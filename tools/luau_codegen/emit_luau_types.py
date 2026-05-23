@@ -221,7 +221,6 @@ def emit(root: Root, target_platform: str = "win") -> Dict[str, str]:
             factories[cls.name] = static_methods
 
     main_lines = _header("Factories and namespace types")
-    main_lines.append("\n")
 
     for cls_name, methods in sorted(factories.items()):
         main_lines.append(f"export type {cls_name}Factory = {{\n")
