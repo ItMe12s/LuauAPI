@@ -60,9 +60,12 @@ namespace luax {
 
         bool push() const {
             if (!valid()) return false;
-            Runtime::instance().setResourcesRoot(m_resourcesRoot);
             lua_getref(m_state, m_ref);
             return true;
+        }
+
+        std::filesystem::path const& resourcesRoot() const {
+            return m_resourcesRoot;
         }
 
     private:

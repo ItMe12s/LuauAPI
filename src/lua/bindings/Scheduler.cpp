@@ -104,6 +104,7 @@ namespace {
             auto& runtime = Runtime::instance();
             if (!runtime.ready()) return false;
             auto* L = runtime.state();
+            Runtime::ResourcesRootScope rootScope(runtime, e.callback.resourcesRoot());
             if (!e.callback.push()) return false;
             if (!lua_isfunction(L, -1)) {
                 lua_pop(L, 1);

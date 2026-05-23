@@ -8,6 +8,7 @@
 
 #include <cstring>
 #include <fstream>
+#include <functional>
 #include <optional>
 #include <sstream>
 #include <string>
@@ -53,9 +54,26 @@ namespace luax {
             return !ec && !escapesRoot(rel);
         }
 
-        bool lexicalPathInsideRoot(std::filesystem::path const& path, std::filesystem::path const& root) {
-            auto rel = path.lexically_normal().lexically_relative(root.lexically_normal());
-            return !escapesRoot(rel);
+        bool isFlatResourcePath(std::filesystem::path const& path) {
+            auto normalized = path.lexically_normal();
+            return normalized == normalized.filename()
+                && normalized != "."
+                && normalized != ".."
+                && !normalized.empty();
+        }
+
+        std::string bytecodeCacheKey(std::filesystem::path const& path, std::string const& contents) {
+            std::error_code ec;
+            auto size = std::filesystem::file_size(path, ec);
+            if (ec) size = 0;
+
+            auto stamp = std::filesystem::last_write_time(path, ec);
+            auto stampTicks = ec ? 0 : stamp.time_since_epoch().count();
+
+            return normalizedPathString(path)
+                + "|size=" + std::to_string(size)
+                + "|mtime=" + std::to_string(stampTicks)
+                + "|hash=" + std::to_string(std::hash<std::string>{}(contents));
         }
 
         Requirer* self(void* ctx) { return static_cast<Requirer*>(ctx); }
@@ -114,7 +132,7 @@ namespace luax {
                 luaL_error(L, "could not read module '%s'", loadname);
             }
 
-            std::string const& bytecode = req->runtime().getOrCompileBytecode(loadname, *contents);
+            std::string const& bytecode = req->runtime().getOrCompileBytecode(bytecodeCacheKey(filePath, *contents), *contents);
 
             lua_State* GL = lua_mainthread(L);
             lua_State* ML = lua_newthread(GL);
@@ -184,6 +202,10 @@ namespace luax {
             return NAVIGATE_NOT_FOUND;
         }
         std::string_view rest = requirer_chunkname + 1;
+        if (!isFlatResourcePath(std::filesystem::path(rest))) {
+            return NAVIGATE_NOT_FOUND;
+        }
+
         std::filesystem::path candidate = m_root / rest;
         std::error_code ec;
         auto canonical = std::filesystem::weakly_canonical(candidate, ec);
@@ -210,8 +232,9 @@ namespace luax {
         if (sv.find('/') != std::string_view::npos || sv.find('\\') != std::string_view::npos || sv == "..") {
             return NAVIGATE_NOT_FOUND;
         }
-        auto next = (m_current / name).lexically_normal();
-        if (!lexicalPathInsideRoot(next, m_root)) return NAVIGATE_NOT_FOUND;
+        if (!isFlatResourcePath(std::filesystem::path(name))) return NAVIGATE_NOT_FOUND;
+        if (m_current != m_root) return NAVIGATE_NOT_FOUND;
+        auto next = (m_root / name).lexically_normal();
         m_current = next;
         return NAVIGATE_SUCCESS;
     }

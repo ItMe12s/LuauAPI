@@ -39,8 +39,24 @@ namespace luax {
         bool protectedCall(int nargs, int nresults, std::string_view context, int deadlineMs = 50);
         void runOnMain(std::function<void()> fn);
         void assertMainThread() const;
+
+        class ResourcesRootScope final {
+        public:
+            ResourcesRootScope(Runtime& runtime, std::filesystem::path root);
+            ~ResourcesRootScope();
+
+            ResourcesRootScope(ResourcesRootScope const&) = delete;
+            ResourcesRootScope& operator=(ResourcesRootScope const&) = delete;
+
+        private:
+            Runtime& m_runtime;
+            std::filesystem::path m_previous;
+        };
+
         void setResourcesRoot(std::filesystem::path const& root);
         std::filesystem::path const& resourcesRoot() const { return m_resourcesRoot; }
+        void clearLastError() { m_lastError.clear(); }
+        std::string const& lastError() const { return m_lastError; }
 
         // Shutdown hooks run (last-in, first-out) during destruction, before lua_close.
         void registerShutdownHook(std::function<void()> fn);
@@ -63,6 +79,7 @@ namespace luax {
         void installTraceback();
         void installPrint();
         std::string formatLuaError(char const* chunk);
+        void setLastError(std::string error);
 
         lua_State* m_state = nullptr;
         std::thread::id m_ownerThread;
@@ -78,6 +95,7 @@ namespace luax {
 
         bool m_codegenEnabled = false;
         std::filesystem::path m_resourcesRoot;
+        std::string m_lastError;
 
         std::unordered_map<std::string, std::string> m_bytecodeCache;
 

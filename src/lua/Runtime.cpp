@@ -4,6 +4,7 @@
 #include "Requirer.hpp"
 
 #include <Geode/Geode.hpp>
+#include <fmt/format.h>
 #include <Luau/CodeGen.h>
 #include <Luau/Compiler.h>
 #include <Luau/Require.h>
@@ -16,6 +17,7 @@
 #include <exception>
 #include <functional>
 #include <string>
+#include <string_view>
 #include <utility>
 
 namespace luax {
@@ -182,7 +184,7 @@ namespace luax {
 
     bool Runtime::isMainThread() {
         auto const& id = mainThreadIdStorage();
-        return id == std::thread::id{} || std::this_thread::get_id() == id;
+        return id != std::thread::id{} && std::this_thread::get_id() == id;
     }
 
     lua_State* Runtime::state() {
@@ -200,6 +202,15 @@ namespace luax {
         if (m_requirer) {
             m_requirer->setResourcesRoot(m_resourcesRoot);
         }
+    }
+
+    Runtime::ResourcesRootScope::ResourcesRootScope(Runtime& runtime, std::filesystem::path root)
+        : m_runtime(runtime), m_previous(runtime.resourcesRoot()) {
+        m_runtime.setResourcesRoot(root);
+    }
+
+    Runtime::ResourcesRootScope::~ResourcesRootScope() {
+        m_runtime.setResourcesRoot(m_previous);
     }
 
     void Runtime::installTraceback() {
@@ -269,6 +280,10 @@ namespace luax {
         return out;
     }
 
+    void Runtime::setLastError(std::string error) {
+        m_lastError = std::move(error);
+    }
+
     std::string const& Runtime::getOrCompileBytecode(std::string const& key, std::string const& source) {
         auto cached = m_bytecodeCache.find(key);
         if (cached != m_bytecodeCache.end()) {
@@ -290,6 +305,7 @@ namespace luax {
 
     bool Runtime::runScript(std::string_view src, std::string_view chunkName, int deadlineMs) {
         assertMainThread();
+        clearLastError();
 
         std::string chunk(chunkName);
         auto bytecodeKey = chunk;
@@ -303,6 +319,7 @@ namespace luax {
 
         if (luau_load(m_state, chunk.c_str(), bytecode.data(), bytecode.size(), 0) != 0) {
             auto err = formatLuaError(chunk.c_str());
+            setLastError(err);
             geode::log::error("luau load failed {}", err);
             lua_pop(m_state, 1);
             return false;
@@ -332,7 +349,9 @@ namespace luax {
         assertMainThread();
         int baseTop = lua_gettop(m_state) - nargs;
         if (nargs < 0 || baseTop < 1 || !lua_isfunction(m_state, baseTop)) {
-            geode::log::error("[{}] luau protectedCall missing function", context);
+            auto err = fmt::format("[{}] luau protectedCall missing function", context);
+            setLastError(err);
+            geode::log::error("{}", err);
             return false;
         }
 
@@ -348,6 +367,7 @@ namespace luax {
         if (status != 0) {
             std::string ctx(context);
             auto err = formatLuaError(ctx.c_str());
+            setLastError(err);
             geode::log::error("{}", err);
             lua_pop(m_state, 1);
             return false;

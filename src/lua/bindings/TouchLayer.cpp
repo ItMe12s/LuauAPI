@@ -181,6 +181,7 @@ namespace {
             if (!runtime.ready()) return;
 
             auto* L = runtime.state();
+            luax::Runtime::ResourcesRootScope rootScope(runtime, target.callback.resourcesRoot());
             if (!target.callback.push()) return;
             if (!lua_isfunction(L, -1)) {
                 lua_pop(L, 1);

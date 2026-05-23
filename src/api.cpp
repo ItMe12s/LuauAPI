@@ -6,6 +6,7 @@
 #include <optional>
 #include <sstream>
 #include <string>
+#include <string_view>
 
 namespace {
     geode::Result<void> requireMainThread() {
@@ -40,6 +41,62 @@ namespace {
         std::error_code ec;
         auto rel = std::filesystem::relative(path, root, ec);
         return !ec && !escapesRoot(rel);
+    }
+
+    bool hasLuauExtension(std::filesystem::path const& path) {
+        return path.extension() == ".luau";
+    }
+
+    bool hasUnsupportedExtension(std::filesystem::path const& path) {
+        auto ext = path.extension();
+        return !ext.empty() && ext != ".luau";
+    }
+
+    bool isFlatResourcePath(std::filesystem::path const& path) {
+        auto normalized = path.lexically_normal();
+        return normalized == normalized.filename()
+            && normalized != "."
+            && normalized != ".."
+            && !normalized.empty();
+    }
+
+    geode::Result<std::filesystem::path> normalizeVirtualPath(std::string_view rawChunkName) {
+        if (rawChunkName.empty()) {
+            return geode::Err("chunk name is empty");
+        }
+
+        std::string text(rawChunkName);
+        if (!text.empty() && text.front() == '@') {
+            text.erase(text.begin());
+        }
+
+        std::filesystem::path path(text);
+        if (path.empty()) {
+            return geode::Err("chunk name is empty");
+        }
+
+        if (path.is_absolute()) {
+            return geode::Err("chunk name must not be absolute");
+        }
+
+        path = path.lexically_normal();
+        if (!isFlatResourcePath(path)) {
+            return geode::Err("chunk name must be a flat resource name");
+        }
+
+        if (hasUnsupportedExtension(path)) {
+            return geode::Err("chunk name extension must be .luau");
+        }
+
+        if (!hasLuauExtension(path)) {
+            path += ".luau";
+        }
+
+        if (!isFlatResourcePath(path)) {
+            return geode::Err("chunk name must be a flat resource name");
+        }
+
+        return geode::Ok(path);
     }
 
     geode::Result<std::filesystem::path> canonicalRoot(std::filesystem::path const& resourcesRoot) {
@@ -85,9 +142,15 @@ namespace imes::luauapi {
             return geode::Err("relative path must not be absolute");
         }
 
+        auto flatPathResult = normalizeVirtualPath(normalizedPathString(relativePath));
+        if (flatPathResult.isErr()) {
+            return geode::Err("relative path must be a flat .luau resource name");
+        }
+        auto flatPath = flatPathResult.unwrap();
+
         auto root = rootResult.unwrap();
         std::error_code ec;
-        auto path = std::filesystem::weakly_canonical(root / relativePath, ec);
+        auto path = std::filesystem::weakly_canonical(root / flatPath, ec);
         if (ec) {
             return geode::Err("script path cannot be resolved: " + ec.message());
         }
@@ -106,8 +169,8 @@ namespace imes::luauapi {
         }
 
         auto rel = std::filesystem::relative(path, root, ec);
-        auto chunkName = "@" + normalizedPathString(ec ? relativePath : rel);
-        return runScript(root, *source, chunkName, deadlineMs);
+        auto chunkPath = ec ? flatPath : rel;
+        return runScript(root, *source, normalizedPathString(chunkPath), deadlineMs);
     }
 
     geode::Result<void> runScript(
@@ -126,11 +189,24 @@ namespace imes::luauapi {
             return geode::Err(rootResult.unwrapErr());
         }
 
-        auto& runtime = luax::Runtime::instance();
-        runtime.setResourcesRoot(rootResult.unwrap());
+        auto chunkResult = normalizeVirtualPath(chunkName);
+        if (chunkResult.isErr()) {
+            return geode::Err(chunkResult.unwrapErr());
+        }
 
-        if (!runtime.runScript(source, chunkName, deadlineMs)) {
-            return geode::Err("luau script failed: " + std::string(chunkName));
+        auto root = rootResult.unwrap();
+        auto chunkPath = chunkResult.unwrap();
+        auto chunk = "@" + normalizedPathString(chunkPath);
+
+        auto& runtime = luax::Runtime::instance();
+        luax::Runtime::ResourcesRootScope rootScope(runtime, root);
+
+        if (!runtime.runScript(source, chunk, deadlineMs)) {
+            auto const& err = runtime.lastError();
+            if (!err.empty()) {
+                return geode::Err(err);
+            }
+            return geode::Err("luau script failed: " + chunk);
         }
 
         return geode::Ok();

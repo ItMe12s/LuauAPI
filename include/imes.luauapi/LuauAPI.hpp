@@ -27,6 +27,9 @@ namespace imes::luauapi {
         int deadlineMs = 250
     );
 
+    // chunkName is a flat Luau resource name under resourcesRoot.
+    // It may be "Main", "Main.luau", or "@Main.luau".
+    // Subdirectories are rejected because Geode doesn't support them anyway.
     LUAUAPI_DLL geode::Result<void> runScript(
         std::filesystem::path const& resourcesRoot,
         std::string_view source,
