@@ -24,6 +24,16 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(luau)
 
+FetchContent_Declare(
+    geode_bindings
+    GIT_REPOSITORY https://github.com/geode-sdk/bindings.git
+    GIT_TAG        main
+)
+FetchContent_GetProperties(geode_bindings)
+if (NOT geode_bindings_POPULATED)
+    FetchContent_Populate(geode_bindings)
+endif()
+
 if (WIN32)
     foreach(LUAU_TARGET
         Luau.Common
@@ -46,9 +56,6 @@ if (WIN32)
     endforeach()
 endif()
 
-file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS src/*.cpp)
-add_library(${PROJECT_NAME} SHARED ${SOURCES})
-
 if (NOT DEFINED ENV{GEODE_SDK})
     message(FATAL_ERROR "Unable to find Geode SDK! Please define GEODE_SDK environment variable to point to Geode")
 else()
@@ -57,9 +64,103 @@ endif()
 
 add_subdirectory($ENV{GEODE_SDK} ${CMAKE_CURRENT_BINARY_DIR}/geode)
 
+find_package(Python3 REQUIRED COMPONENTS Interpreter)
+
+file(READ ${CMAKE_CURRENT_SOURCE_DIR}/mod.json LUAUAPI_MOD_JSON)
+string(REGEX MATCH "\"win\"[ \t\r\n]*:[ \t\r\n]*\"([^\"]+)\"" LUAUAPI_GD_MATCH "${LUAUAPI_MOD_JSON}")
+if (CMAKE_MATCH_1)
+    set(LUAUAPI_GD_VERSION "${CMAKE_MATCH_1}")
+else()
+    set(LUAUAPI_GD_VERSION "2.2081")
+endif()
+
+if (WIN32)
+    set(LUAUAPI_CODEGEN_PLATFORM "win")
+elseif (ANDROID)
+    set(LUAUAPI_CODEGEN_PLATFORM "android")
+elseif (IOS)
+    set(LUAUAPI_CODEGEN_PLATFORM "ios")
+elseif (APPLE AND CMAKE_OSX_ARCHITECTURES MATCHES "arm64")
+    set(LUAUAPI_CODEGEN_PLATFORM "m1")
+elseif (APPLE)
+    set(LUAUAPI_CODEGEN_PLATFORM "imac")
+else()
+    set(LUAUAPI_CODEGEN_PLATFORM "win")
+endif()
+
+set(LUAUAPI_BINDINGS_DIR
+    "${geode_bindings_SOURCE_DIR}/bindings/${LUAUAPI_GD_VERSION}"
+    CACHE PATH "Path to Geode bindings/<gdver>/ dir")
+set(LUAUAPI_GEN_DIR "${CMAKE_BINARY_DIR}/luauapi-gen")
+set(LUAUAPI_GENERATED_CPP "${LUAUAPI_GEN_DIR}/src/luauapi_generated_bindings.cpp")
+set(LUAUAPI_TYPES_OUT "${CMAKE_CURRENT_SOURCE_DIR}/types/geode.d.luau")
+
+if (NOT EXISTS "${LUAUAPI_BINDINGS_DIR}/GeometryDash.bro")
+    message(FATAL_ERROR "LuauAPI bindings dir missing: ${LUAUAPI_BINDINGS_DIR}")
+endif()
+
+file(GLOB LUAUAPI_CODEGEN_PY CONFIGURE_DEPENDS
+    ${CMAKE_CURRENT_SOURCE_DIR}/tools/luau_codegen/*.py)
+file(GLOB LUAUAPI_BRO_FILES CONFIGURE_DEPENDS
+    ${LUAUAPI_BINDINGS_DIR}/*.bro)
+
+if (NOT EXISTS "${LUAUAPI_GENERATED_CPP}")
+    execute_process(
+        COMMAND ${Python3_EXECUTABLE}
+                ${CMAKE_CURRENT_SOURCE_DIR}/tools/luau_codegen/codegen.py
+                --bindings ${LUAUAPI_BINDINGS_DIR}
+                --out ${LUAUAPI_GEN_DIR}
+                --types-out ${LUAUAPI_TYPES_OUT}
+                --platform ${LUAUAPI_CODEGEN_PLATFORM}
+        RESULT_VARIABLE LUAUAPI_CODEGEN_RC
+    )
+    if (NOT LUAUAPI_CODEGEN_RC EQUAL 0)
+        message(FATAL_ERROR "LuauAPI codegen failed with ${LUAUAPI_CODEGEN_RC}")
+    endif()
+endif()
+
+add_custom_command(
+    OUTPUT ${LUAUAPI_GENERATED_CPP} ${LUAUAPI_TYPES_OUT}
+    COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_CURRENT_SOURCE_DIR}/tools/luau_codegen/codegen.py
+            --bindings ${LUAUAPI_BINDINGS_DIR}
+            --out ${LUAUAPI_GEN_DIR}
+            --types-out ${LUAUAPI_TYPES_OUT}
+            --platform ${LUAUAPI_CODEGEN_PLATFORM}
+    DEPENDS ${LUAUAPI_CODEGEN_PY} ${LUAUAPI_BRO_FILES}
+    COMMENT "LuauAPI Broma codegen"
+    VERBATIM
+)
+add_custom_target(luauapi_codegen DEPENDS ${LUAUAPI_GENERATED_CPP} ${LUAUAPI_TYPES_OUT})
+set_source_files_properties(${LUAUAPI_GENERATED_CPP} PROPERTIES GENERATED TRUE)
+
+file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS src/*.cpp)
+foreach(LUAUAPI_MANUAL_BINDING
+    CCObject
+    CCNode
+    CCSprite
+    CCLayer
+    CCSpriteFrame
+    CCSpriteFrameCache
+    CCLabelBMFont
+    CCDirector
+    CCAction
+    GameManager
+    SimplePlayer
+)
+    list(FILTER SOURCES EXCLUDE REGEX "src[/\\\\]lua[/\\\\]bindings[/\\\\]${LUAUAPI_MANUAL_BINDING}\\.cpp$")
+endforeach()
+list(APPEND SOURCES ${LUAUAPI_GENERATED_CPP})
+
+add_library(${PROJECT_NAME} SHARED ${SOURCES})
+add_dependencies(${PROJECT_NAME} luauapi_codegen)
+
 setup_geode_mod(${PROJECT_NAME})
 
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_23)
-target_include_directories(${PROJECT_NAME} PRIVATE include)
+target_include_directories(${PROJECT_NAME} PRIVATE include src)
 target_link_libraries(${PROJECT_NAME} Luau.VM Luau.Compiler Luau.Ast Luau.Require Luau.CodeGen)
 target_compile_definitions(${PROJECT_NAME} PRIVATE LUAUAPI_EXPORTING=1)
+if (MSVC)
+    target_compile_options(${PROJECT_NAME} PRIVATE /bigobj)
+endif()

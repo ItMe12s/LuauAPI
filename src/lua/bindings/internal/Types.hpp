@@ -40,6 +40,12 @@ namespace luax {
         lua_pushnumber(L, size.height); lua_setfield(L, -2, "height");
     }
 
+    inline void pushRect(lua_State* L, cocos2d::CCRect const& rect) {
+        lua_createtable(L, 0, 2);
+        pushPoint(L, rect.origin); lua_setfield(L, -2, "origin");
+        pushSize(L, rect.size); lua_setfield(L, -2, "size");
+    }
+
     inline void pushColor3B(lua_State* L, cocos2d::ccColor3B const& color) {
         lua_createtable(L, 0, 3);
         lua_pushinteger(L, color.r); lua_setfield(L, -2, "r");

@@ -62,3 +62,7 @@ build-*/
 # CLion
 .idea/
 /cmake-build-*/
+
+# Whatever this project does
+**/__pycache__
+types/geode.d.luau
