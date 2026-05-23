@@ -10,13 +10,13 @@
 	"name": "LuauAPI",
 	"version": "v1.0.0",
 	"developer": "imes",
-	"description": "Make geode mods with Luau, supports jit by default!",
+	"description": "Shared Luau runtime API for Geode mods.",
+	"api": {
+		"include": [
+			"include/**/*.hpp"
+		]
+	},
 	"dependencies": {
 		"geode.node-ids": ">=v1.23.3"
-	},
-	"resources": {
-		"files": [
-			"mod/*.luau"
-		]
 	}
 }

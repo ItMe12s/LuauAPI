@@ -14,12 +14,31 @@
 #include <cstdlib>
 #include <cstring>
 #include <exception>
+#include <functional>
 #include <string>
 #include <utility>
 
 namespace luax {
     namespace {
         constexpr char const kTracebackName[] = "luax:traceback";
+
+        std::optional<Runtime>& runtimeStorage() {
+            static std::optional<Runtime> runtime;
+            return runtime;
+        }
+
+        std::thread::id& mainThreadIdStorage() {
+            static std::thread::id id;
+            return id;
+        }
+
+        std::string normalizedPathString(std::filesystem::path const& path) {
+            auto out = path.generic_string();
+            for (auto& c : out) {
+                if (c == '\\') c = '/';
+            }
+            return out;
+        }
 
         class StackGuard {
         public:
@@ -81,7 +100,7 @@ namespace luax {
         }
     }
 
-    Runtime::Runtime() : m_ownerThread(std::this_thread::get_id()) {
+    Runtime::Runtime() : m_ownerThread(mainThreadIdStorage() == std::thread::id{} ? std::this_thread::get_id() : mainThreadIdStorage()) {
         m_state = lua_newstate(&Runtime::boundedAlloc, this);
         if (!m_state) {
             geode::log::error("luau lua_newstate failed");
@@ -139,11 +158,31 @@ namespace luax {
     }
 
     Runtime& Runtime::instance() {
-        static std::optional<Runtime> runtime;
+        auto& runtime = runtimeStorage();
         if (!runtime) {
             runtime.emplace();
         }
         return *runtime;
+    }
+
+    bool Runtime::isInitialized() {
+        auto& runtime = runtimeStorage();
+        return runtime && runtime->ready();
+    }
+
+    Runtime* Runtime::getIfInitialized() {
+        auto& runtime = runtimeStorage();
+        if (!runtime) return nullptr;
+        return &*runtime;
+    }
+
+    void Runtime::setMainThreadId(std::thread::id id) {
+        mainThreadIdStorage() = id;
+    }
+
+    bool Runtime::isMainThread() {
+        auto const& id = mainThreadIdStorage();
+        return id == std::thread::id{} || std::this_thread::get_id() == id;
     }
 
     lua_State* Runtime::state() {
@@ -153,6 +192,14 @@ namespace luax {
 
     bool Runtime::ready() const {
         return m_ready.load(std::memory_order_acquire);
+    }
+
+    void Runtime::setResourcesRoot(std::filesystem::path const& root) {
+        assertMainThread();
+        m_resourcesRoot = root;
+        if (m_requirer) {
+            m_requirer->setResourcesRoot(m_resourcesRoot);
+        }
     }
 
     void Runtime::installTraceback() {
@@ -245,7 +292,14 @@ namespace luax {
         assertMainThread();
 
         std::string chunk(chunkName);
-        std::string const& bytecode = getOrCompileBytecode(chunk, std::string(src));
+        auto bytecodeKey = chunk;
+        if (!m_resourcesRoot.empty()) {
+            bytecodeKey = normalizedPathString(m_resourcesRoot) + "|" + bytecodeKey;
+        }
+        bytecodeKey += "|";
+        bytecodeKey += std::to_string(std::hash<std::string_view>{}(src));
+
+        std::string const& bytecode = getOrCompileBytecode(bytecodeKey, std::string(src));
 
         if (luau_load(m_state, chunk.c_str(), bytecode.data(), bytecode.size(), 0) != 0) {
             auto err = formatLuaError(chunk.c_str());

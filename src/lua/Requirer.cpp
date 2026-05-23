@@ -2,7 +2,6 @@
 
 #include "Runtime.hpp"
 
-#include <Geode/Geode.hpp>
 #include <Luau/CodeGen.h>
 #include <Luau/Compiler.h>
 #include <lualib.h>
@@ -52,6 +51,11 @@ namespace luax {
             std::error_code ec;
             auto rel = std::filesystem::relative(path, root, ec);
             return !ec && !escapesRoot(rel);
+        }
+
+        bool lexicalPathInsideRoot(std::filesystem::path const& path, std::filesystem::path const& root) {
+            auto rel = path.lexically_normal().lexically_relative(root.lexically_normal());
+            return !escapesRoot(rel);
         }
 
         Requirer* self(void* ctx) { return static_cast<Requirer*>(ctx); }
@@ -152,8 +156,11 @@ namespace luax {
         }
     }
 
-    Requirer::Requirer(Runtime& runtime) : m_runtime(runtime) {
-        m_root = std::filesystem::weakly_canonical(geode::Mod::get()->getResourcesDir());
+    Requirer::Requirer(Runtime& runtime) : m_runtime(runtime) {}
+
+    void Requirer::setResourcesRoot(std::filesystem::path const& root) {
+        m_root = root;
+        m_current = m_root;
     }
 
     void Requirer::initConfig(luarequire_Configuration* config) {
@@ -203,7 +210,9 @@ namespace luax {
         if (sv.find('/') != std::string_view::npos || sv.find('\\') != std::string_view::npos || sv == "..") {
             return NAVIGATE_NOT_FOUND;
         }
-        m_current /= name;
+        auto next = (m_current / name).lexically_normal();
+        if (!lexicalPathInsideRoot(next, m_root)) return NAVIGATE_NOT_FOUND;
+        m_current = next;
         return NAVIGATE_SUCCESS;
     }
 

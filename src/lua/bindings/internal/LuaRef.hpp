@@ -1,7 +1,11 @@
 #pragma once
 
+#include "../../Runtime.hpp"
+
 #include <lua.h>
 #include <lualib.h>
+
+#include <filesystem>
 
 namespace luax {
     class LuaRef {
@@ -37,12 +41,14 @@ namespace luax {
             }
             m_state = nullptr;
             m_ref = LUA_NOREF;
+            m_resourcesRoot.clear();
         }
 
         void reset(lua_State* L, int index) {
             reset();
             if (!L) return;
             m_state = L;
+            m_resourcesRoot = Runtime::instance().resourcesRoot();
             lua_pushvalue(L, index);
             m_ref = lua_ref(L, -1);
             lua_pop(L, 1);
@@ -54,6 +60,7 @@ namespace luax {
 
         bool push() const {
             if (!valid()) return false;
+            Runtime::instance().setResourcesRoot(m_resourcesRoot);
             lua_getref(m_state, m_ref);
             return true;
         }
@@ -62,11 +69,14 @@ namespace luax {
         void moveFrom(LuaRef& other) noexcept {
             m_state = other.m_state;
             m_ref = other.m_ref;
+            m_resourcesRoot = std::move(other.m_resourcesRoot);
             other.m_state = nullptr;
             other.m_ref = LUA_NOREF;
+            other.m_resourcesRoot.clear();
         }
 
         lua_State* m_state = nullptr;
         int m_ref = LUA_NOREF;
+        std::filesystem::path m_resourcesRoot;
     };
 }

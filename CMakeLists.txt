@@ -8,7 +8,7 @@ else()
 endif()
 set(CMAKE_CXX_VISIBILITY_PRESET hidden)
 
-project(FishRNG VERSION 1.0.0)
+project(LuauAPI VERSION 1.0.0)
 
 include(FetchContent)
 
@@ -24,6 +24,28 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(luau)
 
+if (WIN32)
+    foreach(LUAU_TARGET
+        Luau.Common
+        Luau.Ast
+        Luau.Bytecode
+        Luau.Compiler
+        Luau.Config
+        Luau.Analysis
+        Luau.CodeGen
+        Luau.VM
+        Luau.Require
+        isocline
+    )
+        if (TARGET ${LUAU_TARGET})
+            target_compile_definitions(${LUAU_TARGET} PRIVATE
+                _HAS_ITERATOR_DEBUGGING=0
+                _ITERATOR_DEBUG_LEVEL=0
+            )
+        endif()
+    endforeach()
+endif()
+
 file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS src/*.cpp)
 add_library(${PROJECT_NAME} SHARED ${SOURCES})
 
@@ -38,5 +60,6 @@ add_subdirectory($ENV{GEODE_SDK} ${CMAKE_CURRENT_BINARY_DIR}/geode)
 setup_geode_mod(${PROJECT_NAME})
 
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_23)
+target_include_directories(${PROJECT_NAME} PRIVATE include)
 target_link_libraries(${PROJECT_NAME} Luau.VM Luau.Compiler Luau.Ast Luau.Require Luau.CodeGen)
-target_compile_definitions(${PROJECT_NAME} PRIVATE FISHRNG_LUAU=1)
+target_compile_definitions(${PROJECT_NAME} PRIVATE LUAUAPI_EXPORTING=1)

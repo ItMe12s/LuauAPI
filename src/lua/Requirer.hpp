@@ -15,6 +15,7 @@ namespace luax {
         static void initConfig(luarequire_Configuration* config);
 
         Runtime& runtime() { return m_runtime; }
+        void setResourcesRoot(std::filesystem::path const& root);
 
         std::filesystem::path const& resourcesRoot() const { return m_root; }
         std::filesystem::path const& current() const { return m_current; }

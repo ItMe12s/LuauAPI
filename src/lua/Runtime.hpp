@@ -6,6 +6,7 @@
 #include <atomic>
 #include <chrono>
 #include <cstddef>
+#include <filesystem>
 #include <functional>
 #include <memory>
 #include <optional>
@@ -30,10 +31,16 @@ namespace luax {
 
         lua_State* state();
         bool ready() const;
+        static bool isInitialized();
+        static Runtime* getIfInitialized();
+        static void setMainThreadId(std::thread::id id);
+        static bool isMainThread();
         bool runScript(std::string_view src, std::string_view chunkName, int deadlineMs = 250);
         bool protectedCall(int nargs, int nresults, std::string_view context, int deadlineMs = 50);
         void runOnMain(std::function<void()> fn);
         void assertMainThread() const;
+        void setResourcesRoot(std::filesystem::path const& root);
+        std::filesystem::path const& resourcesRoot() const { return m_resourcesRoot; }
 
         // Shutdown hooks run (last-in, first-out) during destruction, before lua_close.
         void registerShutdownHook(std::function<void()> fn);
@@ -70,6 +77,7 @@ namespace luax {
         int m_tracebackRef = 0;
 
         bool m_codegenEnabled = false;
+        std::filesystem::path m_resourcesRoot;
 
         std::unordered_map<std::string, std::string> m_bytecodeCache;
 
