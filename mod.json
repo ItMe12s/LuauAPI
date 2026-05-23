@@ -10,6 +10,8 @@
 	"name": "LuauAPI",
 	"version": "v1.0.0",
 	"developer": "imes",
+	"early-load": true,
+	"load-priority": "first",
 	"description": "Shared Luau runtime API for Geode mods.",
 	"api": {
 		"include": [
