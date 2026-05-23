@@ -93,7 +93,12 @@ set(LUAUAPI_BINDINGS_DIR
     CACHE PATH "Path to Geode bindings/<gdver>/ dir")
 set(LUAUAPI_GEN_DIR "${CMAKE_BINARY_DIR}/luauapi-gen")
 set(LUAUAPI_GENERATED_CPP "${LUAUAPI_GEN_DIR}/src/luauapi_generated_bindings.cpp")
-set(LUAUAPI_TYPES_OUT "${CMAKE_CURRENT_SOURCE_DIR}/types/geode.d.luau")
+set(LUAUAPI_TYPES_DIR "${CMAKE_CURRENT_SOURCE_DIR}/types")
+set(LUAUAPI_TYPES_FILES
+    "${LUAUAPI_TYPES_DIR}/geode_cocos2d.d.luau"
+    "${LUAUAPI_TYPES_DIR}/geode_gd.d.luau"
+    "${LUAUAPI_TYPES_DIR}/geode.d.luau"
+)
 
 if (NOT EXISTS "${LUAUAPI_BINDINGS_DIR}/GeometryDash.bro")
     message(FATAL_ERROR "LuauAPI bindings dir missing: ${LUAUAPI_BINDINGS_DIR}")
@@ -110,7 +115,7 @@ if (NOT EXISTS "${LUAUAPI_GENERATED_CPP}")
                 ${CMAKE_CURRENT_SOURCE_DIR}/tools/luau_codegen/codegen.py
                 --bindings ${LUAUAPI_BINDINGS_DIR}
                 --out ${LUAUAPI_GEN_DIR}
-                --types-out ${LUAUAPI_TYPES_OUT}
+                --types-out ${LUAUAPI_TYPES_DIR}
                 --platform ${LUAUAPI_CODEGEN_PLATFORM}
         RESULT_VARIABLE LUAUAPI_CODEGEN_RC
     )
@@ -120,18 +125,18 @@ if (NOT EXISTS "${LUAUAPI_GENERATED_CPP}")
 endif()
 
 add_custom_command(
-    OUTPUT ${LUAUAPI_GENERATED_CPP} ${LUAUAPI_TYPES_OUT}
+    OUTPUT ${LUAUAPI_GENERATED_CPP} ${LUAUAPI_TYPES_FILES}
     COMMAND ${Python3_EXECUTABLE}
             ${CMAKE_CURRENT_SOURCE_DIR}/tools/luau_codegen/codegen.py
             --bindings ${LUAUAPI_BINDINGS_DIR}
             --out ${LUAUAPI_GEN_DIR}
-            --types-out ${LUAUAPI_TYPES_OUT}
+            --types-out ${LUAUAPI_TYPES_DIR}
             --platform ${LUAUAPI_CODEGEN_PLATFORM}
     DEPENDS ${LUAUAPI_CODEGEN_PY} ${LUAUAPI_BRO_FILES}
     COMMENT "LuauAPI Broma codegen"
     VERBATIM
 )
-add_custom_target(luauapi_codegen DEPENDS ${LUAUAPI_GENERATED_CPP} ${LUAUAPI_TYPES_OUT})
+add_custom_target(luauapi_codegen DEPENDS ${LUAUAPI_GENERATED_CPP} ${LUAUAPI_TYPES_FILES})
 set_source_files_properties(${LUAUAPI_GENERATED_CPP} PROPERTIES GENERATED TRUE)
 
 file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS src/*.cpp)

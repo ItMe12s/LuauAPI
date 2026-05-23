@@ -65,4 +65,4 @@ build-*/
 
 # Whatever this project does
 **/__pycache__
-types/geode.d.luau
+types/

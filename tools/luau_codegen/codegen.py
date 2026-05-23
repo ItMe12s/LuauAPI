@@ -132,12 +132,16 @@ def main(argv: List[str]) -> int:
     schema_path = os.path.join(args.out, "schema.json")
     report_path = os.path.join(args.out, "report.md")
     _write_if_changed(cxx_path, cxx)
-    _write_if_changed(args.types_out, emit_luau_types.emit(root, args.platform))
+    type_files = emit_luau_types.emit(root, args.platform)
+    for filename, content in type_files.items():
+        _write_if_changed(os.path.join(args.types_out, filename), content)
     _emit_schema(root, schema_path)
-    _emit_report(root, report_path, cxx_path, args.types_out, skipped)
+    types_paths = [os.path.join(args.types_out, f) for f in type_files]
+    _emit_report(root, report_path, cxx_path, ", ".join(types_paths), skipped)
     print(f"[luauapi] parsed {len(root.classes)} classes")
     print(f"[luauapi] wrote {cxx_path}")
-    print(f"[luauapi] wrote {args.types_out}")
+    for f in types_paths:
+        print(f"[luauapi] wrote {f}")
     print(f"[luauapi] wrote {report_path}")
     return 0
 
