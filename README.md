@@ -8,6 +8,8 @@ Use the `Luau Language Server` extension by JohnnyMorganz.
 To get the `.d.luau` files, compile this mod on your pc.
 Then copy the `types` folder into your mod project root.
 
+**BTW IT TAKES LIKE FOREVER TO COMPILE**, if you don't have a workstation cpu.
+
 Also do the vscode `>Developer: Restart Extension Host` after doing stuff with luau lsp.
 
 ## Setting files

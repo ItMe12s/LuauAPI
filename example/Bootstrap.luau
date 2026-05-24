@@ -1,4 +1,6 @@
--- Assuming you already know this (just finish volume 1) https://docs.geode-sdk.org/handbook/vol1/chap1_7/
+-- Assuming you already know this (just finish volume 1)
+-- https://docs.geode-sdk.org/handbook/vol1/chap1_7/
+-- And made a Geode mod beforehand.
 
 local cocos2d = geode.cocos2d
 
