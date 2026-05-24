@@ -4,7 +4,7 @@ import re
 from typing import Dict
 
 from broma_parser import Class, Method
-from filtering import platform_value
+from filtering import direct_callable, platform_value
 from marshalling import push_value
 from model import cxx_name, lua_namespace
 from type_map import TypeInfo, classify_arg, classify_return, normalize_type
@@ -34,6 +34,8 @@ def hookable(
     cls: Class, m: Method, objects: Dict[str, Class], target_platform: str
 ) -> bool:
     if m.is_static or m.is_ctor or m.is_dtor:
+        return False
+    if not direct_callable(cls, m, target_platform):
         return False
     if not hook_offset(m, target_platform):
         return False

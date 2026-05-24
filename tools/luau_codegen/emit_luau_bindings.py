@@ -10,6 +10,7 @@ from filtering import (
     call_label,
     group_supported,
     linkless_class_names,
+    prune_skipped_class_refs,
     returns_owned,
 )
 from cxx_templates import emit_internal_hpp, file_preamble
@@ -25,7 +26,6 @@ def _id(value: str) -> str:
 
 def _gen_ns(cls: Class) -> str:
     return f"ns_{_id(cls.name)}"
-
 
 
 def _emit_invoke(cls: Class, m: Method, objects: Dict[str, Class], suffix: str) -> str:
@@ -102,8 +102,6 @@ def _emit_compat_functions(objects: Dict[str, Class]) -> str:
     )
 
 
-
-
 def _inheritance_depth(
     cls: Class, by_short: Dict[str, Class], skipped_classes: Set[str]
 ) -> int:
@@ -151,6 +149,15 @@ def _collect_plan(root: Root, target_platform: str) -> EmitPlan:
 
     skipped_classes = linkless_class_names(
         classes, objects, supported_by_class, skipped_by_class, target_platform
+    )
+    skipped.extend(
+        prune_skipped_class_refs(
+            supported_by_class,
+            skipped_by_class,
+            objects,
+            skipped_classes,
+            target_platform,
+        )
     )
     depths = {
         cls.name: _inheritance_depth(cls, by_short, skipped_classes) for cls in classes
@@ -316,9 +323,7 @@ def _emit_common_file(emitted_classes: List[Class]) -> str:
         out.append("HookRange const kAllHookRanges[] = {\n")
         for cls in emitted_classes:
             gen_ns = _gen_ns(cls)
-            out.append(
-                f"    {{ {gen_ns}::hookTargets, {gen_ns}::hookTargetCount }},\n"
-            )
+            out.append(f"    {{ {gen_ns}::hookTargets, {gen_ns}::hookTargetCount }},\n")
         out.append("};\n\n")
     else:
         out.append("struct HookRange {\n")

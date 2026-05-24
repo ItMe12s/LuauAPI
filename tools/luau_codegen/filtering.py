@@ -8,6 +8,8 @@ from denylist import INACCESSIBLE_CLASSES, INACCESSIBLE_METHODS
 from model import short_name, status_for
 from type_map import classify_arg, classify_return
 
+STRICT_DIRECT_PLATFORMS = {"ios", "mac", "imac", "m1"}
+
 
 def platform_value(m: Method, target_platform: str) -> str:
     value = m.platforms.get(target_platform, "")
@@ -25,11 +27,30 @@ def platform_value(m: Method, target_platform: str) -> str:
 
 
 def _is_link_platform(cls: Class, target_platform: str) -> bool:
+    aliases = {
+        "mac": {"mac", "imac", "m1"},
+        "imac": {"mac", "imac"},
+        "m1": {"mac", "m1"},
+        "android": {"android", "android32", "android64"},
+        "android32": {"android", "android32"},
+        "android64": {"android", "android64"},
+    }.get(target_platform, {target_platform})
     for attr in cls.attributes:
         if attr.startswith("link(") and attr.endswith(")"):
             platforms = [p.strip() for p in attr[5:-1].split(",")]
-            return target_platform in platforms
+            return any(platform in aliases for platform in platforms)
     return False
+
+
+def direct_callable(cls: Class, m: Method, target_platform: str) -> bool:
+    if _is_link_platform(cls, target_platform):
+        return True
+
+    value = platform_value(m, target_platform)
+    token = value.split()[0] if value else ""
+    if target_platform in STRICT_DIRECT_PLATFORMS:
+        return token == "link"
+    return bool(value)
 
 
 def method_key(m: Method) -> str:
@@ -53,8 +74,8 @@ def supported(
         return False, "operator"
     if status_for(m.platforms) == "Missing":
         return False, "missing-address"
-    if not platform_value(m, target_platform) and not _is_link_platform(cls, target_platform):
-        return False, f"not-linkable:{target_platform}"
+    if not direct_callable(cls, m, target_platform):
+        return False, f"not-callable:{target_platform}"
     if classify_return(m.ret, objects) is None:
         return False, f"unsupported-return:{m.ret}"
     for arg in m.args:
@@ -137,14 +158,17 @@ def linkless_class_names(
                         referenced.add(info.class_name)
 
     out: set[str] = set()
-    no_link = f"not-linkable:{target_platform}"
+    no_call = f"not-callable:{target_platform}"
     for cls in classes:
         if supported_by_class.get(cls.name):
             continue
         reasons = [reason for _, reason in skipped_by_class.get(cls.name, [])]
+        if target_platform in STRICT_DIRECT_PLATFORMS and no_call in reasons:
+            out.add(cls.name)
+            continue
         if cls.name in referenced:
             continue
-        if any(reason in ("inaccessible-class", no_link) for reason in reasons):
+        if any(reason in ("inaccessible-class", no_call) for reason in reasons):
             out.add(cls.name)
 
     by_short = {cls.name: cls for cls in classes}
@@ -157,3 +181,44 @@ def linkless_class_names(
             if base_cls:
                 keep_bases.add(base_cls.name)
     return out - keep_bases
+
+
+def _skipped_object_ref(
+    m: Method, objects: Dict[str, Class], skipped_classes: set[str]
+) -> str:
+    ret = classify_return(m.ret, objects)
+    if ret and ret.kind == "object" and ret.class_name in skipped_classes:
+        return ret.class_name
+    for arg in m.args:
+        info = classify_arg(arg.type, objects)
+        if info and info.kind == "object" and info.class_name in skipped_classes:
+            return info.class_name
+    return ""
+
+
+def prune_skipped_class_refs(
+    supported_by_class: dict[str, dict[str, list[Method]]],
+    skipped_by_class: dict[str, list[tuple[Method, str]]],
+    objects: Dict[str, Class],
+    skipped_classes: set[str],
+    target_platform: str,
+) -> list[tuple[str, str, str]]:
+    pruned: list[tuple[str, str, str]] = []
+    if not skipped_classes:
+        return pruned
+    for cls_name, grouped in supported_by_class.items():
+        for name, methods in list(grouped.items()):
+            kept: list[Method] = []
+            for m in methods:
+                skipped_ref = _skipped_object_ref(m, objects, skipped_classes)
+                if skipped_ref:
+                    reason = f"not-callable-type:{target_platform}:{skipped_ref}"
+                    skipped_by_class[cls_name].append((m, reason))
+                    pruned.append((cls_name, m.name, reason))
+                else:
+                    kept.append(m)
+            if kept:
+                grouped[name] = kept
+            else:
+                del grouped[name]
+    return pruned

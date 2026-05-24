@@ -6,6 +6,9 @@ Before you start, Luau doesn't mean you can just not do memory management.
 You'll still have to write performant code and now with Luau typing on top.
 Also don't vibecode (duh).
 
+Note that platform like iOS might be missing some bindings.
+*(You wouldn't notice it anyunless you're doing really niche and specific stuff).*
+
 ## Setup your visual studio
 
 You would want autocomplete and help from the lsp.
@@ -162,4 +165,9 @@ Add `Bootstrap.luau` to your `mod.json` resources so Geode packages it as a runt
 ## Development checks
 
 To run optional host tests, build with `-DLUAUAPI_BUILD_TESTS=ON` and run `luauapi_tests` or CTest.
-Manual Geode testing is still needed.
+Manual Geode testing is still needed per usual.
+
+## Extra info
+
+The broma parser code is from my previous project saphhire sdk,
+which brings Luau like syntax to Geode (weren't very useful afaik).

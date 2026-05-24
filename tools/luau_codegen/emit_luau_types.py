@@ -4,7 +4,7 @@ from collections import defaultdict
 from typing import Dict, List, Sequence
 
 from broma_parser import Class, Method, Root
-from filtering import group_supported, linkless_class_names
+from filtering import group_supported, linkless_class_names, prune_skipped_class_refs
 from model import lua_namespace, object_classes, short_name
 from type_map import TypeInfo, classify_arg, classify_return
 
@@ -188,6 +188,13 @@ def emit(root: Root, target_platform: str = "win") -> Dict[str, str]:
 
     skipped_classes = linkless_class_names(
         classes, objects, grouped_by_class, skipped_by_class, target_platform
+    )
+    prune_skipped_class_refs(
+        grouped_by_class,
+        skipped_by_class,
+        objects,
+        skipped_classes,
+        target_platform,
     )
 
     cocos_namespace = "geode.cocos2d"
