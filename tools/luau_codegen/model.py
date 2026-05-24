@@ -1,38 +1,12 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 from typing import Dict, List
 
-from broma_parser import Class, Method, Root
+from broma_parser import Class, Root
 
 
 BRO_FILES = ("Cocos2d.bro", "Extras.bro", "FMOD.bro", "Kazmath.bro", "GeometryDash.bro")
 DENY_CLASSES = {"cocos2d", "pugi"}
-
-
-@dataclass
-class MethodDecision:
-    method: Method
-    supported: bool
-    reason: str = ""
-
-
-@dataclass
-class ClassModel:
-    source: Class
-    cxx_name: str
-    lua_name: str
-    namespace: str
-    base_names: List[str] = field(default_factory=list)
-    methods: List[MethodDecision] = field(default_factory=list)
-
-
-def collect_classes(root: Root) -> Dict[str, Class]:
-    out: Dict[str, Class] = {}
-    for cls in root.classes:
-        out[cls.qualified_name] = cls
-        out.setdefault(cls.name, cls)
-    return out
 
 
 def short_name(name: str) -> str:

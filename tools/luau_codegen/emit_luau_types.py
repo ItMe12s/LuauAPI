@@ -4,7 +4,7 @@ from collections import defaultdict
 from typing import Dict, List, Sequence
 
 from broma_parser import Class, Method, Root
-from emit_luau_bindings import _group_supported, _linkless_class_names
+from filtering import group_supported, linkless_class_names
 from model import lua_namespace, object_classes, short_name
 from type_map import TypeInfo, classify_arg, classify_return
 
@@ -182,11 +182,11 @@ def emit(root: Root, target_platform: str = "win") -> Dict[str, str]:
     factories: Dict[str, Dict[str, List[Method]]] = defaultdict(dict)
 
     for cls in classes:
-        grouped, cls_skipped = _group_supported(cls, objects, target_platform)
+        grouped, cls_skipped = group_supported(cls, objects, target_platform)
         grouped_by_class[cls.name] = grouped
         skipped_by_class[cls.name] = cls_skipped
 
-    skipped_classes = _linkless_class_names(
+    skipped_classes = linkless_class_names(
         classes, objects, grouped_by_class, skipped_by_class, target_platform
     )
 
