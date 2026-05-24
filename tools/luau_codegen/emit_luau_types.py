@@ -221,6 +221,18 @@ def emit(root: Root, target_platform: str = "win") -> Dict[str, str]:
             factories[cls.name] = static_methods
 
     main_lines = _header("Factories and namespace types")
+    main_lines.append("export type HookContext = {\n")
+    main_lines.append("    self: any,\n")
+    main_lines.append("    args: { any },\n")
+    main_lines.append("    result: any,\n")
+    main_lines.append("    target: string,\n")
+    main_lines.append("}\n\n")
+    main_lines.append("export type HookHandle = {\n")
+    main_lines.append("    enable: (self: HookHandle) -> boolean,\n")
+    main_lines.append("    disable: (self: HookHandle) -> boolean,\n")
+    main_lines.append("    remove: (self: HookHandle) -> boolean,\n")
+    main_lines.append("    isEnabled: (self: HookHandle) -> boolean,\n")
+    main_lines.append("}\n\n")
 
     for cls_name, methods in sorted(factories.items()):
         main_lines.append(f"export type {cls_name}Factory = {{\n")
@@ -256,6 +268,9 @@ def emit(root: Root, target_platform: str = "win") -> Dict[str, str]:
     main_lines.append("export type GeodeNamespace = {\n")
     main_lines.append("    cocos2d: Cocos2dNamespace,\n")
     main_lines.append("    gd: GDNamespace,\n")
+    main_lines.append(
+        "    hook: (target: string, callback: (ctx: HookContext) -> any?) -> HookHandle,\n"
+    )
     main_lines.append("}\n\n")
     main_lines.append("declare geode: GeodeNamespace\n")
 

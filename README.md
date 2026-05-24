@@ -44,7 +44,7 @@ At your project root, add this `.luaurc` file
 |   |- settings.json
 |
 |- mod
-|   |- Bootstrap.lua
+|   |- Bootstrap.luau
 |
 |- src
 |   |- main.cpp
@@ -55,3 +55,17 @@ At your project root, add this `.luaurc` file
 |   |- geode.d.luau
 |
 |- .luaurc
+
+Add `Bootstrap.luau` to your `mod.json` resources so Geode packages it as a runtime file:
+
+```json
+{
+    "resources": {
+        "files": [
+            "mod/Bootstrap.luau"
+        ]
+    }
+}
+```
+
+`runFile(Mod::get()->getResourcesDir(), "Bootstrap.luau")` expects the script as a flat resource name.

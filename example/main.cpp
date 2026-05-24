@@ -1,28 +1,17 @@
 #include <Geode/Geode.hpp>
-#include <Geode/modify/MenuLayer.hpp>
+#include <Geode/loader/ModEvent.hpp>
 #include <imes.luauapi/LuauAPI.hpp>
 
 using namespace geode::prelude;
 
-class $modify(MenuLayer) {
-    bool init() {
-        if (!MenuLayer::init()) return false;
+$on_mod(Loaded) {
+    auto result = imes::luauapi::runFile(
+        Mod::get()->getResourcesDir(),
+        "Bootstrap.luau",
+        250
+    );
 
-        static bool bootstrapLoaded = false;
-        if (!bootstrapLoaded) {
-            auto result = imes::luauapi::runFile(
-                Mod::get()->getResourcesDir(),
-                "Bootstrap.luau",
-                250,
-                this
-            );
-            if (result.isOk()) {
-                bootstrapLoaded = true;
-            } else {
-                log::error("Bootstrap.luau failed: {}", result.unwrapErr());
-            }
-        }
-
-        return true;
+    if (result.isErr()) {
+        log::error("Bootstrap.luau failed: {}", result.unwrapErr());
     }
-};
+}

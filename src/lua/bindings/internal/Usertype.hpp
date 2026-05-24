@@ -103,6 +103,26 @@ namespace luax {
             return static_cast<T*>(obj);
         }
 
+        static T* tryCheck(lua_State* L, int idx) {
+            if (lua_type(L, idx) != LUA_TUSERDATA) return nullptr;
+            int tagInt = lua_userdatatag(L, idx);
+            if (tagInt <= 0) return nullptr;
+            auto* info = detail::UsertypeRegistry::get().findByTag(static_cast<std::uint32_t>(tagInt));
+            if (!info) return nullptr;
+            auto myTag = tag();
+            bool ok = false;
+            for (auto b : info->baseClosure) {
+                if (b == myTag) {
+                    ok = true;
+                    break;
+                }
+            }
+            if (!ok) return nullptr;
+            auto* block = static_cast<UserdataBlock*>(lua_touserdata(L, idx));
+            if (!block || !block->ptr) return nullptr;
+            return static_cast<T*>(block->ptr);
+        }
+
         static void pushOwned(lua_State* L, T* obj) {
             if (!obj) { lua_pushnil(L); return; }
             auto const& info = detail::UsertypeRegistry::get().infoFor(std::type_index(typeid(T)));
