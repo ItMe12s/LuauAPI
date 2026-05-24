@@ -3,16 +3,41 @@
 #include <imes.luauapi/LuauAPI.hpp>
 
 using namespace geode::prelude;
+namespace lua = imes::luauapi;
 
 $on_mod(Loaded) {
-    imes::luauapi::runFileAsync(
+    // Check runtime status before doing anything.
+    // Can be NotReady, Ready, InitFailed, or Panicked.
+    auto st = lua::status();
+    if (st == lua::RuntimeStatus::InitFailed) {
+        log::error("LuauAPI runtime failed to initialize");
+        return;
+    }
+    if (st == lua::RuntimeStatus::Panicked) {
+        log::error("LuauAPI runtime panicked, no recovery possible");
+        return;
+    }
+
+    // Log diagnostics about the shared VM.
+    log::info("LuauAPI codegen: {}", lua::codegenEnabled() ? "on" : "off");
+    log::info("LuauAPI memory: {} / {} bytes",
+        lua::memoryUsage(), lua::memoryLimit());
+    // Memory limit defaults to 64 MiB. Heavy mods can call
+    // lua::setMemoryLimit(bytes) to raise it (clamped to 16 to 512 MiB).
+
+    // runFileAsync compiles off-thread, then executes on the main thread.
+    // Prefer this over runFile (sync) to avoid hitching during load.
+    lua::runFileAsync(
         Mod::get()->getResourcesDir(),
         "Bootstrap.luau",
-        250
+        250 // CPU deadline in ms (default). Set <= 0 to disable budget.
     ).listen(
         [](geode::Result<void>* result) {
             if (result && result->isErr()) {
                 log::error("Bootstrap.luau failed: {}", result->unwrapErr());
+                // lua::lastError() has the latest sync error string.
+                // Read it before your next LuauAPI call because it gets overwritten.
+                log::error("lastError: {}", lua::lastError());
             }
         },
         [](auto*) {},
@@ -20,4 +45,9 @@ $on_mod(Loaded) {
             log::warn("Bootstrap.luau cancelled");
         }
     );
+
+    // Sync alternative (blocks the main thread during compile and execute):
+    //   auto result = lua::runFile(
+    //       Mod::get()->getResourcesDir(), "Bootstrap.luau");
+    //   if (result.isErr()) log::error("{}", result.unwrapErr());
 }
