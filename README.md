@@ -1,6 +1,15 @@
-# Setup your visual studio
+# LuauAPI
+
+**Write Geode SDK mods with Luau!**
+
+Before you start, Luau doesn't mean you can just not do memory management.
+You'll still have to write performant code and now with Luau typing on top.
+Also don't vibecode (duh).
+
+## Setup your visual studio
 
 You would want autocomplete and help from the lsp.
+
 Use the `Luau Language Server` extension by JohnnyMorganz.
 
 ## C++ API
@@ -41,31 +50,30 @@ Available calls:
 | `setMemoryLimit(bytes)`                                             | Sets shared VM allocator limit, clamped to supported range.          |
 | `codegenEnabled()`                                                  | Whether Luau native codegen is active.                               |
 
-`deadlineMs <= 0` disables the Luau CPU budget for that execution.
-Default script deadline is `250 ms`. Generated hook callbacks use `50 ms`.
-`setMemoryLimit` clamps to `16 MiB..512 MiB`. Default memory limit is `64 MiB`.
-**Please use the default values** unless you're making a really heavy mod.
-`lastError()` is a synchronous side channel. Read it before the next LuauAPI call. Reentrant calls can replace it.
+- `deadlineMs <= 0` disables the Luau CPU budget for that execution.
+- Default script deadline is `250 ms`. Generated hook callbacks use `50 ms`.
+- `setMemoryLimit` clamps to `16 MiB..512 MiB`. Default memory limit is `64 MiB`.
+- **Please use the default values** unless you're making a really heavy mod.
+- `lastError()` only shows the latest sync error, check before your next call.
 
-Threading contract:
+**Threading contract:**
 
 - All public APIs are main-thread only.
-- Async APIs read and compile off-thread, then queue execution on the main thread.
-- Off-thread query calls return default values and do not create the runtime.
+- Async APIs run off-thread, then execute on the main thread.
+- Off-thread queries return defaults and don't start the runtime.
 - Off-thread `setMemoryLimit` does nothing.
 
-Runtime contract:
+**Runtime contract:**
 
-- Panic is terminal for this process. Status becomes `Panicked`, readiness becomes false, and there is no in-process recovery path.
-- OOM is a shared-pool allocation denial. The allocator returns null when the shared memory limit is exceeded. Status does not change to `Panicked`.
-- Dependent mods must check `isReady()` or `status()` before execution and treat non-ready status as a shared platform failure.
-- Native C++ work called from Luau is outside Luau interrupt budgeting.
-- Geode hook registration is capped at 4096 live callbacks globally and 64 live callbacks per target. Removed callbacks stop counting after later registrations compact the registry.
+- Panic is fatal, status changes to `Panicked` with no recovery.
+- OOM means hitting the memory limit, allocator returns null, status stays unchanged.
+- Mods must check `isReady()` or `status()` before use, non-ready means platform failure.
+- Native C++ called from Luau isn't budgeted.
+- 4096 global max hooks and 64 per target. Removed hooks don't count after next registry compact.
 
-Dependency contract:
+**Dependency contract:**
 
 - LuauAPI public headers use Geode API types such as `geode::Result` and `geode::Task`.
-- Dependent mods must declare `imes.luauapi` in `mod.json`.
 - Build dependency pins are intentionally unchanged in this release.
 
 ## Getting types
@@ -73,7 +81,7 @@ Dependency contract:
 To get the `.d.luau` files, compile this mod on your pc.
 Then copy the `types` folder into your mod project root.
 
-**BTW IT TAKES LIKE FOREVER TO COMPILE**, if you don't have a workstation cpu.
+**BTW IT TAKES LIKE FOREVER TO COMPILE** if you don't have a workstation cpu.
 
 Also do the vscode `>Developer: Restart Extension Host` after doing stuff with luau lsp.
 

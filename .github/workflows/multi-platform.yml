@@ -7,6 +7,22 @@ on:
       - "**"
 
 jobs:
+  windows-tests:
+    name: Windows Tests
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build tests
+        uses: geode-sdk/build-geode-mod@main
+        with:
+          configure-args: -DLUAUAPI_BUILD_TESTS=ON
+          build-args: --target luauapi_tests
+
+      - name: Run tests
+        run: ctest --test-dir build --output-on-failure
+
   build:
     strategy:
       fail-fast: false

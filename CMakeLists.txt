@@ -169,11 +169,6 @@ set(LUAUAPI_GENERATED_BINDING_SOURCES ${LUAUAPI_GENERATED_BINDINGS})
 list(FILTER LUAUAPI_GENERATED_BINDING_SOURCES INCLUDE REGEX "\\.cpp$")
 list(APPEND SOURCES ${LUAUAPI_GENERATED_BINDING_SOURCES})
 set_source_files_properties(${LUAUAPI_GENERATED_BINDING_SOURCES} PROPERTIES GENERATED TRUE)
-if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC" OR CMAKE_CXX_COMPILER MATCHES "clang-cl")
-    set_source_files_properties(${LUAUAPI_GENERATED_BINDING_SOURCES} PROPERTIES COMPILE_OPTIONS /wd4100)
-elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
-    set_source_files_properties(${LUAUAPI_GENERATED_BINDING_SOURCES} PROPERTIES COMPILE_OPTIONS -Wno-unused-parameter)
-endif()
 
 add_library(${PROJECT_NAME} SHARED ${SOURCES})
 add_dependencies(${PROJECT_NAME} luauapi_codegen)
@@ -185,14 +180,14 @@ target_include_directories(${PROJECT_NAME} PRIVATE include src ${LUAUAPI_GEN_DIR
 target_link_libraries(${PROJECT_NAME} Luau.VM Luau.Compiler Luau.Ast Luau.Require Luau.CodeGen)
 target_compile_definitions(${PROJECT_NAME} PRIVATE LUAUAPI_EXPORTING=1)
 
-if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC" OR CMAKE_CXX_COMPILER MATCHES "clang-cl")
-    target_compile_options(${PROJECT_NAME} PRIVATE /W4)
-elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
-    target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Wpedantic)
-endif()
-if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-    target_compile_options(${PROJECT_NAME} PRIVATE -Wno-gnu-zero-variadic-macro-arguments)
-endif()
+# if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC" OR CMAKE_CXX_COMPILER MATCHES "clang-cl")
+#     target_compile_options(${PROJECT_NAME} PRIVATE /W4)
+# elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+#     target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Wpedantic)
+# endif()
+# if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+#     target_compile_options(${PROJECT_NAME} PRIVATE -Wno-gnu-zero-variadic-macro-arguments)
+# endif()
 
 if(WIN32)
     if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC" OR CMAKE_CXX_COMPILER MATCHES "clang-cl")
@@ -214,6 +209,8 @@ if(LUAUAPI_BUILD_TESTS)
 
     add_executable(luauapi_tests
         tests/allocator_accounting_tests.cpp
+        tests/bytecode_cache_key_tests.cpp
+        tests/path_sandbox_tests.cpp
         tests/path_rules_tests.cpp
         tests/require_path_tests.cpp
     )

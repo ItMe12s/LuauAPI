@@ -1,5 +1,6 @@
 #include "Requirer.hpp"
 
+#include "BytecodeCacheKey.hpp"
 #include "PathSandbox.hpp"
 #include "RequirePath.hpp"
 #include "Runtime.hpp"
@@ -9,7 +10,6 @@
 #include <lualib.h>
 
 #include <cstring>
-#include <fmt/format.h>
 #include <functional>
 #include <string>
 #include <string_view>
@@ -25,19 +25,6 @@ namespace luax {
             std::memcpy(buffer, contents.c_str(), needed);
             *sizeOut = needed;
             return WRITE_SUCCESS;
-        }
-
-        std::string bytecodeCacheKey(std::filesystem::path const& path, std::string const& contents) {
-            std::error_code ec;
-            auto size = std::filesystem::file_size(path, ec);
-            if (ec) size = 0;
-
-            auto stamp = std::filesystem::last_write_time(path, ec);
-            auto stampTicks = ec ? 0 : stamp.time_since_epoch().count();
-
-            return fmt::format("{}|size={}|mtime={}|hash={}",
-                normalizedPathString(path), size, stampTicks,
-                std::hash<std::string>{}(contents));
         }
 
         Requirer* self(void* ctx) { return static_cast<Requirer*>(ctx); }

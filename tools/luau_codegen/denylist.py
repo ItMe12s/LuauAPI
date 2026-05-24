@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+# Manually maintained, you can try removing some but it will probably break.
+
 INACCESSIBLE_METHODS = {
     ("CCActionManager", "update"),
     ("CCAnimationCache", "parseVersion1"),
