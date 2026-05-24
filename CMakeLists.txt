@@ -91,7 +91,6 @@ set(LUAUAPI_BINDINGS_DIR
     "${geode_bindings_SOURCE_DIR}/bindings/${LUAUAPI_GD_VERSION}"
     CACHE PATH "Path to Geode bindings/<gdver>/ dir")
 set(LUAUAPI_GEN_DIR "${CMAKE_BINARY_DIR}/luauapi-gen")
-set(LUAUAPI_GENERATED_CPP "${LUAUAPI_GEN_DIR}/src/luauapi_generated_bindings.cpp")
 set(LUAUAPI_TYPES_DIR "${CMAKE_CURRENT_SOURCE_DIR}/types")
 set(LUAUAPI_TYPES_FILES
     "${LUAUAPI_TYPES_DIR}/geode_cocos2d.d.luau"
@@ -103,13 +102,32 @@ if (NOT EXISTS "${LUAUAPI_BINDINGS_DIR}/GeometryDash.bro")
     message(FATAL_ERROR "LuauAPI bindings dir missing: ${LUAUAPI_BINDINGS_DIR}")
 endif()
 
+execute_process(
+    COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_CURRENT_SOURCE_DIR}/tools/luau_codegen/codegen.py
+            --bindings ${LUAUAPI_BINDINGS_DIR}
+            --list-outputs
+            --platform ${LUAUAPI_CODEGEN_PLATFORM}
+    OUTPUT_VARIABLE LUAUAPI_GENERATED_BINDINGS_RAW
+    RESULT_VARIABLE LUAUAPI_LIST_OUTPUTS_RESULT
+    ERROR_VARIABLE LUAUAPI_LIST_OUTPUTS_ERROR
+)
+if (NOT LUAUAPI_LIST_OUTPUTS_RESULT EQUAL 0)
+    message(FATAL_ERROR "LuauAPI codegen --list-outputs failed: ${LUAUAPI_LIST_OUTPUTS_ERROR}")
+endif()
+string(REPLACE "\r" "" LUAUAPI_GENERATED_BINDINGS_RAW "${LUAUAPI_GENERATED_BINDINGS_RAW}")
+string(STRIP "${LUAUAPI_GENERATED_BINDINGS_RAW}" LUAUAPI_GENERATED_BINDINGS_RAW)
+string(REPLACE "\n" ";" LUAUAPI_GENERATED_BINDINGS "${LUAUAPI_GENERATED_BINDINGS_RAW}")
+list(FILTER LUAUAPI_GENERATED_BINDINGS EXCLUDE REGEX "^$")
+list(TRANSFORM LUAUAPI_GENERATED_BINDINGS PREPEND "${LUAUAPI_GEN_DIR}/")
+
 file(GLOB LUAUAPI_CODEGEN_PY CONFIGURE_DEPENDS
     ${CMAKE_CURRENT_SOURCE_DIR}/tools/luau_codegen/*.py)
 file(GLOB LUAUAPI_BRO_FILES CONFIGURE_DEPENDS
     ${LUAUAPI_BINDINGS_DIR}/*.bro)
 
 add_custom_command(
-    OUTPUT ${LUAUAPI_GENERATED_CPP} ${LUAUAPI_TYPES_FILES}
+    OUTPUT ${LUAUAPI_GENERATED_BINDINGS} ${LUAUAPI_TYPES_FILES}
     COMMAND ${Python3_EXECUTABLE}
             ${CMAKE_CURRENT_SOURCE_DIR}/tools/luau_codegen/codegen.py
             --bindings ${LUAUAPI_BINDINGS_DIR}
@@ -120,11 +138,13 @@ add_custom_command(
     COMMENT "LuauAPI Broma codegen"
     VERBATIM
 )
-add_custom_target(luauapi_codegen DEPENDS ${LUAUAPI_GENERATED_CPP} ${LUAUAPI_TYPES_FILES})
+add_custom_target(luauapi_codegen DEPENDS ${LUAUAPI_GENERATED_BINDINGS} ${LUAUAPI_TYPES_FILES})
 
 file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS src/*.cpp)
-list(APPEND SOURCES ${LUAUAPI_GENERATED_CPP})
-set_source_files_properties(${LUAUAPI_GENERATED_CPP} PROPERTIES GENERATED TRUE)
+set(LUAUAPI_GENERATED_BINDING_SOURCES ${LUAUAPI_GENERATED_BINDINGS})
+list(FILTER LUAUAPI_GENERATED_BINDING_SOURCES INCLUDE REGEX "\\.cpp$")
+list(APPEND SOURCES ${LUAUAPI_GENERATED_BINDING_SOURCES})
+set_source_files_properties(${LUAUAPI_GENERATED_BINDING_SOURCES} PROPERTIES GENERATED TRUE)
 
 add_library(${PROJECT_NAME} SHARED ${SOURCES})
 add_dependencies(${PROJECT_NAME} luauapi_codegen)
@@ -132,7 +152,7 @@ add_dependencies(${PROJECT_NAME} luauapi_codegen)
 setup_geode_mod(${PROJECT_NAME})
 
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_23)
-target_include_directories(${PROJECT_NAME} PRIVATE include src)
+target_include_directories(${PROJECT_NAME} PRIVATE include src ${LUAUAPI_GEN_DIR}/src)
 target_link_libraries(${PROJECT_NAME} Luau.VM Luau.Compiler Luau.Ast Luau.Require Luau.CodeGen)
 target_compile_definitions(${PROJECT_NAME} PRIVATE LUAUAPI_EXPORTING=1)
 
