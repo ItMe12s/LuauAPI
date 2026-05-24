@@ -70,13 +70,13 @@ TEST_CASE("canonical root accepts directories and rejects empty roots") {
 
 TEST_CASE("script file read enforces maximum source size") {
     auto dir = makeTempDir();
-    auto small = dir / "Small.luau";
+    auto smallFile = dir / "Small.luau";
     auto large = dir / "Large.luau";
 
-    writeFile(small, "return 1");
+    writeFile(smallFile, "return 1");
     writeOversizedFile(large);
 
-    auto smallRead = luax::readScriptFile(small);
+    auto smallRead = luax::readScriptFile(smallFile);
     REQUIRE(smallRead.isOk());
     REQUIRE(smallRead.unwrap() == "return 1");
 

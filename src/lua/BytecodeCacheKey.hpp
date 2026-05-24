@@ -2,6 +2,10 @@
 
 #include "PathSandbox.hpp"
 
+#include <Geode/utils/general.hpp>
+
+#include <chrono>
+#include <cstdint>
 #include <filesystem>
 #include <functional>
 #include <string>
@@ -14,11 +18,15 @@ namespace luax {
         if (ec) size = 0;
 
         auto stamp = std::filesystem::last_write_time(path, ec);
-        auto stampTicks = ec ? 0 : stamp.time_since_epoch().count();
+        std::int64_t stampNanoseconds = 0;
+        if (!ec) {
+            stampNanoseconds = static_cast<std::int64_t>(
+                std::chrono::duration_cast<std::chrono::nanoseconds>(stamp.time_since_epoch()).count());
+        }
 
         return normalizedPathString(path)
-            + "|size=" + std::to_string(size)
-            + "|mtime=" + std::to_string(stampTicks)
-            + "|hash=" + std::to_string(std::hash<std::string>{}(contents));
+            + "|size=" + geode::utils::numToString(size)
+            + "|mtime=" + geode::utils::numToString(stampNanoseconds)
+            + "|hash=" + geode::utils::numToString(std::hash<std::string>{}(contents));
     }
 }
