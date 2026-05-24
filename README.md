@@ -1,7 +1,6 @@
 # Setup your visual studio
 
 You would want autocomplete and help from the lsp.
-
 Use the `Luau Language Server` extension by JohnnyMorganz.
 
 ## Getting types

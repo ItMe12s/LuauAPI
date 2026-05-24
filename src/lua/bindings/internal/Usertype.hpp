@@ -18,7 +18,7 @@
 namespace luax {
     struct UserdataBlock {
         cocos2d::CCObject* ptr;
-        // Bit 0 set means Lua holds a retain on the object and the dtor must release it.
+        // Bit 0, Lua-retained, dtor must release.
         std::uint32_t flags;
     };
 
@@ -67,7 +67,6 @@ namespace luax {
         static void registerType(lua_State* L, char const* nm, std::initializer_list<std::uint32_t> baseTags = {}) {
             auto& reg = detail::UsertypeRegistry::get();
             auto& info = reg.infoFor(std::type_index(typeid(T)));
-            // Force a tag allocation in case infoFor returned a freshly seeded record.
             (void)reg.tagFor(std::type_index(typeid(T)));
             info.name = nm;
             info.mtName = std::string("luax:") + nm;

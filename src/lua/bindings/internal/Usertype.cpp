@@ -58,8 +58,7 @@ namespace luax::detail {
     void chainMethodTable(lua_State* L, TypeInfo const& info, std::uint32_t baseTag) {
         auto const* base = UsertypeRegistry::get().findByTag(baseTag);
         if (!base) return;
-        // Gives T's method table a metatable that falls back to the base's method table.
-        // Missing keys on a derived instance then walk up to inherited methods.
+        // Inherit methods from base.
         luaL_getmetatable(L, info.mtName.c_str());
         lua_getfield(L, -1, "__index");
         luaL_getmetatable(L, base->mtName.c_str());

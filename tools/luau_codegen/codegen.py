@@ -124,7 +124,9 @@ def main(argv: List[str]) -> int:
 
     root = _collect(args.bindings)
     if not root.classes:
-        print(f"[luauapi] no Broma classes parsed from {args.bindings}", file=sys.stderr)
+        print(
+            f"[luauapi] no Broma classes parsed from {args.bindings}", file=sys.stderr
+        )
         return 3
 
     cxx, skipped = emit_luau_bindings.emit(root, args.platform)

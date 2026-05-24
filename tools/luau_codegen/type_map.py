@@ -129,7 +129,9 @@ def classify_return(t: str, object_classes: Dict[str, Class]) -> Optional[TypeIn
     if n.endswith("*"):
         cls = resolve_object_class(n, object_classes)
         if cls:
-            return TypeInfo("object", cxx_class_name(cls) + "*", f"{cls.name}?", cls.name)
+            return TypeInfo(
+                "object", cxx_class_name(cls) + "*", f"{cls.name}?", cls.name
+            )
     return None
 
 

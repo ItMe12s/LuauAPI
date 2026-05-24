@@ -6,8 +6,7 @@
 #include <string_view>
 
 namespace luax {
-    // Walks a dotted path starting from globals and creates a table for any segment
-    // that is missing. The final table is left on top of the stack for the caller.
+    // Gets or creates a table at a dotted global path, leaves it on top.
     inline void getOrCreateTable(lua_State* L, std::string_view path) {
         lua_pushvalue(L, LUA_GLOBALSINDEX);
         size_t start = 0;

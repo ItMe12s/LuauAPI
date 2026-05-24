@@ -59,7 +59,17 @@ _PLATFORMS = ("win", "imac", "m1", "ios", "android", "android32", "android64", "
 _LINE_COMMENT = re.compile(r"//[^\n]*")
 _BLOCK_COMMENT = re.compile(r"/\*.*?\*/", re.DOTALL)
 _QUALIFIERS = {"unsigned", "signed", "const", "volatile", "long", "short"}
-_PRIMITIVES = {"int", "char", "short", "long", "float", "double", "bool", "void", "auto"}
+_PRIMITIVES = {
+    "int",
+    "char",
+    "short",
+    "long",
+    "float",
+    "double",
+    "bool",
+    "void",
+    "auto",
+}
 
 
 def _strip_comments(text: str) -> str:
@@ -119,7 +129,9 @@ def _split_arg(arg: str) -> Arg:
         return Arg(head, matched)
 
     head_tokens = head.split()
-    if all(t in _QUALIFIERS for t in head_tokens) and matched in (_QUALIFIERS | _PRIMITIVES):
+    if all(t in _QUALIFIERS for t in head_tokens) and matched in (
+        _QUALIFIERS | _PRIMITIVES
+    ):
         return Arg(arg, "")
     return Arg(head, matched)
 

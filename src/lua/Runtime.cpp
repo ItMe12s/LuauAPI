@@ -400,7 +400,7 @@ namespace luax {
         if (self) {
             std::size_t delta = (nsize > osize) ? (nsize - osize) : 0;
             if (delta && self->m_memoryUsage + delta > self->m_memoryLimit) {
-                // Returning null surfaces as a recoverable Luau OOM through pcall.
+                // Return null to signal OOM to Luau.
                 return nullptr;
             }
         }
@@ -421,7 +421,7 @@ namespace luax {
         if (!self || self->m_scriptBudgetMs <= 0) return;
         if (std::chrono::steady_clock::now() >= self->m_scriptDeadline) {
             int budget = self->m_scriptBudgetMs;
-            // Zero the budget so the error path does not re-enter this callback.
+            // Prevent re-entrance into this callback.
             self->m_scriptBudgetMs = 0;
             luaL_errorL(L, "luax: script exceeded %d ms budget", budget);
         }

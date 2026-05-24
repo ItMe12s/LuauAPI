@@ -76,9 +76,7 @@ def object_classes(root: Root) -> List[Class]:
         return False
 
     classes = [
-        cls
-        for cls in root.classes
-        if not is_namespace_class(cls) and is_object(cls)
+        cls for cls in root.classes if not is_namespace_class(cls) and is_object(cls)
     ]
 
     def depth(cls: Class) -> int:
