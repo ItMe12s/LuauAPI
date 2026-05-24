@@ -1,5 +1,6 @@
 #include <imes.luauapi/LuauAPI.hpp>
 
+#include "lua/Config.hpp"
 #include "lua/Runtime.hpp"
 
 #include <fstream>
@@ -17,11 +18,17 @@ namespace {
     }
 
     std::optional<std::string> readFileToString(std::filesystem::path const& path) {
+        std::error_code ec;
+        auto size = std::filesystem::file_size(path, ec);
+        if (ec || size > luax::kMaxScriptBytes) return std::nullopt;
+
         std::ifstream file(path, std::ios::binary);
         if (!file) return std::nullopt;
         std::ostringstream buffer;
         buffer << file.rdbuf();
-        return buffer.str();
+        auto contents = buffer.str();
+        if (contents.size() > luax::kMaxScriptBytes) return std::nullopt;
+        return contents;
     }
 
     std::string normalizedPathString(std::filesystem::path const& path) {
@@ -163,6 +170,12 @@ namespace imes::luauapi {
             return geode::Err("script file not found: " + normalizedPathString(path));
         }
 
+        std::error_code sizeEc;
+        auto fileSize = std::filesystem::file_size(path, sizeEc);
+        if (!sizeEc && fileSize > luax::kMaxScriptBytes) {
+            return geode::Err("script file exceeds maximum size");
+        }
+
         auto source = readFileToString(path);
         if (!source) {
             return geode::Err("script file cannot be read: " + normalizedPathString(path));
@@ -198,7 +211,16 @@ namespace imes::luauapi {
         auto chunkPath = chunkResult.unwrap();
         auto chunk = "@" + normalizedPathString(chunkPath);
 
+        if (source.size() > luax::kMaxScriptBytes) {
+            return geode::Err("script exceeds maximum size");
+        }
+
         auto& runtime = luax::Runtime::instance();
+        if (!runtime.ready()) {
+            auto const& err = runtime.lastError();
+            return geode::Err(!err.empty() ? err : "luau runtime not ready");
+        }
+
         luax::Runtime::ResourcesRootScope rootScope(runtime, root);
 
         if (!runtime.runScript(source, chunk, deadlineMs)) {

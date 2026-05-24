@@ -1,6 +1,7 @@
 #include "Binding.hpp"
 
 #include <Geode/Geode.hpp>
+#include <fmt/format.h>
 #include <algorithm>
 #include <exception>
 #include <vector>
@@ -17,7 +18,7 @@ namespace luax {
         bindings().push_back(binding);
     }
 
-    void applyAllBindings(lua_State* L) {
+    std::optional<std::string> applyAllBindings(lua_State* L) {
         auto ordered = bindings();
         std::stable_sort(ordered.begin(), ordered.end(), [](auto const& left, auto const& right) {
             return left.priority < right.priority;
@@ -27,10 +28,15 @@ namespace luax {
             try {
                 binding.fn(L);
             } catch (std::exception const& e) {
-                geode::log::error("[lua:bind:{}] {}", binding.name, e.what());
+                auto msg = fmt::format("[lua:bind:{}] {}", binding.name, e.what());
+                geode::log::error("{}", msg);
+                return msg;
             } catch (...) {
-                geode::log::error("[lua:bind:{}] unknown exception", binding.name);
+                auto msg = fmt::format("[lua:bind:{}] unknown exception", binding.name);
+                geode::log::error("{}", msg);
+                return msg;
             }
         }
+        return std::nullopt;
     }
 }

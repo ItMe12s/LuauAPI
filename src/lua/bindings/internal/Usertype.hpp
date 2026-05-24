@@ -13,6 +13,7 @@
 #include <type_traits>
 #include <typeindex>
 #include <typeinfo>
+#include <unordered_map>
 #include <vector>
 
 namespace luax {
@@ -126,8 +127,11 @@ namespace luax {
         static void pushOwned(lua_State* L, T* obj) {
             if (!obj) { lua_pushnil(L); return; }
             auto const& info = detail::UsertypeRegistry::get().infoFor(std::type_index(typeid(T)));
-            retainLuaRef(static_cast<cocos2d::CCObject*>(obj), info.name.c_str());
             detail::pushUserdata(L, static_cast<cocos2d::CCObject*>(obj), info, true);
+            if (!retainLuaRef(static_cast<cocos2d::CCObject*>(obj), info.name.c_str())) {
+                lua_pop(L, 1);
+                lua_pushnil(L);
+            }
         }
 
         static void pushBorrowed(lua_State* L, T* obj) {

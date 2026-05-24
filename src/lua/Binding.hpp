@@ -2,6 +2,9 @@
 
 #include <lua.h>
 
+#include <optional>
+#include <string>
+
 namespace luax {
     using Registrar = void(*)(lua_State*);
 
@@ -12,7 +15,7 @@ namespace luax {
     };
 
     void registerBinding(Binding const& binding);
-    void applyAllBindings(lua_State* L);
+    std::optional<std::string> applyAllBindings(lua_State* L);
 }
 
 #define LUAX_BINDING_PRIORITY(NAME, FN, PRIO)                \

@@ -1,3 +1,5 @@
+-- Assuming you already know this (just finish volume 1) https://docs.geode-sdk.org/handbook/vol1/chap1_7/
+
 local menuLayerInit = geode.hook("geode.gd.MenuLayer:init/0", function(ctx)
     if not ctx.result then return false end
 

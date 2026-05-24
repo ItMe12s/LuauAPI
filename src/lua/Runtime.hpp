@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Config.hpp"
+
 #include <lua.h>
 #include <lualib.h>
 
@@ -38,7 +40,7 @@ namespace luax {
         bool runScript(std::string_view src, std::string_view chunkName, int deadlineMs = 250);
         bool protectedCall(int nargs, int nresults, std::string_view context, int deadlineMs = 50);
         void runOnMain(std::function<void()> fn);
-        void assertMainThread() const;
+        bool assertMainThread() const;
 
         class ResourcesRootScope final {
         public:
@@ -89,13 +91,14 @@ namespace luax {
         int m_scriptBudgetMs = 0;
 
         std::size_t m_memoryUsage = 0;
-        std::size_t m_memoryLimit = 64 * 1024 * 1024;
+        std::size_t m_memoryLimit = kDefaultMemoryLimitBytes;
 
         int m_tracebackRef = 0;
 
         bool m_codegenEnabled = false;
         std::filesystem::path m_resourcesRoot;
         std::string m_lastError;
+        std::string m_initError;
 
         std::unordered_map<std::string, std::string> m_bytecodeCache;
 

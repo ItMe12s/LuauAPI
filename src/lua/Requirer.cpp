@@ -1,5 +1,6 @@
 #include "Requirer.hpp"
 
+#include "Config.hpp"
 #include "Runtime.hpp"
 
 #include <Luau/CodeGen.h>
@@ -28,11 +29,17 @@ namespace luax {
         }
 
         std::optional<std::string> readFileToString(std::filesystem::path const& path) {
+            std::error_code ec;
+            auto size = std::filesystem::file_size(path, ec);
+            if (ec || size > kMaxScriptBytes) return std::nullopt;
+
             std::ifstream file(path, std::ios::binary);
             if (!file) return std::nullopt;
             std::ostringstream buffer;
             buffer << file.rdbuf();
-            return buffer.str();
+            auto contents = buffer.str();
+            if (contents.size() > kMaxScriptBytes) return std::nullopt;
+            return contents;
         }
 
         std::string normalizedPathString(std::filesystem::path const& path) {
@@ -127,6 +134,12 @@ namespace luax {
             Requirer* req = self(ctx);
 
             std::filesystem::path filePath(loadname);
+            std::error_code ec;
+            auto fileSize = std::filesystem::file_size(filePath, ec);
+            if (ec || fileSize > kMaxScriptBytes) {
+                luaL_error(L, "module '%s' exceeds maximum size or cannot be read", loadname);
+            }
+
             auto contents = readFileToString(filePath);
             if (!contents) {
                 luaL_error(L, "could not read module '%s'", loadname);

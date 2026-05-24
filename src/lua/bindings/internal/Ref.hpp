@@ -2,8 +2,8 @@
 
 #include "../../Runtime.hpp"
 
+#include <Geode/Geode.hpp>
 #include <cocos2d.h>
-#include <stdexcept>
 #include <string>
 #include <unordered_map>
 
@@ -13,8 +13,8 @@ namespace luax {
         return *value;
     }
 
-    inline void assertMainThread() {
-        luax::Runtime::instance().assertMainThread();
+    inline bool assertMainThread() {
+        return luax::Runtime::instance().assertMainThread();
     }
 
     inline void releaseLuaRetain(cocos2d::CCObject* object, char const* method, bool explicitRelease) {
@@ -23,7 +23,7 @@ namespace luax {
         auto found = retains.find(object);
         if (found == retains.end() || found->second == 0) {
             if (explicitRelease) {
-                throw std::runtime_error(std::string(method) + " has no Lua-owned retain");
+                geode::log::error("[lua:{}] has no Lua-owned retain", method);
             }
             return;
         }
@@ -34,15 +34,19 @@ namespace luax {
         object->release();
     }
 
-    inline void retainLuaRef(cocos2d::CCObject* object, char const* method) {
-        if (!object) throw std::runtime_error(std::string(method) + " expected CCObject");
-        assertMainThread();
+    inline bool retainLuaRef(cocos2d::CCObject* object, char const* method) {
+        if (!object) {
+            geode::log::error("[lua:{}] expected CCObject", method);
+            return false;
+        }
+        if (!assertMainThread()) return false;
         object->retain();
         luaRetains()[object] += 1;
+        return true;
     }
 
     inline void releaseLuaRef(cocos2d::CCObject* object, char const* method) {
-        assertMainThread();
+        if (!assertMainThread()) return;
         releaseLuaRetain(object, method, true);
     }
 }

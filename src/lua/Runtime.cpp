@@ -11,7 +11,6 @@
 #include <lua.h>
 #include <lualib.h>
 
-#include <cassert>
 #include <cstdlib>
 #include <cstring>
 #include <exception>
@@ -105,8 +104,9 @@ namespace luax {
     Runtime::Runtime() : m_ownerThread(mainThreadIdStorage() == std::thread::id{} ? std::this_thread::get_id() : mainThreadIdStorage()) {
         m_state = lua_newstate(&Runtime::boundedAlloc, this);
         if (!m_state) {
-            geode::log::error("luau lua_newstate failed");
-            std::abort();
+            m_initError = "luau lua_newstate failed";
+            geode::log::error("{}", m_initError);
+            return;
         }
 
         luaL_openlibs(m_state);
@@ -130,7 +130,12 @@ namespace luax {
         m_requirer = std::make_unique<Requirer>(*this);
         luaopen_require(m_state, &Requirer::initConfig, m_requirer.get());
 
-        applyAllBindings(m_state);
+        if (auto bindError = applyAllBindings(m_state)) {
+            m_initError = "luau binding failed: " + *bindError;
+            setLastError(m_initError);
+            geode::log::error("{}", m_initError);
+            return;
+        }
 
         // Mark globals as safe for fastcall, must be last.
         lua_pushvalue(m_state, LUA_GLOBALSINDEX);
@@ -155,7 +160,7 @@ namespace luax {
     }
 
     void Runtime::registerShutdownHook(std::function<void()> fn) {
-        assertMainThread();
+        if (!assertMainThread()) return;
         if (fn) m_shutdownHooks.push_back(std::move(fn));
     }
 
@@ -188,7 +193,7 @@ namespace luax {
     }
 
     lua_State* Runtime::state() {
-        assertMainThread();
+        if (!assertMainThread()) return nullptr;
         return m_state;
     }
 
@@ -197,7 +202,7 @@ namespace luax {
     }
 
     void Runtime::setResourcesRoot(std::filesystem::path const& root) {
-        assertMainThread();
+        if (!assertMainThread()) return;
         m_resourcesRoot = root;
         if (m_requirer) {
             m_requirer->setResourcesRoot(m_resourcesRoot);
@@ -290,6 +295,10 @@ namespace luax {
             return cached->second;
         }
 
+        if (m_bytecodeCache.size() >= kMaxBytecodeCacheEntries) {
+            m_bytecodeCache.erase(m_bytecodeCache.begin());
+        }
+
         auto compileStart = std::chrono::steady_clock::now();
         Luau::CompileOptions opts;
         opts.optimizationLevel = 2;
@@ -304,7 +313,21 @@ namespace luax {
     }
 
     bool Runtime::runScript(std::string_view src, std::string_view chunkName, int deadlineMs) {
-        assertMainThread();
+        if (!assertMainThread()) {
+            setLastError("luau runtime accessed off main thread");
+            return false;
+        }
+        if (!ready() || !m_state) {
+            if (m_lastError.empty()) {
+                setLastError(m_initError.empty() ? "luau runtime not ready" : m_initError);
+            }
+            return false;
+        }
+        if (src.size() > kMaxScriptBytes) {
+            setLastError("script exceeds maximum size");
+            geode::log::error("luau script exceeds maximum size: {}", chunkName);
+            return false;
+        }
         clearLastError();
 
         std::string chunk(chunkName);
@@ -346,7 +369,14 @@ namespace luax {
     }
 
     bool Runtime::protectedCall(int nargs, int nresults, std::string_view context, int deadlineMs) {
-        assertMainThread();
+        if (!assertMainThread()) {
+            setLastError("luau runtime accessed off main thread");
+            return false;
+        }
+        if (!m_state) {
+            setLastError(m_initError.empty() ? "luau runtime not ready" : m_initError);
+            return false;
+        }
         int baseTop = lua_gettop(m_state) - nargs;
         if (nargs < 0 || baseTop < 1 || !lua_isfunction(m_state, baseTop)) {
             auto err = fmt::format("[{}] luau protectedCall missing function", context);
@@ -380,10 +410,17 @@ namespace luax {
         geode::queueInMainThread(std::move(fn));
     }
 
-    void Runtime::assertMainThread() const {
-#ifndef NDEBUG
-        assert(std::this_thread::get_id() == m_ownerThread);
-#endif
+    bool Runtime::assertMainThread() const {
+        auto const& registered = mainThreadIdStorage();
+        if (registered != std::thread::id{}) {
+            if (std::this_thread::get_id() == registered) {
+                return true;
+            }
+        } else if (std::this_thread::get_id() == m_ownerThread) {
+            return true;
+        }
+        geode::log::error("luau runtime accessed off main thread");
+        return false;
     }
 
     void* Runtime::boundedAlloc(void* ud, void* ptr, size_t osize, size_t nsize) {
@@ -391,7 +428,9 @@ namespace luax {
         if (nsize == 0) {
             if (ptr) {
                 if (self) {
-                    self->m_memoryUsage = osize > self->m_memoryUsage ? 0 : self->m_memoryUsage - osize;
+                    self->m_memoryUsage = osize <= self->m_memoryUsage
+                        ? self->m_memoryUsage - osize
+                        : 0;
                 }
                 std::free(ptr);
             }
@@ -400,17 +439,17 @@ namespace luax {
         if (self) {
             std::size_t delta = (nsize > osize) ? (nsize - osize) : 0;
             if (delta && self->m_memoryUsage + delta > self->m_memoryLimit) {
-                // Return null to signal OOM to Luau.
+                geode::log::error("luau memory limit exceeded ({} bytes)", self->m_memoryLimit);
                 return nullptr;
             }
         }
         void* out = std::realloc(ptr, nsize);
         if (!out) return nullptr;
         if (self) {
-            if (osize > self->m_memoryUsage) {
-                self->m_memoryUsage = nsize;
-            } else {
+            if (osize <= self->m_memoryUsage) {
                 self->m_memoryUsage = self->m_memoryUsage - osize + nsize;
+            } else {
+                self->m_memoryUsage = nsize;
             }
         }
         return out;
@@ -430,6 +469,11 @@ namespace luax {
     void Runtime::panicCallback(lua_State* L, int errcode) {
         char const* message = lua_tostring(L, -1);
         geode::log::error("[lua:panic code={}] {}", errcode, message ? message : "unknown panic");
-        std::abort();
+
+        auto* self = static_cast<Runtime*>(lua_callbacks(L)->userdata);
+        if (self) {
+            self->m_ready.store(false, std::memory_order_release);
+            self->setLastError(message ? message : "unknown lua panic");
+        }
     }
 }
