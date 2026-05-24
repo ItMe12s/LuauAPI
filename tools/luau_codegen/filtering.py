@@ -24,6 +24,14 @@ def platform_value(m: Method, target_platform: str) -> str:
     return ""
 
 
+def _is_link_platform(cls: Class, target_platform: str) -> bool:
+    for attr in cls.attributes:
+        if attr.startswith("link(") and attr.endswith(")"):
+            platforms = [p.strip() for p in attr[5:-1].split(",")]
+            return target_platform in platforms
+    return False
+
+
 def method_key(m: Method) -> str:
     return f"{m.name}({','.join(a.type for a in m.args)})"
 
@@ -45,9 +53,7 @@ def supported(
         return False, "operator"
     if status_for(m.platforms) == "Missing":
         return False, "missing-address"
-    if not platform_value(m, target_platform) and not cls.source.endswith(
-        "Cocos2d.bro"
-    ):
+    if not platform_value(m, target_platform) and not _is_link_platform(cls, target_platform):
         return False, f"not-linkable:{target_platform}"
     if classify_return(m.ret, objects) is None:
         return False, f"unsupported-return:{m.ret}"
