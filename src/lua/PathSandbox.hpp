@@ -29,8 +29,8 @@ namespace luax {
         }
 
         std::string contents(
-            std::istreambuf_iterator<char>(in),
-            std::istreambuf_iterator<char>()
+            (std::istreambuf_iterator<char>(in)),
+            std::istreambuf_iterator<char>{}
         );
         if (in.bad()) {
             return geode::Err("script cannot be read: " + normalizedPathString(path));
