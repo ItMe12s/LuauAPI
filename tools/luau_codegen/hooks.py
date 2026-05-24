@@ -266,6 +266,25 @@ def emit_hook_support() -> str:
         return false;
     }
 
+    void compactRemovedCallbacks(LuaHookState& state) {
+        std::size_t out = 0;
+        for (auto const& callback : state.callbacks) {
+            if (callback && !callback->removed) {
+                state.callbacks[out++] = callback;
+            }
+        }
+        state.callbacks.resize(out);
+    }
+
+    std::size_t compactAndCountLiveCallbacks() {
+        std::size_t total = 0;
+        for (auto& [_, state] : hookStates()) {
+            compactRemovedCallbacks(state);
+            total += state.callbacks.size();
+        }
+        return total;
+    }
+
     std::size_t hookHandleId(lua_State* L) {
         return static_cast<std::size_t>(lua_tointeger(L, lua_upvalueindex(1)));
     }
@@ -353,6 +372,14 @@ def emit_hook_support() -> str:
 
         auto& state = hookStates()[id];
         state.target = target;
+        auto liveTotal = compactAndCountLiveCallbacks();
+        if (liveTotal >= luax::kMaxHookCallbacksGlobal) {
+            luaL_error(L, "geode.hook global callback limit exceeded");
+        }
+        if (state.callbacks.size() >= luax::kMaxHookCallbacksPerTarget) {
+            luaL_error(L, "geode.hook target callback limit exceeded for %s", id);
+        }
+
         if (!state.hook) {
             auto result = target->createHook(target->displayName);
             if (result.isErr()) {

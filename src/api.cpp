@@ -325,6 +325,11 @@ namespace imes::luauapi {
         return runtime ? runtime->memoryLimit() : 0;
     }
 
+    void setMemoryLimit(std::size_t bytes) {
+        if (!luax::Runtime::isMainThread()) return;
+        luax::Runtime::instance().setMemoryLimit(bytes);
+    }
+
     bool codegenEnabled() {
         if (!luax::Runtime::isMainThread()) return false;
         auto* runtime = luax::Runtime::getIfInitialized();

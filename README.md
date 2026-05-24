@@ -38,11 +38,21 @@ Available calls:
 | `lastError()`                                                       | Returns last synchronous runtime error string.                       |
 | `memoryUsage()`                                                     | Shared VM allocator usage in bytes.                                  |
 | `memoryLimit()`                                                     | Shared VM allocator limit in bytes.                                  |
+| `setMemoryLimit(bytes)`                                             | Sets shared VM allocator limit, clamped to supported range.          |
 | `codegenEnabled()`                                                  | Whether Luau native codegen is active.                               |
 
 `deadlineMs <= 0` disables the Luau CPU budget for that execution.
 Default script deadline is `250 ms`. Generated hook callbacks use `50 ms`.
-Please use the default values.
+`setMemoryLimit` clamps to `16 MiB..512 MiB`. Default memory limit is `64 MiB`.
+**Please use the default values** unless you're making a really heavy mod.
+`lastError()` is a synchronous side channel. Read it before the next LuauAPI call. Reentrant calls can replace it.
+
+Threading contract:
+
+- All public APIs are main-thread only.
+- Async APIs read and compile off-thread, then queue execution on the main thread.
+- Off-thread query calls return default values and do not create the runtime.
+- Off-thread `setMemoryLimit` does nothing.
 
 Runtime contract:
 
@@ -50,6 +60,13 @@ Runtime contract:
 - OOM is a shared-pool allocation denial. The allocator returns null when the shared memory limit is exceeded. Status does not change to `Panicked`.
 - Dependent mods must check `isReady()` or `status()` before execution and treat non-ready status as a shared platform failure.
 - Native C++ work called from Luau is outside Luau interrupt budgeting.
+- Geode hook registration is capped at 4096 live callbacks globally and 64 live callbacks per target. Removed callbacks stop counting after later registrations compact the registry.
+
+Dependency contract:
+
+- LuauAPI public headers use Geode API types such as `geode::Result` and `geode::Task`.
+- Dependent mods must declare `imes.luauapi` in `mod.json`.
+- Build dependency pins are intentionally unchanged in this release.
 
 ## Getting types
 
