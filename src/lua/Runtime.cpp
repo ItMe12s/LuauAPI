@@ -1,5 +1,6 @@
 #include "Runtime.hpp"
 
+#include "AllocatorAccounting.hpp"
 #include "Binding.hpp"
 #include "PathSandbox.hpp"
 #include "Requirer.hpp"
@@ -478,13 +479,7 @@ namespace luax {
 
     void Runtime::setMemoryLimit(std::size_t bytes) {
         if (!assertMainThread()) return;
-        if (bytes < kMinMemoryLimitBytes) {
-            m_memoryLimit = kMinMemoryLimitBytes;
-        } else if (bytes > kMaxMemoryLimitBytes) {
-            m_memoryLimit = kMaxMemoryLimitBytes;
-        } else {
-            m_memoryLimit = bytes;
-        }
+        m_memoryLimit = clampMemoryLimit(bytes);
     }
 
     void* Runtime::boundedAlloc(void* ud, void* ptr, size_t osize, size_t nsize) {
@@ -492,17 +487,14 @@ namespace luax {
         if (nsize == 0) {
             if (ptr) {
                 if (self) {
-                    self->m_memoryUsage = osize <= self->m_memoryUsage
-                        ? self->m_memoryUsage - osize
-                        : 0;
+                    self->m_memoryUsage = allocatorUsageAfterFree(self->m_memoryUsage, osize);
                 }
                 std::free(ptr);
             }
             return nullptr;
         }
         if (self) {
-            std::size_t delta = (nsize > osize) ? (nsize - osize) : 0;
-            if (delta && self->m_memoryUsage + delta > self->m_memoryLimit) {
+            if (!allocatorCanReallocate(self->m_memoryUsage, self->m_memoryLimit, osize, nsize)) {
                 geode::log::error("luau memory limit exceeded ({} bytes)", self->m_memoryLimit);
                 return nullptr;
             }
@@ -510,11 +502,7 @@ namespace luax {
         void* out = std::realloc(ptr, nsize);
         if (!out) return nullptr;
         if (self) {
-            if (osize <= self->m_memoryUsage) {
-                self->m_memoryUsage = self->m_memoryUsage - osize + nsize;
-            } else {
-                self->m_memoryUsage = nsize;
-            }
+            self->m_memoryUsage = allocatorUsageAfterReallocate(self->m_memoryUsage, osize, nsize);
         }
         return out;
     }

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Config.hpp"
+#include "PathRules.hpp"
 
 #include <Geode/utils/file.hpp>
 #include <Geode/utils/string.hpp>
@@ -28,30 +29,23 @@ namespace luax {
 
     inline bool escapesRoot(std::filesystem::path const& rel) {
         auto s = normalizedPathString(rel);
-        return rel.empty() || s == ".." || s.rfind("../", 0) == 0;
+        return rel.empty() || escapedRelativePathText(s);
     }
 
     inline bool pathInsideRoot(std::filesystem::path const& path, std::filesystem::path const& root) {
-        std::error_code ec;
-        auto rel = std::filesystem::relative(path, root, ec);
-        return !ec && !escapesRoot(rel);
+        return pathInsideRootValue(path, root);
     }
 
     inline bool hasLuauExtension(std::filesystem::path const& path) {
-        return path.extension() == ".luau";
+        return hasLuauExtensionValue(path);
     }
 
     inline bool hasUnsupportedExtension(std::filesystem::path const& path) {
-        auto ext = path.extension();
-        return !ext.empty() && ext != ".luau";
+        return hasUnsupportedExtensionValue(path);
     }
 
     inline bool isFlatResourcePath(std::filesystem::path const& path) {
-        auto normalized = path.lexically_normal();
-        return normalized == normalized.filename()
-            && normalized != "."
-            && normalized != ".."
-            && !normalized.empty();
+        return isFlatResourcePathValue(path);
     }
 
     inline geode::Result<std::filesystem::path> normalizeVirtualPath(std::string_view rawChunkName) {

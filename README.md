@@ -150,3 +150,8 @@ Add `Bootstrap.luau` to your `mod.json` resources so Geode packages it as a runt
 ```
 
 `runFile(Mod::get()->getResourcesDir(), "Bootstrap.luau")` expects the script as a flat resource name.
+
+## Development checks
+
+To run optional host tests, build with `-DLUAUAPI_BUILD_TESTS=ON` and run `luauapi_tests` or CTest.
+Manual Geode testing is still needed.

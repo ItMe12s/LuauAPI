@@ -12,6 +12,9 @@ set(CMAKE_CXX_VISIBILITY_PRESET hidden)
 project(LuauAPI VERSION 1.0.0)
 
 include(FetchContent)
+include(CTest)
+
+option(LUAUAPI_BUILD_TESTS "Build LuauAPI host unit tests" OFF)
 
 set(LUAU_BUILD_CLI   OFF CACHE BOOL "" FORCE)
 set(LUAU_BUILD_TESTS OFF CACHE BOOL "" FORCE)
@@ -24,6 +27,27 @@ FetchContent_Declare(
     GIT_TAG        0.722
 )
 FetchContent_MakeAvailable(luau)
+
+foreach(LUAU_TARGET
+    Luau.Common
+    Luau.Ast
+    Luau.Bytecode
+    Luau.Compiler
+    Luau.Config
+    Luau.Analysis
+    Luau.CodeGen
+    Luau.VM
+    Luau.Require
+)
+    if (TARGET ${LUAU_TARGET})
+        get_target_property(LUAU_PUBLIC_INCLUDES ${LUAU_TARGET} INTERFACE_INCLUDE_DIRECTORIES)
+        if (LUAU_PUBLIC_INCLUDES)
+            set_target_properties(${LUAU_TARGET} PROPERTIES
+                INTERFACE_SYSTEM_INCLUDE_DIRECTORIES "${LUAU_PUBLIC_INCLUDES}"
+            )
+        endif()
+    endif()
+endforeach()
 
 FetchContent_Declare(
     geode_bindings
@@ -145,6 +169,11 @@ set(LUAUAPI_GENERATED_BINDING_SOURCES ${LUAUAPI_GENERATED_BINDINGS})
 list(FILTER LUAUAPI_GENERATED_BINDING_SOURCES INCLUDE REGEX "\\.cpp$")
 list(APPEND SOURCES ${LUAUAPI_GENERATED_BINDING_SOURCES})
 set_source_files_properties(${LUAUAPI_GENERATED_BINDING_SOURCES} PROPERTIES GENERATED TRUE)
+if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC" OR CMAKE_CXX_COMPILER MATCHES "clang-cl")
+    set_source_files_properties(${LUAUAPI_GENERATED_BINDING_SOURCES} PROPERTIES COMPILE_OPTIONS /wd4100)
+elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+    set_source_files_properties(${LUAUAPI_GENERATED_BINDING_SOURCES} PROPERTIES COMPILE_OPTIONS -Wno-unused-parameter)
+endif()
 
 add_library(${PROJECT_NAME} SHARED ${SOURCES})
 add_dependencies(${PROJECT_NAME} luauapi_codegen)
@@ -156,10 +185,43 @@ target_include_directories(${PROJECT_NAME} PRIVATE include src ${LUAUAPI_GEN_DIR
 target_link_libraries(${PROJECT_NAME} Luau.VM Luau.Compiler Luau.Ast Luau.Require Luau.CodeGen)
 target_compile_definitions(${PROJECT_NAME} PRIVATE LUAUAPI_EXPORTING=1)
 
+if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC" OR CMAKE_CXX_COMPILER MATCHES "clang-cl")
+    target_compile_options(${PROJECT_NAME} PRIVATE /W4)
+elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+    target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Wpedantic)
+endif()
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    target_compile_options(${PROJECT_NAME} PRIVATE -Wno-gnu-zero-variadic-macro-arguments)
+endif()
+
 if(WIN32)
     if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC" OR CMAKE_CXX_COMPILER MATCHES "clang-cl")
         target_compile_options(${PROJECT_NAME} PRIVATE /bigobj)
     elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
         target_compile_options(${PROJECT_NAME} PRIVATE -Wa,-mbig-obj)
     endif()
+endif()
+
+if(LUAUAPI_BUILD_TESTS)
+    enable_testing()
+
+    FetchContent_Declare(
+        Catch2
+        GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+        GIT_TAG        v3.15.0
+    )
+    FetchContent_MakeAvailable(Catch2)
+
+    add_executable(luauapi_tests
+        tests/allocator_accounting_tests.cpp
+        tests/path_rules_tests.cpp
+        tests/require_path_tests.cpp
+    )
+    target_compile_features(luauapi_tests PRIVATE cxx_std_23)
+    target_include_directories(luauapi_tests PRIVATE src)
+    target_link_libraries(luauapi_tests PRIVATE Catch2::Catch2WithMain geode-sdk)
+
+    list(APPEND CMAKE_MODULE_PATH ${catch2_SOURCE_DIR}/extras)
+    include(Catch)
+    catch_discover_tests(luauapi_tests)
 endif()

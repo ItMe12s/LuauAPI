@@ -1,6 +1,7 @@
 #include "Requirer.hpp"
 
 #include "PathSandbox.hpp"
+#include "RequirePath.hpp"
 #include "Runtime.hpp"
 
 #include <Luau/CodeGen.h>
@@ -42,8 +43,7 @@ namespace luax {
         Requirer* self(void* ctx) { return static_cast<Requirer*>(ctx); }
 
         bool is_require_allowed(lua_State*, void*, char const* requirer_chunkname) {
-            if (!requirer_chunkname) return false;
-            return requirer_chunkname[0] == '@';
+            return requirer_chunkname && canRequireFromChunk(requirer_chunkname);
         }
 
         luarequire_NavigateResult reset(lua_State*, void* ctx, char const* requirer_chunkname) {
@@ -198,12 +198,9 @@ namespace luax {
     }
 
     luarequire_NavigateResult Requirer::toChild(char const* name) {
-        if (!name || !*name) return NAVIGATE_NOT_FOUND;
-        std::string_view sv = name;
-        if (sv.find('/') != std::string_view::npos || sv.find('\\') != std::string_view::npos || sv == "..") {
+        if (!name || !isRequireChildNameAllowed(name)) {
             return NAVIGATE_NOT_FOUND;
         }
-        if (!isFlatResourcePath(std::filesystem::path(name))) return NAVIGATE_NOT_FOUND;
         if (m_current != m_root) return NAVIGATE_NOT_FOUND;
         auto next = (m_root / name).lexically_normal();
         m_current = next;
@@ -217,9 +214,7 @@ namespace luax {
     }
 
     std::filesystem::path Requirer::modulePath() const {
-        auto path = m_current;
-        path += ".luau";
-        return path;
+        return requireModulePath(m_current);
     }
 
     std::string Requirer::chunkname() const {
