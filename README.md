@@ -6,8 +6,22 @@ Before you start, Luau doesn't mean you can just not do memory management.
 You'll still have to write performant code and now with Luau typing on top.
 Also don't vibecode (duh).
 
-Note that platform like iOS might be missing some bindings.
-*(You wouldn't notice it anyunless you're doing really niche and specific stuff).*
+## Platform bindings
+
+Generated API differs per platform. Build for your target before copying `types/`.
+
+| Platform       | Bindings                                |
+| -------------- | --------------------------------------- |
+| **Windows**    | Full API + `geode.hook`                 |
+| **Android**    | Most methods, no hooks                  |
+| **iOS/macOS**  | ~None (Apple `link` filter applies)     |
+
+Cross-platform Luau scripts are not yet supported. You'll have to do manual hooking.
+I'll add support later. This is very-very WIP.
+
+- Windows uses `win 0x...` addresses. (Full support, make anything you want).
+- Android uses `[[link(android)]]`. (Almost full support, you'll have to check yourself).
+- iOS/macOS only emit `link`-tagged symbols. (You ain't doing shit except basic Luau stuff).
 
 ## Setup your visual studio
 
@@ -81,7 +95,7 @@ Available calls:
 
 ## Getting types
 
-To get the `.d.luau` files, compile this mod on your pc.
+To get the `.d.luau` files, compile this mod on your PC.
 Then copy the `types` folder into your mod project root.
 
 **BTW IT TAKES LIKE FOREVER TO COMPILE** if you don't have a workstation cpu.
