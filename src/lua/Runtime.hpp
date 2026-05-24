@@ -2,6 +2,7 @@
 
 #include "Config.hpp"
 
+#include <Geode/Geode.hpp>
 #include <lua.h>
 #include <lualib.h>
 
@@ -38,6 +39,8 @@ namespace luax {
         static void setMainThreadId(std::thread::id id);
         static bool isMainThread();
         bool runScript(std::string_view src, std::string_view chunkName, int deadlineMs = 250);
+        geode::Result<void> runBytecode(std::string const& bytecode, std::string_view chunkName, int deadlineMs = 250);
+        static std::string compileSource(std::string_view source);
         bool protectedCall(int nargs, int nresults, std::string_view context, int deadlineMs = 50);
         void runOnMain(std::function<void()> fn);
         bool assertMainThread() const;

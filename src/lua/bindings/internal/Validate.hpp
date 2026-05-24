@@ -2,16 +2,16 @@
 
 #include "Usertype.hpp"
 
+#include <Geode/Geode.hpp>
 #include <cocos2d.h>
 #include <lua.h>
-#include <stdexcept>
-#include <string>
 
 namespace luax {
     template <class T>
     inline T* requirePtr(T* value, char const* method, char const* typeName) {
         if (!value) {
-            throw std::runtime_error(std::string(method) + " expected " + typeName);
+            geode::log::error("[lua:{}] expected {}", method, typeName);
+            return nullptr;
         }
         return value;
     }

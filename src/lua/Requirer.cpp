@@ -1,6 +1,6 @@
 #include "Requirer.hpp"
 
-#include "Config.hpp"
+#include "PathSandbox.hpp"
 #include "Runtime.hpp"
 
 #include <Luau/CodeGen.h>
@@ -8,10 +8,7 @@
 #include <lualib.h>
 
 #include <cstring>
-#include <fstream>
 #include <functional>
-#include <optional>
-#include <sstream>
 #include <string>
 #include <string_view>
 
@@ -26,47 +23,6 @@ namespace luax {
             std::memcpy(buffer, contents.c_str(), needed);
             *sizeOut = needed;
             return WRITE_SUCCESS;
-        }
-
-        std::optional<std::string> readFileToString(std::filesystem::path const& path) {
-            std::error_code ec;
-            auto size = std::filesystem::file_size(path, ec);
-            if (ec || size > kMaxScriptBytes) return std::nullopt;
-
-            std::ifstream file(path, std::ios::binary);
-            if (!file) return std::nullopt;
-            std::ostringstream buffer;
-            buffer << file.rdbuf();
-            auto contents = buffer.str();
-            if (contents.size() > kMaxScriptBytes) return std::nullopt;
-            return contents;
-        }
-
-        std::string normalizedPathString(std::filesystem::path const& path) {
-            auto out = path.string();
-            for (auto& c : out) {
-                if (c == '\\') c = '/';
-            }
-            return out;
-        }
-
-        bool escapesRoot(std::filesystem::path const& rel) {
-            auto s = rel.generic_string();
-            return rel.empty() || s == ".." || s.rfind("../", 0) == 0;
-        }
-
-        bool pathInsideRoot(std::filesystem::path const& path, std::filesystem::path const& root) {
-            std::error_code ec;
-            auto rel = std::filesystem::relative(path, root, ec);
-            return !ec && !escapesRoot(rel);
-        }
-
-        bool isFlatResourcePath(std::filesystem::path const& path) {
-            auto normalized = path.lexically_normal();
-            return normalized == normalized.filename()
-                && normalized != "."
-                && normalized != ".."
-                && !normalized.empty();
         }
 
         std::string bytecodeCacheKey(std::filesystem::path const& path, std::string const& contents) {
@@ -140,12 +96,13 @@ namespace luax {
                 luaL_error(L, "module '%s' exceeds maximum size or cannot be read", loadname);
             }
 
-            auto contents = readFileToString(filePath);
-            if (!contents) {
+            auto contentsResult = readScriptFile(filePath);
+            if (contentsResult.isErr()) {
                 luaL_error(L, "could not read module '%s'", loadname);
             }
+            auto const& contents = contentsResult.unwrap();
 
-            std::string const& bytecode = req->runtime().getOrCompileBytecode(bytecodeCacheKey(filePath, *contents), *contents);
+            std::string const& bytecode = req->runtime().getOrCompileBytecode(bytecodeCacheKey(filePath, contents), contents);
 
             lua_State* GL = lua_mainthread(L);
             lua_State* ML = lua_newthread(GL);

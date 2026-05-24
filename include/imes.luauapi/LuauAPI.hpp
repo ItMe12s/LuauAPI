@@ -1,9 +1,11 @@
 #pragma once
 
 #include <Geode/Geode.hpp>
+#include <Geode/utils/async.hpp>
 
 #include <cstddef>
 #include <filesystem>
+#include <string>
 #include <string_view>
 
 #ifdef GEODE_IS_WINDOWS
@@ -33,6 +35,19 @@ namespace imes::luauapi {
     LUAUAPI_DLL geode::Result<void> runScript(
         std::filesystem::path const& resourcesRoot,
         std::string_view source,
+        std::string_view chunkName,
+        int deadlineMs = 250
+    );
+
+    LUAUAPI_DLL geode::Task<geode::Result<void>> runFileAsync(
+        std::filesystem::path const& resourcesRoot,
+        std::filesystem::path const& relativePath,
+        int deadlineMs = 250
+    );
+
+    LUAUAPI_DLL geode::Task<geode::Result<void>> runScriptAsync(
+        std::filesystem::path const& resourcesRoot,
+        std::string source,
         std::string_view chunkName,
         int deadlineMs = 250
     );

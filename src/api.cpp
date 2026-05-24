@@ -1,15 +1,17 @@
 #include <imes.luauapi/LuauAPI.hpp>
 
-#include "lua/Config.hpp"
+#include "lua/PathSandbox.hpp"
 #include "lua/Runtime.hpp"
 
-#include <fstream>
-#include <optional>
-#include <sstream>
+#include <Geode/utils/async.hpp>
+
 #include <string>
 #include <string_view>
+#include <utility>
 
 namespace {
+    using RunTask = geode::Task<geode::Result<void>>;
+
     geode::Result<void> requireMainThread() {
         if (!luax::Runtime::isMainThread()) {
             return geode::Err("luau api must be called on the main thread");
@@ -17,204 +19,20 @@ namespace {
         return geode::Ok();
     }
 
-    std::optional<std::string> readFileToString(std::filesystem::path const& path) {
-        std::error_code ec;
-        auto size = std::filesystem::file_size(path, ec);
-        if (ec || size > luax::kMaxScriptBytes) return std::nullopt;
-
-        std::ifstream file(path, std::ios::binary);
-        if (!file) return std::nullopt;
-        std::ostringstream buffer;
-        buffer << file.rdbuf();
-        auto contents = buffer.str();
-        if (contents.size() > luax::kMaxScriptBytes) return std::nullopt;
-        return contents;
-    }
-
-    std::string normalizedPathString(std::filesystem::path const& path) {
-        auto out = path.generic_string();
-        for (auto& c : out) {
-            if (c == '\\') c = '/';
-        }
-        return out;
-    }
-
-    bool escapesRoot(std::filesystem::path const& rel) {
-        auto s = rel.generic_string();
-        return rel.empty() || s == ".." || s.rfind("../", 0) == 0;
-    }
-
-    bool pathInsideRoot(std::filesystem::path const& path, std::filesystem::path const& root) {
-        std::error_code ec;
-        auto rel = std::filesystem::relative(path, root, ec);
-        return !ec && !escapesRoot(rel);
-    }
-
-    bool hasLuauExtension(std::filesystem::path const& path) {
-        return path.extension() == ".luau";
-    }
-
-    bool hasUnsupportedExtension(std::filesystem::path const& path) {
-        auto ext = path.extension();
-        return !ext.empty() && ext != ".luau";
-    }
-
-    bool isFlatResourcePath(std::filesystem::path const& path) {
-        auto normalized = path.lexically_normal();
-        return normalized == normalized.filename()
-            && normalized != "."
-            && normalized != ".."
-            && !normalized.empty();
-    }
-
-    geode::Result<std::filesystem::path> normalizeVirtualPath(std::string_view rawChunkName) {
-        if (rawChunkName.empty()) {
-            return geode::Err("chunk name is empty");
-        }
-
-        std::string text(rawChunkName);
-        if (!text.empty() && text.front() == '@') {
-            text.erase(text.begin());
-        }
-
-        std::filesystem::path path(text);
-        if (path.empty()) {
-            return geode::Err("chunk name is empty");
-        }
-
-        if (path.is_absolute()) {
-            return geode::Err("chunk name must not be absolute");
-        }
-
-        path = path.lexically_normal();
-        if (!isFlatResourcePath(path)) {
-            return geode::Err("chunk name must be a flat resource name");
-        }
-
-        if (hasUnsupportedExtension(path)) {
-            return geode::Err("chunk name extension must be .luau");
-        }
-
-        if (!hasLuauExtension(path)) {
-            path += ".luau";
-        }
-
-        if (!isFlatResourcePath(path)) {
-            return geode::Err("chunk name must be a flat resource name");
-        }
-
-        return geode::Ok(path);
-    }
-
-    geode::Result<std::filesystem::path> canonicalRoot(std::filesystem::path const& resourcesRoot) {
-        if (resourcesRoot.empty()) {
-            return geode::Err("resources root is empty");
-        }
-
-        std::error_code ec;
-        auto root = std::filesystem::weakly_canonical(resourcesRoot, ec);
-        if (ec) {
-            return geode::Err("resources root cannot be resolved: " + ec.message());
-        }
-
-        if (!std::filesystem::is_directory(root, ec)) {
-            return geode::Err("resources root is not a directory: " + normalizedPathString(root));
-        }
-
-        return geode::Ok(root);
-    }
-}
-
-namespace imes::luauapi {
-    geode::Result<void> runFile(
-        std::filesystem::path const& resourcesRoot,
-        std::filesystem::path const& relativePath,
-        int deadlineMs
-    ) {
-        auto threadResult = requireMainThread();
-        if (threadResult.isErr()) {
-            return geode::Err(threadResult.unwrapErr());
-        }
-
-        auto rootResult = canonicalRoot(resourcesRoot);
-        if (rootResult.isErr()) {
-            return geode::Err(rootResult.unwrapErr());
-        }
-
-        if (relativePath.empty()) {
-            return geode::Err("relative path is empty");
-        }
-
-        if (relativePath.is_absolute()) {
-            return geode::Err("relative path must not be absolute");
-        }
-
-        auto flatPathResult = normalizeVirtualPath(normalizedPathString(relativePath));
-        if (flatPathResult.isErr()) {
-            return geode::Err("relative path must be a flat .luau resource name");
-        }
-        auto flatPath = flatPathResult.unwrap();
-
-        auto root = rootResult.unwrap();
-        std::error_code ec;
-        auto path = std::filesystem::weakly_canonical(root / flatPath, ec);
-        if (ec) {
-            return geode::Err("script path cannot be resolved: " + ec.message());
-        }
-
-        if (!pathInsideRoot(path, root)) {
-            return geode::Err("script path escapes resources root");
-        }
-
-        if (!std::filesystem::is_regular_file(path, ec)) {
-            return geode::Err("script file not found: " + normalizedPathString(path));
-        }
-
-        std::error_code sizeEc;
-        auto fileSize = std::filesystem::file_size(path, sizeEc);
-        if (!sizeEc && fileSize > luax::kMaxScriptBytes) {
-            return geode::Err("script file exceeds maximum size");
-        }
-
-        auto source = readFileToString(path);
-        if (!source) {
-            return geode::Err("script file cannot be read: " + normalizedPathString(path));
-        }
-
-        auto rel = std::filesystem::relative(path, root, ec);
-        auto chunkPath = ec ? flatPath : rel;
-        return runScript(root, *source, normalizedPathString(chunkPath), deadlineMs);
-    }
-
-    geode::Result<void> runScript(
-        std::filesystem::path const& resourcesRoot,
-        std::string_view source,
-        std::string_view chunkName,
-        int deadlineMs
-    ) {
-        auto threadResult = requireMainThread();
-        if (threadResult.isErr()) {
-            return geode::Err(threadResult.unwrapErr());
-        }
-
-        auto rootResult = canonicalRoot(resourcesRoot);
-        if (rootResult.isErr()) {
-            return geode::Err(rootResult.unwrapErr());
-        }
-
-        auto chunkResult = normalizeVirtualPath(chunkName);
+    geode::Result<std::string> prepareChunkName(std::string_view chunkName) {
+        auto chunkResult = luax::normalizeVirtualPath(chunkName);
         if (chunkResult.isErr()) {
             return geode::Err(chunkResult.unwrapErr());
         }
+        return geode::Ok("@" + luax::normalizedPathString(chunkResult.unwrap()));
+    }
 
-        auto root = rootResult.unwrap();
-        auto chunkPath = chunkResult.unwrap();
-        auto chunk = "@" + normalizedPathString(chunkPath);
-
-        if (source.size() > luax::kMaxScriptBytes) {
-            return geode::Err("script exceeds maximum size");
-        }
-
+    geode::Result<void> executeScriptOnMain(
+        std::filesystem::path const& root,
+        std::string source,
+        std::string chunk,
+        int deadlineMs
+    ) {
         auto& runtime = luax::Runtime::instance();
         if (!runtime.ready()) {
             auto const& err = runtime.lastError();
@@ -232,6 +50,251 @@ namespace imes::luauapi {
         }
 
         return geode::Ok();
+    }
+
+    geode::Result<void> resolveRunFilePath(
+        std::filesystem::path const& resourcesRoot,
+        std::filesystem::path const& relativePath,
+        std::filesystem::path& outPath,
+        std::filesystem::path& outRoot
+    ) {
+        auto rootResult = luax::canonicalRoot(resourcesRoot);
+        if (rootResult.isErr()) {
+            return geode::Err(rootResult.unwrapErr());
+        }
+
+        if (relativePath.empty()) {
+            return geode::Err("relative path is empty");
+        }
+
+        if (relativePath.is_absolute()) {
+            return geode::Err("relative path must not be absolute");
+        }
+
+        auto flatPathResult = luax::normalizeVirtualPath(luax::normalizedPathString(relativePath));
+        if (flatPathResult.isErr()) {
+            return geode::Err("relative path must be a flat .luau resource name");
+        }
+        auto flatPath = flatPathResult.unwrap();
+
+        outRoot = rootResult.unwrap();
+        std::error_code ec;
+        auto path = std::filesystem::weakly_canonical(outRoot / flatPath, ec);
+        if (ec) {
+            return geode::Err("script path cannot be resolved: " + ec.message());
+        }
+
+        if (!luax::pathInsideRoot(path, outRoot)) {
+            return geode::Err("script path escapes resources root");
+        }
+
+        if (!std::filesystem::is_regular_file(path, ec)) {
+            return geode::Err("script file not found: " + luax::normalizedPathString(path));
+        }
+
+        std::error_code sizeEc;
+        auto fileSize = std::filesystem::file_size(path, sizeEc);
+        if (!sizeEc && fileSize > luax::kMaxScriptBytes) {
+            return geode::Err("script file exceeds maximum size");
+        }
+
+        outPath = path;
+        return geode::Ok();
+    }
+}
+
+namespace imes::luauapi {
+    geode::Result<void> runFile(
+        std::filesystem::path const& resourcesRoot,
+        std::filesystem::path const& relativePath,
+        int deadlineMs
+    ) {
+        auto threadResult = requireMainThread();
+        if (threadResult.isErr()) {
+            return geode::Err(threadResult.unwrapErr());
+        }
+
+        std::filesystem::path path;
+        std::filesystem::path root;
+        auto resolveResult = resolveRunFilePath(resourcesRoot, relativePath, path, root);
+        if (resolveResult.isErr()) {
+            return geode::Err(resolveResult.unwrapErr());
+        }
+
+        auto sourceResult = luax::readScriptFile(path);
+        if (sourceResult.isErr()) {
+            return geode::Err("script file cannot be read: " + luax::normalizedPathString(path));
+        }
+
+        std::error_code ec;
+        auto rel = std::filesystem::relative(path, root, ec);
+        auto chunkPath = ec ? path.filename() : rel;
+        auto chunkResult = prepareChunkName(luax::normalizedPathString(chunkPath));
+        if (chunkResult.isErr()) {
+            return geode::Err(chunkResult.unwrapErr());
+        }
+
+        return executeScriptOnMain(root, std::move(sourceResult.unwrap()), chunkResult.unwrap(), deadlineMs);
+    }
+
+    geode::Result<void> runScript(
+        std::filesystem::path const& resourcesRoot,
+        std::string_view source,
+        std::string_view chunkName,
+        int deadlineMs
+    ) {
+        auto threadResult = requireMainThread();
+        if (threadResult.isErr()) {
+            return geode::Err(threadResult.unwrapErr());
+        }
+
+        auto rootResult = luax::canonicalRoot(resourcesRoot);
+        if (rootResult.isErr()) {
+            return geode::Err(rootResult.unwrapErr());
+        }
+
+        auto chunkResult = prepareChunkName(chunkName);
+        if (chunkResult.isErr()) {
+            return geode::Err(chunkResult.unwrapErr());
+        }
+
+        if (source.size() > luax::kMaxScriptBytes) {
+            return geode::Err("script exceeds maximum size");
+        }
+
+        return executeScriptOnMain(
+            rootResult.unwrap(),
+            std::string(source),
+            chunkResult.unwrap(),
+            deadlineMs
+        );
+    }
+
+    RunTask runFileAsync(
+        std::filesystem::path const& resourcesRoot,
+        std::filesystem::path const& relativePath,
+        int deadlineMs
+    ) {
+        return RunTask::runWithCallback([resourcesRoot, relativePath, deadlineMs](
+            auto finish,
+            auto /*progress*/,
+            auto hasBeenCancelled
+        ) {
+            if (hasBeenCancelled()) {
+                finish(geode::Err("cancelled"));
+                return;
+            }
+
+            std::filesystem::path path;
+            std::filesystem::path root;
+            auto resolveResult = resolveRunFilePath(resourcesRoot, relativePath, path, root);
+            if (resolveResult.isErr()) {
+                finish(geode::Err(resolveResult.unwrapErr()));
+                return;
+            }
+
+            auto sourceResult = luax::readScriptFile(path);
+            if (sourceResult.isErr()) {
+                finish(geode::Err("script file cannot be read: " + luax::normalizedPathString(path)));
+                return;
+            }
+
+            if (hasBeenCancelled()) {
+                finish(geode::Err("cancelled"));
+                return;
+            }
+
+            std::error_code ec;
+            auto rel = std::filesystem::relative(path, root, ec);
+            auto chunkPath = ec ? path.filename() : rel;
+            auto chunkResult = prepareChunkName(luax::normalizedPathString(chunkPath));
+            if (chunkResult.isErr()) {
+                finish(geode::Err(chunkResult.unwrapErr()));
+                return;
+            }
+
+            auto source = std::move(sourceResult.unwrap());
+            auto chunk = chunkResult.unwrap();
+            auto bytecode = luax::Runtime::compileSource(source);
+
+            geode::queueInMainThread([finish = std::move(finish), root, chunk = std::move(chunk), bytecode = std::move(bytecode), deadlineMs]() mutable {
+                if (!luax::Runtime::isMainThread()) {
+                    finish(geode::Err("luau api must be called on the main thread"));
+                    return;
+                }
+
+                auto& runtime = luax::Runtime::instance();
+                if (!runtime.ready()) {
+                    auto const& err = runtime.lastError();
+                    finish(geode::Err(!err.empty() ? err : "luau runtime not ready"));
+                    return;
+                }
+
+                luax::Runtime::ResourcesRootScope rootScope(runtime, root);
+                finish(runtime.runBytecode(bytecode, chunk, deadlineMs));
+            });
+        }, "luau run file");
+    }
+
+    RunTask runScriptAsync(
+        std::filesystem::path const& resourcesRoot,
+        std::string source,
+        std::string_view chunkName,
+        int deadlineMs
+    ) {
+        return RunTask::runWithCallback([resourcesRoot, source = std::move(source), chunkName, deadlineMs](
+            auto finish,
+            auto /*progress*/,
+            auto hasBeenCancelled
+        ) mutable {
+            if (hasBeenCancelled()) {
+                finish(geode::Err("cancelled"));
+                return;
+            }
+
+            auto rootResult = luax::canonicalRoot(resourcesRoot);
+            if (rootResult.isErr()) {
+                finish(geode::Err(rootResult.unwrapErr()));
+                return;
+            }
+
+            auto chunkResult = prepareChunkName(chunkName);
+            if (chunkResult.isErr()) {
+                finish(geode::Err(chunkResult.unwrapErr()));
+                return;
+            }
+
+            if (source.size() > luax::kMaxScriptBytes) {
+                finish(geode::Err("script exceeds maximum size"));
+                return;
+            }
+
+            if (hasBeenCancelled()) {
+                finish(geode::Err("cancelled"));
+                return;
+            }
+
+            auto root = rootResult.unwrap();
+            auto chunk = chunkResult.unwrap();
+            auto bytecode = luax::Runtime::compileSource(source);
+
+            geode::queueInMainThread([finish = std::move(finish), root, chunk = std::move(chunk), bytecode = std::move(bytecode), deadlineMs]() mutable {
+                if (!luax::Runtime::isMainThread()) {
+                    finish(geode::Err("luau api must be called on the main thread"));
+                    return;
+                }
+
+                auto& runtime = luax::Runtime::instance();
+                if (!runtime.ready()) {
+                    auto const& err = runtime.lastError();
+                    finish(geode::Err(!err.empty() ? err : "luau runtime not ready"));
+                    return;
+                }
+
+                luax::Runtime::ResourcesRootScope rootScope(runtime, root);
+                finish(runtime.runBytecode(bytecode, chunk, deadlineMs));
+            });
+        }, "luau run script");
     }
 
     bool isReady() {

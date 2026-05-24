@@ -1,7 +1,9 @@
 #include "Runtime.hpp"
 
 #include "Binding.hpp"
+#include "PathSandbox.hpp"
 #include "Requirer.hpp"
+#include "bindings/internal/Ref.hpp"
 
 #include <Geode/Geode.hpp>
 #include <fmt/format.h>
@@ -13,7 +15,6 @@
 
 #include <cstdlib>
 #include <cstring>
-#include <exception>
 #include <functional>
 #include <string>
 #include <string_view>
@@ -31,14 +32,6 @@ namespace luax {
         std::thread::id& mainThreadIdStorage() {
             static std::thread::id id;
             return id;
-        }
-
-        std::string normalizedPathString(std::filesystem::path const& path) {
-            auto out = path.generic_string();
-            for (auto& c : out) {
-                if (c == '\\') c = '/';
-            }
-            return out;
         }
 
         class StackGuard {
@@ -151,6 +144,7 @@ namespace luax {
             (*it)();
         }
         m_shutdownHooks.clear();
+        clearLuaRetains();
 
         if (m_state) {
             lua_close(m_state);
@@ -289,6 +283,14 @@ namespace luax {
         m_lastError = std::move(error);
     }
 
+    std::string Runtime::compileSource(std::string_view source) {
+        Luau::CompileOptions opts;
+        opts.optimizationLevel = 2;
+        opts.debugLevel = 1;
+        opts.typeInfoLevel = 1;
+        return Luau::compile(std::string(source), opts);
+    }
+
     std::string const& Runtime::getOrCompileBytecode(std::string const& key, std::string const& source) {
         auto cached = m_bytecodeCache.find(key);
         if (cached != m_bytecodeCache.end()) {
@@ -300,16 +302,54 @@ namespace luax {
         }
 
         auto compileStart = std::chrono::steady_clock::now();
-        Luau::CompileOptions opts;
-        opts.optimizationLevel = 2;
-        opts.debugLevel = 1;
-        opts.typeInfoLevel = 1;
-        std::string compiled = Luau::compile(source, opts);
+        std::string compiled = compileSource(source);
         auto compileMs = std::chrono::duration_cast<std::chrono::milliseconds>(
             std::chrono::steady_clock::now() - compileStart).count();
         auto inserted = m_bytecodeCache.emplace(key, std::move(compiled));
         geode::log::debug("luau compile [{}] {}ms", key, compileMs);
         return inserted.first->second;
+    }
+
+    geode::Result<void> Runtime::runBytecode(std::string const& bytecode, std::string_view chunkName, int deadlineMs) {
+        if (!assertMainThread()) {
+            return geode::Err("luau runtime accessed off main thread");
+        }
+        if (!ready() || !m_state) {
+            if (m_lastError.empty()) {
+                return geode::Err(m_initError.empty() ? "luau runtime not ready" : m_initError);
+            }
+            return geode::Err(m_lastError);
+        }
+
+        clearLastError();
+
+        std::string chunk(chunkName);
+        if (luau_load(m_state, chunk.c_str(), bytecode.data(), bytecode.size(), 0) != 0) {
+            auto err = formatLuaError(chunk.c_str());
+            setLastError(err);
+            geode::log::error("luau load failed {}", err);
+            lua_pop(m_state, 1);
+            return geode::Err(err);
+        }
+
+        if (m_codegenEnabled) {
+            auto cgResult = Luau::CodeGen::compile(m_state, -1, Luau::CodeGen::CodeGen_ColdFunctions);
+            if (cgResult.hasErrors()) {
+                geode::log::warn("luau codegen [{}] partial: {}", chunk, Luau::CodeGen::toString(cgResult.result));
+            }
+        }
+
+        auto execStart = std::chrono::steady_clock::now();
+        bool ok = protectedCall(0, 0, chunk, deadlineMs);
+        auto execMs = std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now() - execStart).count();
+
+        if (!ok) {
+            return geode::Err(m_lastError.empty() ? "luau script failed: " + chunk : m_lastError);
+        }
+
+        geode::log::debug("luau exec [{}] {}ms", chunk, execMs);
+        return geode::Ok();
     }
 
     bool Runtime::runScript(std::string_view src, std::string_view chunkName, int deadlineMs) {
@@ -333,7 +373,7 @@ namespace luax {
         std::string chunk(chunkName);
         auto bytecodeKey = chunk;
         if (!m_resourcesRoot.empty()) {
-            bytecodeKey = normalizedPathString(m_resourcesRoot) + "|" + bytecodeKey;
+            bytecodeKey = luax::normalizedPathString(m_resourcesRoot) + "|" + bytecodeKey;
         }
         bytecodeKey += "|";
         bytecodeKey += std::to_string(std::hash<std::string_view>{}(src));

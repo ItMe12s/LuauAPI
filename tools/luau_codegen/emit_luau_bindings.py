@@ -283,6 +283,17 @@ def _call_label(cls: Class, m: Method) -> str:
     return f"{cls.name}{sep}{m.name}"
 
 
+def _returns_owned(m: Method) -> bool:
+    if not m.is_static:
+        return False
+    name = m.name.lower()
+    if name.startswith("create"):
+        return True
+    if name in ("copy", "clone"):
+        return True
+    return False
+
+
 def _check_arg(arg: Arg, info: TypeInfo, idx: int, var: str, label: str) -> list[str]:
     cxx = info.cxx_type
     if info.kind == "bool":
@@ -554,9 +565,7 @@ def _emit_invoke(cls: Class, m: Method, objects: Dict[str, Class], suffix: str) 
         out.extend(_push_return(ret, "", False))
     else:
         out.append(f"        auto result = {target};\n")
-        out.extend(
-            _push_return(ret, "result", m.is_static and m.name.startswith("create"))
-        )
+        out.extend(_push_return(ret, "result", _returns_owned(m)))
     out.append("    }\n\n")
     return "".join(out)
 
@@ -1041,7 +1050,7 @@ def emit(
     out.append("    }\n\n")
 
     out.append(_emit_compat_functions(objects))
-    out.append("    void bindGeneratedBroma(lua_State* L) {\n")
+    out.append("    geode::Result<void> bindGeneratedBroma(lua_State* L) {\n")
 
     for cls in classes:
         if cls.name in skipped_classes:
@@ -1103,6 +1112,7 @@ def emit(
     out.append("            runtime->registerShutdownHook(&clearHookRegistry);\n")
     out.append("        }\n")
 
+    out.append("        return geode::Ok();\n")
     out.append("    }\n\n")
     out.append("    LUAX_BINDING_PRIORITY(GeneratedBroma, bindGeneratedBroma, 0)\n")
     out.append("}\n")

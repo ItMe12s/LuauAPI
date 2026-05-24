@@ -17,8 +17,5 @@
 		"include": [
 			"include/**/*.hpp"
 		]
-	},
-	"dependencies": {
-		"geode.node-ids": ">=v1.23.3"
 	}
 }

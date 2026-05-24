@@ -34,13 +34,24 @@ namespace luax::detail {
         return it == m_byTag.end() ? nullptr : it->second;
     }
 
+    cocos2d::CCObject* liveObject(UserdataBlock* block) {
+        if (!block) return nullptr;
+        if (block->flags & 1u) {
+            return block->ptr;
+        }
+        return block->weak.lock().data();
+    }
+
     void destructorDispatch(lua_State*, void* ud) {
         auto* block = static_cast<UserdataBlock*>(ud);
-        if (!block || !block->ptr) return;
+        if (!block) return;
         if (block->flags & 1u) {
-            releaseLuaRetain(block->ptr, "__gc", false);
+            if (block->ptr) {
+                releaseLuaRetain(block->ptr, "__gc", false);
+            }
+            block->ptr = nullptr;
         }
-        block->ptr = nullptr;
+        block->weak = geode::WeakRef<cocos2d::CCObject>{};
     }
 
     void getOrCreateMetatable(lua_State* L, TypeInfo& info) {
@@ -58,7 +69,6 @@ namespace luax::detail {
     void chainMethodTable(lua_State* L, TypeInfo const& info, std::uint32_t baseTag) {
         auto const* base = UsertypeRegistry::get().findByTag(baseTag);
         if (!base) return;
-        // Inherit methods from base.
         luaL_getmetatable(L, info.mtName.c_str());
         lua_getfield(L, -1, "__index");
         luaL_getmetatable(L, base->mtName.c_str());
@@ -99,17 +109,29 @@ namespace luax::detail {
             luaL_error(L, "%s expected %s at arg %d", method, targetName, idx);
         }
         auto* block = static_cast<UserdataBlock*>(lua_touserdata(L, idx));
-        if (!block || !block->ptr) {
+        auto* obj = liveObject(block);
+        if (!obj) {
             luaL_error(L, "%s expected live %s at arg %d", method, targetName, idx);
         }
-        return block->ptr;
+        return obj;
     }
 
-    void pushUserdata(lua_State* L, cocos2d::CCObject* obj, TypeInfo const& info, bool owned) {
+    void pushUserdataOwned(lua_State* L, cocos2d::CCObject* obj, TypeInfo const& info) {
         auto* block = static_cast<UserdataBlock*>(
             lua_newuserdatatagged(L, sizeof(UserdataBlock), static_cast<int>(info.tag)));
         block->ptr = obj;
-        block->flags = owned ? 1u : 0u;
+        block->weak = geode::WeakRef<cocos2d::CCObject>{};
+        block->flags = 1u;
+        luaL_getmetatable(L, info.mtName.c_str());
+        lua_setmetatable(L, -2);
+    }
+
+    void pushUserdataBorrowed(lua_State* L, cocos2d::CCObject* obj, TypeInfo const& info) {
+        auto* block = static_cast<UserdataBlock*>(
+            lua_newuserdatatagged(L, sizeof(UserdataBlock), static_cast<int>(info.tag)));
+        block->ptr = nullptr;
+        block->weak = geode::WeakRef<cocos2d::CCObject>(obj);
+        block->flags = 0u;
         luaL_getmetatable(L, info.mtName.c_str());
         lua_setmetatable(L, -2);
     }

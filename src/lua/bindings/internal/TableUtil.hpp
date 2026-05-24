@@ -1,19 +1,18 @@
 #pragma once
 
+#include <Geode/utils/string.hpp>
 #include <lua.h>
 #include <lualib.h>
 
+#include <string>
 #include <string_view>
+#include <vector>
 
 namespace luax {
-    // Gets or creates a table at a dotted global path, leaves it on top.
     inline void getOrCreateTable(lua_State* L, std::string_view path) {
         lua_pushvalue(L, LUA_GLOBALSINDEX);
-        size_t start = 0;
-        while (start <= path.size()) {
-            size_t end = path.find('.', start);
-            if (end == std::string_view::npos) end = path.size();
-            auto seg = path.substr(start, end - start);
+        auto segments = geode::utils::string::split(std::string(path), ".");
+        for (auto const& seg : segments) {
             lua_pushlstring(L, seg.data(), seg.size());
             lua_rawget(L, -2);
             if (lua_isnil(L, -1)) {
@@ -24,8 +23,6 @@ namespace luax {
                 lua_rawset(L, -4);
             }
             lua_remove(L, -2);
-            if (end == path.size()) break;
-            start = end + 1;
         }
     }
 

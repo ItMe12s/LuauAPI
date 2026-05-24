@@ -11,6 +11,7 @@ Then copy the `types` folder into your mod project root.
 ## Setting files
 
 Add this to your `.vscode/settings.json`
+It's split into 3 files because luau lsp can't just process 13k lines at once.
 
 ```json
 {

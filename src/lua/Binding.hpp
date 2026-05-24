@@ -1,12 +1,13 @@
 #pragma once
 
+#include <Geode/Geode.hpp>
 #include <lua.h>
 
 #include <optional>
 #include <string>
 
 namespace luax {
-    using Registrar = void(*)(lua_State*);
+    using Registrar = geode::Result<void>(*)(lua_State*);
 
     struct Binding {
         char const* name;

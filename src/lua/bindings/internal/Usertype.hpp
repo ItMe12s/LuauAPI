@@ -2,6 +2,7 @@
 
 #include "Ref.hpp"
 
+#include <Geode/utils/cocos.hpp>
 #include <cocos2d.h>
 #include <lua.h>
 #include <lualib.h>
@@ -18,9 +19,9 @@
 
 namespace luax {
     struct UserdataBlock {
-        cocos2d::CCObject* ptr;
-        // Bit 0, Lua-retained, dtor must release.
-        std::uint32_t flags;
+        cocos2d::CCObject* ptr = nullptr;
+        geode::WeakRef<cocos2d::CCObject> weak;
+        std::uint32_t flags = 0;
     };
 
     namespace detail {
@@ -45,12 +46,14 @@ namespace luax {
             std::uint32_t m_next = 1;
         };
 
+        cocos2d::CCObject* liveObject(UserdataBlock* block);
         void destructorDispatch(lua_State* L, void* ud);
         void getOrCreateMetatable(lua_State* L, TypeInfo& info);
         void chainMethodTable(lua_State* L, TypeInfo const& info, std::uint32_t baseTag);
         void appendMethod(lua_State* L, TypeInfo const& info, char const* name, lua_CFunction fn);
         cocos2d::CCObject* checkUserdata(lua_State* L, int idx, std::uint32_t targetTag, char const* targetName, char const* method);
-        void pushUserdata(lua_State* L, cocos2d::CCObject* obj, TypeInfo const& info, bool owned);
+        void pushUserdataOwned(lua_State* L, cocos2d::CCObject* obj, TypeInfo const& info);
+        void pushUserdataBorrowed(lua_State* L, cocos2d::CCObject* obj, TypeInfo const& info);
     }
 
     template <class T>
@@ -99,9 +102,11 @@ namespace luax {
         }
 
         static T* check(lua_State* L, int idx, char const* method) {
-            auto myTag = tag();
-            auto* obj = detail::checkUserdata(L, idx, myTag, name(), method);
-            return static_cast<T*>(obj);
+            auto* obj = detail::checkUserdata(L, idx, tag(), name(), method);
+            if (auto* typed = geode::cast::typeinfo_cast<T*>(obj)) {
+                return typed;
+            }
+            luaL_error(L, "%s expected %s at arg %d", method, name(), idx);
         }
 
         static T* tryCheck(lua_State* L, int idx) {
@@ -120,14 +125,15 @@ namespace luax {
             }
             if (!ok) return nullptr;
             auto* block = static_cast<UserdataBlock*>(lua_touserdata(L, idx));
-            if (!block || !block->ptr) return nullptr;
-            return static_cast<T*>(block->ptr);
+            auto* obj = detail::liveObject(block);
+            if (!obj) return nullptr;
+            return geode::cast::typeinfo_cast<T*>(obj);
         }
 
         static void pushOwned(lua_State* L, T* obj) {
             if (!obj) { lua_pushnil(L); return; }
             auto const& info = detail::UsertypeRegistry::get().infoFor(std::type_index(typeid(T)));
-            detail::pushUserdata(L, static_cast<cocos2d::CCObject*>(obj), info, true);
+            detail::pushUserdataOwned(L, static_cast<cocos2d::CCObject*>(obj), info);
             if (!retainLuaRef(static_cast<cocos2d::CCObject*>(obj), info.name.c_str())) {
                 lua_pop(L, 1);
                 lua_pushnil(L);
@@ -137,7 +143,7 @@ namespace luax {
         static void pushBorrowed(lua_State* L, T* obj) {
             if (!obj) { lua_pushnil(L); return; }
             auto const& info = detail::UsertypeRegistry::get().infoFor(std::type_index(typeid(T)));
-            detail::pushUserdata(L, static_cast<cocos2d::CCObject*>(obj), info, false);
+            detail::pushUserdataBorrowed(L, static_cast<cocos2d::CCObject*>(obj), info);
         }
     };
 }

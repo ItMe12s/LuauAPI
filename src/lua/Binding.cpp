@@ -3,7 +3,6 @@
 #include <Geode/Geode.hpp>
 #include <fmt/format.h>
 #include <algorithm>
-#include <exception>
 #include <vector>
 
 namespace luax {
@@ -25,14 +24,9 @@ namespace luax {
         });
 
         for (auto const& binding : ordered) {
-            try {
-                binding.fn(L);
-            } catch (std::exception const& e) {
-                auto msg = fmt::format("[lua:bind:{}] {}", binding.name, e.what());
-                geode::log::error("{}", msg);
-                return msg;
-            } catch (...) {
-                auto msg = fmt::format("[lua:bind:{}] unknown exception", binding.name);
+            auto result = binding.fn(L);
+            if (result.isErr()) {
+                auto msg = fmt::format("[lua:bind:{}] {}", binding.name, result.unwrapErr());
                 geode::log::error("{}", msg);
                 return msg;
             }

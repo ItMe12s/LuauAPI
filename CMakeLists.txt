@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.21)
+
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 if ("${CMAKE_SYSTEM_NAME}" STREQUAL "iOS" OR IOS)
@@ -107,21 +108,6 @@ file(GLOB LUAUAPI_CODEGEN_PY CONFIGURE_DEPENDS
 file(GLOB LUAUAPI_BRO_FILES CONFIGURE_DEPENDS
     ${LUAUAPI_BINDINGS_DIR}/*.bro)
 
-if (NOT EXISTS "${LUAUAPI_GENERATED_CPP}")
-    execute_process(
-        COMMAND ${Python3_EXECUTABLE}
-                ${CMAKE_CURRENT_SOURCE_DIR}/tools/luau_codegen/codegen.py
-                --bindings ${LUAUAPI_BINDINGS_DIR}
-                --out ${LUAUAPI_GEN_DIR}
-                --types-out ${LUAUAPI_TYPES_DIR}
-                --platform ${LUAUAPI_CODEGEN_PLATFORM}
-        RESULT_VARIABLE LUAUAPI_CODEGEN_RC
-    )
-    if (NOT LUAUAPI_CODEGEN_RC EQUAL 0)
-        message(FATAL_ERROR "LuauAPI codegen failed with ${LUAUAPI_CODEGEN_RC}")
-    endif()
-endif()
-
 add_custom_command(
     OUTPUT ${LUAUAPI_GENERATED_CPP} ${LUAUAPI_TYPES_FILES}
     COMMAND ${Python3_EXECUTABLE}
@@ -135,10 +121,10 @@ add_custom_command(
     VERBATIM
 )
 add_custom_target(luauapi_codegen DEPENDS ${LUAUAPI_GENERATED_CPP} ${LUAUAPI_TYPES_FILES})
-set_source_files_properties(${LUAUAPI_GENERATED_CPP} PROPERTIES GENERATED TRUE)
 
 file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS src/*.cpp)
 list(APPEND SOURCES ${LUAUAPI_GENERATED_CPP})
+set_source_files_properties(${LUAUAPI_GENERATED_CPP} PROPERTIES GENERATED TRUE)
 
 add_library(${PROJECT_NAME} SHARED ${SOURCES})
 add_dependencies(${PROJECT_NAME} luauapi_codegen)
@@ -149,6 +135,11 @@ target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_23)
 target_include_directories(${PROJECT_NAME} PRIVATE include src)
 target_link_libraries(${PROJECT_NAME} Luau.VM Luau.Compiler Luau.Ast Luau.Require Luau.CodeGen)
 target_compile_definitions(${PROJECT_NAME} PRIVATE LUAUAPI_EXPORTING=1)
-if (MSVC)
-    target_compile_options(${PROJECT_NAME} PRIVATE /bigobj)
+
+if(WIN32)
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC" OR CMAKE_CXX_COMPILER MATCHES "clang-cl")
+        target_compile_options(${PROJECT_NAME} PRIVATE /bigobj)
+    elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+        target_compile_options(${PROJECT_NAME} PRIVATE -Wa,-mbig-obj)
+    endif()
 endif()

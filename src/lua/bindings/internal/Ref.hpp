@@ -4,13 +4,22 @@
 
 #include <Geode/Geode.hpp>
 #include <cocos2d.h>
-#include <string>
 #include <unordered_map>
 
 namespace luax {
     inline std::unordered_map<cocos2d::CCObject*, unsigned int>& luaRetains() {
-        static auto* value = new std::unordered_map<cocos2d::CCObject*, unsigned int>();
-        return *value;
+        static std::unordered_map<cocos2d::CCObject*, unsigned int> value;
+        return value;
+    }
+
+    inline void clearLuaRetains() {
+        auto& retains = luaRetains();
+        for (auto const& entry : retains) {
+            for (unsigned int i = 0; i < entry.second; ++i) {
+                entry.first->release();
+            }
+        }
+        retains.clear();
     }
 
     inline bool assertMainThread() {
@@ -46,7 +55,13 @@ namespace luax {
     }
 
     inline void releaseLuaRef(cocos2d::CCObject* object, char const* method) {
-        if (!assertMainThread()) return;
-        releaseLuaRetain(object, method, true);
+        if (!object) return;
+        if (assertMainThread()) {
+            releaseLuaRetain(object, method, true);
+            return;
+        }
+        geode::queueInMainThread([object, method]() {
+            releaseLuaRetain(object, method, true);
+        });
     }
 }
