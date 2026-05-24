@@ -44,7 +44,8 @@ At your project root, add this `.luaurc` file
 
 Since you can't do folders inside resources, you'll just have to name and prefix them properly.
 
-**YourMod**
+```.
+YourMod
 |- .vscode
 |   |- settings.json
 |
@@ -65,6 +66,7 @@ Since you can't do folders inside resources, you'll just have to name and prefix
 |- .luaurc
 |
 |... and everything else from the Geode mod template.
+```
 
 ## Don't forget to include the files
 
