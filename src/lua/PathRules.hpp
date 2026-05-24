@@ -1,7 +1,5 @@
 #pragma once
 
-#include <Geode/utils/string.hpp>
-
 #include <filesystem>
 #include <string_view>
 #include <system_error>
@@ -9,12 +7,12 @@
 namespace luax {
     inline bool escapedRelativePathText(std::string_view text) {
         return text == ".."
-            || geode::utils::string::startsWith(text, "../")
-            || geode::utils::string::startsWith(text, "..\\");
+            || text.starts_with("../")
+            || text.starts_with("..\\");
     }
 
     inline bool escapedRelativePathValue(std::filesystem::path const& rel) {
-        return rel.empty() || escapedRelativePathText(geode::utils::string::pathToString(rel));
+        return rel.empty() || escapedRelativePathText(rel.generic_string());
     }
 
     inline bool pathInsideRootValue(std::filesystem::path const& path, std::filesystem::path const& root) {

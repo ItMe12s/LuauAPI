@@ -216,38 +216,7 @@ if(LUAUAPI_BUILD_TESTS)
     )
     target_compile_features(luauapi_tests PRIVATE cxx_std_23)
     target_include_directories(luauapi_tests PRIVATE src)
-    target_link_libraries(luauapi_tests PRIVATE Catch2::Catch2WithMain geode-sdk)
-
-    if(WIN32)
-        set(LUAUAPI_TEST_GEODE_VERSION "${GEODE_VERSION}")
-        if("${LUAUAPI_TEST_GEODE_VERSION}" STREQUAL "")
-            file(READ "$ENV{GEODE_SDK}/VERSION" LUAUAPI_TEST_GEODE_VERSION)
-            string(STRIP "${LUAUAPI_TEST_GEODE_VERSION}" LUAUAPI_TEST_GEODE_VERSION)
-        endif()
-
-        set(LUAUAPI_TEST_GEODE_RUNTIME_DIR "$ENV{GEODE_SDK}/bin/${LUAUAPI_TEST_GEODE_VERSION}")
-        if(NOT EXISTS "${LUAUAPI_TEST_GEODE_RUNTIME_DIR}/Geode.dll")
-            set(LUAUAPI_TEST_GEODE_RUNTIME_DIR "$ENV{GEODE_SDK}/bin/nightly")
-        endif()
-        if(NOT EXISTS "${LUAUAPI_TEST_GEODE_RUNTIME_DIR}/Geode.dll")
-            message(FATAL_ERROR "Geode runtime DLL missing: ${LUAUAPI_TEST_GEODE_RUNTIME_DIR}/Geode.dll")
-        endif()
-
-        file(GLOB LUAUAPI_TEST_GEODE_RUNTIME_DLLS CONFIGURE_DEPENDS
-            "${LUAUAPI_TEST_GEODE_RUNTIME_DIR}/*.dll")
-        if(NOT LUAUAPI_TEST_GEODE_RUNTIME_DLLS)
-            message(FATAL_ERROR "No Geode runtime DLLs found in: ${LUAUAPI_TEST_GEODE_RUNTIME_DIR}")
-        endif()
-
-        add_custom_command(
-            TARGET luauapi_tests POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                    ${LUAUAPI_TEST_GEODE_RUNTIME_DLLS}
-                    $<TARGET_FILE_DIR:luauapi_tests>
-            COMMAND_EXPAND_LISTS
-            VERBATIM
-        )
-    endif()
+    target_link_libraries(luauapi_tests PRIVATE Catch2::Catch2WithMain GeodeBindings)
 
     list(APPEND CMAKE_MODULE_PATH ${catch2_SOURCE_DIR}/extras)
     include(Catch)

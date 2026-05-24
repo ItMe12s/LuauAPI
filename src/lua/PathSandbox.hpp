@@ -3,24 +3,39 @@
 #include "Config.hpp"
 #include "PathRules.hpp"
 
-#include <Geode/utils/file.hpp>
-#include <Geode/utils/string.hpp>
+#include <Geode/Result.hpp>
 
 #include <filesystem>
+#include <fstream>
+#include <iterator>
 #include <string>
 #include <string_view>
 
 namespace luax {
     inline std::string normalizedPathString(std::filesystem::path const& path) {
-        return geode::utils::string::pathToString(path);
+        return path.generic_string();
     }
 
     inline geode::Result<std::string> readScriptFile(std::filesystem::path const& path) {
-        auto result = geode::utils::file::readString(path);
-        if (result.isErr()) {
-            return geode::Err(result.unwrapErr());
+        std::error_code ec;
+        auto size = std::filesystem::file_size(path, ec);
+        if (!ec && size > kMaxScriptBytes) {
+            return geode::Err("script exceeds maximum size");
         }
-        auto contents = std::move(result.unwrap());
+
+        std::ifstream in(path, std::ios::binary);
+        if (!in.good()) {
+            return geode::Err("script cannot be read: " + normalizedPathString(path));
+        }
+
+        std::string contents(
+            std::istreambuf_iterator<char>(in),
+            std::istreambuf_iterator<char>()
+        );
+        if (in.bad()) {
+            return geode::Err("script cannot be read: " + normalizedPathString(path));
+        }
+
         if (contents.size() > kMaxScriptBytes) {
             return geode::Err("script exceeds maximum size");
         }

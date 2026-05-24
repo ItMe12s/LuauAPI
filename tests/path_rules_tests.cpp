@@ -1,7 +1,5 @@
 #include "lua/PathRules.hpp"
 
-#include <Geode/utils/file.hpp>
-
 #include <catch2/catch_test_macros.hpp>
 
 #include <chrono>
@@ -46,8 +44,8 @@ TEST_CASE("root containment rejects paths outside root") {
     auto child = root / "Bootstrap.luau";
     auto outside = base / "outside" / "Bootstrap.luau";
 
-    REQUIRE(geode::utils::file::createDirectoryAll(root).isOk());
-    REQUIRE(geode::utils::file::createDirectoryAll(outside.parent_path()).isOk());
+    REQUIRE(std::filesystem::create_directories(root));
+    REQUIRE(std::filesystem::create_directories(outside.parent_path()));
 
     REQUIRE(luax::pathInsideRootValue(child, root));
     REQUIRE_FALSE(luax::pathInsideRootValue(outside, root));
