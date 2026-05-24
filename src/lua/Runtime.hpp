@@ -2,6 +2,7 @@
 
 #include "Config.hpp"
 
+#include <imes.luauapi/LuauAPI.hpp>
 #include <Geode/Geode.hpp>
 #include <lua.h>
 #include <lualib.h>
@@ -34,16 +35,32 @@ namespace luax {
 
         lua_State* state();
         bool ready() const;
+        imes::luauapi::RuntimeStatus status() const;
         static bool isInitialized();
         static Runtime* getIfInitialized();
         static void setMainThreadId(std::thread::id id);
         static bool isMainThread();
-        bool runScript(std::string_view src, std::string_view chunkName, int deadlineMs = 250);
-        geode::Result<void> runBytecode(std::string const& bytecode, std::string_view chunkName, int deadlineMs = 250);
+        bool runScript(std::string_view src, std::string_view chunkName, int deadlineMs = kDefaultScriptDeadlineMs);
+        geode::Result<void> runBytecode(std::string const& bytecode, std::string_view chunkName, int deadlineMs = kDefaultScriptDeadlineMs);
         static std::string compileSource(std::string_view source);
         bool protectedCall(int nargs, int nresults, std::string_view context, int deadlineMs = 50);
         void runOnMain(std::function<void()> fn);
         bool assertMainThread() const;
+
+        class ScriptBudgetGuard final {
+        public:
+            ScriptBudgetGuard(Runtime& runtime, int deadlineMs);
+            ~ScriptBudgetGuard();
+
+            ScriptBudgetGuard(ScriptBudgetGuard const&) = delete;
+            ScriptBudgetGuard& operator=(ScriptBudgetGuard const&) = delete;
+
+        private:
+            Runtime& m_runtime;
+            bool m_outermost = false;
+            int m_previousBudget = 0;
+            std::chrono::steady_clock::time_point m_previousDeadline{};
+        };
 
         class ResourcesRootScope final {
         public:
@@ -88,10 +105,11 @@ namespace luax {
 
         lua_State* m_state = nullptr;
         std::thread::id m_ownerThread;
-        std::atomic<bool> m_ready{false};
+        std::atomic<imes::luauapi::RuntimeStatus> m_status{imes::luauapi::RuntimeStatus::NotReady};
 
         std::chrono::steady_clock::time_point m_scriptDeadline{};
         int m_scriptBudgetMs = 0;
+        int m_scriptBudgetDepth = 0;
 
         std::size_t m_memoryUsage = 0;
         std::size_t m_memoryLimit = kDefaultMemoryLimitBytes;

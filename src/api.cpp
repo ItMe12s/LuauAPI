@@ -301,6 +301,18 @@ namespace imes::luauapi {
         return luax::Runtime::isInitialized();
     }
 
+    RuntimeStatus status() {
+        if (!luax::Runtime::isMainThread()) return RuntimeStatus::NotReady;
+        auto* runtime = luax::Runtime::getIfInitialized();
+        return runtime ? runtime->status() : RuntimeStatus::NotReady;
+    }
+
+    std::string_view lastError() {
+        if (!luax::Runtime::isMainThread()) return {};
+        auto* runtime = luax::Runtime::getIfInitialized();
+        return runtime ? std::string_view(runtime->lastError()) : std::string_view();
+    }
+
     std::size_t memoryUsage() {
         if (!luax::Runtime::isMainThread()) return 0;
         auto* runtime = luax::Runtime::getIfInitialized();

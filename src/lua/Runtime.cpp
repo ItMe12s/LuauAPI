@@ -54,37 +54,6 @@ namespace luax {
             bool m_active = true;
         };
 
-        class ScriptBudgetGuard {
-        public:
-            ScriptBudgetGuard(
-                int& budget,
-                std::chrono::steady_clock::time_point& deadline,
-                int deadlineMs
-            ) : m_budget(budget),
-                m_deadline(deadline),
-                m_previousBudget(budget),
-                m_previousDeadline(deadline) {
-                m_budget = deadlineMs;
-                if (deadlineMs > 0) {
-                    m_deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(deadlineMs);
-                }
-            }
-
-            ~ScriptBudgetGuard() {
-                m_budget = m_previousBudget;
-                m_deadline = m_previousDeadline;
-            }
-
-            ScriptBudgetGuard(ScriptBudgetGuard const&) = delete;
-            ScriptBudgetGuard& operator=(ScriptBudgetGuard const&) = delete;
-
-        private:
-            int& m_budget;
-            std::chrono::steady_clock::time_point& m_deadline;
-            int m_previousBudget = 0;
-            std::chrono::steady_clock::time_point m_previousDeadline{};
-        };
-
         std::string valueToString(lua_State* L, int idx) {
             size_t len = 0;
             char const* text = luaL_tolstring(L, idx, &len);
@@ -98,6 +67,8 @@ namespace luax {
         m_state = lua_newstate(&Runtime::boundedAlloc, this);
         if (!m_state) {
             m_initError = "luau lua_newstate failed";
+            setLastError(m_initError);
+            m_status.store(imes::luauapi::RuntimeStatus::InitFailed, std::memory_order_release);
             geode::log::error("{}", m_initError);
             return;
         }
@@ -127,6 +98,12 @@ namespace luax {
             m_initError = "luau binding failed: " + *bindError;
             setLastError(m_initError);
             geode::log::error("{}", m_initError);
+            m_requirer.reset();
+            lua_close(m_state);
+            m_state = nullptr;
+            m_tracebackRef = 0;
+            m_codegenEnabled = false;
+            m_status.store(imes::luauapi::RuntimeStatus::InitFailed, std::memory_order_release);
             return;
         }
 
@@ -135,7 +112,7 @@ namespace luax {
         lua_setsafeenv(m_state, -1, true);
         lua_pop(m_state, 1);
 
-        m_ready.store(true, std::memory_order_release);
+        m_status.store(imes::luauapi::RuntimeStatus::Ready, std::memory_order_release);
         geode::log::info("luau runtime ready");
     }
 
@@ -188,11 +165,45 @@ namespace luax {
 
     lua_State* Runtime::state() {
         if (!assertMainThread()) return nullptr;
+        if (!ready()) {
+            if (m_lastError.empty()) {
+                setLastError(m_initError.empty() ? "luau runtime not ready" : m_initError);
+            }
+            return nullptr;
+        }
         return m_state;
     }
 
     bool Runtime::ready() const {
-        return m_ready.load(std::memory_order_acquire);
+        return status() == imes::luauapi::RuntimeStatus::Ready && m_state;
+    }
+
+    imes::luauapi::RuntimeStatus Runtime::status() const {
+        return m_status.load(std::memory_order_acquire);
+    }
+
+    Runtime::ScriptBudgetGuard::ScriptBudgetGuard(Runtime& runtime, int deadlineMs)
+        : m_runtime(runtime),
+          m_outermost(runtime.m_scriptBudgetDepth == 0),
+          m_previousBudget(runtime.m_scriptBudgetMs),
+          m_previousDeadline(runtime.m_scriptDeadline) {
+        ++m_runtime.m_scriptBudgetDepth;
+        if (m_outermost) {
+            m_runtime.m_scriptBudgetMs = deadlineMs;
+            if (deadlineMs > 0) {
+                m_runtime.m_scriptDeadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(deadlineMs);
+            }
+        }
+    }
+
+    Runtime::ScriptBudgetGuard::~ScriptBudgetGuard() {
+        if (m_runtime.m_scriptBudgetDepth > 0) {
+            --m_runtime.m_scriptBudgetDepth;
+        }
+        if (m_outermost) {
+            m_runtime.m_scriptBudgetMs = m_previousBudget;
+            m_runtime.m_scriptDeadline = m_previousDeadline;
+        }
     }
 
     void Runtime::setResourcesRoot(std::filesystem::path const& root) {
@@ -413,8 +424,10 @@ namespace luax {
             setLastError("luau runtime accessed off main thread");
             return false;
         }
-        if (!m_state) {
-            setLastError(m_initError.empty() ? "luau runtime not ready" : m_initError);
+        if (!ready() || !m_state) {
+            if (m_lastError.empty()) {
+                setLastError(m_initError.empty() ? "luau runtime not ready" : m_initError);
+            }
             return false;
         }
         int baseTop = lua_gettop(m_state) - nargs;
@@ -429,7 +442,7 @@ namespace luax {
         lua_insert(m_state, -nargs - 2);
         int errfunc = lua_gettop(m_state) - nargs - 1;
 
-        ScriptBudgetGuard budget(m_scriptBudgetMs, m_scriptDeadline, deadlineMs);
+        ScriptBudgetGuard budget(*this, deadlineMs);
 
         int status = lua_pcall(m_state, nargs, nresults, errfunc);
         lua_remove(m_state, errfunc);
@@ -512,7 +525,7 @@ namespace luax {
 
         auto* self = static_cast<Runtime*>(lua_callbacks(L)->userdata);
         if (self) {
-            self->m_ready.store(false, std::memory_order_release);
+            self->m_status.store(imes::luauapi::RuntimeStatus::Panicked, std::memory_order_release);
             self->setLastError(message ? message : "unknown lua panic");
         }
     }
