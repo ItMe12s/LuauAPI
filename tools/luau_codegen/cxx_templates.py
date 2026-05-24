@@ -58,7 +58,7 @@ def emit_internal_hpp() -> str:
         "};\n\n"
         "std::unordered_map<std::string, LuaHookState>& hookStates();\n\n"
         "template <class PushContext, class ApplyReturn>\n"
-        "void runLuaPostHooks(char const* targetId, PushContext pushContext, ApplyReturn applyReturn) {\n"
+        "void runLuaPostHooks(char const* targetId, int nargs, PushContext pushContext, ApplyReturn applyReturn) {\n"
         "    auto it = hookStates().find(targetId);\n"
         "    if (it == hookStates().end()) return;\n"
         "    auto callbacks = it->second.callbacks;\n"
@@ -73,7 +73,7 @@ def emit_internal_hpp() -> str:
         "        }\n"
         "        pushContext(L);\n"
         "        luax::Runtime::ResourcesRootScope rootScope(runtime, callback->ref.resourcesRoot());\n"
-        "        if (runtime.protectedCall(1, 1, targetId, 50)) {\n"
+        "        if (runtime.protectedCall(nargs, 1, targetId, 50)) {\n"
         "            if (!lua_isnil(L, -1) && !applyReturn(L, -1)) {\n"
         '                geode::log::warn("luau hook [{}] returned invalid override", targetId);\n'
         "            }\n"

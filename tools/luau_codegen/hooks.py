@@ -182,27 +182,22 @@ def emit_hook_target(
         out.append(f"        {call};\n")
     else:
         out.append(f"        auto result = {call};\n")
+    if ret.kind == "bool":
+        out.append("        if (!result) return false;\n")
+    nargs = 1 + len(args) + (1 if ret.kind not in ("void", "bool") else 0)
     out.append(
-        f'        luauapi_gen::runLuaPostHooks("{target_id}", [&](lua_State* L) {{\n'
+        f'        luauapi_gen::runLuaPostHooks("{target_id}", {nargs}, [&](lua_State* L) {{\n'
     )
-    out.append("            lua_createtable(L, 0, 4);\n")
     out.extend(
         f"    {line}"
         for line in push_value(
             TypeInfo("object", f"{cxx_cls}*", cls.name, cls.name), "self"
         )
     )
-    out.append('            lua_setfield(L, -2, "self");\n')
-    out.append(f"            lua_createtable(L, {len(args)}, 0);\n")
-    for i, (_, info, name) in enumerate(args, start=1):
+    for _, info, name in args:
         out.extend(f"    {line}" for line in push_value(info, name))
-        out.append(f"            lua_rawseti(L, -2, {i});\n")
-    out.append('            lua_setfield(L, -2, "args");\n')
-    result_expr = "nullptr" if ret.kind == "void" else "result"
-    out.extend(f"    {line}" for line in push_value(ret, result_expr))
-    out.append('            lua_setfield(L, -2, "result");\n')
-    out.append(f'            lua_pushliteral(L, "{target_id}");\n')
-    out.append('            lua_setfield(L, -2, "target");\n')
+    if ret.kind not in ("void", "bool"):
+        out.extend(f"    {line}" for line in push_value(ret, "result"))
     out.append("        }, [&](lua_State* L, int idx) -> bool {\n")
     if ret.kind == "void":
         out.append("            return true;\n")
