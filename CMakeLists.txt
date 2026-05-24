@@ -28,11 +28,9 @@ FetchContent_Declare(
     geode_bindings
     GIT_REPOSITORY https://github.com/geode-sdk/bindings.git
     GIT_TAG        main
+    SOURCE_SUBDIR  _fetch_only_
 )
-FetchContent_GetProperties(geode_bindings)
-if (NOT geode_bindings_POPULATED)
-    FetchContent_Populate(geode_bindings)
-endif()
+FetchContent_MakeAvailable(geode_bindings)
 
 if (WIN32)
     foreach(LUAU_TARGET
@@ -140,21 +138,6 @@ add_custom_target(luauapi_codegen DEPENDS ${LUAUAPI_GENERATED_CPP} ${LUAUAPI_TYP
 set_source_files_properties(${LUAUAPI_GENERATED_CPP} PROPERTIES GENERATED TRUE)
 
 file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS src/*.cpp)
-foreach(LUAUAPI_MANUAL_BINDING
-    CCObject
-    CCNode
-    CCSprite
-    CCLayer
-    CCSpriteFrame
-    CCSpriteFrameCache
-    CCLabelBMFont
-    CCDirector
-    CCAction
-    GameManager
-    SimplePlayer
-)
-    list(FILTER SOURCES EXCLUDE REGEX "src[/\\\\]lua[/\\\\]bindings[/\\\\]${LUAUAPI_MANUAL_BINDING}\\.cpp$")
-endforeach()
 list(APPEND SOURCES ${LUAUAPI_GENERATED_CPP})
 
 add_library(${PROJECT_NAME} SHARED ${SOURCES})
