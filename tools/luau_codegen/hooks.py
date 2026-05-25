@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 from typing import Dict
 
+from android_symbol import android_symbol
 from broma_parser import Class, Method
 from filtering import direct_callable, platform_value
 from marshalling import push_value
@@ -22,11 +23,48 @@ def hook_suffix(cls: Class, m: Method) -> str:
     return f"{_id(cls.name)}_{_id(m.name)}_{len(m.args)}"
 
 
+def concrete_hook_platform(target_platform: str) -> bool:
+    if target_platform == "android":
+        return False
+    return True
+
+
+def _class_link_platforms(cls: Class) -> set[str]:
+    out: set[str] = set()
+    for attr in cls.attributes:
+        if attr.startswith("link(") and attr.endswith(")"):
+            out.update(p.strip() for p in attr[5:-1].split(","))
+    return out
+
+
+def _android_linked(cls: Class, target_platform: str) -> bool:
+    if target_platform not in ("android32", "android64"):
+        return False
+    links = _class_link_platforms(cls)
+    return bool(links & {"android", target_platform})
+
+
 def hook_offset(m: Method, target_platform: str) -> str:
+    if not concrete_hook_platform(target_platform):
+        return ""
     value = platform_value(m, target_platform)
     token = value.split()[0] if value else ""
     if token.startswith("0x"):
         return token
+    return ""
+
+
+def hook_address_expr(cls: Class, m: Method, target_platform: str) -> str:
+    offset = hook_offset(m, target_platform)
+    if offset:
+        return f"reinterpret_cast<void*>(geode::base::get() + {offset})"
+    if not concrete_hook_platform(target_platform):
+        return ""
+    if _android_linked(cls, target_platform):
+        symbol = android_symbol(cls, m)
+        return (
+            f'dlsym(dlopen("libcocos2dcpp.so", RTLD_NOW), "{symbol}")'
+        )
     return ""
 
 
@@ -37,7 +75,7 @@ def hookable(
         return False
     if not direct_callable(cls, m, target_platform):
         return False
-    if not hook_offset(m, target_platform):
+    if not hook_address_expr(cls, m, target_platform):
         return False
     ret = classify_return(m.ret, objects)
     if ret is None:
@@ -212,12 +250,12 @@ def emit_hook_target(
     if ret.kind != "void":
         out.append("        return result;\n")
     out.append("    }\n\n")
-    offset = hook_offset(m, target_platform)
+    address = hook_address_expr(cls, m, target_platform)
     out.append(
         f"    geode::Result<geode::Hook*> luaapi_create_hook_{suffix}(std::string const& displayName) {{\n"
     )
     out.append(
-        f"        return geode::Mod::get()->hook(reinterpret_cast<void*>(geode::base::get() + {offset}), "
+        f"        return geode::Mod::get()->hook({address}, "
         f"&luaapi_hook_{suffix}, displayName, tulip::hook::TulipConvention::Default);\n"
     )
     out.append("    }\n\n")

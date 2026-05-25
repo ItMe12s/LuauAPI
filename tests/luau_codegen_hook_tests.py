@@ -1,0 +1,74 @@
+from __future__ import annotations
+
+import os
+import sys
+import unittest
+
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+CODEGEN_DIR = os.path.join(ROOT, "tools", "luau_codegen")
+if CODEGEN_DIR not in sys.path:
+    sys.path.insert(0, CODEGEN_DIR)
+
+from broma_parser import Arg, Class, Method  # type: ignore[import-unresolved]
+from hooks import android_symbol, hook_address_expr, hook_offset  # type: ignore[import-unresolved]
+
+
+class HookOffsetTests(unittest.TestCase):
+    def test_android32_uses_android32_offset(self) -> None:
+        method = Method(
+            name="init",
+            ret="bool",
+            args=[],
+            platforms={"android32": "0x1234", "android64": "0x5678"},
+        )
+
+        self.assertEqual(hook_offset(method, "android32"), "0x1234")
+
+    def test_android64_uses_android64_offset(self) -> None:
+        method = Method(
+            name="init",
+            ret="bool",
+            args=[],
+            platforms={"android32": "0x1234", "android64": "0x5678"},
+        )
+
+        self.assertEqual(hook_offset(method, "android64"), "0x5678")
+
+    def test_aggregate_android_emits_no_hook_offset(self) -> None:
+        method = Method(
+            name="init",
+            ret="bool",
+            args=[],
+            platforms={"android32": "0x1234", "android64": "0x5678"},
+        )
+
+        self.assertEqual(hook_offset(method, "android"), "")
+
+    def test_android_symbol_uses_itanium_name(self) -> None:
+        cls = Class(name="CCObject", namespace="cocos2d")
+        method = Method(name="setTag", ret="void", args=[Arg("int", "tag")])
+
+        self.assertEqual(
+            android_symbol(cls, method),
+            "_ZN7cocos2d8CCObject6setTagEi",
+        )
+
+    def test_android_symbol_preserves_pointer_const(self) -> None:
+        cls = Class(name="Foo")
+        method = Method(name="setText", ret="void", args=[Arg("char const*", "text")])
+
+        self.assertEqual(android_symbol(cls, method), "_ZN3Foo7setTextEPKc")
+
+    def test_android_linked_hook_uses_dlsym_address(self) -> None:
+        cls = Class(name="CCObject", namespace="cocos2d", attributes=["link(android)"])
+        method = Method(name="getTag", ret="int", args=[])
+
+        self.assertIn(
+            'dlsym(dlopen("libcocos2dcpp.so", RTLD_NOW), "_ZN7cocos2d8CCObject6getTagEv")',
+            hook_address_expr(cls, method, "android64"),
+        )
+
+
+if __name__ == "__main__":
+    unittest.main()

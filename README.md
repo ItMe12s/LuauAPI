@@ -13,14 +13,15 @@ Generated API differs per platform. Build for your target before copying `types/
 | Platform       | Bindings                                |
 | -------------- | --------------------------------------- |
 | **Windows**    | Full API + `geode.hook`                 |
-| **Android**    | Most methods, no hooks                  |
+| **Android**    | Generated calls + `geode.hook` targets  |
 | **iOS/macOS**  | ~None (Apple `link` filter applies)     |
 
-Cross-platform Luau scripts are not yet supported. You'll have to do manual hooking.
-I'll add support later. This is very-very WIP.
+Cross-platform Luau scripts are not yet supported. Android hook targets are generated per ABI.
+Manual Android device testing is still required before treating a hook-heavy script as release-ready.
 
 - Windows uses `win 0x...` addresses. (Full support, make anything you want).
-- Android uses `[[link(android)]]`. (Almost full support, you'll have to check yourself).
+- Android uses `[[link(android)]]`, `android32`, and `android64` symbols.
+  - Generated calls and `geode.hook` targets are ABI-specific, so build Android32 or Android64 before copying `types/`.
 - iOS/macOS only emit `link`-tagged symbols. (You ain't doing shit except basic Luau stuff).
 
 ## Setup your visual studio
