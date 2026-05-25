@@ -200,6 +200,11 @@ def plan_outputs(root: Root, target_platform: str = "win") -> List[str]:
     return outputs
 
 
+def hook_target_count(root: Root, target_platform: str = "win") -> int:
+    plan = _collect_plan(root, target_platform)
+    return sum(len(targets) for targets in plan.hook_targets_by_class.values())
+
+
 def _emit_class_file(
     cls: Class,
     grouped: dict[str, list[Method]],

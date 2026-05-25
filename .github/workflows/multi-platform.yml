@@ -58,6 +58,26 @@ jobs:
           combine: true
           target: ${{ matrix.config.target }}
 
+      - name: Summarize LuauAPI codegen
+        shell: pwsh
+        run: |
+          $reports = Get-ChildItem -Path . -Recurse -Filter report.md | Where-Object { $_.FullName -like '*luauapi-gen*' }
+          if (-not $reports) {
+            Write-Host "No LuauAPI codegen report found."
+            exit 0
+          }
+          foreach ($report in $reports) {
+            Write-Host "LuauAPI codegen report: $($report.FullName)"
+            Get-Content $report.FullName | Select-Object -First 40
+          }
+
+      - name: Upload LuauAPI codegen reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: LuauAPI Codegen Reports ${{ matrix.config.name }}
+          path: '**/luauapi-gen/report.md'
+          if-no-files-found: ignore
+
   package:
     name: Package builds
     runs-on: ubuntu-latest

@@ -16,6 +16,17 @@ import emit_luau_bindings
 import emit_luau_types
 from model import BRO_FILES, object_classes, status_for
 
+VALID_PLATFORMS = {
+    "win",
+    "android",
+    "android32",
+    "android64",
+    "ios",
+    "mac",
+    "imac",
+    "m1",
+}
+
 
 def _collect(bindings_dir: str) -> broma_parser.Root:
     root = broma_parser.Root()
@@ -83,6 +94,8 @@ def _emit_report(
     cxx_paths: list[str],
     types_path: str,
     skipped: list[tuple[str, str, str]],
+    target_platform: str,
+    hook_target_count: int,
 ) -> None:
     obj = object_classes(root)
     total_methods = sum(len(c.methods) for c in root.classes)
@@ -92,11 +105,13 @@ def _emit_report(
         reasons[reason] = reasons.get(reason, 0) + 1
     lines = [
         "# LuauAPI codegen report\n\n",
+        f"- Target platform: **{target_platform}**\n",
         f"- Classes parsed: **{len(root.classes)}**\n",
         f"- CCObject classes emitted: **{len(obj)}**\n",
         f"- Methods parsed: **{total_methods}**\n",
         f"- Methods emitted: **{emitted_methods}**\n",
         f"- Methods skipped: **{len(skipped)}**\n",
+        f"- Hook targets emitted: **{hook_target_count}**\n",
         f"- Generated binding files: **{len(cxx_paths)}**\n",
     ]
     for cxx_path in cxx_paths:
@@ -145,6 +160,14 @@ def main(argv: List[str]) -> int:
     )
     args = parser.parse_args(argv)
 
+    if args.platform not in VALID_PLATFORMS:
+        valid = ", ".join(sorted(VALID_PLATFORMS))
+        print(
+            f"[luauapi] unknown platform '{args.platform}'. Expected one of: {valid}",
+            file=sys.stderr,
+        )
+        return 2
+
     if not os.path.isdir(args.bindings):
         print(f"[luauapi] bindings dir missing: {args.bindings}", file=sys.stderr)
         return 2
@@ -185,8 +208,19 @@ def main(argv: List[str]) -> int:
         _write_if_changed(os.path.join(args.types_out, filename), content)
     _emit_schema(root, schema_path)
     types_paths = [os.path.join(args.types_out, f) for f in type_files]
-    _emit_report(root, report_path, written_paths, ", ".join(types_paths), skipped)
+    hook_count = emit_luau_bindings.hook_target_count(root, args.platform)
+    _emit_report(
+        root,
+        report_path,
+        written_paths,
+        ", ".join(types_paths),
+        skipped,
+        args.platform,
+        hook_count,
+    )
     print(f"[luauapi] parsed {len(root.classes)} classes")
+    print(f"[luauapi] target platform {args.platform}")
+    print(f"[luauapi] hook targets {hook_count}")
     for path in written_paths:
         print(f"[luauapi] wrote {path}")
     for path in types_paths:
