@@ -6,18 +6,6 @@ using namespace geode::prelude;
 namespace lua = imes::luauapi;
 
 $on_mod(Loaded) {
-    // Check runtime status before doing anything.
-    // Can be NotReady, Ready, InitFailed, or Panicked.
-    auto st = lua::status();
-    if (st == lua::RuntimeStatus::InitFailed) {
-        log::error("LuauAPI runtime failed to initialize");
-        return;
-    }
-    if (st == lua::RuntimeStatus::Panicked) {
-        log::error("LuauAPI runtime panicked, no recovery possible");
-        return;
-    }
-
     // Log diagnostics about the shared VM.
     log::info("LuauAPI codegen: {}", lua::codegenEnabled() ? "on" : "off");
     log::info("LuauAPI memory: {} / {} bytes",

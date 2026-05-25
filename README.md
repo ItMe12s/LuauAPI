@@ -81,7 +81,7 @@ Available calls:
 
 - Panic is fatal, status changes to `Panicked` with no recovery.
 - OOM means hitting the memory limit, allocator returns null, status stays unchanged.
-- Mods must check `isReady()` or `status()` before use, non-ready means platform failure.
+- Runtime loads at startup. `isReady()` and `status()` exist for diagnostics but checking before use is not required.
 - Native C++ called from Luau isn't budgeted.
 - 4096 global max hooks and 64 per target. Removed hooks don't count after next registry compact.
 
