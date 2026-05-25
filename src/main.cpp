@@ -6,5 +6,8 @@
 
 $execute {
     luax::Runtime::setMainThreadId(std::this_thread::get_id());
+}
+
+$on_mod(Loaded) {
     luax::Runtime::instance();
 }

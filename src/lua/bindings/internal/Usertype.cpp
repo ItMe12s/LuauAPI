@@ -68,10 +68,14 @@ namespace luax::detail {
 
     void chainMethodTable(lua_State* L, TypeInfo const& info, std::uint32_t baseTag) {
         auto const* base = UsertypeRegistry::get().findByTag(baseTag);
-        if (!base) return;
+        if (!base || base->mtName.empty()) return;
         luaL_getmetatable(L, info.mtName.c_str());
         lua_getfield(L, -1, "__index");
         luaL_getmetatable(L, base->mtName.c_str());
+        if (lua_isnil(L, -1)) {
+            lua_pop(L, 3);
+            return;
+        }
         lua_getfield(L, -1, "__index");
         lua_remove(L, -2);
         lua_createtable(L, 0, 1);
