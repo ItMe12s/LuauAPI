@@ -44,6 +44,23 @@ def _android_linked(cls: Class, target_platform: str) -> bool:
     return bool(links & {"android", target_platform})
 
 
+_APPLE_PLATFORMS = {"ios", "mac", "imac", "m1"}
+
+
+def _apple_linked(cls: Class, target_platform: str) -> bool:
+    if target_platform not in _APPLE_PLATFORMS:
+        return False
+    aliases = {
+        "mac": {"mac", "imac", "m1"},
+        "imac": {"mac", "imac"},
+        "m1": {"mac", "m1"},
+        "ios": {"ios"},
+    }
+    valid = aliases.get(target_platform, {target_platform})
+    links = _class_link_platforms(cls)
+    return bool(links & valid)
+
+
 def hook_offset(m: Method, target_platform: str) -> str:
     if not concrete_hook_platform(target_platform):
         return ""
@@ -65,6 +82,9 @@ def hook_address_expr(cls: Class, m: Method, target_platform: str) -> str:
         return (
             f'dlsym(dlopen("libcocos2dcpp.so", RTLD_NOW), "{symbol}")'
         )
+    if _apple_linked(cls, target_platform):
+        symbol = android_symbol(cls, m)
+        return f'dlsym(RTLD_DEFAULT, "{symbol}")'
     return ""
 
 

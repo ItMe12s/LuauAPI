@@ -8,7 +8,7 @@ from denylist import INACCESSIBLE_CLASSES, INACCESSIBLE_METHODS
 from model import short_name, status_for
 from type_map import classify_arg, classify_return
 
-STRICT_DIRECT_PLATFORMS = {"ios", "mac", "imac", "m1"}
+STRICT_DIRECT_PLATFORMS: set[str] = set()
 
 
 def platform_value(m: Method, target_platform: str) -> str:

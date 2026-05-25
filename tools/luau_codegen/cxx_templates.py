@@ -17,7 +17,7 @@ def file_preamble() -> str:
         "#include <Geode/loader/Tulip.hpp>\n"
         "#include <cocos2d.h>\n"
         "#include <lua.h>\n\n"
-        "#if defined(GEODE_IS_ANDROID)\n"
+        "#if defined(GEODE_IS_ANDROID) || defined(GEODE_IS_MACOS) || defined(GEODE_IS_IOS)\n"
         "#include <dlfcn.h>\n"
         "#endif\n\n"
         "#include <cstddef>\n"
