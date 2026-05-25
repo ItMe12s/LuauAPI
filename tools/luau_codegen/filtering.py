@@ -11,6 +11,17 @@ from type_map import classify_arg, classify_return
 STRICT_DIRECT_PLATFORMS: set[str] = set()
 
 
+def _platform_aliases(target_platform: str) -> set[str]:
+    return {
+        "mac": {"mac", "imac", "m1"},
+        "imac": {"mac", "imac"},
+        "m1": {"mac", "m1"},
+        "android": {"android", "android32", "android64"},
+        "android32": {"android", "android32"},
+        "android64": {"android", "android64"},
+    }.get(target_platform, {target_platform})
+
+
 def platform_value(m: Method, target_platform: str) -> str:
     value = m.platforms.get(target_platform, "")
     if value:
@@ -27,19 +38,27 @@ def platform_value(m: Method, target_platform: str) -> str:
 
 
 def _is_link_platform(cls: Class, target_platform: str) -> bool:
-    aliases = {
-        "mac": {"mac", "imac", "m1"},
-        "imac": {"mac", "imac"},
-        "m1": {"mac", "m1"},
-        "android": {"android", "android32", "android64"},
-        "android32": {"android", "android32"},
-        "android64": {"android", "android64"},
-    }.get(target_platform, {target_platform})
+    aliases = _platform_aliases(target_platform)
     for attr in cls.attributes:
         if attr.startswith("link(") and attr.endswith(")"):
             platforms = [p.strip() for p in attr[5:-1].split(",")]
             return any(platform in aliases for platform in platforms)
     return False
+
+
+def _method_missing_platforms(m: Method) -> set[str]:
+    out: set[str] = set()
+    for attr in m.attributes:
+        if attr.startswith("missing(") and attr.endswith(")"):
+            out.update(p.strip() for p in attr[8:-1].split(","))
+    return out
+
+
+def _is_missing_on_platform(m: Method, target_platform: str) -> bool:
+    missing = _method_missing_platforms(m)
+    if not missing:
+        return False
+    return bool(missing & _platform_aliases(target_platform))
 
 
 def direct_callable(cls: Class, m: Method, target_platform: str) -> bool:
@@ -72,9 +91,14 @@ def supported(
         return False, "callback"
     if m.name.startswith("operator"):
         return False, "operator"
+    if _is_missing_on_platform(m, target_platform):
+        return False, "missing-platform"
     if status_for(m.platforms) == "Missing":
-        return False, "missing-address"
-    if not direct_callable(cls, m, target_platform):
+        if not _is_link_platform(cls, target_platform):
+            return False, "missing-address"
+        if m.name.startswith("_"):
+            return False, "inaccessible"
+    elif not direct_callable(cls, m, target_platform):
         return False, f"not-callable:{target_platform}"
     if classify_return(m.ret, objects) is None:
         return False, f"unsupported-return:{m.ret}"

@@ -23,6 +23,7 @@ class Method:
     is_ctor: bool = False
     is_dtor: bool = False
     platforms: Dict[str, str] = dataclasses.field(default_factory=dict)
+    attributes: List[str] = dataclasses.field(default_factory=list)
     line: int = 0
 
 
@@ -233,6 +234,7 @@ def _parse_bases(value: str) -> List[str]:
 
 
 def _parse_class_body(cur: _Cursor, cls: Class) -> None:
+    pending_method_attrs: List[str] = []
     while not cur.at_end():
         cur.skip_ws()
         if cur.at_end():
@@ -245,6 +247,7 @@ def _parse_class_body(cur: _Cursor, cls: Class) -> None:
             if end == -1:
                 cur.advance(2)
             else:
+                pending_method_attrs.append(cur.text[cur.pos + 2 : end].strip())
                 cur.line += cur.text[cur.pos : end + 2].count("\n")
                 cur.pos = end + 2
             continue
@@ -264,13 +267,15 @@ def _parse_class_body(cur: _Cursor, cls: Class) -> None:
                 end = _skip_balanced_brace(cur.text, i)
                 cur.line += cur.text[start:end].count("\n")
                 cur.pos = end
-                _parse_member(cls, head, line)
+                _parse_member(cls, head, line, pending_method_attrs)
+                pending_method_attrs.clear()
                 break
             elif ch == ";" and depth == 0:
                 text = cur.text[start:i].strip()
                 cur.line += cur.text[start : i + 1].count("\n")
                 cur.pos = i + 1
-                _parse_member(cls, text, line)
+                _parse_member(cls, text, line, pending_method_attrs)
+                pending_method_attrs.clear()
                 break
             elif ch == "}" and depth == 0:
                 cur.pos = i
@@ -295,7 +300,9 @@ def _skip_balanced_brace(text: str, start: int) -> int:
     return len(text)
 
 
-def _parse_member(cls: Class, decl: str, line: int) -> None:
+def _parse_member(
+    cls: Class, decl: str, line: int, pending_method_attrs: List[str]
+) -> None:
     if not decl:
         return
     head, addr_tail = _split_decl_and_addr(decl)
@@ -304,6 +311,7 @@ def _parse_member(cls: Class, decl: str, line: int) -> None:
         method = _parse_method(cls.name, head, line)
         if method:
             method.platforms = _parse_platform_list(addr_tail)
+            method.attributes = pending_method_attrs[:]
             cls.methods.append(method)
         return
     field = _parse_field(head, line)
