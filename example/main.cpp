@@ -1,6 +1,6 @@
 #include <Geode/Geode.hpp>
 #include <Geode/loader/ModEvent.hpp>
-#include <imes.luauapi/LuauAPI.hpp>
+#include <imes.luauapi/include/LuauAPI.hpp>
 
 using namespace geode::prelude;
 namespace lua = imes::luauapi;

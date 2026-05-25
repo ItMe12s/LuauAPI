@@ -2,7 +2,7 @@
 
 #include "Config.hpp"
 
-#include <imes.luauapi/LuauAPI.hpp>
+#include <LuauAPI.hpp>
 #include <Geode/Geode.hpp>
 #include <lua.h>
 #include <lualib.h>

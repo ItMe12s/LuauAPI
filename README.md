@@ -48,7 +48,7 @@ Add LuauAPI as a required dependency in your mod:
 Use the public header from C++:
 
 ```cpp
-#include <imes.luauapi/LuauAPI.hpp>
+#include <imes.luauapi/include/LuauAPI.hpp>
 ```
 
 Main thread is required for every public API. Async APIs read and compile off-thread, then queue execution on the main thread.

@@ -1,4 +1,4 @@
-#include <imes.luauapi/LuauAPI.hpp>
+#include <LuauAPI.hpp>
 
 #include "lua/PathSandbox.hpp"
 #include "lua/Runtime.hpp"
