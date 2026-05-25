@@ -5,34 +5,30 @@
 using namespace geode::prelude;
 namespace lua = imes::luauapi;
 
-$on_mod(Loaded) {
-    // Log diagnostics about the shared VM.
-    log::info("LuauAPI codegen: {}", lua::codegenEnabled() ? "on" : "off");
-    log::info("LuauAPI memory: {} / {} bytes",
-        lua::memoryUsage(), lua::memoryLimit());
-    // runFileAsync compiles off-thread, then executes on the main thread.
-    // Prefer this over runFile (sync) to avoid hitching during load.
-    lua::runFileAsync(
+static void loadBootstrap() {
+    if (lua::status() != lua::RuntimeStatus::Ready) {
+        log::error("LuauAPI not ready (status {})", static_cast<int>(lua::status()));
+        return;
+    }
+
+    auto result = lua::runFile(
         Mod::get()->getResourcesDir(),
         "Bootstrap.luau",
-        250 // CPU deadline in ms (default). Set <= 0 to disable budget.
-    ).listen(
-        [](geode::Result<void>* result) {
-            if (result && result->isErr()) {
-                log::error("Bootstrap.luau failed: {}", result->unwrapErr());
-                // lua::lastError() has the latest sync error string.
-                // Read it before your next LuauAPI call because it gets overwritten.
-                log::error("lastError: {}", lua::lastError());
-            }
-        },
-        [](auto*) {},
-        []() {
-            log::warn("Bootstrap.luau cancelled");
-        }
+        250
     );
+    if (result.isErr()) {
+        log::error("Bootstrap.luau failed: {}", result.unwrapErr());
+        log::error("lastError: {}", lua::lastError());
+    } else {
+        log::info("Bootstrap.luau loaded");
+    }
+}
 
-    // Sync alternative (blocks the main thread during compile and execute):
-    //   auto result = lua::runFile(
-    //       Mod::get()->getResourcesDir(), "Bootstrap.luau");
-    //   if (result.isErr()) log::error("{}", result.unwrapErr());
+$on_mod(Loaded) {
+    log::info("LuauAPI codegen: {}", lua::codegenEnabled() ? "on" : "off");
+    log::info("LuauAPI memory: {} / {} bytes", lua::memoryUsage(), lua::memoryLimit());
+
+    queueInMainThread([] {
+        loadBootstrap();
+    });
 }
