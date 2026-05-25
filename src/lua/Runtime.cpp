@@ -477,11 +477,6 @@ namespace luax {
         return false;
     }
 
-    void Runtime::setMemoryLimit(std::size_t bytes) {
-        if (!assertMainThread()) return;
-        m_memoryLimit = clampMemoryLimit(bytes);
-    }
-
     void* Runtime::boundedAlloc(void* ud, void* ptr, size_t osize, size_t nsize) {
         auto* self = static_cast<Runtime*>(ud);
         if (nsize == 0) {

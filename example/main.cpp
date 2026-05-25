@@ -22,9 +22,6 @@ $on_mod(Loaded) {
     log::info("LuauAPI codegen: {}", lua::codegenEnabled() ? "on" : "off");
     log::info("LuauAPI memory: {} / {} bytes",
         lua::memoryUsage(), lua::memoryLimit());
-    // Memory limit defaults to 64 MiB. Heavy mods can call
-    // lua::setMemoryLimit(bytes) to raise it (clamped to 16 to 512 MiB).
-
     // runFileAsync compiles off-thread, then executes on the main thread.
     // Prefer this over runFile (sync) to avoid hitching during load.
     lua::runFileAsync(

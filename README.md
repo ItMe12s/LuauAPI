@@ -64,13 +64,11 @@ Available calls:
 | `lastError()`                                                       | Returns last synchronous runtime error string.                       |
 | `memoryUsage()`                                                     | Shared VM allocator usage in bytes.                                  |
 | `memoryLimit()`                                                     | Shared VM allocator limit in bytes.                                  |
-| `setMemoryLimit(bytes)`                                             | Sets shared VM allocator limit, clamped to supported range.          |
 | `codegenEnabled()`                                                  | Whether Luau native codegen is active.                               |
 
 - `deadlineMs <= 0` disables the Luau CPU budget for that execution.
 - Default script deadline is `250 ms`. Generated hook callbacks use `50 ms`.
-- `setMemoryLimit` clamps to `16 MiB..512 MiB`. Default memory limit is `64 MiB`.
-- **Please use the default values** unless you're making a really heavy mod.
+- Memory limit is `512 MiB`.
 - `lastError()` only shows the latest sync error, check before your next call.
 
 **Threading contract:**
@@ -78,7 +76,6 @@ Available calls:
 - All public APIs are main-thread only.
 - Async APIs run off-thread, then execute on the main thread.
 - Off-thread queries return defaults and don't start the runtime.
-- Off-thread `setMemoryLimit` does nothing.
 
 **Runtime contract:**
 

@@ -21,9 +21,3 @@ TEST_CASE("allocator accounting clamps underflow") {
     REQUIRE(luax::allocatorUsageAfterFree(4, 8) == 0);
     REQUIRE(luax::allocatorUsageAfterReallocate(4, 8, 16) == 16);
 }
-
-TEST_CASE("memory limits clamp to supported range") {
-    REQUIRE(luax::clampMemoryLimit(1) == luax::kMinMemoryLimitBytes);
-    REQUIRE(luax::clampMemoryLimit(luax::kDefaultMemoryLimitBytes) == luax::kDefaultMemoryLimitBytes);
-    REQUIRE(luax::clampMemoryLimit(luax::kMaxMemoryLimitBytes + 1) == luax::kMaxMemoryLimitBytes);
-}

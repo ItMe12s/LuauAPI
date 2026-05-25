@@ -87,7 +87,6 @@ namespace luax {
 
         std::size_t memoryUsage() const { return m_memoryUsage; }
         std::size_t memoryLimit() const { return m_memoryLimit; }
-        void setMemoryLimit(std::size_t bytes);
 
         bool codegenEnabled() const { return m_codegenEnabled; }
 
@@ -112,7 +111,7 @@ namespace luax {
         int m_scriptBudgetDepth = 0;
 
         std::size_t m_memoryUsage = 0;
-        std::size_t m_memoryLimit = kDefaultMemoryLimitBytes;
+        std::size_t m_memoryLimit = kMemoryLimitBytes;
 
         int m_tracebackRef = 0;
 

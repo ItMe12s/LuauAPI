@@ -22,6 +22,7 @@
     #endif
 #endif
 
+// I hope people actually read this.
 namespace imes::luauapi {
     enum class RuntimeStatus {
         NotReady,
@@ -74,9 +75,6 @@ namespace imes::luauapi {
     // Main-thread only query APIs. Off-thread calls return default values.
     LUAUAPI_DLL std::size_t memoryUsage();
     LUAUAPI_DLL std::size_t memoryLimit();
-
-    // Main-thread only. Creates runtime if needed. Clamps to supported shared-pool range.
-    LUAUAPI_DLL void setMemoryLimit(std::size_t bytes);
 
     LUAUAPI_DLL bool codegenEnabled();
 }
