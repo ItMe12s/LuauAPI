@@ -38,6 +38,8 @@ namespace luax {
         imes::luauapi::RuntimeStatus status() const;
         static bool isInitialized();
         static Runtime* getIfInitialized();
+        static void shutdown();
+        static bool isShuttingDown();
         static void setMainThreadId(std::thread::id id);
         static bool isMainThread();
         bool runScript(std::string_view src, std::string_view chunkName, int deadlineMs = kDefaultScriptDeadlineMs);
@@ -105,6 +107,7 @@ namespace luax {
         lua_State* m_state = nullptr;
         std::thread::id m_ownerThread;
         std::atomic<imes::luauapi::RuntimeStatus> m_status{imes::luauapi::RuntimeStatus::NotReady};
+        bool m_destroyed = false;
 
         std::chrono::steady_clock::time_point m_scriptDeadline{};
         int m_scriptBudgetMs = 0;

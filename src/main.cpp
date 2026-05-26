@@ -1,6 +1,7 @@
 #include "lua/Runtime.hpp"
 
 #include <Geode/Geode.hpp>
+#include <Geode/loader/GameEvent.hpp>
 
 #include <thread>
 
@@ -10,4 +11,8 @@ $execute {
 
 $on_mod(Loaded) {
     luax::Runtime::instance();
+}
+
+$on_game(Exiting) {
+    luax::Runtime::shutdown();
 }

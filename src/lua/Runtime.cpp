@@ -30,6 +30,11 @@ namespace luax {
             return runtime;
         }
 
+        std::atomic_bool& shuttingDownStorage() {
+            static std::atomic_bool shuttingDown{false};
+            return shuttingDown;
+        }
+
         std::thread::id& mainThreadIdStorage() {
             static std::thread::id id;
             return id;
@@ -118,16 +123,21 @@ namespace luax {
     }
 
     Runtime::~Runtime() {
+        if (m_destroyed) return;
+        m_destroyed = true;
+        m_status.store(imes::luauapi::RuntimeStatus::NotReady, std::memory_order_release);
+
         for (auto it = m_shutdownHooks.rbegin(); it != m_shutdownHooks.rend(); ++it) {
             (*it)();
         }
         m_shutdownHooks.clear();
-        clearLuaRetains();
 
         if (m_state) {
             lua_close(m_state);
             m_state = nullptr;
         }
+
+        clearLuaRetains();
         geode::log::info("luau runtime shutdown");
     }
 
@@ -153,6 +163,18 @@ namespace luax {
         auto& runtime = runtimeStorage();
         if (!runtime) return nullptr;
         return &*runtime;
+    }
+
+    void Runtime::shutdown() {
+        shuttingDownStorage().store(true, std::memory_order_release);
+        auto& runtime = runtimeStorage();
+        if (runtime) {
+            runtime.reset();
+        }
+    }
+
+    bool Runtime::isShuttingDown() {
+        return shuttingDownStorage().load(std::memory_order_acquire);
     }
 
     void Runtime::setMainThreadId(std::thread::id id) {

@@ -33,6 +33,10 @@ namespace {
         std::string chunk,
         int deadlineMs
     ) {
+        if (luax::Runtime::isShuttingDown()) {
+            return geode::Err("luau runtime shutting down");
+        }
+
         auto& runtime = luax::Runtime::instance();
         if (!runtime.ready()) {
             auto const& err = runtime.lastError();
@@ -113,6 +117,9 @@ namespace imes::luauapi {
         if (threadResult.isErr()) {
             return geode::Err(threadResult.unwrapErr());
         }
+        if (luax::Runtime::isShuttingDown()) {
+            return geode::Err("luau runtime shutting down");
+        }
 
         std::filesystem::path path;
         std::filesystem::path root;
@@ -147,6 +154,9 @@ namespace imes::luauapi {
         if (threadResult.isErr()) {
             return geode::Err(threadResult.unwrapErr());
         }
+        if (luax::Runtime::isShuttingDown()) {
+            return geode::Err("luau runtime shutting down");
+        }
 
         auto rootResult = luax::canonicalRoot(resourcesRoot);
         if (rootResult.isErr()) {
@@ -180,6 +190,11 @@ namespace imes::luauapi {
             auto /*progress*/,
             auto hasBeenCancelled
         ) {
+            if (luax::Runtime::isShuttingDown()) {
+                finish(geode::Err("luau runtime shutting down"));
+                return;
+            }
+
             if (hasBeenCancelled()) {
                 finish(geode::Err("cancelled"));
                 return;
@@ -218,6 +233,10 @@ namespace imes::luauapi {
             auto bytecode = luax::Runtime::compileSource(source);
 
             geode::queueInMainThread([finish = std::move(finish), root, chunk = std::move(chunk), bytecode = std::move(bytecode), deadlineMs]() mutable {
+                if (luax::Runtime::isShuttingDown()) {
+                    finish(geode::Err("luau runtime shutting down"));
+                    return;
+                }
                 if (!luax::Runtime::isMainThread()) {
                     finish(geode::Err("luau api must be called on the main thread"));
                     return;
@@ -247,6 +266,11 @@ namespace imes::luauapi {
             auto /*progress*/,
             auto hasBeenCancelled
         ) mutable {
+            if (luax::Runtime::isShuttingDown()) {
+                finish(geode::Err("luau runtime shutting down"));
+                return;
+            }
+
             if (hasBeenCancelled()) {
                 finish(geode::Err("cancelled"));
                 return;
@@ -279,6 +303,10 @@ namespace imes::luauapi {
             auto bytecode = luax::Runtime::compileSource(source);
 
             geode::queueInMainThread([finish = std::move(finish), root, chunk = std::move(chunk), bytecode = std::move(bytecode), deadlineMs]() mutable {
+                if (luax::Runtime::isShuttingDown()) {
+                    finish(geode::Err("luau runtime shutting down"));
+                    return;
+                }
                 if (!luax::Runtime::isMainThread()) {
                     finish(geode::Err("luau api must be called on the main thread"));
                     return;
@@ -298,34 +326,40 @@ namespace imes::luauapi {
     }
 
     bool isReady() {
+        if (luax::Runtime::isShuttingDown()) return false;
         return luax::Runtime::isInitialized();
     }
 
     RuntimeStatus status() {
+        if (luax::Runtime::isShuttingDown()) return RuntimeStatus::NotReady;
         if (!luax::Runtime::isMainThread()) return RuntimeStatus::NotReady;
         auto* runtime = luax::Runtime::getIfInitialized();
         return runtime ? runtime->status() : RuntimeStatus::NotReady;
     }
 
     std::string_view lastError() {
+        if (luax::Runtime::isShuttingDown()) return {};
         if (!luax::Runtime::isMainThread()) return {};
         auto* runtime = luax::Runtime::getIfInitialized();
         return runtime ? std::string_view(runtime->lastError()) : std::string_view();
     }
 
     std::size_t memoryUsage() {
+        if (luax::Runtime::isShuttingDown()) return 0;
         if (!luax::Runtime::isMainThread()) return 0;
         auto* runtime = luax::Runtime::getIfInitialized();
         return runtime ? runtime->memoryUsage() : 0;
     }
 
     std::size_t memoryLimit() {
+        if (luax::Runtime::isShuttingDown()) return 0;
         if (!luax::Runtime::isMainThread()) return 0;
         auto* runtime = luax::Runtime::getIfInitialized();
         return runtime ? runtime->memoryLimit() : 0;
     }
 
     bool codegenEnabled() {
+        if (luax::Runtime::isShuttingDown()) return false;
         if (!luax::Runtime::isMainThread()) return false;
         auto* runtime = luax::Runtime::getIfInitialized();
         return runtime && runtime->codegenEnabled();

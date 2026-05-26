@@ -23,6 +23,7 @@ namespace luax {
     }
 
     inline bool assertMainThread() {
+        if (luax::Runtime::isShuttingDown()) return false;
         return luax::Runtime::instance().assertMainThread();
     }
 
