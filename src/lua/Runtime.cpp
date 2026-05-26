@@ -104,6 +104,7 @@ namespace luax {
             m_initError = "luau binding failed: " + *bindError;
             setLastError(m_initError);
             geode::log::error("{}", m_initError);
+            runShutdownHooks();
             m_requirer.reset();
             lua_close(m_state);
             m_state = nullptr;
@@ -127,10 +128,7 @@ namespace luax {
         m_destroyed = true;
         m_status.store(imes::luauapi::RuntimeStatus::NotReady, std::memory_order_release);
 
-        for (auto it = m_shutdownHooks.rbegin(); it != m_shutdownHooks.rend(); ++it) {
-            (*it)();
-        }
-        m_shutdownHooks.clear();
+        runShutdownHooks();
 
         if (m_state) {
             lua_close(m_state);
@@ -139,6 +137,13 @@ namespace luax {
 
         clearLuaRetains();
         geode::log::info("luau runtime shutdown");
+    }
+
+    void Runtime::runShutdownHooks() {
+        for (auto it = m_shutdownHooks.rbegin(); it != m_shutdownHooks.rend(); ++it) {
+            (*it)();
+        }
+        m_shutdownHooks.clear();
     }
 
     void Runtime::registerShutdownHook(std::function<void()> fn) {
@@ -325,7 +330,7 @@ namespace luax {
         return Luau::compile(std::string(source), opts);
     }
 
-    std::string const& Runtime::getOrCompileBytecode(std::string const& key, std::string const& source) {
+    std::string const& Runtime::getOrCompileBytecode(std::string const& key, std::string_view source) {
         auto cached = m_bytecodeCache.find(key);
         if (cached != m_bytecodeCache.end()) {
             return cached->second;
@@ -412,7 +417,7 @@ namespace luax {
         bytecodeKey += "|";
         bytecodeKey += std::to_string(std::hash<std::string_view>{}(src));
 
-        std::string const& bytecode = getOrCompileBytecode(bytecodeKey, std::string(src));
+        std::string const& bytecode = getOrCompileBytecode(bytecodeKey, src);
 
         if (luau_load(m_state, chunk.c_str(), bytecode.data(), bytecode.size(), 0) != 0) {
             auto err = formatLuaError(chunk.c_str());
@@ -480,10 +485,6 @@ namespace luax {
         }
 
         return true;
-    }
-
-    void Runtime::runOnMain(std::function<void()> fn) {
-        geode::queueInMainThread(std::move(fn));
     }
 
     bool Runtime::assertMainThread() const {

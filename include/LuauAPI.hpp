@@ -48,16 +48,16 @@ namespace imes::luauapi {
         int deadlineMs = 250
     );
 
-    LUAUAPI_DLL geode::Task<geode::Result<void>> runFileAsync(
-        std::filesystem::path const& resourcesRoot,
-        std::filesystem::path const& relativePath,
+    LUAUAPI_DLL arc::Future<geode::Result<void>> runFileAsync(
+        std::filesystem::path resourcesRoot,
+        std::filesystem::path relativePath,
         int deadlineMs = 250
     );
 
-    LUAUAPI_DLL geode::Task<geode::Result<void>> runScriptAsync(
-        std::filesystem::path const& resourcesRoot,
+    LUAUAPI_DLL arc::Future<geode::Result<void>> runScriptAsync(
+        std::filesystem::path resourcesRoot,
         std::string source,
-        std::string_view chunkName,
+        std::string chunkName,
         int deadlineMs = 250
     );
 

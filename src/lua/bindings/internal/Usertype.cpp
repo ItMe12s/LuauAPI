@@ -5,6 +5,8 @@
 #include <luaconf.h>
 #include <lualib.h>
 
+#include <new>
+
 namespace luax::detail {
     UsertypeRegistry& UsertypeRegistry::get() {
         static auto* instance = new UsertypeRegistry;
@@ -57,9 +59,8 @@ namespace luax::detail {
             if (block->ptr) {
                 releaseLuaRetain(block->ptr, "__gc", false);
             }
-            block->ptr = nullptr;
         }
-        block->weak = geode::WeakRef<cocos2d::CCObject>{};
+        block->~UserdataBlock();
     }
 
     void getOrCreateMetatable(lua_State* L, TypeInfo& info) {
@@ -72,6 +73,27 @@ namespace luax::detail {
             lua_setfield(L, -2, "__type");
         }
         lua_pop(L, 1);
+    }
+
+    geode::Result<void> ensureUserdataMetatable(lua_State* L, TypeInfo const& info) {
+        if (info.tag == 0 || info.tag >= LUA_UTAG_LIMIT) {
+            return geode::Err(fmt::format("{} userdata tag {} exceeds LUA_UTAG_LIMIT ({})", info.name, info.tag, LUA_UTAG_LIMIT));
+        }
+
+        lua_getuserdatametatable(L, static_cast<int>(info.tag));
+        if (!lua_isnil(L, -1)) {
+            lua_pop(L, 1);
+            return geode::Ok();
+        }
+        lua_pop(L, 1);
+
+        luaL_getmetatable(L, info.mtName.c_str());
+        if (lua_isnil(L, -1)) {
+            lua_pop(L, 1);
+            return geode::Err(fmt::format("missing userdata metatable for {}", info.name));
+        }
+        lua_setuserdatametatable(L, static_cast<int>(info.tag));
+        return geode::Ok();
     }
 
     void chainMethodTable(lua_State* L, TypeInfo const& info, std::uint32_t baseTag) {
@@ -140,31 +162,18 @@ namespace luax::detail {
         return { obj, info };
     }
 
-    cocos2d::CCObject* checkUserdata(lua_State* L, int idx, std::uint32_t targetTag, char const* targetName, char const* method) {
-        auto candidate = checkCandidate(L, idx, targetName, method);
-        if (!hasBase(*candidate.info, targetTag)) {
-            luaL_error(L, "%s expected %s at arg %d", method, targetName, idx);
-        }
-        return candidate.obj;
-    }
-
     void pushUserdataOwned(lua_State* L, cocos2d::CCObject* obj, TypeInfo const& info) {
-        auto* block = static_cast<UserdataBlock*>(
-            lua_newuserdatatagged(L, sizeof(UserdataBlock), static_cast<int>(info.tag)));
+        auto* storage = lua_newuserdatataggedwithmetatable(L, sizeof(UserdataBlock), static_cast<int>(info.tag));
+        auto* block = new (storage) UserdataBlock();
         block->ptr = obj;
-        block->weak = geode::WeakRef<cocos2d::CCObject>{};
         block->flags = 1u;
-        luaL_getmetatable(L, info.mtName.c_str());
-        lua_setmetatable(L, -2);
     }
 
     void pushUserdataBorrowed(lua_State* L, cocos2d::CCObject* obj, TypeInfo const& info) {
-        auto* block = static_cast<UserdataBlock*>(
-            lua_newuserdatatagged(L, sizeof(UserdataBlock), static_cast<int>(info.tag)));
+        auto* storage = lua_newuserdatataggedwithmetatable(L, sizeof(UserdataBlock), static_cast<int>(info.tag));
+        auto* block = new (storage) UserdataBlock();
         block->ptr = nullptr;
         block->weak = geode::WeakRef<cocos2d::CCObject>(obj);
         block->flags = 0u;
-        luaL_getmetatable(L, info.mtName.c_str());
-        lua_setmetatable(L, -2);
     }
 }

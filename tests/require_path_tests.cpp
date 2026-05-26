@@ -11,6 +11,7 @@ TEST_CASE("require only starts from chunk names") {
 TEST_CASE("require child names stay flat") {
     REQUIRE(luax::isRequireChildNameAllowed("Module"));
     REQUIRE(luax::isRequireChildNameAllowed("Module.luau"));
+    REQUIRE_FALSE(luax::isRequireChildNameAllowed("Module.lua"));
     REQUIRE_FALSE(luax::isRequireChildNameAllowed(""));
     REQUIRE_FALSE(luax::isRequireChildNameAllowed(".."));
     REQUIRE_FALSE(luax::isRequireChildNameAllowed("../Module"));
@@ -20,4 +21,5 @@ TEST_CASE("require child names stay flat") {
 
 TEST_CASE("require module path appends luau suffix") {
     REQUIRE(luax::requireModulePath(std::filesystem::path("Module")) == std::filesystem::path("Module.luau"));
+    REQUIRE(luax::requireModulePath(std::filesystem::path("Module.luau")) == std::filesystem::path("Module.luau"));
 }

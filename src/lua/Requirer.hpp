@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Luau/Require.h>
+#include <Geode/Result.hpp>
 #include <lua.h>
 
 #include <filesystem>
@@ -26,6 +27,7 @@ namespace luax {
 
         bool isModulePresent() const;
         std::filesystem::path modulePath() const;
+        geode::Result<std::filesystem::path> resolvedModulePath() const;
         std::string chunkname() const;
 
     private:

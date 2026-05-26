@@ -4,16 +4,26 @@
 #include "PathRules.hpp"
 
 #include <Geode/Result.hpp>
+#include <Geode/utils/string.hpp>
 
 #include <filesystem>
 #include <fstream>
-#include <iterator>
 #include <string>
 #include <string_view>
+#include <vector>
 
 namespace luax {
     inline std::string normalizedPathString(std::filesystem::path const& path) {
         return path.generic_string();
+    }
+
+    inline std::string filesystemPathString(std::filesystem::path const& path) {
+#if defined(LUAUAPI_HOST_TESTS)
+        auto text = path.u8string();
+        return std::string(reinterpret_cast<char const*>(text.data()), text.size());
+#else
+        return geode::utils::string::pathToString(path);
+#endif
     }
 
     inline geode::Result<std::string> readScriptFile(std::filesystem::path const& path) {
@@ -25,21 +35,49 @@ namespace luax {
 
         std::ifstream in(path, std::ios::binary);
         if (!in.good()) {
-            return geode::Err("script cannot be read: " + normalizedPathString(path));
+            return geode::Err("script cannot be read: " + filesystemPathString(path));
         }
 
-        std::string contents(
-            (std::istreambuf_iterator<char>(in)),
-            std::istreambuf_iterator<char>{}
-        );
+        std::string contents;
+        if (!ec) {
+            contents.reserve(static_cast<std::size_t>(size));
+        }
+
+        std::vector<char> buffer(64 * 1024);
+        while (in) {
+            in.read(buffer.data(), static_cast<std::streamsize>(buffer.size()));
+            auto read = in.gcount();
+            if (read <= 0) break;
+            if (contents.size() + static_cast<std::size_t>(read) > kMaxScriptBytes) {
+                return geode::Err("script exceeds maximum size");
+            }
+            contents.append(buffer.data(), static_cast<std::size_t>(read));
+        }
         if (in.bad()) {
-            return geode::Err("script cannot be read: " + normalizedPathString(path));
-        }
-
-        if (contents.size() > kMaxScriptBytes) {
-            return geode::Err("script exceeds maximum size");
+            return geode::Err("script cannot be read: " + filesystemPathString(path));
         }
         return geode::Ok(std::move(contents));
+    }
+
+    inline geode::Result<std::filesystem::path> resolveScriptFileInsideRoot(
+        std::filesystem::path const& root,
+        std::filesystem::path const& candidate
+    ) {
+        std::error_code ec;
+        auto path = std::filesystem::weakly_canonical(candidate, ec);
+        if (ec) {
+            return geode::Err("script path cannot be resolved: " + ec.message());
+        }
+
+        if (!pathInsideRootValue(path, root)) {
+            return geode::Err("script path escapes resources root");
+        }
+
+        if (!std::filesystem::is_regular_file(path, ec)) {
+            return geode::Err("script file not found: " + filesystemPathString(path));
+        }
+
+        return geode::Ok(path);
     }
 
     inline bool escapesRoot(std::filesystem::path const& rel) {
@@ -114,7 +152,7 @@ namespace luax {
         }
 
         if (!std::filesystem::is_directory(root, ec)) {
-            return geode::Err("resources root is not a directory: " + normalizedPathString(root));
+            return geode::Err("resources root is not a directory: " + filesystemPathString(root));
         }
 
         return geode::Ok(root);

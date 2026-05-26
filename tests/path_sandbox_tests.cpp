@@ -68,6 +68,33 @@ TEST_CASE("canonical root accepts directories and rejects empty roots") {
     std::filesystem::remove_all(dir);
 }
 
+TEST_CASE("script path resolution rejects root escapes") {
+    auto dir = makeTempDir();
+    auto outsideDir = makeTempDir();
+    auto insideFile = dir / "Inside.luau";
+    auto outsideFile = outsideDir / "Outside.luau";
+    auto linkFile = dir / "Link.luau";
+
+    writeFile(insideFile, "return 1");
+    writeFile(outsideFile, "return 2");
+
+    auto root = luax::canonicalRoot(dir);
+    REQUIRE(root.isOk());
+    auto canonicalRoot = root.unwrap();
+
+    auto inside = luax::resolveScriptFileInsideRoot(canonicalRoot, insideFile);
+    REQUIRE(inside.isOk());
+
+    std::error_code ec;
+    std::filesystem::create_symlink(outsideFile, linkFile, ec);
+    if (!ec) {
+        REQUIRE(luax::resolveScriptFileInsideRoot(canonicalRoot, linkFile).isErr());
+    }
+
+    std::filesystem::remove_all(dir);
+    std::filesystem::remove_all(outsideDir);
+}
+
 TEST_CASE("script file read enforces maximum source size") {
     auto dir = makeTempDir();
     auto smallFile = dir / "Small.luau";

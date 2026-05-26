@@ -3,7 +3,9 @@
 #include "Ref.hpp"
 
 #include <Geode/utils/cocos.hpp>
+#include <Geode/Result.hpp>
 #include <cocos2d.h>
+#include <fmt/format.h>
 #include <lua.h>
 #include <lualib.h>
 
@@ -54,9 +56,9 @@ namespace luax {
         cocos2d::CCObject* liveObject(UserdataBlock* block);
         void destructorDispatch(lua_State* L, void* ud);
         void getOrCreateMetatable(lua_State* L, TypeInfo& info);
+        geode::Result<void> ensureUserdataMetatable(lua_State* L, TypeInfo const& info);
         void chainMethodTable(lua_State* L, TypeInfo const& info, std::uint32_t baseTag);
         void appendMethod(lua_State* L, TypeInfo const& info, char const* name, lua_CFunction fn);
-        cocos2d::CCObject* checkUserdata(lua_State* L, int idx, std::uint32_t targetTag, char const* targetName, char const* method);
         UserdataCandidate checkCandidate(lua_State* L, int idx, char const* targetName, char const* method);
         UserdataCandidate tryCandidate(lua_State* L, int idx);
         bool hasBase(TypeInfo const& info, std::uint32_t targetTag);
@@ -76,10 +78,13 @@ namespace luax {
             return detail::UsertypeRegistry::get().infoFor(std::type_index(typeid(T))).name.c_str();
         }
 
-        static void registerType(lua_State* L, char const* nm, std::initializer_list<std::uint32_t> baseTags = {}) {
+        static geode::Result<void> registerType(lua_State* L, char const* nm, std::initializer_list<std::uint32_t> baseTags = {}) {
             auto& reg = detail::UsertypeRegistry::get();
             auto& info = reg.infoFor(std::type_index(typeid(T)));
             (void)reg.tagFor(std::type_index(typeid(T)));
+            if (info.tag == 0 || info.tag >= LUA_UTAG_LIMIT) {
+                return geode::Err(fmt::format("{} userdata tag {} exceeds LUA_UTAG_LIMIT ({})", nm, info.tag, LUA_UTAG_LIMIT));
+            }
             info.name = nm;
             info.mtName = std::string("luax:") + nm;
 
@@ -101,7 +106,12 @@ namespace luax {
             if (baseTags.size() > 0) {
                 detail::chainMethodTable(L, info, *baseTags.begin());
             }
+            auto mtResult = detail::ensureUserdataMetatable(L, info);
+            if (mtResult.isErr()) {
+                return geode::Err(mtResult.unwrapErr());
+            }
             lua_setuserdatadtor(L, static_cast<int>(info.tag), &detail::destructorDispatch);
+            return geode::Ok();
         }
 
         static void method(lua_State* L, char const* methodName, lua_CFunction fn) {

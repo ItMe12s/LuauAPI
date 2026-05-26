@@ -266,8 +266,9 @@ def _emit_class_file(
             bases.append(f"luax::Usertype<{cxx_name(base_cls)}>::tag()")
     base_expr = "{ " + ", ".join(bases) + " }" if bases else "{}"
     out.append(
-        f'    luax::Usertype<{cxx_name(cls)}>::registerType(L, "{cls.name}", {base_expr});\n'
+        f'    auto registerResult = luax::Usertype<{cxx_name(cls)}>::registerType(L, "{cls.name}", {base_expr});\n'
     )
+    out.append("    if (registerResult.isErr()) return geode::Err(registerResult.unwrapErr());\n")
 
     for name, methods in grouped.items():
         if methods[0].is_static:
@@ -317,6 +318,9 @@ def _emit_common_file(emitted_classes: List[Class]) -> str:
         out.append("std::size_t hookTargetCount();\n")
         out.append("}\n\n")
     out.append("namespace luauapi_gen {\n\n")
+    out.append(
+        f"static_assert({len(emitted_classes)} < LUA_UTAG_LIMIT, \"LuauAPI generated userdata tags exceed LUA_UTAG_LIMIT\");\n\n"
+    )
     out.append("LuaHookTarget const* findHookTarget(std::string_view id);\n\n")
     out.append(emit_hook_support())
 

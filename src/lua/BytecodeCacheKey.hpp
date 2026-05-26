@@ -24,7 +24,7 @@ namespace luax {
                 std::chrono::duration_cast<std::chrono::nanoseconds>(stamp.time_since_epoch()).count());
         }
 
-        return normalizedPathString(path)
+        return filesystemPathString(path)
             + "|size=" + geode::utils::numToString(size)
             + "|mtime=" + geode::utils::numToString(stampNanoseconds)
             + "|hash=" + geode::utils::numToString(std::hash<std::string>{}(contents));

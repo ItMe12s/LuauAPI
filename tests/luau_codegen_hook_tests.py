@@ -11,8 +11,9 @@ if CODEGEN_DIR not in sys.path:
     sys.path.insert(0, CODEGEN_DIR)
 
 from broma_parser import Arg, Class, Method  # type: ignore[import-unresolved]
+from emit_luau_bindings import _emit_class_file, _emit_common_file  # type: ignore[import-unresolved]
 from filtering import supported  # type: ignore[import-unresolved]
-from hooks import android_symbol, hook_address_expr, hook_offset  # type: ignore[import-unresolved]
+from hooks import android_symbol, emit_hook_support, hook_address_expr, hook_offset  # type: ignore[import-unresolved]
 
 
 class HookOffsetTests(unittest.TestCase):
@@ -135,6 +136,38 @@ class LinkClassFilterTests(unittest.TestCase):
 
         self.assertFalse(ok)
         self.assertEqual(reason, "inaccessible")
+
+
+class GeneratedSafetyTests(unittest.TestCase):
+    def test_register_type_error_is_propagated(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        foo = Class(name="Foo", bases=["CCObject"])
+
+        text = _emit_class_file(
+            foo,
+            {},
+            [],
+            {"CCObject": ccobject, "Foo": foo},
+            set(),
+            1,
+            "win",
+        )
+
+        self.assertIn("auto registerResult = luax::Usertype<Foo>::registerType", text)
+        self.assertIn("if (registerResult.isErr()) return geode::Err(registerResult.unwrapErr());", text)
+
+    def test_common_file_asserts_userdata_tag_budget(self) -> None:
+        text = _emit_common_file([Class(name="CCObject", namespace="cocos2d")])
+
+        self.assertIn("static_assert(1 < LUA_UTAG_LIMIT", text)
+
+    def test_hook_shutdown_clears_refs_and_disables_hooks(self) -> None:
+        text = emit_hook_support()
+
+        self.assertIn("callback->removed = true;", text)
+        self.assertIn("callback->ref.reset();", text)
+        self.assertIn("state.hook->disable();", text)
+        self.assertIn("!callback || callback->removed", text)
 
 
 if __name__ == "__main__":

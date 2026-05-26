@@ -294,6 +294,20 @@ def emit_hook_support() -> str:
     }
 
     void clearHookRegistry() {
+        for (auto& [_, state] : hookStates()) {
+            for (auto const& callback : state.callbacks) {
+                if (callback) {
+                    callback->removed = true;
+                    callback->ref.reset();
+                }
+            }
+            if (state.hook && state.hook->isEnabled()) {
+                auto result = state.hook->disable();
+                if (result.isErr()) {
+                    geode::log::warn("luau hook disable failed during shutdown: {}", result.unwrapErr());
+                }
+            }
+        }
         hookStates().clear();
     }
 
@@ -350,7 +364,13 @@ def emit_hook_support() -> str:
     }
 
     int luaapi_hook_handle_enable(lua_State* L) {
-        auto* state = findHookState(hookHandleId(L));
+        auto id = hookHandleId(L);
+        auto callback = findHookCallback(id);
+        auto* state = findHookState(id);
+        if (!callback || callback->removed) {
+            lua_pushboolean(L, false);
+            return 1;
+        }
         if (!state || !state->hook) {
             lua_pushboolean(L, false);
             return 1;
@@ -365,7 +385,13 @@ def emit_hook_support() -> str:
     }
 
     int luaapi_hook_handle_disable(lua_State* L) {
-        auto* state = findHookState(hookHandleId(L));
+        auto id = hookHandleId(L);
+        auto callback = findHookCallback(id);
+        auto* state = findHookState(id);
+        if (!callback || callback->removed) {
+            lua_pushboolean(L, false);
+            return 1;
+        }
         if (!state || !state->hook) {
             lua_pushboolean(L, false);
             return 1;
@@ -400,8 +426,10 @@ def emit_hook_support() -> str:
     }
 
     int luaapi_hook_handle_is_enabled(lua_State* L) {
-        auto* state = findHookState(hookHandleId(L));
-        lua_pushboolean(L, state && state->hook && state->hook->isEnabled());
+        auto id = hookHandleId(L);
+        auto callback = findHookCallback(id);
+        auto* state = findHookState(id);
+        lua_pushboolean(L, callback && !callback->removed && state && state->hook && state->hook->isEnabled());
         return 1;
     }
 

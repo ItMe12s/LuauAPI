@@ -17,11 +17,14 @@ namespace luax {
         if (name.find('/') != std::string_view::npos || name.find('\\') != std::string_view::npos) {
             return false;
         }
-        return isFlatResourcePathValue(std::filesystem::path(name));
+        auto path = std::filesystem::path(name);
+        return isFlatResourcePathValue(path) && !hasUnsupportedExtensionValue(path);
     }
 
     inline std::filesystem::path requireModulePath(std::filesystem::path current) {
-        current += ".luau";
+        if (!hasLuauExtensionValue(current)) {
+            current += ".luau";
+        }
         return current;
     }
 }

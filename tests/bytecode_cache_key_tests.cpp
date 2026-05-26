@@ -35,7 +35,7 @@ TEST_CASE("bytecode cache key includes path and metadata tokens") {
 
     auto key = luax::bytecodeCacheKey(file, "return 1");
 
-    REQUIRE(contains(key, luax::normalizedPathString(file)));
+    REQUIRE(contains(key, luax::filesystemPathString(file)));
     REQUIRE(contains(key, "|size="));
     REQUIRE(contains(key, "|mtime="));
     REQUIRE(contains(key, "|hash="));

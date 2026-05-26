@@ -58,11 +58,15 @@ namespace luax {
         }
 
         luarequire_WriteResult get_loadname(lua_State*, void* ctx, char* buffer, size_t buffer_size, size_t* size_out) {
-            return writeString(normalizedPathString(self(ctx)->modulePath()), buffer, buffer_size, size_out);
+            auto path = self(ctx)->resolvedModulePath();
+            if (path.isErr()) return WRITE_FAILURE;
+            return writeString(filesystemPathString(path.unwrap()), buffer, buffer_size, size_out);
         }
 
         luarequire_WriteResult get_cache_key(lua_State*, void* ctx, char* buffer, size_t buffer_size, size_t* size_out) {
-            return writeString(normalizedPathString(self(ctx)->modulePath()), buffer, buffer_size, size_out);
+            auto path = self(ctx)->resolvedModulePath();
+            if (path.isErr()) return WRITE_FAILURE;
+            return writeString(filesystemPathString(path.unwrap()), buffer, buffer_size, size_out);
         }
 
         luarequire_ConfigStatus get_config_status(lua_State*, void*) {
@@ -76,16 +80,21 @@ namespace luax {
         int load(lua_State* L, void* ctx, char const* /*path*/, char const* chunkname, char const* loadname) {
             Requirer* req = self(ctx);
 
-            std::filesystem::path filePath(loadname);
+            auto pathResult = req->resolvedModulePath();
+            if (pathResult.isErr()) {
+                luaL_error(L, "module '%s' cannot be resolved: %s", loadname, pathResult.unwrapErr().c_str());
+            }
+            auto filePath = pathResult.unwrap();
+
             std::error_code ec;
             auto fileSize = std::filesystem::file_size(filePath, ec);
             if (ec || fileSize > kMaxScriptBytes) {
-                luaL_error(L, "module '%s' exceeds maximum size or cannot be read", loadname);
+                luaL_error(L, "module '%s' exceeds maximum size or cannot be read", filesystemPathString(filePath).c_str());
             }
 
             auto contentsResult = readScriptFile(filePath);
             if (contentsResult.isErr()) {
-                luaL_error(L, "could not read module '%s'", loadname);
+                luaL_error(L, "could not read module '%s': %s", filesystemPathString(filePath).c_str(), contentsResult.unwrapErr().c_str());
             }
             auto const& contents = contentsResult.unwrap();
 
@@ -160,11 +169,12 @@ namespace luax {
             return NAVIGATE_NOT_FOUND;
         }
         std::string_view rest = requirer_chunkname + 1;
-        if (!isFlatResourcePath(std::filesystem::path(rest))) {
+        auto restPath = std::filesystem::path(rest);
+        if (!isFlatResourcePath(restPath) || hasUnsupportedExtension(restPath)) {
             return NAVIGATE_NOT_FOUND;
         }
 
-        std::filesystem::path candidate = m_root / rest;
+        std::filesystem::path candidate = m_root / restPath;
         std::error_code ec;
         auto canonical = std::filesystem::weakly_canonical(candidate, ec);
         if (ec) return NAVIGATE_NOT_FOUND;
@@ -196,7 +206,9 @@ namespace luax {
 
     bool Requirer::isModulePresent() const {
         std::error_code ec;
-        auto path = modulePath();
+        auto resolved = resolvedModulePath();
+        if (resolved.isErr()) return false;
+        auto path = resolved.unwrap();
         return std::filesystem::is_regular_file(path, ec);
     }
 
@@ -204,10 +216,18 @@ namespace luax {
         return requireModulePath(m_current);
     }
 
+    geode::Result<std::filesystem::path> Requirer::resolvedModulePath() const {
+        return resolveScriptFileInsideRoot(m_root, modulePath());
+    }
+
     std::string Requirer::chunkname() const {
         std::error_code ec;
         auto rel = std::filesystem::relative(m_current, m_root, ec);
         std::string name = normalizedPathString(ec ? m_current : rel);
-        return "@" + name + ".luau";
+        auto path = std::filesystem::path(name);
+        if (!hasLuauExtension(path)) {
+            name += ".luau";
+        }
+        return "@" + name;
     }
 }

@@ -46,7 +46,6 @@ namespace luax {
         geode::Result<void> runBytecode(std::string const& bytecode, std::string_view chunkName, int deadlineMs = kDefaultScriptDeadlineMs);
         static std::string compileSource(std::string_view source);
         bool protectedCall(int nargs, int nresults, std::string_view context, int deadlineMs = 50);
-        void runOnMain(std::function<void()> fn);
         bool assertMainThread() const;
 
         class ScriptBudgetGuard final {
@@ -85,7 +84,7 @@ namespace luax {
         // Shutdown hooks run (last-in, first-out) during destruction, before lua_close.
         void registerShutdownHook(std::function<void()> fn);
 
-        std::string const& getOrCompileBytecode(std::string const& key, std::string const& source);
+        std::string const& getOrCompileBytecode(std::string const& key, std::string_view source);
 
         std::size_t memoryUsage() const { return m_memoryUsage; }
         std::size_t memoryLimit() const { return m_memoryLimit; }
@@ -103,6 +102,7 @@ namespace luax {
         void installPrint();
         std::string formatLuaError(char const* chunk);
         void setLastError(std::string error);
+        void runShutdownHooks();
 
         lua_State* m_state = nullptr;
         std::thread::id m_ownerThread;
