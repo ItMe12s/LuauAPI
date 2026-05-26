@@ -69,6 +69,7 @@ INACCESSIBLE_METHODS = {
     # ("CCLabelTTF", "draw"),
     # ("CCLabelTTF", "getContentText"),
     ("CCLabelTTF", "updateTexture"),
+    ("CCLayer", "excuteScriptTouchHandler"),
     ("CCLayerColor", "updateColor"),
     ("CCLabelBMFont", "getLetterPosXLeft"),
     ("CCLabelBMFont", "getLetterPosXRight"),
