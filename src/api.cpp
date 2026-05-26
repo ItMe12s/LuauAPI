@@ -54,29 +54,6 @@ namespace {
         return geode::Ok();
     }
 
-    geode::Result<void> executeBytecodeOnMain(
-        std::filesystem::path const& root,
-        std::string const& bytecode,
-        std::string const& chunk,
-        int deadlineMs
-    ) {
-        if (luax::Runtime::isShuttingDown()) {
-            return geode::Err("luau runtime shutting down");
-        }
-        if (!luax::Runtime::isMainThread()) {
-            return geode::Err("luau api must be called on the main thread");
-        }
-
-        auto& runtime = luax::Runtime::instance();
-        if (!runtime.ready()) {
-            auto const& err = runtime.lastError();
-            return geode::Err(!err.empty() ? err : "luau runtime not ready");
-        }
-
-        luax::Runtime::ResourcesRootScope rootScope(runtime, root);
-        return runtime.runBytecode(bytecode, chunk, deadlineMs);
-    }
-
     geode::Result<void> resolveRunFilePath(
         std::filesystem::path const& resourcesRoot,
         std::filesystem::path const& relativePath,
@@ -224,11 +201,10 @@ namespace imes::luauapi {
 
         auto source = std::move(sourceResult.unwrap());
         auto chunk = chunkResult.unwrap();
-        auto bytecode = luax::Runtime::compileSource(source);
 
         auto result = co_await geode::async::waitForMainThread<geode::Result<void>>(
-            [root = std::move(root), chunk = std::move(chunk), bytecode = std::move(bytecode), deadlineMs]() mutable {
-                return executeBytecodeOnMain(root, bytecode, chunk, deadlineMs);
+            [root = std::move(root), chunk = std::move(chunk), source = std::move(source), deadlineMs]() mutable {
+                return executeScriptOnMain(root, std::move(source), chunk, deadlineMs);
             }
         );
         if (!result) {
@@ -263,11 +239,10 @@ namespace imes::luauapi {
 
         auto root = rootResult.unwrap();
         auto chunk = chunkResult.unwrap();
-        auto bytecode = luax::Runtime::compileSource(source);
 
         auto result = co_await geode::async::waitForMainThread<geode::Result<void>>(
-            [root = std::move(root), chunk = std::move(chunk), bytecode = std::move(bytecode), deadlineMs]() mutable {
-                return executeBytecodeOnMain(root, bytecode, chunk, deadlineMs);
+            [root = std::move(root), chunk = std::move(chunk), source = std::move(source), deadlineMs]() mutable {
+                return executeScriptOnMain(root, std::move(source), chunk, deadlineMs);
             }
         );
         if (!result) {

@@ -17,6 +17,7 @@
 #include <string>
 #include <string_view>
 #include <thread>
+#include <list>
 #include <unordered_map>
 #include <vector>
 
@@ -45,7 +46,7 @@ namespace luax {
         bool runScript(std::string_view src, std::string_view chunkName, int deadlineMs = kDefaultScriptDeadlineMs);
         geode::Result<void> runBytecode(std::string const& bytecode, std::string_view chunkName, int deadlineMs = kDefaultScriptDeadlineMs);
         static std::string compileSource(std::string_view source);
-        bool protectedCall(int nargs, int nresults, std::string_view context, int deadlineMs = 50);
+        bool protectedCall(int nargs, int nresults, std::string_view context, int deadlineMs = kDefaultScriptDeadlineMs);
         bool assertMainThread() const;
 
         class ScriptBudgetGuard final {
@@ -90,6 +91,7 @@ namespace luax {
         std::size_t memoryLimit() const { return m_memoryLimit; }
 
         bool codegenEnabled() const { return m_codegenEnabled; }
+        std::uint32_t generation() const { return m_generation; }
 
     private:
         static void* boundedAlloc(void* ud, void* ptr, size_t osize, size_t nsize);
@@ -108,6 +110,7 @@ namespace luax {
         std::thread::id m_ownerThread;
         std::atomic<imes::luauapi::RuntimeStatus> m_status{imes::luauapi::RuntimeStatus::NotReady};
         bool m_destroyed = false;
+        std::uint32_t m_generation = 0;
 
         std::chrono::steady_clock::time_point m_scriptDeadline{};
         int m_scriptBudgetMs = 0;
@@ -123,7 +126,12 @@ namespace luax {
         std::string m_lastError;
         std::string m_initError;
 
-        std::unordered_map<std::string, std::string> m_bytecodeCache;
+        struct BytecodeCacheEntry {
+            std::string key;
+            std::string bytecode;
+        };
+        std::list<BytecodeCacheEntry> m_bytecodeLru;
+        std::unordered_map<std::string, std::list<BytecodeCacheEntry>::iterator> m_bytecodeIndex;
 
         std::unique_ptr<Requirer> m_requirer;
 

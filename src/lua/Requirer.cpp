@@ -37,7 +37,8 @@ namespace luax {
             return self(ctx)->resetTo(requirer_chunkname);
         }
 
-        luarequire_NavigateResult jump_to_alias(lua_State*, void*, char const*) {
+        luarequire_NavigateResult jump_to_alias(lua_State*, void*, char const* alias) {
+            geode::log::debug("require alias '{}' not supported", alias ? alias : "");
             return NAVIGATE_NOT_FOUND;
         }
 
@@ -63,6 +64,7 @@ namespace luax {
             return writeString(filesystemPathString(path.unwrap()), buffer, buffer_size, size_out);
         }
 
+        // Module identity key, path only. (Bytecode caching uses bytecodeCacheKey().)
         luarequire_WriteResult get_cache_key(lua_State*, void* ctx, char* buffer, size_t buffer_size, size_t* size_out) {
             auto path = self(ctx)->resolvedModulePath();
             if (path.isErr()) return WRITE_FAILURE;
@@ -144,7 +146,9 @@ namespace luax {
     Requirer::Requirer(Runtime& runtime) : m_runtime(runtime) {}
 
     void Requirer::setResourcesRoot(std::filesystem::path const& root) {
-        m_root = root;
+        std::error_code ec;
+        m_root = std::filesystem::weakly_canonical(root, ec);
+        if (ec) m_root = root;
         m_current = m_root;
     }
 

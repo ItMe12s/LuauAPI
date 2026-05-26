@@ -20,9 +20,11 @@ namespace luax::detail {
         info.tag = m_next++;
         if (info.tag >= LUA_UTAG_LIMIT) {
             geode::log::error("UsertypeRegistry: tag {} exceeds LUA_UTAG_LIMIT ({})", info.tag, LUA_UTAG_LIMIT);
+            --m_next;
+            return 0;
         }
         auto inserted = m_byType.emplace(idx, std::move(info));
-        m_byTag[inserted.first->second.tag] = &inserted.first->second;
+        m_byTag.insert_or_assign(inserted.first->second.tag, idx);
         return inserted.first->second.tag;
     }
 
@@ -33,15 +35,20 @@ namespace luax::detail {
         info.tag = m_next++;
         if (info.tag >= LUA_UTAG_LIMIT) {
             geode::log::error("UsertypeRegistry: tag {} exceeds LUA_UTAG_LIMIT ({})", info.tag, LUA_UTAG_LIMIT);
+            --m_next;
+            static TypeInfo invalid{};
+            return invalid;
         }
         auto inserted = m_byType.emplace(idx, std::move(info));
-        m_byTag[inserted.first->second.tag] = &inserted.first->second;
+        m_byTag.insert_or_assign(inserted.first->second.tag, idx);
         return inserted.first->second;
     }
 
     TypeInfo const* UsertypeRegistry::findByTag(std::uint32_t tag) const {
-        auto it = m_byTag.find(tag);
-        return it == m_byTag.end() ? nullptr : it->second;
+        auto tagIt = m_byTag.find(tag);
+        if (tagIt == m_byTag.end()) return nullptr;
+        auto typeIt = m_byType.find(tagIt->second);
+        return typeIt == m_byType.end() ? nullptr : &typeIt->second;
     }
 
     cocos2d::CCObject* liveObject(UserdataBlock* block) {

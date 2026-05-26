@@ -5,6 +5,7 @@
 #include <lua.h>
 #include <lualib.h>
 
+#include <cstdint>
 #include <filesystem>
 
 namespace luax {
@@ -41,6 +42,7 @@ namespace luax {
             }
             m_state = nullptr;
             m_ref = LUA_NOREF;
+            m_generation = 0;
             m_resourcesRoot.clear();
         }
 
@@ -48,6 +50,7 @@ namespace luax {
             reset();
             if (!L) return;
             m_state = L;
+            m_generation = Runtime::instance().generation();
             m_resourcesRoot = Runtime::instance().resourcesRoot();
             lua_pushvalue(L, index);
             m_ref = lua_ref(L, -1);
@@ -55,7 +58,9 @@ namespace luax {
         }
 
         bool valid() const {
-            return m_state && m_ref != LUA_NOREF && m_ref != LUA_REFNIL;
+            if (!m_state || m_ref == LUA_NOREF || m_ref == LUA_REFNIL) return false;
+            if (!Runtime::isInitialized()) return false;
+            return m_generation == Runtime::instance().generation();
         }
 
         bool push() const {
@@ -72,14 +77,17 @@ namespace luax {
         void moveFrom(LuaRef& other) noexcept {
             m_state = other.m_state;
             m_ref = other.m_ref;
+            m_generation = other.m_generation;
             m_resourcesRoot = std::move(other.m_resourcesRoot);
             other.m_state = nullptr;
             other.m_ref = LUA_NOREF;
+            other.m_generation = 0;
             other.m_resourcesRoot.clear();
         }
 
         lua_State* m_state = nullptr;
         int m_ref = LUA_NOREF;
+        std::uint32_t m_generation = 0;
         std::filesystem::path m_resourcesRoot;
     };
 }

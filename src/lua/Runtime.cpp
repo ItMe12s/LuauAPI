@@ -104,6 +104,7 @@ namespace luax {
             m_initError = "luau binding failed: " + *bindError;
             setLastError(m_initError);
             geode::log::error("{}", m_initError);
+            ++m_generation;
             runShutdownHooks();
             m_requirer.reset();
             lua_close(m_state);
@@ -126,6 +127,7 @@ namespace luax {
     Runtime::~Runtime() {
         if (m_destroyed) return;
         m_destroyed = true;
+        ++m_generation;
         m_status.store(imes::luauapi::RuntimeStatus::NotReady, std::memory_order_release);
 
         runShutdownHooks();
@@ -331,22 +333,25 @@ namespace luax {
     }
 
     std::string const& Runtime::getOrCompileBytecode(std::string const& key, std::string_view source) {
-        auto cached = m_bytecodeCache.find(key);
-        if (cached != m_bytecodeCache.end()) {
-            return cached->second;
+        auto it = m_bytecodeIndex.find(key);
+        if (it != m_bytecodeIndex.end()) {
+            m_bytecodeLru.splice(m_bytecodeLru.begin(), m_bytecodeLru, it->second);
+            return it->second->bytecode;
         }
 
-        if (m_bytecodeCache.size() >= kMaxBytecodeCacheEntries) {
-            m_bytecodeCache.erase(m_bytecodeCache.begin());
+        if (m_bytecodeIndex.size() >= kMaxBytecodeCacheEntries) {
+            m_bytecodeIndex.erase(m_bytecodeLru.back().key);
+            m_bytecodeLru.pop_back();
         }
 
         auto compileStart = std::chrono::steady_clock::now();
         std::string compiled = compileSource(source);
         auto compileMs = std::chrono::duration_cast<std::chrono::milliseconds>(
             std::chrono::steady_clock::now() - compileStart).count();
-        auto inserted = m_bytecodeCache.emplace(key, std::move(compiled));
+        m_bytecodeLru.push_front({key, std::move(compiled)});
+        m_bytecodeIndex[key] = m_bytecodeLru.begin();
         geode::log::debug("luau compile [{}] {}ms", key, compileMs);
-        return inserted.first->second;
+        return m_bytecodeLru.front().bytecode;
     }
 
     geode::Result<void> Runtime::runBytecode(std::string const& bytecode, std::string_view chunkName, int deadlineMs) {

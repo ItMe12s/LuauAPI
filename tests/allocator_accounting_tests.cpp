@@ -21,3 +21,9 @@ TEST_CASE("allocator accounting clamps underflow") {
     REQUIRE(luax::allocatorUsageAfterFree(4, 8) == 0);
     REQUIRE(luax::allocatorUsageAfterReallocate(4, 8, 16) == 16);
 }
+
+TEST_CASE("allocator accounting at exact boundary") {
+    REQUIRE(luax::allocatorCanReallocate(24, 32, 8, 16));
+    REQUIRE_FALSE(luax::allocatorCanReallocate(24, 32, 8, 17));
+    REQUIRE(luax::allocatorUsageAfterReallocate(24, 8, 16) == 32);
+}

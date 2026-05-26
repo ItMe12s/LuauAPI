@@ -49,7 +49,7 @@ namespace luax {
 
         private:
             std::unordered_map<std::type_index, TypeInfo> m_byType;
-            std::unordered_map<std::uint32_t, TypeInfo*> m_byTag;
+            std::unordered_map<std::uint32_t, std::type_index> m_byTag;
             std::uint32_t m_next = 1;
         };
 
@@ -103,6 +103,7 @@ namespace luax {
             }
 
             detail::getOrCreateMetatable(L, info);
+            // Method __index chains first base only; type-check accepts any base via baseClosure.
             if (baseTags.size() > 0) {
                 detail::chainMethodTable(L, info, *baseTags.begin());
             }

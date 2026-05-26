@@ -134,6 +134,7 @@ set(LUAUAPI_BINDINGS_DIR
     CACHE PATH "Path to Geode bindings/<gdver>/ dir")
 set(LUAUAPI_GEN_DIR "${CMAKE_BINARY_DIR}/luauapi-gen")
 set(LUAUAPI_TYPES_DIR "${CMAKE_CURRENT_SOURCE_DIR}/types")
+file(TO_CMAKE_PATH "$ENV{GEODE_SDK}" LUAUAPI_GEODE_SDK_PATH)
 execute_process(
     COMMAND ${Python3_EXECUTABLE}
             ${CMAKE_CURRENT_SOURCE_DIR}/tools/luau_codegen/codegen.py
@@ -157,8 +158,6 @@ list(TRANSFORM LUAUAPI_TYPES_FILES PREPEND "${LUAUAPI_TYPES_DIR}/")
 if (NOT EXISTS "${LUAUAPI_BINDINGS_DIR}/GeometryDash.bro")
     message(FATAL_ERROR "LuauAPI bindings dir missing: ${LUAUAPI_BINDINGS_DIR}")
 endif()
-
-file(TO_CMAKE_PATH "$ENV{GEODE_SDK}" LUAUAPI_GEODE_SDK_PATH)
 
 execute_process(
     COMMAND ${Python3_EXECUTABLE}
@@ -221,14 +220,20 @@ target_include_directories(${PROJECT_NAME} PRIVATE include src ${LUAUAPI_GEN_DIR
 target_link_libraries(${PROJECT_NAME} Luau.VM Luau.Compiler Luau.Ast Luau.Require Luau.CodeGen)
 target_compile_definitions(${PROJECT_NAME} PRIVATE LUAUAPI_EXPORTING=1)
 
-# if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC" OR CMAKE_CXX_COMPILER MATCHES "clang-cl")
-#     target_compile_options(${PROJECT_NAME} PRIVATE /W4)
-# elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
-#     target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Wpedantic)
-# endif()
-# if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-#     target_compile_options(${PROJECT_NAME} PRIVATE -Wno-gnu-zero-variadic-macro-arguments)
-# endif()
+if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC" OR CMAKE_CXX_COMPILER MATCHES "clang-cl")
+    target_compile_options(${PROJECT_NAME} PRIVATE /W4)
+elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+    target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Wpedantic)
+endif()
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    target_compile_options(${PROJECT_NAME} PRIVATE -Wno-gnu-zero-variadic-macro-arguments)
+endif()
+
+if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC" OR CMAKE_CXX_COMPILER MATCHES "clang-cl")
+    set_source_files_properties(${LUAUAPI_GENERATED_BINDINGS} PROPERTIES COMPILE_OPTIONS "/w")
+elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+    set_source_files_properties(${LUAUAPI_GENERATED_BINDINGS} PROPERTIES COMPILE_OPTIONS "-w")
+endif()
 
 if(WIN32)
     if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC" OR CMAKE_CXX_COMPILER MATCHES "clang-cl")
@@ -254,11 +259,12 @@ if(LUAUAPI_BUILD_TESTS)
         tests/path_sandbox_tests.cpp
         tests/path_rules_tests.cpp
         tests/require_path_tests.cpp
+        tests/usertype_registry_tests.cpp
     )
     target_compile_features(luauapi_tests PRIVATE cxx_std_23)
     target_include_directories(luauapi_tests PRIVATE src)
     target_compile_definitions(luauapi_tests PRIVATE LUAUAPI_HOST_TESTS=1)
-    target_link_libraries(luauapi_tests PRIVATE Catch2::Catch2WithMain GeodeBindings)
+    target_link_libraries(luauapi_tests PRIVATE Catch2::Catch2WithMain GeodeBindings Luau.VM)
 
     list(APPEND CMAKE_MODULE_PATH ${catch2_SOURCE_DIR}/extras)
     include(Catch)
