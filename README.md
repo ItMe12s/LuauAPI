@@ -105,14 +105,17 @@ Also do the vscode `>Developer: Restart Extension Host` after doing stuff with l
 ## Setting files
 
 Add this to your `.vscode/settings.json`
-It's split into 3 files because luau lsp can't just process 10-20k lines at once.
+It's split into multiple files because Luau LSP hits complexity limits around 5-10k lines per file.
 
 ```json
 {
     "luau-lsp.platform.type": "standard",
     "luau-lsp.types.definitionFiles": {
         "@geode-cocos2d": "types/geode_cocos2d.d.luau",
+        "@geode-cocos2d-factories": "types/geode_cocos2d_factories.d.luau",
         "@geode-gd": "types/geode_gd.d.luau",
+        "@geode-gd-2": "types/geode_gd_2.d.luau",
+        "@geode-gd-factories": "types/geode_gd_factories.d.luau",
         "@geode": "types/geode.d.luau"
     },
     "luau-lsp.ignoreGlobs": [
@@ -152,7 +155,10 @@ YourMod
 |
 |- types
 |   |- geode_cocos2d.d.luau
+|   |- geode_cocos2d_factories.d.luau
 |   |- geode_gd.d.luau
+|   |- geode_gd_2.d.luau
+|   |- geode_gd_factories.d.luau
 |   |- geode.d.luau
 |
 |- .luaurc

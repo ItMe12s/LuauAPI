@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import sys
 import unittest
+from unittest import mock
 
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -139,7 +140,9 @@ class LinkClassFilterTests(unittest.TestCase):
 
     def test_underscore_internal_rejected_on_link_class(self) -> None:
         cls = Class(name="CCImage", attributes=["link(win, android)"])
-        method = Method(name="_saveImageToJPG", ret="bool", args=[Arg("char const*", "path")])
+        method = Method(
+            name="_saveImageToJPG", ret="bool", args=[Arg("char const*", "path")]
+        )
 
         ok, reason = supported(cls, method, {"CCImage": cls}, "win")
 
@@ -153,7 +156,11 @@ class AccessLevelTests(unittest.TestCase):
         method = Method(
             name="insertText",
             ret="void",
-            args=[Arg("char const*", "text"), Arg("int", "len"), Arg("cocos2d::enumKeyCodes", "key")],
+            args=[
+                Arg("char const*", "text"),
+                Arg("int", "len"),
+                Arg("cocos2d::enumKeyCodes", "key"),
+            ],
             access="protected",
             platforms={"win": "link"},
         )
@@ -244,9 +251,19 @@ class CompoundLinkAttributeTests(unittest.TestCase):
 class BareInlineTests(unittest.TestCase):
     def test_bare_inline_callable_on_win(self) -> None:
         cls = Class(name="GameManager")
-        method = Method(name="getPlayLayer", ret="PlayLayer*", args=[], platforms={"inline": "inline"})
+        method = Method(
+            name="getPlayLayer",
+            ret="PlayLayer*",
+            args=[],
+            platforms={"inline": "inline"},
+        )
 
-        ok, reason = supported(cls, method, {"GameManager": cls, "PlayLayer": Class(name="PlayLayer")}, "win")
+        ok, reason = supported(
+            cls,
+            method,
+            {"GameManager": cls, "PlayLayer": Class(name="PlayLayer")},
+            "win",
+        )
 
         self.assertTrue(ok)
         self.assertEqual(reason, "")
@@ -268,7 +285,10 @@ class GeneratedSafetyTests(unittest.TestCase):
         )
 
         self.assertIn("auto registerResult = luax::Usertype<Foo>::registerType", text)
-        self.assertIn("if (registerResult.isErr()) return geode::Err(registerResult.unwrapErr());", text)
+        self.assertIn(
+            "if (registerResult.isErr()) return geode::Err(registerResult.unwrapErr());",
+            text,
+        )
 
     def test_common_file_asserts_userdata_tag_budget(self) -> None:
         text = _emit_common_file([Class(name="CCObject", namespace="cocos2d")])
@@ -341,6 +361,230 @@ class LuauTypeEmissionTests(unittest.TestCase):
         self.assertIn("export type RGBColor = { r: number, g: number, b: number }", gd)
         self.assertIn("declare class CCNode end", gd)
 
+    def test_factories_live_in_namespace_files(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        director = Class(
+            name="CCDirector",
+            namespace="cocos2d",
+            bases=["CCObject"],
+            methods=[
+                Method(
+                    name="getWinSize",
+                    ret="cocos2d::CCSize",
+                    args=[],
+                    platforms={"win": "0x1"},
+                ),
+                Method(
+                    name="sharedDirector",
+                    ret="cocos2d::CCDirector*",
+                    args=[],
+                    is_static=True,
+                    platforms={"win": "0x2"},
+                ),
+            ],
+            attributes=["link(win)"],
+        )
+        root = Root(classes=[ccobject, director])
+        files = emit_luau_types(root)
+        cocos = files["geode_cocos2d.d.luau"]
+        main = files["geode.d.luau"]
+
+        self.assertIn(
+            "export type CCDirectorFactory", files["geode_cocos2d_factories.d.luau"]
+        )
+        self.assertIn(
+            "export type Cocos2dNamespace", files["geode_cocos2d_factories.d.luau"]
+        )
+        self.assertIn(
+            "sharedDirector: (() -> CCDirector?)",
+            files["geode_cocos2d_factories.d.luau"],
+        )
+        self.assertIn("function getWinSize(self): CCSize", cocos)
+        self.assertNotIn("export type CCDirectorFactory", cocos)
+        self.assertNotIn("export type CCDirectorFactory", main)
+        self.assertIn("cocos2d: Cocos2dNamespace", main)
+
+    def test_cross_namespace_forward_decls(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        text_area = Class(
+            name="TextArea",
+            bases=["CCSprite"],
+            methods=[
+                Method(
+                    name="create",
+                    ret="TextArea*",
+                    args=[Arg("char const*", "text")],
+                    is_static=True,
+                    platforms={"win": "0x1"},
+                )
+            ],
+        )
+        ccnode = Class(
+            name="CCNode",
+            namespace="cocos2d",
+            bases=["CCObject"],
+            methods=[
+                Method(
+                    name="addTextArea",
+                    ret="void",
+                    args=[Arg("TextArea*", "area")],
+                    platforms={"win": "0x2"},
+                )
+            ],
+        )
+        root = Root(
+            classes=[
+                ccobject,
+                Class(name="CCSprite", namespace="cocos2d", bases=["CCNode"]),
+                ccnode,
+                text_area,
+            ]
+        )
+        files = emit_luau_types(root)
+        self.assertIn("declare class TextArea end", files["geode_cocos2d.d.luau"])
+        self.assertIn("declare class CCSprite end", files["geode_gd.d.luau"])
+
+    def test_intra_file_forward_decls(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        early = Class(
+            name="EarlyLayer",
+            bases=["CCObject"],
+            methods=[
+                Method(
+                    name="getLate",
+                    ret="LateLayer*",
+                    args=[],
+                    platforms={"win": "0x1"},
+                )
+            ],
+        )
+        late = Class(
+            name="LateLayer",
+            bases=["CCObject"],
+            methods=[
+                Method(
+                    name="init",
+                    ret="bool",
+                    args=[],
+                    platforms={"win": "0x2"},
+                )
+            ],
+        )
+        root = Root(classes=[ccobject, early, late])
+        files = emit_luau_types(root)
+        gd = files["geode_gd.d.luau"]
+        forward_pos = gd.find("declare class LateLayer end\n")
+        early_pos = gd.find("declare class EarlyLayer extends")
+        self.assertGreaterEqual(forward_pos, 0)
+        self.assertGreater(early_pos, forward_pos)
+
+    def test_split_file_forward_decls(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        classes = [ccobject]
+        for i in range(30):
+            name = f"SplitClass{i:02d}"
+            ret = "SplitClass29*" if i == 0 else "bool"
+            classes.append(
+                Class(
+                    name=name,
+                    bases=["CCObject"],
+                    methods=[
+                        Method(
+                            name="init",
+                            ret=ret,
+                            args=[],
+                            platforms={"win": f"0x{i}"},
+                        )
+                    ],
+                )
+            )
+        root = Root(classes=classes)
+        with mock.patch("emit_luau_types.MAX_CLASS_FILE_LINES", 80):
+            files = emit_luau_types(root)
+        self.assertIn("geode_gd_2.d.luau", files)
+        gd = files["geode_gd.d.luau"]
+        self.assertIn("declare class SplitClass29 end\n", gd)
+        forward_pos = gd.find("declare class SplitClass29 end\n")
+        first_use = gd.find("declare class SplitClass00 extends")
+        self.assertGreater(first_use, forward_pos)
+        self.assertIn(
+            "declare class SplitClass29",
+            files["geode_gd_2.d.luau"],
+        )
+
+    def test_factory_forward_decls(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        widget = Class(
+            name="WidgetLayer",
+            bases=["CCObject"],
+            methods=[
+                Method(
+                    name="create",
+                    ret="WidgetLayer*",
+                    args=[],
+                    is_static=True,
+                    platforms={"win": "0x1"},
+                )
+            ],
+            attributes=["link(win)"],
+        )
+        root = Root(classes=[ccobject, widget])
+        files = emit_luau_types(root)
+        factories = files["geode_gd_factories.d.luau"]
+        forward_pos = factories.find("declare class WidgetLayer end")
+        factory_pos = factories.find("export type WidgetLayerFactory")
+        self.assertGreaterEqual(forward_pos, 0)
+        self.assertGreater(factory_pos, forward_pos)
+
+    def test_value_stub_order(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        node = Class(
+            name="CCNode",
+            namespace="cocos2d",
+            bases=["CCObject"],
+            methods=[
+                Method(
+                    name="getRect",
+                    ret="cocos2d::CCRect",
+                    args=[],
+                    platforms={"win": "0x1"},
+                )
+            ],
+        )
+        gm = Class(
+            name="GameManager",
+            bases=["CCNode"],
+            methods=[
+                Method(
+                    name="getSize",
+                    ret="cocos2d::CCSize",
+                    args=[],
+                    platforms={"win": "0x2"},
+                ),
+                Method(
+                    name="getRect",
+                    ret="cocos2d::CCRect",
+                    args=[],
+                    platforms={"win": "0x3"},
+                ),
+            ],
+        )
+        root = Root(classes=[ccobject, node, gm])
+        files = emit_luau_types(root)
+        gd = files["geode_gd.d.luau"]
+        ccsize_pos = gd.find("export type CCSize =")
+        ccrect_pos = gd.find("export type CCRect =")
+        self.assertGreaterEqual(ccsize_pos, 0)
+        self.assertGreater(ccrect_pos, ccsize_pos)
+
+    def test_geode_root_namespace_stubs(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        root = Root(classes=[ccobject])
+        main = emit_luau_types(root)["geode.d.luau"]
+        self.assertIn("type Cocos2dNamespace = any", main)
+        self.assertIn("type GDNamespace = any", main)
+        self.assertIn("cocos2d: Cocos2dNamespace", main)
+
     def test_dispatcher_uses_input_arg_count_for_out_refs(self) -> None:
         method = Method(
             name="getUnlockForAchievement",
@@ -387,7 +631,10 @@ class LuauTypeEmissionTests(unittest.TestCase):
         text = _emit_dispatcher(cls, "updateMainColor", methods, objects)
         self.assertIn("case 0:", text)
         self.assertIn("case 1:", text)
-        self.assertNotIn("case 0: return luaapi_GameObject_updateMainColor_0(L);\n            case 0:", text)
+        self.assertNotIn(
+            "case 0: return luaapi_GameObject_updateMainColor_0(L);\n            case 0:",
+            text,
+        )
 
 
 if __name__ == "__main__":

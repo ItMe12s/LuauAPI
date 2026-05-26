@@ -136,7 +136,10 @@ set(LUAUAPI_GEN_DIR "${CMAKE_BINARY_DIR}/luauapi-gen")
 set(LUAUAPI_TYPES_DIR "${CMAKE_CURRENT_SOURCE_DIR}/types")
 set(LUAUAPI_TYPES_FILES
     "${LUAUAPI_TYPES_DIR}/geode_cocos2d.d.luau"
+    "${LUAUAPI_TYPES_DIR}/geode_cocos2d_factories.d.luau"
     "${LUAUAPI_TYPES_DIR}/geode_gd.d.luau"
+    "${LUAUAPI_TYPES_DIR}/geode_gd_2.d.luau"
+    "${LUAUAPI_TYPES_DIR}/geode_gd_factories.d.luau"
     "${LUAUAPI_TYPES_DIR}/geode.d.luau"
 )
 

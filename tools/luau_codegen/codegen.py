@@ -206,6 +206,10 @@ def main(argv: List[str]) -> int:
     type_files = emit_luau_types.emit(root, args.platform)
     for filename, content in type_files.items():
         _write_if_changed(os.path.join(args.types_out, filename), content)
+    for orphan in glob.glob(os.path.join(args.types_out, "geode*.d.luau")):
+        name = os.path.basename(orphan)
+        if name not in type_files:
+            os.remove(orphan)
     _emit_schema(root, schema_path)
     types_paths = [os.path.join(args.types_out, f) for f in type_files]
     hook_count = emit_luau_bindings.hook_target_count(root, args.platform)

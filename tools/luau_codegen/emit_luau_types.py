@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from collections import defaultdict
-from typing import Dict, List, Sequence
+import re
+from typing import Dict, List, Sequence, Tuple
 
 from broma_parser import Class, Method, Root
 from filtering import group_supported, linkless_class_names, prune_skipped_class_refs
@@ -189,7 +189,7 @@ def _base_type_refs(
     return refs
 
 
-def _external_type_refs(
+def _all_object_type_refs(
     classes: Sequence[Class],
     grouped_by_class: Dict[str, Dict[str, List[Method]]],
     objects: Dict[str, Class],
@@ -205,12 +205,70 @@ def _external_type_refs(
             for method in methods:
                 object_refs, _ = _refs_from_method(method, objects)
                 refs.update(object_refs)
+    return refs
+
+
+def _external_type_refs(
+    classes: Sequence[Class],
+    grouped_by_class: Dict[str, Dict[str, List[Method]]],
+    objects: Dict[str, Class],
+    skipped_classes: set,
+    source_namespace: str,
+) -> set[str]:
+    refs = _all_object_type_refs(
+        classes, grouped_by_class, objects, skipped_classes, source_namespace
+    )
     external: set[str] = set()
     for name in refs:
         ref_cls = objects.get(name)
         if ref_cls and lua_namespace(ref_cls) != source_namespace:
             external.add(name)
     return external
+
+
+def _object_refs_for_classes(
+    class_names: set[str],
+    grouped_by_class: Dict[str, Dict[str, List[Method]]],
+    objects: Dict[str, Class],
+    skipped_classes: set,
+) -> set[str]:
+    refs: set[str] = set()
+    for name in class_names:
+        cls = objects.get(name)
+        if not cls or name in skipped_classes:
+            continue
+        refs.update(_base_type_refs(cls, objects, skipped_classes))
+        for methods in grouped_by_class.get(name, {}).values():
+            for method in methods:
+                object_refs, _ = _refs_from_method(method, objects)
+                refs.update(object_refs)
+    return refs
+
+
+def _refs_from_chunk_content(content: str) -> set[str]:
+    refs: set[str] = set()
+    for match in re.finditer(r"extends (\w+)", content):
+        refs.add(match.group(1))
+    for match in re.finditer(
+        r":\s*(\w+)\??(?:\s*[,&)]|\s*$|\s*->)", content, re.MULTILINE
+    ):
+        name = match.group(1)
+        if name[0].isupper():
+            refs.add(name)
+    return refs
+
+
+def _factory_object_refs(
+    factories: Dict[str, Dict[str, List[Method]]],
+    objects: Dict[str, Class],
+) -> set[str]:
+    refs: set[str] = set()
+    for methods in factories.values():
+        for overloads in methods.values():
+            for method in overloads:
+                object_refs, _ = _refs_from_method(method, objects)
+                refs.update(object_refs)
+    return refs
 
 
 def _external_value_refs(
@@ -240,11 +298,16 @@ def _emit_forward_decls(names: set[str], label: str) -> str:
     return "".join(lines)
 
 
+_VALUE_STUB_ORDER = ("CCPoint", "CCSize", "RGBColor", "CCRect", "UIButtonConfig")
+
+
 def _emit_value_stubs(names: set[str]) -> str:
     if not names:
         return ""
     lines = [f"\n-- Value types defined in geode_cocos2d.d.luau\n", "\n"]
-    for name in sorted(names):
+    for name in _VALUE_STUB_ORDER:
+        if name not in names:
+            continue
         if name == "RGBColor":
             lines.append("export type RGBColor = { r: number, g: number, b: number }\n")
         elif name == "CCSize":
@@ -272,6 +335,158 @@ def _emit_value_stubs(names: set[str]) -> str:
             )
     lines.append("\n")
     return "".join(lines)
+
+
+def _emit_factories(
+    factories: Dict[str, Dict[str, List[Method]]],
+    objects: Dict[str, Class],
+    namespace: str,
+) -> List[str]:
+    lines: List[str] = []
+    if not factories:
+        lines.append(f"export type {_namespace_type_name(namespace)} = {{}}\n\n")
+        return lines
+
+    for cls_name in sorted(factories):
+        methods = factories[cls_name]
+        lines.append(f"export type {cls_name}Factory = {{\n")
+        for name, overloads in sorted(methods.items()):
+            lines.append(
+                f"    {name}: {_method_type(objects[cls_name], overloads, objects)},\n"
+            )
+        lines.append("}\n\n")
+
+    lines.append(f"export type {_namespace_type_name(namespace)} = {{\n")
+    for cls_name in sorted(factories):
+        lines.append(f"    {cls_name}: {cls_name}Factory,\n")
+    lines.append("}\n\n")
+    return lines
+
+
+def _namespace_type_name(namespace: str) -> str:
+    if namespace == "geode.cocos2d":
+        return "Cocos2dNamespace"
+    return "GDNamespace"
+
+
+def _collect_factories(
+    classes: Sequence[Class],
+    grouped_by_class: Dict[str, Dict[str, List[Method]]],
+    skipped_classes: set,
+    namespace: str,
+) -> Dict[str, Dict[str, List[Method]]]:
+    factories: Dict[str, Dict[str, List[Method]]] = {}
+    for cls in classes:
+        if cls.name in skipped_classes or lua_namespace(cls) != namespace:
+            continue
+        grouped = grouped_by_class[cls.name]
+        static_methods = {
+            k: v
+            for k, v in grouped.items()
+            if v[0].is_static and k not in LUAU_KEYWORDS
+        }
+        if static_methods:
+            factories[cls.name] = static_methods
+    return factories
+
+
+MAX_CLASS_FILE_LINES = 4500
+
+
+def _line_count(chunks: Sequence[str]) -> int:
+    return sum(chunk.count("\n") for chunk in chunks)
+
+
+def _pack_line_chunks(
+    header: List[str],
+    class_chunks: Sequence[Tuple[str, str]],
+    base_name: str,
+    *,
+    extra_name: str = "_2",
+) -> Tuple[Dict[str, str], Dict[str, set[str]]]:
+    if not class_chunks:
+        return {base_name: "".join(header)}, {base_name: set()}
+
+    packed: Dict[str, List[str]] = {}
+    classes_per_file: Dict[str, set[str]] = {}
+    current_name = base_name
+    current = header.copy()
+    current_lines = _line_count(current)
+    current_classes: set[str] = set()
+
+    for class_name, chunk in class_chunks:
+        chunk_lines = chunk.count("\n")
+        if (
+            current_lines > len(header)
+            and current_lines + chunk_lines > MAX_CLASS_FILE_LINES
+        ):
+            packed[current_name] = current
+            classes_per_file[current_name] = current_classes
+            current_name = f"{base_name.removesuffix('.d.luau')}{extra_name}.d.luau"
+            current = header.copy()
+            current_lines = _line_count(current)
+            current_classes = set()
+        current.append(chunk)
+        current_classes.add(class_name)
+        current_lines += chunk_lines
+
+    packed[current_name] = current
+    classes_per_file[current_name] = current_classes
+    return {name: "".join(lines) for name, lines in packed.items()}, classes_per_file
+
+
+def _augment_packed_class_files(
+    packed: Dict[str, str],
+    classes_per_file: Dict[str, set[str]],
+    base_header: List[str],
+    cross_namespace_forward: set[str],
+    grouped_by_class: Dict[str, Dict[str, List[Method]]],
+    objects: Dict[str, Class],
+    skipped_classes: set,
+) -> Dict[str, str]:
+    class_to_file: Dict[str, str] = {}
+    for file_name, names in classes_per_file.items():
+        for name in names:
+            class_to_file[name] = file_name
+
+    augmented: Dict[str, str] = {}
+    for file_name, body in packed.items():
+        defined_here = classes_per_file.get(file_name, set())
+        refs = _object_refs_for_classes(
+            defined_here, grouped_by_class, objects, skipped_classes
+        )
+        for class_name in defined_here:
+            chunk_start = body.find(f"declare class {class_name}")
+            if chunk_start >= 0:
+                next_decl = body.find("\ndeclare class ", chunk_start + 1)
+                chunk_end = next_decl if next_decl >= 0 else len(body)
+                refs.update(_refs_from_chunk_content(body[chunk_start:chunk_end]))
+
+        sibling_refs: set[str] = set()
+        for ref in refs:
+            ref_file = class_to_file.get(ref)
+            if ref_file and ref_file != file_name:
+                sibling_refs.add(ref)
+
+        forward_names = (defined_here | sibling_refs) - cross_namespace_forward
+        file_header = base_header.copy()
+        if forward_names:
+            file_header.append(
+                _emit_forward_decls(forward_names, file_name)
+            )
+        header_text = "".join(file_header)
+        base_body = body[len("".join(base_header)) :]
+        augmented[file_name] = header_text + base_body
+
+    return augmented
+
+
+def _root_header(label: str) -> List[str]:
+    return [
+        "-- Generated by LuauAPI codegen\n",
+        f"-- {label}\n",
+        "\n",
+    ]
 
 
 def _emit_class(
@@ -325,7 +540,6 @@ def emit(root: Root, target_platform: str = "win") -> Dict[str, str]:
     objects = codegen_object_map(root)
     grouped_by_class: Dict[str, Dict[str, List[Method]]] = {}
     skipped_by_class: Dict[str, List[tuple[Method, str]]] = {}
-    factories: Dict[str, Dict[str, List[Method]]] = defaultdict(dict)
 
     for cls in classes:
         grouped, cls_skipped = group_supported(cls, objects, target_platform)
@@ -346,91 +560,119 @@ def emit(root: Root, target_platform: str = "win") -> Dict[str, str]:
     cocos_namespace = "geode.cocos2d"
     gd_namespace = "geode.gd"
 
-    cocos_lines = _header("Cocos2d class declarations")
-    cocos_lines.append(_prelude(cocos_namespace))
-    cocos_lines.append("\n")
+    cocos_class_header = _header("Cocos2d class declarations")
+    cocos_class_header.append(_prelude(cocos_namespace))
+    cocos_class_header.append("\n")
     cocos_external = _external_type_refs(
         classes, grouped_by_class, objects, skipped_classes, cocos_namespace
     )
-    cocos_lines.append(_emit_forward_decls(cocos_external, "geode_gd.d.luau"))
+    cocos_class_header.append(_emit_forward_decls(cocos_external, "geode_gd.d.luau"))
 
-    gd_lines = _header("Geometry Dash class declarations")
-    gd_lines.append(_prelude(gd_namespace))
+    gd_class_header = _header("Geometry Dash class declarations")
+    gd_class_header.append(_prelude(gd_namespace))
     gd_external = _external_type_refs(
         classes, grouped_by_class, objects, skipped_classes, gd_namespace
     )
     gd_value_refs = _external_value_refs(
         classes, grouped_by_class, objects, skipped_classes, gd_namespace
     )
-    gd_lines.append(_emit_value_stubs(gd_value_refs))
-    gd_lines.append(_emit_forward_decls(gd_external, "geode_cocos2d.d.luau"))
+    gd_class_header.append(_emit_value_stubs(gd_value_refs))
+    gd_class_header.append(_emit_forward_decls(gd_external, "geode_cocos2d.d.luau"))
 
+    cocos_class_chunks: List[Tuple[str, str]] = []
+    gd_class_chunks: List[Tuple[str, str]] = []
     for cls in classes:
         if cls.name in skipped_classes:
             continue
         grouped = grouped_by_class[cls.name]
         cls_lines = _emit_class(cls, grouped, objects, skipped_classes)
-
-        if lua_namespace(cls) == "geode.cocos2d":
-            cocos_lines.extend(cls_lines)
+        chunk = "".join(cls_lines)
+        if lua_namespace(cls) == cocos_namespace:
+            cocos_class_chunks.append((cls.name, chunk))
         else:
-            gd_lines.extend(cls_lines)
+            gd_class_chunks.append((cls.name, chunk))
 
-        static_methods = {
-            k: v
-            for k, v in grouped.items()
-            if v[0].is_static and k not in LUAU_KEYWORDS
-        }
-        if static_methods:
-            factories[cls.name] = static_methods
-
-    main_external: set[str] = set()
-    for methods in factories.values():
-        for overloads in methods.values():
-            for method in overloads:
-                object_refs, _ = _refs_from_method(method, objects)
-                main_external.update(object_refs)
-
-    main_lines = _header("Factories and namespace types")
-    main_lines.append(
-        _emit_forward_decls(main_external, "geode_gd.d.luau and geode_cocos2d.d.luau")
+    cocos_factories = _collect_factories(
+        classes, grouped_by_class, skipped_classes, cocos_namespace
     )
+    gd_factories = _collect_factories(
+        classes, grouped_by_class, skipped_classes, gd_namespace
+    )
+
+    output: Dict[str, str] = {}
+    cocos_packed, cocos_classes_per_file = _pack_line_chunks(
+        cocos_class_header, cocos_class_chunks, "geode_cocos2d.d.luau"
+    )
+    output.update(
+        _augment_packed_class_files(
+            cocos_packed,
+            cocos_classes_per_file,
+            cocos_class_header,
+            cocos_external,
+            grouped_by_class,
+            objects,
+            skipped_classes,
+        )
+    )
+
+    gd_packed, gd_classes_per_file = _pack_line_chunks(
+        gd_class_header, gd_class_chunks, "geode_gd.d.luau"
+    )
+    output.update(
+        _augment_packed_class_files(
+            gd_packed,
+            gd_classes_per_file,
+            gd_class_header,
+            gd_external,
+            grouped_by_class,
+            objects,
+            skipped_classes,
+        )
+    )
+
+    cocos_factory_refs = _factory_object_refs(cocos_factories, objects)
+    cocos_factory_lines = _header("Cocos2d factory declarations")
+    cocos_factory_lines.append(
+        _emit_forward_decls(cocos_factory_refs, "geode_cocos2d.d.luau")
+    )
+    cocos_factory_lines.extend(
+        _emit_factories(cocos_factories, objects, cocos_namespace)
+    )
+    output["geode_cocos2d_factories.d.luau"] = "".join(cocos_factory_lines)
+
+    gd_factory_refs = _factory_object_refs(gd_factories, objects)
+    gd_factory_external = {
+        name
+        for name in gd_factory_refs
+        if (ref_cls := objects.get(name))
+        and lua_namespace(ref_cls) == cocos_namespace
+    }
+    gd_factory_same_ns = gd_factory_refs - gd_factory_external
+    gd_factory_lines = _header("Geometry Dash factory declarations")
+    gd_factory_lines.append(
+        _emit_forward_decls(gd_factory_external, "geode_cocos2d.d.luau")
+    )
+    gd_factory_lines.append(
+        _emit_forward_decls(
+            gd_factory_same_ns,
+            "geode_gd.d.luau and geode_gd_2.d.luau",
+        )
+    )
+    gd_factory_lines.extend(_emit_factories(gd_factories, objects, gd_namespace))
+    output["geode_gd_factories.d.luau"] = "".join(gd_factory_lines)
+
+    main_lines = _root_header("Geode namespace root")
+    main_lines.append(
+        "-- Namespace types are fully defined in geode_*_factories.d.luau\n"
+    )
+    main_lines.append("type Cocos2dNamespace = any\n")
+    main_lines.append("type GDNamespace = any\n\n")
     main_lines.append("export type HookHandle = {\n")
     main_lines.append("    enable: (self: HookHandle) -> boolean,\n")
     main_lines.append("    disable: (self: HookHandle) -> boolean,\n")
     main_lines.append("    remove: (self: HookHandle) -> boolean,\n")
     main_lines.append("    isEnabled: (self: HookHandle) -> boolean,\n")
     main_lines.append("}\n\n")
-
-    for cls_name, methods in sorted(factories.items()):
-        main_lines.append(f"export type {cls_name}Factory = {{\n")
-        for name, overloads in sorted(methods.items()):
-            main_lines.append(
-                f"    {name}: {_method_type(objects[cls_name], overloads, objects)},\n"
-            )
-        main_lines.append("}\n\n")
-
-    cocos = []
-    gd = []
-    for cls in classes:
-        if cls.name in skipped_classes:
-            continue
-        factory = f"{cls.name}Factory" if cls.name in factories else "{}"
-        if lua_namespace(cls) == "geode.cocos2d":
-            cocos.append((cls.name, factory))
-        else:
-            gd.append((cls.name, factory))
-
-    main_lines.append("export type Cocos2dNamespace = {\n")
-    for name, factory in sorted(cocos):
-        main_lines.append(f"    {name}: {factory},\n")
-    main_lines.append("}\n\n")
-
-    main_lines.append("export type GDNamespace = {\n")
-    for name, factory in sorted(gd):
-        main_lines.append(f"    {name}: {factory},\n")
-    main_lines.append("}\n\n")
-
     main_lines.append("export type GeodeNamespace = {\n")
     main_lines.append("    cocos2d: Cocos2dNamespace,\n")
     main_lines.append("    gd: GDNamespace,\n")
@@ -439,9 +681,6 @@ def emit(root: Root, target_platform: str = "win") -> Dict[str, str]:
     )
     main_lines.append("}\n\n")
     main_lines.append("declare geode: GeodeNamespace\n")
+    output["geode.d.luau"] = "".join(main_lines)
 
-    return {
-        "geode_cocos2d.d.luau": "".join(cocos_lines),
-        "geode_gd.d.luau": "".join(gd_lines),
-        "geode.d.luau": "".join(main_lines),
-    }
+    return output
