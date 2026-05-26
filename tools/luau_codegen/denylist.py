@@ -158,6 +158,7 @@ INACCESSIBLE_METHODS = {
     ("CCTextFieldTTF", "deleteForward"),
     ("CCTextFieldTTF", "draw"),
     ("CCTextFieldTTF", "getContentText"),
+    ("CCTextFieldTTF", "insertText"),
     ("CCTexture2D", "initPremultipliedATextureWithImage"),
     ("CCTextureAtlas", "mapBuffers"),
     ("CCTextureAtlas", "setupIndices"),

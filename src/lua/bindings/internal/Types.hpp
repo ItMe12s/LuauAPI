@@ -52,4 +52,39 @@ namespace luax {
         lua_pushinteger(L, color.g); lua_setfield(L, -2, "g");
         lua_pushinteger(L, color.b); lua_setfield(L, -2, "b");
     }
+
+    inline UIButtonConfig toUIButtonConfig(lua_State* L, int idx, char const* method) {
+        UIButtonConfig config{};
+        config.m_width = static_cast<int>(fieldNumber(L, idx, "width", method));
+        config.m_height = static_cast<int>(fieldNumber(L, idx, "height", method));
+        config.m_deadzone = static_cast<float>(fieldNumber(L, idx, "deadzone", method));
+        config.m_scale = static_cast<float>(fieldNumber(L, idx, "scale", method));
+        config.m_opacity = static_cast<int>(fieldNumber(L, idx, "opacity", method));
+        config.m_radius = static_cast<float>(fieldNumber(L, idx, "radius", method));
+        config.m_modeB = fieldBool(L, idx, "modeB", method);
+        config.m_snap = fieldBool(L, idx, "snap", method);
+        lua_getfield(L, idx, "position");
+        config.m_position = toPoint(L, -1, method);
+        lua_pop(L, 1);
+        config.m_oneButton = fieldBool(L, idx, "oneButton", method);
+        config.m_player2 = fieldBool(L, idx, "player2", method);
+        config.m_split = fieldBool(L, idx, "split", method);
+        return config;
+    }
+
+    inline void pushUIButtonConfig(lua_State* L, UIButtonConfig const& config) {
+        lua_createtable(L, 0, 12);
+        lua_pushinteger(L, config.m_width); lua_setfield(L, -2, "width");
+        lua_pushinteger(L, config.m_height); lua_setfield(L, -2, "height");
+        lua_pushnumber(L, config.m_deadzone); lua_setfield(L, -2, "deadzone");
+        lua_pushnumber(L, config.m_scale); lua_setfield(L, -2, "scale");
+        lua_pushinteger(L, config.m_opacity); lua_setfield(L, -2, "opacity");
+        lua_pushnumber(L, config.m_radius); lua_setfield(L, -2, "radius");
+        luax::push(L, config.m_modeB); lua_setfield(L, -2, "modeB");
+        luax::push(L, config.m_snap); lua_setfield(L, -2, "snap");
+        pushPoint(L, config.m_position); lua_setfield(L, -2, "position");
+        luax::push(L, config.m_oneButton); lua_setfield(L, -2, "oneButton");
+        luax::push(L, config.m_player2); lua_setfield(L, -2, "player2");
+        luax::push(L, config.m_split); lua_setfield(L, -2, "split");
+    }
 }

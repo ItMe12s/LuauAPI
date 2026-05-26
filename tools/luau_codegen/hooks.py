@@ -6,6 +6,7 @@ from typing import Dict
 from android_symbol import android_symbol
 from broma_parser import Class, Method
 from filtering import direct_callable, platform_value
+from link_attrs import class_link_platforms
 from marshalling import push_value
 from model import cxx_name, lua_namespace
 from type_map import TypeInfo, classify_arg, classify_return, normalize_type
@@ -30,11 +31,7 @@ def concrete_hook_platform(target_platform: str) -> bool:
 
 
 def _class_link_platforms(cls: Class) -> set[str]:
-    out: set[str] = set()
-    for attr in cls.attributes:
-        if attr.startswith("link(") and attr.endswith(")"):
-            out.update(p.strip() for p in attr[5:-1].split(","))
-    return out
+    return class_link_platforms(cls)
 
 
 def _android_linked(cls: Class, target_platform: str) -> bool:
@@ -120,7 +117,7 @@ def emit_return_override(
             f"        {var} = lua_toboolean(L, {idx}) != 0;\n",
             "        return true;\n",
         ]
-    if info.kind == "number":
+    if info.kind in ("number", "enum"):
         return [
             f"        if (!lua_isnumber(L, {idx})) return false;\n",
             f"        {var} = static_cast<{info.cxx_type}>(lua_tonumber(L, {idx}));\n",

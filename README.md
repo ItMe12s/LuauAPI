@@ -24,6 +24,7 @@ Manual Android device testing is still required before treating a hook-heavy scr
   - Generated calls and `geode.hook` targets are ABI-specific, so build Android32 or Android64 before copying `types/`.
 - iOS uses `[[link(ios)]]` symbols and `ios` addresses. macOS uses `[[link(mac)]]`/`imac`/`m1` addresses.
   - Linked class hooks resolve via `dlsym(RTLD_DEFAULT, ...)`. Coverage matches whatever has a platform value in bindings.
+- Broma **fields** (`m_*` members) are not bound to Luau. Use generated methods, hooks, or C++ `$modify` for field access.
 
 ## Setup your visual studio
 

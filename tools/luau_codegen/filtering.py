@@ -6,20 +6,14 @@ from typing import Dict, List
 from broma_parser import Class, Method
 from denylist import INACCESSIBLE_CLASSES, INACCESSIBLE_METHODS
 from model import short_name, status_for
+from link_attrs import is_link_platform, platform_aliases
 from type_map import classify_arg, classify_return
 
 STRICT_DIRECT_PLATFORMS: set[str] = set()
 
 
 def _platform_aliases(target_platform: str) -> set[str]:
-    return {
-        "mac": {"mac", "imac", "m1"},
-        "imac": {"mac", "imac"},
-        "m1": {"mac", "m1"},
-        "android": {"android", "android32", "android64"},
-        "android32": {"android", "android32"},
-        "android64": {"android", "android64"},
-    }.get(target_platform, {target_platform})
+    return platform_aliases(target_platform)
 
 
 def platform_value(m: Method, target_platform: str) -> str:
@@ -35,15 +29,6 @@ def platform_value(m: Method, target_platform: str) -> str:
     if target_platform == "android":
         return m.platforms.get("android64", "") or m.platforms.get("android32", "")
     return ""
-
-
-def _is_link_platform(cls: Class, target_platform: str) -> bool:
-    aliases = _platform_aliases(target_platform)
-    for attr in cls.attributes:
-        if attr.startswith("link(") and attr.endswith(")"):
-            platforms = [p.strip() for p in attr[5:-1].split(",")]
-            return any(platform in aliases for platform in platforms)
-    return False
 
 
 def _method_missing_platforms(m: Method) -> set[str]:
@@ -62,7 +47,9 @@ def _is_missing_on_platform(m: Method, target_platform: str) -> bool:
 
 
 def direct_callable(cls: Class, m: Method, target_platform: str) -> bool:
-    if _is_link_platform(cls, target_platform):
+    if is_link_platform(cls, target_platform):
+        return True
+    if m.platforms.get("inline") == "inline":
         return True
 
     value = platform_value(m, target_platform)
@@ -89,12 +76,14 @@ def supported(
         return False, "destructor"
     if m.is_callback:
         return False, "callback"
+    if m.access != "public":
+        return False, "inaccessible"
     if m.name.startswith("operator"):
         return False, "operator"
     if _is_missing_on_platform(m, target_platform):
         return False, "missing-platform"
     if status_for(m.platforms) == "Missing":
-        if not _is_link_platform(cls, target_platform):
+        if not is_link_platform(cls, target_platform):
             return False, "missing-address"
         if m.name.startswith("_"):
             return False, "inaccessible"

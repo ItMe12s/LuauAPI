@@ -15,9 +15,13 @@ from filtering import (
 )
 from cxx_templates import emit_internal_hpp, file_preamble
 from hooks import emit_hook_support, emit_hook_target, hook_id, hook_suffix, hookable
-from marshalling import check_arg, push_return
-from model import cxx_name, lua_namespace, object_classes, short_name
-from type_map import classify_arg, classify_return
+from marshalling import check_arg, push_return, push_value
+from model import codegen_object_map, cxx_name, lua_namespace, object_classes, short_name
+from type_map import TypeInfo, require_classify_arg, require_classify_return
+
+
+def _classify_method_args(m: Method, objects: Dict[str, Class]) -> List[TypeInfo]:
+    return [require_classify_arg(arg.type, objects) for arg in m.args]
 
 
 def _id(value: str) -> str:
@@ -31,10 +35,17 @@ def _gen_ns(cls: Class) -> str:
 def _emit_invoke(cls: Class, m: Method, objects: Dict[str, Class], suffix: str) -> str:
     fn = f"luaapi_{_id(cls.name)}_{_id(m.name)}{suffix}"
     label = call_label(cls, m)
-    ret = classify_return(m.ret, objects)
-    assert ret is not None
+    ret = require_classify_return(m.ret, objects)
+    arg_infos = _classify_method_args(m, objects)
+
+    input_count = 0
+    for arg, info in zip(m.args, arg_infos):
+        if ret.kind == "void" and info.is_ref:
+            continue
+        input_count += 1
+
     out = [f"    int {fn}(lua_State* L) {{\n"]
-    expected = len(m.args) if m.is_static else len(m.args) + 1
+    expected = input_count + (0 if m.is_static else 1)
     out.append(
         f'        if (lua_gettop(L) != {expected}) luaL_error(L, "{label} expected {expected} args");\n'
     )
@@ -43,21 +54,41 @@ def _emit_invoke(cls: Class, m: Method, objects: Dict[str, Class], suffix: str) 
         out.append(
             f'        auto self = luax::Usertype<{cxx_name(cls)}>::check(L, 1, "{label}");\n'
         )
-    for i, arg in enumerate(m.args):
-        info = classify_arg(arg.type, objects)
-        assert info is not None
-        var = f"arg{i}"
-        out.extend(check_arg(arg, info, i + (1 if m.is_static else 2), var, label))
+    lua_idx = 1 if m.is_static else 2
+    for arg_idx, (arg, info) in enumerate(zip(m.args, arg_infos)):
+        var = f"arg{arg_idx}"
+        if ret.kind == "void" and info.is_ref:
+            if info.kind == "value" and info.lua_type == "UIButtonConfig":
+                out.append(f"        UIButtonConfig {var}{{}};\n")
+            elif info.kind == "enum":
+                out.append(f"        {info.cxx_type} {var}{{}};\n")
+            else:
+                out.append(f"        {info.cxx_type} {var}{{}};\n")
+            call_args.append(var)
+            continue
+        out.extend(check_arg(arg, info, lua_idx, var, label))
         call_args.append(var)
+        lua_idx += 1
+
     args = ", ".join(call_args)
     target = (
         f"{cxx_name(cls)}::{m.name}({args})"
         if m.is_static
         else f"self->{m.name}({args})"
     )
+    out_refs = [
+        (arg_idx, info)
+        for arg_idx, (_, info) in enumerate(zip(m.args, arg_infos))
+        if ret.kind == "void" and info.is_ref
+    ]
     if ret.kind == "void":
         out.append(f"        {target};\n")
-        out.extend(push_return(ret, "", False))
+        if out_refs:
+            for arg_idx, info in out_refs:
+                out.extend(push_value(info, f"arg{arg_idx}", False))
+            out.append(f"        return {len(out_refs)};\n")
+        else:
+            out.extend(push_return(ret, "", False))
     else:
         out.append(f"        auto result = {target};\n")
         out.extend(push_return(ret, "result", returns_owned(m)))
@@ -86,20 +117,6 @@ def _emit_dispatcher(
     )
     out.append("    }\n\n")
     return "".join(out)
-
-
-def _emit_compat_functions(objects: Dict[str, Class]) -> str:
-    if "GameManager" not in objects:
-        return ""
-    return (
-        "    int luaapi_GameManager_get(lua_State* L) {\n"
-        '        if (lua_gettop(L) != 0) luaL_error(L, "GameManager.get expected 0 args");\n'
-        "        auto* result = GameManager::get();\n"
-        '        if (!result) luaL_error(L, "GameManager.get singleton not available");\n'
-        "        luax::Usertype<GameManager>::pushBorrowed(L, result);\n"
-        "        return 1;\n"
-        "    }\n\n"
-    )
 
 
 def _inheritance_depth(
@@ -133,8 +150,7 @@ class EmitPlan:
 
 def _collect_plan(root: Root, target_platform: str) -> EmitPlan:
     classes = object_classes(root)
-    objects = {cls.name: cls for cls in classes}
-    objects.update({cls.qualified_name: cls for cls in classes})
+    objects = codegen_object_map(root)
     by_short = {cls.name: cls for cls in classes}
     skipped: list[tuple[str, str, str]] = []
     supported_by_class: dict[str, dict[str, list[Method]]] = {}
@@ -220,9 +236,6 @@ def _emit_class_file(
     out.append(f"namespace luauapi_gen::{gen_ns} {{\n\n")
     out.append("namespace {\n\n")
 
-    if cls.name == "GameManager":
-        out.append(_emit_compat_functions(objects))
-
     for methods in grouped.values():
         for idx, m in enumerate(methods):
             suffix = "" if len(methods) == 1 else f"_{idx}"
@@ -281,20 +294,14 @@ def _emit_class_file(
     static_methods = [
         (name, methods) for name, methods in grouped.items() if methods[0].is_static
     ]
-    if static_methods or cls.name == "GameManager":
+    if static_methods:
         ns = lua_namespace(cls)
-        extra = 1 if cls.name == "GameManager" else 0
         out.append(f'\n    luax::getOrCreateTable(L, "{ns}");\n')
-        out.append(f"    lua_createtable(L, 0, {len(static_methods) + extra});\n")
+        out.append(f"    lua_createtable(L, 0, {len(static_methods)});\n")
         for name, methods in static_methods:
             fn = f"luaapi_{_id(cls.name)}_{_id(name)}"
             out.append(f'    lua_pushcfunction(L, &{fn}, "{cls.name}.{name}");\n')
             out.append(f'    lua_setfield(L, -2, "{name}");\n')
-        if cls.name == "GameManager":
-            out.append(
-                '    lua_pushcfunction(L, &luaapi_GameManager_get, "GameManager.get");\n'
-            )
-            out.append('    lua_setfield(L, -2, "get");\n')
         out.append(f'    lua_setfield(L, -2, "{cls.name}");\n')
         out.append("    lua_pop(L, 1);\n")
 

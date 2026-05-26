@@ -5,8 +5,8 @@ from typing import Dict, List, Sequence
 
 from broma_parser import Class, Method, Root
 from filtering import group_supported, linkless_class_names, prune_skipped_class_refs
-from model import lua_namespace, object_classes, short_name
-from type_map import TypeInfo, classify_arg, classify_return
+from model import codegen_object_map, lua_namespace, object_classes, short_name
+from type_map import ENUM_TYPES, TypeInfo, classify_arg, classify_return
 
 LUAU_KEYWORDS = frozenset(
     {
@@ -64,21 +64,75 @@ def _classify_args(method: Method, objects: Dict[str, Class]) -> List[TypeInfo]:
     return args
 
 
+def _method_return_type(
+    cls: Class, m: Method, objects: Dict[str, Class]
+) -> str:
+    ret = classify_return(m.ret, objects)
+    assert ret is not None
+    out_types: List[str] = []
+    if ret.kind != "void":
+        out_types.append(ret.lua_type)
+    if ret.kind == "void":
+        for arg in m.args:
+            info = classify_arg(arg.type, objects)
+            assert info is not None
+            if info.is_ref:
+                out_types.append(info.lua_type)
+    if not out_types:
+        return "()"
+    if len(out_types) == 1:
+        return out_types[0]
+    return "(" + ", ".join(out_types) + ")"
+
+
 def _method_type(cls: Class, methods: List[Method], objects: Dict[str, Class]) -> str:
     parts = []
     for m in methods:
-        args = _classify_args(m, objects)
-        ret = classify_return(m.ret, objects)
-        assert ret is not None
-        parts.append(_fn(args, ret, None if m.is_static else cls.name))
+        args = _classify_input_args(m, objects)
+        ret_type = _method_return_type(cls, m, objects)
+        params = []
+        if not m.is_static:
+            params.append(f"self: {cls.name}")
+        for i, arg in enumerate(args, start=1):
+            params.append(f"arg{i}: {arg.lua_type}")
+        parts.append(f"({', '.join(params)}) -> {ret_type}")
     return " & ".join(f"({p})" for p in parts)
 
 
+def _classify_input_args(m: Method, objects: Dict[str, Class]) -> List[TypeInfo]:
+    ret = classify_return(m.ret, objects)
+    assert ret is not None
+    args: List[TypeInfo] = []
+    for arg in m.args:
+        info = classify_arg(arg.type, objects)
+        assert info is not None
+        if ret.kind == "void" and info.is_ref:
+            continue
+        args.append(info)
+    return args
+
+
 def _prelude() -> str:
-    return """export type RGBColor = { r: number, g: number, b: number }
-export type CCSize = { width: number, height: number }
-export type CCPoint = { x: number, y: number }
-export type CCRect = { origin: CCPoint, size: CCSize }
+    enum_lines = "\n".join(f"export type {name} = number" for name in sorted(ENUM_TYPES))
+    return f"""export type RGBColor = {{ r: number, g: number, b: number }}
+export type CCSize = {{ width: number, height: number }}
+export type CCPoint = {{ x: number, y: number }}
+export type CCRect = {{ origin: CCPoint, size: CCSize }}
+export type UIButtonConfig = {{
+    width: number,
+    height: number,
+    deadzone: number,
+    scale: number,
+    opacity: number,
+    radius: number,
+    modeB: boolean,
+    snap: boolean,
+    position: CCPoint,
+    oneButton: boolean,
+    player2: boolean,
+    split: boolean,
+}}
+{enum_lines}
 """
 
 
@@ -158,15 +212,21 @@ def _emit_class(
         for name, methods in sorted(instance_methods.items()):
             if len(methods) == 1:
                 m = methods[0]
-                args = _classify_args(m, objects)
-                ret = classify_return(m.ret, objects)
-                assert ret is not None
+                args = _classify_input_args(m, objects)
+                ret_type = _method_return_type(cls, m, objects)
                 arg_text = ", ".join(
                     f"arg{i}: {arg.lua_type}" for i, arg in enumerate(args, start=1)
                 )
-                suffix = "" if ret.kind == "void" else f": {ret.lua_type}"
                 joiner = ", " if arg_text else ""
-                lines.append(f"    function {name}(self{joiner}{arg_text}){suffix}\n")
+                self_prefix = "" if m.is_static else f"self{joiner}"
+                if m.is_static:
+                    lines.append(
+                        f"    function {name}({arg_text}){': ' + ret_type if ret_type != '()' else ''}\n"
+                    )
+                else:
+                    lines.append(
+                        f"    function {name}({self_prefix}{arg_text}){': ' + ret_type if ret_type != '()' else ''}\n"
+                    )
             else:
                 lines.append(f"    {name}: {_method_type(cls, methods, objects)}\n")
         lines.append("end\n\n")
@@ -175,8 +235,7 @@ def _emit_class(
 
 def emit(root: Root, target_platform: str = "win") -> Dict[str, str]:
     classes = object_classes(root)
-    objects = {cls.name: cls for cls in classes}
-    objects.update({cls.qualified_name: cls for cls in classes})
+    objects = codegen_object_map(root)
     grouped_by_class: Dict[str, Dict[str, List[Method]]] = {}
     skipped_by_class: Dict[str, List[tuple[Method, str]]] = {}
     factories: Dict[str, Dict[str, List[Method]]] = defaultdict(dict)
@@ -237,8 +296,6 @@ def emit(root: Root, target_platform: str = "win") -> Dict[str, str]:
 
     for cls_name, methods in sorted(factories.items()):
         main_lines.append(f"export type {cls_name}Factory = {{\n")
-        if cls_name == "GameManager":
-            main_lines.append("    get: () -> GameManager,\n")
         for name, overloads in sorted(methods.items()):
             main_lines.append(
                 f"    {name}: {_method_type(objects[cls_name], overloads, objects)},\n"

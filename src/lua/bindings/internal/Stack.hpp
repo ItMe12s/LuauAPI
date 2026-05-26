@@ -94,4 +94,15 @@ namespace luax {
         lua_pop(L, 1);
         return v;
     }
+
+    inline bool fieldBool(lua_State* L, int tableIdx, char const* key, char const* method) {
+        lua_getfield(L, tableIdx, key);
+        if (!lua_isboolean(L, -1)) {
+            lua_pop(L, 1);
+            luaL_error(L, "%s expected boolean field '%s'", method, key);
+        }
+        bool v = lua_toboolean(L, -1) != 0;
+        lua_pop(L, 1);
+        return v;
+    }
 }

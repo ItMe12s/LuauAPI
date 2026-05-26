@@ -10,10 +10,11 @@ CODEGEN_DIR = os.path.join(ROOT, "tools", "luau_codegen")
 if CODEGEN_DIR not in sys.path:
     sys.path.insert(0, CODEGEN_DIR)
 
-from broma_parser import Arg, Class, Method  # type: ignore[import-unresolved]
+from broma_parser import Arg, Class, Method, parse_file  # type: ignore[import-unresolved]
 from emit_luau_bindings import _emit_class_file, _emit_common_file  # type: ignore[import-unresolved]
-from filtering import supported  # type: ignore[import-unresolved]
+from filtering import is_link_platform, supported  # type: ignore[import-unresolved]
 from hooks import android_symbol, emit_hook_support, hook_address_expr, hook_offset  # type: ignore[import-unresolved]
+from link_attrs import class_link_platforms  # type: ignore[import-unresolved]
 
 
 class HookOffsetTests(unittest.TestCase):
@@ -136,6 +137,111 @@ class LinkClassFilterTests(unittest.TestCase):
 
         self.assertFalse(ok)
         self.assertEqual(reason, "inaccessible")
+
+
+class AccessLevelTests(unittest.TestCase):
+    def test_protected_method_rejected(self) -> None:
+        cls = Class(name="CCTextFieldTTF", attributes=["link(win)"])
+        method = Method(
+            name="insertText",
+            ret="void",
+            args=[Arg("char const*", "text"), Arg("int", "len"), Arg("cocos2d::enumKeyCodes", "key")],
+            access="protected",
+            platforms={"win": "link"},
+        )
+
+        ok, reason = supported(cls, method, {"CCTextFieldTTF": cls}, "win")
+
+        self.assertFalse(ok)
+        self.assertEqual(reason, "inaccessible")
+
+    def test_parse_protected_prefix(self) -> None:
+        import tempfile
+
+        bro = """
+class Foo {
+    protected virtual void insertText(char const* text, int len);
+};
+"""
+        with tempfile.NamedTemporaryFile("w", suffix=".bro", delete=False) as f:
+            f.write(bro)
+            path = f.name
+        try:
+            root = parse_file(path)
+            methods = root.classes[0].methods
+            self.assertEqual(len(methods), 1)
+            self.assertEqual(methods[0].name, "insertText")
+            self.assertEqual(methods[0].access, "protected")
+        finally:
+            os.unlink(path)
+
+    def test_parse_access_section(self) -> None:
+        import tempfile
+
+        bro = """
+class Foo {
+protected:
+    virtual void insertText(char const* text);
+};
+"""
+        with tempfile.NamedTemporaryFile("w", suffix=".bro", delete=False) as f:
+            f.write(bro)
+            path = f.name
+        try:
+            root = parse_file(path)
+            methods = root.classes[0].methods
+            self.assertEqual(len(methods), 1)
+            self.assertEqual(methods[0].access, "protected")
+        finally:
+            os.unlink(path)
+
+
+class CompoundLinkAttributeTests(unittest.TestCase):
+    def test_compound_link_attribute_matches_android64(self) -> None:
+        cls = Class(
+            name="GameManager",
+            attributes=["link(android)", "depends(UIButtonConfig)"],
+        )
+
+        self.assertTrue(is_link_platform(cls, "android64"))
+        self.assertFalse(is_link_platform(cls, "win"))
+
+    def test_compound_link_attribute_string_matches_android64(self) -> None:
+        cls = Class(
+            name="GameManager",
+            attributes=["link(android), depends(UIButtonConfig)"],
+        )
+
+        self.assertEqual(class_link_platforms(cls), {"android"})
+        self.assertTrue(is_link_platform(cls, "android64"))
+
+    def test_linked_game_manager_method_supported_on_android64(self) -> None:
+        cls = Class(
+            name="GameManager",
+            attributes=["link(android)", "depends(UIButtonConfig)"],
+        )
+        method = Method(
+            name="update",
+            ret="void",
+            args=[Arg("float", "dt")],
+            platforms={"win": "0x189bc0", "imac": "0x38bb20"},
+        )
+
+        ok, reason = supported(cls, method, {"GameManager": cls}, "android64")
+
+        self.assertTrue(ok)
+        self.assertEqual(reason, "")
+
+
+class BareInlineTests(unittest.TestCase):
+    def test_bare_inline_callable_on_win(self) -> None:
+        cls = Class(name="GameManager")
+        method = Method(name="getPlayLayer", ret="PlayLayer*", args=[], platforms={"inline": "inline"})
+
+        ok, reason = supported(cls, method, {"GameManager": cls, "PlayLayer": Class(name="PlayLayer")}, "win")
+
+        self.assertTrue(ok)
+        self.assertEqual(reason, "")
 
 
 class GeneratedSafetyTests(unittest.TestCase):

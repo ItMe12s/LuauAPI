@@ -9,6 +9,10 @@ def _push_impl(info: TypeInfo, expr: str, owned: bool) -> list[str]:
         return [f"        luax::push(L, {expr});\n"]
     if info.kind == "number":
         return [f"        lua_pushnumber(L, static_cast<double>({expr}));\n"]
+    if info.kind == "enum":
+        return [
+            f"        lua_pushnumber(L, static_cast<double>(static_cast<int>({expr})));\n"
+        ]
     if info.kind == "string":
         if info.cxx_type.endswith("*"):
             return [f"        luax::push(L, {expr});\n"]
@@ -22,6 +26,8 @@ def _push_impl(info: TypeInfo, expr: str, owned: bool) -> list[str]:
             return [f"        luax::pushRect(L, {expr});\n"]
         if info.lua_type == "RGBColor":
             return [f"        luax::pushColor3B(L, {expr});\n"]
+        if info.lua_type == "UIButtonConfig":
+            return [f"        luax::pushUIButtonConfig(L, {expr});\n"]
     if info.kind == "object":
         push = "pushOwned" if owned else "pushBorrowed"
         return [f"        luax::Usertype<{info.cxx_type[:-1]}>::{push}(L, {expr});\n"]
@@ -32,7 +38,7 @@ def check_arg(arg: Arg, info: TypeInfo, idx: int, var: str, label: str) -> list[
     cxx = info.cxx_type
     if info.kind == "bool":
         return [f'        auto {var} = luax::check<bool>(L, {idx}, "{label}");\n']
-    if info.kind == "number":
+    if info.kind in ("number", "enum"):
         if cxx in ("float", "double"):
             return [f'        auto {var} = luax::check<{cxx}>(L, {idx}, "{label}");\n']
         return [
@@ -61,6 +67,8 @@ def check_arg(arg: Arg, info: TypeInfo, idx: int, var: str, label: str) -> list[
             return [f'        auto {var} = luax::toRect(L, {idx}, "{label}");\n']
         if info.lua_type == "RGBColor":
             return [f'        auto {var} = luax::toColor3B(L, {idx}, "{label}");\n']
+        if info.lua_type == "UIButtonConfig":
+            return [f'        auto {var} = luax::toUIButtonConfig(L, {idx}, "{label}");\n']
     if info.kind == "object":
         return [
             f'        auto {var} = luax::Usertype<{info.cxx_type[:-1]}>::check(L, {idx}, "{label}");\n'

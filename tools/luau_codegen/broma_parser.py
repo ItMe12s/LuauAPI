@@ -22,6 +22,7 @@ class Method:
     is_callback: bool = False
     is_ctor: bool = False
     is_dtor: bool = False
+    access: str = "public"
     platforms: Dict[str, str] = dataclasses.field(default_factory=dict)
     attributes: List[str] = dataclasses.field(default_factory=list)
     line: int = 0
@@ -183,7 +184,11 @@ def parse_text(raw: str, source: str = "") -> Root:
             if end == -1:
                 cur.advance(2)
                 continue
-            pending_attrs.append(cur.text[cur.pos + 2 : end].strip())
+            attr_text = cur.text[cur.pos + 2 : end].strip()
+            for part in split_top_level(attr_text):
+                part = part.strip()
+                if part:
+                    pending_attrs.append(part)
             cur.line += cur.text[cur.pos : end + 2].count("\n")
             cur.pos = end + 2
             continue
@@ -235,6 +240,7 @@ def _parse_bases(value: str) -> List[str]:
 
 def _parse_class_body(cur: _Cursor, cls: Class) -> None:
     pending_method_attrs: List[str] = []
+    current_access = "public"
     while not cur.at_end():
         cur.skip_ws()
         if cur.at_end():
@@ -262,19 +268,31 @@ def _parse_class_body(cur: _Cursor, cls: Class) -> None:
                 depth += 1
             elif ch in ">)]":
                 depth -= 1
+            elif ch == ":" and depth == 0:
+                candidate = cur.text[start : i + 1].strip()
+                section = re.match(r"^(public|protected|private)\s*:\s*$", candidate)
+                if section:
+                    cur.line += cur.text[start : i + 1].count("\n")
+                    cur.pos = i + 1
+                    current_access = section.group(1)
+                    break
             elif ch == "{" and depth == 0:
                 head = cur.text[start:i].strip()
                 end = _skip_balanced_brace(cur.text, i)
                 cur.line += cur.text[start:end].count("\n")
                 cur.pos = end
-                _parse_member(cls, head, line, pending_method_attrs)
+                _parse_member(cls, head, line, pending_method_attrs, current_access)
                 pending_method_attrs.clear()
                 break
             elif ch == ";" and depth == 0:
                 text = cur.text[start:i].strip()
                 cur.line += cur.text[start : i + 1].count("\n")
                 cur.pos = i + 1
-                _parse_member(cls, text, line, pending_method_attrs)
+                new_access = _parse_member(
+                    cls, text, line, pending_method_attrs, current_access
+                )
+                if new_access:
+                    current_access = new_access
                 pending_method_attrs.clear()
                 break
             elif ch == "}" and depth == 0:
@@ -301,22 +319,30 @@ def _skip_balanced_brace(text: str, start: int) -> int:
 
 
 def _parse_member(
-    cls: Class, decl: str, line: int, pending_method_attrs: List[str]
-) -> None:
+    cls: Class,
+    decl: str,
+    line: int,
+    pending_method_attrs: List[str],
+    current_access: str,
+) -> Optional[str]:
     if not decl:
-        return
+        return None
     head, addr_tail = _split_decl_and_addr(decl)
     head = head.strip()
+    section = re.match(r"^(public|protected|private)\s*:\s*$", head)
+    if section:
+        return section.group(1)
     if "(" in head and ")" in head:
-        method = _parse_method(cls.name, head, line)
+        method = _parse_method(cls.name, head, line, current_access)
         if method:
             method.platforms = _parse_platform_list(addr_tail)
             method.attributes = pending_method_attrs[:]
             cls.methods.append(method)
-        return
+        return None
     field = _parse_field(head, line)
     if field:
         cls.fields.append(field)
+    return None
 
 
 def _split_decl_and_addr(decl: str) -> tuple[str, str]:
@@ -333,6 +359,10 @@ def _split_decl_and_addr(decl: str) -> tuple[str, str]:
 
 def _parse_platform_list(tail: str) -> Dict[str, str]:
     out: Dict[str, str] = {}
+    stripped = tail.strip()
+    if stripped == "inline":
+        out["inline"] = "inline"
+        return out
     for part in split_top_level(tail):
         toks = part.strip().split(None, 1)
         if not toks or toks[0] not in _PLATFORMS:
@@ -341,14 +371,24 @@ def _parse_platform_list(tail: str) -> Dict[str, str]:
     return out
 
 
-def _parse_method(class_name: str, head: str, line: int) -> Optional[Method]:
+def _parse_method(
+    class_name: str, head: str, line: int, default_access: str = "public"
+) -> Optional[Method]:
     flags = {"virtual": False, "static": False, "inline": False, "callback": False}
+    access = default_access
     rest = head
     while True:
-        m = re.match(r"\s*(virtual|static|inline|callback)\s+", rest)
+        m = re.match(
+            r"\s*(virtual|static|inline|callback|public|protected|private)\s+",
+            rest,
+        )
         if not m:
             break
-        flags[m.group(1)] = True
+        kw = m.group(1)
+        if kw in ("public", "protected", "private"):
+            access = kw
+        else:
+            flags[kw] = True
         rest = rest[m.end() :]
 
     paren_start = rest.find("(")
@@ -391,6 +431,7 @@ def _parse_method(class_name: str, head: str, line: int) -> Optional[Method]:
         is_callback=flags["callback"],
         is_ctor=is_ctor,
         is_dtor=is_dtor,
+        access=access,
         line=line,
     )
 

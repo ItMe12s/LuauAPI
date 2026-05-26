@@ -66,6 +66,13 @@ def object_classes(root: Root) -> List[Class]:
     return sorted(classes, key=lambda c: (depth(c), c.namespace, c.name))
 
 
+def codegen_object_map(root: Root) -> Dict[str, Class]:
+    classes = object_classes(root)
+    objects: Dict[str, Class] = {cls.name: cls for cls in classes}
+    objects.update({cls.qualified_name: cls for cls in classes})
+    return objects
+
+
 def status_for(platforms: Dict[str, str]) -> str:
     if not platforms:
         return "Missing"
