@@ -79,6 +79,13 @@ if (WIN32)
     endforeach()
 endif()
 
+foreach(LUAU_TARGET Luau.VM Luau.CodeGen)
+    if (TARGET ${LUAU_TARGET})
+        # I could hardcode this.
+        target_compile_definitions(${LUAU_TARGET} PUBLIC LUA_UTAG_LIMIT=1024)
+    endif()
+endforeach()
+
 if (NOT DEFINED ENV{GEODE_SDK})
     message(FATAL_ERROR "Unable to find Geode SDK! Please define GEODE_SDK environment variable to point to Geode")
 else()

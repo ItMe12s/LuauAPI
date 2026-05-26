@@ -1,6 +1,8 @@
 #include "Usertype.hpp"
 
+#include <Geode/Geode.hpp>
 #include <lua.h>
+#include <luaconf.h>
 #include <lualib.h>
 
 namespace luax::detail {
@@ -14,6 +16,9 @@ namespace luax::detail {
         if (it != m_byType.end()) return it->second.tag;
         TypeInfo info;
         info.tag = m_next++;
+        if (info.tag >= LUA_UTAG_LIMIT) {
+            geode::log::error("UsertypeRegistry: tag {} exceeds LUA_UTAG_LIMIT ({})", info.tag, LUA_UTAG_LIMIT);
+        }
         auto inserted = m_byType.emplace(idx, std::move(info));
         m_byTag[inserted.first->second.tag] = &inserted.first->second;
         return inserted.first->second.tag;
@@ -24,6 +29,9 @@ namespace luax::detail {
         if (it != m_byType.end()) return it->second;
         TypeInfo info;
         info.tag = m_next++;
+        if (info.tag >= LUA_UTAG_LIMIT) {
+            geode::log::error("UsertypeRegistry: tag {} exceeds LUA_UTAG_LIMIT ({})", info.tag, LUA_UTAG_LIMIT);
+        }
         auto inserted = m_byType.emplace(idx, std::move(info));
         m_byTag[inserted.first->second.tag] = &inserted.first->second;
         return inserted.first->second;
