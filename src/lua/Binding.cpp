@@ -8,8 +8,8 @@
 namespace luax {
     namespace {
         std::vector<Binding>& bindings() {
-            static std::vector<Binding> value;
-            return value;
+            static auto* value = new std::vector<Binding>;
+            return *value;
         }
     }
 

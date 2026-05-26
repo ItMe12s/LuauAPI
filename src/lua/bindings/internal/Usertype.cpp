@@ -5,8 +5,8 @@
 
 namespace luax::detail {
     UsertypeRegistry& UsertypeRegistry::get() {
-        static UsertypeRegistry instance;
-        return instance;
+        static auto* instance = new UsertypeRegistry;
+        return *instance;
     }
 
     std::uint32_t UsertypeRegistry::tagFor(std::type_index idx) {
