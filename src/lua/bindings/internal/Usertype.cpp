@@ -101,7 +101,14 @@ namespace luax::detail {
         lua_pop(L, 2);
     }
 
-    cocos2d::CCObject* checkUserdata(lua_State* L, int idx, std::uint32_t targetTag, char const* targetName, char const* method) {
+    bool hasBase(TypeInfo const& info, std::uint32_t targetTag) {
+        for (auto b : info.baseClosure) {
+            if (b == targetTag) return true;
+        }
+        return false;
+    }
+
+    UserdataCandidate checkCandidate(lua_State* L, int idx, char const* targetName, char const* method) {
         if (lua_type(L, idx) != LUA_TUSERDATA) {
             luaL_error(L, "%s expected %s at arg %d", method, targetName, idx);
         }
@@ -113,19 +120,32 @@ namespace luax::detail {
         if (!info) {
             luaL_error(L, "%s expected %s at arg %d", method, targetName, idx);
         }
-        bool ok = false;
-        for (auto b : info->baseClosure) {
-            if (b == targetTag) { ok = true; break; }
-        }
-        if (!ok) {
-            luaL_error(L, "%s expected %s at arg %d", method, targetName, idx);
-        }
         auto* block = static_cast<UserdataBlock*>(lua_touserdata(L, idx));
         auto* obj = liveObject(block);
         if (!obj) {
             luaL_error(L, "%s expected live %s at arg %d", method, targetName, idx);
         }
-        return obj;
+        return { obj, info };
+    }
+
+    UserdataCandidate tryCandidate(lua_State* L, int idx) {
+        if (lua_type(L, idx) != LUA_TUSERDATA) return {};
+        int tagInt = lua_userdatatag(L, idx);
+        if (tagInt <= 0) return {};
+        auto* info = UsertypeRegistry::get().findByTag(static_cast<std::uint32_t>(tagInt));
+        if (!info) return {};
+        auto* block = static_cast<UserdataBlock*>(lua_touserdata(L, idx));
+        auto* obj = liveObject(block);
+        if (!obj) return {};
+        return { obj, info };
+    }
+
+    cocos2d::CCObject* checkUserdata(lua_State* L, int idx, std::uint32_t targetTag, char const* targetName, char const* method) {
+        auto candidate = checkCandidate(L, idx, targetName, method);
+        if (!hasBase(*candidate.info, targetTag)) {
+            luaL_error(L, "%s expected %s at arg %d", method, targetName, idx);
+        }
+        return candidate.obj;
     }
 
     void pushUserdataOwned(lua_State* L, cocos2d::CCObject* obj, TypeInfo const& info) {

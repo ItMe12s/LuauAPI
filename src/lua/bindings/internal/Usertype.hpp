@@ -32,6 +32,11 @@ namespace luax {
             std::vector<std::uint32_t> baseClosure;
         };
 
+        struct UserdataCandidate {
+            cocos2d::CCObject* obj = nullptr;
+            TypeInfo const* info = nullptr;
+        };
+
         class UsertypeRegistry {
         public:
             static UsertypeRegistry& get();
@@ -52,6 +57,9 @@ namespace luax {
         void chainMethodTable(lua_State* L, TypeInfo const& info, std::uint32_t baseTag);
         void appendMethod(lua_State* L, TypeInfo const& info, char const* name, lua_CFunction fn);
         cocos2d::CCObject* checkUserdata(lua_State* L, int idx, std::uint32_t targetTag, char const* targetName, char const* method);
+        UserdataCandidate checkCandidate(lua_State* L, int idx, char const* targetName, char const* method);
+        UserdataCandidate tryCandidate(lua_State* L, int idx);
+        bool hasBase(TypeInfo const& info, std::uint32_t targetTag);
         void pushUserdataOwned(lua_State* L, cocos2d::CCObject* obj, TypeInfo const& info);
         void pushUserdataBorrowed(lua_State* L, cocos2d::CCObject* obj, TypeInfo const& info);
     }
@@ -102,32 +110,23 @@ namespace luax {
         }
 
         static T* check(lua_State* L, int idx, char const* method) {
-            auto* obj = detail::checkUserdata(L, idx, tag(), name(), method);
-            if (auto* typed = geode::cast::typeinfo_cast<T*>(obj)) {
+            auto candidate = detail::checkCandidate(L, idx, name(), method);
+            if (auto* typed = geode::cast::typeinfo_cast<T*>(candidate.obj)) {
                 return typed;
+            }
+            if (detail::hasBase(*candidate.info, tag())) {
+                return static_cast<T*>(candidate.obj);
             }
             luaL_error(L, "%s expected %s at arg %d", method, name(), idx);
         }
 
         static T* tryCheck(lua_State* L, int idx) {
-            if (lua_type(L, idx) != LUA_TUSERDATA) return nullptr;
-            int tagInt = lua_userdatatag(L, idx);
-            if (tagInt <= 0) return nullptr;
-            auto* info = detail::UsertypeRegistry::get().findByTag(static_cast<std::uint32_t>(tagInt));
-            if (!info) return nullptr;
-            auto myTag = tag();
-            bool ok = false;
-            for (auto b : info->baseClosure) {
-                if (b == myTag) {
-                    ok = true;
-                    break;
-                }
+            auto candidate = detail::tryCandidate(L, idx);
+            if (!candidate.obj || !candidate.info) return nullptr;
+            if (auto* typed = geode::cast::typeinfo_cast<T*>(candidate.obj)) {
+                return typed;
             }
-            if (!ok) return nullptr;
-            auto* block = static_cast<UserdataBlock*>(lua_touserdata(L, idx));
-            auto* obj = detail::liveObject(block);
-            if (!obj) return nullptr;
-            return geode::cast::typeinfo_cast<T*>(obj);
+            return detail::hasBase(*candidate.info, tag()) ? static_cast<T*>(candidate.obj) : nullptr;
         }
 
         static void pushOwned(lua_State* L, T* obj) {
