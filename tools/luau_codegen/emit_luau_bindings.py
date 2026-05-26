@@ -17,7 +17,7 @@ from cxx_templates import emit_internal_hpp, file_preamble
 from hooks import emit_hook_support, emit_hook_target, hook_id, hook_suffix, hookable
 from marshalling import check_arg, push_return, push_value
 from model import codegen_object_map, cxx_name, lua_namespace, object_classes, short_name
-from type_map import TypeInfo, require_classify_arg, require_classify_return
+from type_map import TypeInfo, require_classify_arg, require_classify_return, method_input_arg_count
 
 
 def _classify_method_args(m: Method, objects: Dict[str, Class]) -> List[TypeInfo]:
@@ -40,7 +40,7 @@ def _emit_invoke(cls: Class, m: Method, objects: Dict[str, Class], suffix: str) 
 
     input_count = 0
     for arg, info in zip(m.args, arg_infos):
-        if ret.kind == "void" and info.is_ref:
+        if ret.kind == "void" and info.is_out:
             continue
         input_count += 1
 
@@ -57,7 +57,7 @@ def _emit_invoke(cls: Class, m: Method, objects: Dict[str, Class], suffix: str) 
     lua_idx = 1 if m.is_static else 2
     for arg_idx, (arg, info) in enumerate(zip(m.args, arg_infos)):
         var = f"arg{arg_idx}"
-        if ret.kind == "void" and info.is_ref:
+        if ret.kind == "void" and info.is_out:
             if info.kind == "value" and info.lua_type == "UIButtonConfig":
                 out.append(f"        UIButtonConfig {var}{{}};\n")
             elif info.kind == "enum":
@@ -79,7 +79,7 @@ def _emit_invoke(cls: Class, m: Method, objects: Dict[str, Class], suffix: str) 
     out_refs = [
         (arg_idx, info)
         for arg_idx, (_, info) in enumerate(zip(m.args, arg_infos))
-        if ret.kind == "void" and info.is_ref
+        if ret.kind == "void" and info.is_out
     ]
     if ret.kind == "void":
         out.append(f"        {target};\n")
@@ -96,6 +96,10 @@ def _emit_invoke(cls: Class, m: Method, objects: Dict[str, Class], suffix: str) 
     return "".join(out)
 
 
+def _input_arg_count(m: Method, objects: Dict[str, Class]) -> int:
+    return method_input_arg_count(m, objects)
+
+
 def _emit_dispatcher(
     cls: Class, name: str, methods: List[Method], objects: Dict[str, Class]
 ) -> str:
@@ -108,7 +112,7 @@ def _emit_dispatcher(
     out.append(f"        switch (lua_gettop(L) - {adjust}) {{\n")
     for idx, m in enumerate(methods):
         out.append(
-            f"            case {len(m.args)}: return luaapi_{_id(cls.name)}_{_id(name)}_{idx}(L);\n"
+            f"            case {_input_arg_count(m, objects)}: return luaapi_{_id(cls.name)}_{_id(name)}_{idx}(L);\n"
         )
     out.append("            default: break;\n")
     out.append("        }\n")

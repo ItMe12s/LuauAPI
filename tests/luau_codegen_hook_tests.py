@@ -11,7 +11,15 @@ if CODEGEN_DIR not in sys.path:
     sys.path.insert(0, CODEGEN_DIR)
 
 from broma_parser import Arg, Class, Method, parse_file  # type: ignore[import-unresolved]
-from emit_luau_bindings import _emit_class_file, _emit_common_file  # type: ignore[import-unresolved]
+from emit_luau_bindings import (  # type: ignore[import-unresolved]
+    _emit_class_file,
+    _emit_common_file,
+    _emit_dispatcher,
+    _input_arg_count,
+)
+from emit_luau_types import emit as emit_luau_types  # type: ignore[import-unresolved]
+from broma_parser import Root  # type: ignore[import-unresolved]
+from type_map import classify_arg, is_const_reference, is_out_reference  # type: ignore[import-unresolved]
 from filtering import is_link_platform, supported  # type: ignore[import-unresolved]
 from hooks import android_symbol, emit_hook_support, hook_address_expr, hook_offset  # type: ignore[import-unresolved]
 from link_attrs import class_link_platforms  # type: ignore[import-unresolved]
@@ -274,6 +282,112 @@ class GeneratedSafetyTests(unittest.TestCase):
         self.assertIn("callback->ref.reset();", text)
         self.assertIn("state.hook->disable();", text)
         self.assertIn("!callback || callback->removed", text)
+
+
+class LuauTypeEmissionTests(unittest.TestCase):
+    def test_enum_prelude_uses_valid_luau_names(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        ccnode = Class(
+            name="CCNode",
+            namespace="cocos2d",
+            bases=["CCObject"],
+            methods=[
+                Method(
+                    name="getPosition",
+                    ret="cocos2d::CCPoint",
+                    args=[],
+                    platforms={"win": "0x1"},
+                )
+            ],
+        )
+        gm = Class(
+            name="GameManager",
+            bases=["GManager"],
+            methods=[
+                Method(
+                    name="colorForIdx",
+                    ret="cocos2d::ccColor3B",
+                    args=[Arg("int", "idx")],
+                    platforms={"win": "0x2"},
+                )
+            ],
+        )
+        root = Root(
+            classes=[
+                ccobject,
+                ccnode,
+                Class(
+                    name="GManager",
+                    bases=["CCNode"],
+                    methods=[
+                        Method(
+                            name="init",
+                            ret="bool",
+                            args=[],
+                            platforms={"win": "0x3"},
+                        )
+                    ],
+                ),
+                gm,
+            ]
+        )
+        files = emit_luau_types(root)
+        cocos = files["geode_cocos2d.d.luau"]
+        gd = files["geode_gd.d.luau"]
+
+        self.assertNotIn("cocos2d::", cocos)
+        self.assertIn("export type enumKeyCodes = number", cocos)
+        self.assertNotIn("export type IconType = number", cocos)
+        self.assertIn("export type RGBColor = { r: number, g: number, b: number }", gd)
+        self.assertIn("declare class CCNode end", gd)
+
+    def test_dispatcher_uses_input_arg_count_for_out_refs(self) -> None:
+        method = Method(
+            name="getUnlockForAchievement",
+            ret="void",
+            args=[
+                Arg("char const*", "achievement"),
+                Arg("UnlockType&", "type"),
+            ],
+        )
+        objects = {"UnlockType": Class(name="UnlockType")}
+
+        self.assertEqual(_input_arg_count(method, objects), 1)
+
+    def test_const_ref_is_input_not_out(self) -> None:
+        self.assertTrue(is_const_reference("cocos2d::ccColor3B const&"))
+        self.assertFalse(is_out_reference("cocos2d::ccColor3B const&"))
+        self.assertTrue(is_out_reference("UnlockType&"))
+
+        info = classify_arg("cocos2d::ccColor3B const&", {})
+        assert info is not None
+        self.assertTrue(info.is_ref)
+        self.assertFalse(info.is_out)
+
+    def test_const_ref_overload_dispatcher_has_distinct_cases(self) -> None:
+        cls = Class(name="GameObject", bases=["CCSprite"])
+        methods = [
+            Method(
+                name="updateMainColor",
+                ret="void",
+                args=[Arg("cocos2d::ccColor3B const&", "color")],
+                platforms={"win": "0x1"},
+            ),
+            Method(
+                name="updateMainColor",
+                ret="void",
+                args=[],
+                platforms={"win": "inline"},
+            ),
+        ]
+        objects = {
+            "GameObject": cls,
+            "CCSprite": Class(name="CCSprite", namespace="cocos2d"),
+        }
+        text = _emit_dispatcher(cls, "updateMainColor", methods, objects)
+        self.assertIn("case 0:", text)
+        self.assertIn("case 1:", text)
+        self.assertNotIn("case 0: return luaapi_GameObject_updateMainColor_0(L);\n            case 0:", text)
 
 
 if __name__ == "__main__":

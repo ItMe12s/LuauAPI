@@ -6,7 +6,7 @@ from typing import Dict, List, Sequence
 from broma_parser import Class, Method, Root
 from filtering import group_supported, linkless_class_names, prune_skipped_class_refs
 from model import codegen_object_map, lua_namespace, object_classes, short_name
-from type_map import ENUM_TYPES, TypeInfo, classify_arg, classify_return
+from type_map import TypeInfo, classify_arg, classify_return, enum_lua_names
 
 LUAU_KEYWORDS = frozenset(
     {
@@ -64,9 +64,7 @@ def _classify_args(method: Method, objects: Dict[str, Class]) -> List[TypeInfo]:
     return args
 
 
-def _method_return_type(
-    cls: Class, m: Method, objects: Dict[str, Class]
-) -> str:
+def _method_return_type(cls: Class, m: Method, objects: Dict[str, Class]) -> str:
     ret = classify_return(m.ret, objects)
     assert ret is not None
     out_types: List[str] = []
@@ -76,7 +74,7 @@ def _method_return_type(
         for arg in m.args:
             info = classify_arg(arg.type, objects)
             assert info is not None
-            if info.is_ref:
+            if info.is_out:
                 out_types.append(info.lua_type)
     if not out_types:
         return "()"
@@ -106,19 +104,17 @@ def _classify_input_args(m: Method, objects: Dict[str, Class]) -> List[TypeInfo]
     for arg in m.args:
         info = classify_arg(arg.type, objects)
         assert info is not None
-        if ret.kind == "void" and info.is_ref:
+        if ret.kind == "void" and info.is_out:
             continue
         args.append(info)
     return args
 
 
-def _prelude() -> str:
-    enum_lines = "\n".join(f"export type {name} = number" for name in sorted(ENUM_TYPES))
-    return f"""export type RGBColor = {{ r: number, g: number, b: number }}
-export type CCSize = {{ width: number, height: number }}
-export type CCPoint = {{ x: number, y: number }}
-export type CCRect = {{ origin: CCPoint, size: CCSize }}
-export type UIButtonConfig = {{
+VALUE_TYPE_STUBS = """export type RGBColor = { r: number, g: number, b: number }
+export type CCSize = { width: number, height: number }
+export type CCPoint = { x: number, y: number }
+export type CCRect = { origin: CCPoint, size: CCSize }
+export type UIButtonConfig = {
     width: number,
     height: number,
     deadzone: number,
@@ -131,9 +127,19 @@ export type UIButtonConfig = {{
     oneButton: boolean,
     player2: boolean,
     split: boolean,
-}}
-{enum_lines}
+}
 """
+
+
+def _prelude(namespace: str) -> str:
+    enum_lines = "\n".join(
+        f"export type {name} = number" for name in sorted(enum_lua_names(namespace))
+    )
+    if namespace == "geode.cocos2d":
+        return VALUE_TYPE_STUBS + enum_lines + "\n"
+    if enum_lines:
+        return enum_lines + "\n"
+    return ""
 
 
 def _header(label: str) -> List[str]:
@@ -150,7 +156,64 @@ def _object_type_name(info: TypeInfo) -> str:
     return info.lua_type.removesuffix("?")
 
 
+def _refs_from_method(
+    method: Method, objects: Dict[str, Class]
+) -> tuple[set[str], set[str]]:
+    object_refs: set[str] = set()
+    value_refs: set[str] = set()
+    for arg in method.args:
+        info = classify_arg(arg.type, objects)
+        if not info:
+            continue
+        if info.kind == "object":
+            object_refs.add(_object_type_name(info))
+        elif info.kind == "value":
+            value_refs.add(info.lua_type)
+    ret = classify_return(method.ret, objects)
+    if ret:
+        if ret.kind == "object":
+            object_refs.add(_object_type_name(ret))
+        elif ret.kind == "value":
+            value_refs.add(ret.lua_type)
+    return object_refs, value_refs
+
+
+def _base_type_refs(
+    cls: Class, objects: Dict[str, Class], skipped_classes: set
+) -> set[str]:
+    refs: set[str] = set()
+    for base in cls.bases:
+        base_cls = objects.get(short_name(base))
+        if base_cls and base_cls.name not in skipped_classes:
+            refs.add(base_cls.name)
+    return refs
+
+
 def _external_type_refs(
+    classes: Sequence[Class],
+    grouped_by_class: Dict[str, Dict[str, List[Method]]],
+    objects: Dict[str, Class],
+    skipped_classes: set,
+    source_namespace: str,
+) -> set[str]:
+    refs: set[str] = set()
+    for cls in classes:
+        if cls.name in skipped_classes or lua_namespace(cls) != source_namespace:
+            continue
+        refs.update(_base_type_refs(cls, objects, skipped_classes))
+        for methods in grouped_by_class[cls.name].values():
+            for method in methods:
+                object_refs, _ = _refs_from_method(method, objects)
+                refs.update(object_refs)
+    external: set[str] = set()
+    for name in refs:
+        ref_cls = objects.get(name)
+        if ref_cls and lua_namespace(ref_cls) != source_namespace:
+            external.add(name)
+    return external
+
+
+def _external_value_refs(
     classes: Sequence[Class],
     grouped_by_class: Dict[str, Dict[str, List[Method]]],
     objects: Dict[str, Class],
@@ -163,19 +226,9 @@ def _external_type_refs(
             continue
         for methods in grouped_by_class[cls.name].values():
             for method in methods:
-                for arg in method.args:
-                    info = classify_arg(arg.type, objects)
-                    if info and info.kind == "object":
-                        refs.add(_object_type_name(info))
-                ret = classify_return(method.ret, objects)
-                if ret and ret.kind == "object":
-                    refs.add(_object_type_name(ret))
-    external: set[str] = set()
-    for name in refs:
-        ref_cls = objects.get(name)
-        if ref_cls and lua_namespace(ref_cls) != source_namespace:
-            external.add(name)
-    return external
+                _, value_refs = _refs_from_method(method, objects)
+                refs.update(value_refs)
+    return refs
 
 
 def _emit_forward_decls(names: set[str], label: str) -> str:
@@ -184,6 +237,40 @@ def _emit_forward_decls(names: set[str], label: str) -> str:
     lines = [f"-- Forward declarations for types defined in {label}\n", "\n"]
     for name in sorted(names):
         lines.append(f"declare class {name} end\n\n")
+    return "".join(lines)
+
+
+def _emit_value_stubs(names: set[str]) -> str:
+    if not names:
+        return ""
+    lines = [f"\n-- Value types defined in geode_cocos2d.d.luau\n", "\n"]
+    for name in sorted(names):
+        if name == "RGBColor":
+            lines.append("export type RGBColor = { r: number, g: number, b: number }\n")
+        elif name == "CCSize":
+            lines.append("export type CCSize = { width: number, height: number }\n")
+        elif name == "CCPoint":
+            lines.append("export type CCPoint = { x: number, y: number }\n")
+        elif name == "CCRect":
+            lines.append("export type CCRect = { origin: CCPoint, size: CCSize }\n")
+        elif name == "UIButtonConfig":
+            lines.append(
+                "export type UIButtonConfig = {\n"
+                "    width: number,\n"
+                "    height: number,\n"
+                "    deadzone: number,\n"
+                "    scale: number,\n"
+                "    opacity: number,\n"
+                "    radius: number,\n"
+                "    modeB: boolean,\n"
+                "    snap: boolean,\n"
+                "    position: CCPoint,\n"
+                "    oneButton: boolean,\n"
+                "    player2: boolean,\n"
+                "    split: boolean,\n"
+                "}\n"
+            )
+    lines.append("\n")
     return "".join(lines)
 
 
@@ -257,15 +344,26 @@ def emit(root: Root, target_platform: str = "win") -> Dict[str, str]:
     )
 
     cocos_namespace = "geode.cocos2d"
+    gd_namespace = "geode.gd"
 
     cocos_lines = _header("Cocos2d class declarations")
-    cocos_lines.append(_prelude())
+    cocos_lines.append(_prelude(cocos_namespace))
     cocos_lines.append("\n")
     cocos_external = _external_type_refs(
         classes, grouped_by_class, objects, skipped_classes, cocos_namespace
     )
     cocos_lines.append(_emit_forward_decls(cocos_external, "geode_gd.d.luau"))
+
     gd_lines = _header("Geometry Dash class declarations")
+    gd_lines.append(_prelude(gd_namespace))
+    gd_external = _external_type_refs(
+        classes, grouped_by_class, objects, skipped_classes, gd_namespace
+    )
+    gd_value_refs = _external_value_refs(
+        classes, grouped_by_class, objects, skipped_classes, gd_namespace
+    )
+    gd_lines.append(_emit_value_stubs(gd_value_refs))
+    gd_lines.append(_emit_forward_decls(gd_external, "geode_cocos2d.d.luau"))
 
     for cls in classes:
         if cls.name in skipped_classes:
@@ -286,7 +384,17 @@ def emit(root: Root, target_platform: str = "win") -> Dict[str, str]:
         if static_methods:
             factories[cls.name] = static_methods
 
+    main_external: set[str] = set()
+    for methods in factories.values():
+        for overloads in methods.values():
+            for method in overloads:
+                object_refs, _ = _refs_from_method(method, objects)
+                main_external.update(object_refs)
+
     main_lines = _header("Factories and namespace types")
+    main_lines.append(
+        _emit_forward_decls(main_external, "geode_gd.d.luau and geode_cocos2d.d.luau")
+    )
     main_lines.append("export type HookHandle = {\n")
     main_lines.append("    enable: (self: HookHandle) -> boolean,\n")
     main_lines.append("    disable: (self: HookHandle) -> boolean,\n")

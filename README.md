@@ -105,7 +105,7 @@ Also do the vscode `>Developer: Restart Extension Host` after doing stuff with l
 ## Setting files
 
 Add this to your `.vscode/settings.json`
-It's split into 3 files because luau lsp can't just process 13k lines at once.
+It's split into 3 files because luau lsp can't just process 10-20k lines at once.
 
 ```json
 {

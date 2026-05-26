@@ -7,7 +7,7 @@ from broma_parser import Class, Method
 from denylist import INACCESSIBLE_CLASSES, INACCESSIBLE_METHODS
 from model import short_name, status_for
 from link_attrs import is_link_platform, platform_aliases
-from type_map import classify_arg, classify_return
+from type_map import classify_arg, classify_return, method_input_arg_count
 
 STRICT_DIRECT_PLATFORMS: set[str] = set()
 
@@ -136,7 +136,7 @@ def group_supported(
     for name, methods in list(by_name.items()):
         by_arity: dict[int, list[Method]] = defaultdict(list)
         for m in methods:
-            by_arity[len(m.args)].append(m)
+            by_arity[method_input_arg_count(m, objects)].append(m)
         kept: list[Method] = []
         for arity, overloads in by_arity.items():
             if len(overloads) == 1:
