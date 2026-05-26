@@ -192,7 +192,10 @@ def _mangle_template(seen: list[str], base: str, parts: list[str], subs: bool) -
 
 def android_symbol(cls: Class, method: Method) -> str:
     qualified = cxx_name(cls)
-    symbol = f"_Z{_mangle_ident(f'{qualified}::{method.name}')}"
+    nested = _mangle_ident(f"{qualified}::{method.name}")
+    if method.is_const and nested.startswith("N"):
+        nested = "NK" + nested[1:]
+    symbol = f"_Z{nested}"
     if not method.args:
         return f"{symbol}v"
     seen = [_mangle_ident(qualified.split("::", 1)[0])]

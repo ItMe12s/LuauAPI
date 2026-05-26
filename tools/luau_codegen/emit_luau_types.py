@@ -46,23 +46,6 @@ def _ret(ret: TypeInfo) -> str:
     return ret.lua_type
 
 
-def _fn(args: Sequence[TypeInfo], ret: TypeInfo, self_name: str | None = None) -> str:
-    params = []
-    if self_name:
-        params.append(f"self: {self_name}")
-    for i, arg in enumerate(args, start=1):
-        params.append(f"arg{i}: {arg.lua_type}")
-    return f"({', '.join(params)}) -> {_ret(ret)}"
-
-
-def _classify_args(method: Method, objects: Dict[str, Class]) -> List[TypeInfo]:
-    args: List[TypeInfo] = []
-    for arg in method.args:
-        info = classify_arg(arg.type, objects)
-        assert info is not None
-        args.append(info)
-    return args
-
 
 def _method_return_type(cls: Class, m: Method, objects: Dict[str, Class]) -> str:
     ret = classify_return(m.ret, objects)
@@ -401,8 +384,6 @@ def _pack_line_chunks(
     header: List[str],
     class_chunks: Sequence[Tuple[str, str]],
     base_name: str,
-    *,
-    extra_name: str = "_2",
 ) -> Tuple[Dict[str, str], Dict[str, set[str]]]:
     if not class_chunks:
         return {base_name: "".join(header)}, {base_name: set()}
@@ -413,6 +394,7 @@ def _pack_line_chunks(
     current = header.copy()
     current_lines = _line_count(current)
     current_classes: set[str] = set()
+    split_idx = 2
 
     for class_name, chunk in class_chunks:
         chunk_lines = chunk.count("\n")
@@ -422,7 +404,9 @@ def _pack_line_chunks(
         ):
             packed[current_name] = current
             classes_per_file[current_name] = current_classes
-            current_name = f"{base_name.removesuffix('.d.luau')}{extra_name}.d.luau"
+            stem = base_name.removesuffix(".d.luau")
+            current_name = f"{stem}_{split_idx}.d.luau"
+            split_idx += 1
             current = header.copy()
             current_lines = _line_count(current)
             current_classes = set()

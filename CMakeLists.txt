@@ -134,14 +134,25 @@ set(LUAUAPI_BINDINGS_DIR
     CACHE PATH "Path to Geode bindings/<gdver>/ dir")
 set(LUAUAPI_GEN_DIR "${CMAKE_BINARY_DIR}/luauapi-gen")
 set(LUAUAPI_TYPES_DIR "${CMAKE_CURRENT_SOURCE_DIR}/types")
-set(LUAUAPI_TYPES_FILES
-    "${LUAUAPI_TYPES_DIR}/geode_cocos2d.d.luau"
-    "${LUAUAPI_TYPES_DIR}/geode_cocos2d_factories.d.luau"
-    "${LUAUAPI_TYPES_DIR}/geode_gd.d.luau"
-    "${LUAUAPI_TYPES_DIR}/geode_gd_2.d.luau"
-    "${LUAUAPI_TYPES_DIR}/geode_gd_factories.d.luau"
-    "${LUAUAPI_TYPES_DIR}/geode.d.luau"
+execute_process(
+    COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_CURRENT_SOURCE_DIR}/tools/luau_codegen/codegen.py
+            --bindings ${LUAUAPI_BINDINGS_DIR}
+            --list-type-outputs
+            --platform ${LUAUAPI_CODEGEN_PLATFORM}
+            --geode-sdk "${LUAUAPI_GEODE_SDK_PATH}"
+    OUTPUT_VARIABLE LUAUAPI_TYPES_RAW
+    RESULT_VARIABLE LUAUAPI_LIST_TYPES_RESULT
+    ERROR_VARIABLE LUAUAPI_LIST_TYPES_ERROR
 )
+if (NOT LUAUAPI_LIST_TYPES_RESULT EQUAL 0)
+    message(FATAL_ERROR "LuauAPI codegen --list-type-outputs failed: ${LUAUAPI_LIST_TYPES_ERROR}")
+endif()
+string(REPLACE "\r" "" LUAUAPI_TYPES_RAW "${LUAUAPI_TYPES_RAW}")
+string(STRIP "${LUAUAPI_TYPES_RAW}" LUAUAPI_TYPES_RAW)
+string(REPLACE "\n" ";" LUAUAPI_TYPES_FILES "${LUAUAPI_TYPES_RAW}")
+list(FILTER LUAUAPI_TYPES_FILES EXCLUDE REGEX "^$")
+list(TRANSFORM LUAUAPI_TYPES_FILES PREPEND "${LUAUAPI_TYPES_DIR}/")
 
 if (NOT EXISTS "${LUAUAPI_BINDINGS_DIR}/GeometryDash.bro")
     message(FATAL_ERROR "LuauAPI bindings dir missing: ${LUAUAPI_BINDINGS_DIR}")

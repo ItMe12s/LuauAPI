@@ -63,8 +63,9 @@ def scan_geode_sdk(sdk_path: str) -> List[Class]:
             continue
         try:
             classes.extend(_scan_header(os.path.join(ui_dir, filename)))
-        except Exception:
-            pass
+        except Exception as exc:
+            import warnings
+            warnings.warn(f"[luauapi] failed to scan {filename}: {exc}")
     return classes
 
 

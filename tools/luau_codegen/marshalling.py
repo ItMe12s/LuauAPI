@@ -41,8 +41,22 @@ def check_arg(arg: Arg, info: TypeInfo, idx: int, var: str, label: str) -> list[
     if info.kind in ("number", "enum"):
         if cxx in ("float", "double"):
             return [f'        auto {var} = luax::check<{cxx}>(L, {idx}, "{label}");\n']
+        _UNSIGNED = {
+            "unsigned", "unsigned int", "unsigned char", "unsigned short",
+            "uint8_t", "uint16_t", "uint32_t",
+        }
+        _WIDE = {
+            "long long", "unsigned long long", "int64_t", "uint64_t",
+            "unsigned long", "long", "size_t", "ptrdiff_t",
+        }
+        if cxx in _WIDE:
+            check_type = "double"
+        elif cxx in _UNSIGNED:
+            check_type = "unsigned"
+        else:
+            check_type = "int"
         return [
-            f'        auto {var} = static_cast<{cxx}>(luax::check<int>(L, {idx}, "{label}"));\n'
+            f'        auto {var} = static_cast<{cxx}>(luax::check<{check_type}>(L, {idx}, "{label}"));\n'
         ]
     if info.kind == "string":
         if cxx == "char const*" or cxx == "const char*":

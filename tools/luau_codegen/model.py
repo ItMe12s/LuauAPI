@@ -27,26 +27,46 @@ def is_namespace_class(cls: Class) -> bool:
     return cls.name in DENY_CLASSES
 
 
+def build_class_lookup(classes) -> Dict[str, Class]:
+    lookup: Dict[str, Class] = {}
+    ambiguous: set[str] = set()
+    for cls in classes:
+        lookup[cls.qualified_name] = cls
+        if cls.name in ambiguous:
+            continue
+        if cls.name in lookup and lookup[cls.name].qualified_name != cls.qualified_name:
+            ambiguous.add(cls.name)
+            del lookup[cls.name]
+        else:
+            lookup[cls.name] = cls
+    return lookup
+
+
+def resolve_base(lookup: Dict[str, Class], base: str) -> "Class | None":
+    return lookup.get(base) or lookup.get(short_name(base))
+
+
 def object_classes(root: Root) -> List[Class]:
-    by_short = {cls.name: cls for cls in root.classes}
+    lookup = build_class_lookup(root.classes)
     memo: Dict[str, bool] = {}
 
     def is_object(cls: Class) -> bool:
-        if cls.name in memo:
-            return memo[cls.name]
+        key = cls.qualified_name
+        if key in memo:
+            return memo[key]
         if cls.qualified_name == "cocos2d::CCObject" or cls.name == "CCObject":
-            memo[cls.name] = True
+            memo[key] = True
             return True
         for base in cls.bases:
             base_short = short_name(base)
             if base_short == "CCObject":
-                memo[cls.name] = True
+                memo[key] = True
                 return True
-            base_cls = by_short.get(base_short)
+            base_cls = resolve_base(lookup, base)
             if base_cls and is_object(base_cls):
-                memo[cls.name] = True
+                memo[key] = True
                 return True
-        memo[cls.name] = False
+        memo[key] = False
         return False
 
     classes = [
@@ -58,7 +78,7 @@ def object_classes(root: Root) -> List[Class]:
             return 0
         values = []
         for base in cls.bases:
-            base_cls = by_short.get(short_name(base))
+            base_cls = resolve_base(lookup, base)
             if base_cls and base_cls is not cls:
                 values.append(depth(base_cls) + 1)
         return max(values) if values else 1

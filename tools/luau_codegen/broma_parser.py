@@ -253,7 +253,11 @@ def _parse_class_body(cur: _Cursor, cls: Class) -> None:
             if end == -1:
                 cur.advance(2)
             else:
-                pending_method_attrs.append(cur.text[cur.pos + 2 : end].strip())
+                attr_text = cur.text[cur.pos + 2 : end].strip()
+                for part in split_top_level(attr_text):
+                    part = part.strip()
+                    if part:
+                        pending_method_attrs.append(part)
                 cur.line += cur.text[cur.pos : end + 2].count("\n")
                 cur.pos = end + 2
             continue

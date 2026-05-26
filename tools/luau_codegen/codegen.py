@@ -47,9 +47,24 @@ def _collect(bindings_dir: str, geode_sdk_path: str | None = None) -> broma_pars
             if name.endswith(".bro"):
                 parsed = broma_parser.parse_file(os.path.join(extra_dir, name))
                 root.classes.extend(parsed.classes)
+    import warnings
+
     seen: dict[str, broma_parser.Class] = {}
     for cls in root.classes:
-        seen[cls.qualified_name] = cls
+        if cls.qualified_name in seen:
+            existing = seen[cls.qualified_name]
+            for attr in cls.attributes:
+                if attr not in existing.attributes:
+                    existing.attributes.append(attr)
+            if cls.methods and existing.methods:
+                warnings.warn(
+                    f"[luauapi] duplicate class {cls.qualified_name} "
+                    f"from {cls.source} and {existing.source}, keeping first"
+                )
+            elif cls.methods and not existing.methods:
+                existing.methods = cls.methods
+        else:
+            seen[cls.qualified_name] = cls
     root.classes = list(seen.values())
     root.classes.sort(key=lambda c: (c.namespace, c.name))
     return root
@@ -174,6 +189,11 @@ def main(argv: List[str]) -> int:
         action="store_true",
         help="Print generated binding paths relative to --out/src, one per line",
     )
+    parser.add_argument(
+        "--list-type-outputs",
+        action="store_true",
+        help="Print generated type file names, one per line",
+    )
     args = parser.parse_args(argv)
 
     if args.platform not in VALID_PLATFORMS:
@@ -200,11 +220,18 @@ def main(argv: List[str]) -> int:
             print(f"src/{rel}")
         return 0
 
+    if args.list_type_outputs:
+        type_files = emit_luau_types.emit(root, args.platform)
+        for name in sorted(type_files):
+            print(name)
+        return 0
+
     if not args.out or not args.types_out:
         print("[luauapi] --out and --types-out are required", file=sys.stderr)
         return 2
 
-    binding_files, skipped = emit_luau_bindings.emit(root, args.platform)
+    plan = emit_luau_bindings.collect_plan(root, args.platform)
+    binding_files, skipped = emit_luau_bindings.emit(root, args.platform, plan=plan)
     written_paths: list[str] = []
     current_files: set[str] = set()
 
@@ -228,7 +255,7 @@ def main(argv: List[str]) -> int:
             os.remove(orphan)
     _emit_schema(root, schema_path)
     types_paths = [os.path.join(args.types_out, f) for f in type_files]
-    hook_count = emit_luau_bindings.hook_target_count(root, args.platform)
+    hook_count = emit_luau_bindings.hook_target_count(root, args.platform, plan=plan)
     _emit_report(
         root,
         report_path,

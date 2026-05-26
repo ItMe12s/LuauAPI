@@ -6,7 +6,7 @@ from typing import Dict
 from android_symbol import android_symbol
 from broma_parser import Class, Method
 from filtering import direct_callable, platform_value
-from link_attrs import class_link_platforms
+from link_attrs import class_link_platforms, platform_aliases
 from marshalling import push_value
 from model import cxx_name, lua_namespace
 from type_map import TypeInfo, classify_arg, classify_return, normalize_type
@@ -38,24 +38,14 @@ def _android_linked(cls: Class, target_platform: str) -> bool:
     if target_platform not in ("android32", "android64"):
         return False
     links = _class_link_platforms(cls)
-    return bool(links & {"android", target_platform})
-
-
-_APPLE_PLATFORMS = {"ios", "mac", "imac", "m1"}
+    return bool(links & platform_aliases(target_platform))
 
 
 def _apple_linked(cls: Class, target_platform: str) -> bool:
-    if target_platform not in _APPLE_PLATFORMS:
+    if target_platform not in ("ios", "mac", "imac", "m1"):
         return False
-    aliases = {
-        "mac": {"mac", "imac", "m1"},
-        "imac": {"mac", "imac"},
-        "m1": {"mac", "m1"},
-        "ios": {"ios"},
-    }
-    valid = aliases.get(target_platform, {target_platform})
     links = _class_link_platforms(cls)
-    return bool(links & valid)
+    return bool(links & platform_aliases(target_platform))
 
 
 def hook_offset(m: Method, target_platform: str) -> str:
@@ -128,7 +118,7 @@ def emit_return_override(
                 "        size_t len = 0;\n",
                 f"        char const* text = lua_tolstring(L, {idx}, &len);\n",
                 '        auto storage = std::string(text ? text : "", len);\n',
-                "        result = gd::string(storage.c_str());\n",
+                f"        {var} = gd::string(storage.c_str());\n",
                 "        return true;\n",
             ]
         return [

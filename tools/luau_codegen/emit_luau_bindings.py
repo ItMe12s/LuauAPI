@@ -17,10 +17,12 @@ from cxx_templates import emit_internal_hpp, file_preamble
 from hooks import emit_hook_support, emit_hook_target, hook_id, hook_suffix, hookable
 from marshalling import check_arg, push_return, push_value
 from model import (
+    build_class_lookup,
     codegen_object_map,
     cxx_name,
     lua_namespace,
     object_classes,
+    resolve_base,
     short_name,
 )
 from type_map import (
@@ -135,15 +137,15 @@ def _emit_dispatcher(
 
 
 def _inheritance_depth(
-    cls: Class, by_short: Dict[str, Class], skipped_classes: Set[str]
+    cls: Class, lookup: Dict[str, Class], skipped_classes: Set[str]
 ) -> int:
     if cls.name == "CCObject":
         return 0
     values: List[int] = []
     for base in cls.bases:
-        base_cls = by_short.get(short_name(base))
+        base_cls = resolve_base(lookup, base)
         if base_cls and base_cls.name not in skipped_classes:
-            values.append(_inheritance_depth(base_cls, by_short, skipped_classes) + 1)
+            values.append(_inheritance_depth(base_cls, lookup, skipped_classes) + 1)
     return max(values) if values else 1
 
 
@@ -166,7 +168,7 @@ class EmitPlan:
 def _collect_plan(root: Root, target_platform: str) -> EmitPlan:
     classes = object_classes(root)
     objects = codegen_object_map(root)
-    by_short = {cls.name: cls for cls in classes}
+    lookup = build_class_lookup(classes)
     skipped: list[tuple[str, str, str]] = []
     supported_by_class: dict[str, dict[str, list[Method]]] = {}
     skipped_by_class: dict[str, list[tuple[Method, str]]] = {}
@@ -191,7 +193,7 @@ def _collect_plan(root: Root, target_platform: str) -> EmitPlan:
         )
     )
     depths = {
-        cls.name: _inheritance_depth(cls, by_short, skipped_classes) for cls in classes
+        cls.name: _inheritance_depth(cls, lookup, skipped_classes) for cls in classes
     }
 
     hook_targets_by_class: dict[str, List[tuple[Class, Method]]] = defaultdict(list)
@@ -224,15 +226,21 @@ def _collect_plan(root: Root, target_platform: str) -> EmitPlan:
     )
 
 
-def plan_outputs(root: Root, target_platform: str = "win") -> List[str]:
-    plan = _collect_plan(root, target_platform)
+def collect_plan(root: Root, target_platform: str = "win") -> EmitPlan:
+    return _collect_plan(root, target_platform)
+
+
+def plan_outputs(root: Root, target_platform: str = "win", plan: EmitPlan | None = None) -> List[str]:
+    if plan is None:
+        plan = _collect_plan(root, target_platform)
     outputs = ["bindings_internal.hpp", "bindings_common.cpp"]
     outputs.extend(_binding_filename(cls.name) for cls in plan.emitted_classes)
     return outputs
 
 
-def hook_target_count(root: Root, target_platform: str = "win") -> int:
-    plan = _collect_plan(root, target_platform)
+def hook_target_count(root: Root, target_platform: str = "win", plan: EmitPlan | None = None) -> int:
+    if plan is None:
+        plan = _collect_plan(root, target_platform)
     return sum(len(targets) for targets in plan.hook_targets_by_class.values())
 
 
@@ -399,9 +407,10 @@ def _emit_common_file(emitted_classes: List[Class]) -> str:
 
 
 def emit(
-    root: Root, target_platform: str = "win"
+    root: Root, target_platform: str = "win", plan: EmitPlan | None = None
 ) -> tuple[dict[str, str], list[tuple[str, str, str]]]:
-    plan = _collect_plan(root, target_platform)
+    if plan is None:
+        plan = _collect_plan(root, target_platform)
 
     files: dict[str, str] = {
         "bindings_internal.hpp": emit_internal_hpp(),

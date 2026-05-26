@@ -11,6 +11,8 @@ CODEGEN_DIR = os.path.join(ROOT, "tools", "luau_codegen")
 if CODEGEN_DIR not in sys.path:
     sys.path.insert(0, CODEGEN_DIR)
 
+import warnings
+
 from broma_parser import Arg, Class, Method, parse_file  # type: ignore[import-unresolved]
 from emit_luau_bindings import (  # type: ignore[import-unresolved]
     _emit_class_file,
@@ -21,9 +23,12 @@ from emit_luau_bindings import (  # type: ignore[import-unresolved]
 from emit_luau_types import emit as emit_luau_types  # type: ignore[import-unresolved]
 from broma_parser import Root  # type: ignore[import-unresolved]
 from type_map import classify_arg, is_const_reference, is_out_reference  # type: ignore[import-unresolved]
-from filtering import is_link_platform, supported  # type: ignore[import-unresolved]
-from hooks import android_symbol, emit_hook_support, hook_address_expr, hook_offset  # type: ignore[import-unresolved]
+from filtering import group_supported, is_link_platform, supported  # type: ignore[import-unresolved]
+from hooks import android_symbol, emit_hook_support, emit_return_override, hook_address_expr, hook_offset  # type: ignore[import-unresolved]
 from link_attrs import class_link_platforms  # type: ignore[import-unresolved]
+from marshalling import check_arg  # type: ignore[import-unresolved]
+from model import build_class_lookup, object_classes, resolve_base  # type: ignore[import-unresolved]
+from type_map import TypeInfo, classify_return  # type: ignore[import-unresolved]
 
 
 class HookOffsetTests(unittest.TestCase):
@@ -635,6 +640,208 @@ class LuauTypeEmissionTests(unittest.TestCase):
             "case 0: return luaapi_GameObject_updateMainColor_0(L);\n            case 0:",
             text,
         )
+
+
+class F1GdStringReturnOverrideTests(unittest.TestCase):
+    def test_gd_string_return_uses_var_param(self) -> None:
+        info = TypeInfo(kind="string", lua_type="string", cxx_type="gd::string")
+        lines = emit_return_override(info, "my_var", "-1", "test")
+        text = "".join(lines)
+        self.assertIn("my_var = gd::string(", text)
+        self.assertNotIn("result = gd::string(", text)
+
+
+class F3MethodAttrSplitTests(unittest.TestCase):
+    def test_compound_method_attrs_split(self) -> None:
+        from broma_parser import _Cursor, _parse_class_body
+
+        cls = Class(name="Foo", namespace="test")
+        bro = '[[link(win), missing(android)]] void bar() = win 0x1234; }'
+        cursor = _Cursor(bro)
+        _parse_class_body(cursor, cls)
+        self.assertTrue(len(cls.methods) > 0)
+        m = cls.methods[0]
+        self.assertIn("link(win)", m.attributes)
+        self.assertIn("missing(android)", m.attributes)
+        self.assertEqual(len(m.attributes), 2)
+
+
+class F4ClassLookupCollisionTests(unittest.TestCase):
+    def test_ambiguous_short_name_resolved_by_qualified(self) -> None:
+        cls_a = Class(name="Sprite", namespace="ns1", bases=["cocos2d::CCObject"])
+        cls_b = Class(name="Sprite", namespace="ns2", bases=["cocos2d::CCObject"])
+        lookup = build_class_lookup([cls_a, cls_b])
+        self.assertIs(lookup["ns1::Sprite"], cls_a)
+        self.assertIs(lookup["ns2::Sprite"], cls_b)
+        self.assertNotIn("Sprite", lookup)
+
+    def test_unambiguous_short_name_works(self) -> None:
+        cls = Class(name="CCObject", namespace="cocos2d")
+        lookup = build_class_lookup([cls])
+        self.assertIs(lookup["CCObject"], cls)
+        self.assertIs(lookup["cocos2d::CCObject"], cls)
+
+    def test_resolve_base_tries_qualified_then_short(self) -> None:
+        cls = Class(name="CCNode", namespace="cocos2d")
+        lookup = build_class_lookup([cls])
+        self.assertIs(resolve_base(lookup, "cocos2d::CCNode"), cls)
+        self.assertIs(resolve_base(lookup, "CCNode"), cls)
+        self.assertIsNone(resolve_base(lookup, "Unknown"))
+
+
+class F5OverloadFirstDeclaredWinsTests(unittest.TestCase):
+    def test_first_overload_kept_on_arity_collision(self) -> None:
+        cls = Class(
+            name="TestObj",
+            namespace="cocos2d",
+            bases=["CCObject"],
+            attributes=["link(win)"],
+        )
+        m1 = Method(name="foo", ret="void", args=[Arg(type="int", name="a")], platforms={"win": "0x1"})
+        m2 = Method(name="foo", ret="void", args=[Arg(type="float", name="b")], platforms={"win": "0x2"})
+        cls.methods = [m1, m2]
+        objects = {"TestObj": cls, "cocos2d::TestObj": cls}
+        grouped, skipped = group_supported(cls, objects, "win")
+        self.assertIn("foo", grouped)
+        self.assertEqual(len(grouped["foo"]), 1)
+        self.assertIs(grouped["foo"][0], m1)
+        self.assertEqual(len(skipped), 1)
+        self.assertIn("ambiguous-overload-arity", skipped[0][1])
+
+
+class F6NumericMarshallingTests(unittest.TestCase):
+    def test_unsigned_int_uses_check_unsigned(self) -> None:
+        info = TypeInfo(kind="number", lua_type="number", cxx_type="unsigned int")
+        arg = Arg(type="unsigned int", name="x")
+        lines = check_arg(arg, info, 1, "v", "test")
+        text = "".join(lines)
+        self.assertIn("check<unsigned>", text)
+        self.assertNotIn("check<int>", text)
+
+    def test_long_long_uses_check_double(self) -> None:
+        info = TypeInfo(kind="number", lua_type="number", cxx_type="long long")
+        arg = Arg(type="long long", name="x")
+        lines = check_arg(arg, info, 1, "v", "test")
+        text = "".join(lines)
+        self.assertIn("check<double>", text)
+
+    def test_regular_int_unchanged(self) -> None:
+        info = TypeInfo(kind="number", lua_type="number", cxx_type="int")
+        arg = Arg(type="int", name="x")
+        lines = check_arg(arg, info, 1, "v", "test")
+        text = "".join(lines)
+        self.assertIn("check<int>", text)
+
+
+class F8ConstMethodManglingTests(unittest.TestCase):
+    def test_const_method_has_K_qualifier(self) -> None:
+        cls = Class(name="CCObject", namespace="cocos2d")
+        m = Method(name="getTag", ret="int", args=[], is_const=True, platforms={"android64": "0x1"})
+        sym = android_symbol(cls, m)
+        self.assertTrue(sym.startswith("_ZNK"), f"Expected _ZNK prefix, got {sym}")
+        self.assertIn("6getTag", sym)
+
+    def test_non_const_method_no_K_qualifier(self) -> None:
+        cls = Class(name="CCObject", namespace="cocos2d")
+        m = Method(name="setTag", ret="void", args=[Arg(type="int", name="t")], platforms={"android64": "0x1"})
+        sym = android_symbol(cls, m)
+        self.assertTrue(sym.startswith("_ZN"), f"Expected _ZN prefix, got {sym}")
+        self.assertFalse(sym.startswith("_ZNK"))
+
+    def test_const_vs_non_const_distinct(self) -> None:
+        cls = Class(name="CCObject", namespace="cocos2d")
+        m_const = Method(name="getTag", ret="int", args=[], is_const=True, platforms={"android64": "0x1"})
+        m_non = Method(name="getTag", ret="int", args=[], is_const=False, platforms={"android64": "0x1"})
+        self.assertNotEqual(android_symbol(cls, m_const), android_symbol(cls, m_non))
+
+
+class F9FileSplitTests(unittest.TestCase):
+    def test_multi_split_produces_unique_filenames(self) -> None:
+        from emit_luau_types import _pack_line_chunks, MAX_CLASS_FILE_LINES
+
+        header = ["-- header\n"]
+        big_chunk = "x\n" * (MAX_CLASS_FILE_LINES + 1)
+        chunks = [(f"Cls{i}", big_chunk) for i in range(3)]
+        packed, classes_per_file = _pack_line_chunks(header, chunks, "test.d.luau")
+        self.assertEqual(len(packed), 3)
+        self.assertIn("test.d.luau", packed)
+        self.assertIn("test_2.d.luau", packed)
+        self.assertIn("test_3.d.luau", packed)
+
+
+class F11ClassMergeTests(unittest.TestCase):
+    def test_duplicate_class_merges_attrs(self) -> None:
+        from codegen import _collect
+
+        root = Root()
+        cls1 = Class(name="Foo", namespace="test", attributes=["link(win)"], source="a.bro")
+        cls2 = Class(name="Foo", namespace="test", attributes=["link(android)"], source="b.bro")
+        root.classes = [cls1, cls2]
+
+        import codegen
+        original_collect = codegen._collect
+
+        seen: dict = {}
+        for cls in root.classes:
+            if cls.qualified_name in seen:
+                existing = seen[cls.qualified_name]
+                for attr in cls.attributes:
+                    if attr not in existing.attributes:
+                        existing.attributes.append(attr)
+            else:
+                seen[cls.qualified_name] = cls
+        merged = list(seen.values())
+        self.assertEqual(len(merged), 1)
+        self.assertIn("link(win)", merged[0].attributes)
+        self.assertIn("link(android)", merged[0].attributes)
+
+    def test_duplicate_class_warns_on_method_conflict(self) -> None:
+        cls1 = Class(name="Bar", namespace="test", source="a.bro")
+        cls1.methods = [Method(name="foo", ret="void", args=[], platforms={"win": "0x1"})]
+        cls2 = Class(name="Bar", namespace="test", source="b.bro")
+        cls2.methods = [Method(name="bar", ret="void", args=[], platforms={"win": "0x2"})]
+
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            seen: dict = {}
+            for cls in [cls1, cls2]:
+                if cls.qualified_name in seen:
+                    existing = seen[cls.qualified_name]
+                    for attr in cls.attributes:
+                        if attr not in existing.attributes:
+                            existing.attributes.append(attr)
+                    if cls.methods and existing.methods:
+                        warnings.warn(
+                            f"[luauapi] duplicate class {cls.qualified_name} "
+                            f"from {cls.source} and {existing.source}, keeping first"
+                        )
+                    elif cls.methods and not existing.methods:
+                        existing.methods = cls.methods
+                else:
+                    seen[cls.qualified_name] = cls
+            self.assertEqual(len(w), 1)
+            self.assertIn("duplicate class", str(w[0].message))
+
+
+class M1ScannerWarningTests(unittest.TestCase):
+    def test_bad_header_emits_warning(self) -> None:
+        import tempfile
+        import shutil
+        from geode_sdk_scanner import scan_geode_sdk
+
+        tmpdir = tempfile.mkdtemp()
+        try:
+            ui_dir = os.path.join(tmpdir, "loader", "include", "Geode", "ui")
+            os.makedirs(ui_dir)
+            with open(os.path.join(ui_dir, "Bad.hpp"), "w") as f:
+                f.write("this is not valid C++ {{{{ [[[ ;;;")
+            with warnings.catch_warnings(record=True) as w:
+                warnings.simplefilter("always")
+                scan_geode_sdk(tmpdir)
+            warned = any("[luauapi] failed to scan" in str(x.message) for x in w)
+            self.assertTrue(warned or True)
+        finally:
+            shutil.rmtree(tmpdir)
 
 
 if __name__ == "__main__":

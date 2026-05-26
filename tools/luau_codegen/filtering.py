@@ -5,7 +5,7 @@ from typing import Dict, List
 
 from broma_parser import Class, Method
 from denylist import INACCESSIBLE_CLASSES, INACCESSIBLE_METHODS
-from model import short_name, status_for
+from model import build_class_lookup, resolve_base, short_name, status_for
 from link_attrs import is_link_platform, platform_aliases
 from type_map import classify_arg, classify_return, method_input_arg_count
 
@@ -142,7 +142,8 @@ def group_supported(
             if len(overloads) == 1:
                 kept.extend(overloads)
             else:
-                for m in overloads:
+                kept.append(overloads[0])
+                for m in overloads[1:]:
                     skipped.append((m, f"ambiguous-overload-arity:{arity}"))
         if kept:
             by_name[name] = kept
@@ -184,13 +185,13 @@ def linkless_class_names(
         if any(reason in ("inaccessible-class", no_call) for reason in reasons):
             out.add(cls.name)
 
-    by_short = {cls.name: cls for cls in classes}
+    lookup = build_class_lookup(classes)
     keep_bases: set[str] = set()
     for cls in classes:
         if cls.name in out:
             continue
         for base in cls.bases:
-            base_cls = by_short.get(short_name(base))
+            base_cls = resolve_base(lookup, base)
             if base_cls:
                 keep_bases.add(base_cls.name)
     return out - keep_bases
