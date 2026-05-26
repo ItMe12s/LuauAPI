@@ -179,7 +179,13 @@ def _classify_core(
     if n in STRING_TYPES:
         return TypeInfo("string", n, "string", is_ref=is_ref, is_out=is_out)
     if n in VALUE_TYPES:
-        return TypeInfo("value", n, VALUE_TYPES.get(n, VALUE_TYPES.get(base, n)), is_ref=is_ref, is_out=is_out)
+        return TypeInfo(
+            "value",
+            n,
+            VALUE_TYPES.get(n, VALUE_TYPES.get(base, n)),
+            is_ref=is_ref,
+            is_out=is_out,
+        )
     if base in ENUM_TYPES or n in ENUM_TYPES:
         cxx = enum_cxx_type(n, base)
         return TypeInfo("enum", cxx, "number", is_ref=is_ref, is_out=is_out)

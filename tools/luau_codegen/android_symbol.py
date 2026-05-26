@@ -158,9 +158,7 @@ def _mangle_type(
     return _subs_seen(seen, _mangle_ident(name), subs, _mangle_ident(name))
 
 
-def _mangle_template(
-    seen: list[str], base: str, parts: list[str], subs: bool
-) -> str:
+def _mangle_template(seen: list[str], base: str, parts: list[str], subs: bool) -> str:
     outer = _mangle_type(seen, base, subs, True)
     result = "".join(_mangle_type(seen, part, subs, True) for part in parts)
     if base == "gd::vector":

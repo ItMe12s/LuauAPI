@@ -68,7 +68,9 @@ def check_arg(arg: Arg, info: TypeInfo, idx: int, var: str, label: str) -> list[
         if info.lua_type == "RGBColor":
             return [f'        auto {var} = luax::toColor3B(L, {idx}, "{label}");\n']
         if info.lua_type == "UIButtonConfig":
-            return [f'        auto {var} = luax::toUIButtonConfig(L, {idx}, "{label}");\n']
+            return [
+                f'        auto {var} = luax::toUIButtonConfig(L, {idx}, "{label}");\n'
+            ]
     if info.kind == "object":
         return [
             f'        auto {var} = luax::Usertype<{info.cxx_type[:-1]}>::check(L, {idx}, "{label}");\n'

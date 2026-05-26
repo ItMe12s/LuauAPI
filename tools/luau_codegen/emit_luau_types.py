@@ -471,9 +471,7 @@ def _augment_packed_class_files(
         forward_names = (defined_here | sibling_refs) - cross_namespace_forward
         file_header = base_header.copy()
         if forward_names:
-            file_header.append(
-                _emit_forward_decls(forward_names, file_name)
-            )
+            file_header.append(_emit_forward_decls(forward_names, file_name))
         header_text = "".join(file_header)
         base_body = body[len("".join(base_header)) :]
         augmented[file_name] = header_text + base_body
@@ -644,8 +642,7 @@ def emit(root: Root, target_platform: str = "win") -> Dict[str, str]:
     gd_factory_external = {
         name
         for name in gd_factory_refs
-        if (ref_cls := objects.get(name))
-        and lua_namespace(ref_cls) == cocos_namespace
+        if (ref_cls := objects.get(name)) and lua_namespace(ref_cls) == cocos_namespace
     }
     gd_factory_same_ns = gd_factory_refs - gd_factory_external
     gd_factory_lines = _header("Geometry Dash factory declarations")

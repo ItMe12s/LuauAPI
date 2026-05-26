@@ -147,12 +147,15 @@ if (NOT EXISTS "${LUAUAPI_BINDINGS_DIR}/GeometryDash.bro")
     message(FATAL_ERROR "LuauAPI bindings dir missing: ${LUAUAPI_BINDINGS_DIR}")
 endif()
 
+file(TO_CMAKE_PATH "$ENV{GEODE_SDK}" LUAUAPI_GEODE_SDK_PATH)
+
 execute_process(
     COMMAND ${Python3_EXECUTABLE}
             ${CMAKE_CURRENT_SOURCE_DIR}/tools/luau_codegen/codegen.py
             --bindings ${LUAUAPI_BINDINGS_DIR}
             --list-outputs
             --platform ${LUAUAPI_CODEGEN_PLATFORM}
+            --geode-sdk "${LUAUAPI_GEODE_SDK_PATH}"
     OUTPUT_VARIABLE LUAUAPI_GENERATED_BINDINGS_RAW
     RESULT_VARIABLE LUAUAPI_LIST_OUTPUTS_RESULT
     ERROR_VARIABLE LUAUAPI_LIST_OUTPUTS_ERROR
@@ -170,6 +173,11 @@ file(GLOB LUAUAPI_CODEGEN_PY CONFIGURE_DEPENDS
     ${CMAKE_CURRENT_SOURCE_DIR}/tools/luau_codegen/*.py)
 file(GLOB LUAUAPI_BRO_FILES CONFIGURE_DEPENDS
     ${LUAUAPI_BINDINGS_DIR}/*.bro)
+# I will add custom wrappers and libraries later.
+file(GLOB LUAUAPI_EXTRA_BRO_FILES CONFIGURE_DEPENDS
+    ${CMAKE_CURRENT_SOURCE_DIR}/tools/luau_codegen/extra_bindings/*.bro)
+file(GLOB LUAUAPI_GEODE_UI_HEADERS CONFIGURE_DEPENDS
+    "${LUAUAPI_GEODE_SDK_PATH}/loader/include/Geode/ui/*.hpp")
 
 add_custom_command(
     OUTPUT ${LUAUAPI_GENERATED_BINDINGS} ${LUAUAPI_TYPES_FILES}
@@ -179,7 +187,8 @@ add_custom_command(
             --out ${LUAUAPI_GEN_DIR}
             --types-out ${LUAUAPI_TYPES_DIR}
             --platform ${LUAUAPI_CODEGEN_PLATFORM}
-    DEPENDS ${LUAUAPI_CODEGEN_PY} ${LUAUAPI_BRO_FILES}
+            --geode-sdk "${LUAUAPI_GEODE_SDK_PATH}"
+    DEPENDS ${LUAUAPI_CODEGEN_PY} ${LUAUAPI_BRO_FILES} ${LUAUAPI_EXTRA_BRO_FILES} ${LUAUAPI_GEODE_UI_HEADERS}
     COMMENT "LuauAPI Broma codegen"
     VERBATIM
 )

@@ -16,8 +16,19 @@ from filtering import (
 from cxx_templates import emit_internal_hpp, file_preamble
 from hooks import emit_hook_support, emit_hook_target, hook_id, hook_suffix, hookable
 from marshalling import check_arg, push_return, push_value
-from model import codegen_object_map, cxx_name, lua_namespace, object_classes, short_name
-from type_map import TypeInfo, require_classify_arg, require_classify_return, method_input_arg_count
+from model import (
+    codegen_object_map,
+    cxx_name,
+    lua_namespace,
+    object_classes,
+    short_name,
+)
+from type_map import (
+    TypeInfo,
+    require_classify_arg,
+    require_classify_return,
+    method_input_arg_count,
+)
 
 
 def _classify_method_args(m: Method, objects: Dict[str, Class]) -> List[TypeInfo]:
@@ -285,7 +296,9 @@ def _emit_class_file(
     out.append(
         f'    auto registerResult = luax::Usertype<{cxx_name(cls)}>::registerType(L, "{cls.name}", {base_expr});\n'
     )
-    out.append("    if (registerResult.isErr()) return geode::Err(registerResult.unwrapErr());\n")
+    out.append(
+        "    if (registerResult.isErr()) return geode::Err(registerResult.unwrapErr());\n"
+    )
 
     for name, methods in grouped.items():
         if methods[0].is_static:
@@ -330,7 +343,7 @@ def _emit_common_file(emitted_classes: List[Class]) -> str:
         out.append("}\n\n")
     out.append("namespace luauapi_gen {\n\n")
     out.append(
-        f"static_assert({len(emitted_classes)} < LUA_UTAG_LIMIT, \"LuauAPI generated userdata tags exceed LUA_UTAG_LIMIT\");\n\n"
+        f'static_assert({len(emitted_classes)} < LUA_UTAG_LIMIT, "LuauAPI generated userdata tags exceed LUA_UTAG_LIMIT");\n\n'
     )
     out.append("LuaHookTarget const* findHookTarget(std::string_view id);\n\n")
     out.append(emit_hook_support())

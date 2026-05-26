@@ -76,9 +76,7 @@ def hook_address_expr(cls: Class, m: Method, target_platform: str) -> str:
         return ""
     if _android_linked(cls, target_platform):
         symbol = android_symbol(cls, m)
-        return (
-            f'dlsym(dlopen("libcocos2dcpp.so", RTLD_NOW), "{symbol}")'
-        )
+        return f'dlsym(dlopen("libcocos2dcpp.so", RTLD_NOW), "{symbol}")'
     if _apple_linked(cls, target_platform):
         symbol = android_symbol(cls, m)
         return f'dlsym(RTLD_DEFAULT, "{symbol}")'

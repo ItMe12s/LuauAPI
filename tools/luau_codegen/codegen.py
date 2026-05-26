@@ -28,7 +28,7 @@ VALID_PLATFORMS = {
 }
 
 
-def _collect(bindings_dir: str) -> broma_parser.Root:
+def _collect(bindings_dir: str, geode_sdk_path: str | None = None) -> broma_parser.Root:
     root = broma_parser.Root()
     for name in BRO_FILES:
         path = os.path.join(bindings_dir, name)
@@ -36,6 +36,21 @@ def _collect(bindings_dir: str) -> broma_parser.Root:
             continue
         parsed = broma_parser.parse_file(path)
         root.classes.extend(parsed.classes)
+    if geode_sdk_path:
+        from geode_sdk_scanner import scan_geode_sdk
+
+        root.classes.extend(scan_geode_sdk(geode_sdk_path))
+    # There's plans for custom wrappers and stuff but not rn.
+    extra_dir = os.path.join(HERE, "extra_bindings")
+    if os.path.isdir(extra_dir):
+        for name in sorted(os.listdir(extra_dir)):
+            if name.endswith(".bro"):
+                parsed = broma_parser.parse_file(os.path.join(extra_dir, name))
+                root.classes.extend(parsed.classes)
+    seen: dict[str, broma_parser.Class] = {}
+    for cls in root.classes:
+        seen[cls.qualified_name] = cls
+    root.classes = list(seen.values())
     root.classes.sort(key=lambda c: (c.namespace, c.name))
     return root
 
@@ -153,6 +168,7 @@ def main(argv: List[str]) -> int:
     parser.add_argument("--out")
     parser.add_argument("--types-out")
     parser.add_argument("--platform", default="win")
+    parser.add_argument("--geode-sdk", default=None)
     parser.add_argument(
         "--list-outputs",
         action="store_true",
@@ -172,7 +188,7 @@ def main(argv: List[str]) -> int:
         print(f"[luauapi] bindings dir missing: {args.bindings}", file=sys.stderr)
         return 2
 
-    root = _collect(args.bindings)
+    root = _collect(args.bindings, geode_sdk_path=args.geode_sdk)
     if not root.classes:
         print(
             f"[luauapi] no Broma classes parsed from {args.bindings}", file=sys.stderr
