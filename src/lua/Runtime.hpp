@@ -33,6 +33,7 @@ namespace luax {
         Runtime& operator=(Runtime const&) = delete;
 
         static Runtime& instance();
+        static Runtime* getOrCreate();
 
         lua_State* state();
         bool ready() const;
@@ -92,6 +93,12 @@ namespace luax {
 
         bool codegenEnabled() const { return m_codegenEnabled; }
         std::uint32_t generation() const { return m_generation; }
+
+#if defined(LUAUAPI_HOST_TESTS)
+        static void resetForHostTests();
+        int scriptBudgetDepthForHostTests() const { return m_scriptBudgetDepth; }
+        std::size_t bytecodeCacheSizeForHostTests() const { return m_bytecodeIndex.size(); }
+#endif
 
     private:
         static void* boundedAlloc(void* ud, void* ptr, size_t osize, size_t nsize);

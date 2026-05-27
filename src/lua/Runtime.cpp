@@ -22,6 +22,8 @@
 #include <utility>
 
 namespace luax {
+    static_assert(imes::luauapi::kDefaultScriptDeadlineMs == kDefaultScriptDeadlineMs);
+
     namespace {
         constexpr char const kTracebackName[] = "luax:traceback";
 
@@ -154,19 +156,30 @@ namespace luax {
     }
 
     Runtime& Runtime::instance() {
-        auto& runtime = runtimeStorage();
+        auto* runtime = getOrCreate();
         if (!runtime) {
-            runtime.emplace();
+            std::abort();
         }
         return *runtime;
     }
 
+    Runtime* Runtime::getOrCreate() {
+        if (isShuttingDown()) return nullptr;
+        auto& runtime = runtimeStorage();
+        if (!runtime) {
+            runtime.emplace();
+        }
+        return &*runtime;
+    }
+
     bool Runtime::isInitialized() {
+        if (isShuttingDown()) return false;
         auto& runtime = runtimeStorage();
         return runtime && runtime->ready();
     }
 
     Runtime* Runtime::getIfInitialized() {
+        if (isShuttingDown()) return nullptr;
         auto& runtime = runtimeStorage();
         if (!runtime) return nullptr;
         return &*runtime;
@@ -183,6 +196,17 @@ namespace luax {
     bool Runtime::isShuttingDown() {
         return shuttingDownStorage().load(std::memory_order_acquire);
     }
+
+#if defined(LUAUAPI_HOST_TESTS)
+    void Runtime::resetForHostTests() {
+        auto& runtime = runtimeStorage();
+        if (runtime) {
+            runtime.reset();
+        }
+        shuttingDownStorage().store(false, std::memory_order_release);
+        mainThreadIdStorage() = std::this_thread::get_id();
+    }
+#endif
 
     void Runtime::setMainThreadId(std::thread::id id) {
         mainThreadIdStorage() = id;

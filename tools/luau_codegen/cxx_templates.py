@@ -78,7 +78,7 @@ def emit_internal_hpp() -> str:
         "        }\n"
         "        pushContext(L);\n"
         "        luax::Runtime::ResourcesRootScope rootScope(*runtime, callback->ref.resourcesRoot());\n"
-        "        if (runtime->protectedCall(nargs, 1, targetId, 50)) {\n"
+        "        if (runtime->protectedCall(nargs, 1, targetId, luax::kHookScriptDeadlineMs)) {\n"
         "            if (!lua_isnil(L, -1) && !applyReturn(L, -1)) {\n"
         '                geode::log::warn("luau hook [{}] returned invalid override", targetId);\n'
         "            }\n"

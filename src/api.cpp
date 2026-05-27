@@ -35,16 +35,19 @@ namespace {
             return geode::Err("luau runtime shutting down");
         }
 
-        auto& runtime = luax::Runtime::instance();
-        if (!runtime.ready()) {
-            auto const& err = runtime.lastError();
+        auto* runtime = luax::Runtime::getOrCreate();
+        if (!runtime) {
+            return geode::Err("luau runtime shutting down");
+        }
+        if (!runtime->ready()) {
+            auto const& err = runtime->lastError();
             return geode::Err(!err.empty() ? err : "luau runtime not ready");
         }
 
-        luax::Runtime::ResourcesRootScope rootScope(runtime, root);
+        luax::Runtime::ResourcesRootScope rootScope(*runtime, root);
 
-        if (!runtime.runScript(source, chunk, deadlineMs)) {
-            auto const& err = runtime.lastError();
+        if (!runtime->runScript(source, chunk, deadlineMs)) {
+            auto const& err = runtime->lastError();
             if (!err.empty()) {
                 return geode::Err(err);
             }

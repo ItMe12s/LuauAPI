@@ -359,6 +359,12 @@ class GeneratedSafetyTests(unittest.TestCase):
         self.assertIn("state.hook->disable();", text)
         self.assertIn("!callback || callback->removed", text)
 
+    def test_hook_runtime_uses_named_deadline(self) -> None:
+        text = _emit_common_file([Class(name="CCObject", namespace="cocos2d")])
+
+        self.assertIn("luax::kHookScriptDeadlineMs", text)
+        self.assertNotIn("targetId, 50", text)
+
 
 class LuauTypeEmissionTests(unittest.TestCase):
     def test_enum_prelude_uses_valid_luau_names(self) -> None:

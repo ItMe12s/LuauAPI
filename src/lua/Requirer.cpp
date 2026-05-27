@@ -120,8 +120,11 @@ namespace luax {
                 Luau::CodeGen::compile(ML, -1, Luau::CodeGen::CodeGen_ColdFunctions);
             }
 
-            Runtime::ScriptBudgetGuard budget(req->runtime(), kDefaultScriptDeadlineMs);
-            int resumeStatus = lua_resume(ML, L, 0);
+            int resumeStatus = 0;
+            {
+                Runtime::ScriptBudgetGuard budget(req->runtime(), kDefaultScriptDeadlineMs);
+                resumeStatus = lua_resume(ML, L, 0);
+            }
             if (resumeStatus == 0) {
                 if (lua_gettop(ML) != 1) {
                     lua_pop(L, 1);

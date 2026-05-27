@@ -8,7 +8,9 @@
 #include <string>
 #include <string_view>
 
-#ifdef GEODE_IS_WINDOWS
+#if defined(LUAUAPI_HOST_TESTS)
+    #define LUAUAPI_DLL
+#elif defined(GEODE_IS_WINDOWS)
     #ifdef LUAUAPI_EXPORTING
         #define LUAUAPI_DLL __declspec(dllexport)
     #else
@@ -24,6 +26,8 @@
 
 // I hope people actually read this.
 namespace imes::luauapi {
+    inline constexpr int kDefaultScriptDeadlineMs = 250;
+
     enum class RuntimeStatus {
         NotReady,
         Ready,
@@ -36,7 +40,7 @@ namespace imes::luauapi {
     LUAUAPI_DLL geode::Result<void> runFile(
         std::filesystem::path const& resourcesRoot,
         std::filesystem::path const& relativePath,
-        int deadlineMs = 250
+        int deadlineMs = kDefaultScriptDeadlineMs
     );
 
     // chunkName is a flat Luau resource name under resourcesRoot. No subdirs allowed.
@@ -45,20 +49,20 @@ namespace imes::luauapi {
         std::filesystem::path const& resourcesRoot,
         std::string_view source,
         std::string_view chunkName,
-        int deadlineMs = 250
+        int deadlineMs = kDefaultScriptDeadlineMs
     );
 
     LUAUAPI_DLL arc::Future<geode::Result<void>> runFileAsync(
         std::filesystem::path resourcesRoot,
         std::filesystem::path relativePath,
-        int deadlineMs = 250
+        int deadlineMs = kDefaultScriptDeadlineMs
     );
 
     LUAUAPI_DLL arc::Future<geode::Result<void>> runScriptAsync(
         std::filesystem::path resourcesRoot,
         std::string source,
         std::string chunkName,
-        int deadlineMs = 250
+        int deadlineMs = kDefaultScriptDeadlineMs
     );
 
     // Compatibility check for RuntimeStatus::Ready.

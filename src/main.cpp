@@ -10,7 +10,7 @@ $execute {
 }
 
 $on_mod(Loaded) {
-    luax::Runtime::instance();
+    luax::Runtime::getOrCreate();
 }
 
 $on_game(Exiting) {

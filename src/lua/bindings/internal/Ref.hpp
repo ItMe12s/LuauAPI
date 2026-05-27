@@ -24,7 +24,8 @@ namespace luax {
 
     inline bool assertMainThread() {
         if (luax::Runtime::isShuttingDown()) return false;
-        return luax::Runtime::instance().assertMainThread();
+        auto* runtime = luax::Runtime::getOrCreate();
+        return runtime && runtime->assertMainThread();
     }
 
     inline void releaseLuaRetain(cocos2d::CCObject* object, char const* method, bool explicitRelease) {
@@ -55,14 +56,4 @@ namespace luax {
         return true;
     }
 
-    inline void releaseLuaRef(cocos2d::CCObject* object, char const* method) {
-        if (!object) return;
-        if (assertMainThread()) {
-            releaseLuaRetain(object, method, true);
-            return;
-        }
-        geode::queueInMainThread([object, method]() {
-            releaseLuaRetain(object, method, true);
-        });
-    }
 }

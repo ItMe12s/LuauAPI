@@ -49,9 +49,11 @@ namespace luax {
         void reset(lua_State* L, int index) {
             reset();
             if (!L) return;
+            auto* runtime = Runtime::getOrCreate();
+            if (!runtime) return;
             m_state = L;
-            m_generation = Runtime::instance().generation();
-            m_resourcesRoot = Runtime::instance().resourcesRoot();
+            m_generation = runtime->generation();
+            m_resourcesRoot = runtime->resourcesRoot();
             lua_pushvalue(L, index);
             m_ref = lua_ref(L, -1);
             lua_pop(L, 1);
@@ -59,8 +61,8 @@ namespace luax {
 
         bool valid() const {
             if (!m_state || m_ref == LUA_NOREF || m_ref == LUA_REFNIL) return false;
-            if (!Runtime::isInitialized()) return false;
-            return m_generation == Runtime::instance().generation();
+            auto* runtime = Runtime::getIfInitialized();
+            return runtime && m_generation == runtime->generation();
         }
 
         bool push() const {

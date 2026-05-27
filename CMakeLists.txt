@@ -204,7 +204,8 @@ add_custom_command(
 )
 add_custom_target(luauapi_codegen DEPENDS ${LUAUAPI_GENERATED_BINDINGS} ${LUAUAPI_TYPES_FILES})
 
-file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS src/*.cpp)
+file(GLOB_RECURSE LUAUAPI_HANDWRITTEN_SOURCES CONFIGURE_DEPENDS src/*.cpp)
+set(SOURCES ${LUAUAPI_HANDWRITTEN_SOURCES})
 set(LUAUAPI_GENERATED_BINDING_SOURCES ${LUAUAPI_GENERATED_BINDINGS})
 list(FILTER LUAUAPI_GENERATED_BINDING_SOURCES INCLUDE REGEX "\\.cpp$")
 list(APPEND SOURCES ${LUAUAPI_GENERATED_BINDING_SOURCES})
@@ -256,16 +257,30 @@ if(LUAUAPI_BUILD_TESTS)
     add_executable(luauapi_tests
         tests/allocator_accounting_tests.cpp
         tests/bytecode_cache_key_tests.cpp
+        tests/runtime_integration_tests.cpp
         tests/path_sandbox_tests.cpp
         tests/path_rules_tests.cpp
         tests/require_path_tests.cpp
         tests/usertype_registry_tests.cpp
+        src/api.cpp
+        src/lua/Binding.cpp
+        src/lua/Requirer.cpp
+        src/lua/Runtime.cpp
+        src/lua/bindings/internal/Usertype.cpp
         src/lua/bindings/internal/UsertypeRegistry.cpp
     )
     target_compile_features(luauapi_tests PRIVATE cxx_std_23)
     target_include_directories(luauapi_tests PRIVATE src include)
-    target_compile_definitions(luauapi_tests PRIVATE LUAUAPI_HOST_TESTS=1)
-    target_link_libraries(luauapi_tests PRIVATE Catch2::Catch2WithMain GeodeBindings Luau.VM)
+    target_compile_definitions(luauapi_tests PRIVATE LUAUAPI_HOST_TESTS=1 LUAUAPI_EXPORTING=1)
+    target_link_libraries(luauapi_tests PRIVATE
+        Catch2::Catch2WithMain
+        GeodeBindings
+        Luau.Ast
+        Luau.CodeGen
+        Luau.Compiler
+        Luau.Require
+        Luau.VM
+    )
 
     list(APPEND CMAKE_MODULE_PATH ${catch2_SOURCE_DIR}/extras)
     include(Catch)
