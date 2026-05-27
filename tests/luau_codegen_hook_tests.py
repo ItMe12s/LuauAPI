@@ -28,6 +28,7 @@ from hooks import android_symbol, emit_hook_support, emit_return_override, hook_
 from link_attrs import class_link_platforms  # type: ignore[import-unresolved]
 from marshalling import check_arg  # type: ignore[import-unresolved]
 from model import build_class_lookup, object_classes, resolve_base  # type: ignore[import-unresolved]
+from parity import collect_parity, emit_markdown  # type: ignore[import-unresolved]
 from type_map import TypeInfo, classify_return  # type: ignore[import-unresolved]
 
 
@@ -895,6 +896,96 @@ class F11ClassMergeTests(unittest.TestCase):
                     seen[cls.qualified_name] = cls
             self.assertEqual(len(w), 1)
             self.assertIn("duplicate class", str(w[0].message))
+
+
+class F12ParityReportTests(unittest.TestCase):
+    def test_android_link_class_reports_missing_win_callable_proof(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        android_only = Class(
+            name="AndroidOnly",
+            bases=["CCObject"],
+            attributes=["link(android)"],
+            methods=[Method(name="ping", ret="void", args=[])],
+        )
+        root = Root(classes=[ccobject, android_only])
+
+        data = collect_parity(root)
+        key = "AndroidOnly.ping()"
+
+        self.assertIn("android64", data["methods"][key]["supportedPlatforms"])
+        self.assertEqual(data["methods"][key]["skipReasons"]["win"], "missing-address")
+        self.assertIn(key, data["hints"]["winMissingCallableProof"])
+
+    def test_m1_offset_method_reports_supported(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        m1_only = Class(
+            name="M1Only",
+            bases=["CCObject"],
+            methods=[
+                Method(
+                    name="tick",
+                    ret="void",
+                    args=[],
+                    platforms={"m1": "0x1234"},
+                )
+            ],
+        )
+        root = Root(classes=[ccobject, m1_only])
+
+        data = collect_parity(root)
+        key = "M1Only.tick()"
+
+        self.assertIn("m1", data["methods"][key]["supportedPlatforms"])
+
+    def test_ios_strict_callable_class_prune_is_reported(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        static_only = Class(
+            name="StaticOnly",
+            bases=["CCObject"],
+            methods=[
+                Method(
+                    name="make",
+                    ret="StaticOnly*",
+                    args=[],
+                    is_static=True,
+                    platforms={"inline": "inline"},
+                )
+            ],
+        )
+        root = Root(classes=[ccobject, static_only])
+
+        data = collect_parity(root)
+        key = "StaticOnly.make()"
+
+        self.assertIn("StaticOnly", data["skippedClasses"]["ios"])
+        self.assertEqual(
+            data["methods"][key]["skipReasons"]["ios"],
+            "not-callable-type:ios:StaticOnly",
+        )
+        self.assertIn("StaticOnly", emit_markdown(data))
+
+    def test_hook_parity_separates_callable_from_hookable(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        inline_only = Class(
+            name="InlineOnly",
+            bases=["CCObject"],
+            methods=[
+                Method(
+                    name="localCall",
+                    ret="void",
+                    args=[],
+                    platforms={"inline": "inline"},
+                )
+            ],
+        )
+        root = Root(classes=[ccobject, inline_only])
+
+        data = collect_parity(root)
+        key = "InlineOnly.localCall()"
+
+        self.assertIn("win", data["methods"][key]["supportedPlatforms"])
+        self.assertNotIn("win", data["methods"][key]["hookablePlatforms"])
+        self.assertIn(key, data["hints"]["hookAddressGaps"])
 
 
 class M1ScannerWarningTests(unittest.TestCase):

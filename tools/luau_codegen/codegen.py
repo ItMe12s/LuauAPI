@@ -14,6 +14,7 @@ if HERE not in sys.path:
 import broma_parser
 import emit_luau_bindings
 import emit_luau_types
+import parity
 from model import BRO_FILES, object_classes, status_for
 
 VALID_PLATFORMS = {
@@ -77,7 +78,9 @@ def _write_if_changed(path: str, content: str) -> None:
                 return
     except FileNotFoundError:
         pass
-    os.makedirs(os.path.dirname(path), exist_ok=True)
+    parent = os.path.dirname(path)
+    if parent:
+        os.makedirs(parent, exist_ok=True)
     with open(path, "w", encoding="utf-8", newline="\n") as f:
         f.write(content)
 
@@ -194,6 +197,10 @@ def main(argv: List[str]) -> int:
         action="store_true",
         help="Print generated type file names, one per line",
     )
+    parser.add_argument(
+        "--parity-report-out",
+        help="Write runtime-safe cross-platform parity report and exit",
+    )
     args = parser.parse_args(argv)
 
     if args.platform not in VALID_PLATFORMS:
@@ -214,6 +221,12 @@ def main(argv: List[str]) -> int:
             f"[luauapi] no Broma classes parsed from {args.bindings}", file=sys.stderr
         )
         return 3
+
+    if args.parity_report_out:
+        parity_data = parity.collect_parity(root)
+        _write_if_changed(args.parity_report_out, parity.emit_markdown(parity_data))
+        print(f"[luauapi] wrote {args.parity_report_out}")
+        return 0
 
     if args.list_outputs:
         for rel in emit_luau_bindings.plan_outputs(root, args.platform):
@@ -254,6 +267,9 @@ def main(argv: List[str]) -> int:
         if name not in type_files:
             os.remove(orphan)
     _emit_schema(root, schema_path)
+    parity_path = os.path.join(args.out, "parity.json")
+    parity_data = parity.collect_parity(root)
+    _write_if_changed(parity_path, parity.emit_json(parity_data))
     types_paths = [os.path.join(args.types_out, f) for f in type_files]
     hook_count = emit_luau_bindings.hook_target_count(root, args.platform, plan=plan)
     _emit_report(
@@ -272,6 +288,7 @@ def main(argv: List[str]) -> int:
         print(f"[luauapi] wrote {path}")
     for path in types_paths:
         print(f"[luauapi] wrote {path}")
+    print(f"[luauapi] wrote {parity_path}")
     print(f"[luauapi] wrote {report_path}")
     return 0
 

@@ -158,6 +158,7 @@ class EmitPlan:
     classes: List[Class]
     objects: Dict[str, Class]
     skipped: List[tuple[str, str, str]]
+    skipped_by_class: dict[str, list[tuple[Method, str]]]
     skipped_classes: Set[str]
     supported_by_class: dict[str, dict[str, list[Method]]]
     hook_targets_by_class: dict[str, List[tuple[Class, Method]]]
@@ -218,6 +219,7 @@ def _collect_plan(root: Root, target_platform: str) -> EmitPlan:
         classes=classes,
         objects=objects,
         skipped=skipped,
+        skipped_by_class=skipped_by_class,
         skipped_classes=skipped_classes,
         supported_by_class=supported_by_class,
         hook_targets_by_class=hook_targets_by_class,
