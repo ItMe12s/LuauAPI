@@ -260,6 +260,7 @@ if(LUAUAPI_BUILD_TESTS)
         tests/path_rules_tests.cpp
         tests/require_path_tests.cpp
         tests/usertype_registry_tests.cpp
+        src/lua/bindings/internal/UsertypeRegistry.cpp
     )
     target_compile_features(luauapi_tests PRIVATE cxx_std_23)
     target_include_directories(luauapi_tests PRIVATE src include)
