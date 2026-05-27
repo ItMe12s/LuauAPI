@@ -8,7 +8,7 @@
 
 namespace {
     template <int N>
-    struct FakeType : cocos2d::CCObject {};
+    struct FakeType {};
 
     template <int... Ns>
     void registerMany(std::integer_sequence<int, Ns...>) {

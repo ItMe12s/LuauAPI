@@ -261,17 +261,17 @@ if(LUAUAPI_BUILD_TESTS)
         tests/path_sandbox_tests.cpp
         tests/path_rules_tests.cpp
         tests/require_path_tests.cpp
+        tests/host_geode_stubs.cpp
         tests/usertype_registry_tests.cpp
         src/api.cpp
         src/lua/Binding.cpp
         src/lua/Requirer.cpp
         src/lua/Runtime.cpp
-        src/lua/bindings/internal/Usertype.cpp
         src/lua/bindings/internal/UsertypeRegistry.cpp
     )
     target_compile_features(luauapi_tests PRIVATE cxx_std_23)
     target_include_directories(luauapi_tests PRIVATE src include)
-    target_compile_definitions(luauapi_tests PRIVATE LUAUAPI_HOST_TESTS=1 LUAUAPI_EXPORTING=1)
+    target_compile_definitions(luauapi_tests PRIVATE LUAUAPI_HOST_TESTS=1 LUAUAPI_EXPORTING=1 GEODE_EXPORTING=1)
     target_link_libraries(luauapi_tests PRIVATE
         Catch2::Catch2WithMain
         GeodeBindings
