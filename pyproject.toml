@@ -1,0 +1,6 @@
+[project]
+name = "LuauAPI"
+version = "1.0.0"
+description = "LuauAPI codegen stuff."
+requires-python = ">=3.11"
+dependencies = []

@@ -18,6 +18,8 @@ Generated API differs per platform. Build for your target before copying `types/
 
 Cross-platform Luau scripts are not yet supported. Android hook targets are generated per ABI.
 Manual Android device testing is still required before treating a hook-heavy script as release-ready.
+Generated bindings use a forced runtime-safe intersection across Windows, macOS ARM, iOS, Android32, and Android64.
+Methods or hook targets missing from any intersection platform are removed from generated output.
 
 - Windows uses `win 0x...` addresses. Almost everything you need is supported.
 - Android uses `[[link(android)]]`, `android32`, and `android64` symbols.

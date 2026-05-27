@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-from broma_parser import Class, Method
+from filtering import method_key
 
 INTERSECTION_PLATFORMS = ("win", "m1", "ios", "android32", "android64")
 
@@ -25,11 +25,6 @@ class IntersectionStats:
     common_hook_targets: int = 0
     removed_methods: list[tuple[str, str, str]] = field(default_factory=list)
     removed_hooks: list[tuple[str, str, str]] = field(default_factory=list)
-
-
-def method_key(cls: Class, method: Method) -> str:
-    args = ",".join(arg.type for arg in method.args)
-    return f"{cls.qualified_name}.{method.name}({args})"
 
 
 def supported_method_keys(plan: Any) -> set[str]:

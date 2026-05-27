@@ -59,8 +59,9 @@ def direct_callable(cls: Class, m: Method, target_platform: str) -> bool:
     return bool(value)
 
 
-def method_key(m: Method) -> str:
-    return f"{m.name}({','.join(a.type for a in m.args)})"
+def method_key(cls: Class, m: Method) -> str:
+    args = ",".join(a.type for a in m.args)
+    return f"{cls.qualified_name}.{m.name}({args})"
 
 
 def supported(
@@ -122,7 +123,7 @@ def group_supported(
     by_name: dict[str, list[Method]] = defaultdict(list)
     seen: set[str] = set()
     for m in cls.methods:
-        key = method_key(m)
+        key = method_key(cls, m)
         if key in seen:
             skipped.append((m, "duplicate-signature"))
             continue

@@ -88,3 +88,219 @@ def emit_internal_hpp() -> str:
         "}\n"
         "} // namespace luauapi_gen\n"
     )
+
+
+def emit_hook_support() -> str:
+    return """    std::unordered_map<std::string, LuaHookState>& hookStates() {
+        static auto* value = new std::unordered_map<std::string, LuaHookState>();
+        return *value;
+    }
+
+    std::size_t& nextHookCallbackId() {
+        static auto value = std::size_t(1);
+        return value;
+    }
+
+    void clearHookRegistry() {
+        for (auto& [_, state] : hookStates()) {
+            for (auto const& callback : state.callbacks) {
+                if (callback) {
+                    callback->removed = true;
+                    callback->ref.reset();
+                }
+            }
+            if (state.hook && state.hook->isEnabled()) {
+                auto result = state.hook->disable();
+                if (result.isErr()) {
+                    geode::log::warn("luau hook disable failed during shutdown: {}", result.unwrapErr());
+                }
+            }
+        }
+        hookStates().clear();
+    }
+
+    LuaHookState* findHookState(std::size_t callbackId) {
+        for (auto& [_, state] : hookStates()) {
+            for (auto const& callback : state.callbacks) {
+                if (callback && callback->id == callbackId) {
+                    return &state;
+                }
+            }
+        }
+        return nullptr;
+    }
+
+    std::shared_ptr<LuaHookCallback> findHookCallback(std::size_t callbackId) {
+        for (auto& [_, state] : hookStates()) {
+            for (auto const& callback : state.callbacks) {
+                if (callback && callback->id == callbackId) {
+                    return callback;
+                }
+            }
+        }
+        return nullptr;
+    }
+
+    bool stateHasLiveCallbacks(LuaHookState const& state) {
+        for (auto const& callback : state.callbacks) {
+            if (callback && !callback->removed) return true;
+        }
+        return false;
+    }
+
+    void compactRemovedCallbacks(LuaHookState& state) {
+        std::size_t out = 0;
+        for (auto const& callback : state.callbacks) {
+            if (callback && !callback->removed) {
+                state.callbacks[out++] = callback;
+            }
+        }
+        state.callbacks.resize(out);
+    }
+
+    std::size_t compactAndCountLiveCallbacks() {
+        std::size_t total = 0;
+        for (auto& [_, state] : hookStates()) {
+            compactRemovedCallbacks(state);
+            total += state.callbacks.size();
+        }
+        return total;
+    }
+
+    std::size_t hookHandleId(lua_State* L) {
+        return static_cast<std::size_t>(lua_tointeger(L, lua_upvalueindex(1)));
+    }
+
+    int luaapi_hook_handle_enable(lua_State* L) {
+        auto id = hookHandleId(L);
+        auto callback = findHookCallback(id);
+        auto* state = findHookState(id);
+        if (!callback || callback->removed) {
+            lua_pushboolean(L, false);
+            return 1;
+        }
+        if (!state || !state->hook) {
+            lua_pushboolean(L, false);
+            return 1;
+        }
+        auto result = state->hook->enable();
+        lua_pushboolean(L, result.isOk());
+        if (result.isErr()) {
+            luax::push(L, result.unwrapErr());
+            return 2;
+        }
+        return 1;
+    }
+
+    int luaapi_hook_handle_disable(lua_State* L) {
+        auto id = hookHandleId(L);
+        auto callback = findHookCallback(id);
+        auto* state = findHookState(id);
+        if (!callback || callback->removed) {
+            lua_pushboolean(L, false);
+            return 1;
+        }
+        if (!state || !state->hook) {
+            lua_pushboolean(L, false);
+            return 1;
+        }
+        auto result = state->hook->disable();
+        lua_pushboolean(L, result.isOk());
+        if (result.isErr()) {
+            luax::push(L, result.unwrapErr());
+            return 2;
+        }
+        return 1;
+    }
+
+    int luaapi_hook_handle_remove(lua_State* L) {
+        auto id = hookHandleId(L);
+        auto callback = findHookCallback(id);
+        auto* state = findHookState(id);
+        if (!callback || callback->removed) {
+            lua_pushboolean(L, false);
+            return 1;
+        }
+        callback->removed = true;
+        callback->ref.reset();
+        if (state && state->hook && !stateHasLiveCallbacks(*state)) {
+            auto result = state->hook->disable();
+            if (result.isErr()) {
+                geode::log::warn("luau hook disable failed after remove: {}", result.unwrapErr());
+            }
+        }
+        lua_pushboolean(L, true);
+        return 1;
+    }
+
+    int luaapi_hook_handle_is_enabled(lua_State* L) {
+        auto id = hookHandleId(L);
+        auto callback = findHookCallback(id);
+        auto* state = findHookState(id);
+        lua_pushboolean(L, callback && !callback->removed && state && state->hook && state->hook->isEnabled());
+        return 1;
+    }
+
+    void pushHookHandle(lua_State* L, std::size_t callbackId) {
+        lua_createtable(L, 0, 4);
+        lua_pushinteger(L, static_cast<lua_Integer>(callbackId));
+        lua_pushcclosure(L, &luaapi_hook_handle_enable, nullptr, 1);
+        lua_setfield(L, -2, "enable");
+        lua_pushinteger(L, static_cast<lua_Integer>(callbackId));
+        lua_pushcclosure(L, &luaapi_hook_handle_disable, nullptr, 1);
+        lua_setfield(L, -2, "disable");
+        lua_pushinteger(L, static_cast<lua_Integer>(callbackId));
+        lua_pushcclosure(L, &luaapi_hook_handle_remove, nullptr, 1);
+        lua_setfield(L, -2, "remove");
+        lua_pushinteger(L, static_cast<lua_Integer>(callbackId));
+        lua_pushcclosure(L, &luaapi_hook_handle_is_enabled, nullptr, 1);
+        lua_setfield(L, -2, "isEnabled");
+    }
+
+    int luaapi_geode_hook(lua_State* L) {
+        if (lua_gettop(L) != 2) luaL_error(L, "geode.hook expected 2 args");
+        char const* id = lua_tostring(L, 1);
+        if (!id || !*id) luaL_error(L, "geode.hook expected target id at arg 1");
+        if (!lua_isfunction(L, 2)) luaL_error(L, "geode.hook expected function at arg 2");
+
+        auto* target = findHookTarget(id);
+        if (!target) luaL_error(L, "geode.hook target not found: %s", id);
+
+        auto& state = hookStates()[id];
+        state.target = target;
+        auto liveTotal = compactAndCountLiveCallbacks();
+        if (liveTotal >= luax::kMaxHookCallbacksGlobal) {
+            luaL_error(L, "geode.hook global callback limit exceeded");
+        }
+        if (state.callbacks.size() >= luax::kMaxHookCallbacksPerTarget) {
+            luaL_error(L, "geode.hook target callback limit exceeded for %s", id);
+        }
+
+        if (!state.hook) {
+            auto result = target->createHook(target->displayName);
+            if (result.isErr()) {
+                luaL_error(L, "geode.hook failed for %s: %s", id, result.unwrapErr().c_str());
+            }
+            state.hook = result.unwrap();
+            if (!state.hook->isEnabled()) {
+                auto enableResult = state.hook->enable();
+                if (enableResult.isErr()) {
+                    luaL_error(L, "geode.hook enable failed for %s: %s", id, enableResult.unwrapErr().c_str());
+                }
+            }
+        } else if (!state.hook->isEnabled()) {
+            auto result = state.hook->enable();
+            if (result.isErr()) {
+                luaL_error(L, "geode.hook enable failed for %s: %s", id, result.unwrapErr().c_str());
+            }
+        }
+
+        auto callback = std::make_shared<LuaHookCallback>();
+        callback->id = nextHookCallbackId()++;
+        callback->ref.reset(L, 2);
+        state.callbacks.push_back(callback);
+        pushHookHandle(L, callback->id);
+        return 1;
+    }
+
+"""

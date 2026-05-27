@@ -5,7 +5,7 @@ from collections import Counter
 from typing import Any
 
 from broma_parser import Root
-from emit_luau_bindings import (
+from plan import (
     EmitPlan,
     collect_plan,
     collect_platform_plan,
@@ -52,10 +52,15 @@ def _skip_reasons(plan: EmitPlan) -> dict[str, str]:
 
 
 def collect_parity(
-    root: Root, platforms: tuple[str, ...] = PARITY_PLATFORMS
+    root: Root,
+    platforms: tuple[str, ...] = PARITY_PLATFORMS,
+    plans_by_platform: dict[str, EmitPlan] | None = None,
 ) -> dict[str, Any]:
-    plans = {platform: collect_platform_plan(root, platform) for platform in platforms}
-    final_plan = collect_plan(root, platforms[0])
+    plans = dict(plans_by_platform or {})
+    for platform in platforms:
+        if platform not in plans:
+            plans[platform] = collect_platform_plan(root, platform)
+    final_plan = collect_plan(root, platforms[0], plans_by_platform=plans)
     total_methods = sum(len(cls.methods) for cls in root.classes)
     object_count = len(object_classes(root))
 

@@ -33,6 +33,9 @@ _CLASS_DECL = re.compile(
     r"\s*\{",
     re.DOTALL,
 )
+_ACCESS_LABEL = re.compile(r"(public|protected|private)\s*:")
+_NESTED_DECL = re.compile(r"(class|struct|enum)\s+")
+_TEMPLATE_DECL = re.compile(r"template\s*<")
 
 
 def _included_headers(sdk_path: str) -> set[str]:
@@ -142,20 +145,18 @@ def _extract_public_methods(class_name: str, body: str, base_line: int) -> List[
             i += 1
             continue
 
-        rest = body[i:]
-
-        access_m = re.match(r"(public|protected|private)\s*:", rest)
+        access_m = _ACCESS_LABEL.match(body, i)
         if access_m:
             access = access_m.group(1)
-            i += access_m.end()
+            i = access_m.end()
             continue
 
-        if rest.startswith("using ") or rest.startswith("friend "):
+        if body.startswith("using ", i) or body.startswith("friend ", i):
             semi = body.find(";", i)
             i = semi + 1 if semi != -1 else length
             continue
 
-        if re.match(r"(class|struct|enum)\s+", rest):
+        if _NESTED_DECL.match(body, i):
             brace = body.find("{", i)
             semi = body.find(";", i)
             if brace != -1 and (semi == -1 or brace < semi):
@@ -164,11 +165,11 @@ def _extract_public_methods(class_name: str, body: str, base_line: int) -> List[
                 i = semi + 1 if semi != -1 else length
             continue
 
-        if rest.startswith("template"):
-            tm = re.match(r"template\s*<", rest)
+        if body.startswith("template", i):
+            tm = _TEMPLATE_DECL.match(body, i)
             if tm:
                 depth = 1
-                j = i + tm.end()
+                j = tm.end()
                 while j < length and depth > 0:
                     if body[j] == "<":
                         depth += 1

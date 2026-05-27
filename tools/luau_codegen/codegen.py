@@ -4,7 +4,9 @@ import argparse
 import glob
 import json
 import os
+from pathlib import Path
 import sys
+import warnings
 from typing import List
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -15,6 +17,8 @@ import broma_parser
 import emit_luau_bindings
 import emit_luau_types
 import parity
+import plan as emit_plan
+from intersection import INTERSECTION_PLATFORMS
 from model import BRO_FILES, object_classes, status_for
 
 VALID_PLATFORMS = {
@@ -29,11 +33,22 @@ VALID_PLATFORMS = {
 }
 
 
-def _collect(bindings_dir: str, geode_sdk_path: str | None = None) -> broma_parser.Root:
+def log_info(message: str) -> None:
+    print(f"[luauapi] {message}")
+
+
+def log_error(message: str) -> None:
+    print(f"[luauapi] {message}", file=sys.stderr)
+
+
+def collect_bindings_root(
+    bindings_dir: str, geode_sdk_path: str | None = None
+) -> broma_parser.Root:
     root = broma_parser.Root()
     for name in BRO_FILES:
         path = os.path.join(bindings_dir, name)
         if not os.path.exists(path):
+            warnings.warn(f"[luauapi] missing Broma file: {path}")
             continue
         parsed = broma_parser.parse_file(path)
         root.classes.extend(parsed.classes)
@@ -48,8 +63,6 @@ def _collect(bindings_dir: str, geode_sdk_path: str | None = None) -> broma_pars
             if name.endswith(".bro"):
                 parsed = broma_parser.parse_file(os.path.join(extra_dir, name))
                 root.classes.extend(parsed.classes)
-    import warnings
-
     seen: dict[str, broma_parser.Class] = {}
     for cls in root.classes:
         if cls.qualified_name in seen:
@@ -71,6 +84,10 @@ def _collect(bindings_dir: str, geode_sdk_path: str | None = None) -> broma_pars
     return root
 
 
+def _collect(bindings_dir: str, geode_sdk_path: str | None = None) -> broma_parser.Root:
+    return collect_bindings_root(bindings_dir, geode_sdk_path)
+
+
 def _write_if_changed(path: str, content: str) -> None:
     try:
         with open(path, "r", encoding="utf-8") as f:
@@ -81,8 +98,17 @@ def _write_if_changed(path: str, content: str) -> None:
     parent = os.path.dirname(path)
     if parent:
         os.makedirs(parent, exist_ok=True)
-    with open(path, "w", encoding="utf-8", newline="\n") as f:
-        f.write(content)
+    tmp_path = f"{path}.tmp.{os.getpid()}"
+    try:
+        with open(tmp_path, "w", encoding="utf-8", newline="\n") as f:
+            f.write(content)
+        os.replace(tmp_path, path)
+    except OSError:
+        try:
+            if os.path.exists(tmp_path):
+                os.remove(tmp_path)
+        finally:
+            raise
 
 
 def _emit_schema(root: broma_parser.Root, path: str) -> None:
@@ -129,7 +155,7 @@ def _emit_report(
     skipped: list[tuple[str, str, str]],
     target_platform: str,
     hook_target_count: int,
-    plan: emit_luau_bindings.EmitPlan | None = None,
+    plan: emit_plan.EmitPlan | None = None,
 ) -> None:
     obj = object_classes(root)
     total_methods = sum(len(c.methods) for c in root.classes)
@@ -194,6 +220,10 @@ def _cleanup_orphans(out_dir: str, current_files: set[str]) -> None:
 
 
 def main(argv: List[str]) -> int:
+    if sys.version_info < (3, 11):
+        log_error("Python 3.11 or newer is required")
+        return 2
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--bindings", required=True)
     parser.add_argument("--out")
@@ -218,92 +248,131 @@ def main(argv: List[str]) -> int:
 
     if args.platform not in VALID_PLATFORMS:
         valid = ", ".join(sorted(VALID_PLATFORMS))
-        print(
-            f"[luauapi] unknown platform '{args.platform}'. Expected one of: {valid}",
-            file=sys.stderr,
-        )
+        log_error(f"unknown platform '{args.platform}'. Expected one of: {valid}")
         return 2
+
+    args.bindings = str(Path(args.bindings).resolve())
+    if args.out:
+        args.out = str(Path(args.out).resolve())
+    if args.types_out:
+        args.types_out = str(Path(args.types_out).resolve())
+    if args.geode_sdk:
+        args.geode_sdk = str(Path(args.geode_sdk).resolve())
+    if args.parity_report_out:
+        args.parity_report_out = str(Path(args.parity_report_out).resolve())
 
     if not os.path.isdir(args.bindings):
-        print(f"[luauapi] bindings dir missing: {args.bindings}", file=sys.stderr)
+        log_error(f"bindings dir missing: {args.bindings}")
         return 2
 
-    root = _collect(args.bindings, geode_sdk_path=args.geode_sdk)
+    try:
+        root = collect_bindings_root(args.bindings, geode_sdk_path=args.geode_sdk)
+    except OSError as exc:
+        log_error(f"I/O failed while collecting bindings: {exc}")
+        return 4
+
     if not root.classes:
-        print(
-            f"[luauapi] no Broma classes parsed from {args.bindings}", file=sys.stderr
-        )
+        log_error(f"no Broma classes parsed from {args.bindings}")
         return 3
 
+    plan_platforms = tuple(dict.fromkeys(INTERSECTION_PLATFORMS + (args.platform,)))
+    plans_by_platform = {
+        platform: emit_plan.collect_platform_plan(root, platform)
+        for platform in plan_platforms
+    }
+
     if args.parity_report_out:
-        parity_data = parity.collect_parity(root)
-        _write_if_changed(args.parity_report_out, parity.emit_markdown(parity_data))
-        print(f"[luauapi] wrote {args.parity_report_out}")
+        try:
+            parity_data = parity.collect_parity(
+                root, plans_by_platform=plans_by_platform
+            )
+            _write_if_changed(args.parity_report_out, parity.emit_markdown(parity_data))
+        except OSError as exc:
+            log_error(f"I/O failed while writing parity report: {exc}")
+            return 4
+        log_info(f"wrote {args.parity_report_out}")
         return 0
 
     if args.list_outputs:
-        for rel in emit_luau_bindings.plan_outputs(root, args.platform):
+        plan = emit_plan.collect_plan(
+            root, args.platform, plans_by_platform=plans_by_platform
+        )
+        for rel in emit_plan.plan_outputs(root, args.platform, plan=plan):
             print(f"src/{rel}")
         return 0
 
     if args.list_type_outputs:
-        type_files = emit_luau_types.emit(root, args.platform)
+        plan = emit_plan.collect_plan(
+            root, args.platform, plans_by_platform=plans_by_platform
+        )
+        type_files = emit_luau_types.emit(root, args.platform, plan=plan)
         for name in sorted(type_files):
             print(name)
         return 0
 
     if not args.out or not args.types_out:
-        print("[luauapi] --out and --types-out are required", file=sys.stderr)
+        log_error("--out and --types-out are required")
         return 2
 
-    plan = emit_luau_bindings.collect_plan(root, args.platform)
+    plan = emit_plan.collect_plan(
+        root, args.platform, plans_by_platform=plans_by_platform
+    )
     binding_files, skipped = emit_luau_bindings.emit(root, args.platform, plan=plan)
     written_paths: list[str] = []
     current_files: set[str] = set()
 
-    for rel, content in binding_files.items():
-        rel_path = os.path.join("src", rel).replace("\\", "/")
-        current_files.add(rel_path)
-        cxx_path = os.path.join(args.out, rel_path)
-        _write_if_changed(cxx_path, content)
-        written_paths.append(cxx_path)
+    try:
+        for rel, content in binding_files.items():
+            rel_path = os.path.join("src", rel).replace("\\", "/")
+            current_files.add(rel_path)
+            cxx_path = os.path.join(args.out, rel_path)
+            _write_if_changed(cxx_path, content)
+            written_paths.append(cxx_path)
 
-    _cleanup_orphans(args.out, current_files)
+        _cleanup_orphans(args.out, current_files)
 
-    schema_path = os.path.join(args.out, "schema.json")
-    report_path = os.path.join(args.out, "report.md")
-    type_files = emit_luau_types.emit(root, args.platform, plan=plan)
-    for filename, content in type_files.items():
-        _write_if_changed(os.path.join(args.types_out, filename), content)
-    for orphan in glob.glob(os.path.join(args.types_out, "geode*.d.luau")):
-        name = os.path.basename(orphan)
-        if name not in type_files:
-            os.remove(orphan)
-    _emit_schema(root, schema_path)
-    parity_path = os.path.join(args.out, "parity.json")
-    parity_data = parity.collect_parity(root)
-    _write_if_changed(parity_path, parity.emit_json(parity_data))
+        schema_path = os.path.join(args.out, "schema.json")
+        report_path = os.path.join(args.out, "report.md")
+        type_files = emit_luau_types.emit(root, args.platform, plan=plan)
+        for filename, content in type_files.items():
+            _write_if_changed(os.path.join(args.types_out, filename), content)
+        for orphan in glob.glob(os.path.join(args.types_out, "geode*.d.luau")):
+            name = os.path.basename(orphan)
+            if name not in type_files:
+                os.remove(orphan)
+        _emit_schema(root, schema_path)
+        parity_path = os.path.join(args.out, "parity.json")
+        parity_data = parity.collect_parity(root, plans_by_platform=plans_by_platform)
+        _write_if_changed(parity_path, parity.emit_json(parity_data))
+    except OSError as exc:
+        log_error(f"I/O failed while writing generated files: {exc}")
+        return 4
+
     types_paths = [os.path.join(args.types_out, f) for f in type_files]
-    hook_count = emit_luau_bindings.hook_target_count(root, args.platform, plan=plan)
-    _emit_report(
-        root,
-        report_path,
-        written_paths,
-        ", ".join(types_paths),
-        skipped,
-        args.platform,
-        hook_count,
-        plan,
-    )
-    print(f"[luauapi] parsed {len(root.classes)} classes")
-    print(f"[luauapi] target platform {args.platform}")
-    print(f"[luauapi] hook targets {hook_count}")
+    hook_count = emit_plan.hook_target_count(root, args.platform, plan=plan)
+    try:
+        _emit_report(
+            root,
+            report_path,
+            written_paths,
+            ", ".join(types_paths),
+            skipped,
+            args.platform,
+            hook_count,
+            plan,
+        )
+    except OSError as exc:
+        log_error(f"I/O failed while writing report: {exc}")
+        return 4
+    log_info(f"parsed {len(root.classes)} classes")
+    log_info(f"target platform {args.platform}")
+    log_info(f"hook targets {hook_count}")
     for path in written_paths:
-        print(f"[luauapi] wrote {path}")
+        log_info(f"wrote {path}")
     for path in types_paths:
-        print(f"[luauapi] wrote {path}")
-    print(f"[luauapi] wrote {parity_path}")
-    print(f"[luauapi] wrote {report_path}")
+        log_info(f"wrote {path}")
+    log_info(f"wrote {parity_path}")
+    log_info(f"wrote {report_path}")
     return 0
 
 

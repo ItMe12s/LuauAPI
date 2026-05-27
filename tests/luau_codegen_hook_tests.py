@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import os
+import shutil
 import sys
+import tempfile
 import unittest
 from unittest import mock
 
@@ -19,8 +21,6 @@ from emit_luau_bindings import (  # type: ignore[import-unresolved]
     _emit_common_file,
     _emit_dispatcher,
     _input_arg_count,
-    collect_plan,
-    plan_outputs,
 )
 from emit_luau_types import emit as emit_luau_types  # type: ignore[import-unresolved]
 from broma_parser import Root  # type: ignore[import-unresolved]
@@ -31,6 +31,7 @@ from link_attrs import class_link_platforms  # type: ignore[import-unresolved]
 from marshalling import check_arg  # type: ignore[import-unresolved]
 from model import build_class_lookup, object_classes, resolve_base  # type: ignore[import-unresolved]
 from parity import collect_parity, emit_markdown  # type: ignore[import-unresolved]
+from plan import collect_plan, collect_platform_plan, plan_outputs  # type: ignore[import-unresolved]
 from type_map import TypeInfo  # type: ignore[import-unresolved]
 
 
@@ -74,6 +75,14 @@ class HookOffsetTests(unittest.TestCase):
         )
 
         self.assertEqual(hook_offset(method, "android"), "")
+
+    def test_hook_offset_accepts_only_valid_hex_tokens(self) -> None:
+        valid = Method(name="ok", ret="void", args=[], platforms={"win": "0xAb12"})
+        self.assertEqual(hook_offset(valid, "win"), "0xAb12")
+
+        for token in ("0xGG", "0x1);evil", "0x"):
+            method = Method(name="bad", ret="void", args=[], platforms={"win": token})
+            self.assertEqual(hook_offset(method, "win"), "")
 
     def test_android_symbol_uses_itanium_name(self) -> None:
         cls = Class(name="CCObject", namespace="cocos2d")
@@ -861,8 +870,6 @@ class F9FileSplitTests(unittest.TestCase):
 
 class F11ClassMergeTests(unittest.TestCase):
     def test_duplicate_class_merges_attrs(self) -> None:
-        from codegen import _collect  # type: ignore[import-unresolved]
-
         root = Root()
         cls1 = Class(
             name="Foo", namespace="test", attributes=["link(win)"], source="a.bro"
@@ -871,10 +878,6 @@ class F11ClassMergeTests(unittest.TestCase):
             name="Foo", namespace="test", attributes=["link(android)"], source="b.bro"
         )
         root.classes = [cls1, cls2]
-
-        import codegen  # type: ignore[import-unresolved]
-
-        original_collect = codegen._collect
 
         seen: dict = {}
         for cls in root.classes:
@@ -920,6 +923,38 @@ class F11ClassMergeTests(unittest.TestCase):
                     seen[cls.qualified_name] = cls
             self.assertEqual(len(w), 1)
             self.assertIn("duplicate class", str(w[0].message))
+
+
+class CodegenIoTests(unittest.TestCase):
+    def test_write_if_changed_skips_identical_content(self) -> None:
+        from codegen import _write_if_changed  # type: ignore[import-unresolved]
+
+        tmpdir = tempfile.mkdtemp()
+        try:
+            path = os.path.join(tmpdir, "out.txt")
+            _write_if_changed(path, "same\n")
+            first_mtime = os.stat(path).st_mtime_ns
+            _write_if_changed(path, "same\n")
+            self.assertEqual(os.stat(path).st_mtime_ns, first_mtime)
+            _write_if_changed(path, "different\n")
+            self.assertEqual(open(path, encoding="utf-8").read(), "different\n")
+        finally:
+            shutil.rmtree(tmpdir)
+
+    def test_collect_bindings_root_warns_for_missing_bro_files(self) -> None:
+        from codegen import collect_bindings_root  # type: ignore[import-unresolved]
+
+        tmpdir = tempfile.mkdtemp()
+        try:
+            with open(os.path.join(tmpdir, "GeometryDash.bro"), "w", encoding="utf-8") as f:
+                f.write("class Foo {\n    void bar();\n};\n")
+            with warnings.catch_warnings(record=True) as w:
+                warnings.simplefilter("always")
+                root = collect_bindings_root(tmpdir)
+            self.assertEqual(len(root.classes), 1)
+            self.assertTrue(any("missing Broma file" in str(x.message) for x in w))
+        finally:
+            shutil.rmtree(tmpdir)
 
 
 class F12ParityReportTests(unittest.TestCase):
@@ -1072,6 +1107,24 @@ class F12ParityReportTests(unittest.TestCase):
 
         self.assertIn("m1", data["methods"][key]["supportedPlatforms"])
 
+    def test_collect_parity_reuses_supplied_platform_plans(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        foo = Class(
+            name="Foo",
+            namespace="gd",
+            bases=["CCObject"],
+            methods=[Method(name="shared", ret="void", args=[], platforms=all_platforms())],
+        )
+        root = Root(classes=[ccobject, foo])
+        platforms = ("win", "m1", "ios", "android32", "android64")
+        plans = {platform: collect_platform_plan(root, platform) for platform in platforms}
+
+        with mock.patch("parity.collect_platform_plan") as mocked_collect:
+            data = collect_parity(root, platforms=platforms, plans_by_platform=plans)
+
+        mocked_collect.assert_not_called()
+        self.assertIn("gd::Foo.shared()", data["methods"])
+
     def test_ios_strict_callable_class_prune_is_reported(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")
         static_only = Class(
@@ -1125,21 +1178,25 @@ class F12ParityReportTests(unittest.TestCase):
 
 class M1ScannerWarningTests(unittest.TestCase):
     def test_bad_header_emits_warning(self) -> None:
-        import tempfile
-        import shutil
         from geode_sdk_scanner import scan_geode_sdk  # type: ignore[import-unresolved]
 
         tmpdir = tempfile.mkdtemp()
         try:
             ui_dir = os.path.join(tmpdir, "loader", "include", "Geode", "ui")
             os.makedirs(ui_dir)
+            include_dir = os.path.dirname(ui_dir)
+            with open(os.path.join(include_dir, "UI.hpp"), "w", encoding="utf-8") as f:
+                f.write('#include "ui/Bad.hpp"\n')
             with open(os.path.join(ui_dir, "Bad.hpp"), "w") as f:
                 f.write("this is not valid C++ {{{{ [[[ ;;;")
             with warnings.catch_warnings(record=True) as w:
                 warnings.simplefilter("always")
-                scan_geode_sdk(tmpdir)
+                with mock.patch(
+                    "geode_sdk_scanner._scan_header", side_effect=ValueError("bad")
+                ):
+                    scan_geode_sdk(tmpdir)
             warned = any("[luauapi] failed to scan" in str(x.message) for x in w)
-            self.assertTrue(warned or True)
+            self.assertTrue(warned)
         finally:
             shutil.rmtree(tmpdir)
 

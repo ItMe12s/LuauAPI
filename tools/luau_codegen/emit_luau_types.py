@@ -4,8 +4,8 @@ import re
 from typing import Dict, List, Sequence, Tuple
 
 from broma_parser import Class, Method, Root
-from emit_luau_bindings import EmitPlan, collect_plan
 from model import lua_namespace, short_name
+from plan import EmitPlan, collect_plan
 from type_map import TypeInfo, classify_arg, classify_return, enum_lua_names
 
 LUAU_KEYWORDS = frozenset(

@@ -53,7 +53,7 @@ def hook_offset(m: Method, target_platform: str) -> str:
         return ""
     value = platform_value(m, target_platform)
     token = value.split()[0] if value else ""
-    if token.startswith("0x"):
+    if re.fullmatch(r"0x[0-9A-Fa-f]+", token):
         return token
     return ""
 
@@ -267,7 +267,7 @@ def emit_hook_target(
     return "".join(out)
 
 
-def emit_hook_support() -> str:
+def _legacy_emit_hook_support_template() -> str:
     return """    std::unordered_map<std::string, LuaHookState>& hookStates() {
         static auto* value = new std::unordered_map<std::string, LuaHookState>();
         return *value;
@@ -481,3 +481,9 @@ def emit_hook_support() -> str:
     }
 
 """
+
+
+def emit_hook_support() -> str:
+    from cxx_templates import emit_hook_support as emit_template
+
+    return emit_template()
