@@ -1,6 +1,6 @@
 -- AsyncBootstrap.luau
 -- Loaded with lua::runFileAsync.
--- File read and compile happen off-thread, then script executes on main thread.
+-- VM execution still happens on main thread.
 
 local cocos2d = geode.cocos2d
 
