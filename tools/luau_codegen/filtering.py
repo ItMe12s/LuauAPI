@@ -9,7 +9,7 @@ from model import build_class_lookup, resolve_base, short_name, status_for
 from link_attrs import is_link_platform, platform_aliases
 from type_map import classify_arg, classify_return, method_input_arg_count
 
-STRICT_DIRECT_PLATFORMS: set[str] = set()
+STRICT_DIRECT_PLATFORMS: set[str] = {"ios"}
 
 
 def _platform_aliases(target_platform: str) -> set[str]:
@@ -55,7 +55,7 @@ def direct_callable(cls: Class, m: Method, target_platform: str) -> bool:
     value = platform_value(m, target_platform)
     token = value.split()[0] if value else ""
     if target_platform in STRICT_DIRECT_PLATFORMS:
-        return token == "link"
+        return token == "link" or token.startswith("0x")
     return bool(value)
 
 
@@ -152,6 +152,21 @@ def group_supported(
     return by_name, skipped
 
 
+def _class_has_platform_support(cls: Class, target_platform: str) -> bool:
+    if is_link_platform(cls, target_platform):
+        return True
+    for m in cls.methods:
+        if m.is_static:
+            continue
+        value = platform_value(m, target_platform)
+        if not value:
+            continue
+        token = value.split()[0]
+        if token.startswith("0x") or token == "link":
+            return True
+    return False
+
+
 def linkless_class_names(
     classes: List[Class],
     objects: Dict[str, Class],
@@ -175,12 +190,23 @@ def linkless_class_names(
     no_call = f"not-callable:{target_platform}"
     for cls in classes:
         if supported_by_class.get(cls.name):
+            if (
+                target_platform in STRICT_DIRECT_PLATFORMS
+                and not _class_has_platform_support(cls, target_platform)
+            ):
+                out.add(cls.name)
             continue
         reasons = [reason for _, reason in skipped_by_class.get(cls.name, [])]
         if target_platform in STRICT_DIRECT_PLATFORMS and no_call in reasons:
             out.add(cls.name)
             continue
         if cls.name in referenced:
+            if (
+                target_platform not in STRICT_DIRECT_PLATFORMS
+                or _class_has_platform_support(cls, target_platform)
+            ):
+                continue
+            out.add(cls.name)
             continue
         if any(reason in ("inaccessible-class", no_call) for reason in reasons):
             out.add(cls.name)

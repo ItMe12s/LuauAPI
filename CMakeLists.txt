@@ -262,7 +262,7 @@ if(LUAUAPI_BUILD_TESTS)
         tests/usertype_registry_tests.cpp
     )
     target_compile_features(luauapi_tests PRIVATE cxx_std_23)
-    target_include_directories(luauapi_tests PRIVATE src)
+    target_include_directories(luauapi_tests PRIVATE src include)
     target_compile_definitions(luauapi_tests PRIVATE LUAUAPI_HOST_TESTS=1)
     target_link_libraries(luauapi_tests PRIVATE Catch2::Catch2WithMain GeodeBindings Luau.VM)
 
