@@ -324,6 +324,68 @@ class BareInlineTests(unittest.TestCase):
         self.assertTrue(ok)
         self.assertEqual(reason, "")
 
+    def test_platform_inline_callable_on_ios(self) -> None:
+        cls = Class(name="SimplePlayer", bases=["cocos2d::CCSprite"])
+        method = Method(
+            name="setColors",
+            ret="void",
+            args=[
+                Arg("cocos2d::ccColor3B const&", "color1"),
+                Arg("cocos2d::ccColor3B const&", "color2"),
+            ],
+            platforms={
+                "win": "inline",
+                "imac": "0x36edb0",
+                "m1": "0x2f8c50",
+                "ios": "inline",
+            },
+        )
+        objects = {
+            "SimplePlayer": cls,
+            "cocos2d::CCSprite": Class(name="CCSprite", namespace="cocos2d"),
+        }
+
+        ok, reason = supported(cls, method, objects, "ios")
+
+        self.assertTrue(ok)
+        self.assertEqual(reason, "")
+
+    def test_platform_inline_survives_intersection(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        cls = Class(
+            name="SimplePlayer",
+            bases=["cocos2d::CCSprite"],
+            methods=[
+                Method(
+                    name="setColors",
+                    ret="void",
+                    args=[
+                        Arg("cocos2d::ccColor3B const&", "color1"),
+                        Arg("cocos2d::ccColor3B const&", "color2"),
+                    ],
+                    platforms={
+                        "win": "inline",
+                        "imac": "0x36edb0",
+                        "m1": "0x2f8c50",
+                        "ios": "inline",
+                        "android32": "0x1",
+                        "android64": "0x1",
+                    },
+                )
+            ],
+        )
+        root = Root(
+            classes=[
+                ccobject,
+                Class(name="CCSprite", namespace="cocos2d", bases=["CCObject"]),
+                cls,
+            ]
+        )
+
+        plan = collect_plan(root, "win")
+
+        self.assertIn("setColors", plan.supported_by_class["SimplePlayer"])
+
 
 class GeneratedSafetyTests(unittest.TestCase):
     def test_register_type_error_is_propagated(self) -> None:

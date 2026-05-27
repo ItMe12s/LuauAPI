@@ -55,7 +55,7 @@ def direct_callable(cls: Class, m: Method, target_platform: str) -> bool:
     value = platform_value(m, target_platform)
     token = value.split()[0] if value else ""
     if target_platform in STRICT_DIRECT_PLATFORMS:
-        return token == "link" or token.startswith("0x")
+        return token == "link" or token.startswith("0x") or token == "inline"
     return bool(value)
 
 
@@ -163,7 +163,7 @@ def _class_has_platform_support(cls: Class, target_platform: str) -> bool:
         if not value:
             continue
         token = value.split()[0]
-        if token.startswith("0x") or token == "link":
+        if token.startswith("0x") or token == "link" or token == "inline":
             return True
     return False
 
