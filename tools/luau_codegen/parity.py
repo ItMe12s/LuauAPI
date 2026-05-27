@@ -4,40 +4,32 @@ import json
 from collections import Counter
 from typing import Any
 
-from broma_parser import Class, Method, Root
-from emit_luau_bindings import EmitPlan, collect_plan, hook_target_count, plan_outputs
+from broma_parser import Root
+from emit_luau_bindings import (
+    EmitPlan,
+    collect_plan,
+    collect_platform_plan,
+    hook_target_count,
+    plan_outputs,
+)
 from hooks import hook_address_expr
+from intersection import (
+    INTERSECTION_PLATFORMS,
+    hook_method_keys,
+    method_key,
+    supported_method_keys,
+)
 from model import object_classes
 
-PARITY_PLATFORMS = ("win", "m1", "ios", "android32", "android64")
-
-
-def method_key(cls: Class, method: Method) -> str:
-    args = ",".join(arg.type for arg in method.args)
-    return f"{cls.qualified_name}.{method.name}({args})"
+PARITY_PLATFORMS = INTERSECTION_PLATFORMS
 
 
 def _supported_keys(plan: EmitPlan) -> set[str]:
-    out: set[str] = set()
-    classes_by_name = {cls.name: cls for cls in plan.classes}
-    for cls_name, grouped in plan.supported_by_class.items():
-        if cls_name in plan.skipped_classes:
-            continue
-        cls = classes_by_name.get(cls_name)
-        if not cls:
-            continue
-        for methods in grouped.values():
-            for method in methods:
-                out.add(method_key(cls, method))
-    return out
+    return supported_method_keys(plan)
 
 
 def _hookable_keys(plan: EmitPlan) -> set[str]:
-    out: set[str] = set()
-    for targets in plan.hook_targets_by_class.values():
-        for cls, method in targets:
-            out.add(method_key(cls, method))
-    return out
+    return hook_method_keys(plan)
 
 
 def _skip_reasons(plan: EmitPlan) -> dict[str, str]:
@@ -62,7 +54,8 @@ def _skip_reasons(plan: EmitPlan) -> dict[str, str]:
 def collect_parity(
     root: Root, platforms: tuple[str, ...] = PARITY_PLATFORMS
 ) -> dict[str, Any]:
-    plans = {platform: collect_plan(root, platform) for platform in platforms}
+    plans = {platform: collect_platform_plan(root, platform) for platform in platforms}
+    final_plan = collect_plan(root, platforms[0])
     total_methods = sum(len(cls.methods) for cls in root.classes)
     object_count = len(object_classes(root))
 
@@ -134,11 +127,32 @@ def collect_parity(
     return {
         "platforms": list(platforms),
         "summary": summary,
+        "intersection": _intersection_summary(final_plan, total_methods),
         "methods": methods,
         "skippedClasses": {
             platform: sorted(plans[platform].skipped_classes) for platform in platforms
         },
         "hints": hints,
+    }
+
+
+def _intersection_summary(plan: EmitPlan, total_methods: int) -> dict[str, Any]:
+    stats = plan.intersection_stats
+    return {
+        "enabled": stats.enabled,
+        "platforms": list(stats.platforms),
+        "commonBindingMethods": stats.common_supported_methods,
+        "commonHookTargets": stats.common_hook_targets,
+        "methodsEmitted": total_methods - len(plan.skipped),
+        "methodsSkipped": len(plan.skipped),
+        "hookTargets": sum(
+            len(targets) for targets in plan.hook_targets_by_class.values()
+        ),
+        "generatedBindingFiles": 2 + len(plan.emitted_classes),
+        "emittedClasses": len(plan.emitted_classes),
+        "skippedClasses": len(plan.skipped_classes),
+        "methodsRemoved": len(stats.removed_methods),
+        "hooksRemoved": len(stats.removed_hooks),
     }
 
 
@@ -170,9 +184,7 @@ def _collect_hints(
         and info["skipReasons"].get("m1")
     )
     hook_only_gaps = [
-        key
-        for key, info in methods.items()
-        if info["hookAddressMissingPlatforms"]
+        key for key, info in methods.items() if info["hookAddressMissingPlatforms"]
     ]
     return {
         "winMissingCallableProof": win_missing[:200],
@@ -203,6 +215,17 @@ def emit_markdown(data: dict[str, Any]) -> str:
             f"{row['hookTargets']} | {row['generatedBindingFiles']} | {row['skippedClasses']} |\n"
         )
 
+    if "intersection" in data:
+        final = data["intersection"]
+        lines.append("\n## Forced Intersection\n\n")
+        lines.append(f"- enabled: {str(final['enabled']).lower()}\n")
+        lines.append(f"- platforms: {', '.join(final['platforms'])}\n")
+        lines.append(f"- common binding methods: {final['commonBindingMethods']}\n")
+        lines.append(f"- common hook targets: {final['commonHookTargets']}\n")
+        lines.append(f"- generated binding files: {final['generatedBindingFiles']}\n")
+        lines.append(f"- methods removed: {final['methodsRemoved']}\n")
+        lines.append(f"- hooks removed: {final['hooksRemoved']}\n")
+
     lines.append("\n## Runtime-Safe Hints\n\n")
     hints = data["hints"]
     lines.append(
@@ -226,7 +249,9 @@ def emit_markdown(data: dict[str, Any]) -> str:
     lines.append(f"- m1 gaps versus android64: {reason_text}.\n")
 
     lines.append("\n## Samples\n\n")
-    _append_sample(lines, "win missing callable proof", hints["winMissingCallableProof"])
+    _append_sample(
+        lines, "win missing callable proof", hints["winMissingCallableProof"]
+    )
     _append_sample(lines, "ios skipped classes", hints["iosSkippedClasses"])
     _append_sample(lines, "hook address gaps", hints["hookAddressGaps"])
     return "".join(lines)

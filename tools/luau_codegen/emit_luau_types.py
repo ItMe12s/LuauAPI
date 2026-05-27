@@ -4,8 +4,8 @@ import re
 from typing import Dict, List, Sequence, Tuple
 
 from broma_parser import Class, Method, Root
-from filtering import group_supported, linkless_class_names, prune_skipped_class_refs
-from model import codegen_object_map, lua_namespace, object_classes, short_name
+from emit_luau_bindings import EmitPlan, collect_plan
+from model import lua_namespace, short_name
 from type_map import TypeInfo, classify_arg, classify_return, enum_lua_names
 
 LUAU_KEYWORDS = frozenset(
@@ -516,27 +516,15 @@ def _emit_class(
     return lines
 
 
-def emit(root: Root, target_platform: str = "win") -> Dict[str, str]:
-    classes = object_classes(root)
-    objects = codegen_object_map(root)
-    grouped_by_class: Dict[str, Dict[str, List[Method]]] = {}
-    skipped_by_class: Dict[str, List[tuple[Method, str]]] = {}
-
-    for cls in classes:
-        grouped, cls_skipped = group_supported(cls, objects, target_platform)
-        grouped_by_class[cls.name] = grouped
-        skipped_by_class[cls.name] = cls_skipped
-
-    skipped_classes = linkless_class_names(
-        classes, objects, grouped_by_class, skipped_by_class, target_platform
-    )
-    prune_skipped_class_refs(
-        grouped_by_class,
-        skipped_by_class,
-        objects,
-        skipped_classes,
-        target_platform,
-    )
+def emit(
+    root: Root, target_platform: str = "win", plan: EmitPlan | None = None
+) -> Dict[str, str]:
+    if plan is None:
+        plan = collect_plan(root, target_platform)
+    classes = plan.classes
+    objects = plan.objects
+    grouped_by_class = plan.supported_by_class
+    skipped_classes = plan.skipped_classes
 
     cocos_namespace = "geode.cocos2d"
     gd_namespace = "geode.gd"

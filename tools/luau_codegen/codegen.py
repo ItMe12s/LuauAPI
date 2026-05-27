@@ -129,6 +129,7 @@ def _emit_report(
     skipped: list[tuple[str, str, str]],
     target_platform: str,
     hook_target_count: int,
+    plan: emit_luau_bindings.EmitPlan | None = None,
 ) -> None:
     obj = object_classes(root)
     total_methods = sum(len(c.methods) for c in root.classes)
@@ -147,6 +148,18 @@ def _emit_report(
         f"- Hook targets emitted: **{hook_target_count}**\n",
         f"- Generated binding files: **{len(cxx_paths)}**\n",
     ]
+    if plan and plan.intersection_stats.enabled:
+        stats = plan.intersection_stats
+        lines.extend(
+            [
+                "- Intersection mode: **enabled**\n",
+                f"- Intersection platforms: **{', '.join(stats.platforms)}**\n",
+                f"- Common binding methods: **{stats.common_supported_methods}**\n",
+                f"- Common hook targets: **{stats.common_hook_targets}**\n",
+                f"- Methods removed by intersection: **{len(stats.removed_methods)}**\n",
+                f"- Hooks removed by intersection: **{len(stats.removed_hooks)}**\n",
+            ]
+        )
     for cxx_path in cxx_paths:
         lines.append(f"  - `{cxx_path}`\n")
     lines.append(f"- Generated Luau types: `{types_path}`\n\n")
@@ -259,7 +272,7 @@ def main(argv: List[str]) -> int:
 
     schema_path = os.path.join(args.out, "schema.json")
     report_path = os.path.join(args.out, "report.md")
-    type_files = emit_luau_types.emit(root, args.platform)
+    type_files = emit_luau_types.emit(root, args.platform, plan=plan)
     for filename, content in type_files.items():
         _write_if_changed(os.path.join(args.types_out, filename), content)
     for orphan in glob.glob(os.path.join(args.types_out, "geode*.d.luau")):
@@ -280,6 +293,7 @@ def main(argv: List[str]) -> int:
         skipped,
         args.platform,
         hook_count,
+        plan,
     )
     print(f"[luauapi] parsed {len(root.classes)} classes")
     print(f"[luauapi] target platform {args.platform}")

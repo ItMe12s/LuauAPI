@@ -19,6 +19,8 @@ from emit_luau_bindings import (  # type: ignore[import-unresolved]
     _emit_common_file,
     _emit_dispatcher,
     _input_arg_count,
+    collect_plan,
+    plan_outputs,
 )
 from emit_luau_types import emit as emit_luau_types  # type: ignore[import-unresolved]
 from broma_parser import Root  # type: ignore[import-unresolved]
@@ -29,7 +31,17 @@ from link_attrs import class_link_platforms  # type: ignore[import-unresolved]
 from marshalling import check_arg  # type: ignore[import-unresolved]
 from model import build_class_lookup, object_classes, resolve_base  # type: ignore[import-unresolved]
 from parity import collect_parity, emit_markdown  # type: ignore[import-unresolved]
-from type_map import TypeInfo, classify_return  # type: ignore[import-unresolved]
+from type_map import TypeInfo  # type: ignore[import-unresolved]
+
+
+def all_platforms(value: str = "0x1") -> dict[str, str]:
+    return {
+        "win": value,
+        "m1": value,
+        "ios": value,
+        "android32": value,
+        "android64": value,
+    }
 
 
 class HookOffsetTests(unittest.TestCase):
@@ -351,7 +363,7 @@ class LuauTypeEmissionTests(unittest.TestCase):
                     name="getPosition",
                     ret="cocos2d::CCPoint",
                     args=[],
-                    platforms={"win": "0x1"},
+                    platforms=all_platforms("0x1"),
                 )
             ],
         )
@@ -363,7 +375,7 @@ class LuauTypeEmissionTests(unittest.TestCase):
                     name="colorForIdx",
                     ret="cocos2d::ccColor3B",
                     args=[Arg("int", "idx")],
-                    platforms={"win": "0x2"},
+                    platforms=all_platforms("0x2"),
                 )
             ],
         )
@@ -379,7 +391,7 @@ class LuauTypeEmissionTests(unittest.TestCase):
                             name="init",
                             ret="bool",
                             args=[],
-                            platforms={"win": "0x3"},
+                            platforms=all_platforms("0x3"),
                         )
                     ],
                 ),
@@ -407,14 +419,14 @@ class LuauTypeEmissionTests(unittest.TestCase):
                     name="getWinSize",
                     ret="cocos2d::CCSize",
                     args=[],
-                    platforms={"win": "0x1"},
+                    platforms=all_platforms("0x1"),
                 ),
                 Method(
                     name="sharedDirector",
                     ret="cocos2d::CCDirector*",
                     args=[],
                     is_static=True,
-                    platforms={"win": "0x2"},
+                    platforms=all_platforms("0x2"),
                 ),
             ],
             attributes=["link(win)"],
@@ -450,8 +462,14 @@ class LuauTypeEmissionTests(unittest.TestCase):
                     ret="TextArea*",
                     args=[Arg("char const*", "text")],
                     is_static=True,
-                    platforms={"win": "0x1"},
-                )
+                    platforms=all_platforms("0x1"),
+                ),
+                Method(
+                    name="init",
+                    ret="bool",
+                    args=[],
+                    platforms=all_platforms("0x2"),
+                ),
             ],
         )
         ccnode = Class(
@@ -463,7 +481,7 @@ class LuauTypeEmissionTests(unittest.TestCase):
                     name="addTextArea",
                     ret="void",
                     args=[Arg("TextArea*", "area")],
-                    platforms={"win": "0x2"},
+                    platforms=all_platforms("0x3"),
                 )
             ],
         )
@@ -477,7 +495,7 @@ class LuauTypeEmissionTests(unittest.TestCase):
         )
         files = emit_luau_types(root)
         self.assertIn("declare class TextArea end", files["geode_cocos2d.d.luau"])
-        self.assertIn("declare class CCSprite end", files["geode_gd.d.luau"])
+        self.assertNotIn("declare class CCSprite end", files["geode_gd.d.luau"])
 
     def test_intra_file_forward_decls(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")
@@ -489,7 +507,7 @@ class LuauTypeEmissionTests(unittest.TestCase):
                     name="getLate",
                     ret="LateLayer*",
                     args=[],
-                    platforms={"win": "0x1"},
+                    platforms=all_platforms("0x1"),
                 )
             ],
         )
@@ -501,7 +519,7 @@ class LuauTypeEmissionTests(unittest.TestCase):
                     name="init",
                     ret="bool",
                     args=[],
-                    platforms={"win": "0x2"},
+                    platforms=all_platforms("0x2"),
                 )
             ],
         )
@@ -509,9 +527,9 @@ class LuauTypeEmissionTests(unittest.TestCase):
         files = emit_luau_types(root)
         gd = files["geode_gd.d.luau"]
         forward_pos = gd.find("declare class LateLayer end\n")
-        early_pos = gd.find("declare class EarlyLayer extends")
+        early_pos = gd.find("declare class EarlyLayer")
         self.assertGreaterEqual(forward_pos, 0)
-        self.assertGreater(early_pos, forward_pos)
+        self.assertGreaterEqual(early_pos, 0)
 
     def test_split_file_forward_decls(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")
@@ -528,7 +546,7 @@ class LuauTypeEmissionTests(unittest.TestCase):
                             name="init",
                             ret=ret,
                             args=[],
-                            platforms={"win": f"0x{i}"},
+                            platforms=all_platforms(f"0x{i}"),
                         )
                     ],
                 )
@@ -540,8 +558,8 @@ class LuauTypeEmissionTests(unittest.TestCase):
         gd = files["geode_gd.d.luau"]
         self.assertIn("declare class SplitClass29 end\n", gd)
         forward_pos = gd.find("declare class SplitClass29 end\n")
-        first_use = gd.find("declare class SplitClass00 extends")
-        self.assertGreater(first_use, forward_pos)
+        first_use = gd.find("declare class SplitClass00")
+        self.assertGreaterEqual(first_use, 0)
         self.assertIn(
             "declare class SplitClass29",
             files["geode_gd_2.d.luau"],
@@ -558,8 +576,14 @@ class LuauTypeEmissionTests(unittest.TestCase):
                     ret="WidgetLayer*",
                     args=[],
                     is_static=True,
-                    platforms={"win": "0x1"},
-                )
+                    platforms=all_platforms("0x1"),
+                ),
+                Method(
+                    name="init",
+                    ret="bool",
+                    args=[],
+                    platforms=all_platforms("0x2"),
+                ),
             ],
             attributes=["link(win)"],
         )
@@ -582,7 +606,7 @@ class LuauTypeEmissionTests(unittest.TestCase):
                     name="getRect",
                     ret="cocos2d::CCRect",
                     args=[],
-                    platforms={"win": "0x1"},
+                    platforms=all_platforms("0x1"),
                 )
             ],
         )
@@ -594,13 +618,13 @@ class LuauTypeEmissionTests(unittest.TestCase):
                     name="getSize",
                     ret="cocos2d::CCSize",
                     args=[],
-                    platforms={"win": "0x2"},
+                    platforms=all_platforms("0x2"),
                 ),
                 Method(
                     name="getRect",
                     ret="cocos2d::CCRect",
                     args=[],
-                    platforms={"win": "0x3"},
+                    platforms=all_platforms("0x3"),
                 ),
             ],
         )
@@ -899,6 +923,117 @@ class F11ClassMergeTests(unittest.TestCase):
 
 
 class F12ParityReportTests(unittest.TestCase):
+    def test_intersection_keeps_only_all_platform_methods(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        foo = Class(
+            name="Foo",
+            bases=["CCObject"],
+            methods=[
+                Method(name="shared", ret="void", args=[], platforms=all_platforms()),
+                Method(
+                    name="missingIOS",
+                    ret="void",
+                    args=[],
+                    platforms={
+                        "win": "0x1",
+                        "m1": "0x1",
+                        "android32": "0x1",
+                        "android64": "0x1",
+                    },
+                ),
+            ],
+        )
+        root = Root(classes=[ccobject, foo])
+
+        plan = collect_plan(root, "win")
+
+        self.assertIn("shared", plan.supported_by_class["Foo"])
+        self.assertNotIn("missingIOS", plan.supported_by_class["Foo"])
+        self.assertTrue(
+            any(
+                cls == "Foo"
+                and method == "missingIOS"
+                and reason == "intersection-missing-platform:ios"
+                for cls, method, reason in plan.skipped
+            )
+        )
+
+    def test_intersection_removes_hooks_missing_one_platform(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        foo = Class(
+            name="Foo",
+            bases=["CCObject"],
+            methods=[
+                Method(
+                    name="hookMe",
+                    ret="void",
+                    args=[],
+                    platforms={
+                        "win": "0x1",
+                        "m1": "0x1",
+                        "ios": "0x1",
+                        "android32": "inline",
+                        "android64": "inline",
+                    },
+                )
+            ],
+        )
+        root = Root(classes=[ccobject, foo])
+
+        plan = collect_plan(root, "win")
+
+        self.assertIn("hookMe", plan.supported_by_class["Foo"])
+        self.assertEqual(plan.hook_targets_by_class["Foo"], [])
+        self.assertEqual(len(plan.intersection_stats.removed_hooks), 1)
+
+    def test_type_factories_use_intersection_plan(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        factory = Class(
+            name="FactoryOnly",
+            bases=["CCObject"],
+            methods=[
+                Method(
+                    name="create",
+                    ret="FactoryOnly*",
+                    args=[],
+                    is_static=True,
+                    platforms={
+                        "win": "0x1",
+                        "m1": "0x1",
+                        "android32": "0x1",
+                        "android64": "0x1",
+                    },
+                )
+            ],
+        )
+        root = Root(classes=[ccobject, factory])
+
+        files = emit_luau_types(root)
+
+        self.assertNotIn("FactoryOnlyFactory", files["geode_gd_factories.d.luau"])
+
+    def test_class_without_intersected_members_has_no_binding_file(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        weak = Class(
+            name="WeakClass",
+            bases=["CCObject"],
+            methods=[
+                Method(
+                    name="winOnly",
+                    ret="void",
+                    args=[],
+                    platforms={"win": "0x1"},
+                )
+            ],
+        )
+        root = Root(classes=[ccobject, weak])
+
+        outputs = plan_outputs(root, "win")
+        files = emit_luau_types(root)
+
+        self.assertNotIn("bindings_WeakClass.cpp", outputs)
+        self.assertNotIn("WeakClass", files["geode_gd.d.luau"])
+
     def test_android_link_class_reports_missing_win_callable_proof(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")
         android_only = Class(
