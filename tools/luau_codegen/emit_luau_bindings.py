@@ -230,7 +230,9 @@ def collect_plan(root: Root, target_platform: str = "win") -> EmitPlan:
     return _collect_plan(root, target_platform)
 
 
-def plan_outputs(root: Root, target_platform: str = "win", plan: EmitPlan | None = None) -> List[str]:
+def plan_outputs(
+    root: Root, target_platform: str = "win", plan: EmitPlan | None = None
+) -> List[str]:
     if plan is None:
         plan = _collect_plan(root, target_platform)
     outputs = ["bindings_internal.hpp", "bindings_common.cpp"]
@@ -238,7 +240,9 @@ def plan_outputs(root: Root, target_platform: str = "win", plan: EmitPlan | None
     return outputs
 
 
-def hook_target_count(root: Root, target_platform: str = "win", plan: EmitPlan | None = None) -> int:
+def hook_target_count(
+    root: Root, target_platform: str = "win", plan: EmitPlan | None = None
+) -> int:
     if plan is None:
         plan = _collect_plan(root, target_platform)
     return sum(len(targets) for targets in plan.hook_targets_by_class.values())

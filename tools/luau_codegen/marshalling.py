@@ -42,12 +42,23 @@ def check_arg(arg: Arg, info: TypeInfo, idx: int, var: str, label: str) -> list[
         if cxx in ("float", "double"):
             return [f'        auto {var} = luax::check<{cxx}>(L, {idx}, "{label}");\n']
         _UNSIGNED = {
-            "unsigned", "unsigned int", "unsigned char", "unsigned short",
-            "uint8_t", "uint16_t", "uint32_t",
+            "unsigned",
+            "unsigned int",
+            "unsigned char",
+            "unsigned short",
+            "uint8_t",
+            "uint16_t",
+            "uint32_t",
         }
         _WIDE = {
-            "long long", "unsigned long long", "int64_t", "uint64_t",
-            "unsigned long", "long", "size_t", "ptrdiff_t",
+            "long long",
+            "unsigned long long",
+            "int64_t",
+            "uint64_t",
+            "unsigned long",
+            "long",
+            "size_t",
+            "ptrdiff_t",
         }
         if cxx in _WIDE:
             check_type = "double"

@@ -46,7 +46,6 @@ def _ret(ret: TypeInfo) -> str:
     return ret.lua_type
 
 
-
 def _method_return_type(cls: Class, m: Method, objects: Dict[str, Class]) -> str:
     ret = classify_return(m.ret, objects)
     assert ret is not None

@@ -154,6 +154,35 @@ class LinkClassFilterTests(unittest.TestCase):
         self.assertFalse(ok)
         self.assertEqual(reason, "inaccessible")
 
+    def test_game_level_manager_has_liked_item_full_check_is_denied(self) -> None:
+        cls = Class(name="GameLevelManager", attributes=["link(android)"])
+        method = Method(
+            name="hasLikedItemFullCheck",
+            ret="bool",
+            args=[
+                Arg("LikeItemType", "type"),
+                Arg("int", "id"),
+                Arg("bool", "liked"),
+                Arg("int", "parentID"),
+            ],
+            platforms={
+                "win": "0x164d80",
+                "imac": "0x557a90",
+                "m1": "0x4a78e0",
+                "ios": "0xaa3f4",
+            },
+        )
+
+        ok, reason = supported(
+            cls,
+            method,
+            {"GameLevelManager": cls, "LikeItemType": Class(name="LikeItemType")},
+            "android64",
+        )
+
+        self.assertFalse(ok)
+        self.assertEqual(reason, "inaccessible")
+
 
 class AccessLevelTests(unittest.TestCase):
     def test_protected_method_rejected(self) -> None:
@@ -653,10 +682,10 @@ class F1GdStringReturnOverrideTests(unittest.TestCase):
 
 class F3MethodAttrSplitTests(unittest.TestCase):
     def test_compound_method_attrs_split(self) -> None:
-        from broma_parser import _Cursor, _parse_class_body
+        from broma_parser import _Cursor, _parse_class_body  # type: ignore[import-unresolved]
 
         cls = Class(name="Foo", namespace="test")
-        bro = '[[link(win), missing(android)]] void bar() = win 0x1234; }'
+        bro = "[[link(win), missing(android)]] void bar() = win 0x1234; }"
         cursor = _Cursor(bro)
         _parse_class_body(cursor, cls)
         self.assertTrue(len(cls.methods) > 0)
@@ -697,8 +726,18 @@ class F5OverloadFirstDeclaredWinsTests(unittest.TestCase):
             bases=["CCObject"],
             attributes=["link(win)"],
         )
-        m1 = Method(name="foo", ret="void", args=[Arg(type="int", name="a")], platforms={"win": "0x1"})
-        m2 = Method(name="foo", ret="void", args=[Arg(type="float", name="b")], platforms={"win": "0x2"})
+        m1 = Method(
+            name="foo",
+            ret="void",
+            args=[Arg(type="int", name="a")],
+            platforms={"win": "0x1"},
+        )
+        m2 = Method(
+            name="foo",
+            ret="void",
+            args=[Arg(type="float", name="b")],
+            platforms={"win": "0x2"},
+        )
         cls.methods = [m1, m2]
         objects = {"TestObj": cls, "cocos2d::TestObj": cls}
         grouped, skipped = group_supported(cls, objects, "win")
@@ -736,28 +775,54 @@ class F6NumericMarshallingTests(unittest.TestCase):
 class F8ConstMethodManglingTests(unittest.TestCase):
     def test_const_method_has_K_qualifier(self) -> None:
         cls = Class(name="CCObject", namespace="cocos2d")
-        m = Method(name="getTag", ret="int", args=[], is_const=True, platforms={"android64": "0x1"})
+        m = Method(
+            name="getTag",
+            ret="int",
+            args=[],
+            is_const=True,
+            platforms={"android64": "0x1"},
+        )
         sym = android_symbol(cls, m)
         self.assertTrue(sym.startswith("_ZNK"), f"Expected _ZNK prefix, got {sym}")
         self.assertIn("6getTag", sym)
 
     def test_non_const_method_no_K_qualifier(self) -> None:
         cls = Class(name="CCObject", namespace="cocos2d")
-        m = Method(name="setTag", ret="void", args=[Arg(type="int", name="t")], platforms={"android64": "0x1"})
+        m = Method(
+            name="setTag",
+            ret="void",
+            args=[Arg(type="int", name="t")],
+            platforms={"android64": "0x1"},
+        )
         sym = android_symbol(cls, m)
         self.assertTrue(sym.startswith("_ZN"), f"Expected _ZN prefix, got {sym}")
         self.assertFalse(sym.startswith("_ZNK"))
 
     def test_const_vs_non_const_distinct(self) -> None:
         cls = Class(name="CCObject", namespace="cocos2d")
-        m_const = Method(name="getTag", ret="int", args=[], is_const=True, platforms={"android64": "0x1"})
-        m_non = Method(name="getTag", ret="int", args=[], is_const=False, platforms={"android64": "0x1"})
+        m_const = Method(
+            name="getTag",
+            ret="int",
+            args=[],
+            is_const=True,
+            platforms={"android64": "0x1"},
+        )
+        m_non = Method(
+            name="getTag",
+            ret="int",
+            args=[],
+            is_const=False,
+            platforms={"android64": "0x1"},
+        )
         self.assertNotEqual(android_symbol(cls, m_const), android_symbol(cls, m_non))
 
 
 class F9FileSplitTests(unittest.TestCase):
     def test_multi_split_produces_unique_filenames(self) -> None:
-        from emit_luau_types import _pack_line_chunks, MAX_CLASS_FILE_LINES
+        from emit_luau_types import (  # type: ignore[import-unresolved]
+            MAX_CLASS_FILE_LINES,
+            _pack_line_chunks,
+        )
 
         header = ["-- header\n"]
         big_chunk = "x\n" * (MAX_CLASS_FILE_LINES + 1)
@@ -771,14 +836,19 @@ class F9FileSplitTests(unittest.TestCase):
 
 class F11ClassMergeTests(unittest.TestCase):
     def test_duplicate_class_merges_attrs(self) -> None:
-        from codegen import _collect
+        from codegen import _collect  # type: ignore[import-unresolved]
 
         root = Root()
-        cls1 = Class(name="Foo", namespace="test", attributes=["link(win)"], source="a.bro")
-        cls2 = Class(name="Foo", namespace="test", attributes=["link(android)"], source="b.bro")
+        cls1 = Class(
+            name="Foo", namespace="test", attributes=["link(win)"], source="a.bro"
+        )
+        cls2 = Class(
+            name="Foo", namespace="test", attributes=["link(android)"], source="b.bro"
+        )
         root.classes = [cls1, cls2]
 
-        import codegen
+        import codegen  # type: ignore[import-unresolved]
+
         original_collect = codegen._collect
 
         seen: dict = {}
@@ -797,9 +867,13 @@ class F11ClassMergeTests(unittest.TestCase):
 
     def test_duplicate_class_warns_on_method_conflict(self) -> None:
         cls1 = Class(name="Bar", namespace="test", source="a.bro")
-        cls1.methods = [Method(name="foo", ret="void", args=[], platforms={"win": "0x1"})]
+        cls1.methods = [
+            Method(name="foo", ret="void", args=[], platforms={"win": "0x1"})
+        ]
         cls2 = Class(name="Bar", namespace="test", source="b.bro")
-        cls2.methods = [Method(name="bar", ret="void", args=[], platforms={"win": "0x2"})]
+        cls2.methods = [
+            Method(name="bar", ret="void", args=[], platforms={"win": "0x2"})
+        ]
 
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
@@ -827,7 +901,7 @@ class M1ScannerWarningTests(unittest.TestCase):
     def test_bad_header_emits_warning(self) -> None:
         import tempfile
         import shutil
-        from geode_sdk_scanner import scan_geode_sdk
+        from geode_sdk_scanner import scan_geode_sdk  # type: ignore[import-unresolved]
 
         tmpdir = tempfile.mkdtemp()
         try:

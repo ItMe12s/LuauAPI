@@ -210,6 +210,7 @@ INACCESSIBLE_METHODS = {
     # ("GJBaseGameLayer", "checkSpawnAbuse"),
     # ("GJBaseGameLayer", "isButtonAllowed"),
     # ("GJOptionsLayer", "getToggleButton"),
+    ("GameLevelManager", "hasLikedItemFullCheck"),
     # ("LevelSearchLayer", "onPasteClipboard"),
 }
 
