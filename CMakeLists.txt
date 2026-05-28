@@ -271,7 +271,7 @@ if(LUAUAPI_BUILD_TESTS)
         tests/fake_geode/geode_loader_stubs.cpp
         tests/fake_geode/loader_stubs.cpp
         tests/usertype_registry_tests.cpp
-        "$ENV{GEODE_SDK}/loader/src/utils/JsonValidation.cpp"
+        "${LUAUAPI_GEODE_SDK_PATH}/loader/src/utils/JsonValidation.cpp"
         src/api.cpp
         src/lua/Binding.cpp
         src/lua/Requirer.cpp
@@ -294,7 +294,7 @@ if(LUAUAPI_BUILD_TESTS)
         Luau.VM
     )
     if(WIN32)
-        set(LUAUAPI_GEODE_LINK_DIR "$ENV{GEODE_SDK}/loader/include/link/win64")
+        set(LUAUAPI_GEODE_LINK_DIR "${LUAUAPI_GEODE_SDK_PATH}/loader/include/link/win64")
         if(EXISTS "${LUAUAPI_GEODE_LINK_DIR}/libcocos2d.lib")
             target_link_libraries(luauapi_tests PRIVATE
                 "${LUAUAPI_GEODE_LINK_DIR}/libcocos2d.lib"
