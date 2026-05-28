@@ -1,4 +1,5 @@
 #include "Usertype.hpp"
+#include "Fields.hpp"
 
 #include <Geode/Geode.hpp>
 #include <lua.h>
@@ -6,8 +7,89 @@
 #include <lualib.h>
 
 #include <new>
+#include <string>
 
 namespace luax::detail {
+    namespace {
+        int usertypeIndex(lua_State* L) {
+            if (!lua_getmetatable(L, 1)) {
+                lua_pushnil(L);
+                return 1;
+            }
+            lua_getfield(L, -1, "__methods");
+            lua_pushvalue(L, 2);
+            lua_gettable(L, -2);
+            if (!lua_isnil(L, -1)) {
+                return 1;
+            }
+            lua_pop(L, 2);
+
+            lua_getfield(L, -1, "__fields");
+            lua_pushvalue(L, 2);
+            lua_gettable(L, -2);
+            if (lua_istable(L, -1)) {
+                lua_getfield(L, -1, "get");
+                if (lua_isfunction(L, -1)) {
+                    lua_pushvalue(L, 1);
+                    lua_call(L, 1, 1);
+                    return 1;
+                }
+            }
+            lua_pop(L, 2);
+
+            auto* key = lua_tostring(L, 2);
+            auto* node = tryNodeCandidate(L, 1);
+            if (node && key && std::string(key) == "m_fields") {
+                Fields::push(L, node);
+                return 1;
+            }
+            if (node) {
+                Fields::push(L, node);
+                lua_pushvalue(L, 2);
+                lua_gettable(L, -2);
+                return 1;
+            }
+            lua_pushnil(L);
+            return 1;
+        }
+
+        int usertypeNewIndex(lua_State* L) {
+            if (!lua_getmetatable(L, 1)) {
+                luaL_error(L, "userdata has no metatable");
+                return 0;
+            }
+            lua_getfield(L, -1, "__fields");
+            lua_pushvalue(L, 2);
+            lua_gettable(L, -2);
+            if (lua_istable(L, -1)) {
+                lua_getfield(L, -1, "set");
+                if (lua_isfunction(L, -1)) {
+                    lua_pushvalue(L, 1);
+                    lua_pushvalue(L, 3);
+                    lua_call(L, 2, 0);
+                    return 0;
+                }
+            }
+            lua_pop(L, 3);
+
+            auto* key = lua_tostring(L, 2);
+            if (key && std::string(key) == "m_fields") {
+                luaL_error(L, "m_fields is read-only");
+                return 0;
+            }
+            auto* node = tryNodeCandidate(L, 1);
+            if (!node) {
+                luaL_error(L, "unknown field on non-CCNode userdata");
+                return 0;
+            }
+            Fields::push(L, node);
+            lua_pushvalue(L, 2);
+            lua_pushvalue(L, 3);
+            lua_settable(L, -3);
+            return 0;
+        }
+    }
+
     cocos2d::CCObject* liveObject(UserdataBlock* block) {
         if (!block) return nullptr;
         if (block->flags & 1u) {
@@ -30,7 +112,13 @@ namespace luax::detail {
     void getOrCreateMetatable(lua_State* L, TypeInfo& info) {
         if (luaL_newmetatable(L, info.mtName.c_str())) {
             lua_createtable(L, 0, 16);
+            lua_setfield(L, -2, "__methods");
+            lua_createtable(L, 0, 16);
+            lua_setfield(L, -2, "__fields");
+            lua_pushcfunction(L, &usertypeIndex, "__index");
             lua_setfield(L, -2, "__index");
+            lua_pushcfunction(L, &usertypeNewIndex, "__newindex");
+            lua_setfield(L, -2, "__newindex");
             lua_pushstring(L, "locked");
             lua_setfield(L, -2, "__metatable");
             lua_pushstring(L, info.name.c_str());
@@ -64,13 +152,27 @@ namespace luax::detail {
         auto const* base = UsertypeRegistry::get().findByTag(baseTag);
         if (!base || base->mtName.empty()) return;
         luaL_getmetatable(L, info.mtName.c_str());
-        lua_getfield(L, -1, "__index");
+        lua_getfield(L, -1, "__methods");
         luaL_getmetatable(L, base->mtName.c_str());
         if (lua_isnil(L, -1)) {
             lua_pop(L, 3);
             return;
         }
-        lua_getfield(L, -1, "__index");
+        lua_getfield(L, -1, "__methods");
+        lua_remove(L, -2);
+        lua_createtable(L, 0, 1);
+        lua_pushvalue(L, -2);
+        lua_setfield(L, -2, "__index");
+        lua_setmetatable(L, -3);
+        lua_pop(L, 2);
+
+        lua_getfield(L, -1, "__fields");
+        luaL_getmetatable(L, base->mtName.c_str());
+        if (lua_isnil(L, -1)) {
+            lua_pop(L, 3);
+            return;
+        }
+        lua_getfield(L, -1, "__fields");
         lua_remove(L, -2);
         lua_createtable(L, 0, 1);
         lua_pushvalue(L, -2);
@@ -81,8 +183,20 @@ namespace luax::detail {
 
     void appendMethod(lua_State* L, TypeInfo const& info, char const* name, lua_CFunction fn) {
         luaL_getmetatable(L, info.mtName.c_str());
-        lua_getfield(L, -1, "__index");
+        lua_getfield(L, -1, "__methods");
         lua_pushcfunction(L, fn, name);
+        lua_setfield(L, -2, name);
+        lua_pop(L, 2);
+    }
+
+    void appendField(lua_State* L, TypeInfo const& info, char const* name, lua_CFunction getter, lua_CFunction setter) {
+        luaL_getmetatable(L, info.mtName.c_str());
+        lua_getfield(L, -1, "__fields");
+        lua_createtable(L, 0, 2);
+        lua_pushcfunction(L, getter, name);
+        lua_setfield(L, -2, "get");
+        lua_pushcfunction(L, setter, name);
+        lua_setfield(L, -2, "set");
         lua_setfield(L, -2, name);
         lua_pop(L, 2);
     }
@@ -124,6 +238,19 @@ namespace luax::detail {
         auto* obj = liveObject(block);
         if (!obj) return {};
         return { obj, info };
+    }
+
+    cocos2d::CCNode* tryNodeCandidate(lua_State* L, int idx) {
+        auto candidate = tryCandidate(L, idx);
+        if (!candidate.obj || !candidate.info) return nullptr;
+        if (auto* typed = geode::cast::typeinfo_cast<cocos2d::CCNode*>(candidate.obj)) {
+            return typed;
+        }
+        auto const& nodeInfo = UsertypeRegistry::get().infoFor(std::type_index(typeid(cocos2d::CCNode)));
+        if (nodeInfo.tag != 0 && hasBase(*candidate.info, nodeInfo.tag)) {
+            return static_cast<cocos2d::CCNode*>(candidate.obj);
+        }
+        return nullptr;
     }
 
     void pushUserdataOwned(lua_State* L, cocos2d::CCObject* obj, TypeInfo const& info) {

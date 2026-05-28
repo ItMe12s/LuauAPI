@@ -32,6 +32,7 @@ namespace luax {
             std::string name;
             std::string mtName;
             std::vector<std::uint32_t> baseClosure;
+            bool isNode = false;
         };
 
         struct UserdataCandidate {
@@ -59,8 +60,10 @@ namespace luax {
         geode::Result<void> ensureUserdataMetatable(lua_State* L, TypeInfo const& info);
         void chainMethodTable(lua_State* L, TypeInfo const& info, std::uint32_t baseTag);
         void appendMethod(lua_State* L, TypeInfo const& info, char const* name, lua_CFunction fn);
+        void appendField(lua_State* L, TypeInfo const& info, char const* name, lua_CFunction getter, lua_CFunction setter);
         UserdataCandidate checkCandidate(lua_State* L, int idx, char const* targetName, char const* method);
         UserdataCandidate tryCandidate(lua_State* L, int idx);
+        cocos2d::CCNode* tryNodeCandidate(lua_State* L, int idx);
         bool hasBase(TypeInfo const& info, std::uint32_t targetTag);
         void pushUserdataOwned(lua_State* L, cocos2d::CCObject* obj, TypeInfo const& info);
         void pushUserdataBorrowed(lua_State* L, cocos2d::CCObject* obj, TypeInfo const& info);
@@ -87,6 +90,7 @@ namespace luax {
             }
             info.name = nm;
             info.mtName = std::string("luax:") + nm;
+            info.isNode = std::is_base_of_v<cocos2d::CCNode, T>;
 
             info.baseClosure.clear();
             info.baseClosure.push_back(info.tag);
@@ -118,6 +122,11 @@ namespace luax {
         static void method(lua_State* L, char const* methodName, lua_CFunction fn) {
             auto const& info = detail::UsertypeRegistry::get().infoFor(std::type_index(typeid(T)));
             detail::appendMethod(L, info, methodName, fn);
+        }
+
+        static void field(lua_State* L, char const* fieldName, lua_CFunction getter, lua_CFunction setter) {
+            auto const& info = detail::UsertypeRegistry::get().infoFor(std::type_index(typeid(T)));
+            detail::appendField(L, info, fieldName, getter, setter);
         }
 
         static T* check(lua_State* L, int idx, char const* method) {

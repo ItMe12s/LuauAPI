@@ -1,11 +1,13 @@
 #include <LuauAPI.hpp>
 
 #include "lua/Runtime.hpp"
+#include "lua/bindings/internal/Fields.hpp"
 
 #include <catch2/catch_test_macros.hpp>
 #include <lua.h>
 
 #include <chrono>
+#include <cstdint>
 #include <filesystem>
 #include <fstream>
 #include <string>
@@ -149,4 +151,53 @@ TEST_CASE("async api after shutdown does not recreate runtime before polling") {
     REQUIRE(luax::Runtime::getIfInitialized() == nullptr);
 
     std::filesystem::remove_all(dir);
+}
+
+TEST_CASE("ccnode fields persist and evict by node pointer") {
+    HostRuntimeScope scope;
+    auto* runtime = luax::Runtime::getOrCreate();
+    REQUIRE(runtime != nullptr);
+    auto* L = runtime->state();
+    REQUIRE(L != nullptr);
+
+    auto* node = reinterpret_cast<cocos2d::CCNode*>(static_cast<std::uintptr_t>(0x1234));
+    luax::Fields::push(L, node);
+    REQUIRE(lua_istable(L, -1));
+    lua_pushinteger(L, 9);
+    lua_setfield(L, -2, "calls");
+    lua_pop(L, 1);
+
+    luax::Fields::push(L, node);
+    lua_getfield(L, -1, "calls");
+    REQUIRE(lua_tointeger(L, -1) == 9);
+    lua_pop(L, 2);
+
+    luax::Fields::evict(node);
+    luax::Fields::push(L, node);
+    lua_getfield(L, -1, "calls");
+    REQUIRE(lua_isnil(L, -1));
+    lua_pop(L, 2);
+}
+
+TEST_CASE("ccnode fields evict on final release") {
+    HostRuntimeScope scope;
+    auto* runtime = luax::Runtime::getOrCreate();
+    REQUIRE(runtime != nullptr);
+    auto* L = runtime->state();
+    REQUIRE(L != nullptr);
+
+    cocos2d::CCNode node;
+    node.m_uReference = 1;
+    luax::Fields::push(L, &node);
+    REQUIRE(lua_istable(L, -1));
+    lua_pushinteger(L, 3);
+    lua_setfield(L, -2, "calls");
+    lua_pop(L, 1);
+
+    node.release();
+
+    luax::Fields::push(L, &node);
+    lua_getfield(L, -1, "calls");
+    REQUIRE(lua_isnil(L, -1));
+    lua_pop(L, 2);
 }

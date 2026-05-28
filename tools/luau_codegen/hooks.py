@@ -94,9 +94,7 @@ def hookable(
     return all(classify_arg(arg.type, objects) is not None for arg in m.args)
 
 
-def emit_return_override(
-    info: TypeInfo, var: str, idx: str, target_id: str
-) -> list[str]:
+def emit_value_decode(info: TypeInfo, var: str, idx: str, context: str) -> list[str]:
     if info.kind == "void":
         return ["        return true;\n"]
     if info.kind == "bool":
@@ -162,11 +160,11 @@ def emit_return_override(
                 f"        if (!lua_istable(L, {idx})) return false;\n",
                 f'        lua_getfield(L, {idx}, "origin");\n',
                 "        if (!lua_istable(L, -1)) { lua_pop(L, 1); return false; }\n",
-                '        auto origin = luax::toPoint(L, -1, "hook return");\n',
+                f'        auto origin = luax::toPoint(L, -1, "{context}");\n',
                 "        lua_pop(L, 1);\n",
                 f'        lua_getfield(L, {idx}, "size");\n',
                 "        if (!lua_istable(L, -1)) { lua_pop(L, 1); return false; }\n",
-                '        auto size = luax::toSize(L, -1, "hook return");\n',
+                f'        auto size = luax::toSize(L, -1, "{context}");\n',
                 "        lua_pop(L, 1);\n",
                 f"        {var} = cocos2d::CCRect(origin.x, origin.y, size.width, size.height);\n",
                 "        return true;\n",
@@ -189,6 +187,12 @@ def emit_return_override(
                 f"        {var} = cocos2d::ccColor3B{{r, g, b}};\n",
                 "        return true;\n",
             ]
+        if info.lua_type == "UIButtonConfig":
+            return [
+                f"        if (!lua_istable(L, {idx})) return false;\n",
+                f'        {var} = luax::toUIButtonConfig(L, {idx}, "{context}");\n',
+                "        return true;\n",
+            ]
     if info.kind == "object":
         return [
             f"        if (lua_isnil(L, {idx})) {{ {var} = nullptr; return true; }}\n",
@@ -198,6 +202,12 @@ def emit_return_override(
             "        return true;\n",
         ]
     raise ValueError(f"unsupported type kind: {info.kind}")
+
+
+def emit_return_override(
+    info: TypeInfo, var: str, idx: str, target_id: str
+) -> list[str]:
+    return emit_value_decode(info, var, idx, "hook return")
 
 
 def emit_hook_target(
@@ -223,13 +233,90 @@ def emit_hook_target(
     params_text = ", ".join(params)
     call = f"self->{m.name}({', '.join(call_args)})"
     out = [f"    {ret_type} luaapi_hook_{suffix}({params_text}) {{\n"]
-    if ret.kind == "void":
-        out.append(f"        {call};\n")
+    if ret.kind != "void":
+        out.append(f"        {ret.cxx_type} result{{}};\n")
+    for _, info, name in args:
+        if info.kind == "string" and info.cxx_type.endswith("*"):
+            out.append(f"        std::string {name}Storage;\n")
+    out.append("        bool skipOriginal = false;\n")
+    out.append(
+        f'        skipOriginal = luauapi_gen::runLuaPreHooks("{target_id}", {1 + len(args)}, [&](lua_State* L) {{\n'
+    )
+    out.extend(
+        f"    {line}"
+        for line in push_value(
+            TypeInfo("object", f"{cxx_cls}*", cls.name, cls.name), "self"
+        )
+    )
+    for _, info, name in args:
+        out.extend(f"    {line}" for line in push_value(info, name))
+    out.append("        }, [&](lua_State* L, int idx) -> bool {\n")
+    if args:
+        out.append("            if (!lua_istable(L, idx)) return false;\n")
+        out.append(
+            f"            if (lua_objlen(L, idx) != {len(args)}) return false;\n"
+        )
+        for _, info, name in args:
+            if info.kind == "string" and info.cxx_type.endswith("*"):
+                out.append(f"            std::string {name}StorageOverride;\n")
+            else:
+                out.append(f"            {info.cxx_type} {name}Override{{}};\n")
+        for i, (_, info, name) in enumerate(args, start=1):
+            if info.kind == "string" and info.cxx_type.endswith("*"):
+                out.append(f"            lua_rawgeti(L, idx, {i});\n")
+                out.append(
+                    "            if (!lua_isstring(L, -1)) { lua_pop(L, 1); return false; }\n"
+                )
+                out.append(f"            size_t {name}Len = 0;\n")
+                out.append(
+                    f"            char const* {name}Text = lua_tolstring(L, -1, &{name}Len);\n"
+                )
+                out.append(
+                    f'            {name}StorageOverride = std::string({name}Text ? {name}Text : "", {name}Len);\n'
+                )
+                out.append("            lua_pop(L, 1);\n")
+                continue
+            tmp = f"{name}Override"
+            out.append(f"            lua_rawgeti(L, idx, {i});\n")
+            out.append(
+                f"            auto decode_{name} = [&](int valueIdx) -> bool {{\n"
+            )
+            out.extend(
+                f"        {line}"
+                for line in emit_value_decode(info, tmp, "valueIdx", "hook args")
+            )
+            out.append("            };\n")
+            out.append(
+                f"            if (!decode_{name}(-1)) {{ lua_pop(L, 1); return false; }}\n"
+            )
+            out.append("            lua_pop(L, 1);\n")
+        for _, info, name in args:
+            if info.kind == "string" and info.cxx_type.endswith("*"):
+                out.append(f"            {name}Storage = {name}StorageOverride;\n")
+                out.append(f"            {name} = {name}Storage.c_str();\n")
+            else:
+                out.append(f"            {name} = {name}Override;\n")
+        out.append("            return true;\n")
     else:
-        out.append(f"        auto result = {call};\n")
-    if ret.kind == "bool":
-        out.append("        if (!result) return false;\n")
-    nargs = 1 + len(args) + (1 if ret.kind not in ("void", "bool") else 0)
+        out.append(
+            "            return lua_istable(L, idx) && lua_objlen(L, idx) == 0;\n"
+        )
+    out.append("        }, [&](lua_State* L, int idx) -> bool {\n")
+    if ret.kind == "void":
+        out.append("            return true;\n")
+    else:
+        out.extend(
+            f"    {line}"
+            for line in emit_value_decode(ret, "result", "idx", "hook skip")
+        )
+    out.append("        });\n")
+    out.append("        if (!skipOriginal) {\n")
+    if ret.kind == "void":
+        out.append(f"            {call};\n")
+    else:
+        out.append(f"            result = {call};\n")
+    out.append("        }\n")
+    nargs = 1 + len(args) + (1 if ret.kind != "void" else 0)
     out.append(
         f'        luauapi_gen::runLuaPostHooks("{target_id}", {nargs}, [&](lua_State* L) {{\n'
     )
@@ -241,7 +328,7 @@ def emit_hook_target(
     )
     for _, info, name in args:
         out.extend(f"    {line}" for line in push_value(info, name))
-    if ret.kind not in ("void", "bool"):
+    if ret.kind != "void":
         out.extend(f"    {line}" for line in push_value(ret, "result"))
     out.append("        }, [&](lua_State* L, int idx) -> bool {\n")
     if ret.kind == "void":
@@ -265,222 +352,6 @@ def emit_hook_target(
     )
     out.append("    }\n\n")
     return "".join(out)
-
-
-def _legacy_emit_hook_support_template() -> str:
-    return """    std::unordered_map<std::string, LuaHookState>& hookStates() {
-        static auto* value = new std::unordered_map<std::string, LuaHookState>();
-        return *value;
-    }
-
-    std::size_t& nextHookCallbackId() {
-        static auto value = std::size_t(1);
-        return value;
-    }
-
-    void clearHookRegistry() {
-        for (auto& [_, state] : hookStates()) {
-            for (auto const& callback : state.callbacks) {
-                if (callback) {
-                    callback->removed = true;
-                    callback->ref.reset();
-                }
-            }
-            if (state.hook && state.hook->isEnabled()) {
-                auto result = state.hook->disable();
-                if (result.isErr()) {
-                    geode::log::warn("luau hook disable failed during shutdown: {}", result.unwrapErr());
-                }
-            }
-        }
-        hookStates().clear();
-    }
-
-    LuaHookState* findHookState(std::size_t callbackId) {
-        for (auto& [_, state] : hookStates()) {
-            for (auto const& callback : state.callbacks) {
-                if (callback && callback->id == callbackId) {
-                    return &state;
-                }
-            }
-        }
-        return nullptr;
-    }
-
-    std::shared_ptr<LuaHookCallback> findHookCallback(std::size_t callbackId) {
-        for (auto& [_, state] : hookStates()) {
-            for (auto const& callback : state.callbacks) {
-                if (callback && callback->id == callbackId) {
-                    return callback;
-                }
-            }
-        }
-        return nullptr;
-    }
-
-    bool stateHasLiveCallbacks(LuaHookState const& state) {
-        for (auto const& callback : state.callbacks) {
-            if (callback && !callback->removed) return true;
-        }
-        return false;
-    }
-
-    void compactRemovedCallbacks(LuaHookState& state) {
-        std::size_t out = 0;
-        for (auto const& callback : state.callbacks) {
-            if (callback && !callback->removed) {
-                state.callbacks[out++] = callback;
-            }
-        }
-        state.callbacks.resize(out);
-    }
-
-    std::size_t compactAndCountLiveCallbacks() {
-        std::size_t total = 0;
-        for (auto& [_, state] : hookStates()) {
-            compactRemovedCallbacks(state);
-            total += state.callbacks.size();
-        }
-        return total;
-    }
-
-    std::size_t hookHandleId(lua_State* L) {
-        return static_cast<std::size_t>(lua_tointeger(L, lua_upvalueindex(1)));
-    }
-
-    int luaapi_hook_handle_enable(lua_State* L) {
-        auto id = hookHandleId(L);
-        auto callback = findHookCallback(id);
-        auto* state = findHookState(id);
-        if (!callback || callback->removed) {
-            lua_pushboolean(L, false);
-            return 1;
-        }
-        if (!state || !state->hook) {
-            lua_pushboolean(L, false);
-            return 1;
-        }
-        auto result = state->hook->enable();
-        lua_pushboolean(L, result.isOk());
-        if (result.isErr()) {
-            luax::push(L, result.unwrapErr());
-            return 2;
-        }
-        return 1;
-    }
-
-    int luaapi_hook_handle_disable(lua_State* L) {
-        auto id = hookHandleId(L);
-        auto callback = findHookCallback(id);
-        auto* state = findHookState(id);
-        if (!callback || callback->removed) {
-            lua_pushboolean(L, false);
-            return 1;
-        }
-        if (!state || !state->hook) {
-            lua_pushboolean(L, false);
-            return 1;
-        }
-        auto result = state->hook->disable();
-        lua_pushboolean(L, result.isOk());
-        if (result.isErr()) {
-            luax::push(L, result.unwrapErr());
-            return 2;
-        }
-        return 1;
-    }
-
-    int luaapi_hook_handle_remove(lua_State* L) {
-        auto id = hookHandleId(L);
-        auto callback = findHookCallback(id);
-        auto* state = findHookState(id);
-        if (!callback || callback->removed) {
-            lua_pushboolean(L, false);
-            return 1;
-        }
-        callback->removed = true;
-        callback->ref.reset();
-        if (state && state->hook && !stateHasLiveCallbacks(*state)) {
-            auto result = state->hook->disable();
-            if (result.isErr()) {
-                geode::log::warn("luau hook disable failed after remove: {}", result.unwrapErr());
-            }
-        }
-        lua_pushboolean(L, true);
-        return 1;
-    }
-
-    int luaapi_hook_handle_is_enabled(lua_State* L) {
-        auto id = hookHandleId(L);
-        auto callback = findHookCallback(id);
-        auto* state = findHookState(id);
-        lua_pushboolean(L, callback && !callback->removed && state && state->hook && state->hook->isEnabled());
-        return 1;
-    }
-
-    void pushHookHandle(lua_State* L, std::size_t callbackId) {
-        lua_createtable(L, 0, 4);
-        lua_pushinteger(L, static_cast<lua_Integer>(callbackId));
-        lua_pushcclosure(L, &luaapi_hook_handle_enable, nullptr, 1);
-        lua_setfield(L, -2, "enable");
-        lua_pushinteger(L, static_cast<lua_Integer>(callbackId));
-        lua_pushcclosure(L, &luaapi_hook_handle_disable, nullptr, 1);
-        lua_setfield(L, -2, "disable");
-        lua_pushinteger(L, static_cast<lua_Integer>(callbackId));
-        lua_pushcclosure(L, &luaapi_hook_handle_remove, nullptr, 1);
-        lua_setfield(L, -2, "remove");
-        lua_pushinteger(L, static_cast<lua_Integer>(callbackId));
-        lua_pushcclosure(L, &luaapi_hook_handle_is_enabled, nullptr, 1);
-        lua_setfield(L, -2, "isEnabled");
-    }
-
-    int luaapi_geode_hook(lua_State* L) {
-        if (lua_gettop(L) != 2) luaL_error(L, "geode.hook expected 2 args");
-        char const* id = lua_tostring(L, 1);
-        if (!id || !*id) luaL_error(L, "geode.hook expected target id at arg 1");
-        if (!lua_isfunction(L, 2)) luaL_error(L, "geode.hook expected function at arg 2");
-
-        auto* target = findHookTarget(id);
-        if (!target) luaL_error(L, "geode.hook target not found: %s", id);
-
-        auto& state = hookStates()[id];
-        state.target = target;
-        auto liveTotal = compactAndCountLiveCallbacks();
-        if (liveTotal >= luax::kMaxHookCallbacksGlobal) {
-            luaL_error(L, "geode.hook global callback limit exceeded");
-        }
-        if (state.callbacks.size() >= luax::kMaxHookCallbacksPerTarget) {
-            luaL_error(L, "geode.hook target callback limit exceeded for %s", id);
-        }
-
-        if (!state.hook) {
-            auto result = target->createHook(target->displayName);
-            if (result.isErr()) {
-                luaL_error(L, "geode.hook failed for %s: %s", id, result.unwrapErr().c_str());
-            }
-            state.hook = result.unwrap();
-            if (!state.hook->isEnabled()) {
-                auto enableResult = state.hook->enable();
-                if (enableResult.isErr()) {
-                    luaL_error(L, "geode.hook enable failed for %s: %s", id, enableResult.unwrapErr().c_str());
-                }
-            }
-        } else if (!state.hook->isEnabled()) {
-            auto result = state.hook->enable();
-            if (result.isErr()) {
-                luaL_error(L, "geode.hook enable failed for %s: %s", id, result.unwrapErr().c_str());
-            }
-        }
-
-        auto callback = std::make_shared<LuaHookCallback>();
-        callback->id = nextHookCallbackId()++;
-        callback->ref.reset(L, 2);
-        state.callbacks.push_back(callback);
-        pushHookHandle(L, callback->id);
-        return 1;
-    }
-
-"""
 
 
 def emit_hook_support() -> str:

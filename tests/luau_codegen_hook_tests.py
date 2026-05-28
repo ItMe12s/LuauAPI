@@ -15,7 +15,7 @@ if CODEGEN_DIR not in sys.path:
 
 import warnings
 
-from broma_parser import Arg, Class, Method, parse_file  # type: ignore[import-unresolved]
+from broma_parser import Arg, Class, Field, Method, parse_file  # type: ignore[import-unresolved]
 from emit_luau_bindings import (  # type: ignore[import-unresolved]
     _emit_class_file,
     _emit_common_file,
@@ -26,7 +26,7 @@ from emit_luau_types import emit as emit_luau_types  # type: ignore[import-unres
 from broma_parser import Root  # type: ignore[import-unresolved]
 from type_map import classify_arg, is_const_reference, is_out_reference  # type: ignore[import-unresolved]
 from filtering import group_supported, is_link_platform, supported  # type: ignore[import-unresolved]
-from hooks import android_symbol, emit_hook_support, emit_return_override, hook_address_expr, hook_offset  # type: ignore[import-unresolved]
+from hooks import android_symbol, emit_hook_support, emit_return_override, emit_value_decode, hook_address_expr, hook_offset  # type: ignore[import-unresolved]
 from link_attrs import class_link_platforms  # type: ignore[import-unresolved]
 from marshalling import check_arg  # type: ignore[import-unresolved]
 from model import build_class_lookup, object_classes, resolve_base  # type: ignore[import-unresolved]
@@ -396,6 +396,7 @@ class GeneratedSafetyTests(unittest.TestCase):
             foo,
             {},
             [],
+            [],
             {"CCObject": ccobject, "Foo": foo},
             set(),
             1,
@@ -409,7 +410,9 @@ class GeneratedSafetyTests(unittest.TestCase):
         )
 
     def test_common_file_asserts_userdata_tag_budget(self) -> None:
-        text = _emit_common_file([Class(name="CCObject", namespace="cocos2d")])
+        root = Root(classes=[Class(name="CCObject", namespace="cocos2d")])
+        plan = collect_plan(root, "win")
+        text = _emit_common_file(plan.emitted_classes, plan, "win")
 
         self.assertIn("static_assert(1 < LUA_UTAG_LIMIT", text)
 
@@ -422,10 +425,130 @@ class GeneratedSafetyTests(unittest.TestCase):
         self.assertIn("!callback || callback->removed", text)
 
     def test_hook_runtime_uses_named_deadline(self) -> None:
-        text = _emit_common_file([Class(name="CCObject", namespace="cocos2d")])
+        root = Root(classes=[Class(name="CCObject", namespace="cocos2d")])
+        plan = collect_plan(root, "win")
+        text = _emit_common_file(plan.emitted_classes, plan, "win")
 
         self.assertIn("luax::kHookScriptDeadlineMs", text)
         self.assertNotIn("targetId, 50", text)
+
+    def test_hook_api_is_table_only_with_modify_skip_fields(self) -> None:
+        text = emit_hook_support()
+
+        self.assertIn("geode.hook expected callback table", text)
+        self.assertNotIn("geode.hook expected function at arg 2", text)
+        self.assertIn("luaapi_geode_modify", text)
+        self.assertIn("luaapi_geode_skip", text)
+        self.assertIn("luaapi_geode_fields", text)
+
+    def test_invalid_skip_value_continues_before_chain(self) -> None:
+        text = emit_hook_support()
+
+        self.assertIn('returned invalid skip value", targetId', text)
+        self.assertIn("continue;", text)
+        self.assertIn("return true;", text)
+
+    def test_ui_button_config_decode_supported_for_hook_overrides(self) -> None:
+        info = TypeInfo(
+            kind="value", cxx_type="UIButtonConfig", lua_type="UIButtonConfig"
+        )
+        text = "".join(emit_value_decode(info, "config", "-1", "hook args"))
+
+        self.assertIn("luax::toUIButtonConfig", text)
+        self.assertIn("config = ", text)
+
+    def test_generated_hook_thunk_runs_pre_branch(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        cls = Class(
+            name="CCNode",
+            namespace="cocos2d",
+            bases=["CCObject"],
+            methods=[
+                Method(
+                    name="setTag",
+                    ret="void",
+                    args=[Arg("int", "tag")],
+                    platforms=all_platforms("0x1"),
+                )
+            ],
+        )
+
+        text = _emit_class_file(
+            cls,
+            {"setTag": cls.methods},
+            [(cls, cls.methods[0])],
+            [],
+            {"CCObject": ccobject, "CCNode": cls},
+            set(),
+            1,
+            "win",
+        )
+
+        self.assertIn("runLuaPreHooks", text)
+        self.assertIn("skipOriginal", text)
+        self.assertIn("lua_objlen", text)
+        self.assertIn("arg0 = arg0Override", text)
+        self.assertIn("if (!skipOriginal)", text)
+
+    def test_generated_field_accessors_are_registered(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        cls = Class(
+            name="CCNode",
+            namespace="cocos2d",
+            bases=["CCObject"],
+            fields=[Field("m_nTag", "int")],
+        )
+
+        text = _emit_class_file(
+            cls,
+            {},
+            [],
+            [(cls, cls.fields[0])],
+            {"CCObject": ccobject, "CCNode": cls},
+            set(),
+            1,
+            "win",
+        )
+
+        self.assertIn("luaapi_CCNode_field_get_m_nTag", text)
+        self.assertIn("self->m_nTag", text)
+        self.assertIn("luaapi_CCNode_field_register_m_nTag<cocos2d::CCNode>(L);", text)
+        self.assertIn('luax::Usertype<T>::field(L, "m_nTag"', text)
+
+    def test_field_plan_and_types_include_ccnode_m_fields_only(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        ccnode = Class(
+            name="CCNode",
+            namespace="cocos2d",
+            bases=["CCObject"],
+            fields=[Field("m_obPosition", "cocos2d::CCPoint")],
+        )
+        root = Root(classes=[ccobject, ccnode])
+
+        plan = collect_plan(root, "win")
+        files = emit_luau_types(root, "win", plan=plan)
+
+        self.assertEqual(len(plan.field_targets_by_class["CCNode"]), 1)
+        self.assertIn("m_fields: { [string]: any }", files["geode_cocos2d.d.luau"])
+        self.assertIn("m_obPosition: CCPoint", files["geode_cocos2d.d.luau"])
+        self.assertIn("declare class CCObject end", files["geode_cocos2d.d.luau"])
+
+    def test_inaccessible_broma_field_is_not_bound(self) -> None:
+        ccobject = Class(
+            name="CCObject",
+            namespace="cocos2d",
+            fields=[Field("m_nChildIndex", "int")],
+        )
+        root = Root(classes=[ccobject])
+
+        plan = collect_plan(root, "win")
+        files = emit_luau_types(root, "win", plan=plan)
+
+        self.assertEqual(plan.field_targets_by_class.get("CCObject", []), [])
+        self.assertIn(
+            "-- skipped m_nChildIndex: inaccessible-field",
+            files["geode_cocos2d.d.luau"],
+        )
 
 
 class LuauTypeEmissionTests(unittest.TestCase):
@@ -1014,7 +1137,9 @@ class CodegenIoTests(unittest.TestCase):
 
         tmpdir = tempfile.mkdtemp()
         try:
-            with open(os.path.join(tmpdir, "GeometryDash.bro"), "w", encoding="utf-8") as f:
+            with open(
+                os.path.join(tmpdir, "GeometryDash.bro"), "w", encoding="utf-8"
+            ) as f:
                 f.write("class Foo {\n    void bar();\n};\n")
             with warnings.catch_warnings(record=True) as w:
                 warnings.simplefilter("always")
@@ -1181,11 +1306,15 @@ class F12ParityReportTests(unittest.TestCase):
             name="Foo",
             namespace="gd",
             bases=["CCObject"],
-            methods=[Method(name="shared", ret="void", args=[], platforms=all_platforms())],
+            methods=[
+                Method(name="shared", ret="void", args=[], platforms=all_platforms())
+            ],
         )
         root = Root(classes=[ccobject, foo])
         platforms = ("win", "m1", "ios", "android32", "android64")
-        plans = {platform: collect_platform_plan(root, platform) for platform in platforms}
+        plans = {
+            platform: collect_platform_plan(root, platform) for platform in platforms
+        }
 
         with mock.patch("parity.collect_platform_plan") as mocked_collect:
             data = collect_parity(root, platforms=platforms, plans_by_platform=plans)

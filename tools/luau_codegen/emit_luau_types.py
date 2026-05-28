@@ -3,7 +3,8 @@ from __future__ import annotations
 import re
 from typing import Dict, List, Sequence, Tuple
 
-from broma_parser import Class, Method, Root
+from broma_parser import Class, Field, Method, Root
+from fields import bindable_field
 from model import lua_namespace, short_name
 from plan import EmitPlan, collect_plan
 from type_map import TypeInfo, classify_arg, classify_return, enum_lua_names
@@ -160,6 +161,22 @@ def _refs_from_method(
     return object_refs, value_refs
 
 
+def _refs_from_fields(
+    cls: Class, fields: Sequence[Field], objects: Dict[str, Class]
+) -> tuple[set[str], set[str]]:
+    object_refs: set[str] = set()
+    value_refs: set[str] = set()
+    for field in fields:
+        ok, _, _, ret = bindable_field(field, objects, cls)
+        if not ok or not ret:
+            continue
+        if ret.kind == "object":
+            object_refs.add(_object_type_name(ret))
+        elif ret.kind == "value":
+            value_refs.add(ret.lua_type)
+    return object_refs, value_refs
+
+
 def _base_type_refs(
     cls: Class, objects: Dict[str, Class], skipped_classes: set
 ) -> set[str]:
@@ -183,6 +200,8 @@ def _all_object_type_refs(
         if cls.name in skipped_classes or lua_namespace(cls) != source_namespace:
             continue
         refs.update(_base_type_refs(cls, objects, skipped_classes))
+        object_refs, _ = _refs_from_fields(cls, cls.fields, objects)
+        refs.update(object_refs)
         for methods in grouped_by_class[cls.name].values():
             for method in methods:
                 object_refs, _ = _refs_from_method(method, objects)
@@ -220,6 +239,8 @@ def _object_refs_for_classes(
         if not cls or name in skipped_classes:
             continue
         refs.update(_base_type_refs(cls, objects, skipped_classes))
+        object_refs, _ = _refs_from_fields(cls, cls.fields, objects)
+        refs.update(object_refs)
         for methods in grouped_by_class.get(name, {}).values():
             for method in methods:
                 object_refs, _ = _refs_from_method(method, objects)
@@ -264,6 +285,8 @@ def _external_value_refs(
     for cls in classes:
         if cls.name in skipped_classes or lua_namespace(cls) != source_namespace:
             continue
+        _, field_value_refs = _refs_from_fields(cls, cls.fields, objects)
+        refs.update(field_value_refs)
         for methods in grouped_by_class[cls.name].values():
             for method in methods:
                 _, value_refs = _refs_from_method(method, objects)
@@ -473,6 +496,7 @@ def _root_header(label: str) -> List[str]:
 def _emit_class(
     cls: Class,
     grouped: Dict[str, List[Method]],
+    field_targets: list[tuple[Class, Field]],
     objects: Dict[str, Class],
     skipped_classes: set,
 ) -> List[str]:
@@ -488,10 +512,22 @@ def _emit_class(
         for k, v in grouped.items()
         if not v[0].is_static and k not in LUAU_KEYWORDS
     }
-    if not instance_methods:
+    bound_field_names = {field.name for _, field in field_targets}
+    field_lines: List[str] = []
+    if _is_ccnode_descendant(cls, objects, skipped_classes):
+        field_lines.append("    m_fields: { [string]: any }\n")
+    for field in cls.fields:
+        ok, reason, _, ret = bindable_field(field, objects, cls)
+        if ok and field.name in bound_field_names and ret:
+            field_lines.append(f"    {field.name}: {ret.lua_type}\n")
+        elif reason:
+            field_lines.append(f"    -- skipped {field.name}: {reason}\n")
+
+    if not instance_methods and not field_lines:
         lines.append(f"declare class {cls.name}{base} end\n\n")
     else:
         lines.append(f"declare class {cls.name}{base}\n")
+        lines.extend(field_lines)
         for name, methods in sorted(instance_methods.items()):
             if len(methods) == 1:
                 m = methods[0]
@@ -514,6 +550,27 @@ def _emit_class(
                 lines.append(f"    {name}: {_method_type(cls, methods, objects)}\n")
         lines.append("end\n\n")
     return lines
+
+
+def _is_ccnode_descendant(
+    cls: Class,
+    objects: Dict[str, Class],
+    skipped_classes: set,
+    seen: set[str] | None = None,
+) -> bool:
+    if cls.name == "CCNode":
+        return True
+    if cls.name in skipped_classes:
+        return False
+    seen = seen or set()
+    if cls.name in seen:
+        return False
+    seen.add(cls.name)
+    for base in cls.bases:
+        base_cls = objects.get(short_name(base))
+        if base_cls and _is_ccnode_descendant(base_cls, objects, skipped_classes, seen):
+            return True
+    return False
 
 
 def emit(
@@ -554,7 +611,13 @@ def emit(
         if cls.name in skipped_classes:
             continue
         grouped = grouped_by_class[cls.name]
-        cls_lines = _emit_class(cls, grouped, objects, skipped_classes)
+        cls_lines = _emit_class(
+            cls,
+            grouped,
+            plan.field_targets_by_class.get(cls.name, []),
+            objects,
+            skipped_classes,
+        )
         chunk = "".join(cls_lines)
         if lua_namespace(cls) == cocos_namespace:
             cocos_class_chunks.append((cls.name, chunk))
@@ -641,12 +704,22 @@ def emit(
     main_lines.append("    remove: (self: HookHandle) -> boolean,\n")
     main_lines.append("    isEnabled: (self: HookHandle) -> boolean,\n")
     main_lines.append("}\n\n")
+    main_lines.append("export type HookCallbackTable = {\n")
+    main_lines.append("    before: ((...any) -> any)?,\n")
+    main_lines.append("    after: ((...any) -> any)?,\n")
+    main_lines.append("    priority: number?,\n")
+    main_lines.append("}\n\n")
     main_lines.append("export type GeodeNamespace = {\n")
     main_lines.append("    cocos2d: Cocos2dNamespace,\n")
     main_lines.append("    gd: GDNamespace,\n")
     main_lines.append(
-        "    hook: (target: string, callback: (...any) -> ()) -> HookHandle,\n"
+        "    hook: (target: string, callback: HookCallbackTable) -> HookHandle,\n"
     )
+    main_lines.append(
+        "    modify: (target: string, callback: HookCallbackTable) -> HookHandle,\n"
+    )
+    main_lines.append("    skip: (value: any?) -> any,\n")
+    main_lines.append("    fields: (self: any) -> { [string]: any },\n")
     main_lines.append("}\n\n")
     main_lines.append("declare geode: GeodeNamespace\n")
     output["geode.d.luau"] = "".join(main_lines)

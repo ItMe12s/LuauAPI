@@ -81,40 +81,60 @@ But it offers instant code compilation (Luau handles that).
 
 ### The three namespaces you'll use
 
-| Name | What's in it |
-| ---- | -------------- |
-| `geode` | Hooks + Geode stuff |
-| `geode.gd` | Geometry Dash game classes |
-| `geode.cocos2d` | UI / sprites / labels |
+| Name            | What's in it               |
+| --------------- | -------------------------- |
+| `geode`         | Hooks + Geode stuff        |
+| `geode.gd`      | Geometry Dash game classes |
+| `geode.cocos2d` | UI / sprites / labels      |
 
 ### Hooks (change game code when something runs)
 
 ```luau
-local hook = geode.hook("geode.gd.MenuLayer:init/0", function(self)
-    -- your code
-end)
+local hook = geode.hook("geode.gd.MenuLayer:init/0", {
+    priority = 0,
+    before = function(self)
+        self.m_fields.calls = (self.m_fields.calls or 0) + 1
+    end,
+    after = function(self, result)
+        return result
+    end,
+})
 ```
 
 - First argument is a string like `"Class:method/howManyArgs"`.
+- Second argument must be a callback table. Bare function hooks are rejected.
+- `geode.modify(...)` is the same API with Geode-style naming.
+- `before` runs before original. Return `{ args = { ... } }` to replace args.
+- Return `geode.skip(value)` from `before` to skip original and use `value` as result.
+- `after` runs after original or skipped result. Returning a value overrides result.
+- Lower `priority` runs earlier for `before`, higher `priority` runs earlier for `after`.
 - Hooks get **50 ms** of CPU time per run.
 - Normal scripts get **250 ms** by default.
 - Max **4096** hooks total, **64** on one target.
 
+### Broma fields and `m_fields`
+
+- Supported Broma fields are plain properties: `node.m_obPosition`, `node.m_nTag`.
+- Writes use same checks as method args: `node.m_obPosition = { x = 10, y = 20 }`.
+- Missing SDK fields and unsafe field shapes are skipped by codegen.
+- `self.m_fields` stores Lua scratch state on `CCNode` instances and descendants only.
+- `geode.fields(self)` returns same table as `self.m_fields`.
+- Scratch state lifetime follows underlying `CCNode`.
+
 ### Stuff you can't (and shouldn't) do in LuauAPI
 
-- You **can't** read raw `m_*` memory fields from Broma.
-- Use normal methods, hooks, or C++ `$modify` instead.
 - If a hook or script cost more than **50-250 ms** to run then this mod probably isn't for the job.
 - You should do heavy data processing and networking in C++ instead (e.g. Parsing level string, Argon auth).
+- Don't make custom libraries yet. There will be built-in libraries for stuff like Task, ImGui, Argon and more later.
 
 ### File names (important)
 
 Geode won't pack scripts in subfolders. One file = one name in the folder.
 
-| OK | Not OK |
-| -- | ------ |
-| `hook_GameLayer.luau` | `mod/hooks/GameLayer.luau` |
-| `mod_CoolScript.luau` | `stuff/deep/script.luau` |
+| **OK**                 | **Not OK**                 |
+| ---------------------- | -------------------------- |
+| `hook_GameLayer.luau`  | `mod/hooks/GameLayer.luau` |
+| `mod_CoolScript.luau`  | `stuff/deep/script.luau`   |
 
 Use prefixes to group files (`hook_`, `mod_`).
 
@@ -128,11 +148,16 @@ Use prefixes to group files (`hook_`, `mod_`).
 
 [`example/`](example/) is **not built** with the project. Steal code from it.
 
-| Files | What it shows |
-| ----- | ------------- |
-| [`minimalMain.cpp`](example/minimalMain.cpp) + [`Bootstrap.luau`](example/Bootstrap.luau) | Smallest setup |
-| [`main.cpp`](example/main.cpp) + [`MainThreadBootstrap.luau`](example/MainThreadBootstrap.luau) | Run on main thread + hook UI |
-| [`main.cpp`](example/main.cpp) + [`AsyncBootstrap.luau`](example/AsyncBootstrap.luau) | Load file in background, run on main thread |
+| Files                                                         | What it shows                               |
+| ------------------------------------------------------------- | ------------------------------------------- |
+| [`minimalMain.cpp`](example/minimalMain.cpp)                  | Smallest setup                              |
+| [`Bootstrap.luau`](example/Bootstrap.luau)                    | ^^^                                         |
+| [`main.cpp`](example/main.cpp)                                | Run on main thread + hook UI                |
+| [`MainThreadBootstrap.luau`](example/MainThreadBootstrap.luau)| ^^^                                         |
+| [`main.cpp`](example/main.cpp)                                | Load file in background, run on main thread |
+| [`AsyncBootstrap.luau`](example/AsyncBootstrap.luau)          | ^^^                                         |
+| [`main.cpp`](example/main.cpp)                                | Modify-style before/after hooks             |
+| [`HookModifyBootstrap.luau`](example/HookModifyBootstrap.luau)| ^^^                                         |
 
 ---
 
@@ -146,29 +171,29 @@ One Luau engine for **all** mods that depend on this. It starts early so it's re
 
 ### Functions
 
-| Function | What it does |
-| -------- | ------------ |
-| `runFile(root, "file.luau", 250)` | Run a `.luau` file from your mod resources |
-| `runScript(root, source, "name.luau", 250)` | Run text you pass in |
-| `runFileAsync(...)` | Read file in background, run on main thread |
-| `runScriptAsync(...)` | Compile in background, run on main thread |
-| `isReady()` | `true` if runtime is good to go |
-| `status()` | `NotReady`, `Ready`, `InitFailed`, or `Panicked` |
-| `lastError()` | Last error message (string) |
-| `memoryUsage()` | How much RAM the VM uses (bytes) |
-| `memoryLimit()` | Max RAM allowed (bytes) |
-| `codegenEnabled()` | Is speed-up codegen on? |
+| Function                                    | What it does                                     |
+| ------------------------------------------- | ------------------------------------------------ |
+| `runFile(root, "file.luau", 250)`           | Run a `.luau` file from your mod resources       |
+| `runScript(root, source, "name.luau", 250)` | Run text you pass in                             |
+| `runFileAsync(...)`                         | Read file in background, run on main thread      |
+| `runScriptAsync(...)`                       | Compile in background, run on main thread        |
+| `isReady()`                                 | `true` if runtime is good to go                  |
+| `status()`                                  | `NotReady`, `Ready`, `InitFailed`, or `Panicked` |
+| `lastError()`                               | Last error message (string)                      |
+| `memoryUsage()`                             | How much RAM the VM uses (bytes)                 |
+| `memoryLimit()`                             | Max RAM allowed (bytes)                          |
+| `codegenEnabled()`                          | Is speed-up codegen on?                          |
 
 ### Numbers to remember
 
-| Thing | Value |
-| ----- | ----- |
-| Default script time limit | **250 ms** |
-| Hook time limit | **50 ms** |
-| Max VM memory | **512 MiB** |
-| Pass `0` for deadline | No time limit for that run |
-| Max hooks (all) | **4096** |
-| Max hooks (one target) | **64** |
+| Thing                     | Value                      |
+| ------------------------- | -------------------------- |
+| Default script time limit | **250 ms**                 |
+| Hook time limit           | **50 ms**                  |
+| Max VM memory             | **512 MiB**                |
+| Pass `0` for deadline     | No time limit for that run |
+| Max hooks (all)           | **4096**                   |
+| Max hooks (one target)    | **64**                     |
 
 ### Errors (two places)
 
@@ -185,12 +210,12 @@ queueInMainThread([] {
 
 ### If things go wrong
 
-| Problem | What happens |
-| ------- | -------------- |
-| **Panic** | Game VM is dead (`Panicked`). No fix. |
-| **Out of memory** | Hit 512 MiB cap. Alloc fails. |
+| Problem                  | What happens                                |
+| ------------------------ | ------------------------------------------- |
+| **Panic**                | Game VM is dead (`Panicked`). No fix.       |
+| **Out of memory**        | Hit 512 MiB cap. Alloc fails.               |
 | Call API off main thread | Wrong/default answers. Runtime won't start. |
-| C++ you call from Luau | Not counted in the ms time limit |
+| C++ you call from Luau   | Not counted in the ms time limit.           |
 
 You usually **don't** need to check `isReady()` every time. It loads at startup.
 
@@ -343,14 +368,14 @@ CI builds Win, Mac, iOS, Android32, and Android64. See [`.github/workflows/multi
 
 ### Where stuff lives
 
-| Folder | What's there |
-| ------ | ------------ |
-| `include/` | Header other mods include |
-| `src/` | Main mod + API code |
-| `src/lua/` | VM, require, paths |
-| `tools/luau_codegen/` | Generates bindings + types |
-| `tests/` | Fast tests without full game |
-| `example/` | Samples for mod authors |
+| Folder                | Contents / Purpose               |
+| --------------------- | -------------------------------- |
+| `include/`            | Headers for other mods to use    |
+| `src/`                | Main mod and API source code     |
+| `src/lua/`            | VM code, `require`, path logic   |
+| `tools/luau_codegen/` | Binding and type generators      |
+| `tests/`              | Fast/Python tests (no full game) |
+| `example/`            | Example mods for authors         |
 
 Codegen script is [`tools/luau_codegen/codegen.py`](tools/luau_codegen/codegen.py). CMake target is `luauapi_codegen`.
 

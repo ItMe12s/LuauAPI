@@ -18,6 +18,7 @@ import emit_luau_bindings
 import emit_luau_types
 import parity
 import plan as emit_plan
+from fields import field_key
 from intersection import INTERSECTION_PLATFORMS
 from model import BRO_FILES, object_classes, status_for
 
@@ -111,7 +112,12 @@ def _write_if_changed(path: str, content: str) -> None:
             raise
 
 
-def _emit_schema(root: broma_parser.Root, path: str) -> None:
+def _emit_schema(root: broma_parser.Root, path: str, plan: emit_plan.EmitPlan) -> None:
+    bound_fields = {
+        field_key(cls, field)
+        for targets in plan.field_targets_by_class.values()
+        for cls, field in targets
+    }
     classes = []
     for cls in root.classes:
         classes.append(
@@ -139,7 +145,13 @@ def _emit_schema(root: broma_parser.Root, path: str) -> None:
                     for m in cls.methods
                 ],
                 "fields": [
-                    {"name": f.name, "type": f.type, "count": f.count, "line": f.line}
+                    {
+                        "name": f.name,
+                        "type": f.type,
+                        "count": f.count,
+                        "line": f.line,
+                        "bound": field_key(cls, f) in bound_fields,
+                    }
                     for f in cls.fields
                 ],
             }
@@ -155,6 +167,7 @@ def _emit_report(
     skipped: list[tuple[str, str, str]],
     target_platform: str,
     hook_target_count: int,
+    field_target_count: int,
     plan: emit_plan.EmitPlan | None = None,
 ) -> None:
     obj = object_classes(root)
@@ -172,6 +185,7 @@ def _emit_report(
         f"- Methods emitted: **{emitted_methods}**\n",
         f"- Methods skipped: **{len(skipped)}**\n",
         f"- Hook targets emitted: **{hook_target_count}**\n",
+        f"- Fields bound: **{field_target_count}**\n",
         f"- Generated binding files: **{len(cxx_paths)}**\n",
     ]
     if plan and plan.intersection_stats.enabled:
@@ -182,6 +196,7 @@ def _emit_report(
                 f"- Intersection platforms: **{', '.join(stats.platforms)}**\n",
                 f"- Common binding methods: **{stats.common_supported_methods}**\n",
                 f"- Common hook targets: **{stats.common_hook_targets}**\n",
+                f"- Common fields: **{stats.common_fields}**\n",
                 f"- Methods removed by intersection: **{len(stats.removed_methods)}**\n",
                 f"- Hooks removed by intersection: **{len(stats.removed_hooks)}**\n",
             ]
@@ -340,7 +355,7 @@ def main(argv: List[str]) -> int:
             name = os.path.basename(orphan)
             if name not in type_files:
                 os.remove(orphan)
-        _emit_schema(root, schema_path)
+        _emit_schema(root, schema_path, plan)
         parity_path = os.path.join(args.out, "parity.json")
         parity_data = parity.collect_parity(root, plans_by_platform=plans_by_platform)
         _write_if_changed(parity_path, parity.emit_json(parity_data))
@@ -350,6 +365,7 @@ def main(argv: List[str]) -> int:
 
     types_paths = [os.path.join(args.types_out, f) for f in type_files]
     hook_count = emit_plan.hook_target_count(root, args.platform, plan=plan)
+    field_count = emit_plan.field_target_count(root, args.platform, plan=plan)
     try:
         _emit_report(
             root,
@@ -359,6 +375,7 @@ def main(argv: List[str]) -> int:
             skipped,
             args.platform,
             hook_count,
+            field_count,
             plan,
         )
     except OSError as exc:
@@ -367,6 +384,7 @@ def main(argv: List[str]) -> int:
     log_info(f"parsed {len(root.classes)} classes")
     log_info(f"target platform {args.platform}")
     log_info(f"hook targets {hook_count}")
+    log_info(f"fields bound {field_count}")
     for path in written_paths:
         log_info(f"wrote {path}")
     for path in types_paths:

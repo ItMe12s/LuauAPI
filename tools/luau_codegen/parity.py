@@ -9,6 +9,7 @@ from plan import (
     EmitPlan,
     collect_plan,
     collect_platform_plan,
+    field_target_count,
     hook_target_count,
     plan_outputs,
 )
@@ -83,6 +84,7 @@ def collect_parity(
             "methodsEmitted": total_methods - len(plan.skipped),
             "methodsSkipped": len(plan.skipped),
             "hookTargets": hook_target_count(root, platform, plan=plan),
+            "fieldsBound": field_target_count(root, platform, plan=plan),
             "generatedBindingFiles": len(plan_outputs(root, platform, plan=plan)),
             "skippedClasses": len(plan.skipped_classes),
             "emittedClasses": len(plan.emitted_classes),
@@ -148,6 +150,7 @@ def _intersection_summary(plan: EmitPlan, total_methods: int) -> dict[str, Any]:
         "platforms": list(stats.platforms),
         "commonBindingMethods": stats.common_supported_methods,
         "commonHookTargets": stats.common_hook_targets,
+        "commonFields": stats.common_fields,
         "methodsEmitted": total_methods - len(plan.skipped),
         "methodsSkipped": len(plan.skipped),
         "hookTargets": sum(
@@ -158,6 +161,7 @@ def _intersection_summary(plan: EmitPlan, total_methods: int) -> dict[str, Any]:
         "skippedClasses": len(plan.skipped_classes),
         "methodsRemoved": len(stats.removed_methods),
         "hooksRemoved": len(stats.removed_hooks),
+        "fieldsRemoved": len(stats.removed_fields),
     }
 
 
@@ -210,14 +214,14 @@ def emit_markdown(data: dict[str, Any]) -> str:
     lines = ["# LuauAPI parity report\n\n"]
     lines.append("## Summary\n\n")
     lines.append(
-        "| Platform | Methods emitted | Methods skipped | Hook targets | Binding files | Skipped classes |\n"
+        "| Platform | Methods emitted | Methods skipped | Hook targets | Fields bound | Binding files | Skipped classes |\n"
     )
-    lines.append("| --- | ---: | ---: | ---: | ---: | ---: |\n")
+    lines.append("| --- | ---: | ---: | ---: | ---: | ---: | ---: |\n")
     for platform in data["platforms"]:
         row = data["summary"][platform]
         lines.append(
             f"| {platform} | {row['methodsEmitted']} | {row['methodsSkipped']} | "
-            f"{row['hookTargets']} | {row['generatedBindingFiles']} | {row['skippedClasses']} |\n"
+            f"{row['hookTargets']} | {row.get('fieldsBound', 0)} | {row['generatedBindingFiles']} | {row['skippedClasses']} |\n"
         )
 
     if "intersection" in data:
@@ -227,9 +231,11 @@ def emit_markdown(data: dict[str, Any]) -> str:
         lines.append(f"- platforms: {', '.join(final['platforms'])}\n")
         lines.append(f"- common binding methods: {final['commonBindingMethods']}\n")
         lines.append(f"- common hook targets: {final['commonHookTargets']}\n")
+        lines.append(f"- common fields: {final.get('commonFields', 0)}\n")
         lines.append(f"- generated binding files: {final['generatedBindingFiles']}\n")
         lines.append(f"- methods removed: {final['methodsRemoved']}\n")
         lines.append(f"- hooks removed: {final['hooksRemoved']}\n")
+        lines.append(f"- fields removed: {final.get('fieldsRemoved', 0)}\n")
 
     lines.append("\n## Runtime-Safe Hints\n\n")
     hints = data["hints"]

@@ -5,7 +5,8 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Dict, List, Set
 
-from broma_parser import Class, Method, Root
+from broma_parser import Class, Field, Method, Root
+from fields import bindable_field, field_key
 from filtering import group_supported, linkless_class_names, prune_skipped_class_refs
 from hooks import hookable
 from intersection import (
@@ -27,6 +28,7 @@ class EmitPlan:
     skipped_classes: Set[str]
     supported_by_class: dict[str, dict[str, list[Method]]]
     hook_targets_by_class: dict[str, List[tuple[Class, Method]]]
+    field_targets_by_class: dict[str, List[tuple[Class, Field]]]
     depths: dict[str, int]
     emitted_classes: List[Class] = field(default_factory=list)
     intersection_stats: IntersectionStats = field(default_factory=IntersectionStats)
@@ -55,7 +57,11 @@ def _emitted_classes(plan: EmitPlan) -> List[Class]:
         if cls.name in plan.skipped_classes:
             continue
         grouped = plan.supported_by_class[cls.name]
-        if grouped or plan.hook_targets_by_class[cls.name]:
+        if (
+            grouped
+            or plan.hook_targets_by_class[cls.name]
+            or plan.field_targets_by_class.get(cls.name, [])
+        ):
             out.append(cls)
     return out
 
@@ -92,6 +98,7 @@ def collect_platform_plan(root: Root, target_platform: str = "win") -> EmitPlan:
     }
 
     hook_targets_by_class: dict[str, List[tuple[Class, Method]]] = defaultdict(list)
+    field_targets_by_class: dict[str, List[tuple[Class, Field]]] = defaultdict(list)
     for cls in classes:
         if cls.name in skipped_classes:
             continue
@@ -100,6 +107,10 @@ def collect_platform_plan(root: Root, target_platform: str = "win") -> EmitPlan:
             for method in methods:
                 if hookable(cls, method, objects, target_platform):
                     hook_targets_by_class[cls.name].append((cls, method))
+        for field in cls.fields:
+            ok, _, _, _ = bindable_field(field, objects, cls)
+            if ok:
+                field_targets_by_class[cls.name].append((cls, field))
 
     plan = EmitPlan(
         classes=classes,
@@ -109,6 +120,7 @@ def collect_platform_plan(root: Root, target_platform: str = "win") -> EmitPlan:
         skipped_classes=skipped_classes,
         supported_by_class=supported_by_class,
         hook_targets_by_class=hook_targets_by_class,
+        field_targets_by_class=field_targets_by_class,
         depths=depths,
     )
     plan.emitted_classes = _emitted_classes(plan)
@@ -134,6 +146,7 @@ def _apply_intersection(
         platforms=result.platforms,
         common_supported_methods=len(result.common_supported_method_keys),
         common_hook_targets=len(result.common_hook_method_keys),
+        common_fields=len(result.common_field_keys),
     )
     plan.intersection_stats = stats
 
@@ -172,6 +185,17 @@ def _apply_intersection(
             stats.removed_hooks.append((hook_cls.name, method.name, reason))
         plan.hook_targets_by_class[cls.name] = kept_hooks
 
+        kept_fields: List[tuple[Class, Field]] = []
+        for field_cls, field in plan.field_targets_by_class.get(cls.name, []):
+            key = field_key(field_cls, field)
+            if key in result.common_field_keys:
+                kept_fields.append((field_cls, field))
+                continue
+            missing = result.missing_field_platforms_by_key.get(key, ())
+            reason = _intersection_reason(missing)
+            stats.removed_fields.append((field_cls.name, field.name, reason))
+        plan.field_targets_by_class[cls.name] = kept_fields
+
     changed = True
     while changed:
         changed = False
@@ -180,6 +204,7 @@ def _apply_intersection(
             for cls in plan.classes
             if not plan.supported_by_class[cls.name]
             and not plan.hook_targets_by_class[cls.name]
+            and not plan.field_targets_by_class.get(cls.name, [])
         }
         new_skipped = outputless - plan.skipped_classes
         if new_skipped:
@@ -203,6 +228,12 @@ def _apply_intersection(
                 and plan.hook_targets_by_class[cls_name]
             ):
                 plan.hook_targets_by_class[cls_name] = []
+                changed = True
+            if (
+                cls_name in plan.skipped_classes
+                and plan.field_targets_by_class[cls_name]
+            ):
+                plan.field_targets_by_class[cls_name] = []
                 changed = True
 
     lookup = build_class_lookup(plan.classes)
@@ -263,3 +294,14 @@ def hook_target_count(
     if plan is None:
         plan = collect_plan(root, target_platform, plans_by_platform=plans_by_platform)
     return sum(len(targets) for targets in plan.hook_targets_by_class.values())
+
+
+def field_target_count(
+    root: Root,
+    target_platform: str = "win",
+    plan: EmitPlan | None = None,
+    plans_by_platform: dict[str, EmitPlan] | None = None,
+) -> int:
+    if plan is None:
+        plan = collect_plan(root, target_platform, plans_by_platform=plans_by_platform)
+    return sum(len(targets) for targets in plan.field_targets_by_class.values())

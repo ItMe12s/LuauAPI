@@ -10,6 +10,7 @@ namespace lua = imes::luauapi;
 
 namespace {
     constexpr char const kMainThreadScript[] = "MainThreadBootstrap.luau";
+    constexpr char const kModifyScript[] = "HookModifyBootstrap.luau";
     constexpr char const kAsyncScript[] = "AsyncBootstrap.luau";
 
     geode::async::TaskHolder<geode::Result<void>> g_asyncScriptTask;
@@ -36,6 +37,11 @@ namespace {
         reportScriptResult(
             kMainThreadScript,
             lua::runFile(Mod::get()->getResourcesDir(), kMainThreadScript)
+        );
+
+        reportScriptResult(
+            kModifyScript,
+            lua::runFile(Mod::get()->getResourcesDir(), kModifyScript)
         );
 
         g_asyncScriptTask.spawn(

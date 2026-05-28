@@ -1,6 +1,7 @@
 #include <Geode/loader/Loader.hpp>
 #include <Geode/loader/Log.hpp>
 #include <Geode/loader/ModEvent.hpp>
+#include "lua/bindings/internal/Fields.hpp"
 #include <cocos2d.h>
 
 namespace geode {
@@ -30,6 +31,7 @@ namespace cocos2d {
     }
 
     void CCObject::release() {
+        luax::Fields::evictIfFinalRelease(this);
         if (m_uReference > 0) {
             --m_uReference;
         }

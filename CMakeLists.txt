@@ -269,6 +269,8 @@ if(LUAUAPI_BUILD_TESTS)
         src/lua/Binding.cpp
         src/lua/Requirer.cpp
         src/lua/Runtime.cpp
+        src/lua/bindings/internal/Fields.cpp
+        src/lua/bindings/internal/Usertype.cpp
         src/lua/bindings/internal/UsertypeRegistry.cpp
     )
     target_compile_features(luauapi_tests PRIVATE cxx_std_23)
