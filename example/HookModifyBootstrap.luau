@@ -12,11 +12,13 @@ local setIntHook = geode.modify("geode.gd.GameManager:setIntGameVariable/2", {
                 },
             }
         end
+        return nil
     end,
     after = function(self, key, value)
         if key == "luauapi.demo.count.redirected" then
             print("redirected int variable", value)
         end
+        return nil
     end,
 })
 
@@ -25,6 +27,7 @@ local skipHook = geode.hook("geode.gd.GameManager:getGameVariable/1", {
         if key == "luauapi.demo.alwaysTrue" then
             return geode.skip(true)
         end
+        return nil
     end,
     after = function(self, key, result)
         if key == "luauapi.demo.alwaysTrue" then
