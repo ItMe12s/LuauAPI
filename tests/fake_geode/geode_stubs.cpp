@@ -38,6 +38,8 @@ namespace geode {
 
     SettingV3::~SettingV3() = default;
 
+    SettingV3::SettingV3() : m_impl(std::make_shared<GeodeImpl>()) {}
+
     AxisLayout::~AxisLayout() = default;
     void AxisLayout::apply(cocos2d::CCNode*) {}
     cocos2d::CCSize AxisLayout::getSizeHint(cocos2d::CCNode*) const { return {}; }
@@ -51,4 +53,16 @@ namespace geode {
 
     BasedButtonSprite::BasedButtonSprite() = default;
     BasedButtonSprite::~BasedButtonSprite() = default;
+
+    cocos2d::CCSize BasedButtonSprite::getMaxTopSize() const {
+        return m_obContentSize - cocos2d::CCSize { 18.f, 18.f };
+    }
+
+    cocos2d::CCSize CircleButtonSprite::getMaxTopSize() const {
+        return m_obContentSize * 0.65f;
+    }
+
+    cocos2d::CCSize EditorButtonSprite::getMaxTopSize() const {
+        return m_obContentSize - cocos2d::CCSize { 8.f, 8.f };
+    }
 }

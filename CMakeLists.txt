@@ -94,6 +94,10 @@ endif()
 
 add_subdirectory($ENV{GEODE_SDK} ${CMAKE_CURRENT_BINARY_DIR}/geode)
 
+if(LUAUAPI_BUILD_TESTS AND TARGET GeodeBindings)
+    target_compile_definitions(GeodeBindings PUBLIC GEODE_EXPORTING)
+endif()
+
 find_package(Python3 3.11 REQUIRED COMPONENTS Interpreter)
 
 file(READ ${CMAKE_CURRENT_SOURCE_DIR}/mod.json LUAUAPI_MOD_JSON)
@@ -264,7 +268,10 @@ if(LUAUAPI_BUILD_TESTS)
         tests/host_geode_stubs.cpp
         tests/fake_geode/cocos_stubs.cpp
         tests/fake_geode/geode_stubs.cpp
+        tests/fake_geode/geode_loader_stubs.cpp
+        tests/fake_geode/loader_stubs.cpp
         tests/usertype_registry_tests.cpp
+        "$ENV{GEODE_SDK}/loader/src/utils/JsonValidation.cpp"
         src/api.cpp
         src/lua/Binding.cpp
         src/lua/Requirer.cpp
@@ -279,12 +286,25 @@ if(LUAUAPI_BUILD_TESTS)
     target_link_libraries(luauapi_tests PRIVATE
         Catch2::Catch2WithMain
         GeodeBindings
+        mat-json-impl
         Luau.Ast
         Luau.CodeGen
         Luau.Compiler
         Luau.Require
         Luau.VM
     )
+    if(WIN32)
+        set(LUAUAPI_GEODE_LINK_DIR "$ENV{GEODE_SDK}/loader/include/link/win64")
+        if(EXISTS "${LUAUAPI_GEODE_LINK_DIR}/libcocos2d.lib")
+            target_link_libraries(luauapi_tests PRIVATE
+                "${LUAUAPI_GEODE_LINK_DIR}/libcocos2d.lib"
+                "${LUAUAPI_GEODE_LINK_DIR}/libExtensions.lib"
+                "${LUAUAPI_GEODE_LINK_DIR}/glew32.lib"
+                "${LUAUAPI_GEODE_LINK_DIR}/fmod.lib"
+                opengl32
+            )
+        endif()
+    endif()
 
     list(APPEND CMAKE_MODULE_PATH ${catch2_SOURCE_DIR}/extras)
     include(Catch)
