@@ -9,6 +9,7 @@ namespace geode {
     class Patch::Impl {};
     class AxisLayout::Impl {};
     class SettingV3::GeodeImpl {};
+    class BasedButtonSprite::Impl {};
 
     Hook::~Hook() = default;
     Patch::~Patch() = default;
