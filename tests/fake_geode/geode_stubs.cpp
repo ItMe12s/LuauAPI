@@ -46,6 +46,8 @@ namespace geode {
     cocos2d::CCSize AnchorLayout::getSizeHint(cocos2d::CCNode*) const { return {}; }
 
     CopySizeLayout::~CopySizeLayout() = default;
+    void CopySizeLayout::apply(cocos2d::CCNode*) {}
+    cocos2d::CCSize CopySizeLayout::getSizeHint(cocos2d::CCNode*) const { return {}; }
 
     BasedButtonSprite::BasedButtonSprite() = default;
     BasedButtonSprite::~BasedButtonSprite() = default;

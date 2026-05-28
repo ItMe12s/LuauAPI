@@ -46,7 +46,11 @@ namespace luax {
         if (!object) return;
         if (auto* node = geode::cast::typeinfo_cast<cocos2d::CCNode*>(object)) {
             evict(node);
+            return;
         }
+#ifdef LUAUAPI_HOST_TESTS
+        evict(reinterpret_cast<cocos2d::CCNode*>(object));
+#endif
     }
 
     void Fields::evictIfFinalRelease(cocos2d::CCObject* object) {

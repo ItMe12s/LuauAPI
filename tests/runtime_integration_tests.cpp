@@ -186,17 +186,18 @@ TEST_CASE("ccnode fields evict on final release") {
     auto* L = runtime->state();
     REQUIRE(L != nullptr);
 
-    cocos2d::CCNode node;
-    node.m_uReference = 1;
-    luax::Fields::push(L, &node);
+    cocos2d::CCObject object;
+    object.m_uReference = 1;
+    auto* nodeKey = reinterpret_cast<cocos2d::CCNode*>(&object);
+    luax::Fields::push(L, nodeKey);
     REQUIRE(lua_istable(L, -1));
     lua_pushinteger(L, 3);
     lua_setfield(L, -2, "calls");
     lua_pop(L, 1);
 
-    node.release();
+    object.release();
 
-    luax::Fields::push(L, &node);
+    luax::Fields::push(L, nodeKey);
     lua_getfield(L, -1, "calls");
     REQUIRE(lua_isnil(L, -1));
     lua_pop(L, 2);
