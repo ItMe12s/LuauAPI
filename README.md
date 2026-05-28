@@ -10,6 +10,8 @@ It runs **one shared Luau engine** for the whole game and gives you typed wrappe
 - Luau does **not** free you from caring about memory and speed.
 - Types help. Bad code is still bad code.
 - Don't vibecode your whole mod (duh, also this isn't in any training data yet).
+- [Read Mod Guidelines](https://docs.geode-sdk.org/mods/guidelines).
+- [Read Guidelines Tips](https://docs.geode-sdk.org/mods/guidelines-tips).
 
 ---
 
