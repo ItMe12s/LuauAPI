@@ -262,6 +262,8 @@ if(LUAUAPI_BUILD_TESTS)
         tests/path_rules_tests.cpp
         tests/require_path_tests.cpp
         tests/host_geode_stubs.cpp
+        tests/fake_geode/cocos_stubs.cpp
+        tests/fake_geode/geode_stubs.cpp
         tests/usertype_registry_tests.cpp
         src/api.cpp
         src/lua/Binding.cpp
@@ -281,6 +283,9 @@ if(LUAUAPI_BUILD_TESTS)
         Luau.Require
         Luau.VM
     )
+    if(WIN32)
+        target_link_options(luauapi_tests PRIVATE "/errorlimit:0")
+    endif()
 
     list(APPEND CMAKE_MODULE_PATH ${catch2_SOURCE_DIR}/extras)
     include(Catch)
