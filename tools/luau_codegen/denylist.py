@@ -225,6 +225,7 @@ INACCESSIBLE_METHODS = {
 
 INACCESSIBLE_CLASSES = {
     "CCGrabber",
+    "CCParticleBatchNode",  # iOS: typeinfo missing in linked cocos binary
     "CCProfilingTimer",
     "CCSchedulerScriptHandlerEntry",
     "CCScriptHandlerEntry",

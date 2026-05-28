@@ -4,6 +4,7 @@ import re
 from typing import Dict
 
 from broma_parser import Class, Field
+from denylist import INACCESSIBLE_CLASSES
 from type_map import TypeInfo, classify_arg, classify_return, normalize_type
 
 
@@ -40,4 +41,8 @@ def bindable_field(
         return False, f"unsupported-return:{field.type}", arg, None
     if arg.kind == "string" and arg.cxx_type.endswith("*"):
         return False, "string-pointer", arg, ret
+    if ret.kind == "object" and ret.class_name in INACCESSIBLE_CLASSES:
+        return False, f"inaccessible-type:{ret.class_name}", arg, ret
+    if arg.kind == "object" and arg.class_name in INACCESSIBLE_CLASSES:
+        return False, f"inaccessible-type:{arg.class_name}", arg, ret
     return True, "", arg, ret

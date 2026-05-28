@@ -235,10 +235,37 @@ If a method or hook is missing on one of those, it will **not** show up in your 
 
 You do **not** need to rebuild types per platform. Build LuauAPI once, copy `types/` once, done.
 
+### Generated type files
+
+Codegen writes these files into LuauAPI's `types/` folder (and into your mod after you copy them):
+
+| File                             | Contents                                             |
+|----------------------------------|----------------------------------------------------- |
+| `geode.d.luau`                   | `geode` namespace: hooks, `modify`, `skip`, `fields` |
+| `geode_cocos2d.d.luau`           | Cocos2d class declarations                           |
+| `geode_cocos2d_factories.d.luau` | Cocos2d factory and namespace types                  |
+| `geode_gd.d.luau`                | Geometry Dash class declarations (chunk 1)           |
+| `geode_gd_2.d.luau`              | GD classes (chunk 2)                                 |
+| `geode_gd_3.d.luau`              | GD classes (chunk 3)                                 |
+| `geode_gd_4.d.luau`              | GD classes (chunk 4)                                 |
+| `geode_gd_factories.d.luau`      | GD factory and namespace types                       |
+
+GD class files are split into smaller files for the language server. If there are more classes, new files like `geode_gd_5.d.luau` will appear automatically. Old unused split files are removed on the next build.
+
+Copy **all** `geode*.d.luau` files after a build, not a subset.
+
+To list the exact filenames your bindings produce:
+
+```bash
+python tools/luau_codegen/codegen.py --bindings <path-to-bindings> --list-type-outputs --platform win --geode-sdk <GEODE_SDK>
+```
+
+Use the same `--platform` as your Geode build when the list matters for that target.
+
 ### Getting types
 
 1. Build LuauAPI like any Geode mod (any platform build is fine for types).
-2. Copy the whole `types/` folder into your mod root.
+2. Copy the whole `types/` folder into your mod root (all `geode*.d.luau` files listed above).
 3. Commit or gitignore that folder in your mod (most people gitignore it).
 
 **Compile takes forever** without a beefy CPU. Sorry!!!
@@ -254,7 +281,7 @@ Types being the same does not mean you can skip testing.
 
 If something breaks on one platform, it was probably never in the shared type list, or it is a runtime issue, not a wrong types file.
 
-If you hack on LuauAPI itself, open `luauapi-gen/report.md` in the build folder to see what codegen dropped and why.
+If you hack on LuauAPI itself, see [Codegen outputs](#codegen-outputs-luauapi-gen) and open `luauapi-gen/report.md` in the build folder to see what codegen dropped and why.
 
 ---
 
@@ -262,7 +289,7 @@ If you hack on LuauAPI itself, open `luauapi-gen/report.md` in the build folder 
 
 Install **Luau Language Server** (JohnnyMorganz).
 
-Types are split into several files because one huge file breaks the LSP.
+Types are split into multiple files to avoid breaking the LSP. Make sure to register every `geode*.d.luau` file you copied, including any new `geode_gd_N.d.luau` files by adding a matching `@geode-gd-N` entry below.
 
 **`.vscode/settings.json`**
 
@@ -276,6 +303,8 @@ Put this in the file:
         "@geode-cocos2d-factories": "types/geode_cocos2d_factories.d.luau",
         "@geode-gd": "types/geode_gd.d.luau",
         "@geode-gd-2": "types/geode_gd_2.d.luau",
+        "@geode-gd-3": "types/geode_gd_3.d.luau",
+        "@geode-gd-4": "types/geode_gd_4.d.luau",
         "@geode-gd-factories": "types/geode_gd_factories.d.luau",
         "@geode": "types/geode.d.luau"
     },
@@ -313,7 +342,14 @@ YourMod
 |   |- hook_GameLayer.luau
 |- src/main.cpp
 |- types/
-|   |- (copied from LuauAPI build)
+|   |- geode.d.luau
+|   |- geode_cocos2d.d.luau
+|   |- geode_cocos2d_factories.d.luau
+|   |- geode_gd.d.luau
+|   |- geode_gd_2.d.luau
+|   |- geode_gd_3.d.luau
+|   |- geode_gd_4.d.luau
+|   |- geode_gd_factories.d.luau
 |- .luaurc
 ```
 
@@ -366,16 +402,41 @@ Also run test `luauapi_codegen_hooks` (Python script in `tests/`).
 
 CI builds Win, Mac, iOS, Android32, and Android64. See [`.github/workflows/multi-platform.yml`](.github/workflows/multi-platform.yml).
 
+### Codegen outputs (`luauapi-gen`)
+
+Building LuauAPI creates files in `${CMAKE_BINARY_DIR}/luauapi-gen/` for development and debugging. Dependent mods don't need these files.
+
+| Path (under `build/.../luauapi-gen/`) | Purpose                                                                          |
+| ------------------------------------- | -------------------------------------------------------------------------------- |
+| `report.md`                           | Human-readable summary of skipped methods, intersection stats, and emitted paths |
+| `schema.json`                         | Full parsed Broma metadata and which fields are bound                            |
+| `parity.json`                         | Cross-platform parity data for CI and tooling                                    |
+| `src/bindings_internal.hpp`           | Shared binding internals                                                         |
+| `src/bindings_common.cpp`             | Common registration and shared glue                                              |
+| `src/bindings_<ClassName>.cpp`        | One Luau binding translation unit per emitted class (count varies)               |
+
+Luau type stubs for mod authors are written separately to the repo-root [`types/`](types/) folder (gitignored here, produced on build).
+
+The binding file list is dynamic. List it after configure or with:
+
+```bash
+python tools/luau_codegen/codegen.py --bindings <path-to-bindings> --list-outputs --platform win --geode-sdk <GEODE_SDK>
+```
+
+CMake runs `--list-outputs` and `--list-type-outputs` at configure time so Ninja only rebuilds when generated files change.
+
 ### Where stuff lives
 
-| Folder                | Contents / Purpose               |
-| --------------------- | -------------------------------- |
-| `include/`            | Headers for other mods to use    |
-| `src/`                | Main mod and API source code     |
-| `src/lua/`            | VM code, `require`, path logic   |
-| `tools/luau_codegen/` | Binding and type generators      |
-| `tests/`              | Fast/Python tests (no full game) |
-| `example/`            | Example mods for authors         |
+| Folder                | Contents / Purpose                                         |
+| --------------------- | ---------------------------------------------------------- |
+| `include/`            | Headers for other mods to use                              |
+| `src/`                | Main mod and API source code                               |
+| `src/lua/`            | VM code, `require`, path logic                             |
+| `types/`              | Generated `geode*.d.luau` stubs (copy into dependent mods) |
+| `tools/luau_codegen/` | Binding and type generators                                |
+| `tests/`              | Fast/Python tests (no full game)                           |
+| `example/`            | Example mods for authors                                   |
+| `luauapi-gen/`        | Build-only: generated C++ bindings, `report.md`, JSON      |
 
 Codegen script is [`tools/luau_codegen/codegen.py`](tools/luau_codegen/codegen.py). CMake target is `luauapi_codegen`.
 

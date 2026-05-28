@@ -285,9 +285,6 @@ if(LUAUAPI_BUILD_TESTS)
         Luau.Require
         Luau.VM
     )
-    if(WIN32)
-        target_link_options(luauapi_tests PRIVATE "/errorlimit:0")
-    endif()
 
     list(APPEND CMAKE_MODULE_PATH ${catch2_SOURCE_DIR}/extras)
     include(Catch)

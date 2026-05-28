@@ -27,6 +27,7 @@ from broma_parser import Root  # type: ignore[import-unresolved]
 from type_map import classify_arg, is_const_reference, is_out_reference  # type: ignore[import-unresolved]
 from filtering import group_supported, is_link_platform, supported  # type: ignore[import-unresolved]
 from hooks import android_symbol, emit_hook_support, emit_return_override, emit_value_decode, hook_address_expr, hook_offset  # type: ignore[import-unresolved]
+from cxx_templates import emit_internal_hpp  # type: ignore[import-unresolved]
 from link_attrs import class_link_platforms  # type: ignore[import-unresolved]
 from marshalling import check_arg  # type: ignore[import-unresolved]
 from model import build_class_lookup, object_classes, resolve_base  # type: ignore[import-unresolved]
@@ -410,7 +411,21 @@ class GeneratedSafetyTests(unittest.TestCase):
         )
 
     def test_common_file_asserts_userdata_tag_budget(self) -> None:
-        root = Root(classes=[Class(name="CCObject", namespace="cocos2d")])
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        ccnode = Class(
+            name="CCNode",
+            namespace="cocos2d",
+            bases=["CCObject"],
+            methods=[
+                Method(
+                    name="getTag",
+                    ret="int",
+                    args=[],
+                    platforms=all_platforms("0x1"),
+                )
+            ],
+        )
+        root = Root(classes=[ccobject, ccnode])
         plan = collect_plan(root, "win")
         text = _emit_common_file(plan.emitted_classes, plan, "win")
 
@@ -425,9 +440,7 @@ class GeneratedSafetyTests(unittest.TestCase):
         self.assertIn("!callback || callback->removed", text)
 
     def test_hook_runtime_uses_named_deadline(self) -> None:
-        root = Root(classes=[Class(name="CCObject", namespace="cocos2d")])
-        plan = collect_plan(root, "win")
-        text = _emit_common_file(plan.emitted_classes, plan, "win")
+        text = emit_internal_hpp()
 
         self.assertIn("luax::kHookScriptDeadlineMs", text)
         self.assertNotIn("targetId, 50", text)
@@ -442,7 +455,7 @@ class GeneratedSafetyTests(unittest.TestCase):
         self.assertIn("luaapi_geode_fields", text)
 
     def test_invalid_skip_value_continues_before_chain(self) -> None:
-        text = emit_hook_support()
+        text = emit_internal_hpp()
 
         self.assertIn('returned invalid skip value", targetId', text)
         self.assertIn("continue;", text)
@@ -532,6 +545,7 @@ class GeneratedSafetyTests(unittest.TestCase):
         self.assertIn("m_fields: { [string]: any }", files["geode_cocos2d.d.luau"])
         self.assertIn("m_obPosition: CCPoint", files["geode_cocos2d.d.luau"])
         self.assertIn("declare class CCObject end", files["geode_cocos2d.d.luau"])
+        self.assertNotIn("declare class CCPoint end", files["geode_cocos2d.d.luau"])
 
     def test_inaccessible_broma_field_is_not_bound(self) -> None:
         ccobject = Class(
@@ -547,6 +561,31 @@ class GeneratedSafetyTests(unittest.TestCase):
         self.assertEqual(plan.field_targets_by_class.get("CCObject", []), [])
         self.assertIn(
             "-- skipped m_nChildIndex: inaccessible-field",
+            files["geode_cocos2d.d.luau"],
+        )
+
+    def test_inaccessible_field_type_is_not_bound(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        ccnode = Class(name="CCNode", namespace="cocos2d", bases=["CCObject"])
+        batch_node = Class(
+            name="CCParticleBatchNode",
+            namespace="cocos2d",
+            bases=["CCNode"],
+        )
+        particle_system = Class(
+            name="CCParticleSystem",
+            namespace="cocos2d",
+            bases=["CCNode"],
+            fields=[Field("m_pBatchNode", "CCParticleBatchNode*")],
+        )
+        root = Root(classes=[ccobject, ccnode, batch_node, particle_system])
+
+        plan = collect_plan(root, "win")
+        files = emit_luau_types(root, "win", plan=plan)
+
+        self.assertEqual(plan.field_targets_by_class.get("CCParticleSystem", []), [])
+        self.assertIn(
+            "-- skipped m_pBatchNode: inaccessible-type:CCParticleBatchNode",
             files["geode_cocos2d.d.luau"],
         )
 
@@ -794,6 +833,38 @@ class LuauTypeEmissionTests(unittest.TestCase):
         factory_pos = factories.find("export type WidgetLayerFactory")
         self.assertGreaterEqual(forward_pos, 0)
         self.assertGreater(factory_pos, forward_pos)
+
+    def test_skipped_class_forward_decls(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        ccgrid_base = Class(name="CCGridBase", namespace="cocos2d", bases=["CCObject"])
+        ccnode = Class(
+            name="CCNode",
+            namespace="cocos2d",
+            bases=["CCObject"],
+            fields=[Field("m_pGrid", "cocos2d::CCGridBase*")],
+        )
+        root = Root(classes=[ccobject, ccgrid_base, ccnode])
+        files = emit_luau_types(root)
+        cocos = files["geode_cocos2d.d.luau"]
+        forward_pos = cocos.find("declare class CCGridBase end\n")
+        node_pos = cocos.find("declare class CCNode")
+        self.assertGreaterEqual(forward_pos, 0)
+        self.assertGreater(node_pos, forward_pos)
+        self.assertIn("m_pGrid: CCGridBase?", cocos)
+
+    def test_orphan_forward_decls_exclude_value_types(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        ccnode = Class(
+            name="CCNode",
+            namespace="cocos2d",
+            bases=["CCObject"],
+            fields=[Field("m_obPosition", "cocos2d::CCPoint")],
+        )
+        root = Root(classes=[ccobject, ccnode])
+        files = emit_luau_types(root)
+        cocos = files["geode_cocos2d.d.luau"]
+        self.assertIn("m_obPosition: CCPoint", cocos)
+        self.assertNotIn("declare class CCPoint end", cocos)
 
     def test_value_stub_order(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")
@@ -1348,6 +1419,41 @@ class F12ParityReportTests(unittest.TestCase):
             "not-callable-type:ios:StaticOnly",
         )
         self.assertIn("StaticOnly", emit_markdown(data))
+
+    def test_inaccessible_class_method_ref_is_pruned(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        ccnode = Class(name="CCNode", namespace="cocos2d", bases=["CCObject"])
+        batch_node = Class(
+            name="CCParticleBatchNode",
+            namespace="cocos2d",
+            bases=["CCNode"],
+        )
+        foo = Class(
+            name="Foo",
+            namespace="cocos2d",
+            bases=["CCNode"],
+            methods=[
+                Method(
+                    name="getBatch",
+                    ret="CCParticleBatchNode*",
+                    args=[],
+                    platforms=all_platforms("0x1"),
+                )
+            ],
+        )
+        root = Root(classes=[ccobject, ccnode, batch_node, foo])
+
+        data = collect_parity(root)
+        key = "cocos2d::Foo.getBatch()"
+
+        self.assertEqual(
+            data["methods"][key]["skipReasons"]["win"],
+            "not-callable-type:win:CCParticleBatchNode",
+        )
+        self.assertEqual(
+            data["methods"][key]["skipReasons"]["ios"],
+            "not-callable-type:ios:CCParticleBatchNode",
+        )
 
     def test_hook_parity_separates_callable_from_hookable(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")

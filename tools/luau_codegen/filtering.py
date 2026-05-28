@@ -224,15 +224,27 @@ def linkless_class_names(
     return out - keep_bases
 
 
+def _is_skipped_object_type(class_name: str, skipped_classes: set[str]) -> bool:
+    return class_name in skipped_classes or class_name in INACCESSIBLE_CLASSES
+
+
 def _skipped_object_ref(
     m: Method, objects: Dict[str, Class], skipped_classes: set[str]
 ) -> str:
     ret = classify_return(m.ret, objects)
-    if ret and ret.kind == "object" and ret.class_name in skipped_classes:
+    if (
+        ret
+        and ret.kind == "object"
+        and _is_skipped_object_type(ret.class_name, skipped_classes)
+    ):
         return ret.class_name
     for arg in m.args:
         info = classify_arg(arg.type, objects)
-        if info and info.kind == "object" and info.class_name in skipped_classes:
+        if (
+            info
+            and info.kind == "object"
+            and _is_skipped_object_type(info.class_name, skipped_classes)
+        ):
             return info.class_name
     return ""
 
@@ -245,8 +257,6 @@ def prune_skipped_class_refs(
     target_platform: str,
 ) -> list[tuple[str, str, str]]:
     pruned: list[tuple[str, str, str]] = []
-    if not skipped_classes:
-        return pruned
     for cls_name, grouped in supported_by_class.items():
         for name, methods in list(grouped.items()):
             kept: list[Method] = []

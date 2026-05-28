@@ -449,6 +449,7 @@ def _augment_packed_class_files(
     grouped_by_class: Dict[str, Dict[str, List[Method]]],
     objects: Dict[str, Class],
     skipped_classes: set,
+    source_namespace: str,
 ) -> Dict[str, str]:
     class_to_file: Dict[str, str] = {}
     for file_name, names in classes_per_file.items():
@@ -461,12 +462,23 @@ def _augment_packed_class_files(
         refs = _object_refs_for_classes(
             defined_here, grouped_by_class, objects, skipped_classes
         )
+        all_emitted_classes = set(class_to_file.keys())
         for class_name in defined_here:
             chunk_start = body.find(f"declare class {class_name}")
             if chunk_start >= 0:
                 next_decl = body.find("\ndeclare class ", chunk_start + 1)
                 chunk_end = next_decl if next_decl >= 0 else len(body)
                 refs.update(_refs_from_chunk_content(body[chunk_start:chunk_end]))
+            cls = objects.get(class_name)
+            if cls:
+                for base in cls.bases:
+                    base_cls = objects.get(short_name(base))
+                    if (
+                        base_cls
+                        and base_cls.name not in all_emitted_classes
+                        and lua_namespace(base_cls) == source_namespace
+                    ):
+                        refs.add(base_cls.name)
 
         sibling_refs: set[str] = set()
         for ref in refs:
@@ -474,7 +486,14 @@ def _augment_packed_class_files(
             if ref_file and ref_file != file_name:
                 sibling_refs.add(ref)
 
-        forward_names = (defined_here | sibling_refs) - cross_namespace_forward
+        orphan_refs = {
+            name
+            for name in refs - all_emitted_classes
+            if name in objects and lua_namespace(objects[name]) == source_namespace
+        }
+        forward_names = (
+            defined_here | sibling_refs | orphan_refs
+        ) - cross_namespace_forward
         file_header = base_header.copy()
         if forward_names:
             file_header.append(_emit_forward_decls(forward_names, file_name))
@@ -491,6 +510,24 @@ def _root_header(label: str) -> List[str]:
         f"-- {label}\n",
         "\n",
     ]
+
+
+def _should_emit_type_class(
+    cls: Class,
+    objects: Dict[str, Class],
+    field_targets: list[tuple[Class, Field]],
+    skipped_classes: set,
+) -> bool:
+    if cls.name not in skipped_classes:
+        return True
+    bound = {field.name for _, field in field_targets}
+    for field in cls.fields:
+        ok, reason, _, ret = bindable_field(field, objects, cls)
+        if ok and field.name in bound and ret:
+            return True
+        if reason:
+            return True
+    return False
 
 
 def _emit_class(
@@ -608,13 +645,14 @@ def emit(
     cocos_class_chunks: List[Tuple[str, str]] = []
     gd_class_chunks: List[Tuple[str, str]] = []
     for cls in classes:
-        if cls.name in skipped_classes:
+        field_targets = plan.field_targets_by_class.get(cls.name, [])
+        if not _should_emit_type_class(cls, objects, field_targets, skipped_classes):
             continue
         grouped = grouped_by_class[cls.name]
         cls_lines = _emit_class(
             cls,
             grouped,
-            plan.field_targets_by_class.get(cls.name, []),
+            field_targets,
             objects,
             skipped_classes,
         )
@@ -644,6 +682,7 @@ def emit(
             grouped_by_class,
             objects,
             skipped_classes,
+            cocos_namespace,
         )
     )
 
@@ -659,6 +698,7 @@ def emit(
             grouped_by_class,
             objects,
             skipped_classes,
+            gd_namespace,
         )
     )
 
