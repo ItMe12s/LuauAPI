@@ -9,7 +9,13 @@ from filtering import direct_callable, platform_value
 from link_attrs import class_link_platforms, platform_aliases
 from marshalling import push_value
 from model import cxx_name, lua_namespace
-from type_map import TypeInfo, classify_arg, classify_return, normalize_type
+from type_map import (
+    TypeInfo,
+    classify_arg,
+    classify_return,
+    is_out_reference,
+    normalize_type,
+)
 
 
 def _id(value: str) -> str:
@@ -66,7 +72,7 @@ def hook_address_expr(cls: Class, m: Method, target_platform: str) -> str:
         return ""
     if _android_linked(cls, target_platform):
         symbol = android_symbol(cls, m)
-        return f'dlsym(dlopen("libcocos2dcpp.so", RTLD_NOW), "{symbol}")'
+        return f'dlsym(luaapi_android_libcocos(), "{symbol}")'
     if _apple_linked(cls, target_platform):
         symbol = android_symbol(cls, m)
         return f'dlsym(RTLD_DEFAULT, "{symbol}")'
@@ -89,7 +95,7 @@ def hookable(
         return False
     if ret.kind == "string" and ret.cxx_type.endswith("*"):
         return False
-    if any("&" in normalize_type(arg.type) for arg in m.args):
+    if any(is_out_reference(arg.type) for arg in m.args):
         return False
     return all(classify_arg(arg.type, objects) is not None for arg in m.args)
 

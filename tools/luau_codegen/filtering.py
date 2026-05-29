@@ -5,7 +5,7 @@ from typing import Dict, List
 
 from broma_parser import Class, Method
 from denylist import INACCESSIBLE_CLASSES, INACCESSIBLE_METHODS
-from model import build_class_lookup, resolve_base, short_name, status_for
+from model import build_class_lookup, resolve_base, status_for
 from link_attrs import is_link_platform, platform_aliases
 from type_map import classify_arg, classify_return, method_input_arg_count
 

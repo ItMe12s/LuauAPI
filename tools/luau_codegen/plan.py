@@ -14,6 +14,7 @@ from intersection import (
     IntersectionResult,
     IntersectionStats,
     collect_intersection,
+    intersection_platforms,
     method_key,
 )
 from model import build_class_lookup, codegen_object_map, object_classes, resolve_base
@@ -250,10 +251,9 @@ def collect_plan(
     target_platform: str = "win",
     plans_by_platform: dict[str, EmitPlan] | None = None,
 ) -> EmitPlan:
+    platforms = intersection_platforms(target_platform)
     raw_plans = plans_by_platform or {}
-    missing = [
-        platform for platform in INTERSECTION_PLATFORMS if platform not in raw_plans
-    ]
+    missing = [platform for platform in platforms if platform not in raw_plans]
     if missing:
         raw_plans = dict(raw_plans)
         for platform in missing:
@@ -268,7 +268,7 @@ def collect_plan(
     else:
         plan = collect_platform_plan(root, target_platform)
 
-    result = collect_intersection(raw_plans)
+    result = collect_intersection(raw_plans, platforms=platforms)
     return _apply_intersection(plan, target_platform, result)
 
 

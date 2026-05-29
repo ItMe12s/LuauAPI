@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import os
 import re
-from typing import List, Optional
+from typing import List
 
-from broma_parser import Arg, Class, Method, _parse_method, split_top_level
+from broma_parser import Class, Method, _parse_method, split_top_level
 
 _LINE_COMMENT = re.compile(r"//[^\n]*")
 _BLOCK_COMMENT = re.compile(r"/\*.*?\*/", re.DOTALL)

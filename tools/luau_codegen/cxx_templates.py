@@ -159,7 +159,14 @@ def emit_internal_hpp() -> str:
 
 
 def emit_hook_support() -> str:
-    return """    std::unordered_map<std::string, LuaHookState>& hookStates() {
+    return """#if defined(GEODE_IS_ANDROID)
+    void* luaapi_android_libcocos() {
+        static void* handle = dlopen("libcocos2dcpp.so", RTLD_NOW);
+        return handle;
+    }
+#endif
+
+    std::unordered_map<std::string, LuaHookState>& hookStates() {
         static auto* value = new std::unordered_map<std::string, LuaHookState>();
         return *value;
     }

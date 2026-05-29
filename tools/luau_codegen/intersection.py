@@ -9,6 +9,11 @@ from filtering import method_key
 INTERSECTION_PLATFORMS = ("win", "m1", "ios", "android32", "android64")
 
 
+def intersection_platforms(target_platform: str = "win") -> tuple[str, ...]:
+    mac = "imac" if target_platform == "imac" else "m1"
+    return ("win", mac, "ios", "android32", "android64")
+
+
 @dataclass
 class IntersectionResult:
     platforms: tuple[str, ...]

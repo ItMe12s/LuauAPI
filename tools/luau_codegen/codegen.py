@@ -19,7 +19,7 @@ import emit_luau_types
 import parity
 import plan as emit_plan
 from fields import field_key
-from intersection import INTERSECTION_PLATFORMS
+from intersection import intersection_platforms
 from model import BRO_FILES, object_classes, status_for
 
 VALID_PLATFORMS = {
@@ -57,6 +57,8 @@ def collect_bindings_root(
         from geode_sdk_scanner import scan_geode_sdk
 
         root.classes.extend(scan_geode_sdk(geode_sdk_path))
+    from filtering import method_key
+
     seen: dict[str, broma_parser.Class] = {}
     for cls in root.classes:
         if cls.qualified_name in seen:
@@ -64,13 +66,16 @@ def collect_bindings_root(
             for attr in cls.attributes:
                 if attr not in existing.attributes:
                     existing.attributes.append(attr)
-            if cls.methods and existing.methods:
-                warnings.warn(
-                    f"[luauapi] duplicate class {cls.qualified_name} "
-                    f"from {cls.source} and {existing.source}, keeping first"
-                )
-            elif cls.methods and not existing.methods:
-                existing.methods = cls.methods
+            if cls.methods:
+                if not existing.methods:
+                    existing.methods = list(cls.methods)
+                else:
+                    known = {method_key(existing, m) for m in existing.methods}
+                    for method in cls.methods:
+                        key = method_key(cls, method)
+                        if key not in known:
+                            existing.methods.append(method)
+                            known.add(key)
         else:
             seen[cls.qualified_name] = cls
     root.classes = list(seen.values())
@@ -302,7 +307,9 @@ def main(argv: List[str]) -> int:
         log_error(f"no Broma classes parsed from {args.bindings}")
         return 3
 
-    plan_platforms = tuple(dict.fromkeys(INTERSECTION_PLATFORMS + (args.platform,)))
+    plan_platforms = tuple(
+        dict.fromkeys(intersection_platforms(args.platform) + (args.platform,))
+    )
     plans_by_platform = {
         platform: emit_plan.collect_platform_plan(root, platform)
         for platform in plan_platforms
@@ -377,6 +384,9 @@ def main(argv: List[str]) -> int:
     except OSError as exc:
         log_error(f"I/O failed while writing generated files: {exc}")
         return 4
+    except Exception as exc:
+        log_error(f"codegen failed: {exc}")
+        return 5
 
     types_paths = [os.path.join(args.types_out, f) for f in type_files]
     hook_count = emit_plan.hook_target_count(root, args.platform, plan=plan)
