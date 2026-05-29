@@ -28,13 +28,13 @@ from type_map import classify_arg, is_const_reference, is_out_reference  # type:
 from filtering import group_supported, is_link_platform, supported  # type: ignore[import-unresolved]
 from hooks import (  # type: ignore[import-unresolved]
     android_symbol,
-    emit_hook_support,
     emit_return_override,
     emit_value_decode,
     hook_address_expr,
     hook_offset,
     hookable,
 )
+from cxx_templates import emit_hook_support  # type: ignore[import-unresolved]
 from emit_luau_bindings import emit as emit_luau_bindings  # type: ignore[import-unresolved]
 from intersection import intersection_platforms  # type: ignore[import-unresolved]
 from codegen import collect_bindings_root  # type: ignore[import-unresolved]

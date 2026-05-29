@@ -32,7 +32,6 @@ namespace luax {
         Runtime(Runtime const&) = delete;
         Runtime& operator=(Runtime const&) = delete;
 
-        static Runtime& instance();
         static Runtime* getOrCreate();
         static bool isInitialized();
         static Runtime* getIfInitialized();
@@ -47,7 +46,6 @@ namespace luax {
         bool assertMainThread() const;
 
         bool runScript(std::string_view src, std::string_view chunkName, int deadlineMs = kDefaultScriptDeadlineMs);
-        geode::Result<void> runBytecode(std::string const& bytecode, std::string_view chunkName, int deadlineMs = kDefaultScriptDeadlineMs);
         bool protectedCall(int nargs, int nresults, std::string_view context, int deadlineMs = kDefaultScriptDeadlineMs);
         static std::string compileSource(std::string_view source);
 
@@ -85,7 +83,6 @@ namespace luax {
         void clearLastError() { m_lastError.clear(); }
         std::string const& lastError() const { return m_lastError; }
 
-        // Shutdown hooks run (last-in, first-out) during destruction, before lua_close.
         void registerShutdownHook(std::function<void()> fn);
 
         std::string const& getOrCompileBytecode(std::string const& key, std::string_view source);
@@ -95,12 +92,6 @@ namespace luax {
 
         bool codegenEnabled() const { return m_codegenEnabled; }
         std::uint32_t generation() const { return m_generation; }
-
-#if defined(LUAUAPI_HOST_TESTS)
-        static void resetForHostTests();
-        int scriptBudgetDepthForHostTests() const { return m_scriptBudgetDepth; }
-        std::size_t bytecodeCacheSizeForHostTests() const { return m_bytecodeIndex.size(); }
-#endif
 
     private:
         static void* boundedAlloc(void* ud, void* ptr, size_t osize, size_t nsize);

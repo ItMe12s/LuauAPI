@@ -83,10 +83,6 @@ def collect_bindings_root(
     return root
 
 
-def _collect(bindings_dir: str, geode_sdk_path: str | None = None) -> broma_parser.Root:
-    return collect_bindings_root(bindings_dir, geode_sdk_path)
-
-
 def _collect_extra_dluau() -> str:
     extra_dir = os.path.join(HERE, "extra_bindings")
     if not os.path.isdir(extra_dir):

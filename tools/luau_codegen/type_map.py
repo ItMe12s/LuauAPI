@@ -246,10 +246,6 @@ def require_classify_return(t: str, object_classes: Dict[str, Class]) -> TypeInf
     return info
 
 
-def lua_arg_list(args: list[TypeInfo]) -> str:
-    return ", ".join(f"arg{i}: {a.lua_type}" for i, a in enumerate(args, start=1))
-
-
 def method_input_arg_count(method, object_classes: Dict[str, Class]) -> int:
     ret = classify_return(method.ret, object_classes)
     if ret is None:

@@ -5,9 +5,7 @@
 
 #include <algorithm>
 
-#ifndef LUAUAPI_HOST_TESTS
-    #include <Geode/Geode.hpp>
-#endif
+#include <Geode/Geode.hpp>
 
 namespace luax {
     TaskScheduler& TaskScheduler::get() {
@@ -120,10 +118,6 @@ namespace luax {
         return n;
     }
 
-#ifdef LUAUAPI_HOST_TESTS
-    void armTaskTick() {}
-    void disarmTaskTick() {}
-#else
     namespace {
         class TaskTickNode : public cocos2d::CCNode {
         public:
@@ -160,5 +154,4 @@ namespace luax {
         g_tickNode->release();
         g_tickNode = nullptr;
     }
-#endif
 }

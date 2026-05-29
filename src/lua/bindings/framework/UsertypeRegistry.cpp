@@ -1,8 +1,6 @@
 #include "Usertype.hpp"
 
-#ifndef LUAUAPI_HOST_TESTS
 #include <Geode/Geode.hpp>
-#endif
 
 #include <new>
 
@@ -18,9 +16,7 @@ namespace luax::detail {
         TypeInfo info;
         info.tag = m_next++;
         if (info.tag >= LUA_UTAG_LIMIT) {
-#ifndef LUAUAPI_HOST_TESTS
             geode::log::error("UsertypeRegistry: tag {} exceeds LUA_UTAG_LIMIT ({})", info.tag, LUA_UTAG_LIMIT);
-#endif
             --m_next;
             return 0;
         }
@@ -35,9 +31,7 @@ namespace luax::detail {
         TypeInfo info;
         info.tag = m_next++;
         if (info.tag >= LUA_UTAG_LIMIT) {
-#ifndef LUAUAPI_HOST_TESTS
             geode::log::error("UsertypeRegistry: tag {} exceeds LUA_UTAG_LIMIT ({})", info.tag, LUA_UTAG_LIMIT);
-#endif
             --m_next;
             static TypeInfo invalid{};
             return invalid;

@@ -8,9 +8,7 @@
 #include <string>
 #include <string_view>
 
-#if defined(LUAUAPI_HOST_TESTS)
-    #define LUAUAPI_DLL
-#elif defined(GEODE_IS_WINDOWS)
+#if defined(GEODE_IS_WINDOWS)
     #ifdef LUAUAPI_EXPORTING
         #define LUAUAPI_DLL __declspec(dllexport)
     #else

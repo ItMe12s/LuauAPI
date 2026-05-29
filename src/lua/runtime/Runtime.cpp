@@ -154,14 +154,6 @@ namespace luax {
         if (fn) m_shutdownHooks.push_back(std::move(fn));
     }
 
-    Runtime& Runtime::instance() {
-        auto* runtime = getOrCreate();
-        if (!runtime) {
-            std::abort();
-        }
-        return *runtime;
-    }
-
     Runtime* Runtime::getOrCreate() {
         if (isShuttingDown()) return nullptr;
         auto& runtime = runtimeStorage();
@@ -195,17 +187,6 @@ namespace luax {
     bool Runtime::isShuttingDown() {
         return shuttingDownStorage().load(std::memory_order_acquire);
     }
-
-#if defined(LUAUAPI_HOST_TESTS)
-    void Runtime::resetForHostTests() {
-        auto& runtime = runtimeStorage();
-        if (runtime) {
-            runtime.reset();
-        }
-        shuttingDownStorage().store(false, std::memory_order_release);
-        mainThreadIdStorage() = std::this_thread::get_id();
-    }
-#endif
 
     void Runtime::setMainThreadId(std::thread::id id) {
         mainThreadIdStorage() = id;
@@ -375,48 +356,6 @@ namespace luax {
         m_bytecodeIndex[key] = m_bytecodeLru.begin();
         geode::log::debug("luau compile [{}] {}ms", key, compileMs);
         return m_bytecodeLru.front().bytecode;
-    }
-
-    geode::Result<void> Runtime::runBytecode(std::string const& bytecode, std::string_view chunkName, int deadlineMs) {
-        if (!assertMainThread()) {
-            return geode::Err("luau runtime accessed off main thread");
-        }
-        if (!ready() || !m_state) {
-            if (m_lastError.empty()) {
-                return geode::Err(m_initError.empty() ? "luau runtime not ready" : m_initError);
-            }
-            return geode::Err(m_lastError);
-        }
-
-        clearLastError();
-
-        std::string chunk(chunkName);
-        if (luau_load(m_state, chunk.c_str(), bytecode.data(), bytecode.size(), 0) != 0) {
-            auto err = formatLuaError(chunk.c_str());
-            setLastError(err);
-            geode::log::error("luau load failed {}", err);
-            lua_pop(m_state, 1);
-            return geode::Err(err);
-        }
-
-        if (m_codegenEnabled) {
-            auto cgResult = Luau::CodeGen::compile(m_state, -1, Luau::CodeGen::CodeGen_ColdFunctions);
-            if (cgResult.hasErrors()) {
-                geode::log::warn("luau codegen [{}] partial: {}", chunk, Luau::CodeGen::toString(cgResult.result));
-            }
-        }
-
-        auto execStart = std::chrono::steady_clock::now();
-        bool ok = protectedCall(0, 0, chunk, deadlineMs);
-        auto execMs = std::chrono::duration_cast<std::chrono::milliseconds>(
-            std::chrono::steady_clock::now() - execStart).count();
-
-        if (!ok) {
-            return geode::Err(m_lastError.empty() ? "luau script failed: " + chunk : m_lastError);
-        }
-
-        geode::log::debug("luau exec [{}] {}ms", chunk, execMs);
-        return geode::Ok();
     }
 
     bool Runtime::runScript(std::string_view src, std::string_view chunkName, int deadlineMs) {

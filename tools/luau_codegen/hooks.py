@@ -376,9 +376,3 @@ def emit_hook_target(
     )
     out.append("    }\n\n")
     return "".join(out)
-
-
-def emit_hook_support() -> str:
-    from cxx_templates import emit_hook_support as emit_template
-
-    return emit_template()
