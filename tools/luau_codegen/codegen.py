@@ -57,13 +57,6 @@ def collect_bindings_root(
         from geode_sdk_scanner import scan_geode_sdk
 
         root.classes.extend(scan_geode_sdk(geode_sdk_path))
-    # There's plans for custom wrappers and stuff but not rn.
-    extra_dir = os.path.join(HERE, "extra_bindings")
-    if os.path.isdir(extra_dir):
-        for name in sorted(os.listdir(extra_dir)):
-            if name.endswith(".bro"):
-                parsed = broma_parser.parse_file(os.path.join(extra_dir, name))
-                root.classes.extend(parsed.classes)
     seen: dict[str, broma_parser.Class] = {}
     for cls in root.classes:
         if cls.qualified_name in seen:
@@ -87,6 +80,25 @@ def collect_bindings_root(
 
 def _collect(bindings_dir: str, geode_sdk_path: str | None = None) -> broma_parser.Root:
     return collect_bindings_root(bindings_dir, geode_sdk_path)
+
+
+def _collect_extra_dluau() -> str:
+    extra_dir = os.path.join(HERE, "extra_bindings")
+    if not os.path.isdir(extra_dir):
+        return ""
+    parts: list[str] = []
+    for name in sorted(os.listdir(extra_dir)):
+        if name.endswith(".dluau"):
+            with open(os.path.join(extra_dir, name), "r", encoding="utf-8") as f:
+                parts.append(f.read().strip())
+    if not parts:
+        return ""
+    body = "\n\n".join(parts)
+    return (
+        "\n\n-- Custom definitions from tools/luau_codegen/extra_bindings/\n"
+        + body
+        + "\n"
+    )
 
 
 def _write_if_changed(path: str, content: str) -> None:
@@ -349,6 +361,9 @@ def main(argv: List[str]) -> int:
         schema_path = os.path.join(args.out, "schema.json")
         report_path = os.path.join(args.out, "report.md")
         type_files = emit_luau_types.emit(root, args.platform, plan=plan)
+        extra_dluau = _collect_extra_dluau()
+        if extra_dluau and "geode.d.luau" in type_files:
+            type_files["geode.d.luau"] += extra_dluau
         for filename, content in type_files.items():
             _write_if_changed(os.path.join(args.types_out, filename), content)
         for orphan in glob.glob(os.path.join(args.types_out, "geode*.d.luau")):

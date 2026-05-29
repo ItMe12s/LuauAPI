@@ -146,6 +146,35 @@ Use prefixes to group files (`hook_`, `mod_`).
 - Same flat-name rules.
 - Only works from a loaded script name like `@Bootstrap.luau`.
 
+### `task` and `time` (timers)
+
+Two built-in globals for scheduling tasks over frames. Callback-based, no yielding. Times are in seconds (float).
+
+`task`:
+
+| Call                  | Description                                        |
+| --------------------- | -------------------------------------------------- |
+| `task.spawn(fn, ...)` | Run `fn` immediately (args forwarded).             |
+| `task.delay(sec, fn)` | Run `fn` after `sec` seconds (returns handle).     |
+| `task.every(sec, fn)` | Run `fn` every `sec` seconds (returns handle).     |
+| `task.defer(fn)`      | Run `fn` on next frame (returns handle).           |
+| `task.cancel(handle)` | Cancel scheduled task (same as `handle:cancel()`). |
+
+`delay`, `every`, and `defer` return a handle. Use `handle:cancel()` or `task.cancel(handle)` to stop it,
+doing this more than once is safe.
+These functions only take `(time, fn)` as arguments (only `spawn` lets you pass extra arguments).
+
+Timers run with the game (pause, timeScale). Errors stop the task. Max `kMaxScheduledTasks` (4096), exceeding this errors.
+
+`time`:
+
+| Call          | Description                                  |
+| ------------- | -------------------------------------------- |
+| `time.now()`  | Monotonic seconds since the runtime started. |
+| `time.unix()` | Wall-clock seconds since the Unix epoch.     |
+
+See [`TaskBootstrap.luau`](example/TaskBootstrap.luau).
+
 ### Copy-paste examples
 
 [`example/`](example/) is **not built** with the project. Steal code from it.
@@ -158,6 +187,7 @@ Use prefixes to group files (`hook_`, `mod_`).
 | [`MainThreadBootstrap.luau`](example/MainThreadBootstrap.luau) | Run on main thread + hook UI           |
 | [`AsyncBootstrap.luau`](example/AsyncBootstrap.luau)           | `runFileAsync` from main thread        |
 | [`HookModifyBootstrap.luau`](example/HookModifyBootstrap.luau) | Modify-style before/after hooks        |
+| [`TaskBootstrap.luau`](example/TaskBootstrap.luau)             | `task` timers + `time` clock           |
 
 [`main.cpp`](example/main.cpp) loads all three bootstrap scripts. Examples only show `runFile` and `runFileAsync`. See the C++ API table for `runScript` and `runScriptAsync`.
 

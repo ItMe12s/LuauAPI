@@ -1,4 +1,3 @@
--- AsyncBootstrap.luau
 -- Loaded with runFileAsync.
 -- VM execution still happens on main thread.
 

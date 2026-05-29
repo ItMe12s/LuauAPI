@@ -1,4 +1,3 @@
--- MainThreadBootstrap.luau
 -- Loaded with runFile on main thread.
 -- Owns immediate main-thread UI hook setup.
 

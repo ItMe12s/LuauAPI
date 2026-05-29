@@ -1,0 +1,19 @@
+export type TaskHandle = {
+    cancel: (self: TaskHandle) -> (),
+}
+
+export type TaskNamespace = {
+    spawn: (fn: (...any) -> ...any, ...any) -> (),
+    delay: (seconds: number, fn: () -> ()) -> TaskHandle,
+    every: (seconds: number, fn: () -> ()) -> TaskHandle,
+    defer: (fn: () -> ()) -> TaskHandle,
+    cancel: (handle: TaskHandle) -> (),
+}
+
+export type TimeNamespace = {
+    now: () -> number,
+    unix: () -> number,
+}
+
+declare task: TaskNamespace
+declare time: TimeNamespace

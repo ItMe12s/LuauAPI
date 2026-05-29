@@ -187,9 +187,8 @@ file(GLOB LUAUAPI_CODEGEN_PY CONFIGURE_DEPENDS
     ${CMAKE_CURRENT_SOURCE_DIR}/tools/luau_codegen/*.py)
 file(GLOB LUAUAPI_BRO_FILES CONFIGURE_DEPENDS
     ${LUAUAPI_BINDINGS_DIR}/*.bro)
-# I will add custom wrappers and libraries later.
-file(GLOB LUAUAPI_EXTRA_BRO_FILES CONFIGURE_DEPENDS
-    ${CMAKE_CURRENT_SOURCE_DIR}/tools/luau_codegen/extra_bindings/*.bro)
+file(GLOB LUAUAPI_EXTRA_DLUAU_FILES CONFIGURE_DEPENDS
+    ${CMAKE_CURRENT_SOURCE_DIR}/tools/luau_codegen/extra_bindings/*.dluau)
 file(GLOB LUAUAPI_GEODE_UI_HEADERS CONFIGURE_DEPENDS
     "${LUAUAPI_GEODE_SDK_PATH}/loader/include/Geode/ui/*.hpp")
 
@@ -202,7 +201,7 @@ add_custom_command(
             --types-out ${LUAUAPI_TYPES_DIR}
             --platform ${LUAUAPI_CODEGEN_PLATFORM}
             --geode-sdk "${LUAUAPI_GEODE_SDK_PATH}"
-    DEPENDS ${LUAUAPI_CODEGEN_PY} ${LUAUAPI_BRO_FILES} ${LUAUAPI_EXTRA_BRO_FILES} ${LUAUAPI_GEODE_UI_HEADERS}
+    DEPENDS ${LUAUAPI_CODEGEN_PY} ${LUAUAPI_BRO_FILES} ${LUAUAPI_EXTRA_DLUAU_FILES} ${LUAUAPI_GEODE_UI_HEADERS}
     COMMENT "LuauAPI Broma codegen"
     VERBATIM
 )
@@ -265,6 +264,7 @@ if(LUAUAPI_BUILD_TESTS)
         tests/path_sandbox_tests.cpp
         tests/path_rules_tests.cpp
         tests/require_path_tests.cpp
+        tests/task_scheduler_tests.cpp
         tests/host_geode_stubs.cpp
         tests/fake_geode/cocos_stubs.cpp
         tests/fake_geode/geode_stubs.cpp
@@ -279,6 +279,8 @@ if(LUAUAPI_BUILD_TESTS)
         src/lua/bindings/internal/Fields.cpp
         src/lua/bindings/internal/Usertype.cpp
         src/lua/bindings/internal/UsertypeRegistry.cpp
+        src/lua/bindings/task/TaskScheduler.cpp
+        src/lua/bindings/task/TaskBinding.cpp
     )
     target_compile_features(luauapi_tests PRIVATE cxx_std_23)
     target_include_directories(luauapi_tests PRIVATE src include)
