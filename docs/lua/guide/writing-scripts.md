@@ -1,0 +1,54 @@
+# Writing scripts
+
+## Summary
+
+This page covers the basics of a script: logging, error handling, the time budget, and return values.
+
+## Logging with print
+
+`print` writes a single line to the Geode log, and each argument is separated by a tab.
+
+```lua
+print("loaded", 1, true)
+```
+
+## Errors are logged, not fatal
+
+The host runs your script inside a protected call. When your script raises an error, the runtime catches it and writes it to the log, and the game keeps running.
+
+The host can read the last error after a run. See [Limits and errors](../cpp/limits-and-errors.md).
+
+## The time budget
+
+Every run has a deadline in milliseconds. When a script runs past its deadline, the runtime stops it and raises an error.
+
+The default run deadline is `250 ms`, and callbacks from hooks and tasks receive `50 ms`. Avoid long loops and blocking calls. Spread heavy work across frames with `task`.
+
+## Memory
+
+The runtime caps Lua memory at `512 MiB`. Once that cap is reached, allocation fails. Keep large data small and release references you no longer need.
+
+## Returning a value from a module
+
+A file loaded with `require` must return exactly one value. A top level script run with `runFile` does not need to return anything.
+
+```lua
+-- a module file
+local M = {}
+function M.greet()
+    print("hi")
+end
+return M
+```
+
+## Related
+
+- [Tasks and time](tasks-and-time.md)
+- [Modules and require](modules-and-require.md)
+- [Core concepts](../getting-started/concepts.md)
+
+## Source
+
+- `src/lua/runtime/Runtime.cpp`
+- `src/lua/Config.hpp`
+- `src/lua/module/Requirer.cpp`
