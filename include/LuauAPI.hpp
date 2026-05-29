@@ -24,7 +24,6 @@
     #endif
 #endif
 
-// I hope people actually read this.
 namespace imes::luauapi {
     inline constexpr int kDefaultScriptDeadlineMs = 250;
 
@@ -35,16 +34,12 @@ namespace imes::luauapi {
         Panicked,
     };
 
-    // Shared singleton VM for all dependent mods. Call API on main thread.
-    // deadlineMs <= 0 disables Luau CPU budget for this execution.
     LUAUAPI_DLL geode::Result<void> runFile(
         std::filesystem::path const& resourcesRoot,
         std::filesystem::path const& relativePath,
         int deadlineMs = kDefaultScriptDeadlineMs
     );
 
-    // chunkName is a flat Luau resource name under resourcesRoot. No subdirs allowed.
-    // Panic is terminal for this process. OOM denies allocation from shared pool.
     LUAUAPI_DLL geode::Result<void> runScript(
         std::filesystem::path const& resourcesRoot,
         std::string_view source,
@@ -65,18 +60,12 @@ namespace imes::luauapi {
         int deadlineMs = kDefaultScriptDeadlineMs
     );
 
-    // Compatibility check for RuntimeStatus::Ready.
     LUAUAPI_DLL bool isReady();
 
-    // Does not create the runtime. Returns NotReady before init or off main thread.
     LUAUAPI_DLL RuntimeStatus status();
 
-    // Synchronous error side channel. Read before next LuauAPI call.
-    // Value is not stable across reentrant LuauAPI calls.
-    // Does not create the runtime.
     LUAUAPI_DLL std::string_view lastError();
 
-    // Main-thread only query APIs. Off-thread calls return default values.
     LUAUAPI_DLL std::size_t memoryUsage();
     LUAUAPI_DLL std::size_t memoryLimit();
 

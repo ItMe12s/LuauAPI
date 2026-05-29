@@ -1,7 +1,7 @@
 #pragma once
 
-#include <Luau/Require.h>
 #include <Geode/Result.hpp>
+#include <Luau/Require.h>
 #include <lua.h>
 
 #include <filesystem>

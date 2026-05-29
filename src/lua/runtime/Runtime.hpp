@@ -2,8 +2,8 @@
 
 #include "lua/Config.hpp"
 
-#include <LuauAPI.hpp>
 #include <Geode/Geode.hpp>
+#include <LuauAPI.hpp>
 #include <lua.h>
 #include <lualib.h>
 
@@ -12,12 +12,12 @@
 #include <cstddef>
 #include <filesystem>
 #include <functional>
+#include <list>
 #include <memory>
 #include <optional>
 #include <string>
 #include <string_view>
 #include <thread>
-#include <list>
 #include <unordered_map>
 #include <vector>
 
@@ -34,21 +34,22 @@ namespace luax {
 
         static Runtime& instance();
         static Runtime* getOrCreate();
-
-        lua_State* state();
-        bool ready() const;
-        imes::luauapi::RuntimeStatus status() const;
         static bool isInitialized();
         static Runtime* getIfInitialized();
         static void shutdown();
         static bool isShuttingDown();
         static void setMainThreadId(std::thread::id id);
         static bool isMainThread();
+
+        lua_State* state();
+        bool ready() const;
+        imes::luauapi::RuntimeStatus status() const;
+        bool assertMainThread() const;
+
         bool runScript(std::string_view src, std::string_view chunkName, int deadlineMs = kDefaultScriptDeadlineMs);
         geode::Result<void> runBytecode(std::string const& bytecode, std::string_view chunkName, int deadlineMs = kDefaultScriptDeadlineMs);
-        static std::string compileSource(std::string_view source);
         bool protectedCall(int nargs, int nresults, std::string_view context, int deadlineMs = kDefaultScriptDeadlineMs);
-        bool assertMainThread() const;
+        static std::string compileSource(std::string_view source);
 
         class ScriptBudgetGuard final {
         public:
@@ -80,6 +81,7 @@ namespace luax {
 
         void setResourcesRoot(std::filesystem::path const& root);
         std::filesystem::path const& resourcesRoot() const { return m_resourcesRoot; }
+
         void clearLastError() { m_lastError.clear(); }
         std::string const& lastError() const { return m_lastError; }
 
@@ -113,6 +115,11 @@ namespace luax {
         void setLastError(std::string error);
         void runShutdownHooks();
 
+        struct BytecodeCacheEntry {
+            std::string key;
+            std::string bytecode;
+        };
+
         lua_State* m_state = nullptr;
         std::thread::id m_ownerThread;
         std::atomic<imes::luauapi::RuntimeStatus> m_status{imes::luauapi::RuntimeStatus::NotReady};
@@ -133,10 +140,6 @@ namespace luax {
         std::string m_lastError;
         std::string m_initError;
 
-        struct BytecodeCacheEntry {
-            std::string key;
-            std::string bytecode;
-        };
         std::list<BytecodeCacheEntry> m_bytecodeLru;
         std::unordered_map<std::string, std::list<BytecodeCacheEntry>::iterator> m_bytecodeIndex;
 

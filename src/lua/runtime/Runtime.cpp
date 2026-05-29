@@ -2,15 +2,15 @@
 
 #include "AllocatorAccounting.hpp"
 #include "lua/bindings/Binding.hpp"
+#include "lua/bindings/framework/Ref.hpp"
 #include "lua/module/PathSandbox.hpp"
 #include "lua/module/Requirer.hpp"
-#include "lua/bindings/framework/Ref.hpp"
 
 #include <Geode/Geode.hpp>
-#include <fmt/format.h>
 #include <Luau/CodeGen.h>
 #include <Luau/Compiler.h>
 #include <Luau/Require.h>
+#include <fmt/format.h>
 #include <lua.h>
 #include <lualib.h>
 

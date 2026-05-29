@@ -2,8 +2,8 @@
 
 #include "Ref.hpp"
 
-#include <Geode/utils/cocos.hpp>
 #include <Geode/Result.hpp>
+#include <Geode/utils/cocos.hpp>
 #include <cocos2d.h>
 #include <fmt/format.h>
 #include <lua.h>
