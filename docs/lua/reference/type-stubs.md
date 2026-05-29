@@ -32,19 +32,20 @@ The repository ships editor configuration for the Luau language server.
 }
 ```
 
-`.vscode/settings.json` registers each stub under a name and tells the server to ignore the raw stub files as open documents:
+Configure `.vscode/settings.json` to register each stub file and ignore `.d.luau` files. The order in `definitionFiles` is important.
+Factories must come before their namespace class files, and cocos files before gd files. Do not change this order.
 
 ```json
 {
     "luau-lsp.platform.type": "standard",
     "luau-lsp.types.definitionFiles": {
-        "@geode-cocos2d": "types/geode_cocos2d.d.luau",
         "@geode-cocos2d-factories": "types/geode_cocos2d_factories.d.luau",
+        "@geode-cocos2d": "types/geode_cocos2d.d.luau",
+        "@geode-gd-factories": "types/geode_gd_factories.d.luau",
         "@geode-gd": "types/geode_gd.d.luau",
         "@geode-gd-2": "types/geode_gd_2.d.luau",
         "@geode-gd-3": "types/geode_gd_3.d.luau",
         "@geode-gd-4": "types/geode_gd_4.d.luau",
-        "@geode-gd-factories": "types/geode_gd_factories.d.luau",
         "@geode": "types/geode.d.luau"
     },
     "luau-lsp.ignoreGlobs": [

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import re
 import shutil
 import sys
 import tempfile
@@ -22,7 +23,10 @@ from emit_luau_bindings import (  # type: ignore[import-unresolved]
     _emit_dispatcher,
     _input_arg_count,
 )
-from emit_luau_types import emit as emit_luau_types  # type: ignore[import-unresolved]
+from emit_luau_types import (  # type: ignore[import-unresolved]
+    _build_file_order,
+    emit as emit_luau_types,
+)
 from broma_parser import Root  # type: ignore[import-unresolved]
 from type_map import classify_arg, is_const_reference, is_out_reference  # type: ignore[import-unresolved]
 from filtering import group_supported, is_link_platform, supported  # type: ignore[import-unresolved]
@@ -758,7 +762,7 @@ class LuauTypeEmissionTests(unittest.TestCase):
         self.assertIn("export type enumKeyCodes = number", cocos)
         self.assertNotIn("export type IconType = number", cocos)
         self.assertIn("export type RGBColor = { r: number, g: number, b: number }", gd)
-        self.assertIn("declare class CCNode end", gd)
+        self.assertNotIn("declare class CCNode end", gd)
 
     def test_factories_live_in_namespace_files(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")
@@ -837,17 +841,29 @@ class LuauTypeEmissionTests(unittest.TestCase):
                 )
             ],
         )
-        root = Root(
-            classes=[
-                ccobject,
-                Class(name="CCSprite", namespace="cocos2d", bases=["CCNode"]),
-                ccnode,
-                text_area,
-            ]
+        ccsprite = Class(
+            name="CCSprite",
+            namespace="cocos2d",
+            bases=["CCNode"],
+            methods=[
+                Method(
+                    name="setPosition",
+                    ret="void",
+                    args=[Arg("cocos2d::CCPoint", "pos")],
+                    platforms=all_platforms("0x4"),
+                )
+            ],
         )
+        root = Root(classes=[ccobject, ccsprite, ccnode, text_area])
         files = emit_luau_types(root)
-        self.assertIn("declare class TextArea end", files["geode_cocos2d.d.luau"])
-        self.assertNotIn("declare class CCSprite end", files["geode_gd.d.luau"])
+        cocos = files["geode_cocos2d.d.luau"]
+        gd = files["geode_gd.d.luau"]
+        self.assertIn("declare class TextArea end", cocos)
+        self.assertIn("function setPosition(self", cocos)
+        self.assertNotIn("declare class CCSprite end", gd)
+        self.assertNotIn(
+            "declare class CCSprite end", files["geode_gd_factories.d.luau"]
+        )
 
     def test_intra_file_forward_decls(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")
@@ -916,6 +932,10 @@ class LuauTypeEmissionTests(unittest.TestCase):
             "declare class SplitClass29",
             files["geode_gd_2.d.luau"],
         )
+        self.assertNotIn(
+            "declare class SplitClass00 end\n",
+            files["geode_gd_2.d.luau"],
+        )
 
     def test_factory_forward_decls(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")
@@ -946,6 +966,139 @@ class LuauTypeEmissionTests(unittest.TestCase):
         factory_pos = factories.find("export type WidgetLayerFactory")
         self.assertGreaterEqual(forward_pos, 0)
         self.assertGreater(factory_pos, forward_pos)
+
+    def test_cocos_factory_no_same_namespace_class_stub(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        ccsprite = Class(
+            name="CCSprite",
+            namespace="cocos2d",
+            bases=["CCNode"],
+            methods=[
+                Method(
+                    name="setPosition",
+                    ret="void",
+                    args=[Arg("cocos2d::CCPoint", "pos")],
+                    platforms=all_platforms("0x1"),
+                )
+            ],
+        )
+        root = Root(
+            classes=[
+                ccobject,
+                Class(name="CCNode", namespace="cocos2d", bases=["CCObject"]),
+                ccsprite,
+            ]
+        )
+        files = emit_luau_types(root)
+        factories = files["geode_cocos2d_factories.d.luau"]
+        self.assertNotIn("declare class CCSprite end", factories)
+        self.assertNotIn("declare class CCNode end", factories)
+        self.assertIn("function setPosition(self", files["geode_cocos2d.d.luau"])
+
+    def test_factory_file_order_in_build_file_order(self) -> None:
+        order = _build_file_order(
+            ["geode_cocos2d.d.luau"],
+            ["geode_gd.d.luau", "geode_gd_2.d.luau"],
+        )
+        self.assertEqual(
+            order,
+            [
+                "geode_cocos2d_factories.d.luau",
+                "geode_cocos2d.d.luau",
+                "geode_gd_factories.d.luau",
+                "geode_gd.d.luau",
+                "geode_gd_2.d.luau",
+                "geode.d.luau",
+            ],
+        )
+
+    def test_no_backward_class_stub(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        ccsprite = Class(
+            name="CCSprite",
+            namespace="cocos2d",
+            bases=["CCNode"],
+            methods=[
+                Method(
+                    name="setPosition",
+                    ret="void",
+                    args=[Arg("cocos2d::CCPoint", "pos")],
+                    platforms=all_platforms("0x1"),
+                )
+            ],
+        )
+        text_area = Class(
+            name="TextArea",
+            bases=["CCSprite"],
+            methods=[
+                Method(
+                    name="init",
+                    ret="bool",
+                    args=[],
+                    platforms=all_platforms("0x2"),
+                )
+            ],
+        )
+        root = Root(
+            classes=[
+                ccobject,
+                Class(name="CCNode", namespace="cocos2d", bases=["CCObject"]),
+                ccsprite,
+                text_area,
+            ]
+        )
+        files = emit_luau_types(root)
+        cocos_class_files = [
+            name
+            for name in files
+            if name.startswith("geode_cocos2d")
+            and name.endswith(".d.luau")
+            and "factories" not in name
+        ]
+        gd_class_files = [
+            name
+            for name in files
+            if name.startswith("geode_gd")
+            and name.endswith(".d.luau")
+            and "factories" not in name
+        ]
+        order_index = {
+            name: idx
+            for idx, name in enumerate(
+                _build_file_order(cocos_class_files, gd_class_files)
+            )
+        }
+        decl_re = re.compile(r"^declare class (\w+)\b(.*)$")
+        home_file: dict[str, str] = {}
+        for file_name, body in files.items():
+            if file_name not in order_index:
+                continue
+            for line in body.splitlines():
+                match = decl_re.match(line.strip())
+                if not match:
+                    continue
+                name, rest = match.group(1), match.group(2).strip()
+                if rest == "end":
+                    continue
+                home_file[name] = file_name
+        for file_name, body in files.items():
+            if file_name not in order_index:
+                continue
+            for line in body.splitlines():
+                match = decl_re.match(line.strip())
+                if not match:
+                    continue
+                name, rest = match.group(1), match.group(2).strip()
+                if rest != "end":
+                    continue
+                home = home_file.get(name)
+                if home is None or home == file_name:
+                    continue
+                self.assertLess(
+                    order_index[file_name],
+                    order_index[home],
+                    msg=f"backward stub for {name} in {file_name} (home {home})",
+                )
 
     def test_skipped_class_forward_decls(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")

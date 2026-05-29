@@ -441,11 +441,83 @@ def _pack_line_chunks(
     return {name: "".join(lines) for name, lines in packed.items()}, classes_per_file
 
 
+def _split_file_sort_key(file_name: str, base_name: str) -> int:
+    if file_name == base_name:
+        return 1
+    stem = base_name.removesuffix(".d.luau")
+    prefix = f"{stem}_"
+    if file_name.startswith(prefix) and file_name.endswith(".d.luau"):
+        suffix = file_name[len(prefix) : -len(".d.luau")]
+        if suffix.isdigit():
+            return int(suffix)
+    return 999999
+
+
+def _sort_split_files(file_names: Sequence[str], base_name: str) -> List[str]:
+    return sorted(file_names, key=lambda name: _split_file_sort_key(name, base_name))
+
+
+def _build_home_file(*classes_per_file: Dict[str, set[str]]) -> Dict[str, str]:
+    home_file: Dict[str, str] = {}
+    for mapping in classes_per_file:
+        for file_name, names in mapping.items():
+            for name in names:
+                home_file[name] = file_name
+    return home_file
+
+
+def _build_file_order(
+    cocos_class_files: Sequence[str],
+    gd_class_files: Sequence[str],
+) -> List[str]:
+    order: List[str] = []
+    order.append("geode_cocos2d_factories.d.luau")
+    order.extend(_sort_split_files(cocos_class_files, "geode_cocos2d.d.luau"))
+    order.append("geode_gd_factories.d.luau")
+    order.extend(_sort_split_files(gd_class_files, "geode_gd.d.luau"))
+    order.append("geode.d.luau")
+    return order
+
+
+def _keep_forward_stub(
+    name: str,
+    file_name: str,
+    home_file: Dict[str, str],
+    order_index: Dict[str, int],
+    objects: Dict[str, Class],
+) -> bool:
+    home = home_file.get(name)
+    if home is None or home == file_name:
+        return True
+    if file_name == "geode_cocos2d_factories.d.luau":
+        ref_cls = objects.get(name)
+        if ref_cls and lua_namespace(ref_cls) == "geode.cocos2d" and home is not None:
+            return False
+    return order_index[home] > order_index[file_name]
+
+
+def _filter_forward_stubs(
+    names: set[str],
+    file_name: str,
+    home_file: Dict[str, str],
+    order_index: Dict[str, int],
+    objects: Dict[str, Class],
+) -> set[str]:
+    return {
+        name
+        for name in names
+        if _keep_forward_stub(name, file_name, home_file, order_index, objects)
+    }
+
+
 def _augment_packed_class_files(
     packed: Dict[str, str],
     classes_per_file: Dict[str, set[str]],
     base_header: List[str],
-    cross_namespace_forward: set[str],
+    cross_namespace_external: set[str],
+    external_label: str,
+    home_file: Dict[str, str],
+    order_index: Dict[str, int],
     grouped_by_class: Dict[str, Dict[str, List[Method]]],
     objects: Dict[str, Class],
     skipped_classes: set,
@@ -491,10 +563,23 @@ def _augment_packed_class_files(
             for name in refs - all_emitted_classes
             if name in objects and lua_namespace(objects[name]) == source_namespace
         }
-        forward_names = (
-            defined_here | sibling_refs | orphan_refs
-        ) - cross_namespace_forward
+        forward_names = _filter_forward_stubs(
+            defined_here | sibling_refs | orphan_refs,
+            file_name,
+            home_file,
+            order_index,
+            objects,
+        )
+        cross_namespace = _filter_forward_stubs(
+            cross_namespace_external,
+            file_name,
+            home_file,
+            order_index,
+            objects,
+        )
         file_header = base_header.copy()
+        if cross_namespace:
+            file_header.append(_emit_forward_decls(cross_namespace, external_label))
         if forward_names:
             file_header.append(_emit_forward_decls(forward_names, file_name))
         header_text = "".join(file_header)
@@ -629,7 +714,6 @@ def emit(
     cocos_external = _external_type_refs(
         classes, grouped_by_class, objects, skipped_classes, cocos_namespace
     )
-    cocos_class_header.append(_emit_forward_decls(cocos_external, "geode_gd.d.luau"))
 
     gd_class_header = _header("Geometry Dash class declarations")
     gd_class_header.append(_prelude(gd_namespace))
@@ -640,7 +724,6 @@ def emit(
         classes, grouped_by_class, objects, skipped_classes, gd_namespace
     )
     gd_class_header.append(_emit_value_stubs(gd_value_refs))
-    gd_class_header.append(_emit_forward_decls(gd_external, "geode_cocos2d.d.luau"))
 
     cocos_class_chunks: List[Tuple[str, str]] = []
     gd_class_chunks: List[Tuple[str, str]] = []
@@ -673,21 +756,29 @@ def emit(
     cocos_packed, cocos_classes_per_file = _pack_line_chunks(
         cocos_class_header, cocos_class_chunks, "geode_cocos2d.d.luau"
     )
+
+    gd_packed, gd_classes_per_file = _pack_line_chunks(
+        gd_class_header, gd_class_chunks, "geode_gd.d.luau"
+    )
+
+    home_file = _build_home_file(cocos_classes_per_file, gd_classes_per_file)
+    file_order = _build_file_order(list(cocos_packed), list(gd_packed))
+    order_index = {name: idx for idx, name in enumerate(file_order)}
+
     output.update(
         _augment_packed_class_files(
             cocos_packed,
             cocos_classes_per_file,
             cocos_class_header,
             cocos_external,
+            "geode_gd.d.luau",
+            home_file,
+            order_index,
             grouped_by_class,
             objects,
             skipped_classes,
             cocos_namespace,
         )
-    )
-
-    gd_packed, gd_classes_per_file = _pack_line_chunks(
-        gd_class_header, gd_class_chunks, "geode_gd.d.luau"
     )
     output.update(
         _augment_packed_class_files(
@@ -695,6 +786,9 @@ def emit(
             gd_classes_per_file,
             gd_class_header,
             gd_external,
+            "geode_cocos2d.d.luau",
+            home_file,
+            order_index,
             grouped_by_class,
             objects,
             skipped_classes,
@@ -705,7 +799,16 @@ def emit(
     cocos_factory_refs = _factory_object_refs(cocos_factories, objects)
     cocos_factory_lines = _header("Cocos2d factory declarations")
     cocos_factory_lines.append(
-        _emit_forward_decls(cocos_factory_refs, "geode_cocos2d.d.luau")
+        _emit_forward_decls(
+            _filter_forward_stubs(
+                cocos_factory_refs,
+                "geode_cocos2d_factories.d.luau",
+                home_file,
+                order_index,
+                objects,
+            ),
+            "geode_cocos2d.d.luau",
+        )
     )
     cocos_factory_lines.extend(
         _emit_factories(cocos_factories, objects, cocos_namespace)
@@ -713,20 +816,17 @@ def emit(
     output["geode_cocos2d_factories.d.luau"] = "".join(cocos_factory_lines)
 
     gd_factory_refs = _factory_object_refs(gd_factories, objects)
-    gd_factory_external = {
-        name
-        for name in gd_factory_refs
-        if (ref_cls := objects.get(name)) and lua_namespace(ref_cls) == cocos_namespace
-    }
-    gd_factory_same_ns = gd_factory_refs - gd_factory_external
     gd_factory_lines = _header("Geometry Dash factory declarations")
     gd_factory_lines.append(
-        _emit_forward_decls(gd_factory_external, "geode_cocos2d.d.luau")
-    )
-    gd_factory_lines.append(
         _emit_forward_decls(
-            gd_factory_same_ns,
-            "geode_gd.d.luau and geode_gd_2.d.luau",
+            _filter_forward_stubs(
+                gd_factory_refs,
+                "geode_gd_factories.d.luau",
+                home_file,
+                order_index,
+                objects,
+            ),
+            "geode_gd.d.luau",
         )
     )
     gd_factory_lines.extend(_emit_factories(gd_factories, objects, gd_namespace))

@@ -53,17 +53,19 @@ Create `.luaurc` in your mod root.
 
 Create `.vscode/settings.json` in your mod root.
 
+Keep the `definitionFiles` order exactly, factory files must come before class files for correct types.
+
 ```json
 {
     "luau-lsp.platform.type": "standard",
     "luau-lsp.types.definitionFiles": {
-        "@geode-cocos2d": "types/geode_cocos2d.d.luau",
         "@geode-cocos2d-factories": "types/geode_cocos2d_factories.d.luau",
+        "@geode-cocos2d": "types/geode_cocos2d.d.luau",
+        "@geode-gd-factories": "types/geode_gd_factories.d.luau",
         "@geode-gd": "types/geode_gd.d.luau",
         "@geode-gd-2": "types/geode_gd_2.d.luau",
         "@geode-gd-3": "types/geode_gd_3.d.luau",
         "@geode-gd-4": "types/geode_gd_4.d.luau",
-        "@geode-gd-factories": "types/geode_gd_factories.d.luau",
         "@geode": "types/geode.d.luau"
     },
     "luau-lsp.ignoreGlobs": [
