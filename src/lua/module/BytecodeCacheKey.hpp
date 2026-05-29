@@ -2,8 +2,6 @@
 
 #include "PathSandbox.hpp"
 
-#include <Geode/utils/general.hpp>
-
 #include <chrono>
 #include <cstdint>
 #include <filesystem>
@@ -25,8 +23,8 @@ namespace luax {
         }
 
         return filesystemPathString(path)
-            + "|size=" + geode::utils::numToString(size)
-            + "|mtime=" + geode::utils::numToString(stampNanoseconds)
-            + "|hash=" + geode::utils::numToString(std::hash<std::string>{}(contents));
+            + "|size=" + std::to_string(size)
+            + "|mtime=" + std::to_string(stampNanoseconds)
+            + "|hash=" + std::to_string(std::hash<std::string>{}(contents));
     }
 }

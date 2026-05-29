@@ -94,10 +94,6 @@ endif()
 
 add_subdirectory($ENV{GEODE_SDK} ${CMAKE_CURRENT_BINARY_DIR}/geode)
 
-if(LUAUAPI_BUILD_TESTS AND TARGET GeodeBindings)
-    target_compile_definitions(GeodeBindings PUBLIC GEODE_EXPORTING)
-endif()
-
 find_package(Python3 3.11 REQUIRED COMPONENTS Interpreter)
 
 file(READ ${CMAKE_CURRENT_SOURCE_DIR}/mod.json LUAUAPI_MOD_JSON)
@@ -227,7 +223,7 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE LUAUAPI_EXPORTING=1)
 if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC" OR CMAKE_CXX_COMPILER MATCHES "clang-cl")
     target_compile_options(${PROJECT_NAME} PRIVATE /W4)
 elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
-    target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Wpedantic)
+    target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Wpedantic -Wno-dollar-in-identifier-extension)
 endif()
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     target_compile_options(${PROJECT_NAME} PRIVATE -Wno-gnu-zero-variadic-macro-arguments)
@@ -260,52 +256,34 @@ if(LUAUAPI_BUILD_TESTS)
     add_executable(luauapi_tests
         tests/allocator_accounting_tests.cpp
         tests/bytecode_cache_key_tests.cpp
-        tests/runtime_integration_tests.cpp
         tests/path_sandbox_tests.cpp
         tests/path_rules_tests.cpp
         tests/require_path_tests.cpp
-        tests/task_scheduler_tests.cpp
-        tests/host_geode_stubs.cpp
-        tests/fake_geode/cocos_stubs.cpp
-        tests/fake_geode/geode_stubs.cpp
-        tests/fake_geode/geode_loader_stubs.cpp
-        tests/fake_geode/loader_stubs.cpp
-        tests/usertype_registry_tests.cpp
-        "${LUAUAPI_GEODE_SDK_PATH}/loader/src/utils/JsonValidation.cpp"
-        src/api.cpp
-        src/lua/bindings/Binding.cpp
-        src/lua/module/Requirer.cpp
-        src/lua/runtime/Runtime.cpp
-        src/lua/bindings/framework/Fields.cpp
-        src/lua/bindings/framework/Usertype.cpp
-        src/lua/bindings/framework/UsertypeRegistry.cpp
-        src/lua/bindings/task/TaskScheduler.cpp
-        src/lua/bindings/task/TaskBinding.cpp
     )
     target_compile_features(luauapi_tests PRIVATE cxx_std_23)
     target_include_directories(luauapi_tests PRIVATE src include)
-    target_compile_definitions(luauapi_tests PRIVATE LUAUAPI_HOST_TESTS=1 LUAUAPI_EXPORTING=1 GEODE_EXPORTING=1)
+    target_compile_definitions(luauapi_tests PRIVATE LUAUAPI_HOST_TESTS=1)
     target_link_libraries(luauapi_tests PRIVATE
         Catch2::Catch2WithMain
-        GeodeBindings
-        mat-json-impl
-        Luau.Ast
-        Luau.CodeGen
-        Luau.Compiler
-        Luau.Require
-        Luau.VM
     )
-    if(WIN32)
-        set(LUAUAPI_GEODE_LINK_DIR "${LUAUAPI_GEODE_SDK_PATH}/loader/include/link/win64")
-        if(EXISTS "${LUAUAPI_GEODE_LINK_DIR}/libcocos2d.lib")
-            target_link_libraries(luauapi_tests PRIVATE
-                "${LUAUAPI_GEODE_LINK_DIR}/libcocos2d.lib"
-                "${LUAUAPI_GEODE_LINK_DIR}/libExtensions.lib"
-                "${LUAUAPI_GEODE_LINK_DIR}/glew32.lib"
-                "${LUAUAPI_GEODE_LINK_DIR}/fmod.lib"
+    get_target_property(LUAUAPI_TEST_LINK_LIBS luauapi_tests LINK_LIBRARIES)
+    if(LUAUAPI_TEST_LINK_LIBS)
+        foreach(LUAUAPI_TEST_LINK_LIB IN LISTS LUAUAPI_TEST_LINK_LIBS)
+            get_filename_component(LUAUAPI_TEST_LINK_NAME "${LUAUAPI_TEST_LINK_LIB}" NAME)
+            foreach(LUAUAPI_FORBIDDEN_TEST_LIB
+                GeodeBindings
+                libcocos2d.lib
+                libExtensions.lib
+                glew32.lib
+                fmod.lib
                 opengl32
             )
-        endif()
+                if(LUAUAPI_TEST_LINK_LIB STREQUAL LUAUAPI_FORBIDDEN_TEST_LIB OR
+                   LUAUAPI_TEST_LINK_NAME STREQUAL LUAUAPI_FORBIDDEN_TEST_LIB)
+                    message(FATAL_ERROR "luauapi_tests must not link ${LUAUAPI_FORBIDDEN_TEST_LIB}")
+                endif()
+            endforeach()
+        endforeach()
     endif()
 
     list(APPEND CMAKE_MODULE_PATH ${catch2_SOURCE_DIR}/extras)

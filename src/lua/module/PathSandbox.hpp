@@ -3,16 +3,75 @@
 #include "lua/Config.hpp"
 #include "PathRules.hpp"
 
+#if defined(LUAUAPI_HOST_TESTS)
+#include <optional>
+#else
 #include <Geode/Result.hpp>
 #include <Geode/utils/string.hpp>
+#endif
 
 #include <filesystem>
 #include <fstream>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 namespace luax {
+#if defined(LUAUAPI_HOST_TESTS)
+    template <class T>
+    class HostResult {
+    public:
+        static HostResult ok(T value) {
+            HostResult result;
+            result.m_value = std::move(value);
+            return result;
+        }
+
+        static HostResult err(std::string message) {
+            HostResult result;
+            result.m_error = std::move(message);
+            return result;
+        }
+
+        bool isOk() const { return m_value.has_value(); }
+        bool isErr() const { return !isOk(); }
+        T& unwrap() { return *m_value; }
+        T const& unwrap() const { return *m_value; }
+        std::string const& unwrapErr() const { return m_error; }
+
+    private:
+        std::optional<T> m_value;
+        std::string m_error;
+    };
+
+    template <class T>
+    using ScriptResult = HostResult<T>;
+
+    template <class T>
+    inline ScriptResult<T> scriptOk(T value) {
+        return ScriptResult<T>::ok(std::move(value));
+    }
+
+    template <class T>
+    inline ScriptResult<T> scriptErr(std::string message) {
+        return ScriptResult<T>::err(std::move(message));
+    }
+#else
+    template <class T>
+    using ScriptResult = geode::Result<T>;
+
+    template <class T>
+    inline ScriptResult<T> scriptOk(T value) {
+        return geode::Ok(std::move(value));
+    }
+
+    template <class T>
+    inline ScriptResult<T> scriptErr(std::string message) {
+        return geode::Err(std::move(message));
+    }
+#endif
+
     inline std::string normalizedPathString(std::filesystem::path const& path) {
         return path.generic_string();
     }
@@ -26,16 +85,16 @@ namespace luax {
 #endif
     }
 
-    inline geode::Result<std::string> readScriptFile(std::filesystem::path const& path) {
+    inline ScriptResult<std::string> readScriptFile(std::filesystem::path const& path) {
         std::error_code ec;
         auto size = std::filesystem::file_size(path, ec);
         if (!ec && size > kMaxScriptBytes) {
-            return geode::Err("script exceeds maximum size");
+            return scriptErr<std::string>("script exceeds maximum size");
         }
 
         std::ifstream in(path, std::ios::binary);
         if (!in.good()) {
-            return geode::Err("script cannot be read: " + filesystemPathString(path));
+            return scriptErr<std::string>("script cannot be read: " + filesystemPathString(path));
         }
 
         std::string contents;
@@ -49,35 +108,35 @@ namespace luax {
             auto read = in.gcount();
             if (read <= 0) break;
             if (contents.size() + static_cast<std::size_t>(read) > kMaxScriptBytes) {
-                return geode::Err("script exceeds maximum size");
+                return scriptErr<std::string>("script exceeds maximum size");
             }
             contents.append(buffer.data(), static_cast<std::size_t>(read));
         }
         if (in.bad()) {
-            return geode::Err("script cannot be read: " + filesystemPathString(path));
+            return scriptErr<std::string>("script cannot be read: " + filesystemPathString(path));
         }
-        return geode::Ok(std::move(contents));
+        return scriptOk(std::move(contents));
     }
 
-    inline geode::Result<std::filesystem::path> resolveScriptFileInsideRoot(
+    inline ScriptResult<std::filesystem::path> resolveScriptFileInsideRoot(
         std::filesystem::path const& root,
         std::filesystem::path const& candidate
     ) {
         std::error_code ec;
         auto path = std::filesystem::weakly_canonical(candidate, ec);
         if (ec) {
-            return geode::Err("script path cannot be resolved: " + ec.message());
+            return scriptErr<std::filesystem::path>("script path cannot be resolved: " + ec.message());
         }
 
         if (!pathInsideRootValue(path, root)) {
-            return geode::Err("script path escapes resources root");
+            return scriptErr<std::filesystem::path>("script path escapes resources root");
         }
 
         if (!std::filesystem::is_regular_file(path, ec)) {
-            return geode::Err("script file not found: " + filesystemPathString(path));
+            return scriptErr<std::filesystem::path>("script file not found: " + filesystemPathString(path));
         }
 
-        return geode::Ok(path);
+        return scriptOk(path);
     }
 
     inline bool escapesRoot(std::filesystem::path const& rel) {
@@ -101,9 +160,9 @@ namespace luax {
         return isFlatResourcePathValue(path);
     }
 
-    inline geode::Result<std::filesystem::path> normalizeVirtualPath(std::string_view rawChunkName) {
+    inline ScriptResult<std::filesystem::path> normalizeVirtualPath(std::string_view rawChunkName) {
         if (rawChunkName.empty()) {
-            return geode::Err("chunk name is empty");
+            return scriptErr<std::filesystem::path>("chunk name is empty");
         }
 
         std::string text(rawChunkName);
@@ -113,20 +172,20 @@ namespace luax {
 
         std::filesystem::path path(text);
         if (path.empty()) {
-            return geode::Err("chunk name is empty");
+            return scriptErr<std::filesystem::path>("chunk name is empty");
         }
 
         if (path.is_absolute()) {
-            return geode::Err("chunk name must not be absolute");
+            return scriptErr<std::filesystem::path>("chunk name must not be absolute");
         }
 
         path = path.lexically_normal();
         if (!isFlatResourcePath(path)) {
-            return geode::Err("chunk name must be a flat resource name");
+            return scriptErr<std::filesystem::path>("chunk name must be a flat resource name");
         }
 
         if (hasUnsupportedExtension(path)) {
-            return geode::Err("chunk name extension must be .luau");
+            return scriptErr<std::filesystem::path>("chunk name extension must be .luau");
         }
 
         if (!hasLuauExtension(path)) {
@@ -134,27 +193,27 @@ namespace luax {
         }
 
         if (!isFlatResourcePath(path)) {
-            return geode::Err("chunk name must be a flat resource name");
+            return scriptErr<std::filesystem::path>("chunk name must be a flat resource name");
         }
 
-        return geode::Ok(path);
+        return scriptOk(path);
     }
 
-    inline geode::Result<std::filesystem::path> canonicalRoot(std::filesystem::path const& resourcesRoot) {
+    inline ScriptResult<std::filesystem::path> canonicalRoot(std::filesystem::path const& resourcesRoot) {
         if (resourcesRoot.empty()) {
-            return geode::Err("resources root is empty");
+            return scriptErr<std::filesystem::path>("resources root is empty");
         }
 
         std::error_code ec;
         auto root = std::filesystem::weakly_canonical(resourcesRoot, ec);
         if (ec) {
-            return geode::Err("resources root cannot be resolved: " + ec.message());
+            return scriptErr<std::filesystem::path>("resources root cannot be resolved: " + ec.message());
         }
 
         if (!std::filesystem::is_directory(root, ec)) {
-            return geode::Err("resources root is not a directory: " + filesystemPathString(root));
+            return scriptErr<std::filesystem::path>("resources root is not a directory: " + filesystemPathString(root));
         }
 
-        return geode::Ok(root);
+        return scriptOk(root);
     }
 }
