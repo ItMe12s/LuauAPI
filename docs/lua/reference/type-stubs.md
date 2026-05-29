@@ -10,10 +10,9 @@ The code generator writes `.d.luau` files into the `types/` folder. They describ
 
 The generated files are:
 
+- `types/geode_cocos2d_all.d.luau`: all cocos2d class stubs and factories in one self-contained file.
+- `types/geode_gd_all.d.luau`: all Geometry Dash class stubs and factories in one self-contained file.
 - `types/geode.d.luau`: the `geode` namespace root, along with `HookHandle` and `HookCallbackTable`.
-- `types/geode_cocos2d.d.luau` and `types/geode_cocos2d_factories.d.luau`: the engine classes.
-- `types/geode_gd.d.luau`, `types/geode_gd_2.d.luau`, `types/geode_gd_3.d.luau`, `types/geode_gd_4.d.luau`: the Geometry Dash classes, split across files.
-- `types/geode_gd_factories.d.luau`: the Geometry Dash factory functions.
 
 The `task` and `time` stubs come from `tools/luau_codegen/extra_bindings/task.dluau`.
 
@@ -32,20 +31,14 @@ The repository ships editor configuration for the Luau language server.
 }
 ```
 
-Configure `.vscode/settings.json` to register each stub file and ignore `.d.luau` files. The order in `definitionFiles` is important.
-Factories must come before their namespace class files, and cocos files before gd files. Do not change this order.
+Configure `.vscode/settings.json` to register each stub file and ignore `.d.luau` files. The order in `definitionFiles` is important: cocos bundle first, then gd bundle, then the geode root.
 
 ```json
 {
     "luau-lsp.platform.type": "standard",
     "luau-lsp.types.definitionFiles": {
-        "@geode-cocos2d-factories": "types/geode_cocos2d_factories.d.luau",
-        "@geode-cocos2d": "types/geode_cocos2d.d.luau",
-        "@geode-gd-factories": "types/geode_gd_factories.d.luau",
-        "@geode-gd": "types/geode_gd.d.luau",
-        "@geode-gd-2": "types/geode_gd_2.d.luau",
-        "@geode-gd-3": "types/geode_gd_3.d.luau",
-        "@geode-gd-4": "types/geode_gd_4.d.luau",
+        "@geode-cocos2d-all": "types/geode_cocos2d_all.d.luau",
+        "@geode-gd-all": "types/geode_gd_all.d.luau",
         "@geode": "types/geode.d.luau"
     },
     "luau-lsp.ignoreGlobs": [

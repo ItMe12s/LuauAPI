@@ -26,14 +26,9 @@ Copy the whole `types/` folder from the LuauAPI repo into the root of your own m
 Your mod root should now contain a `types/` folder with these files:
 
 ```text
+types/geode_cocos2d_all.d.luau
+types/geode_gd_all.d.luau
 types/geode.d.luau
-types/geode_cocos2d.d.luau
-types/geode_cocos2d_factories.d.luau
-types/geode_gd.d.luau
-types/geode_gd_2.d.luau
-types/geode_gd_3.d.luau
-types/geode_gd_4.d.luau
-types/geode_gd_factories.d.luau
 ```
 
 ## Step 4: add .luaurc
@@ -53,19 +48,14 @@ Create `.luaurc` in your mod root.
 
 Create `.vscode/settings.json` in your mod root.
 
-Keep the `definitionFiles` order exactly, factory files must come before class files for correct types.
+Keep the `definitionFiles` order exactly: cocos bundle, then gd bundle, then the geode root.
 
 ```json
 {
     "luau-lsp.platform.type": "standard",
     "luau-lsp.types.definitionFiles": {
-        "@geode-cocos2d-factories": "types/geode_cocos2d_factories.d.luau",
-        "@geode-cocos2d": "types/geode_cocos2d.d.luau",
-        "@geode-gd-factories": "types/geode_gd_factories.d.luau",
-        "@geode-gd": "types/geode_gd.d.luau",
-        "@geode-gd-2": "types/geode_gd_2.d.luau",
-        "@geode-gd-3": "types/geode_gd_3.d.luau",
-        "@geode-gd-4": "types/geode_gd_4.d.luau",
+        "@geode-cocos2d-all": "types/geode_cocos2d_all.d.luau",
+        "@geode-gd-all": "types/geode_gd_all.d.luau",
         "@geode": "types/geode.d.luau"
     },
     "luau-lsp.ignoreGlobs": [
