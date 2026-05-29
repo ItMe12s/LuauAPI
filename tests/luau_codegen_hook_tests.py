@@ -127,6 +127,11 @@ class HookOffsetTests(unittest.TestCase):
         self.assertIn('dlopen("libcocos2dcpp.so", RTLD_NOW)', text)
         self.assertEqual(text.count('dlopen("libcocos2dcpp.so"'), 1)
 
+    def test_emit_internal_hpp_declares_android_libcocos(self) -> None:
+        text = emit_internal_hpp()
+        self.assertIn("#if defined(GEODE_IS_ANDROID)", text)
+        self.assertIn("void* luaapi_android_libcocos();", text)
+
 
 class LinkClassFilterTests(unittest.TestCase):
     def test_missing_address_rejected_without_class_link(self) -> None:
