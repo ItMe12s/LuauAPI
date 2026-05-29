@@ -11,9 +11,10 @@ A script runs inside the game on the main thread. From a script you can:
 - Log with `print`.
 - Schedule work with `task` and read clocks with `time`.
 - Load other modules with `require`.
-- Hook and change game functions with `geode.hook` and `geode.modify`.
+- Hook and change game functions with `geode.hook`.
 - Read and create game objects through `geode.cocos2d` and `geode.gd`.
 - Store per object data with `geode.fields`.
+- Share an API with other mods through the global table. See [Sharing APIs between mods](guide/sharing-apis-between-mods.md).
 
 ## Globals at a glance
 
@@ -21,7 +22,8 @@ A script runs inside the game on the main thread. From a script you can:
 - `require(path)` loads a sibling module. See [Modules and require](guide/modules-and-require.md).
 - `task` schedules callbacks. See [Tasks and time](guide/tasks-and-time.md).
 - `time` reads the steady clock and the unix clock.
-- `geode` is the game bindings root. It holds `cocos2d`, `gd`, `hook`, `modify`, `skip`, and `fields`.
+- `geode` is the game bindings root. It holds `cocos2d`, `gd`, `hook`, `skip`, and `fields`.
+- `_G` is the shared global table. Use it to share an API with other mods. See [Sharing APIs between mods](guide/sharing-apis-between-mods.md).
 
 ## The geode namespace
 

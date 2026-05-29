@@ -755,9 +755,6 @@ def emit(
     main_lines.append(
         "    hook: (target: string, callback: HookCallbackTable) -> HookHandle,\n"
     )
-    main_lines.append(
-        "    modify: (target: string, callback: HookCallbackTable) -> HookHandle,\n"
-    )
     main_lines.append("    skip: (value: any?) -> any,\n")
     main_lines.append("    fields: (self: any) -> { [string]: any },\n")
     main_lines.append("}\n\n")

@@ -52,6 +52,7 @@ When you require a module, the runtime resolves the path inside the root, reads 
 ## Related
 
 - [Writing scripts](writing-scripts.md)
+- [Sharing APIs between mods](sharing-apis-between-mods.md)
 - [Module system internals](../../dev/module-system.md)
 
 ## Source

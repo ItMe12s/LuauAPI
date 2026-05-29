@@ -20,10 +20,11 @@ For anyone writing `.luau` files that run inside the game.
 - [Overview](docs/lua/overview.md)
 - Guides
   - [Writing scripts](docs/lua/guide/writing-scripts.md)
-  - [Hooks and modify](docs/lua/guide/hooks-and-modify.md)
+  - [Hooks](docs/lua/guide/hooks.md)
   - [Tasks and time](docs/lua/guide/tasks-and-time.md)
   - [Using game objects](docs/lua/guide/using-game-objects.md)
   - [Modules and require](docs/lua/guide/modules-and-require.md)
+  - [Sharing APIs between mods](docs/lua/guide/sharing-apis-between-mods.md)
 - Reference
   - [Globals](docs/lua/reference/globals.md)
   - [Hooks](docs/lua/reference/hooks.md)

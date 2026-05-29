@@ -431,10 +431,6 @@ def emit_hook_support() -> str:
         return 1;
     }
 
-    int luaapi_geode_modify(lua_State* L) {
-        return luaapi_geode_hook(L);
-    }
-
     int luaapi_geode_skip(lua_State* L) {
         int argc = lua_gettop(L);
         if (argc > 1) luaL_error(L, "geode.skip expected 0 or 1 args");

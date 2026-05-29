@@ -1,4 +1,4 @@
-# Hooks and modify
+# Hooks
 
 ## Summary
 
@@ -6,7 +6,7 @@ A hook lets your script run code before or after a game function. You can read t
 
 ## The basic shape
 
-Use `geode.hook` or `geode.modify`. They are the same function, so choose whichever name you prefer.
+Use `geode.hook` to install a hook.
 
 ```lua
 local handle = geode.hook("geode.gd.MenuLayer:init/0", {

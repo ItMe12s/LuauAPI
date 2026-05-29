@@ -28,6 +28,14 @@ Loads a sibling Luau module and returns its single value. The module system is f
 local Helper = require("./Helper")
 ```
 
+## _G
+
+```lua
+_G: { [string]: any }
+```
+
+The shared global table for every script in the runtime. There is one runtime and one global table, so values you set on `_G` are visible to other scripts and to other mods. This is the channel for cross mod APIs. Read shared values through `_G[key]` rather than as a bare global name. See [Sharing APIs between mods](../guide/sharing-apis-between-mods.md) for the full convention.
+
 ## Other globals
 
 The standard Luau libraries are open, including `string`, `table`, and `math`. The `task`, `time`, and `geode` globals are documented on their own pages.

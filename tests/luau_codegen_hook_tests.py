@@ -468,12 +468,11 @@ class GeneratedSafetyTests(unittest.TestCase):
         self.assertIn("luax::kHookScriptDeadlineMs", text)
         self.assertNotIn("targetId, 50", text)
 
-    def test_hook_api_is_table_only_with_modify_skip_fields(self) -> None:
+    def test_hook_api_is_table_only_with_skip_fields(self) -> None:
         text = emit_hook_support()
 
         self.assertIn("geode.hook expected callback table", text)
         self.assertNotIn("geode.hook expected function at arg 2", text)
-        self.assertIn("luaapi_geode_modify", text)
         self.assertIn("luaapi_geode_skip", text)
         self.assertIn("luaapi_geode_fields", text)
 

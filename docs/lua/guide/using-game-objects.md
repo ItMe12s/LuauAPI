@@ -67,7 +67,7 @@ The runtime tracks whether an object is owned by Lua or only borrowed, and it ha
 
 ## Related
 
-- [Hooks and modify](hooks-and-modify.md)
+- [Hooks](hooks.md)
 - [Type stubs and editor setup](../reference/type-stubs.md)
 - [Bindings framework](../../dev/bindings-framework.md)
 

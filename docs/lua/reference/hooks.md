@@ -2,16 +2,15 @@
 
 ## Summary
 
-This page is the type reference for the hook API. For usage guidance, see [Hooks and modify](../guide/hooks-and-modify.md). The types here match the generated stub `types/geode.d.luau`.
+This page is the type reference for the hook API. For usage guidance, see [Hooks](../guide/hooks.md). The types here match the generated stub `types/geode.d.luau`.
 
-## geode.hook and geode.modify
+## geode.hook
 
 ```lua
 geode.hook(target: string, callback: HookCallbackTable) -> HookHandle
-geode.modify(target: string, callback: HookCallbackTable) -> HookHandle
 ```
 
-`hook` and `modify` are the same function. They register a callback on a target function and return a handle. The target must exist, otherwise the call raises an error. You must pass exactly two arguments.
+`geode.hook` registers a callback on a target function and returns a handle. The target must exist, otherwise the call raises an error. You must pass exactly two arguments.
 
 The target id format is `namespace.Class:method/argCount`, for example `geode.gd.GameManager:setIntGameVariable/2`.
 

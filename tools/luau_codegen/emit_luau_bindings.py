@@ -401,8 +401,6 @@ def _emit_common_file(
     out.append('    luax::getOrCreateTable(L, "geode");\n')
     out.append('    lua_pushcfunction(L, &luaapi_geode_hook, "geode.hook");\n')
     out.append('    lua_setfield(L, -2, "hook");\n')
-    out.append('    lua_pushcfunction(L, &luaapi_geode_modify, "geode.modify");\n')
-    out.append('    lua_setfield(L, -2, "modify");\n')
     out.append('    lua_pushcfunction(L, &luaapi_geode_skip, "geode.skip");\n')
     out.append('    lua_setfield(L, -2, "skip");\n')
     out.append('    lua_pushcfunction(L, &luaapi_geode_fields, "geode.fields");\n')
