@@ -44,6 +44,7 @@ The file name must be a flat `.luau` resource name. It cannot include folders, a
 
 ## Next steps
 
+- Editor: [Editor setup](editor-setup.md)
 - Script side: [Overview](../lua/overview.md)
 - Host side: [Integration guide](../cpp/integration-guide.md)
 - Background: [Core concepts](concepts.md)

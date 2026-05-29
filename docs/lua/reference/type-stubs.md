@@ -2,7 +2,7 @@
 
 ## Summary
 
-The build generates Luau type stubs for the game bindings. These stubs provide autocomplete and type checks in your editor. This page lists the stubs and the editor settings.
+The build generates Luau type stubs for the game bindings. These stubs provide autocomplete and type checks in your editor. This page lists the stubs and the editor settings. For a step by step walkthrough, see [Editor setup](../../getting-started/editor-setup.md).
 
 ## What the stubs are
 

@@ -46,6 +46,7 @@ CMake downloads these for you during configuration, so you do not install them b
 ## Next steps
 
 - [Building](building.md)
+- [Editor setup](editor-setup.md)
 - [Your first script](first-script.md)
 
 ## Source

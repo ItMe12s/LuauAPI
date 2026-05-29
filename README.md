@@ -10,6 +10,7 @@ Start here regardless of your role.
 
 - [Installation](docs/getting-started/installation.md)
 - [Building](docs/getting-started/building.md)
+- [Editor setup](docs/getting-started/editor-setup.md)
 - [Your first script](docs/getting-started/first-script.md)
 - [Core concepts](docs/getting-started/concepts.md)
 
