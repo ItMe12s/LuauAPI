@@ -3,9 +3,12 @@
 #include <lua.h>
 #include <lualib.h>
 
+#include <array>
+#include <charconv>
 #include <cstdint>
 #include <string>
 #include <string_view>
+#include <system_error>
 #include <tuple>
 #include <type_traits>
 #include <utility>
@@ -13,7 +16,7 @@
 namespace luax {
     inline void push(lua_State* L, bool v) { lua_pushboolean(L, v); }
     inline void push(lua_State* L, int v) { lua_pushinteger(L, v); }
-    inline void push(lua_State* L, unsigned v) { lua_pushinteger(L, static_cast<int>(v)); }
+    inline void push(lua_State* L, unsigned v) { lua_pushnumber(L, static_cast<double>(v)); }
     inline void push(lua_State* L, long long v) { lua_pushnumber(L, static_cast<double>(v)); }
     inline void push(lua_State* L, float v) { lua_pushnumber(L, v); }
     inline void push(lua_State* L, double v) { lua_pushnumber(L, v); }
@@ -24,6 +27,41 @@ namespace luax {
     inline void push(lua_State* L, std::string const& v) { lua_pushlstring(L, v.data(), v.size()); }
     inline void push(lua_State* L, std::string_view v) { lua_pushlstring(L, v.data(), v.size()); }
     inline void push(lua_State* L, std::nullptr_t) { lua_pushnil(L); }
+
+    template <class T>
+    inline void pushIntegerString(lua_State* L, T v) {
+        std::array<char, 64> buf{};
+        auto [ptr, ec] = std::to_chars(buf.data(), buf.data() + buf.size(), v);
+        if (ec != std::errc{}) {
+            lua_pushnil(L);
+            return;
+        }
+        lua_pushlstring(L, buf.data(), static_cast<size_t>(ptr - buf.data()));
+    }
+
+    template <class T>
+    inline bool tryIntegerString(lua_State* L, int idx, T* out) {
+        if (lua_type(L, idx) != LUA_TSTRING) return false;
+        size_t len = 0;
+        char const* text = lua_tolstring(L, idx, &len);
+        if (!text || len == 0) return false;
+        T value{};
+        auto const* begin = text;
+        auto const* end = text + len;
+        auto [ptr, ec] = std::from_chars(begin, end, value, 10);
+        if (ec != std::errc{} || ptr != end) return false;
+        *out = value;
+        return true;
+    }
+
+    template <class T>
+    inline T checkIntegerString(lua_State* L, int idx, char const* method) {
+        T value{};
+        if (!tryIntegerString<T>(L, idx, &value)) {
+            luaL_error(L, "%s expected integer string at arg %d", method, idx);
+        }
+        return value;
+    }
 
     template <class... Ts, std::size_t... Is>
     inline int pushTupleImpl(lua_State* L, std::tuple<Ts...> const& t, std::index_sequence<Is...>) {

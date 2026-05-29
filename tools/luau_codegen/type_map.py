@@ -8,6 +8,17 @@ from broma_parser import Class
 from model import short_name
 
 
+WIDE_INTEGER_TYPES = {
+    "long",
+    "unsigned long",
+    "long long",
+    "unsigned long long",
+    "size_t",
+    "ptrdiff_t",
+    "int64_t",
+    "uint64_t",
+}
+
 NUMERIC_TYPES = {
     "char",
     "signed char",
@@ -16,19 +27,12 @@ NUMERIC_TYPES = {
     "unsigned short",
     "int",
     "unsigned int",
-    "long",
-    "unsigned long",
-    "long long",
-    "unsigned long long",
-    "size_t",
     "uint8_t",
     "uint16_t",
     "uint32_t",
-    "uint64_t",
     "int8_t",
     "int16_t",
     "int32_t",
-    "int64_t",
     "float",
     "double",
 }
@@ -174,6 +178,8 @@ def _classify_core(
 
     if n == "bool":
         return TypeInfo("bool", n, "boolean", is_ref=is_ref, is_out=is_out)
+    if n in WIDE_INTEGER_TYPES:
+        return TypeInfo("wideint", n, "string", is_ref=is_ref, is_out=is_out)
     if n in NUMERIC_TYPES:
         return TypeInfo("number", n, "number", is_ref=is_ref, is_out=is_out)
     if n in STRING_TYPES:

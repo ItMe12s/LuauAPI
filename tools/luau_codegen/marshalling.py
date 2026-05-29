@@ -9,6 +9,8 @@ def _push_impl(info: TypeInfo, expr: str, owned: bool) -> list[str]:
         return [f"        luax::push(L, {expr});\n"]
     if info.kind == "number":
         return [f"        lua_pushnumber(L, static_cast<double>({expr}));\n"]
+    if info.kind == "wideint":
+        return [f"        luax::pushIntegerString(L, {expr});\n"]
     if info.kind == "enum":
         return [
             f"        lua_pushnumber(L, static_cast<double>(static_cast<int>({expr})));\n"
@@ -68,6 +70,10 @@ def check_arg(arg: Arg, info: TypeInfo, idx: int, var: str, label: str) -> list[
             check_type = "int"
         return [
             f'        auto {var} = static_cast<{cxx}>(luax::check<{check_type}>(L, {idx}, "{label}"));\n'
+        ]
+    if info.kind == "wideint":
+        return [
+            f'        auto {var} = luax::checkIntegerString<{cxx}>(L, {idx}, "{label}");\n'
         ]
     if info.kind == "string":
         if cxx == "char const*" or cxx == "const char*":

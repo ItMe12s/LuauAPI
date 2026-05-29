@@ -104,6 +104,8 @@ def call_label(cls: Class, m: Method) -> str:
 
 
 def returns_owned(m: Method) -> bool:
+    if "luau_owned" in m.attributes:
+        return True
     if not m.is_static:
         return False
     name = m.name.lower()

@@ -38,10 +38,11 @@ from hooks import (  # type: ignore[import-unresolved]
 from emit_luau_bindings import emit as emit_luau_bindings  # type: ignore[import-unresolved]
 from intersection import intersection_platforms  # type: ignore[import-unresolved]
 from codegen import collect_bindings_root  # type: ignore[import-unresolved]
+from codegen import main as codegen_main  # type: ignore[import-unresolved]
 from cxx_templates import emit_internal_hpp  # type: ignore[import-unresolved]
 from link_attrs import class_link_platforms  # type: ignore[import-unresolved]
-from marshalling import check_arg  # type: ignore[import-unresolved]
-from model import build_class_lookup, object_classes, resolve_base  # type: ignore[import-unresolved]
+from marshalling import check_arg, push_value  # type: ignore[import-unresolved]
+from model import build_class_lookup, codegen_object_map, object_classes, resolve_base  # type: ignore[import-unresolved]
 from parity import collect_parity, emit_markdown  # type: ignore[import-unresolved]
 from plan import collect_plan, collect_platform_plan, plan_outputs  # type: ignore[import-unresolved]
 from type_map import TypeInfo  # type: ignore[import-unresolved]
@@ -517,8 +518,99 @@ class GeneratedSafetyTests(unittest.TestCase):
         self.assertIn("runLuaPreHooks", text)
         self.assertIn("skipOriginal", text)
         self.assertIn("lua_objlen", text)
+        self.assertIn("useArrayArgs", text)
+        self.assertIn('lua_getfield(L, idx, "tag")', text)
         self.assertIn("arg0 = arg0Override", text)
         self.assertIn("if (!skipOriginal)", text)
+
+    def test_hook_named_args_disabled_for_duplicate_names(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        cls = Class(
+            name="CCNode",
+            namespace="cocos2d",
+            bases=["CCObject"],
+            methods=[
+                Method(
+                    name="setPair",
+                    ret="void",
+                    args=[Arg("int", "value"), Arg("int", "value")],
+                    platforms=all_platforms("0x1"),
+                )
+            ],
+        )
+
+        text = _emit_class_file(
+            cls,
+            {"setPair": cls.methods},
+            [(cls, cls.methods[0])],
+            [],
+            {"CCObject": ccobject, "CCNode": cls},
+            set(),
+            1,
+            "win",
+        )
+
+        self.assertIn("bool useNamedArgs = false;", text)
+
+    def test_luau_owned_attr_pushes_owned_instance_return(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        cls = Class(
+            name="CCNode",
+            namespace="cocos2d",
+            bases=["CCObject"],
+            methods=[
+                Method(
+                    name="newChild",
+                    ret="cocos2d::CCNode*",
+                    args=[],
+                    attributes=["luau_owned"],
+                    platforms=all_platforms("0x1"),
+                )
+            ],
+        )
+
+        text = _emit_class_file(
+            cls,
+            {"newChild": cls.methods},
+            [],
+            [],
+            {"CCObject": ccobject, "CCNode": cls, "cocos2d::CCNode": cls},
+            set(),
+            1,
+            "win",
+        )
+
+        self.assertIn("pushOwned", text)
+
+    def test_unmarked_instance_return_stays_borrowed(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        cls = Class(
+            name="CCNode",
+            namespace="cocos2d",
+            bases=["CCObject"],
+            methods=[
+                Method(
+                    name="child",
+                    ret="cocos2d::CCNode*",
+                    args=[],
+                    platforms=all_platforms("0x1"),
+                )
+            ],
+        )
+
+        text = _emit_class_file(
+            cls,
+            {"child": cls.methods},
+            [],
+            [],
+            {"CCObject": ccobject, "CCNode": cls, "cocos2d::CCNode": cls},
+            set(),
+            1,
+            "win",
+        )
+
+        self.assertIn("pushBorrowed", text)
+        self.assertNotIn("pushOwned", text)
 
     def test_generated_field_accessors_are_registered(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")
@@ -1032,6 +1124,15 @@ class F4ClassLookupCollisionTests(unittest.TestCase):
         self.assertIs(resolve_base(lookup, "CCNode"), cls)
         self.assertIsNone(resolve_base(lookup, "Unknown"))
 
+    def test_codegen_object_map_drops_ambiguous_short_name(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        cls_a = Class(name="Sprite", namespace="ns1", bases=["cocos2d::CCObject"])
+        cls_b = Class(name="Sprite", namespace="ns2", bases=["cocos2d::CCObject"])
+        objects = codegen_object_map(Root(classes=[ccobject, cls_a, cls_b]))
+        self.assertIs(objects["ns1::Sprite"], cls_a)
+        self.assertIs(objects["ns2::Sprite"], cls_b)
+        self.assertNotIn("Sprite", objects)
+
 
 class F5OverloadFirstDeclaredWinsTests(unittest.TestCase):
     def test_first_overload_kept_on_arity_collision(self) -> None:
@@ -1062,6 +1163,53 @@ class F5OverloadFirstDeclaredWinsTests(unittest.TestCase):
         self.assertEqual(len(skipped), 1)
         self.assertIn("ambiguous-overload-arity", skipped[0][1])
 
+    def test_fail_on_ambiguous_overload_flag_exits_nonzero(self) -> None:
+        tmpdir = tempfile.mkdtemp()
+        try:
+            with open(
+                os.path.join(tmpdir, "GeometryDash.bro"), "w", encoding="utf-8"
+            ) as f:
+                f.write(
+                    "class cocos2d::CCObject {};"
+                    "class gd::TestObj : cocos2d::CCObject {"
+                    "void foo(int a) = win 0x1;"
+                    "void foo(float b) = win 0x2;"
+                    "};"
+                )
+            code = codegen_main(
+                [
+                    "--bindings",
+                    tmpdir,
+                    "--platform",
+                    "win",
+                    "--list-outputs",
+                    "--fail-on-ambiguous-overload",
+                ]
+            )
+            self.assertEqual(code, 6)
+        finally:
+            shutil.rmtree(tmpdir)
+
+    def test_ambiguous_overload_default_does_not_fail(self) -> None:
+        tmpdir = tempfile.mkdtemp()
+        try:
+            with open(
+                os.path.join(tmpdir, "GeometryDash.bro"), "w", encoding="utf-8"
+            ) as f:
+                f.write(
+                    "class cocos2d::CCObject {};"
+                    "class gd::TestObj : cocos2d::CCObject {"
+                    "void foo(int a) = win 0x1;"
+                    "void foo(float b) = win 0x2;"
+                    "};"
+                )
+            code = codegen_main(
+                ["--bindings", tmpdir, "--platform", "win", "--list-outputs"]
+            )
+            self.assertEqual(code, 0)
+        finally:
+            shutil.rmtree(tmpdir)
+
 
 class F6NumericMarshallingTests(unittest.TestCase):
     def test_unsigned_int_uses_check_unsigned(self) -> None:
@@ -1072,12 +1220,34 @@ class F6NumericMarshallingTests(unittest.TestCase):
         self.assertIn("check<unsigned>", text)
         self.assertNotIn("check<int>", text)
 
-    def test_long_long_uses_check_double(self) -> None:
-        info = TypeInfo(kind="number", lua_type="number", cxx_type="long long")
-        arg = Arg(type="long long", name="x")
+    def test_double_uses_check_double(self) -> None:
+        info = TypeInfo(kind="number", lua_type="number", cxx_type="double")
+        arg = Arg(type="double", name="x")
         lines = check_arg(arg, info, 1, "v", "test")
         text = "".join(lines)
         self.assertIn("check<double>", text)
+
+    def test_wide_integer_uses_string_marshalling(self) -> None:
+        info = classify_arg("uint64_t", {})
+        self.assertIsNotNone(info)
+        assert info is not None
+        self.assertEqual(info.kind, "wideint")
+        self.assertEqual(info.lua_type, "string")
+        check_text = "".join(check_arg(Arg("uint64_t", "x"), info, 1, "v", "test"))
+        push_text = "".join(push_value(info, "v"))
+        self.assertIn("checkIntegerString<uint64_t>", check_text)
+        self.assertIn("pushIntegerString", push_text)
+
+    def test_unsigned_push_does_not_narrow_through_int(self) -> None:
+        with open(
+            os.path.join(ROOT, "src", "lua", "bindings", "framework", "Stack.hpp"),
+            "r",
+            encoding="utf-8",
+        ) as f:
+            text = f.read()
+        self.assertIn("inline void push(lua_State* L, unsigned v)", text)
+        self.assertNotIn("static_cast<int>(v)", text)
+        self.assertIn("static_cast<double>(v)", text)
 
     def test_regular_int_unchanged(self) -> None:
         info = TypeInfo(kind="number", lua_type="number", cxx_type="int")
@@ -1130,6 +1300,31 @@ class F8ConstMethodManglingTests(unittest.TestCase):
             platforms={"android64": "0x1"},
         )
         self.assertNotEqual(android_symbol(cls, m_const), android_symbol(cls, m_non))
+
+    def test_reference_and_const_type_mangling(self) -> None:
+        cls = Class(name="Foo")
+        method = Method(name="take", ret="void", args=[Arg("int const&", "value")])
+        self.assertEqual(android_symbol(cls, method), "_ZN3Foo4takeERKi")
+
+    def test_repeated_pointer_uses_substitution(self) -> None:
+        cls = Class(name="Bar")
+        method = Method(
+            name="take",
+            ret="void",
+            args=[Arg("Foo*", "a"), Arg("Foo*", "b")],
+        )
+        self.assertEqual(android_symbol(cls, method), "_ZN3Bar4takeEP3FooS0_")
+
+    def test_template_type_mangling_includes_defaults(self) -> None:
+        cls = Class(name="Foo")
+        method = Method(
+            name="take",
+            ret="void",
+            args=[Arg("gd::vector<int>", "values")],
+        )
+        self.assertEqual(
+            android_symbol(cls, method), "_ZN3Foo4takeEN2gd6vectorIiSaIiEEE"
+        )
 
 
 class F9FileSplitTests(unittest.TestCase):
@@ -1522,6 +1717,40 @@ class M1ScannerWarningTests(unittest.TestCase):
         finally:
             shutil.rmtree(tmpdir)
 
+    def test_scanned_ui_class_links_win_only(self) -> None:
+        from geode_sdk_scanner import scan_geode_sdk  # type: ignore[import-unresolved]
+
+        tmpdir = tempfile.mkdtemp()
+        try:
+            ui_dir = os.path.join(tmpdir, "loader", "include", "Geode", "ui")
+            os.makedirs(ui_dir)
+            include_dir = os.path.dirname(ui_dir)
+            with open(os.path.join(include_dir, "UI.hpp"), "w", encoding="utf-8") as f:
+                f.write('#include "ui/Good.hpp"\n')
+            with open(os.path.join(ui_dir, "Good.hpp"), "w", encoding="utf-8") as f:
+                f.write(
+                    "namespace geode { "
+                    "class GEODE_DLL GoodUI : public cocos2d::CCObject { "
+                    "public: void show(); "
+                    "}; "
+                    "}"
+                )
+            classes = scan_geode_sdk(tmpdir)
+            self.assertEqual(len(classes), 1)
+            self.assertEqual(class_link_platforms(classes[0]), {"win"})
+
+            ccobject = Class(name="CCObject", namespace="cocos2d")
+            objects = {"CCObject": ccobject, "GoodUI": classes[0]}
+            ok_win, _ = supported(classes[0], classes[0].methods[0], objects, "win")
+            ok_android, reason = supported(
+                classes[0], classes[0].methods[0], objects, "android64"
+            )
+            self.assertTrue(ok_win)
+            self.assertFalse(ok_android)
+            self.assertEqual(reason, "missing-address")
+        finally:
+            shutil.rmtree(tmpdir)
+
 
 class PlanRegressionTests(unittest.TestCase):
     def test_intersection_platforms_uses_imac_for_intel_mac(self) -> None:
@@ -1533,6 +1762,15 @@ class PlanRegressionTests(unittest.TestCase):
             intersection_platforms("m1"),
             ("win", "m1", "ios", "android32", "android64"),
         )
+
+    def test_collect_parity_uses_target_mac_axis(self) -> None:
+        root = Root(classes=[Class(name="CCObject", namespace="cocos2d")])
+        imac_data = collect_parity(root, target_platform="imac")
+        m1_data = collect_parity(root, target_platform="m1")
+        self.assertIn("imac", imac_data["platforms"])
+        self.assertNotIn("m1", imac_data["platforms"])
+        self.assertIn("m1", m1_data["platforms"])
+        self.assertNotIn("imac", m1_data["platforms"])
 
     def test_imac_intersection_keeps_methods_without_m1_offset(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")
@@ -1630,13 +1868,13 @@ class PlanRegressionTests(unittest.TestCase):
             bro_b = os.path.join(bindings, "Extras.bro")
             with open(bro_a, "w", encoding="utf-8") as f:
                 f.write(
-                    'class cocos2d::MergeTest : cocos2d::CCObject {\n'
+                    "class cocos2d::MergeTest : cocos2d::CCObject {\n"
                     "    void first() = win 0x1;\n"
                     "}\n"
                 )
             with open(bro_b, "w", encoding="utf-8") as f:
                 f.write(
-                    'class cocos2d::MergeTest : cocos2d::CCObject {\n'
+                    "class cocos2d::MergeTest : cocos2d::CCObject {\n"
                     "    void second() = win 0x2;\n"
                     "}\n"
                 )

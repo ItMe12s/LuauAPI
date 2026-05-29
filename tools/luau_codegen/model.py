@@ -88,9 +88,7 @@ def object_classes(root: Root) -> List[Class]:
 
 def codegen_object_map(root: Root) -> Dict[str, Class]:
     classes = object_classes(root)
-    objects: Dict[str, Class] = {cls.name: cls for cls in classes}
-    objects.update({cls.qualified_name: cls for cls in classes})
-    return objects
+    return build_class_lookup(classes)
 
 
 def status_for(platforms: Dict[str, str]) -> str:

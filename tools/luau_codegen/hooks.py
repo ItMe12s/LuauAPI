@@ -22,6 +22,10 @@ def _id(value: str) -> str:
     return re.sub(r"[^A-Za-z0-9_]", "_", value)
 
 
+def _cstr(value: str) -> str:
+    return value.replace("\\", "\\\\").replace('"', '\\"')
+
+
 def hook_id(cls: Class, m: Method) -> str:
     return f"{lua_namespace(cls)}.{cls.name}:{m.name}/{len(m.args)}"
 
@@ -114,6 +118,10 @@ def emit_value_decode(info: TypeInfo, var: str, idx: str, context: str) -> list[
             f"        if (!lua_isnumber(L, {idx})) return false;\n",
             f"        {var} = static_cast<{info.cxx_type}>(lua_tonumber(L, {idx}));\n",
             "        return true;\n",
+        ]
+    if info.kind == "wideint":
+        return [
+            f"        return luax::tryIntegerString<{info.cxx_type}>(L, {idx}, &{var});\n"
         ]
     if info.kind == "string":
         if info.cxx_type == "gd::string":
@@ -258,18 +266,26 @@ def emit_hook_target(
         out.extend(f"    {line}" for line in push_value(info, name))
     out.append("        }, [&](lua_State* L, int idx) -> bool {\n")
     if args:
+        arg_names = [arg.name for arg, _, _ in args]
+        named_args = all(arg_names) and len(set(arg_names)) == len(arg_names)
         out.append("            if (!lua_istable(L, idx)) return false;\n")
         out.append(
-            f"            if (lua_objlen(L, idx) != {len(args)}) return false;\n"
+            f"            bool useArrayArgs = lua_objlen(L, idx) == {len(args)};\n"
         )
+        out.append(
+            f"            bool useNamedArgs = {'true' if named_args else 'false'};\n"
+        )
+        out.append("            if (!useArrayArgs && !useNamedArgs) return false;\n")
         for _, info, name in args:
             if info.kind == "string" and info.cxx_type.endswith("*"):
                 out.append(f"            std::string {name}StorageOverride;\n")
             else:
                 out.append(f"            {info.cxx_type} {name}Override{{}};\n")
-        for i, (_, info, name) in enumerate(args, start=1):
+        for i, (arg, info, name) in enumerate(args, start=1):
             if info.kind == "string" and info.cxx_type.endswith("*"):
-                out.append(f"            lua_rawgeti(L, idx, {i});\n")
+                out.append(
+                    f'            if (useArrayArgs) lua_rawgeti(L, idx, {i}); else lua_getfield(L, idx, "{_cstr(arg.name)}");\n'
+                )
                 out.append(
                     "            if (!lua_isstring(L, -1)) { lua_pop(L, 1); return false; }\n"
                 )
@@ -283,7 +299,9 @@ def emit_hook_target(
                 out.append("            lua_pop(L, 1);\n")
                 continue
             tmp = f"{name}Override"
-            out.append(f"            lua_rawgeti(L, idx, {i});\n")
+            out.append(
+                f'            if (useArrayArgs) lua_rawgeti(L, idx, {i}); else lua_getfield(L, idx, "{_cstr(arg.name)}");\n'
+            )
             out.append(
                 f"            auto decode_{name} = [&](int valueIdx) -> bool {{\n"
             )

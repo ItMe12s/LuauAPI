@@ -15,14 +15,12 @@ from plan import (
 )
 from hooks import hook_address_expr
 from intersection import (
-    INTERSECTION_PLATFORMS,
     hook_method_keys,
+    intersection_platforms,
     method_key,
     supported_method_keys,
 )
 from model import object_classes
-
-PARITY_PLATFORMS = INTERSECTION_PLATFORMS
 
 
 def _supported_keys(plan: EmitPlan) -> set[str]:
@@ -54,9 +52,12 @@ def _skip_reasons(plan: EmitPlan) -> dict[str, str]:
 
 def collect_parity(
     root: Root,
-    platforms: tuple[str, ...] = PARITY_PLATFORMS,
+    platforms: tuple[str, ...] | None = None,
     plans_by_platform: dict[str, EmitPlan] | None = None,
+    target_platform: str = "win",
 ) -> dict[str, Any]:
+    if platforms is None:
+        platforms = intersection_platforms(target_platform)
     plans = dict(plans_by_platform or {})
     for platform in platforms:
         if platform not in plans:

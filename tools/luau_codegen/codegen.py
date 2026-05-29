@@ -129,6 +129,14 @@ def _write_if_changed(path: str, content: str) -> None:
             raise
 
 
+def _ambiguous_overloads(plan: emit_plan.EmitPlan) -> list[tuple[str, str, str]]:
+    return [
+        (cls, method, reason)
+        for cls, method, reason in plan.skipped
+        if reason.startswith("ambiguous-overload-arity:")
+    ]
+
+
 def _emit_schema(root: broma_parser.Root, path: str, plan: emit_plan.EmitPlan) -> None:
     bound_fields = {
         field_key(cls, field)
@@ -173,7 +181,21 @@ def _emit_schema(root: broma_parser.Root, path: str, plan: emit_plan.EmitPlan) -
                 ],
             }
         )
-    _write_if_changed(path, json.dumps({"classes": classes}, indent=2) + "\n")
+    ambiguous = [
+        {"class": cls, "method": method, "reason": reason}
+        for cls, method, reason in _ambiguous_overloads(plan)
+    ]
+    _write_if_changed(
+        path,
+        json.dumps(
+            {
+                "classes": classes,
+                "ambiguousOverloads": ambiguous,
+            },
+            indent=2,
+        )
+        + "\n",
+    )
 
 
 def _emit_report(
@@ -224,6 +246,28 @@ def _emit_report(
     lines.append("## Skip reasons\n\n")
     for reason, count in sorted(reasons.items(), key=lambda i: (-i[1], i[0])):
         lines.append(f"- {reason}: {count}\n")
+    ambiguous = _ambiguous_overloads(plan) if plan else []
+    lines.append("\n## Ambiguous overloads\n\n")
+    if ambiguous:
+        for cls, method, reason in ambiguous[:2000]:
+            lines.append(f"- {cls}.{method}: {reason}\n")
+        if len(ambiguous) > 2000:
+            lines.append(f"- ... {len(ambiguous) - 2000} more\n")
+    else:
+        lines.append("- none\n")
+    lines.append("\n## Operational notes\n\n")
+    lines.append(
+        "- generated Luau types are written to repo `types/` for LSP use and remain gitignored\n"
+    )
+    lines.append(
+        "- geode_bindings stays on configured CMake ref; current project keeps `main`, so upstream drift is possible\n"
+    )
+    lines.append(
+        "- userdata tag budget assert remains generated-class based; runtime distinct-type tightening is deferred\n"
+    )
+    lines.append(
+        "- removed hook callback slots compact on later registry operations; eager compaction is deferred\n"
+    )
     lines.append("\n## Skipped methods\n\n")
     for cls, method, reason in skipped[:2000]:
         lines.append(f"- {cls}.{method}: {reason}\n")
@@ -276,6 +320,11 @@ def main(argv: List[str]) -> int:
         "--parity-report-out",
         help="Write runtime-safe cross-platform parity report and exit",
     )
+    parser.add_argument(
+        "--fail-on-ambiguous-overload",
+        action="store_true",
+        help="Fail codegen when same-arity overloads require first-declared selection",
+    )
     args = parser.parse_args(argv)
 
     if args.platform not in VALID_PLATFORMS:
@@ -316,9 +365,17 @@ def main(argv: List[str]) -> int:
     }
 
     if args.parity_report_out:
+        plan = emit_plan.collect_plan(
+            root, args.platform, plans_by_platform=plans_by_platform
+        )
+        if args.fail_on_ambiguous_overload and _ambiguous_overloads(plan):
+            log_error("ambiguous overloads found")
+            return 6
         try:
             parity_data = parity.collect_parity(
-                root, plans_by_platform=plans_by_platform
+                root,
+                plans_by_platform=plans_by_platform,
+                target_platform=args.platform,
             )
             _write_if_changed(args.parity_report_out, parity.emit_markdown(parity_data))
         except OSError as exc:
@@ -331,6 +388,9 @@ def main(argv: List[str]) -> int:
         plan = emit_plan.collect_plan(
             root, args.platform, plans_by_platform=plans_by_platform
         )
+        if args.fail_on_ambiguous_overload and _ambiguous_overloads(plan):
+            log_error("ambiguous overloads found")
+            return 6
         for rel in emit_plan.plan_outputs(root, args.platform, plan=plan):
             print(f"src/{rel}")
         return 0
@@ -339,6 +399,9 @@ def main(argv: List[str]) -> int:
         plan = emit_plan.collect_plan(
             root, args.platform, plans_by_platform=plans_by_platform
         )
+        if args.fail_on_ambiguous_overload and _ambiguous_overloads(plan):
+            log_error("ambiguous overloads found")
+            return 6
         type_files = emit_luau_types.emit(root, args.platform, plan=plan)
         for name in sorted(type_files):
             print(name)
@@ -351,6 +414,13 @@ def main(argv: List[str]) -> int:
     plan = emit_plan.collect_plan(
         root, args.platform, plans_by_platform=plans_by_platform
     )
+    ambiguous = _ambiguous_overloads(plan)
+    if args.fail_on_ambiguous_overload and ambiguous:
+        for cls, method, reason in ambiguous[:200]:
+            log_error(f"ambiguous overload: {cls}.{method}: {reason}")
+        if len(ambiguous) > 200:
+            log_error(f"... {len(ambiguous) - 200} more ambiguous overloads")
+        return 6
     binding_files, skipped = emit_luau_bindings.emit(root, args.platform, plan=plan)
     written_paths: list[str] = []
     current_files: set[str] = set()
@@ -379,7 +449,9 @@ def main(argv: List[str]) -> int:
                 os.remove(orphan)
         _emit_schema(root, schema_path, plan)
         parity_path = os.path.join(args.out, "parity.json")
-        parity_data = parity.collect_parity(root, plans_by_platform=plans_by_platform)
+        parity_data = parity.collect_parity(
+            root, plans_by_platform=plans_by_platform, target_platform=args.platform
+        )
         _write_if_changed(parity_path, parity.emit_json(parity_data))
     except OSError as exc:
         log_error(f"I/O failed while writing generated files: {exc}")
