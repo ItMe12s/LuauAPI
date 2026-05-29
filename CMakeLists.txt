@@ -273,12 +273,12 @@ if(LUAUAPI_BUILD_TESTS)
         tests/usertype_registry_tests.cpp
         "${LUAUAPI_GEODE_SDK_PATH}/loader/src/utils/JsonValidation.cpp"
         src/api.cpp
-        src/lua/Binding.cpp
-        src/lua/Requirer.cpp
-        src/lua/Runtime.cpp
-        src/lua/bindings/internal/Fields.cpp
-        src/lua/bindings/internal/Usertype.cpp
-        src/lua/bindings/internal/UsertypeRegistry.cpp
+        src/lua/bindings/Binding.cpp
+        src/lua/module/Requirer.cpp
+        src/lua/runtime/Runtime.cpp
+        src/lua/bindings/framework/Fields.cpp
+        src/lua/bindings/framework/Usertype.cpp
+        src/lua/bindings/framework/UsertypeRegistry.cpp
         src/lua/bindings/task/TaskScheduler.cpp
         src/lua/bindings/task/TaskBinding.cpp
     )

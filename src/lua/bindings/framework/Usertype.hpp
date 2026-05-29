@@ -107,7 +107,6 @@ namespace luax {
             }
 
             detail::getOrCreateMetatable(L, info);
-            // Method __index chains first base only; type-check accepts any base via baseClosure.
             if (baseTags.size() > 0) {
                 detail::chainMethodTable(L, info, *baseTags.begin());
             }

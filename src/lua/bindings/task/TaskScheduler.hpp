@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../internal/LuaRef.hpp"
+#include "lua/bindings/framework/LuaRef.hpp"
 
 #include <cstddef>
 #include <cstdint>

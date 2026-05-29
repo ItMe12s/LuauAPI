@@ -1,4 +1,4 @@
-#include "lua/PathRules.hpp"
+#include "lua/module/PathRules.hpp"
 
 #include <catch2/catch_test_macros.hpp>
 

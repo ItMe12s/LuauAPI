@@ -1,10 +1,10 @@
 #include "Runtime.hpp"
 
 #include "AllocatorAccounting.hpp"
-#include "Binding.hpp"
-#include "PathSandbox.hpp"
-#include "Requirer.hpp"
-#include "bindings/internal/Ref.hpp"
+#include "lua/bindings/Binding.hpp"
+#include "lua/module/PathSandbox.hpp"
+#include "lua/module/Requirer.hpp"
+#include "lua/bindings/framework/Ref.hpp"
 
 #include <Geode/Geode.hpp>
 #include <fmt/format.h>
@@ -117,7 +117,6 @@ namespace luax {
             return;
         }
 
-        // Mark globals as safe for fastcall, must be last.
         lua_pushvalue(m_state, LUA_GLOBALSINDEX);
         lua_setsafeenv(m_state, -1, true);
         lua_pop(m_state, 1);
@@ -559,7 +558,6 @@ namespace luax {
         if (!self || self->m_scriptBudgetMs <= 0) return;
         if (std::chrono::steady_clock::now() >= self->m_scriptDeadline) {
             int budget = self->m_scriptBudgetMs;
-            // Prevent re-entrance into this callback.
             self->m_scriptBudgetMs = 0;
             luaL_errorL(L, "luax: script exceeded %d ms budget", budget);
         }

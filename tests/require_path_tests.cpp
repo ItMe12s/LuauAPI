@@ -1,4 +1,4 @@
-#include "lua/RequirePath.hpp"
+#include "lua/module/RequirePath.hpp"
 
 #include <catch2/catch_test_macros.hpp>
 

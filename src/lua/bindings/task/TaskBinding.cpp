@@ -1,9 +1,9 @@
 #include "TaskScheduler.hpp"
 
-#include "../../Binding.hpp"
-#include "../../Runtime.hpp"
-#include "../internal/LuaRef.hpp"
-#include "../internal/TableUtil.hpp"
+#include "lua/bindings/Binding.hpp"
+#include "lua/runtime/Runtime.hpp"
+#include "lua/bindings/framework/LuaRef.hpp"
+#include "lua/bindings/framework/TableUtil.hpp"
 
 #include <lua.h>
 #include <lualib.h>

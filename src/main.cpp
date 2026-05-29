@@ -1,4 +1,4 @@
-#include "lua/Runtime.hpp"
+#include "lua/runtime/Runtime.hpp"
 
 #include <Geode/Geode.hpp>
 #include <Geode/loader/GameEvent.hpp>

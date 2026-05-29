@@ -1,7 +1,7 @@
 #include <LuauAPI.hpp>
 
-#include "lua/Runtime.hpp"
-#include "lua/bindings/internal/Fields.hpp"
+#include "lua/runtime/Runtime.hpp"
+#include "lua/bindings/framework/Fields.hpp"
 
 #include <catch2/catch_test_macros.hpp>
 #include <lua.h>

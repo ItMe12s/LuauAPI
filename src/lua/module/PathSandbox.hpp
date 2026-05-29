@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Config.hpp"
+#include "lua/Config.hpp"
 #include "PathRules.hpp"
 
 #include <Geode/Result.hpp>

@@ -1,7 +1,7 @@
 #include <Geode/loader/Loader.hpp>
 #include <Geode/loader/Log.hpp>
 #include <Geode/loader/ModEvent.hpp>
-#include "lua/bindings/internal/Fields.hpp"
+#include "lua/bindings/framework/Fields.hpp"
 #include <cocos2d.h>
 
 namespace geode {

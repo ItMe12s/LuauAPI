@@ -1,7 +1,7 @@
 #include "TaskScheduler.hpp"
 
-#include "../../Config.hpp"
-#include "../../Runtime.hpp"
+#include "lua/Config.hpp"
+#include "lua/runtime/Runtime.hpp"
 
 #include <algorithm>
 

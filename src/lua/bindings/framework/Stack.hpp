@@ -1,4 +1,3 @@
-// Lua argument validation: errors via luaL_error (aborts calling script).
 #pragma once
 
 #include <lua.h>

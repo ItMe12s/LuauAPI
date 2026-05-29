@@ -1,6 +1,6 @@
 #include <LuauAPI.hpp>
 
-#include "lua/Runtime.hpp"
+#include "lua/runtime/Runtime.hpp"
 #include "lua/bindings/task/TaskScheduler.hpp"
 
 #include <catch2/catch_test_macros.hpp>

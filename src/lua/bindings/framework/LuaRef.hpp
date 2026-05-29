@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../../Runtime.hpp"
+#include "lua/runtime/Runtime.hpp"
 
 #include <lua.h>
 #include <lualib.h>

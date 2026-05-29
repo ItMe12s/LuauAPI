@@ -1,7 +1,7 @@
 #include <LuauAPI.hpp>
 
-#include "lua/PathSandbox.hpp"
-#include "lua/Runtime.hpp"
+#include "lua/module/PathSandbox.hpp"
+#include "lua/runtime/Runtime.hpp"
 
 #include <Geode/utils/async.hpp>
 

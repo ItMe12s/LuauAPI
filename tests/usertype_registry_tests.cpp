@@ -1,5 +1,5 @@
-#include "lua/bindings/internal/Usertype.hpp"
-#include "lua/Runtime.hpp"
+#include "lua/bindings/framework/Usertype.hpp"
+#include "lua/runtime/Runtime.hpp"
 
 #include <catch2/catch_test_macros.hpp>
 #include <lua.h>
