@@ -260,13 +260,16 @@ def _emit_report(
         "- generated Luau types are written to repo `types/` for LSP use and remain gitignored\n"
     )
     lines.append(
-        "- geode_bindings stays on configured CMake ref; current project keeps `main`, so upstream drift is possible\n"
+        "- geode_bindings is pinned via LUAUAPI_BINDINGS_GIT_TAG in CMake, bump mod.json GD version and the pin together\n"
     )
     lines.append(
-        "- userdata tag budget assert remains generated-class based; runtime distinct-type tightening is deferred\n"
+        "- generated binding .cpp files are discovered via CONFIGURE_DEPENDS glob, CMake may reconfigure once when new bindings_<Class>.cpp files appear\n"
     )
     lines.append(
-        "- removed hook callback slots compact on later registry operations; eager compaction is deferred\n"
+        "- userdata tag budget assert remains generated-class based, runtime distinct-type tightening is deferred\n"
+    )
+    lines.append(
+        "- removed hook callback slots compact on later registry operations, eager compaction is deferred\n"
     )
     lines.append("\n## Skipped methods\n\n")
     for cls, method, reason in skipped[:2000]:
@@ -421,11 +424,13 @@ def main(argv: List[str]) -> int:
         if len(ambiguous) > 200:
             log_error(f"... {len(ambiguous) - 200} more ambiguous overloads")
         return 6
-    binding_files, skipped = emit_luau_bindings.emit(root, args.platform, plan=plan)
     written_paths: list[str] = []
     current_files: set[str] = set()
 
     try:
+        binding_files, skipped = emit_luau_bindings.emit(
+            root, args.platform, plan=plan
+        )
         for rel, content in binding_files.items():
             rel_path = os.path.join("src", rel).replace("\\", "/")
             current_files.add(rel_path)

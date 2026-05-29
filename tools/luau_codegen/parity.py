@@ -131,7 +131,7 @@ def collect_parity(
                 "skipReasons": skip_reasons,
             }
 
-    hints = _collect_hints(plans, methods, platforms)
+    hints = _collect_hints(plans, methods, platforms, target_platform)
     return {
         "platforms": list(platforms),
         "summary": summary,
@@ -166,11 +166,17 @@ def _intersection_summary(plan: EmitPlan, total_methods: int) -> dict[str, Any]:
     }
 
 
+def _mac_platform_for(target_platform: str) -> str:
+    return "imac" if target_platform == "imac" else "m1"
+
+
 def _collect_hints(
     plans: dict[str, EmitPlan],
     methods: dict[str, dict[str, Any]],
     platforms: tuple[str, ...],
+    target_platform: str = "win",
 ) -> dict[str, Any]:
+    mac = _mac_platform_for(target_platform)
     supported_elsewhere = {
         key: [
             platform
@@ -186,12 +192,12 @@ def _collect_hints(
         and supported_elsewhere[key]
     ]
     ios_pruned = sorted(plans["ios"].skipped_classes) if "ios" in plans else []
-    m1_reasons = Counter(
-        info["skipReasons"].get("m1")
+    mac_reasons = Counter(
+        info["skipReasons"].get(mac)
         for info in methods.values()
         if "android64" in info["supportedPlatforms"]
-        and "m1" not in info["supportedPlatforms"]
-        and info["skipReasons"].get("m1")
+        and mac not in info["supportedPlatforms"]
+        and info["skipReasons"].get(mac)
     )
     hook_only_gaps = [
         key for key, info in methods.items() if info["hookAddressMissingPlatforms"]
@@ -201,7 +207,8 @@ def _collect_hints(
         "winMissingCallableProofCount": len(win_missing),
         "iosSkippedClasses": ios_pruned[:200],
         "iosSkippedClassCount": len(ios_pruned),
-        "m1GapReasons": dict(sorted(m1_reasons.items())),
+        "macPlatform": mac,
+        "macGapReasons": dict(sorted(mac_reasons.items())),
         "hookAddressGaps": hook_only_gaps[:200],
         "hookAddressGapCount": len(hook_only_gaps),
     }
@@ -252,13 +259,14 @@ def emit_markdown(data: dict[str, Any]) -> str:
         f"- hook address gaps: {hints['hookAddressGapCount']} methods. "
         "Callable binding exists, but hook address proof is absent on at least one supported platform.\n"
     )
-    if hints["m1GapReasons"]:
+    mac = hints.get("macPlatform", "m1")
+    if hints.get("macGapReasons"):
         reason_text = ", ".join(
-            f"{reason}: {count}" for reason, count in hints["m1GapReasons"].items()
+            f"{reason}: {count}" for reason, count in hints["macGapReasons"].items()
         )
     else:
         reason_text = "none"
-    lines.append(f"- m1 gaps versus android64: {reason_text}.\n")
+    lines.append(f"- {mac} gaps versus android64: {reason_text}.\n")
 
     lines.append("\n## Samples\n\n")
     _append_sample(

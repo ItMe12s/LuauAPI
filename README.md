@@ -419,7 +419,7 @@ types/
 - `GEODE_SDK` env var pointing at your Geode SDK folder.
 - CMake **3.21+** and a C++23 compiler.
 - Python **3.11+**.
-- Luau **0.722** and GD bindings **2.2081** are fetched automatically during configure.
+- Luau **0.722** and GD bindings **2.2081** are fetched automatically during configure. Broma input is pinned to `LUAUAPI_BINDINGS_GIT_TAG` in [CMakeLists.txt](CMakeLists.txt) (default commit on [geode-sdk/bindings](https://github.com/geode-sdk/bindings)); bump that pin when you change the GD version in `mod.json`.
 
 ### Build + tests
 
@@ -456,7 +456,7 @@ The binding file list is dynamic. List it after configure or with:
 python tools/luau_codegen/codegen.py --bindings <path-to-bindings> --list-outputs --platform win --geode-sdk <GEODE_SDK>
 ```
 
-CMake runs `--list-outputs` and `--list-type-outputs` at configure time so Ninja only rebuilds when generated files change.
+CMake runs `--list-outputs` and `--list-type-outputs` at configure time for Ninja `BYPRODUCTS` tracking. The mod library compiles all `build/.../luauapi-gen/src/bindings_*.cpp` via a `CONFIGURE_DEPENDS` glob, so new per-class binding files are picked up after codegen (CMake may reconfigure once when new `.cpp` files appear).
 
 ### Where stuff lives
 

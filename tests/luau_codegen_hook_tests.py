@@ -1771,6 +1771,10 @@ class PlanRegressionTests(unittest.TestCase):
         self.assertNotIn("m1", imac_data["platforms"])
         self.assertIn("m1", m1_data["platforms"])
         self.assertNotIn("imac", m1_data["platforms"])
+        self.assertEqual(imac_data["hints"]["macPlatform"], "imac")
+        self.assertEqual(m1_data["hints"]["macPlatform"], "m1")
+        self.assertIn("macGapReasons", imac_data["hints"])
+        self.assertNotIn("m1GapReasons", imac_data["hints"])
 
     def test_imac_intersection_keeps_methods_without_m1_offset(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")
@@ -1884,6 +1888,49 @@ class PlanRegressionTests(unittest.TestCase):
             merged = next(c for c in root.classes if c.name == "MergeTest")
             names = {m.name for m in merged.methods}
             self.assertEqual(names, {"first", "second"})
+        finally:
+            shutil.rmtree(tmpdir)
+
+
+class CodegenExitCodeTests(unittest.TestCase):
+    def test_emit_exception_returns_exit_code_5(self) -> None:
+        import codegen as cg  # type: ignore[import-unresolved]
+
+        root = Root(classes=[Class(name="CCObject", namespace="cocos2d")])
+        tmpdir = tempfile.mkdtemp()
+        try:
+            bindings = os.path.join(tmpdir, "bindings")
+            out_dir = os.path.join(tmpdir, "out")
+            types_dir = os.path.join(tmpdir, "types")
+            os.makedirs(bindings)
+            os.makedirs(types_dir)
+            for name in (
+                "Cocos2d.bro",
+                "Extras.bro",
+                "FMOD.bro",
+                "Kazmath.bro",
+                "GeometryDash.bro",
+            ):
+                open(os.path.join(bindings, name), "w", encoding="utf-8").close()
+            with mock.patch.object(cg, "collect_bindings_root", return_value=root):
+                with mock.patch.object(
+                    cg.emit_luau_bindings,
+                    "emit",
+                    side_effect=ValueError("emit failed"),
+                ):
+                    rc = cg.main(
+                        [
+                            "--bindings",
+                            bindings,
+                            "--out",
+                            out_dir,
+                            "--types-out",
+                            types_dir,
+                            "--platform",
+                            "win",
+                        ]
+                    )
+            self.assertEqual(rc, 5)
         finally:
             shutil.rmtree(tmpdir)
 
