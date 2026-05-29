@@ -456,7 +456,7 @@ The binding file list is dynamic. List it after configure or with:
 python tools/luau_codegen/codegen.py --bindings <path-to-bindings> --list-outputs --platform win --geode-sdk <GEODE_SDK>
 ```
 
-CMake runs `--list-outputs` and `--list-type-outputs` at configure time for Ninja `BYPRODUCTS` tracking. The mod library compiles all `build/.../luauapi-gen/src/bindings_*.cpp` via a `CONFIGURE_DEPENDS` glob, so new per-class binding files are picked up after codegen (CMake may reconfigure once when new `.cpp` files appear).
+CMake runs `--list-outputs` and `--list-type-outputs` at configure time. Those lists drive both Ninja `BYPRODUCTS` and the mod `SOURCES` (all `bindings_*.cpp` are `GENERATED` and built after `luauapi_codegen`). Reconfigure when Broma or codegen changes add new `bindings_<Class>.cpp` files.
 
 ### Where stuff lives
 

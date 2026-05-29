@@ -263,7 +263,7 @@ def _emit_report(
         "- geode_bindings is pinned via LUAUAPI_BINDINGS_GIT_TAG in CMake, bump mod.json GD version and the pin together\n"
     )
     lines.append(
-        "- generated binding .cpp files are discovered via CONFIGURE_DEPENDS glob, CMake may reconfigure once when new bindings_<Class>.cpp files appear\n"
+        "- generated binding .cpp files are listed at CMake configure via --list-outputs, reconfigure when new bindings_<Class>.cpp are emitted\n"
     )
     lines.append(
         "- userdata tag budget assert remains generated-class based, runtime distinct-type tightening is deferred\n"
@@ -428,9 +428,7 @@ def main(argv: List[str]) -> int:
     current_files: set[str] = set()
 
     try:
-        binding_files, skipped = emit_luau_bindings.emit(
-            root, args.platform, plan=plan
-        )
+        binding_files, skipped = emit_luau_bindings.emit(root, args.platform, plan=plan)
         for rel, content in binding_files.items():
             rel_path = os.path.join("src", rel).replace("\\", "/")
             current_files.add(rel_path)
