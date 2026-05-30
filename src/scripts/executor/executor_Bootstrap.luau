@@ -6,7 +6,7 @@ imgui.onDraw(function()
     imgui.window("LuauAPI Script Executor", function()
         local avail = imgui.getContentRegionAvail()
         local spacing = 8
-        local footer = 64
+        local footer = 48
 
         code = imgui.inputTextMultiline("##code", code, { x = -1, y = -footer })
 
@@ -32,7 +32,18 @@ imgui.onDraw(function()
         end
 
         imgui.sameLine()
+        if imgui.button("Paste (WIP)", { size = { x = buttonWidth, y = 0 } }) then
+            -- WIP
+        end
+
+        imgui.sameLine()
+        if imgui.button("Open File (WIP)", { size = { x = buttonWidth, y = 0 } }) then
+            -- WIP
+        end
+
+        imgui.sameLine()
         if imgui.button("Clear", { size = { x = buttonWidth, y = 0 } }) then
+            code = ""
             output = ""
         end
 
