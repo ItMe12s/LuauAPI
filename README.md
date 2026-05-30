@@ -1,5 +1,7 @@
 # LuauAPI
 
+![Logo](logo.png)
+
 LuauAPI is a shared Luau runtime for Geode mods.
 It runs Luau scripts inside Geometry Dash and gives those scripts safe access to the game through generated bindings.
 
