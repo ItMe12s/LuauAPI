@@ -1,11 +1,20 @@
-# LuauAPI
+<h1 align="center">LuauAPI</h1>
 
-![Logo](logo.png)
+<p align="center">
+  <img src="logo.png" alt="Logo" width="200">
+</p>
 
-LuauAPI is a shared Luau runtime for Geode mods.
-It runs Luau scripts inside Geometry Dash and gives those scripts safe access to the game through generated bindings.
+<p align="center">
+  LuauAPI is a shared Luau runtime for Geode mods.<br>
+  It lets Luau scripts safely access Geometry Dash through generated bindings,<br>
+  so you can write full mods using only Luau.
+</p>
 
-The documentation is organized by audience. Use the section that matches how you work with the project.
+<p align="center">
+  The documentation is organized by audience.<br>
+  Choose the section that matches how you plan to use,<br>
+  extend, or contribute to the project.
+</p>
 
 ## Getting started
 
