@@ -1,0 +1,37 @@
+export type ImGuiDrawHandle = {
+    cancel: (self: ImGuiDrawHandle) -> (),
+}
+
+export type ImGuiVec2 = { x: number, y: number }
+
+export type ImGuiWindowOpts = {
+    size: ImGuiVec2?,
+    pos: ImGuiVec2?,
+    flags: number?,
+    closable: boolean?,
+}
+
+export type ImGuiChildOpts = { size: ImGuiVec2? }
+
+export type ImGuiButtonOpts = { size: ImGuiVec2? }
+
+export type ImGuiNamespace = {
+    onDraw: (fn: () -> ()) -> ImGuiDrawHandle,
+    cancel: (handle: ImGuiDrawHandle) -> (),
+    setVisible: (visible: boolean) -> (),
+    toggle: () -> (),
+    isVisible: () -> boolean,
+    window: (title: string, fn: () -> (), opts: ImGuiWindowOpts?) -> boolean,
+    child: (id: string, fn: () -> (), opts: ImGuiChildOpts?) -> (),
+    text: (text: string) -> (),
+    button: (label: string, opts: ImGuiButtonOpts?) -> boolean,
+    checkbox: (label: string, value: boolean) -> boolean,
+    sliderFloat: (label: string, value: number, min: number, max: number, fmt: string?) -> number,
+    sliderInt: (label: string, value: number, min: number, max: number) -> number,
+    inputText: (label: string, value: string, maxLen: number?) -> string,
+    sameLine: (offset: number?, spacing: number?) -> (),
+    separator: () -> (),
+    spacing: () -> (),
+}
+
+declare imgui: ImGuiNamespace

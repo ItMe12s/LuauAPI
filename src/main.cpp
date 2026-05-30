@@ -1,3 +1,4 @@
+#include "lua/bindings/imgui/ImGuiHost.hpp"
 #include "lua/runtime/Runtime.hpp"
 
 #include <Geode/Geode.hpp>
@@ -14,5 +15,6 @@ $on_mod(Loaded) {
 }
 
 $on_game(Exiting) {
+    luax::shutdownImGuiHost();
     luax::Runtime::shutdown();
 }

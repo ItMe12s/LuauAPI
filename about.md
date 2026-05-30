@@ -1,8 +1,11 @@
 # LuauAPI
 
-**Write Geode mods in Luau!**
+**Build Geode mods in Luau!**
 
-Includes a higher-level SDK built on top of the API.
+LuauAPI is an ambitious scripting ecosystem for Geode,
+making Luau a first-class way to create mods, APIs, tools, and reusable systems without requiring every creator to work directly in C++.
+
+It includes a higher-level SDK that helps creators start simple, build faster, and share custom Luau APIs across mods.
 
 ---
 

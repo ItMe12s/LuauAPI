@@ -97,6 +97,16 @@ endif()
 
 add_subdirectory($ENV{GEODE_SDK} ${CMAKE_CURRENT_BINARY_DIR}/geode)
 
+set(LUAUAPI_IMGUI_COCOS_GIT_TAG "b93f08ccef778a53ebba09b20c347f6a63980119"
+    CACHE STRING "Pinned gd-imgui-cocos commit")
+FetchContent_Declare(
+    gd_imgui_cocos
+    GIT_REPOSITORY https://github.com/matcool/gd-imgui-cocos.git
+    GIT_TAG        ${LUAUAPI_IMGUI_COCOS_GIT_TAG}
+)
+FetchContent_MakeAvailable(gd_imgui_cocos)
+message(STATUS "LuauAPI imgui-cocos: ${LUAUAPI_IMGUI_COCOS_GIT_TAG}")
+
 find_package(Python3 3.11 REQUIRED COMPONENTS Interpreter)
 
 file(READ ${CMAKE_CURRENT_SOURCE_DIR}/mod.json LUAUAPI_MOD_JSON)
@@ -252,7 +262,7 @@ setup_geode_mod(${PROJECT_NAME})
 
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_23)
 target_include_directories(${PROJECT_NAME} PRIVATE include src ${LUAUAPI_GEN_DIR}/src)
-target_link_libraries(${PROJECT_NAME} Luau.VM Luau.Compiler Luau.Ast Luau.Require Luau.CodeGen)
+target_link_libraries(${PROJECT_NAME} Luau.VM Luau.Compiler Luau.Ast Luau.Require Luau.CodeGen imgui-cocos)
 target_compile_definitions(${PROJECT_NAME} PRIVATE LUAUAPI_EXPORTING=1)
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC" OR CMAKE_CXX_COMPILER MATCHES "clang-cl")
@@ -317,6 +327,8 @@ if(LUAUAPI_BUILD_TESTS)
                 glew32.lib
                 fmod.lib
                 opengl32
+                imgui-cocos
+                imgui
             )
                 if(LUAUAPI_TEST_LINK_LIB STREQUAL LUAUAPI_FORBIDDEN_TEST_LIB OR
                    LUAUAPI_TEST_LINK_NAME STREQUAL LUAUAPI_FORBIDDEN_TEST_LIB)
