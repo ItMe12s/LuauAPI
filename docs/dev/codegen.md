@@ -9,7 +9,7 @@ The code generator turns Geode binding files into C++ bindings and Luau type stu
 The generator reads Broma binding files for one Geometry Dash version and one platform. It writes:
 
 - C++ binding sources into `build/luauapi-gen/src`. These expose game classes to Lua and implement the hook functions.
-- Luau type stubs into `types/`, bundled `.d.luau` files (about 50 classes per bundle by default) plus per-namespace factories files, the `geode.d.luau` root, and a `luau-lsp.json` listing them in load order. Bundling keeps each file small enough to avoid luau-lsp's "Code is too complex to typecheck" error while keeping the definition-file count low enough for Windows editor startup. These give editors autocomplete and type checks.
+- A single Luau type stub, `types/geode.d.luau`, holding the bound classes, the per-namespace factories, the enum aliases, and the `geode` namespace root. It gives editors autocomplete and type checks.
 - Metadata files, including a schema, a report, and a parity file.
 
 The generated C++ is compiled into the main library. Because it is machine written, you do not edit it, and the build compiles it with warnings disabled.

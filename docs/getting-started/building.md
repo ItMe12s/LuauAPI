@@ -28,7 +28,7 @@ The build runs a Python code generator before it compiles. This step is the `lua
 The generator reads Broma binding files from the pinned Geode bindings checkout and produces two kinds of output:
 
 - C++ binding sources in `build/luauapi-gen/src`
-- Luau type stubs in `types/`
+- A Luau type stub, `types/geode.d.luau`
 
 The generator selects a single platform based on your build target. Windows maps to `win`, for example, and an Android 64 bit build maps to `android64`. The generated C++ sources are compiled with warnings disabled, because they are machine written.
 

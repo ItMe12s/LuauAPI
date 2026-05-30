@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import re
 from typing import Dict, List, Sequence, Tuple
 
@@ -158,117 +157,6 @@ def _header(label: str) -> List[str]:
     ]
 
 
-def _object_type_name(info: TypeInfo) -> str:
-    if info.class_name:
-        return info.class_name
-    return info.lua_type.removesuffix("?")
-
-
-def _refs_from_method(
-    method: Method, objects: Dict[str, Class]
-) -> tuple[set[str], set[str]]:
-    object_refs: set[str] = set()
-    value_refs: set[str] = set()
-    for arg in method.args:
-        info = classify_arg(arg.type, objects)
-        if not info:
-            continue
-        if info.kind == "object":
-            object_refs.add(_object_type_name(info))
-        elif info.kind == "value":
-            value_refs.add(info.lua_type)
-    ret = classify_return(method.ret, objects)
-    if ret:
-        if ret.kind == "object":
-            object_refs.add(_object_type_name(ret))
-        elif ret.kind == "value":
-            value_refs.add(ret.lua_type)
-    return object_refs, value_refs
-
-
-def _refs_from_fields(
-    cls: Class, fields: Sequence[Field], objects: Dict[str, Class]
-) -> tuple[set[str], set[str]]:
-    object_refs: set[str] = set()
-    value_refs: set[str] = set()
-    for field in fields:
-        ok, _, _, ret = bindable_field(field, objects, cls)
-        if not ok or not ret:
-            continue
-        if ret.kind == "object":
-            object_refs.add(_object_type_name(ret))
-        elif ret.kind == "value":
-            value_refs.add(ret.lua_type)
-    return object_refs, value_refs
-
-
-def _base_type_refs(
-    cls: Class, objects: Dict[str, Class], skipped_classes: set
-) -> set[str]:
-    refs: set[str] = set()
-    for base in cls.bases:
-        base_cls = objects.get(short_name(base))
-        if base_cls and base_cls.name not in skipped_classes:
-            refs.add(base_cls.name)
-    return refs
-
-
-def _object_refs_for_classes(
-    class_names: set[str],
-    grouped_by_class: Dict[str, Dict[str, List[Method]]],
-    objects: Dict[str, Class],
-    skipped_classes: set,
-) -> set[str]:
-    refs: set[str] = set()
-    for name in class_names:
-        cls = objects.get(name)
-        if not cls or name in skipped_classes:
-            continue
-        refs.update(_base_type_refs(cls, objects, skipped_classes))
-        object_refs, _ = _refs_from_fields(cls, cls.fields, objects)
-        refs.update(object_refs)
-        for methods in grouped_by_class.get(name, {}).values():
-            for method in methods:
-                object_refs, _ = _refs_from_method(method, objects)
-                refs.update(object_refs)
-    return refs
-
-
-def _refs_from_chunk_content(content: str) -> set[str]:
-    refs: set[str] = set()
-    for match in re.finditer(r"extends (\w+)", content):
-        refs.add(match.group(1))
-    for match in re.finditer(
-        r":\s*(\w+)\??(?:\s*[,&)]|\s*$|\s*->)", content, re.MULTILINE
-    ):
-        name = match.group(1)
-        if name[0].isupper():
-            refs.add(name)
-    return refs
-
-
-def _factory_object_refs(
-    factories: Dict[str, Dict[str, List[Method]]],
-    objects: Dict[str, Class],
-) -> set[str]:
-    refs: set[str] = set()
-    for methods in factories.values():
-        for overloads in methods.values():
-            for method in overloads:
-                object_refs, _ = _refs_from_method(method, objects)
-                refs.update(object_refs)
-    return refs
-
-
-def _emit_forward_decls(names: set[str], label: str) -> str:
-    if not names:
-        return ""
-    lines = [f"-- Forward declarations for classes defined in {label}\n", "\n"]
-    for name in sorted(names):
-        lines.append(f"declare class {name} end\n\n")
-    return "".join(lines)
-
-
 def _emit_factories(
     factories: Dict[str, Dict[str, List[Method]]],
     objects: Dict[str, Class],
@@ -320,81 +208,6 @@ def _collect_factories(
         if static_methods:
             factories[cls.name] = static_methods
     return factories
-
-
-def _build_home_file(*classes_per_file: Dict[str, set[str]]) -> Dict[str, str]:
-    home_file: Dict[str, str] = {}
-    for mapping in classes_per_file:
-        for file_name, names in mapping.items():
-            for name in names:
-                home_file[name] = file_name
-    return home_file
-
-
-CLASSES_PER_BUNDLE = 50
-
-
-def _bundle_file_name(namespace: str, bundle_index: int) -> str:
-    prefix = "geode_cocos2d" if namespace == "geode.cocos2d" else "geode_gd"
-    return f"{prefix}_{bundle_index:03d}.d.luau"
-
-
-def _partition_chunks(
-    chunks: Sequence[Tuple[str, str]], namespace: str
-) -> Tuple[List[str], Dict[str, str], Dict[str, set[str]]]:
-    bundle_order: List[str] = []
-    packed: Dict[str, str] = {}
-    classes_per_file: Dict[str, set[str]] = {}
-    for bundle_index, start in enumerate(range(0, len(chunks), CLASSES_PER_BUNDLE)):
-        group = chunks[start : start + CLASSES_PER_BUNDLE]
-        file_name = _bundle_file_name(namespace, bundle_index)
-        bundle_order.append(file_name)
-        classes_per_file[file_name] = {name for name, _ in group}
-        packed[file_name] = "".join(chunk for _, chunk in group)
-    return bundle_order, packed, classes_per_file
-
-
-def _definition_alias(file_name: str) -> str:
-    return "@" + file_name.removesuffix(".d.luau")
-
-
-def _keep_forward_stub(
-    name: str,
-    file_name: str,
-    home_file: Dict[str, str],
-    order_index: Dict[str, int],
-    objects: Dict[str, Class],
-) -> bool:
-    home = home_file.get(name)
-    if home is None:
-        return True
-    if home == file_name:
-        return False
-    if home not in order_index or file_name not in order_index:
-        return True
-    return order_index[home] > order_index[file_name]
-
-
-def _filter_forward_stubs(
-    names: set[str],
-    file_name: str,
-    home_file: Dict[str, str],
-    order_index: Dict[str, int],
-    objects: Dict[str, Class],
-) -> set[str]:
-    return {
-        name
-        for name in names
-        if _keep_forward_stub(name, file_name, home_file, order_index, objects)
-    }
-
-
-def _root_header(label: str) -> List[str]:
-    return [
-        "-- Generated by LuauAPI codegen\n",
-        f"-- {label}\n",
-        "\n",
-    ]
 
 
 def _should_emit_type_class(
@@ -474,164 +287,6 @@ def _emit_class(
     return lines
 
 
-def _collect_split_forward_names(
-    file_name: str,
-    defined_here: set[str],
-    classes_per_file: Dict[str, set[str]],
-    grouped_by_class: Dict[str, Dict[str, List[Method]]],
-    objects: Dict[str, Class],
-    skipped_classes: set,
-    source_namespace: str,
-    current_file: str,
-    home_file: Dict[str, str],
-    order_index: Dict[str, int],
-    packed: Dict[str, str],
-) -> set[str]:
-    class_to_file: Dict[str, str] = {}
-    for split_name, names in classes_per_file.items():
-        for name in names:
-            class_to_file[name] = split_name
-
-    refs = _object_refs_for_classes(
-        defined_here, grouped_by_class, objects, skipped_classes
-    )
-    all_emitted_classes = set(class_to_file.keys())
-    for class_name in defined_here:
-        chunk_start = packed[file_name].find(f"declare class {class_name}")
-        if chunk_start >= 0:
-            next_decl = packed[file_name].find("\ndeclare class ", chunk_start + 1)
-            chunk_end = next_decl if next_decl >= 0 else len(packed[file_name])
-            refs.update(
-                _refs_from_chunk_content(packed[file_name][chunk_start:chunk_end])
-            )
-        cls = objects.get(class_name)
-        if cls:
-            for base in cls.bases:
-                base_cls = objects.get(short_name(base))
-                if (
-                    base_cls
-                    and base_cls.name not in all_emitted_classes
-                    and lua_namespace(base_cls) == source_namespace
-                ):
-                    refs.add(base_cls.name)
-
-    sibling_refs: set[str] = set()
-    for ref in refs:
-        ref_file = class_to_file.get(ref)
-        if ref_file and ref_file != file_name:
-            sibling_refs.add(ref)
-
-    later_in_split: set[str] = set()
-    ordered_in_file = [
-        match.group(1)
-        for match in re.finditer(r"declare class (\w+)", packed[file_name])
-    ]
-    base_refs: set[str] = set()
-    for class_name in defined_here:
-        cls = objects.get(class_name)
-        if not cls:
-            continue
-        for base in cls.bases:
-            base_cls = objects.get(short_name(base))
-            if base_cls:
-                base_refs.add(base_cls.name)
-    for class_name in defined_here:
-        if class_name not in ordered_in_file:
-            continue
-        class_index = ordered_in_file.index(class_name)
-        for ref in refs:
-            if ref in ordered_in_file and ordered_in_file.index(ref) > class_index:
-                later_in_split.add(ref)
-
-    orphan_refs = {
-        name
-        for name in refs - all_emitted_classes
-        if name in objects
-        and lua_namespace(objects[name]) == source_namespace
-        and name not in base_refs
-    }
-    return (
-        _filter_forward_stubs(
-            sibling_refs | orphan_refs,
-            current_file,
-            home_file,
-            order_index,
-            objects,
-        )
-        | later_in_split
-    )
-
-
-def _emit_namespace_files(
-    *,
-    namespace: str,
-    section_label: str,
-    bundle_order: List[str],
-    factories: Dict[str, Dict[str, List[Method]]],
-    grouped_by_class: Dict[str, Dict[str, List[Method]]],
-    objects: Dict[str, Class],
-    skipped_classes: set,
-    classes_per_file: Dict[str, set[str]],
-    home_file: Dict[str, str],
-    order_index: Dict[str, int],
-    packed: Dict[str, str],
-    factory_file_name: str,
-) -> Dict[str, str]:
-    files: Dict[str, str] = {}
-
-    for file_name in bundle_order:
-        defined_here = classes_per_file[file_name]
-        content = packed[file_name]
-        forward_names = _collect_split_forward_names(
-            file_name,
-            defined_here,
-            classes_per_file,
-            grouped_by_class,
-            objects,
-            skipped_classes,
-            namespace,
-            file_name,
-            home_file,
-            order_index,
-            packed,
-        )
-        body = _header(f"{section_label} bundle {file_name}")
-        value_block = _emit_value_stub_block(_value_refs_in_text(content))
-        if value_block:
-            body.append(value_block)
-            body.append("\n")
-        forward = _emit_forward_decls(forward_names, "later bundles or files")
-        if forward:
-            body.append(forward)
-        body.append(content)
-        files[file_name] = "".join(body)
-
-    factory_content = "".join(_emit_factories(factories, objects, namespace))
-    fbody = _header(f"{section_label} factories")
-    enum_block = _enum_block(namespace)
-    if enum_block:
-        fbody.append(enum_block)
-        fbody.append("\n")
-    value_block = _emit_value_stub_block(_value_refs_in_text(factory_content))
-    if value_block:
-        fbody.append(value_block)
-        fbody.append("\n")
-    factory_forward = _filter_forward_stubs(
-        _factory_object_refs(factories, objects),
-        factory_file_name,
-        home_file,
-        order_index,
-        objects,
-    )
-    forward = _emit_forward_decls(factory_forward, "their own files")
-    if forward:
-        fbody.append(forward)
-    fbody.append(factory_content)
-    files[factory_file_name] = "".join(fbody)
-
-    return files
-
-
 def _is_ccnode_descendant(
     cls: Class,
     objects: Dict[str, Class],
@@ -653,10 +308,103 @@ def _is_ccnode_descendant(
     return False
 
 
-COCOS_FACTORY_FILE = "geode_cocos2d_factories.d.luau"
-GD_FACTORY_FILE = "geode_gd_factories.d.luau"
-ROOT_FILE = "geode.d.luau"
-DEFINITION_LIST_FILE = "luau-lsp.json"
+def _object_type_name(info: TypeInfo) -> str:
+    if info.class_name:
+        return info.class_name
+    return info.lua_type.removesuffix("?")
+
+
+def _refs_from_method(method: Method, objects: Dict[str, Class]) -> set[str]:
+    refs: set[str] = set()
+    for arg in method.args:
+        info = classify_arg(arg.type, objects)
+        if info and info.kind == "object":
+            refs.add(_object_type_name(info))
+    ret = classify_return(method.ret, objects)
+    if ret and ret.kind == "object":
+        refs.add(_object_type_name(ret))
+    return refs
+
+
+def _refs_from_fields(
+    cls: Class, fields: Sequence[Field], objects: Dict[str, Class]
+) -> set[str]:
+    refs: set[str] = set()
+    for field in fields:
+        ok, _, _, ret = bindable_field(field, objects, cls)
+        if ok and ret and ret.kind == "object":
+            refs.add(_object_type_name(ret))
+    return refs
+
+
+def _base_type_refs(
+    cls: Class, objects: Dict[str, Class], skipped_classes: set
+) -> set[str]:
+    refs: set[str] = set()
+    for base in cls.bases:
+        base_cls = objects.get(short_name(base))
+        if base_cls and base_cls.name not in skipped_classes:
+            refs.add(base_cls.name)
+    return refs
+
+
+def _refs_from_classes(
+    class_names: set[str],
+    grouped_by_class: Dict[str, Dict[str, List[Method]]],
+    objects: Dict[str, Class],
+    skipped_classes: set,
+) -> set[str]:
+    refs: set[str] = set()
+    for name in class_names:
+        cls = objects.get(name)
+        if not cls or name in skipped_classes:
+            continue
+        refs.update(_base_type_refs(cls, objects, skipped_classes))
+        refs.update(_refs_from_fields(cls, cls.fields, objects))
+        for methods in grouped_by_class.get(name, {}).values():
+            for method in methods:
+                refs.update(_refs_from_method(method, objects))
+    return refs
+
+
+def _factory_object_refs(
+    factories: Dict[str, Dict[str, List[Method]]],
+    objects: Dict[str, Class],
+) -> set[str]:
+    refs: set[str] = set()
+    for methods in factories.values():
+        for overloads in methods.values():
+            for method in overloads:
+                refs.update(_refs_from_method(method, objects))
+    return refs
+
+
+def _refs_from_text(content: str) -> set[str]:
+    refs: set[str] = set()
+    for match in re.finditer(r"extends (\w+)", content):
+        refs.add(match.group(1))
+    for match in re.finditer(
+        r":\s*(\w+)\??(?:\s*[,&)]|\s*$|\s*->)", content, re.MULTILINE
+    ):
+        name = match.group(1)
+        if name[0].isupper():
+            refs.add(name)
+    return refs
+
+
+def _emit_orphan_stubs(names: set[str]) -> str:
+    if not names:
+        return ""
+    lines = [
+        "-- Forward declarations for referenced classes without bindable members\n",
+        "\n",
+    ]
+    for name in sorted(names):
+        lines.append(f"declare class {name} end\n\n")
+    return "".join(lines)
+
+
+TYPES_FILE = "geode.d.luau"
 
 
 def emit(
@@ -690,23 +438,8 @@ def emit(
     cocos_chunks.sort(key=lambda item: item[0])
     gd_chunks.sort(key=lambda item: item[0])
 
-    cocos_bundle_order, cocos_packed, cocos_classes_per_file = _partition_chunks(
-        cocos_chunks, cocos_namespace
-    )
-    gd_bundle_order, gd_packed, gd_classes_per_file = _partition_chunks(
-        gd_chunks, gd_namespace
-    )
-    packed = {**cocos_packed, **gd_packed}
-    classes_per_file = {**cocos_classes_per_file, **gd_classes_per_file}
-
-    global_order: List[str] = list(cocos_bundle_order)
-    global_order.append(COCOS_FACTORY_FILE)
-    global_order += gd_bundle_order
-    global_order.append(GD_FACTORY_FILE)
-    global_order.append(ROOT_FILE)
-
-    home_file = _build_home_file(classes_per_file)
-    order_index = {name: idx for idx, name in enumerate(global_order)}
+    cocos_body = "".join(chunk for _, chunk in cocos_chunks)
+    gd_body = "".join(chunk for _, chunk in gd_chunks)
 
     cocos_factories = _collect_factories(
         classes, grouped_by_class, skipped_classes, cocos_namespace
@@ -714,74 +447,67 @@ def emit(
     gd_factories = _collect_factories(
         classes, grouped_by_class, skipped_classes, gd_namespace
     )
+    cocos_factory_text = "".join(
+        _emit_factories(cocos_factories, objects, cocos_namespace)
+    )
+    gd_factory_text = "".join(_emit_factories(gd_factories, objects, gd_namespace))
 
-    output: Dict[str, str] = {}
-    output.update(
-        _emit_namespace_files(
-            namespace=cocos_namespace,
-            section_label="Cocos2d type",
-            bundle_order=cocos_bundle_order,
-            factories=cocos_factories,
-            grouped_by_class=grouped_by_class,
-            objects=objects,
-            skipped_classes=skipped_classes,
-            classes_per_file=classes_per_file,
-            home_file=home_file,
-            order_index=order_index,
-            packed=packed,
-            factory_file_name=COCOS_FACTORY_FILE,
-        )
-    )
-    output.update(
-        _emit_namespace_files(
-            namespace=gd_namespace,
-            section_label="Geometry Dash type",
-            bundle_order=gd_bundle_order,
-            factories=gd_factories,
-            grouped_by_class=grouped_by_class,
-            objects=objects,
-            skipped_classes=skipped_classes,
-            classes_per_file=classes_per_file,
-            home_file=home_file,
-            order_index=order_index,
-            packed=packed,
-            factory_file_name=GD_FACTORY_FILE,
-        )
-    )
+    defined = {name for name, _ in cocos_chunks} | {name for name, _ in gd_chunks}
+    refs = _refs_from_classes(defined, grouped_by_class, objects, skipped_classes)
+    refs |= _factory_object_refs(cocos_factories, objects)
+    refs |= _factory_object_refs(gd_factories, objects)
+    refs |= _refs_from_text(cocos_body + gd_body + cocos_factory_text + gd_factory_text)
+    orphan_names = {
+        name
+        for name in refs
+        if name not in defined and name in objects and name not in _VALUE_STUB_BODY
+    }
 
-    main_lines = _root_header("Geode namespace root")
-    main_lines.append(
-        "-- Namespace types are defined in the bundled geode_cocos2d_* / geode_gd_* "
-        "files and the *_factories files\n"
+    lines = _header("Geode type stubs")
+
+    value_block = _emit_value_stub_block(
+        _value_refs_in_text(cocos_body + gd_body + cocos_factory_text + gd_factory_text)
     )
-    main_lines.append("type Cocos2dNamespace = any\n")
-    main_lines.append("type GDNamespace = any\n\n")
-    main_lines.append("export type HookHandle = {\n")
-    main_lines.append("    enable: (self: HookHandle) -> boolean,\n")
-    main_lines.append("    disable: (self: HookHandle) -> boolean,\n")
-    main_lines.append("    remove: (self: HookHandle) -> boolean,\n")
-    main_lines.append("    isEnabled: (self: HookHandle) -> boolean,\n")
-    main_lines.append("}\n\n")
-    main_lines.append("export type HookCallbackTable = {\n")
-    main_lines.append("    before: ((...any) -> ())?,\n")
-    main_lines.append("    after: ((...any) -> ())?,\n")
-    main_lines.append("    priority: number?,\n")
-    main_lines.append("}\n\n")
-    main_lines.append("export type GeodeNamespace = {\n")
-    main_lines.append("    cocos2d: Cocos2dNamespace,\n")
-    main_lines.append("    gd: GDNamespace,\n")
-    main_lines.append(
+    if value_block:
+        lines.append(value_block)
+        lines.append("\n")
+
+    for namespace in (cocos_namespace, gd_namespace):
+        enum_block = _enum_block(namespace)
+        if enum_block:
+            lines.append(enum_block)
+            lines.append("\n")
+
+    orphan_block = _emit_orphan_stubs(orphan_names)
+    if orphan_block:
+        lines.append(orphan_block)
+
+    lines.append(cocos_body)
+    lines.append(gd_body)
+
+    lines.append(cocos_factory_text)
+    lines.append(gd_factory_text)
+
+    lines.append("export type HookHandle = {\n")
+    lines.append("    enable: (self: HookHandle) -> boolean,\n")
+    lines.append("    disable: (self: HookHandle) -> boolean,\n")
+    lines.append("    remove: (self: HookHandle) -> boolean,\n")
+    lines.append("    isEnabled: (self: HookHandle) -> boolean,\n")
+    lines.append("}\n\n")
+    lines.append("export type HookCallbackTable = {\n")
+    lines.append("    before: ((...any) -> ())?,\n")
+    lines.append("    after: ((...any) -> ())?,\n")
+    lines.append("    priority: number?,\n")
+    lines.append("}\n\n")
+    lines.append("export type GeodeNamespace = {\n")
+    lines.append("    cocos2d: Cocos2dNamespace,\n")
+    lines.append("    gd: GDNamespace,\n")
+    lines.append(
         "    hook: (target: string, callback: HookCallbackTable) -> HookHandle,\n"
     )
-    main_lines.append("    skip: (value: any?) -> any,\n")
-    main_lines.append("    fields: (self: any) -> { [string]: any },\n")
-    main_lines.append("}\n\n")
-    main_lines.append("declare geode: GeodeNamespace\n")
-    output[ROOT_FILE] = "".join(main_lines)
+    lines.append("    skip: (value: any?) -> any,\n")
+    lines.append("    fields: (self: any) -> { [string]: any },\n")
+    lines.append("}\n\n")
+    lines.append("declare geode: GeodeNamespace\n")
 
-    definition_files = {
-        _definition_alias(name): f"types/{name}" for name in global_order
-    }
-    output[DEFINITION_LIST_FILE] = json.dumps(definition_files, indent=2) + "\n"
-
-    return output
+    return {TYPES_FILE: "".join(lines)}
