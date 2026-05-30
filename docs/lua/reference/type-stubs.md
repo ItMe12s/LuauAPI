@@ -8,11 +8,16 @@ The build generates Luau type stubs for the game bindings. These stubs provide a
 
 The code generator writes `.d.luau` files into the `types/` folder. They describe the bound classes and the `geode` namespace. They are generated, so you do not edit them by hand.
 
-The generated files are:
+The generator writes one file per class so that no single file is large enough to trip luau-lsp's "Code is too complex to typecheck" error.
+The files are:
 
-- `types/geode_cocos2d_all.d.luau`: all cocos2d class stubs and factories in one self-contained file.
-- `types/geode_gd_all.d.luau`: all Geometry Dash class stubs and factories in one self-contained file.
+- `types/geode_cocos2d_<Class>.d.luau`: one stub per cocos2d class.
+- `types/geode_gd_<Class>.d.luau`: one stub per Geometry Dash class.
+- `types/geode_cocos2d_factories.d.luau` and `types/geode_gd_factories.d.luau`: the static-method factories and the enum aliases for each namespace.
 - `types/geode.d.luau`: the `geode` namespace root, along with `HookHandle` and `HookCallbackTable`.
+- `types/luau-lsp.json`: a generated JSON array listing every file above in load order. Use it to configure the language server (see below).
+
+A class may reference another class that is defined in a later file, so the files must be loaded in the order given by `luau-lsp.json`. The generator places each forward reference behind an empty `declare class X end` stub that always precedes the full definition.
 
 The `task` and `time` stubs come from `tools/luau_codegen/extra_bindings/task.dluau`.
 
@@ -31,15 +36,13 @@ The repository ships editor configuration for the Luau language server.
 }
 ```
 
-Configure `.vscode/settings.json` to register each stub file and ignore `.d.luau` files. The order in `definitionFiles` is important: cocos bundle first, then gd bundle, then the geode root.
+In `.vscode/settings.json`, set `luau-lsp.types.definitionFiles` to the object in `types/luau-lsp.json`, and set `luau-lsp.ignoreGlobs` to `["**/*.d.luau"]`.
 
 ```json
 {
     "luau-lsp.platform.type": "standard",
     "luau-lsp.types.definitionFiles": {
-        "@geode-cocos2d-all": "types/geode_cocos2d_all.d.luau",
-        "@geode-gd-all": "types/geode_gd_all.d.luau",
-        "@geode": "types/geode.d.luau"
+        "...paste the object from types/luau-lsp.json here, in order...": "..."
     },
     "luau-lsp.ignoreGlobs": [
         "**/*.d.luau"

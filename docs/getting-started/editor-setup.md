@@ -23,13 +23,18 @@ After the build, `types/` holds the `.d.luau` stub files. See [Building](buildin
 
 Copy the whole `types/` folder from the LuauAPI repo into the root of your own mod repo.
 
-Your mod root should now contain a `types/` folder with these files:
+The stubs are generated as one `.d.luau` file per class, so `types/` holds many files:
 
 ```text
-types/geode_cocos2d_all.d.luau
-types/geode_gd_all.d.luau
-types/geode.d.luau
+types/geode_cocos2d_<Class>.d.luau    one per cocos2d class
+types/geode_gd_<Class>.d.luau         one per Geometry Dash class
+types/geode_cocos2d_factories.d.luau  cocos2d factories + enum aliases
+types/geode_gd_factories.d.luau       Geometry Dash factories + enum aliases
+types/geode.d.luau                    the geode namespace root
+types/luau-lsp.json                   the ordered list of the files above
 ```
+
+Each class has its own file to avoid luau-lsp typecheck errors. Always copy the entire `types/` folder and use the exact order from `luau-lsp.json`.
 
 ## Step 4: add .luaurc
 
@@ -48,14 +53,19 @@ Create `.luaurc` in your mod root.
 
 Create `.vscode/settings.json` in your mod root.
 
-Keep the `definitionFiles` order exactly: cocos bundle, then gd bundle, then the geode root.
+`luau-lsp.types.definitionFiles` is a name-to-path object whose entries load in order.
+Because there is one file per class, the build writes the complete,
+correctly ordered object to `types/luau-lsp.json`. Set `definitionFiles` to it:
+open `types/luau-lsp.json` and paste its contents as the value.
 
 ```json
 {
     "luau-lsp.platform.type": "standard",
     "luau-lsp.types.definitionFiles": {
-        "@geode-cocos2d-all": "types/geode_cocos2d_all.d.luau",
-        "@geode-gd-all": "types/geode_gd_all.d.luau",
+        "@geode_cocos2d_CCNode": "types/geode_cocos2d_CCNode.d.luau",
+        "...the rest of types/luau-lsp.json, in order...": "...",
+        "@geode_cocos2d_factories": "types/geode_cocos2d_factories.d.luau",
+        "@geode_gd_factories": "types/geode_gd_factories.d.luau",
         "@geode": "types/geode.d.luau"
     },
     "luau-lsp.ignoreGlobs": [
@@ -63,6 +73,10 @@ Keep the `definitionFiles` order exactly: cocos bundle, then gd bundle, then the
     ]
 }
 ```
+
+The order in `luau-lsp.json` is required:
+a class may reference another that is defined later, so the files must load in exactly that sequence.
+Do not reorder or drop entries. Re-paste the object whenever you regenerate the stubs.
 
 ## Step 6: ignore the types folder in git
 

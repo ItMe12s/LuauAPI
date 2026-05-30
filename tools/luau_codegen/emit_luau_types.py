@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import re
 from typing import Dict, List, Sequence, Tuple
 
@@ -93,36 +94,60 @@ def _classify_input_args(m: Method, objects: Dict[str, Class]) -> List[TypeInfo]
     return args
 
 
-VALUE_TYPE_STUBS = """export type RGBColor = { r: number, g: number, b: number }
-export type CCSize = { width: number, height: number }
-export type CCPoint = { x: number, y: number }
-export type CCRect = { origin: CCPoint, size: CCSize }
-export type UIButtonConfig = {
-    width: number,
-    height: number,
-    deadzone: number,
-    scale: number,
-    opacity: number,
-    radius: number,
-    modeB: boolean,
-    snap: boolean,
-    position: CCPoint,
-    oneButton: boolean,
-    player2: boolean,
-    split: boolean,
+_VALUE_STUB_BODY: Dict[str, str] = {
+    "RGBColor": "export type RGBColor = { r: number, g: number, b: number }\n",
+    "CCSize": "export type CCSize = { width: number, height: number }\n",
+    "CCPoint": "export type CCPoint = { x: number, y: number }\n",
+    "CCRect": "export type CCRect = { origin: CCPoint, size: CCSize }\n",
+    "UIButtonConfig": (
+        "export type UIButtonConfig = {\n"
+        "    width: number,\n"
+        "    height: number,\n"
+        "    deadzone: number,\n"
+        "    scale: number,\n"
+        "    opacity: number,\n"
+        "    radius: number,\n"
+        "    modeB: boolean,\n"
+        "    snap: boolean,\n"
+        "    position: CCPoint,\n"
+        "    oneButton: boolean,\n"
+        "    player2: boolean,\n"
+        "    split: boolean,\n"
+        "}\n"
+    ),
 }
-"""
+
+_VALUE_STUB_ORDER = ("CCPoint", "CCSize", "RGBColor", "CCRect", "UIButtonConfig")
+
+_VALUE_STUB_DEPS: Dict[str, Tuple[str, ...]] = {
+    "CCRect": ("CCPoint", "CCSize"),
+    "UIButtonConfig": ("CCPoint",),
+}
 
 
-def _prelude(namespace: str) -> str:
-    enum_lines = "\n".join(
-        f"export type {name} = number" for name in sorted(enum_lua_names(namespace))
-    )
-    if namespace == "geode.cocos2d":
-        return VALUE_TYPE_STUBS + enum_lines + "\n"
-    if enum_lines:
-        return enum_lines + "\n"
-    return ""
+def _expand_value_refs(names: set[str]) -> set[str]:
+    out = set(names)
+    for name in names:
+        out.update(_VALUE_STUB_DEPS.get(name, ()))
+    return {n for n in out if n in _VALUE_STUB_BODY}
+
+
+def _value_refs_in_text(text: str) -> set[str]:
+    return {name for name in _VALUE_STUB_BODY if re.search(rf"\b{name}\b", text)}
+
+
+def _emit_value_stub_block(names: set[str]) -> str:
+    expanded = _expand_value_refs(names)
+    if not expanded:
+        return ""
+    return "".join(_VALUE_STUB_BODY[n] for n in _VALUE_STUB_ORDER if n in expanded)
+
+
+def _enum_block(namespace: str) -> str:
+    names = sorted(enum_lua_names(namespace))
+    if not names:
+        return ""
+    return "".join(f"export type {name} = number\n" for name in names)
 
 
 def _header(label: str) -> List[str]:
@@ -188,45 +213,6 @@ def _base_type_refs(
     return refs
 
 
-def _all_object_type_refs(
-    classes: Sequence[Class],
-    grouped_by_class: Dict[str, Dict[str, List[Method]]],
-    objects: Dict[str, Class],
-    skipped_classes: set,
-    source_namespace: str,
-) -> set[str]:
-    refs: set[str] = set()
-    for cls in classes:
-        if cls.name in skipped_classes or lua_namespace(cls) != source_namespace:
-            continue
-        refs.update(_base_type_refs(cls, objects, skipped_classes))
-        object_refs, _ = _refs_from_fields(cls, cls.fields, objects)
-        refs.update(object_refs)
-        for methods in grouped_by_class[cls.name].values():
-            for method in methods:
-                object_refs, _ = _refs_from_method(method, objects)
-                refs.update(object_refs)
-    return refs
-
-
-def _external_type_refs(
-    classes: Sequence[Class],
-    grouped_by_class: Dict[str, Dict[str, List[Method]]],
-    objects: Dict[str, Class],
-    skipped_classes: set,
-    source_namespace: str,
-) -> set[str]:
-    refs = _all_object_type_refs(
-        classes, grouped_by_class, objects, skipped_classes, source_namespace
-    )
-    external: set[str] = set()
-    for name in refs:
-        ref_cls = objects.get(name)
-        if ref_cls and lua_namespace(ref_cls) != source_namespace:
-            external.add(name)
-    return external
-
-
 def _object_refs_for_classes(
     class_names: set[str],
     grouped_by_class: Dict[str, Dict[str, List[Method]]],
@@ -274,71 +260,12 @@ def _factory_object_refs(
     return refs
 
 
-def _external_value_refs(
-    classes: Sequence[Class],
-    grouped_by_class: Dict[str, Dict[str, List[Method]]],
-    objects: Dict[str, Class],
-    skipped_classes: set,
-    source_namespace: str,
-) -> set[str]:
-    refs: set[str] = set()
-    for cls in classes:
-        if cls.name in skipped_classes or lua_namespace(cls) != source_namespace:
-            continue
-        _, field_value_refs = _refs_from_fields(cls, cls.fields, objects)
-        refs.update(field_value_refs)
-        for methods in grouped_by_class[cls.name].values():
-            for method in methods:
-                _, value_refs = _refs_from_method(method, objects)
-                refs.update(value_refs)
-    return refs
-
-
 def _emit_forward_decls(names: set[str], label: str) -> str:
     if not names:
         return ""
-    lines = [f"-- Forward declarations for types defined in {label}\n", "\n"]
+    lines = [f"-- Forward declarations for classes defined in {label}\n", "\n"]
     for name in sorted(names):
         lines.append(f"declare class {name} end\n\n")
-    return "".join(lines)
-
-
-_VALUE_STUB_ORDER = ("CCPoint", "CCSize", "RGBColor", "CCRect", "UIButtonConfig")
-
-
-def _emit_value_stubs(names: set[str]) -> str:
-    if not names:
-        return ""
-    lines = [f"\n-- Value types defined in geode_cocos2d.d.luau\n", "\n"]
-    for name in _VALUE_STUB_ORDER:
-        if name not in names:
-            continue
-        if name == "RGBColor":
-            lines.append("export type RGBColor = { r: number, g: number, b: number }\n")
-        elif name == "CCSize":
-            lines.append("export type CCSize = { width: number, height: number }\n")
-        elif name == "CCPoint":
-            lines.append("export type CCPoint = { x: number, y: number }\n")
-        elif name == "CCRect":
-            lines.append("export type CCRect = { origin: CCPoint, size: CCSize }\n")
-        elif name == "UIButtonConfig":
-            lines.append(
-                "export type UIButtonConfig = {\n"
-                "    width: number,\n"
-                "    height: number,\n"
-                "    deadzone: number,\n"
-                "    scale: number,\n"
-                "    opacity: number,\n"
-                "    radius: number,\n"
-                "    modeB: boolean,\n"
-                "    snap: boolean,\n"
-                "    position: CCPoint,\n"
-                "    oneButton: boolean,\n"
-                "    player2: boolean,\n"
-                "    split: boolean,\n"
-                "}\n"
-            )
-    lines.append("\n")
     return "".join(lines)
 
 
@@ -395,68 +322,6 @@ def _collect_factories(
     return factories
 
 
-MAX_CLASS_FILE_LINES = 4500
-
-
-def _line_count(chunks: Sequence[str]) -> int:
-    return sum(chunk.count("\n") for chunk in chunks)
-
-
-def _pack_line_chunks(
-    header: List[str],
-    class_chunks: Sequence[Tuple[str, str]],
-    base_name: str,
-) -> Tuple[Dict[str, str], Dict[str, set[str]]]:
-    if not class_chunks:
-        return {base_name: "".join(header)}, {base_name: set()}
-
-    packed: Dict[str, List[str]] = {}
-    classes_per_file: Dict[str, set[str]] = {}
-    current_name = base_name
-    current = header.copy()
-    current_lines = _line_count(current)
-    current_classes: set[str] = set()
-    split_idx = 2
-
-    for class_name, chunk in class_chunks:
-        chunk_lines = chunk.count("\n")
-        if (
-            current_lines > len(header)
-            and current_lines + chunk_lines > MAX_CLASS_FILE_LINES
-        ):
-            packed[current_name] = current
-            classes_per_file[current_name] = current_classes
-            stem = base_name.removesuffix(".d.luau")
-            current_name = f"{stem}_{split_idx}.d.luau"
-            split_idx += 1
-            current = header.copy()
-            current_lines = _line_count(current)
-            current_classes = set()
-        current.append(chunk)
-        current_classes.add(class_name)
-        current_lines += chunk_lines
-
-    packed[current_name] = current
-    classes_per_file[current_name] = current_classes
-    return {name: "".join(lines) for name, lines in packed.items()}, classes_per_file
-
-
-def _split_file_sort_key(file_name: str, base_name: str) -> int:
-    if file_name == base_name:
-        return 1
-    stem = base_name.removesuffix(".d.luau")
-    prefix = f"{stem}_"
-    if file_name.startswith(prefix) and file_name.endswith(".d.luau"):
-        suffix = file_name[len(prefix) : -len(".d.luau")]
-        if suffix.isdigit():
-            return int(suffix)
-    return 999999
-
-
-def _sort_split_files(file_names: Sequence[str], base_name: str) -> List[str]:
-    return sorted(file_names, key=lambda name: _split_file_sort_key(name, base_name))
-
-
 def _build_home_file(*classes_per_file: Dict[str, set[str]]) -> Dict[str, str]:
     home_file: Dict[str, str] = {}
     for mapping in classes_per_file:
@@ -466,43 +331,13 @@ def _build_home_file(*classes_per_file: Dict[str, set[str]]) -> Dict[str, str]:
     return home_file
 
 
-BUNDLE_COCOS_FILE = "geode_cocos2d_all.d.luau"
-BUNDLE_GD_FILE = "geode_gd_all.d.luau"
+def _class_file_name(namespace: str, class_name: str) -> str:
+    prefix = "geode_cocos2d" if namespace == "geode.cocos2d" else "geode_gd"
+    return f"{prefix}_{class_name}.d.luau"
 
 
-def _build_file_order(
-    cocos_class_files: Sequence[str],
-    gd_class_files: Sequence[str],
-) -> List[str]:
-    order: List[str] = [BUNDLE_COCOS_FILE]
-    order.append(BUNDLE_GD_FILE)
-    order.append("geode.d.luau")
-    return order
-
-
-def _skip_cross_ns_forward_in_bundle(bundle_file: str, ref_namespace: str) -> bool:
-    return bundle_file == BUNDLE_GD_FILE and ref_namespace == "geode.cocos2d"
-
-
-def _should_cross_ns_forward_in_bundle(
-    name: str,
-    bundle_file: str,
-    home_file: Dict[str, str],
-    objects: Dict[str, Class],
-    pack_files: set[str],
-    skipped_classes: set,
-) -> bool:
-    if name in skipped_classes:
-        return False
-    ref_cls = objects.get(name)
-    if ref_cls and _skip_cross_ns_forward_in_bundle(
-        bundle_file, lua_namespace(ref_cls)
-    ):
-        return False
-    home = home_file.get(name)
-    if home is not None and home in pack_files:
-        return False
-    return True
+def _definition_alias(file_name: str) -> str:
+    return "@" + file_name.removesuffix(".d.luau")
 
 
 def _keep_forward_stub(
@@ -512,22 +347,12 @@ def _keep_forward_stub(
     order_index: Dict[str, int],
     objects: Dict[str, Class],
 ) -> bool:
-    if name in order_index and file_name not in order_index:
-        return False
     home = home_file.get(name)
     if home is None:
         return True
     if home == file_name:
         return False
-    ref_cls = objects.get(name)
-    if ref_cls and _skip_cross_ns_forward_in_bundle(
-        file_name, lua_namespace(ref_cls)
-    ):
-        return False
-    if file_name == BUNDLE_COCOS_FILE:
-        if ref_cls and lua_namespace(ref_cls) == "geode.cocos2d" and home is not None:
-            return False
-    if home not in order_index:
+    if home not in order_index or file_name not in order_index:
         return True
     return order_index[home] > order_index[file_name]
 
@@ -719,70 +544,73 @@ def _collect_split_forward_names(
     )
 
 
-def _emit_namespace_bundle(
+def _emit_namespace_files(
     *,
-    bundle_file: str,
-    section_label: str,
     namespace: str,
+    section_label: str,
     class_chunks: Sequence[Tuple[str, str]],
-    pack_base_name: str,
-    prelude_lines: str,
-    value_stub_lines: str,
-    cross_namespace_external: set[str],
-    external_label: str,
     factories: Dict[str, Dict[str, List[Method]]],
     grouped_by_class: Dict[str, Dict[str, List[Method]]],
     objects: Dict[str, Class],
     skipped_classes: set,
-) -> str:
-    packed, classes_per_file = _pack_line_chunks([], class_chunks, pack_base_name)
-    split_files = _sort_split_files(list(packed.keys()), pack_base_name)
-    home_file = _build_home_file(classes_per_file)
-    order_index = {name: idx for idx, name in enumerate(split_files)}
+    classes_per_file: Dict[str, set[str]],
+    home_file: Dict[str, str],
+    order_index: Dict[str, int],
+    packed: Dict[str, str],
+    factory_file_name: str,
+) -> Dict[str, str]:
+    files: Dict[str, str] = {}
 
-    pack_files = set(split_files)
-    forward_names: set[str] = {
-        name
-        for name in cross_namespace_external
-        if _should_cross_ns_forward_in_bundle(
-            name,
-            bundle_file,
-            home_file,
+    for class_name, chunk in class_chunks:
+        file_name = _class_file_name(namespace, class_name)
+        forward_names = _collect_split_forward_names(
+            file_name,
+            {class_name},
+            classes_per_file,
+            grouped_by_class,
             objects,
-            pack_files,
             skipped_classes,
+            namespace,
+            file_name,
+            home_file,
+            order_index,
+            packed,
         )
-    }
-    for split_name in split_files:
-        forward_names.update(
-            _collect_split_forward_names(
-                split_name,
-                classes_per_file.get(split_name, set()),
-                classes_per_file,
-                grouped_by_class,
-                objects,
-                skipped_classes,
-                namespace,
-                split_name,
-                home_file,
-                order_index,
-                packed,
-            )
-        )
+        body = _header(f"{section_label}: {class_name}")
+        value_block = _emit_value_stub_block(_value_refs_in_text(chunk))
+        if value_block:
+            body.append(value_block)
+            body.append("\n")
+        forward = _emit_forward_decls(forward_names, "their own files")
+        if forward:
+            body.append(forward)
+        body.append(chunk)
+        files[file_name] = "".join(body)
 
-    lines = _header(section_label)
-    if prelude_lines:
-        lines.append(prelude_lines)
-        if not prelude_lines.endswith("\n"):
-            lines.append("\n")
-    if value_stub_lines:
-        lines.append(value_stub_lines)
-    if forward_names:
-        lines.append(_emit_forward_decls(forward_names, external_label))
-    for split_name in split_files:
-        lines.append(packed[split_name])
-    lines.extend(_emit_factories(factories, objects, namespace))
-    return "".join(lines)
+    factory_content = "".join(_emit_factories(factories, objects, namespace))
+    fbody = _header(f"{section_label} factories")
+    enum_block = _enum_block(namespace)
+    if enum_block:
+        fbody.append(enum_block)
+        fbody.append("\n")
+    value_block = _emit_value_stub_block(_value_refs_in_text(factory_content))
+    if value_block:
+        fbody.append(value_block)
+        fbody.append("\n")
+    factory_forward = _filter_forward_stubs(
+        _factory_object_refs(factories, objects),
+        factory_file_name,
+        home_file,
+        order_index,
+        objects,
+    )
+    forward = _emit_forward_decls(factory_forward, "their own files")
+    if forward:
+        fbody.append(forward)
+    fbody.append(factory_content)
+    files[factory_file_name] = "".join(fbody)
+
+    return files
 
 
 def _is_ccnode_descendant(
@@ -806,6 +634,12 @@ def _is_ccnode_descendant(
     return False
 
 
+COCOS_FACTORY_FILE = "geode_cocos2d_factories.d.luau"
+GD_FACTORY_FILE = "geode_gd_factories.d.luau"
+ROOT_FILE = "geode.d.luau"
+DEFINITION_LIST_FILE = "luau-lsp.json"
+
+
 def emit(
     root: Root, target_platform: str = "win", plan: EmitPlan | None = None
 ) -> Dict[str, str]:
@@ -819,35 +653,45 @@ def emit(
     cocos_namespace = "geode.cocos2d"
     gd_namespace = "geode.gd"
 
-    cocos_external = _external_type_refs(
-        classes, grouped_by_class, objects, skipped_classes, cocos_namespace
-    )
-    gd_external = _external_type_refs(
-        classes, grouped_by_class, objects, skipped_classes, gd_namespace
-    )
-    gd_value_refs = _external_value_refs(
-        classes, grouped_by_class, objects, skipped_classes, gd_namespace
-    )
-
-    cocos_class_chunks: List[Tuple[str, str]] = []
-    gd_class_chunks: List[Tuple[str, str]] = []
+    cocos_chunks: List[Tuple[str, str]] = []
+    gd_chunks: List[Tuple[str, str]] = []
     for cls in classes:
         field_targets = plan.field_targets_by_class.get(cls.name, [])
         if not _should_emit_type_class(cls, objects, field_targets, skipped_classes):
             continue
         grouped = grouped_by_class[cls.name]
-        cls_lines = _emit_class(
-            cls,
-            grouped,
-            field_targets,
-            objects,
-            skipped_classes,
+        chunk = "".join(
+            _emit_class(cls, grouped, field_targets, objects, skipped_classes)
         )
-        chunk = "".join(cls_lines)
         if lua_namespace(cls) == cocos_namespace:
-            cocos_class_chunks.append((cls.name, chunk))
+            cocos_chunks.append((cls.name, chunk))
         else:
-            gd_class_chunks.append((cls.name, chunk))
+            gd_chunks.append((cls.name, chunk))
+
+    cocos_chunks.sort(key=lambda item: item[0])
+    gd_chunks.sort(key=lambda item: item[0])
+
+    packed: Dict[str, str] = {}
+    classes_per_file: Dict[str, set[str]] = {}
+    for name, chunk in cocos_chunks:
+        file_name = _class_file_name(cocos_namespace, name)
+        packed[file_name] = chunk
+        classes_per_file[file_name] = {name}
+    for name, chunk in gd_chunks:
+        file_name = _class_file_name(gd_namespace, name)
+        packed[file_name] = chunk
+        classes_per_file[file_name] = {name}
+
+    global_order: List[str] = [
+        _class_file_name(cocos_namespace, name) for name, _ in cocos_chunks
+    ]
+    global_order.append(COCOS_FACTORY_FILE)
+    global_order += [_class_file_name(gd_namespace, name) for name, _ in gd_chunks]
+    global_order.append(GD_FACTORY_FILE)
+    global_order.append(ROOT_FILE)
+
+    home_file = _build_home_file(classes_per_file)
+    order_index = {name: idx for idx, name in enumerate(global_order)}
 
     cocos_factories = _collect_factories(
         classes, grouped_by_class, skipped_classes, cocos_namespace
@@ -857,40 +701,43 @@ def emit(
     )
 
     output: Dict[str, str] = {}
-    output[BUNDLE_COCOS_FILE] = _emit_namespace_bundle(
-        bundle_file=BUNDLE_COCOS_FILE,
-        section_label="Cocos2d types (classes and factories)",
-        namespace=cocos_namespace,
-        class_chunks=cocos_class_chunks,
-        pack_base_name="geode_cocos2d.d.luau",
-        prelude_lines=_prelude(cocos_namespace),
-        value_stub_lines="",
-        cross_namespace_external=cocos_external,
-        external_label="geode_gd.d.luau",
-        factories=cocos_factories,
-        grouped_by_class=grouped_by_class,
-        objects=objects,
-        skipped_classes=skipped_classes,
+    output.update(
+        _emit_namespace_files(
+            namespace=cocos_namespace,
+            section_label="Cocos2d type",
+            class_chunks=cocos_chunks,
+            factories=cocos_factories,
+            grouped_by_class=grouped_by_class,
+            objects=objects,
+            skipped_classes=skipped_classes,
+            classes_per_file=classes_per_file,
+            home_file=home_file,
+            order_index=order_index,
+            packed=packed,
+            factory_file_name=COCOS_FACTORY_FILE,
+        )
     )
-    output[BUNDLE_GD_FILE] = _emit_namespace_bundle(
-        bundle_file=BUNDLE_GD_FILE,
-        section_label="Geometry Dash types (classes and factories)",
-        namespace=gd_namespace,
-        class_chunks=gd_class_chunks,
-        pack_base_name="geode_gd.d.luau",
-        prelude_lines=_prelude(gd_namespace),
-        value_stub_lines=_emit_value_stubs(gd_value_refs),
-        cross_namespace_external=gd_external,
-        external_label="geode_cocos2d.d.luau",
-        factories=gd_factories,
-        grouped_by_class=grouped_by_class,
-        objects=objects,
-        skipped_classes=skipped_classes,
+    output.update(
+        _emit_namespace_files(
+            namespace=gd_namespace,
+            section_label="Geometry Dash type",
+            class_chunks=gd_chunks,
+            factories=gd_factories,
+            grouped_by_class=grouped_by_class,
+            objects=objects,
+            skipped_classes=skipped_classes,
+            classes_per_file=classes_per_file,
+            home_file=home_file,
+            order_index=order_index,
+            packed=packed,
+            factory_file_name=GD_FACTORY_FILE,
+        )
     )
 
     main_lines = _root_header("Geode namespace root")
     main_lines.append(
-        "-- Namespace types are defined in geode_cocos2d_all.d.luau and geode_gd_all.d.luau\n"
+        "-- Namespace types are defined in the per-class geode_cocos2d_* / geode_gd_* "
+        "files and the *_factories files\n"
     )
     main_lines.append("type Cocos2dNamespace = any\n")
     main_lines.append("type GDNamespace = any\n\n")
@@ -915,6 +762,11 @@ def emit(
     main_lines.append("    fields: (self: any) -> { [string]: any },\n")
     main_lines.append("}\n\n")
     main_lines.append("declare geode: GeodeNamespace\n")
-    output["geode.d.luau"] = "".join(main_lines)
+    output[ROOT_FILE] = "".join(main_lines)
+
+    definition_files = {
+        _definition_alias(name): f"types/{name}" for name in global_order
+    }
+    output[DEFINITION_LIST_FILE] = json.dumps(definition_files, indent=2) + "\n"
 
     return output
