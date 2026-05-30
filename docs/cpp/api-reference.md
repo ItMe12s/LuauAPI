@@ -16,7 +16,8 @@ geode::Result<void> runFile(
 );
 ```
 
-Reads and runs a `.luau` file, and must run on the main thread. `relativePath` must be a flat `.luau` name inside `resourcesRoot`. It cannot be absolute and cannot contain folders, and the file must be `4 MiB` or smaller. It returns `Ok` on success, or `Err` with a message.
+Reads and runs a `.luau` file, and must run on the main thread. `relativePath` must be a flat `.luau` name inside `resourcesRoot`.
+It cannot be absolute and cannot contain folders, and the file must be `4 MiB` or smaller. It returns `Ok` on success, or `Err` with a message.
 
 ### runScript
 
@@ -41,7 +42,8 @@ arc::Future<geode::Result<void>> runFileAsync(
 );
 ```
 
-Behaves like `runFile`, but returns a future. It resolves the path and reads the file on the calling thread, then runs the script on the main thread. If the main thread work is cancelled, it returns an error.
+Behaves like `runFile`, but returns a future. It resolves the path and reads the file on the calling thread,
+then runs the script on the main thread. If the main thread work is cancelled, it returns an error.
 
 ### runScriptAsync
 
@@ -91,7 +93,8 @@ std::size_t memoryUsage();
 std::size_t memoryLimit();
 ```
 
-Return the current Lua memory use and the cap in bytes. Both return `0` off the main thread or while shutting down. The cap is `512 MiB`.
+Return the current Lua memory use and the cap in bytes. Both return `0` off the main thread or while shutting down.
+See [Limits and errors](limits-and-errors.md) for the cap value.
 
 ### codegenEnabled
 

@@ -2,7 +2,8 @@
 
 ## Summary
 
-`require` loads another Luau file as a module. The module system is flat and sandboxed, so you can only load sibling files inside the same resources root.
+`require` loads another Luau file as a module.
+The module system is flat and sandboxed, so you can only load sibling files inside the same resources root.
 
 ## How to use it
 
@@ -37,11 +38,14 @@ The rules are strict by design, because they keep loading inside the resources r
 
 ## Size and caching
 
-A module must be `4 MiB` or smaller. Compiled modules use the same bytecode cache as scripts, and the cache key includes the path, size, modify time, and content hash.
+A module must be `4 MiB` or smaller.
+Compiled modules use the same bytecode cache as scripts, and the cache key includes the path, size, modify time, and content hash.
 
 ## What happens on load
 
-When you require a module, the runtime resolves the path inside the root, reads the file, compiles it to bytecode, and runs it on a sandboxed thread. The single returned value is handed back to the caller.
+When you require a module, the runtime resolves the path inside the root,
+reads the file, compiles it to bytecode, and runs it on a sandboxed thread.
+The single returned value is handed back to the caller.
 
 ## Limits and notes
 

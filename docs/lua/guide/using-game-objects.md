@@ -2,7 +2,8 @@
 
 ## Summary
 
-This page shows how to read and create game objects from a script. It covers the `geode.cocos2d` and `geode.gd` namespaces, table shaped values such as points and sizes, and per object fields.
+This page shows how to read and create game objects from a script.
+It covers the `geode.cocos2d` and `geode.gd` namespaces, table shaped values such as points and sizes, and per object fields.
 
 ## The two namespaces
 
@@ -54,7 +55,8 @@ bg:setContentSize({ width = 170, height = 84 })
 
 ## Per object fields
 
-You often want to store your own data on a game object. Use `geode.fields(node)` or the `m_fields` property. Both return the same plain table for that object, and the table lives as long as the object does.
+You often want to store your own data on a game object. Use `geode.fields(node)` or the `m_fields` property.
+Both return the same plain table for that object, and the table lives as long as the object does.
 
 ```lua
 local fields = geode.fields(self)
@@ -63,7 +65,8 @@ fields.count = (fields.count or 0) + 1
 
 ## Ownership
 
-The runtime tracks whether an object is owned by Lua or only borrowed, and it handles this for you. You do not manage retain or release by hand. For the details, see the framework page below.
+The runtime tracks whether an object is owned by Lua or only borrowed, and it handles this for you.
+You do not manage retain or release by hand. For the details, see the framework page below.
 
 ## Related
 

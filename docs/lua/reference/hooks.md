@@ -2,7 +2,8 @@
 
 ## Summary
 
-This page is the type reference for the hook API. For usage guidance, see [Hooks](../guide/hooks.md). The types here match the generated stub `types/geode.d.luau`.
+This page is the type reference for the hook API. For usage guidance, see [Hooks](../guide/hooks.md).
+The types here match the generated stub `types/geode.d.luau`.
 
 ## geode.hook
 
@@ -10,7 +11,8 @@ This page is the type reference for the hook API. For usage guidance, see [Hooks
 geode.hook(target: string, callback: HookCallbackTable) -> HookHandle
 ```
 
-`geode.hook` registers a callback on a target function and returns a handle. The target must exist, otherwise the call raises an error. You must pass exactly two arguments.
+`geode.hook` registers a callback on a target function and returns a handle.
+The target must exist, otherwise the call raises an error. You must pass exactly two arguments.
 
 The target id format is `namespace.Class:method/argCount`, for example `geode.gd.GameManager:setIntGameVariable/2`.
 
@@ -48,7 +50,8 @@ You must provide at least one of `before` or `after`.
 geode.skip(value: any?) -> any
 ```
 
-Builds a skip marker for use as a `before` return. The original does not run, and the value becomes the return. Use no argument for functions that return nothing.
+Builds a skip marker for use as a `before` return. The original does not run, and the value becomes the return
+ Use no argument for functions that return nothing.
 
 ## geode.fields
 

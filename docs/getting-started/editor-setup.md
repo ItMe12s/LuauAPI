@@ -11,14 +11,16 @@ Install VSCode and the Luau Language Server extension, `luau-lsp` by JohnnyMorga
 
 ## Step 2: build LuauAPI to get the types
 
-The type stubs are generated during the build, into the `types/` folder. They are not committed to the repo, so you must build LuauAPI yourself to produce them.
+The type stubs are generated during the build, into the `types/` folder.
+They are not committed to the repo, so you must build LuauAPI yourself to produce them.
 
 ```bash
 cmake -B build
 cmake --build build
 ```
 
-After the build, `types/` holds the `.d.luau` stub files. See [Building](building.md) for details.
+After the build, `types/` holds the `.d.luau` stub file.
+See [Building](building.md) for details.
 
 ## Step 3: copy the types folder into your mod
 
@@ -94,7 +96,7 @@ After pulling changes that affect the bindings:
 
 ## Keeping types current
 
-When LuauAPI updates its bindings, rebuild it and recopy the `types/` folder into your mod. The stubs are platform specific, so build on the platform you develop on.
+When LuauAPI updates its bindings, rebuild it and recopy the `types/` folder into your mod.
 
 ## Related
 
@@ -104,8 +106,8 @@ When LuauAPI updates its bindings, rebuild it and recopy the `types/` folder int
 
 ## Source
 
-- `.luaurc`
-- `.vscode/settings.json`
+- `.luaurc` (shipped in the LuauAPI repo)
+- `.vscode/settings.json` (create in your mod, see Step 5)
 - `tools/luau_codegen/emit_luau_types.py`
 - `docs/getting-started/building.md`
 - `CMakeLists.txt`

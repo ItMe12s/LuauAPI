@@ -40,7 +40,8 @@ $on_mod(Loaded) {
 
 ## What the rules are
 
-The file name must be a flat `.luau` resource name. It cannot include folders, and it cannot be absolute. The file must sit inside the resources directory you pass, and it must be `4 MiB` or smaller.
+The file name must be a flat `.luau` resource name. It cannot include folders, and it cannot be absolute.
+The file must sit inside the resources directory you pass, and it must be `4 MiB` or smaller.
 
 ## Next steps
 

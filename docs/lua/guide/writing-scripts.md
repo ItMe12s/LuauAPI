@@ -14,7 +14,8 @@ print("loaded", 1, true)
 
 ## Errors are logged, not fatal
 
-The host runs your script inside a protected call. When your script raises an error, the runtime catches it and writes it to the log, and the game keeps running.
+The host runs your script inside a protected call.
+When your script raises an error, the runtime catches it and writes it to the log, and the game keeps running.
 
 The host can read the last error after a run. See [Limits and errors](../cpp/limits-and-errors.md).
 
@@ -22,11 +23,15 @@ The host can read the last error after a run. See [Limits and errors](../cpp/lim
 
 Every run has a deadline in milliseconds. When a script runs past its deadline, the runtime stops it and raises an error.
 
-The default run deadline is `250 ms`, and callbacks from hooks and tasks receive `50 ms`. Avoid long loops and blocking calls. Spread heavy work across frames with `task`.
+The default run deadline is `250 ms`. Hook and task callbacks receive `50 ms`.
+Avoid long loops and blocking calls. Spread heavy work across frames with `task`.
+See [Limits and errors](../cpp/limits-and-errors.md) for all deadline values.
 
 ## Memory
 
-The runtime caps Lua memory at `512 MiB`. Once that cap is reached, allocation fails. Keep large data small and release references you no longer need.
+The runtime caps Lua memory at a hard limit. Once that cap is reached, allocation fails.
+Keep large data small and release references you no longer need.
+See [Limits and errors](../cpp/limits-and-errors.md).
 
 ## Returning a value from a module
 
@@ -36,7 +41,7 @@ A file loaded with `require` must return exactly one value. A top level script r
 -- a module file
 local M = {}
 function M.greet()
-    print("hi")
+    print("hihi :)")
 end
 return M
 ```

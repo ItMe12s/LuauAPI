@@ -2,13 +2,15 @@
 
 ## Summary
 
-The `task` library schedules callbacks, and the `time` library reads clocks. Tasks run on the game tick and follow the game, so they freeze when the game pauses.
+The `task` library schedules callbacks, and the `time` library reads clocks.
+Tasks run on the game tick and follow the game, so they freeze when the game pauses.
 
 ## task functions
 
 ### task.spawn
 
-Runs a function immediately, under the script budget. Extra arguments are passed to the function. Errors are logged rather than thrown, and the call returns nothing.
+Runs a function immediately, under the callback budget (`50 ms`). Extra arguments are passed to the function
+Errors are logged rather than thrown, and the call returns nothing.
 
 ```lua
 task.spawn(function(name)
@@ -28,7 +30,8 @@ end)
 
 ### task.every
 
-Runs a function repeatedly on a fixed interval in seconds and returns a handle. The interval must be greater than zero, otherwise the call raises an error.
+Runs a function repeatedly on a fixed interval in seconds and returns a handle.
+The interval must be greater than zero, otherwise the call raises an error.
 
 ```lua
 local handle = task.every(0.5, function()
@@ -56,7 +59,8 @@ task.cancel(handle)
 
 ## The handle
 
-`task.delay`, `task.every`, and `task.defer` each return a handle. The handle has a `cancel` method, so you can cancel either with the method or with `task.cancel`.
+`task.delay`, `task.every`, and `task.defer` each return a handle.
+The handle has a `cancel` method, so you can cancel either with the method or with `task.cancel`.
 
 ```lua
 local ticks = 0
@@ -80,13 +84,16 @@ print(time.now(), time.unix())
 
 ## How tasks run
 
-Tasks are driven by the game scheduler. They advance each frame by the frame delta, follow the game tick, and freeze when the game pauses. Each callback runs on the main thread with a `50 ms` budget.
+Tasks are driven by the game scheduler. They advance each frame by the frame delta, follow the game tick, and freeze when the game pauses.
+Each callback runs on the main thread with a `50 ms` budget.
 
 ## Limits and notes
 
 - The most you can schedule at once is `4096`. Going over raises an error.
 - `task.every` requires an interval greater than zero.
 - Callback errors are logged rather than thrown.
+
+See [Limits and errors](../../cpp/limits-and-errors.md) for the full limits table.
 
 ## Related
 

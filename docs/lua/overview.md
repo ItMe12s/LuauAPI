@@ -27,9 +27,12 @@ A script runs inside the game on the main thread. From a script you can:
 
 ## The geode namespace
 
-`geode.cocos2d` holds engine classes such as `CCDirector`, `CCLabelBMFont`, and `CCSprite`. `geode.gd` holds Geometry Dash classes such as `GameManager` and `MenuLayer`.
+`geode.cocos2d` holds engine classes such as `CCDirector`, `CCLabelBMFont`, and `CCSprite`.
+`geode.gd` holds Geometry Dash classes such as `GameManager` and `MenuLayer`.
 
-These classes are generated from the game bindings, and there are many of them. Rather than learning them from a list here, you rely on editor autocomplete backed by the generated type stubs. See [Type stubs and editor setup](reference/type-stubs.md).
+These classes are generated from the game bindings, and there are many of them.
+Rather than learning them from a list here, you rely on editor autocomplete backed by the generated type stubs.
+See [Type stubs and editor setup](reference/type-stubs.md).
 
 ## Rules to remember
 

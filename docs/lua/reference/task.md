@@ -2,7 +2,8 @@
 
 ## Summary
 
-This page is the type reference for the `task` library. For usage guidance, see [Tasks and time](../guide/tasks-and-time.md). The types match the stub `tools/luau_codegen/extra_bindings/task.dluau`.
+This page is the type reference for the `task` library. For usage guidance, see [Tasks and time](../guide/tasks-and-time.md).
+The types match the stub `tools/luau_codegen/extra_bindings/task.dluau`.
 
 ## Types
 
@@ -28,7 +29,8 @@ type TaskNamespace = {
 task.spawn(fn: (...any) -> ...any, ...any) -> ()
 ```
 
-Runs `fn` immediately under the callback budget. Extra arguments are passed to `fn`. Errors are logged rather than thrown, and the call returns nothing.
+Runs `fn` immediately under the callback budget. Extra arguments are passed to `fn`.
+Errors are logged rather than thrown, and the call returns nothing.
 
 ### task.delay
 

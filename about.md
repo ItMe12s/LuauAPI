@@ -2,18 +2,21 @@
 
 **Write Geode mods in Luau!**
 
----
-
-## This mod offers
-
-- Easy to learn syntax.
-- Luau LSP autocompletion.
-- JIT and JIT-less support.
-- No more waiting for your mods to compile.
-- Basically write a whole Geode mod like it's a Roblox game.
+Includes a higher-level SDK built on top of the API.
 
 ---
 
-## README.md
+## Features
 
-[Click here for documentations.](https://github.com/ItMe12s/LuauAPI/blob/master/README.md)
+- Write fully functional Geode mods in Luau
+- Create your own API mod in Luau
+- Luau LSP autocompletion
+- JIT and JIT-less support
+- Useful built-in libraries
+- Custom tooling, including an in-game script executor
+
+---
+
+## Learn more
+
+[Click here for documentation.](https://github.com/ItMe12s/LuauAPI/blob/master/README.md)

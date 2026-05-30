@@ -2,7 +2,8 @@
 
 ## Summary
 
-The module system implements `require`. It builds on the Luau require runtime with a custom configuration, and it lives in `src/lua/module/`. It keeps all loading inside the resources root.
+The module system implements `require`. It builds on the Luau require runtime with a custom configuration, and it lives in `src/lua/module/`.
+It keeps all loading inside the resources root.
 
 ## The requirer
 
@@ -43,7 +44,8 @@ The path helpers live in `PathRules.hpp` and `RequirePath.hpp`.
 
 ## Bytecode cache key
 
-`BytecodeCacheKey.hpp` builds the cache key from the file path, size, modify time, and a content hash. The runtime uses this key in its least recently used cache.
+`BytecodeCacheKey.hpp` builds the cache key from the file path, size, modify time, and a content hash.
+The runtime uses this key in its least recently used cache.
 
 ## Sandbox
 

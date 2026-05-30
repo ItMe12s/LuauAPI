@@ -44,11 +44,13 @@ if (result.isErr()) {
 
 ## Deadlines and interrupts
 
-A run that passes its deadline is interrupted and turned into an error. The check happens at Luau instruction boundaries, so a very tight loop can run slightly past the deadline before the check fires.
+A run that passes its deadline is interrupted and turned into an error.
+The check happens at Luau instruction boundaries, so a very tight loop can run slightly past the deadline before the check fires.
 
 ## Memory behavior
 
-The memory cap is hard. There is no soft limit and no extra collection step. When an allocation would cross the cap, it fails and Lua reports an out of memory error.
+The memory cap is hard. There is no soft limit and no extra collection step.
+When an allocation would cross the cap, it fails and Lua reports an out of memory error.
 
 ## Related
 

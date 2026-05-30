@@ -2,7 +2,8 @@
 
 ## Summary
 
-All mods share one runtime and one global table. A value one script puts on a global is visible to other mods later. Use this to let one mod expose a Luau API to others.
+All mods share one runtime and one global table. A value one script puts on a global is visible to other mods later.
+Use this to let one mod expose a Luau API to others.
 
 ## Publishing
 
@@ -27,11 +28,13 @@ Read the other mod's table by its id.
 local OtherMod = _G["other.mod.id"]
 ```
 
-Always index `_G` with the key. Do not read it as a bare global name. The global table is a safe environment, so a bare read can cache `nil` forever. Indexing `_G` stays dynamic.
+Always index `_G` with the key. Do not read it as a bare global name.
+The global table is a safe environment, so a bare read can cache `nil` forever. Indexing `_G` stays dynamic.
 
 ## Handling load order
 
-The provider may run after you. If so, the first read is `nil`. Do not busy wait. A `repeat` loop never works here, because your script runs in one call with a time budget and the provider runs in a later call.
+The provider may run after you. If so, the first read is `nil`.
+Do not busy wait. A `repeat` loop never works here, because your script runs in one call with a time budget and the provider runs in a later call.
 
 Poll with `task` instead.
 
@@ -61,7 +64,8 @@ It checks now, retries every 0.1s if missing, then cancels and runs once found.
 
 ## Why not require
 
-`require` cannot reach another mod. It is sandboxed to your own resources and only loads flat `.luau` files in your root. Use `_G` for cross mod APIs. See [Modules and require](modules-and-require.md).
+`require` cannot reach another mod. It is sandboxed to your own resources and only loads flat `.luau` files in your root.
+See [Modules and require](modules-and-require.md).
 
 ## Limits and notes
 

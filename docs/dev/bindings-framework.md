@@ -2,11 +2,13 @@
 
 ## Summary
 
-The bindings framework exposes C++ types to Lua. It lives in `src/lua/bindings/framework/`, with the registry in `src/lua/bindings/Binding.hpp`. This page explains how to register a binding and how the pieces fit together.
+The bindings framework exposes C++ types to Lua. It lives in `src/lua/bindings/framework/`, with the registry in `src/lua/bindings/Binding.hpp`.
+This page explains how to register a binding and how the pieces fit together.
 
 ## The binding registry
 
-A binding is a function that takes a `lua_State*` and returns a `geode::Result<void>`. You register it with a macro, and every binding runs once when the runtime is built.
+A binding is a function that takes a `lua_State*` and returns a `geode::Result<void>`.
+You register it with a macro, and every binding runs once when the runtime is built.
 
 ```cpp
 geode::Result<void> registerMyLib(lua_State* L) {
@@ -17,7 +19,9 @@ geode::Result<void> registerMyLib(lua_State* L) {
 LUAX_BINDING(my_lib, registerMyLib)
 ```
 
-`LUAX_BINDING` registers the function with a default priority of `10`. Use `LUAX_BINDING_PRIORITY` to set a different priority. `applyAllBindings` runs every binding in priority order at startup. The task library follows this pattern in `src/lua/bindings/task/TaskBinding.cpp`.
+`LUAX_BINDING` registers the function with a default priority of `10`. Use `LUAX_BINDING_PRIORITY` to set a different priority.
+`applyAllBindings` runs every binding in priority order at startup.
+The task library follows this pattern in `src/lua/bindings/task/TaskBinding.cpp`.
 
 ## Usertypes
 
@@ -31,31 +35,40 @@ LUAX_BINDING(my_lib, registerMyLib)
 - `pushOwned(L, obj)` pushes the object as Lua owned.
 - `pushBorrowed(L, obj)` pushes the object as a weak borrow.
 
-The metatable holds a methods table, a fields table, and `__index` and `__newindex` handlers. The handlers search methods first, then fields, then the per node field table for `CCNode` types.
+The metatable holds a methods table, a fields table, and `__index` and `__newindex` handlers.
+The handlers search methods first, then fields, then the per node field table for `CCNode` types.
 
 ## The usertype registry
 
-`UsertypeRegistry` maps each C++ type to a small integer tag and back. Tags are stable for the life of the runtime. Each type record holds its tag, name, metatable name, and base tags for inheritance checks.
+`UsertypeRegistry` maps each C++ type to a small integer tag and back. Tags are stable for the life of the runtime.
+Each type record holds its tag, name, metatable name, and base tags for inheritance checks.
 
 ## Ownership
 
-An owned userdata holds a strong pointer and increases the C++ retain count. A borrowed userdata holds a weak reference and does not retain. The global retain map in `Ref.hpp` tracks owned objects. When an owned userdata is collected, the retain is released, and on shutdown all Lua retains are cleared.
+An owned userdata holds a strong pointer and increases the C++ retain count. A borrowed userdata holds a weak reference and does not retain.
+The global retain map in `Ref.hpp` tracks owned objects.
+When an owned userdata is collected, the retain is released, and on shutdown all Lua retains are cleared.
 
 ## The stack layer
 
-`Stack.hpp` provides overloaded `push` and `check` helpers for primitives and strings. It also provides helpers for reading numeric and boolean table fields, and helpers to write integers as strings, which avoids float precision loss for large values.
+`Stack.hpp` provides overloaded `push` and `check` helpers for primitives and strings.
+It also provides helpers for reading numeric and boolean table fields,
+and helpers to write integers as strings, which avoids float precision loss for large values.
 
 ## Lua references
 
-`LuaRef` wraps a Lua registry reference with RAII. It records the runtime generation and the resources root, and it becomes invalid after a runtime restart. The task scheduler and the hook runtime store callbacks as `LuaRef`.
+`LuaRef` wraps a Lua registry reference with RAII. It records the runtime generation and the resources root,
+and it becomes invalid after a runtime restart. The task scheduler and the hook runtime store callbacks as `LuaRef`.
 
 ## Value types
 
-`Types.hpp` converts small structs to and from Lua tables. It covers points, sizes, rects, colors, and button configs. The generated hook code uses these helpers to decode table shaped arguments.
+`Types.hpp` converts small structs to and from Lua tables. It covers points, sizes, rects, colors, and button configs.
+The generated hook code uses these helpers to decode table shaped arguments.
 
 ## Per node fields
 
-`Fields` gives each `CCNode` a persistent Lua table and caches it in a map keyed by the node. The table is evicted when the node is released. This backs `geode.fields` and the `m_fields` property.
+`Fields` gives each `CCNode` a persistent Lua table and caches it in a map keyed by the node.
+The table is evicted when the node is released. This backs `geode.fields` and the `m_fields` property.
 
 ## Adding a new bound type
 

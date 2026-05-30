@@ -2,7 +2,9 @@
 
 ## Summary
 
-A hook lets your script run code before or after a game function. You can read the arguments, change the arguments, skip the original, or change the return value. Hooks are the main way scripts change the game.
+A hook lets your script run code before or after a game function.
+You can read the arguments, change the arguments, skip the original, or change the return value.
+Hooks are the main way scripts change the game.
 
 ## The basic shape
 
@@ -41,7 +43,8 @@ A target that does not exist causes the call to raise an error.
 
 ## The callback table
 
-The table can hold three fields. All of them are optional, but you must provide at least one of `before` or `after`.
+The table can hold three fields.
+All of them are optional, but you must provide at least one of `before` or `after`.
 
 - `before` runs before the original.
 - `after` runs after the original.
@@ -59,15 +62,14 @@ geode.hook("geode.gd.GameManager:setIntGameVariable/2", {
 })
 ```
 
-A `before` callback controls what happens next through its return value.
+A `before` callback controls what happens next through its return value:
 
-### Return nothing to proceed
+- Return `nil` or nothing to run the original as normal.
+- Return a table with an `args` field to replace the method arguments.
+- Return `geode.skip(value)` to skip the original. The value you pass becomes the return value. For a void function, call `geode.skip()` with no value.
+- Any other non-nil return is ignored. The runtime logs a warning and runs the original.
 
-Return `nil` or nothing, and the original runs as normal.
-
-### Change the arguments
-
-Return a table with an `args` field, and the values inside replace the method arguments.
+Change the arguments:
 
 ```lua
 before = function(self, key, value)
@@ -77,11 +79,10 @@ before = function(self, key, value)
 end
 ```
 
-The `args` list can be positional, as shown above. It can also use the argument names as keys. A positional list must hold one value per method argument.
+The `args` list can be positional, as shown above. It can also use the argument names as keys.
+A positional list must hold one value per method argument.
 
-### Skip the original
-
-Return `geode.skip(value)`. The original does not run, and the value you pass becomes the return value.
+Skip the original:
 
 ```lua
 before = function(self, key)
@@ -90,12 +91,6 @@ before = function(self, key)
     end
 end
 ```
-
-For a function that returns nothing, call `geode.skip()` with no value.
-
-### Invalid returns
-
-Any other non nil return is ignored. The runtime logs a warning and runs the original.
 
 ## The after callback
 
@@ -112,7 +107,8 @@ geode.hook("geode.gd.GameManager:getIntGameVariable/1", {
 })
 ```
 
-To change the return value, return a new value. To keep it, return the value you received. Return `nil` to leave the original return in place.
+To change the return value, return a new value.
+To keep it, return the value you received. Return `nil` to leave the original return in place.
 
 ## Priority and order
 
@@ -138,16 +134,14 @@ handle:enable()
 handle:remove()
 ```
 
-- `handle:enable()` turns the hook on and returns a boolean.
-- `handle:disable()` turns the hook off and returns a boolean.
-- `handle:remove()` removes the callbacks for this handle and returns a boolean.
-- `handle:isEnabled()` reports whether the hook is on and returns a boolean.
+See [Hooks reference](../reference/hooks.md) for handle method details.
 
 A hook is installed and enabled the first time you register it.
 
 ## Per object fields
 
-Inside a hook you often want to store data on the object. Use `self.m_fields` or `geode.fields(self)`. Both give you a plain table tied to that object.
+Inside a hook you often want to store data on the object. Use `self.m_fields` or `geode.fields(self)`.
+Both give you a plain table tied to that object.
 
 ```lua
 geode.hook("geode.gd.MenuLayer:init/0", {
@@ -167,6 +161,8 @@ See [Using game objects](using-game-objects.md) for more.
 - Hook callbacks per target: `64`.
 - Each callback runs with a `50 ms` budget.
 - Callbacks run on the main thread.
+
+See [Limits and errors](../../cpp/limits-and-errors.md) for the full limits table.
 
 ## Related
 

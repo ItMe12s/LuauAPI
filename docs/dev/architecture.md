@@ -53,7 +53,8 @@ This is the path for `runFile`:
 
 ## Threading
 
-The runtime is single threaded. Almost every call must run on the main thread, and the runtime enforces this. The async API performs its file work off thread, then hops to the main thread to run the script.
+The runtime is single threaded. Almost every call must run on the main thread, and the runtime enforces this.
+The async API performs its file work off thread, then hops to the main thread to run the script.
 
 ## Source
 

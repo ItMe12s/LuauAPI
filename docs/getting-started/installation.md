@@ -6,9 +6,11 @@ This page lists what you need to build and use LuauAPI. LuauAPI is a Geode mod t
 
 ## What LuauAPI is
 
-LuauAPI is published as a Geode mod with the id `imes.luauapi`. It loads early and with first priority, so the runtime is available to other mods as soon as the game starts. It also exports a C++ API that other mods can depend on.
+LuauAPI is published as a Geode mod with the id `imes.luauapi`.
+It loads early and with first priority, so the runtime is available to other mods as soon as the game starts.
+It also exports a C++ API that other mods can depend on.
 
-The following facts come from `mod.json`:
+From `mod.json`:
 
 - Mod id: `imes.luauapi`
 - Geode version: `5.7.1`
@@ -31,8 +33,11 @@ You need the following tools to build the mod. The versions come from `CMakeList
 CMake downloads these for you during configuration, so you do not install them by hand.
 
 - Luau, pinned to tag `0.722`
-- Geode bindings, pinned to a fixed commit
+- Geode bindings, pinned to commit `00328ccd2fd3e4b005a54eaaa4d4d91e22ca7df4` (`LUAUAPI_BINDINGS_GIT_TAG` in `CMakeLists.txt`)
 - Catch2 `v3.15.0`, fetched only when tests are enabled
+
+To bump bindings for a new Geometry Dash version,
+update `mod.json` and the `LUAUAPI_BINDINGS_GIT_TAG` cache variable to a matching commit from the Geode bindings repo.
 
 ## Supported platforms
 
@@ -41,7 +46,9 @@ CMake downloads these for you during configuration, so you do not install them b
 - Windows
 - macOS, both arm64 and x86_64
 - iOS, arm64
-- Android 32 bit and Android 64 bit
+- Android 32-bit and Android 64-bit
+
+Unsupported Android ABIs fail at configure time. See platform mapping in [Codegen](../dev/codegen.md).
 
 ## Next steps
 

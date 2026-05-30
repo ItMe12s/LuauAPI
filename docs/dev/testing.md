@@ -2,7 +2,9 @@
 
 ## Summary
 
-The project has host tests that run without the game. They cover the parts that do not need Cocos2d, such as paths, the allocator, cache keys, and the hook generator. This page lists them and shows how to run them.
+The project has host tests that run without the game.
+They cover the parts that do not need Cocos2d, such as paths, the allocator, cache keys, and the hook generator.
+This page lists them and shows how to run them.
 
 ## Turning tests on
 
@@ -28,11 +30,14 @@ CTest discovers the Catch2 cases at build time.
 
 ## No game libraries in tests
 
-The host tests must not link the game. `CMakeLists.txt` fails deliberately if the test target tries to link the Geode bindings, Cocos2d, the extensions library, GLEW, FMOD, or OpenGL. This keeps the tests fast and host only.
+The host tests must not link the game.
+`CMakeLists.txt` fails deliberately if the test target tries to link the Geode bindings, Cocos2d, the extensions library, GLEW, FMOD, or OpenGL.
+This keeps the tests fast and host only.
 
 ## The Python test
 
-`tests/luau_codegen_hook_tests.py` checks the hook generator. CTest registers it as `luauapi_codegen_hooks` and runs it with Python. It is a large test that covers offsets, symbols, platform intersection, argument marshalling, and return decoding.
+`tests/luau_codegen_hook_tests.py` checks the hook generator. CTest registers it as `luauapi_codegen_hooks` and runs it with Python.
+It is a large test that covers offsets, symbols, platform intersection, argument marshalling, and return decoding.
 
 ## Source
 

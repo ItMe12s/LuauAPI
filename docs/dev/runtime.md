@@ -2,7 +2,8 @@
 
 ## Summary
 
-The `Runtime` class owns the Lua state and everything around it, including memory, deadlines, the bytecode cache, bindings setup, and shutdown. It lives in `src/lua/runtime/`.
+The `Runtime` class owns the Lua state and everything around it, including memory, deadlines, the bytecode cache, bindings setup, and shutdown.
+It lives in `src/lua/runtime/`.
 
 ## One shared instance
 
@@ -16,21 +17,31 @@ The runtime is a single shared instance, accessed through static functions:
 
 ## Construction
 
-The constructor creates the Lua state with a custom bounded allocator, opens the standard libraries, enables native codegen when the hardware allows, installs callbacks, creates the requirer, and applies all bindings. After this, `status` reports `Ready`.
+The constructor creates the Lua state with a custom bounded allocator, opens the standard libraries,
+enables native codegen when the hardware allows, installs callbacks, creates the requirer, and applies all bindings.
+After this, `status` reports `Ready`.
 
 ## Memory accounting
 
-The state uses `boundedAlloc`, a custom allocator. It tracks current use in `m_memoryUsage` and caps it at `m_memoryLimit`, which starts at `512 MiB`. When an allocation would cross the cap, the allocator returns null and Lua reports an out of memory error. The helper logic lives in `src/lua/runtime/AllocatorAccounting.hpp`.
+The state uses `boundedAlloc`, a custom allocator.
+It tracks current use in `m_memoryUsage` and caps it at `m_memoryLimit`, which starts at `512 MiB`.
+When an allocation would cross the cap, the allocator returns null and Lua reports an out of memory error.
+The helper logic lives in `src/lua/runtime/AllocatorAccounting.hpp`.
 
 ## Deadlines and budget
 
-`ScriptBudgetGuard` sets a deadline for a run. It nests, so an inner run does not weaken an outer budget. The guard saves the previous budget and deadline and restores them when it ends.
+`ScriptBudgetGuard` sets a deadline for a run. It nests, so an inner run does not weaken an outer budget.
+The guard saves the previous budget and deadline and restores them when it ends.
 
-An interrupt callback checks the wall clock at instruction boundaries. When the run passes its deadline, it raises an error. A panic callback handles fatal Lua errors.
+An interrupt callback checks the wall clock at instruction boundaries. When the run passes its deadline, it raises an error.
+A panic callback handles fatal Lua errors.
 
 ## Bytecode cache
 
-`getOrCompileBytecode` compiles source to bytecode or returns a cached copy. The cache is a least recently used list with an index map, and it holds up to `512` entries. The cache key is built in the module layer from the path, size, modify time, and content hash. See [Module system](module-system.md).
+`getOrCompileBytecode` compiles source to bytecode or returns a cached copy.
+The cache is a least recently used list with an index map, and it holds up to `512` entries.
+The cache key is built in the module layer from the path, size, modify time, and content hash.
+See [Module system](module-system.md).
 
 ## Running code
 
