@@ -331,9 +331,27 @@ def _build_home_file(*classes_per_file: Dict[str, set[str]]) -> Dict[str, str]:
     return home_file
 
 
-def _class_file_name(namespace: str, class_name: str) -> str:
+CLASSES_PER_BUNDLE = 50
+
+
+def _bundle_file_name(namespace: str, bundle_index: int) -> str:
     prefix = "geode_cocos2d" if namespace == "geode.cocos2d" else "geode_gd"
-    return f"{prefix}_{class_name}.d.luau"
+    return f"{prefix}_{bundle_index:03d}.d.luau"
+
+
+def _partition_chunks(
+    chunks: Sequence[Tuple[str, str]], namespace: str
+) -> Tuple[List[str], Dict[str, str], Dict[str, set[str]]]:
+    bundle_order: List[str] = []
+    packed: Dict[str, str] = {}
+    classes_per_file: Dict[str, set[str]] = {}
+    for bundle_index, start in enumerate(range(0, len(chunks), CLASSES_PER_BUNDLE)):
+        group = chunks[start : start + CLASSES_PER_BUNDLE]
+        file_name = _bundle_file_name(namespace, bundle_index)
+        bundle_order.append(file_name)
+        classes_per_file[file_name] = {name for name, _ in group}
+        packed[file_name] = "".join(chunk for _, chunk in group)
+    return bundle_order, packed, classes_per_file
 
 
 def _definition_alias(file_name: str) -> str:
@@ -548,7 +566,7 @@ def _emit_namespace_files(
     *,
     namespace: str,
     section_label: str,
-    class_chunks: Sequence[Tuple[str, str]],
+    bundle_order: List[str],
     factories: Dict[str, Dict[str, List[Method]]],
     grouped_by_class: Dict[str, Dict[str, List[Method]]],
     objects: Dict[str, Class],
@@ -561,11 +579,12 @@ def _emit_namespace_files(
 ) -> Dict[str, str]:
     files: Dict[str, str] = {}
 
-    for class_name, chunk in class_chunks:
-        file_name = _class_file_name(namespace, class_name)
+    for file_name in bundle_order:
+        defined_here = classes_per_file[file_name]
+        content = packed[file_name]
         forward_names = _collect_split_forward_names(
             file_name,
-            {class_name},
+            defined_here,
             classes_per_file,
             grouped_by_class,
             objects,
@@ -576,15 +595,15 @@ def _emit_namespace_files(
             order_index,
             packed,
         )
-        body = _header(f"{section_label}: {class_name}")
-        value_block = _emit_value_stub_block(_value_refs_in_text(chunk))
+        body = _header(f"{section_label} bundle {file_name}")
+        value_block = _emit_value_stub_block(_value_refs_in_text(content))
         if value_block:
             body.append(value_block)
             body.append("\n")
-        forward = _emit_forward_decls(forward_names, "their own files")
+        forward = _emit_forward_decls(forward_names, "later bundles or files")
         if forward:
             body.append(forward)
-        body.append(chunk)
+        body.append(content)
         files[file_name] = "".join(body)
 
     factory_content = "".join(_emit_factories(factories, objects, namespace))
@@ -671,22 +690,18 @@ def emit(
     cocos_chunks.sort(key=lambda item: item[0])
     gd_chunks.sort(key=lambda item: item[0])
 
-    packed: Dict[str, str] = {}
-    classes_per_file: Dict[str, set[str]] = {}
-    for name, chunk in cocos_chunks:
-        file_name = _class_file_name(cocos_namespace, name)
-        packed[file_name] = chunk
-        classes_per_file[file_name] = {name}
-    for name, chunk in gd_chunks:
-        file_name = _class_file_name(gd_namespace, name)
-        packed[file_name] = chunk
-        classes_per_file[file_name] = {name}
+    cocos_bundle_order, cocos_packed, cocos_classes_per_file = _partition_chunks(
+        cocos_chunks, cocos_namespace
+    )
+    gd_bundle_order, gd_packed, gd_classes_per_file = _partition_chunks(
+        gd_chunks, gd_namespace
+    )
+    packed = {**cocos_packed, **gd_packed}
+    classes_per_file = {**cocos_classes_per_file, **gd_classes_per_file}
 
-    global_order: List[str] = [
-        _class_file_name(cocos_namespace, name) for name, _ in cocos_chunks
-    ]
+    global_order: List[str] = list(cocos_bundle_order)
     global_order.append(COCOS_FACTORY_FILE)
-    global_order += [_class_file_name(gd_namespace, name) for name, _ in gd_chunks]
+    global_order += gd_bundle_order
     global_order.append(GD_FACTORY_FILE)
     global_order.append(ROOT_FILE)
 
@@ -705,7 +720,7 @@ def emit(
         _emit_namespace_files(
             namespace=cocos_namespace,
             section_label="Cocos2d type",
-            class_chunks=cocos_chunks,
+            bundle_order=cocos_bundle_order,
             factories=cocos_factories,
             grouped_by_class=grouped_by_class,
             objects=objects,
@@ -721,7 +736,7 @@ def emit(
         _emit_namespace_files(
             namespace=gd_namespace,
             section_label="Geometry Dash type",
-            class_chunks=gd_chunks,
+            bundle_order=gd_bundle_order,
             factories=gd_factories,
             grouped_by_class=grouped_by_class,
             objects=objects,
@@ -736,7 +751,7 @@ def emit(
 
     main_lines = _root_header("Geode namespace root")
     main_lines.append(
-        "-- Namespace types are defined in the per-class geode_cocos2d_* / geode_gd_* "
+        "-- Namespace types are defined in the bundled geode_cocos2d_* / geode_gd_* "
         "files and the *_factories files\n"
     )
     main_lines.append("type Cocos2dNamespace = any\n")

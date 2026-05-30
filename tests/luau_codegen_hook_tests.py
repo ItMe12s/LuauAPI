@@ -29,7 +29,7 @@ from emit_luau_types import (  # type: ignore[import-unresolved]
     GD_FACTORY_FILE,
     ROOT_FILE,
     DEFINITION_LIST_FILE,
-    _class_file_name,
+    _bundle_file_name,
     emit as emit_luau_types,
 )
 from broma_parser import Root  # type: ignore[import-unresolved]
@@ -84,6 +84,17 @@ def cocos_all(files: dict[str, str]) -> str:
 
 def gd_all(files: dict[str, str]) -> str:
     return concat_in_order(files, "geode_gd_")
+
+
+def bundle_for_class(files: dict[str, str], namespace: str, class_name: str) -> str:
+    prefix = "geode_cocos2d" if namespace == "geode.cocos2d" else "geode_gd"
+    needle = f"declare class {class_name}"
+    for name in definition_order(files):
+        if not name.startswith(prefix) or name.endswith("_factories.d.luau"):
+            continue
+        if needle in files[name]:
+            return name
+    raise KeyError(f"{class_name} not found in {prefix} bundles")
 
 
 class HookOffsetTests(unittest.TestCase):
@@ -909,16 +920,15 @@ class LuauTypeEmissionTests(unittest.TestCase):
         )
         root = Root(classes=[ccobject, early, late])
         files = emit_luau_types(root)
-        early_file = files[_class_file_name("geode.gd", "EarlyLayer")]
+        bundle = bundle_for_class(files, "geode.gd", "EarlyLayer")
+        early_file = files[bundle]
         forward_pos = early_file.find("declare class LateLayer end\n")
         early_pos = early_file.find("declare class EarlyLayer")
         self.assertGreaterEqual(forward_pos, 0)
         self.assertGreaterEqual(early_pos, 0)
         self.assertLess(forward_pos, early_pos)
-        self.assertNotIn(
-            "declare class EarlyLayer end\n",
-            files[_class_file_name("geode.gd", "LateLayer")],
-        )
+        self.assertEqual(bundle, bundle_for_class(files, "geode.gd", "LateLayer"))
+        self.assertNotIn("declare class EarlyLayer end\n", early_file)
 
     def test_per_class_forward_decls(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")
@@ -942,18 +952,15 @@ class LuauTypeEmissionTests(unittest.TestCase):
             )
         root = Root(classes=classes)
         files = emit_luau_types(root)
-        self.assertIn(_class_file_name("geode.gd", "SplitClass00"), files)
-        self.assertIn(_class_file_name("geode.gd", "SplitClass29"), files)
-        c00 = files[_class_file_name("geode.gd", "SplitClass00")]
+        bundle = bundle_for_class(files, "geode.gd", "SplitClass00")
+        self.assertEqual(bundle, bundle_for_class(files, "geode.gd", "SplitClass29"))
+        c00 = files[bundle]
         forward_pos = c00.find("declare class SplitClass29 end\n")
         self_pos = c00.find("declare class SplitClass00")
         self.assertGreaterEqual(forward_pos, 0)
         self.assertGreaterEqual(self_pos, 0)
         self.assertLess(forward_pos, self_pos)
-        self.assertNotIn(
-            "declare class SplitClass00 end\n",
-            files[_class_file_name("geode.gd", "SplitClass29")],
-        )
+        self.assertNotIn("declare class SplitClass00 end\n", c00)
 
     def test_factory_forward_decls(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")
@@ -1034,16 +1041,24 @@ class LuauTypeEmissionTests(unittest.TestCase):
         files = emit_luau_types(Root(classes=[ccobject, sprite, widget]))
         order = definition_order(files)
         self.assertEqual(order[-1], ROOT_FILE)
-        cocos_cls = order.index(_class_file_name("geode.cocos2d", "CCSprite"))
-        gd_cls = order.index(_class_file_name("geode.gd", "Widget"))
+        cocos_cls = order.index(_bundle_file_name("geode.cocos2d", 0))
+        gd_cls = order.index(_bundle_file_name("geode.gd", 0))
         self.assertLess(cocos_cls, order.index(COCOS_FACTORY_FILE))
         self.assertLess(order.index(COCOS_FACTORY_FILE), gd_cls)
         self.assertLess(gd_cls, order.index(GD_FACTORY_FILE))
         self.assertLess(order.index(GD_FACTORY_FILE), order.index(ROOT_FILE))
         self.assertNotIn(DEFINITION_LIST_FILE, order)
 
-    def test_emit_outputs_one_file_per_class(self) -> None:
-        ccobject = Class(name="CCObject", namespace="cocos2d")
+    def test_emit_outputs_bundled_class_files(self) -> None:
+        ccobject = Class(
+            name="CCObject",
+            namespace="cocos2d",
+            methods=[
+                Method(
+                    name="retain", ret="void", args=[], platforms=all_platforms("0x1")
+                )
+            ],
+        )
         widget = Class(
             name="Widget",
             bases=["CCObject"],
@@ -1055,7 +1070,8 @@ class LuauTypeEmissionTests(unittest.TestCase):
         self.assertEqual(
             set(files.keys()),
             {
-                _class_file_name("geode.gd", "Widget"),
+                _bundle_file_name("geode.cocos2d", 0),
+                _bundle_file_name("geode.gd", 0),
                 COCOS_FACTORY_FILE,
                 GD_FACTORY_FILE,
                 ROOT_FILE,
@@ -1127,7 +1143,7 @@ class LuauTypeEmissionTests(unittest.TestCase):
         )
         root = Root(classes=[ccobject, ccgrid_base, ccnode])
         files = emit_luau_types(root)
-        cocos = files[_class_file_name("geode.cocos2d", "CCNode")]
+        cocos = files[bundle_for_class(files, "geode.cocos2d", "CCNode")]
         forward_pos = cocos.find("declare class CCGridBase end\n")
         node_pos = cocos.find("declare class CCNode")
         self.assertGreaterEqual(forward_pos, 0)
@@ -1183,7 +1199,7 @@ class LuauTypeEmissionTests(unittest.TestCase):
         )
         root = Root(classes=[ccobject, node, gm])
         files = emit_luau_types(root)
-        gd = files[_class_file_name("geode.gd", "GameManager")]
+        gd = files[bundle_for_class(files, "geode.gd", "GameManager")]
         ccsize_pos = gd.find("export type CCSize =")
         ccrect_pos = gd.find("export type CCRect =")
         self.assertGreaterEqual(ccsize_pos, 0)
@@ -1501,21 +1517,21 @@ class F8ConstMethodManglingTests(unittest.TestCase):
 
 
 class F9FileSplitTests(unittest.TestCase):
-    def test_per_class_file_names_are_namespaced(self) -> None:
+    def test_bundle_file_names_are_namespaced(self) -> None:
         self.assertEqual(
-            _class_file_name("geode.cocos2d", "CCSprite"),
-            "geode_cocos2d_CCSprite.d.luau",
+            _bundle_file_name("geode.cocos2d", 0),
+            "geode_cocos2d_000.d.luau",
         )
         self.assertEqual(
-            _class_file_name("geode.gd", "PlayerObject"),
-            "geode_gd_PlayerObject.d.luau",
+            _bundle_file_name("geode.gd", 0),
+            "geode_gd_000.d.luau",
         )
         self.assertNotEqual(
-            _class_file_name("geode.cocos2d", "Shared"),
-            _class_file_name("geode.gd", "Shared"),
+            _bundle_file_name("geode.cocos2d", 0),
+            _bundle_file_name("geode.gd", 0),
         )
 
-    def test_each_class_gets_its_own_file(self) -> None:
+    def test_each_class_appears_in_a_bundle(self) -> None:
         ccobject = Class(
             name="CCObject",
             namespace="cocos2d",
@@ -1548,7 +1564,7 @@ class F9FileSplitTests(unittest.TestCase):
             ("geode.cocos2d", "CCNode"),
             ("geode.gd", "PlayerObject"),
         ):
-            self.assertIn(_class_file_name(ns, name), files)
+            self.assertIn(bundle_for_class(files, ns, name), files)
 
 
 class F11ClassMergeTests(unittest.TestCase):

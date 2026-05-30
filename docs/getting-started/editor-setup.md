@@ -23,18 +23,18 @@ After the build, `types/` holds the `.d.luau` stub files. See [Building](buildin
 
 Copy the whole `types/` folder from the LuauAPI repo into the root of your own mod repo.
 
-The stubs are generated as one `.d.luau` file per class, so `types/` holds many files:
+The stubs are generated as bundled `.d.luau` files (about 50 classes per bundle), so `types/` holds a small set of files:
 
 ```text
-types/geode_cocos2d_<Class>.d.luau    one per cocos2d class
-types/geode_gd_<Class>.d.luau         one per Geometry Dash class
+types/geode_cocos2d_NNN.d.luau        bundled cocos2d classes (NNN = 000, 001, ...)
+types/geode_gd_NNN.d.luau             bundled Geometry Dash classes
 types/geode_cocos2d_factories.d.luau  cocos2d factories + enum aliases
 types/geode_gd_factories.d.luau       Geometry Dash factories + enum aliases
 types/geode.d.luau                    the geode namespace root
 types/luau-lsp.json                   the ordered list of the files above
 ```
 
-Each class has its own file to avoid luau-lsp typecheck errors. Always copy the entire `types/` folder and use the exact order from `luau-lsp.json`.
+Bundling keeps each file small enough for luau-lsp typechecking while avoiding Windows `spawn ENAMETOOLONG` when the editor starts the language server with hundreds of definition paths. Always copy the entire `types/` folder and use the exact order from `luau-lsp.json`.
 
 ## Step 4: add .luaurc
 
@@ -54,19 +54,14 @@ Create `.luaurc` in your mod root.
 Create `.vscode/settings.json` in your mod root.
 
 `luau-lsp.types.definitionFiles` is a name-to-path object whose entries load in order.
-Because there is one file per class, the build writes the complete,
-correctly ordered object to `types/luau-lsp.json`. Set `definitionFiles` to it:
-open `types/luau-lsp.json` and paste its contents as the value.
+The build writes the complete, correctly ordered object to `types/luau-lsp.json`.
+Set `definitionFiles` to it: open `types/luau-lsp.json` and paste its contents as the value.
 
 ```json
 {
     "luau-lsp.platform.type": "standard",
     "luau-lsp.types.definitionFiles": {
-        "@geode_cocos2d_CCNode": "types/geode_cocos2d_CCNode.d.luau",
-        "...the rest of types/luau-lsp.json, in order...": "...",
-        "@geode_cocos2d_factories": "types/geode_cocos2d_factories.d.luau",
-        "@geode_gd_factories": "types/geode_gd_factories.d.luau",
-        "@geode": "types/geode.d.luau"
+        "...paste the full object from types/luau-lsp.json here, in order...": "..."
     },
     "luau-lsp.ignoreGlobs": [
         "**/*.d.luau"
@@ -89,6 +84,16 @@ The stubs are generated output, not source. Add this line to your mod's `.gitign
 ## Step 7: reload
 
 Reload the VSCode window so the language server reads the new config. Open a `.luau` file and type `geode.` to confirm autocomplete works.
+
+## If you develop LuauAPI in this repo
+
+After pulling changes that affect type stub layout (for example bundled stubs instead of one file per class):
+
+1. Reconfigure CMake (`cmake -B build`) so the build knows the new generated type filenames.
+2. Rebuild (`cmake --build build`) to regenerate `types/`.
+3. Open `types/luau-lsp.json` and paste its object into `.vscode/settings.json` under `luau-lsp.types.definitionFiles` (replace the old per-class list).
+4. Reload the window and confirm the Luau Language Server output shows no `spawn ENAMETOOLONG`.
+5. If luau-lsp reports "Code is too complex to typecheck" on a bundle, lower `CLASSES_PER_BUNDLE` in `tools/luau_codegen/emit_luau_types.py`, rebuild, and re-paste `luau-lsp.json`.
 
 ## Keeping types current
 
