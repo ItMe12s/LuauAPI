@@ -19,6 +19,10 @@ From `mod.json`:
 - `load-priority` is first
 - The C++ API is exported from `include/**/*.hpp`
 
+## Settings
+
+- `enable-executor`: Enables the built-in ImGui script executor (on by default).
+
 ## Required tools
 
 You need the following tools to build the mod. The versions come from `CMakeLists.txt`.

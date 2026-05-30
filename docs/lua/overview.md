@@ -42,6 +42,11 @@ See [Type stubs and editor setup](reference/type-stubs.md).
 - Your script has a time budget, so avoid blocking and infinite loops.
 - Errors are caught and written to the log. They do not crash the game.
 
+## Tools
+
+The mod ships a built-in script executor. It is an ImGui window with a code box and an Execute button.
+It loads by default and you can turn it off with the `enable-executor` mod setting.
+
 See [Core concepts](../getting-started/concepts.md) for the full model.
 
 ## Source

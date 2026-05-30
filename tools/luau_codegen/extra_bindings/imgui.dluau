@@ -29,6 +29,7 @@ export type ImGuiNamespace = {
     sliderFloat: (label: string, value: number, min: number, max: number, fmt: string?) -> number,
     sliderInt: (label: string, value: number, min: number, max: number) -> number,
     inputText: (label: string, value: string, maxLen: number?) -> string,
+    inputTextMultiline: (label: string, value: string, size: ImGuiVec2?, maxLen: number?) -> string,
     sameLine: (offset: number?, spacing: number?) -> (),
     separator: () -> (),
     spacing: () -> (),

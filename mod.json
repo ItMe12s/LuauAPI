@@ -17,5 +17,18 @@
 		"include": [
 			"include/**/*.hpp"
 		]
+	},
+	"resources": {
+		"files": [
+			"src/scripts/**/*.luau"
+		]
+	},
+	"settings": {
+		"enable-executor": {
+			"name": "Enable Script Executor",
+			"description": "Load the built-in ImGui script executor on startup.",
+			"type": "bool",
+			"default": true
+		}
 	}
 }

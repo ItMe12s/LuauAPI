@@ -140,6 +140,15 @@ imgui.inputText(label: string, value: string, maxLen: number?) -> string
 
 Draws a single line text box and returns its new contents. `maxLen` is the buffer size and defaults to `16384`, capped at `65536`.
 
+### imgui.inputTextMultiline
+
+```lua
+imgui.inputTextMultiline(label: string, value: string, size: ImGuiVec2?, maxLen: number?) -> string
+```
+
+Draws a multi line text box and returns its new contents. Use it for code or long text.
+`size` is the box size in pixels. A zero value lets ImGui pick the size. `maxLen` is the buffer size and defaults to `16384`, capped at `65536`.
+
 ### imgui.sameLine / imgui.separator / imgui.spacing
 
 ```lua

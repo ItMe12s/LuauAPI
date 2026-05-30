@@ -1,3 +1,4 @@
+#include "LuauAPI.hpp"
 #include "lua/bindings/imgui/ImGuiHost.hpp"
 #include "lua/runtime/Runtime.hpp"
 
@@ -12,6 +13,14 @@ $execute {
 
 $on_mod(Loaded) {
     luax::Runtime::getOrCreate();
+
+    if (geode::Mod::get()->getSettingValue<bool>("enable-executor")) {
+        auto res = imes::luauapi::runFile(
+            geode::Mod::get()->getResourcesDir(), "executor_Bootstrap.luau");
+        if (res.isErr()) {
+            geode::log::error("[executor] failed to load: {}", res.unwrapErr());
+        }
+    }
 }
 
 $on_game(Exiting) {

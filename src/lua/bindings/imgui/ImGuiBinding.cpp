@@ -228,6 +228,32 @@ namespace {
         return 1;
     }
 
+    int imguiInputTextMultiline(lua_State* L) {
+        requireFrame(L, "imgui.inputTextMultiline");
+        std::string label = check<std::string>(L, 1, "imgui.inputTextMultiline");
+        std::string value = check<std::string>(L, 2, "imgui.inputTextMultiline");
+
+        ImVec2 size(0.0f, 0.0f);
+        if (lua_istable(L, 3)) {
+            size = toImVec2(L, 3, "imgui.inputTextMultiline");
+        }
+
+        std::size_t cap = kInputTextDefaultCap;
+        if (!lua_isnoneornil(L, 4)) {
+            int requested = check<int>(L, 4, "imgui.inputTextMultiline");
+            if (requested < 1) requested = 1;
+            cap = std::min(static_cast<std::size_t>(requested), kInputTextMaxCap);
+        }
+
+        std::vector<char> buffer(cap + 1, '\0');
+        std::size_t copy = std::min(value.size(), cap);
+        std::copy_n(value.data(), copy, buffer.data());
+
+        ImGui::InputTextMultiline(label.c_str(), buffer.data(), buffer.size(), size);
+        lua_pushstring(L, buffer.data());
+        return 1;
+    }
+
     int imguiSameLine(lua_State* L) {
         requireFrame(L, "imgui.sameLine");
         float offset = lua_isnoneornil(L, 1) ? 0.0f : check<float>(L, 1, "imgui.sameLine");
@@ -279,6 +305,7 @@ namespace {
         setTableCFunction(L, -1, "sliderFloat", &imguiSliderFloat);
         setTableCFunction(L, -1, "sliderInt", &imguiSliderInt);
         setTableCFunction(L, -1, "inputText", &imguiInputText);
+        setTableCFunction(L, -1, "inputTextMultiline", &imguiInputTextMultiline);
         setTableCFunction(L, -1, "sameLine", &imguiSameLine);
         setTableCFunction(L, -1, "separator", &imguiSeparator);
         setTableCFunction(L, -1, "spacing", &imguiSpacing);
