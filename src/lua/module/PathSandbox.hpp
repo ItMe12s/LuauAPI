@@ -5,17 +5,18 @@
 
 #if defined(LUAUAPI_HOST_TESTS)
 #include <optional>
+#include <fstream>
+#include <vector>
 #else
 #include <Geode/Result.hpp>
 #include <Geode/utils/string.hpp>
+#include <Geode/utils/file.hpp>
 #endif
 
 #include <filesystem>
-#include <fstream>
 #include <string>
 #include <string_view>
 #include <utility>
-#include <vector>
 
 namespace luax {
 #if defined(LUAUAPI_HOST_TESTS)
@@ -92,6 +93,7 @@ namespace luax {
             return scriptErr<std::string>("script exceeds maximum size");
         }
 
+#if defined(LUAUAPI_HOST_TESTS)
         std::ifstream in(path, std::ios::binary);
         if (!in.good()) {
             return scriptErr<std::string>("script cannot be read: " + filesystemPathString(path));
@@ -116,6 +118,17 @@ namespace luax {
             return scriptErr<std::string>("script cannot be read: " + filesystemPathString(path));
         }
         return scriptOk(std::move(contents));
+#else
+        auto contents = geode::utils::file::readString(path);
+        if (contents.isErr()) {
+            return scriptErr<std::string>("script cannot be read: " + filesystemPathString(path));
+        }
+        auto data = std::move(contents.unwrap());
+        if (data.size() > kMaxScriptBytes) {
+            return scriptErr<std::string>("script exceeds maximum size");
+        }
+        return scriptOk(std::move(data));
+#endif
     }
 
     inline ScriptResult<std::filesystem::path> resolveScriptFileInsideRoot(
