@@ -159,6 +159,15 @@ imgui.spacing() -> ()
 
 Layout helpers. `imgui.sameLine` keeps the next widget on the current line.
 
+### imgui.getContentRegionAvail
+
+```lua
+imgui.getContentRegionAvail() -> ImGuiVec2
+```
+
+Returns the space left in the current window as `{ x, y }` in pixels.
+Use it to size widgets to the window. Negative sizes also fill the space, typically used to split rows.
+
 ## Limits
 
 - The most draw callbacks at once is `256`. Going over raises an error.

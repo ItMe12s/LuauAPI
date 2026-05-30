@@ -274,6 +274,12 @@ namespace {
         return 0;
     }
 
+    int imguiGetContentRegionAvail(lua_State* L) {
+        requireFrame(L, "imgui.getContentRegionAvail");
+        pushImVec2(L, ImGui::GetContentRegionAvail());
+        return 1;
+    }
+
     void registerHandleMetatable(lua_State* L) {
         if (luaL_newmetatable(L, kHandleMeta)) {
             lua_pushcfunction(L, &imguiCancel, "cancel");
@@ -309,6 +315,7 @@ namespace {
         setTableCFunction(L, -1, "sameLine", &imguiSameLine);
         setTableCFunction(L, -1, "separator", &imguiSeparator);
         setTableCFunction(L, -1, "spacing", &imguiSpacing);
+        setTableCFunction(L, -1, "getContentRegionAvail", &imguiGetContentRegionAvail);
         lua_setglobal(L, "imgui");
 
         if (auto* runtime = static_cast<Runtime*>(lua_callbacks(L)->userdata)) {

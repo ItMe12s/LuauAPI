@@ -33,6 +33,7 @@ export type ImGuiNamespace = {
     sameLine: (offset: number?, spacing: number?) -> (),
     separator: () -> (),
     spacing: () -> (),
+    getContentRegionAvail: () -> ImGuiVec2,
 }
 
 declare imgui: ImGuiNamespace
