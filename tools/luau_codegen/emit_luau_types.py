@@ -9,6 +9,10 @@ from model import lua_namespace, short_name
 from plan import EmitPlan, collect_plan
 from type_map import TypeInfo, classify_arg, classify_return, enum_lua_names
 
+TYPES_FILE = "geode.d.luau"
+cocos_namespace = "geode.cocos2d"
+gd_namespace = "geode.gd"
+
 LUAU_KEYWORDS = frozenset(
     {
         "and",
@@ -39,12 +43,6 @@ LUAU_KEYWORDS = frozenset(
         "declare",
     }
 )
-
-
-def _ret(ret: TypeInfo) -> str:
-    if ret.kind == "void":
-        return "()"
-    return ret.lua_type
 
 
 def _method_return_type(cls: Class, m: Method, objects: Dict[str, Class]) -> str:
@@ -228,6 +226,16 @@ def _should_emit_type_class(
     return False
 
 
+def _emitted_base_name(
+    cls: Class, objects: Dict[str, Class], skipped_classes: set
+) -> str | None:
+    for b in cls.bases:
+        b_cls = objects.get(short_name(b))
+        if b_cls and b_cls.name not in skipped_classes:
+            return b_cls.name
+    return None
+
+
 def _emit_class(
     cls: Class,
     grouped: Dict[str, List[Method]],
@@ -236,12 +244,8 @@ def _emit_class(
     skipped_classes: set,
 ) -> List[str]:
     lines: List[str] = []
-    base = ""
-    for b in cls.bases:
-        b_cls = objects.get(short_name(b))
-        if b_cls and b_cls.name not in skipped_classes:
-            base = f" extends {b_cls.name}"
-            break
+    base_name = _emitted_base_name(cls, objects, skipped_classes)
+    base = f" extends {base_name}" if base_name else ""
     instance_methods = {
         k: v
         for k, v in grouped.items()
@@ -404,7 +408,26 @@ def _emit_orphan_stubs(names: set[str]) -> str:
     return "".join(lines)
 
 
-TYPES_FILE = "geode.d.luau"
+def _topo_sort_chunks(
+    chunks: List[Tuple[str, str]], base_of: Dict[str, str | None]
+) -> List[Tuple[str, str]]:
+    chunk_map = dict(chunks)
+    present = set(chunk_map)
+    placed: set[str] = set()
+    ordered: List[str] = []
+
+    def visit(name: str, stack: frozenset[str]) -> None:
+        if name in placed:
+            return
+        base = base_of.get(name)
+        if base in present and base not in placed and name not in stack:
+            visit(base, stack | {name})
+        placed.add(name)
+        ordered.append(name)
+
+    for name in sorted(chunk_map):
+        visit(name, frozenset())
+    return [(n, chunk_map[n]) for n in ordered]
 
 
 def emit(
@@ -416,9 +439,6 @@ def emit(
     objects = plan.objects
     grouped_by_class = plan.supported_by_class
     skipped_classes = plan.skipped_classes
-
-    cocos_namespace = "geode.cocos2d"
-    gd_namespace = "geode.gd"
 
     cocos_chunks: List[Tuple[str, str]] = []
     gd_chunks: List[Tuple[str, str]] = []
@@ -435,8 +455,13 @@ def emit(
         else:
             gd_chunks.append((cls.name, chunk))
 
-    cocos_chunks.sort(key=lambda item: item[0])
-    gd_chunks.sort(key=lambda item: item[0])
+    base_of = {
+        name: _emitted_base_name(objects[name], objects, skipped_classes)
+        for name in {n for n, _ in cocos_chunks} | {n for n, _ in gd_chunks}
+        if name in objects
+    }
+    cocos_chunks = _topo_sort_chunks(cocos_chunks, base_of)
+    gd_chunks = _topo_sort_chunks(gd_chunks, base_of)
 
     cocos_body = "".join(chunk for _, chunk in cocos_chunks)
     gd_body = "".join(chunk for _, chunk in gd_chunks)

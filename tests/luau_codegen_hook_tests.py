@@ -1006,6 +1006,67 @@ class LuauTypeEmissionTests(unittest.TestCase):
         self.assertGreaterEqual(ccsize_pos, 0)
         self.assertGreater(ccrect_pos, ccsize_pos)
 
+    @staticmethod
+    def _stub_method(name: str = "init", addr: str = "0x1") -> Method:
+        return Method(name=name, ret="bool", args=[], platforms=all_platforms(addr))
+
+    def test_base_class_declared_before_derived(self) -> None:
+        ccobject = Class(
+            name="CCObject", namespace="cocos2d", methods=[self._stub_method()]
+        )
+        ccaction = Class(
+            name="CCAction",
+            namespace="cocos2d",
+            bases=["CCObject"],
+            methods=[self._stub_method("step", "0x2")],
+        )
+        root = Root(classes=[ccaction, ccobject])
+        out = types_text(emit_luau_types(root))
+        obj_pos = out.index("declare class CCObject")
+        action_pos = out.index("declare class CCAction extends CCObject")
+        self.assertLess(obj_pos, action_pos)
+
+    def test_no_extends_references_class_declared_later(self) -> None:
+        ccobject = Class(
+            name="CCObject", namespace="cocos2d", methods=[self._stub_method()]
+        )
+        finite = Class(
+            name="CCFiniteTimeAction",
+            namespace="cocos2d",
+            bases=["CCObject"],
+            methods=[self._stub_method("step", "0x2")],
+        )
+        interval = Class(
+            name="CCActionInterval",
+            namespace="cocos2d",
+            bases=["CCFiniteTimeAction"],
+            methods=[self._stub_method("isDone", "0x3")],
+        )
+        ease = Class(
+            name="CCActionEase",
+            namespace="cocos2d",
+            bases=["CCActionInterval"],
+            methods=[self._stub_method("reverse", "0x4")],
+        )
+        gm = Class(
+            name="GameManager",
+            bases=["CCObject"],
+            methods=[self._stub_method("update", "0x5")],
+        )
+        root = Root(classes=[ease, interval, finite, ccobject, gm])
+        out = types_text(emit_luau_types(root))
+        for m in re.finditer(r"declare class (\w+) extends (\w+)", out):
+            derived, base = m.group(1), m.group(2)
+            base_pos = out.find(f"declare class {base}")
+            self.assertGreaterEqual(
+                base_pos, 0, f"base {base} of {derived} not declared"
+            )
+            self.assertLess(
+                base_pos,
+                m.start(),
+                f"base {base} declared after derived {derived}",
+            )
+
     def test_geode_root_namespace_stubs(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")
         root = Root(classes=[ccobject])
