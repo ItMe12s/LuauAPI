@@ -1,8 +1,10 @@
 #include "Runtime.hpp"
 
 #include "AllocatorAccounting.hpp"
+#include "Loadstring.hpp"
 #include "lua/bindings/Binding.hpp"
 #include "lua/bindings/framework/Ref.hpp"
+#include "lua/module/BytecodeCacheKey.hpp"
 #include "lua/module/PathSandbox.hpp"
 #include "lua/module/Requirer.hpp"
 
@@ -16,7 +18,6 @@
 
 #include <cstdlib>
 #include <cstring>
-#include <functional>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -93,6 +94,7 @@ namespace luax {
 
         installTraceback();
         installPrint();
+        installLoadstring();
 
         auto* cb = lua_callbacks(m_state);
         cb->interrupt = &Runtime::interruptCallback;
@@ -268,6 +270,11 @@ namespace luax {
         lua_setglobal(m_state, "print");
     }
 
+    void Runtime::installLoadstring() {
+        lua_pushcfunction(m_state, &Runtime::luaLoadstring, "loadstring");
+        lua_setglobal(m_state, "loadstring");
+    }
+
     int Runtime::luaPrint(lua_State* L) {
         StackGuard stack(L);
         int argc = lua_gettop(L);
@@ -280,6 +287,40 @@ namespace luax {
 
         geode::log::info("[lua] {}", out);
         return 0;
+    }
+
+    int Runtime::luaLoadstring(lua_State* L) {
+        auto* self = static_cast<Runtime*>(lua_callbacks(L)->userdata);
+        if (!self) {
+            lua_pushnil(L);
+            lua_pushliteral(L, "luau runtime not ready");
+            return 2;
+        }
+
+        size_t sourceLen = 0;
+        char const* sourceData = luaL_checklstring(L, 1, &sourceLen);
+        std::string_view source(sourceData, sourceLen);
+        if (source.size() > kMaxScriptBytes) {
+            lua_pushnil(L);
+            lua_pushliteral(L, "script exceeds maximum size");
+            return 2;
+        }
+
+        char const* chunkData = luaL_optstring(L, 2, "=loadstring");
+        std::string_view chunk(chunkData ? chunkData : "=loadstring");
+        auto const& bytecode = self->getOrCompileBytecode(loadstringBytecodeKey(chunk, source), source);
+        if (loadstringPushResult(L, chunk, bytecode) == LoadstringStatus::Failure) {
+            return 2;
+        }
+
+        if (self->m_codegenEnabled) {
+            auto cgResult = Luau::CodeGen::compile(L, -1, Luau::CodeGen::CodeGen_ColdFunctions);
+            if (cgResult.hasErrors()) {
+                geode::log::warn("luau codegen [{}] partial: {}", chunk, Luau::CodeGen::toString(cgResult.result));
+            }
+        }
+
+        return 1;
     }
 
     int Runtime::luaTraceback(lua_State* L) {
@@ -300,7 +341,7 @@ namespace luax {
             }
             if (ar.currentline > 0) {
                 out.append(":");
-                out.append(std::to_string(ar.currentline));
+                out.append(geode::utils::numToString(ar.currentline));
             }
             if (ar.name) {
                 out.append(" in ");
@@ -377,12 +418,7 @@ namespace luax {
         clearLastError();
 
         std::string chunk(chunkName);
-        auto bytecodeKey = chunk;
-        if (!m_resourcesRoot.empty()) {
-            bytecodeKey = luax::normalizedPathString(m_resourcesRoot) + "|" + bytecodeKey;
-        }
-        bytecodeKey += "|";
-        bytecodeKey += std::to_string(std::hash<std::string_view>{}(src));
+        auto bytecodeKey = runScriptBytecodeKey(m_resourcesRoot, chunk, src);
 
         std::string const& bytecode = getOrCompileBytecode(bytecodeKey, src);
 

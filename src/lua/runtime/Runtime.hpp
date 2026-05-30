@@ -99,9 +99,11 @@ namespace luax {
         static void panicCallback(lua_State* L, int errcode);
         static int luaTraceback(lua_State* L);
         static int luaPrint(lua_State* L);
+        static int luaLoadstring(lua_State* L);
 
         void installTraceback();
         void installPrint();
+        void installLoadstring();
         std::string formatLuaError(char const* chunk);
         void setLastError(std::string error);
         void runShutdownHooks();

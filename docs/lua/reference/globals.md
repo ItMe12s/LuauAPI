@@ -16,6 +16,32 @@ Writes a single line to the Geode log. Each argument is converted to text and jo
 print("value", 1, true)
 ```
 
+## loadstring
+
+```lua
+loadstring(source: string, chunkName: string?) -> (((...any) -> ...any)?, string?)
+```
+
+Compiles a Luau source string and returns a callable function. It does not run the chunk.
+On syntax or load failure, returns `nil` plus an error string instead of throwing.
+
+```lua
+local fn, err = loadstring("return 1 + 1")
+if not fn then
+    print("compile failed:", err)
+    return
+end
+
+print(fn())
+```
+
+The optional `chunkName` is used in diagnostics and debug output. If omitted, LuauAPI uses `=loadstring`.
+Sources over 4 MiB are rejected with `nil, "script exceeds maximum size"`.
+
+`loadstring` is always available, can compile any string, and ignores the `require` sandbox.
+Calling the returned function from Lua does not start a new script deadline.
+It only inherits an existing guarded call path, such as code already running inside a `task` callback.
+
 ## require
 
 ```lua

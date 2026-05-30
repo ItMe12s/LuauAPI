@@ -17,3 +17,5 @@ export type TimeNamespace = {
 
 declare task: TaskNamespace
 declare time: TimeNamespace
+
+declare function loadstring(source: string, chunkName: string?): (((...any) -> ...any)?, string?)

@@ -289,8 +289,11 @@ if(LUAUAPI_BUILD_TESTS)
     FetchContent_MakeAvailable(Catch2)
 
     add_executable(luauapi_tests
+        src/lua/module/BytecodeCacheKey.cpp
+        src/lua/runtime/Loadstring.cpp
         tests/allocator_accounting_tests.cpp
         tests/bytecode_cache_key_tests.cpp
+        tests/loadstring_tests.cpp
         tests/path_sandbox_tests.cpp
         tests/path_rules_tests.cpp
         tests/require_path_tests.cpp
@@ -300,6 +303,8 @@ if(LUAUAPI_BUILD_TESTS)
     target_compile_definitions(luauapi_tests PRIVATE LUAUAPI_HOST_TESTS=1)
     target_link_libraries(luauapi_tests PRIVATE
         Catch2::Catch2WithMain
+        Luau.VM
+        Luau.Compiler
     )
     get_target_property(LUAUAPI_TEST_LINK_LIBS luauapi_tests LINK_LIBRARIES)
     if(LUAUAPI_TEST_LINK_LIBS)
