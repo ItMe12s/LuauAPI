@@ -1,0 +1,18 @@
+local cocos = geode.cocos2d
+
+local function helloWorld(self)
+    local director = cocos.CCDirector.sharedDirector()
+    if not director then return end
+    local winSize = director:getWinSize()
+    local label = cocos.CCLabelBMFont.create("Hello, World!", "bigFont.fnt")
+    if not label then return end
+    label:setPosition({ x = winSize.width / 2, y = winSize.height / 2 })
+    self:addChild(label)
+end
+
+geode.hook("geode.gd.MenuLayer:init/0", {
+    after = function(self, result)
+        helloWorld(self)
+        return result
+    end,
+})

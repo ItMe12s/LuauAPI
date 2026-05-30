@@ -10,9 +10,14 @@ imgui.onDraw(function()
 
         code = imgui.inputTextMultiline("##code", code, { x = -1, y = -footer })
 
-        local buttonWidth = math.max((avail.x - spacing) / 2, 1)
+        local buttonWidth = math.max((avail.x - spacing) / 4, 1)
 
         if imgui.button("Execute", { size = { x = buttonWidth, y = 0 } }) then
+            if code == "" then
+                output = "error: code is empty"
+                return
+            end
+
             local fn, err = loadstring(code, "=executor")
             if not fn then
                 output = "compile error: " .. tostring(err)
@@ -33,12 +38,12 @@ imgui.onDraw(function()
 
         imgui.sameLine()
         if imgui.button("Paste (WIP)", { size = { x = buttonWidth, y = 0 } }) then
-            -- WIP
+            print("Paste (WIP)")
         end
 
         imgui.sameLine()
         if imgui.button("Open File (WIP)", { size = { x = buttonWidth, y = 0 } }) then
-            -- WIP
+            print("Open File (WIP)")
         end
 
         imgui.sameLine()
