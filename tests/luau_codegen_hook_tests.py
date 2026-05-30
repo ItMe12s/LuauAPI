@@ -1129,6 +1129,177 @@ class LuauTypeEmissionTests(unittest.TestCase):
         )
 
 
+class LuauOverloadWideningTests(unittest.TestCase):
+    @staticmethod
+    def _factory_slice(text: str, name: str) -> str:
+        start = text.index(f"export type {name}Factory")
+        return text[start : text.index("}", start)]
+
+    @staticmethod
+    def _class_slice(text: str, name: str) -> str:
+        start = text.index(f"declare class {name}")
+        return text[start : text.index("end", start)]
+
+    def _factory(self, *methods: Method) -> str:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        instance = Method(
+            name="getValue", ret="int", args=[], platforms=all_platforms("0xff")
+        )
+        foo = Class(
+            name="Foo",
+            bases=["CCObject"],
+            attributes=["link(win)"],
+            methods=[*methods, instance],
+        )
+        return types_text(emit_luau_types(Root(classes=[ccobject, foo])))
+
+    def _instance(self, *methods: Method) -> str:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        bar = Class(
+            name="Bar",
+            bases=["CCObject"],
+            attributes=["link(win)"],
+            methods=list(methods),
+        )
+        return types_text(emit_luau_types(Root(classes=[ccobject, bar])))
+
+    def test_factory_multi_overload_no_intersection(self) -> None:
+        text = self._factory(
+            Method(
+                name="create",
+                ret="Foo*",
+                args=[Arg("int", "a")],
+                is_static=True,
+                platforms=all_platforms("0x1"),
+            ),
+            Method(
+                name="create",
+                ret="Foo*",
+                args=[Arg("int", "a"), Arg("int", "b")],
+                is_static=True,
+                platforms=all_platforms("0x2"),
+            ),
+        )
+        factory = self._factory_slice(text, "Foo")
+        self.assertNotIn(" & (", factory)
+
+    def test_factory_multi_overload_keeps_shared_prefix(self) -> None:
+        text = self._factory(
+            Method(
+                name="create",
+                ret="Foo*",
+                args=[Arg("int", "a")],
+                is_static=True,
+                platforms=all_platforms("0x1"),
+            ),
+            Method(
+                name="create",
+                ret="Foo*",
+                args=[Arg("int", "a"), Arg("int", "b")],
+                is_static=True,
+                platforms=all_platforms("0x2"),
+            ),
+        )
+        self.assertIn(
+            "create: (arg1: number, ...any) -> Foo?",
+            self._factory_slice(text, "Foo"),
+        )
+
+    def test_factory_divergent_arg1_widens_to_varargs(self) -> None:
+        text = self._factory(
+            Method(
+                name="create",
+                ret="Foo*",
+                args=[Arg("int", "a")],
+                is_static=True,
+                platforms=all_platforms("0x1"),
+            ),
+            Method(
+                name="create",
+                ret="Foo*",
+                args=[Arg("bool", "a"), Arg("int", "b")],
+                is_static=True,
+                platforms=all_platforms("0x2"),
+            ),
+        )
+        factory = self._factory_slice(text, "Foo")
+        self.assertNotIn(" & (", factory)
+        self.assertIn("create: (...any) -> Foo?", factory)
+
+    def test_instance_multi_overload_no_intersection(self) -> None:
+        text = self._instance(
+            Method(
+                name="foo",
+                ret="void",
+                args=[Arg("int", "a")],
+                platforms=all_platforms("0x1"),
+            ),
+            Method(
+                name="foo",
+                ret="void",
+                args=[Arg("int", "a"), Arg("int", "b")],
+                platforms=all_platforms("0x2"),
+            ),
+        )
+        body = self._class_slice(text, "Bar")
+        self.assertNotIn(" & (", body)
+        self.assertIn("foo: (self: Bar, arg1: number, ...any) -> ()", body)
+
+    def test_single_overload_still_function_form(self) -> None:
+        text = self._instance(
+            Method(
+                name="foo",
+                ret="void",
+                args=[Arg("int", "a")],
+                platforms=all_platforms("0x1"),
+            ),
+        )
+        body = self._class_slice(text, "Bar")
+        self.assertIn("function foo(self", body)
+        self.assertNotIn("...any", body)
+
+    def test_widened_return_uses_common_type(self) -> None:
+        text = self._factory(
+            Method(
+                name="create",
+                ret="Foo*",
+                args=[Arg("int", "a")],
+                is_static=True,
+                platforms=all_platforms("0x1"),
+            ),
+            Method(
+                name="create",
+                ret="Foo*",
+                args=[Arg("int", "a"), Arg("int", "b")],
+                is_static=True,
+                platforms=all_platforms("0x2"),
+            ),
+        )
+        factory = self._factory_slice(text, "Foo")
+        self.assertIn("-> Foo?", factory)
+        self.assertNotIn("-> any?", factory)
+
+    def test_widened_return_falls_back_to_any_on_divergence(self) -> None:
+        text = self._instance(
+            Method(
+                name="foo",
+                ret="void",
+                args=[Arg("int", "a")],
+                platforms=all_platforms("0x1"),
+            ),
+            Method(
+                name="foo",
+                ret="int",
+                args=[Arg("int", "a"), Arg("int", "b")],
+                platforms=all_platforms("0x2"),
+            ),
+        )
+        self.assertIn(
+            "foo: (self: Bar, arg1: number, ...any) -> any?",
+            self._class_slice(text, "Bar"),
+        )
+
+
 class F1GdStringReturnOverrideTests(unittest.TestCase):
     def test_gd_string_return_uses_var_param(self) -> None:
         info = TypeInfo(kind="string", lua_type="string", cxx_type="gd::string")

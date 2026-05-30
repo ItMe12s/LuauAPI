@@ -2,7 +2,8 @@
 
 ## Summary
 
-This guide sets up VSCode so your `.luau` files get autocomplete and type checks for `geode`, `cocos2d`, `gd`, `task`, and `time`. You build LuauAPI to generate the type stubs, copy them into your mod, then point the Luau language server at them.
+This guide sets up VSCode so your `.luau` files get autocomplete and type checks for `geode`, `cocos2d`, `gd`, `task`, and `time`.
+You build LuauAPI to generate the type stubs, copy them into your mod, then point the Luau language server at them.
 
 ## Step 1: install the extension
 
@@ -56,9 +57,21 @@ Create `.vscode/settings.json` in your mod root.
     },
     "luau-lsp.ignoreGlobs": [
         "**/*.d.luau"
-    ]
+    ],
+    "luau-lsp.fflags.sync": false,
+    "luau-lsp.fflags.override": {
+        "LuauTarjanChildLimit": "0",
+        "LuauTypeInferIterationLimit": "0",
+        "LuauNormalizeCacheLimit": "0",
+        "LuauTypeInferRecursionLimit": "1000",
+        "LuauVisitRecursionLimit": "1000"
+    }
 }
 ```
+
+The bindings stub is large.
+The fflags override prevents typecheck errors about code complexity.
+Keep these values in place.
 
 ## Step 6: ignore the types folder in git
 

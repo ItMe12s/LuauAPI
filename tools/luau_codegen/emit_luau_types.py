@@ -78,6 +78,27 @@ def _method_type(cls: Class, methods: List[Method], objects: Dict[str, Class]) -
     return " & ".join(f"({p})" for p in parts)
 
 
+def _widened_method_type(
+    cls: Class, methods: List[Method], objects: Dict[str, Class], *, static: bool
+) -> str:
+    arg_lists = [_classify_input_args(m, objects) for m in methods]
+    prefix: List[str] = []
+    for i in range(min(len(a) for a in arg_lists)):
+        types_at_i = {a[i].lua_type for a in arg_lists}
+        if len(types_at_i) == 1:
+            prefix.append(arg_lists[0][i].lua_type)
+        else:
+            break
+    returns = {_method_return_type(cls, m, objects) for m in methods}
+    ret = returns.pop() if len(returns) == 1 else "any?"
+    params: List[str] = []
+    if not static:
+        params.append(f"self: {cls.name}")
+    params += [f"arg{i}: {t}" for i, t in enumerate(prefix, start=1)]
+    params.append("...any")
+    return f"({', '.join(params)}) -> {ret}"
+
+
 def _classify_input_args(m: Method, objects: Dict[str, Class]) -> List[TypeInfo]:
     ret = classify_return(m.ret, objects)
     assert ret is not None
@@ -169,9 +190,13 @@ def _emit_factories(
         methods = factories[cls_name]
         lines.append(f"export type {cls_name}Factory = {{\n")
         for name, overloads in sorted(methods.items()):
-            lines.append(
-                f"    {name}: {_method_type(objects[cls_name], overloads, objects)},\n"
-            )
+            if len(overloads) > 1:
+                type_str = _widened_method_type(
+                    objects[cls_name], overloads, objects, static=True
+                )
+            else:
+                type_str = _method_type(objects[cls_name], overloads, objects)
+            lines.append(f"    {name}: {type_str},\n")
         lines.append("}\n\n")
 
     lines.append(f"export type {_namespace_type_name(namespace)} = {{\n")
@@ -286,7 +311,8 @@ def _emit_class(
                         f"    function {name}({self_prefix}{arg_text}){': ' + ret_type if ret_type != '()' else ''}\n"
                     )
             else:
-                lines.append(f"    {name}: {_method_type(cls, methods, objects)}\n")
+                widened = _widened_method_type(cls, methods, objects, static=False)
+                lines.append(f"    {name}: {widened}\n")
         lines.append("end\n\n")
     return lines
 
