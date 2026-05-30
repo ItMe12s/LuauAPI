@@ -10,7 +10,7 @@ _LINE_COMMENT = re.compile(r"//[^\n]*")
 _BLOCK_COMMENT = re.compile(r"/\*.*?\*/", re.DOTALL)
 _PREPROCESSOR = re.compile(r"^\s*#[^\n]*$", re.MULTILINE)
 
-_SCANNED_LINK_ATTR = "link(win)"
+_SCANNED_LINK_ATTR = "link(win, android, android32, android64, imac, m1, ios)"
 
 _GL_TYPE_ALIASES = {
     "GLubyte": "unsigned char",

@@ -1956,7 +1956,7 @@ class M1ScannerWarningTests(unittest.TestCase):
         finally:
             shutil.rmtree(tmpdir)
 
-    def test_scanned_ui_class_links_win_only(self) -> None:
+    def test_scanned_ui_class_links_all_platforms(self) -> None:
         from geode_sdk_scanner import scan_geode_sdk  # type: ignore[import-unresolved]
 
         tmpdir = tempfile.mkdtemp()
@@ -1976,7 +1976,10 @@ class M1ScannerWarningTests(unittest.TestCase):
                 )
             classes = scan_geode_sdk(tmpdir)
             self.assertEqual(len(classes), 1)
-            self.assertEqual(class_link_platforms(classes[0]), {"win"})
+            self.assertEqual(
+                class_link_platforms(classes[0]),
+                {"win", "android", "android32", "android64", "imac", "m1", "ios"},
+            )
 
             ccobject = Class(name="CCObject", namespace="cocos2d")
             objects = {"CCObject": ccobject, "GoodUI": classes[0]}
@@ -1985,13 +1988,40 @@ class M1ScannerWarningTests(unittest.TestCase):
                 classes[0], classes[0].methods[0], objects, "android64"
             )
             self.assertTrue(ok_win)
-            self.assertFalse(ok_android)
-            self.assertEqual(reason, "missing-address")
+            self.assertTrue(ok_android)
+            self.assertEqual(reason, "")
         finally:
             shutil.rmtree(tmpdir)
 
 
 class PlanRegressionTests(unittest.TestCase):
+    def test_scanned_geode_ui_class_survives_intersection(self) -> None:
+        from geode_sdk_scanner import _SCANNED_LINK_ATTR  # type: ignore[import-unresolved]
+
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        ccnode = Class(name="CCNode", namespace="cocos2d", bases=["CCObject"])
+        overlay = Class(
+            name="OverlayManager",
+            namespace="geode",
+            bases=["cocos2d::CCNode"],
+            attributes=[_SCANNED_LINK_ATTR],
+            methods=[
+                Method(
+                    name="get",
+                    ret="OverlayManager*",
+                    args=[],
+                    is_static=True,
+                )
+            ],
+        )
+        root = Root(classes=[ccobject, ccnode, overlay])
+
+        plan = collect_plan(root, "win")
+        self.assertNotIn("OverlayManager", plan.skipped_classes)
+
+        files = emit_luau_types(root, "win", plan=plan)
+        self.assertIn("OverlayManagerFactory", types_text(files))
+
     def test_intersection_platforms_uses_imac_for_intel_mac(self) -> None:
         self.assertEqual(
             intersection_platforms("imac"),
