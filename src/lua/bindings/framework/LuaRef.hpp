@@ -38,7 +38,10 @@ namespace luax {
 
         void reset() {
             if (m_state && m_ref != LUA_NOREF && m_ref != LUA_REFNIL) {
-                lua_unref(m_state, m_ref);
+                auto* runtime = Runtime::getIfInitialized();
+                if (runtime && m_generation == runtime->generation()) {
+                    lua_unref(m_state, m_ref);
+                }
             }
             m_state = nullptr;
             m_ref = LUA_NOREF;

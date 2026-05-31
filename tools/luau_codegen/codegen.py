@@ -53,16 +53,16 @@ def collect_bindings_root(
             continue
         parsed = broma_parser.parse_file(path)
         root.classes.extend(parsed.classes)
+    geode_enums: dict[str, str] | None = None
     if geode_sdk_path:
         from geode_sdk_scanner import (
             scan_geode_sdk,
             scan_geode_enums,
             scan_geode_functions,
         )
-        from type_map import register_geode_enums
 
+        geode_enums = scan_geode_enums(geode_sdk_path)
         root.classes.extend(scan_geode_sdk(geode_sdk_path))
-        register_geode_enums(scan_geode_enums(geode_sdk_path))
         root.functions.extend(scan_geode_functions(geode_sdk_path))
     from filtering import method_key
 
@@ -87,6 +87,11 @@ def collect_bindings_root(
             seen[cls.qualified_name] = cls
     root.classes = list(seen.values())
     root.classes.sort(key=lambda c: (c.namespace, c.name))
+    if geode_enums is not None:
+        from type_map import COCOS_ENUM_TYPES, GD_ENUM_TYPES, register_geode_enums
+
+        skip = GD_ENUM_TYPES | COCOS_ENUM_TYPES | {c.name for c in object_classes(root)}
+        register_geode_enums(geode_enums, skip=skip)
     return root
 
 

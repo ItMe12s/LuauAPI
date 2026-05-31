@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
-from typing import Dict, Optional, Set, Tuple
+from typing import AbstractSet, Dict, Optional, Set, Tuple
 
 from broma_parser import Class, _split_arg, split_top_level
 from model import short_name
@@ -92,9 +92,15 @@ ENUM_CXX_NAMES: dict[str, str] = {
 ENUM_TYPES = frozenset(ENUM_CXX_NAMES.keys())
 
 
-def register_geode_enums(names_to_cxx: Dict[str, str]) -> None:
+def register_geode_enums(
+    names_to_cxx: Dict[str, str],
+    skip: AbstractSet[str] = frozenset(),
+) -> None:
     global ENUM_TYPES
+    GEODE_ENUM_TYPES.clear()
     for name, cxx in names_to_cxx.items():
+        if name in skip:
+            continue
         GEODE_ENUM_TYPES.add(name)
         ENUM_CXX_NAMES.setdefault(name, cxx)
     ENUM_TYPES = frozenset(ENUM_CXX_NAMES.keys())
