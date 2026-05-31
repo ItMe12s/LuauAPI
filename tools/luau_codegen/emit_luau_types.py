@@ -598,14 +598,14 @@ def emit(
     lines.append(geode_factory_text)
 
     lines.append("export type HookHandle = {\n")
-    lines.append("    enable: (self: HookHandle) -> boolean,\n")
-    lines.append("    disable: (self: HookHandle) -> boolean,\n")
+    lines.append("    enable: (self: HookHandle) -> (boolean, string?),\n")
+    lines.append("    disable: (self: HookHandle) -> (boolean, string?),\n")
     lines.append("    remove: (self: HookHandle) -> boolean,\n")
     lines.append("    isEnabled: (self: HookHandle) -> boolean,\n")
     lines.append("}\n\n")
     lines.append("export type HookCallbackTable = {\n")
-    lines.append("    before: ((...any) -> ())?,\n")
-    lines.append("    after: ((...any) -> ())?,\n")
+    lines.append("    before: ((...any) -> any?)?,\n")
+    lines.append("    after: ((...any) -> any?)?,\n")
     lines.append("    priority: number?,\n")
     lines.append("}\n\n")
 
@@ -632,7 +632,7 @@ def emit(
         "    hook: (target: string, callback: HookCallbackTable) -> HookHandle,\n"
     )
     lines.append("    skip: (value: any?) -> any,\n")
-    lines.append("    fields: (self: any) -> { [string]: any },\n")
+    lines.append("    fields: (self: CCNode) -> { [string]: any },\n")
     lines.append("}\n\n")
     lines.append("declare geode: GeodeNamespace\n")
 

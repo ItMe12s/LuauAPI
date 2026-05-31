@@ -18,8 +18,12 @@ These values come from `src/lua/Config.hpp`.
 | Scheduled tasks | `4096` | Tasks alive at once |
 | Default script deadline | `250 ms` | Budget for a normal run |
 | Hook and task deadline | `50 ms` | Budget for a hook or task callback |
+| ImGui draw callbacks | `256` | Active `imgui.onDraw` handles at once |
+| ImGui draw deadline | `16 ms` | Budget for one ImGui draw callback |
 
 The public default deadline is also defined in `include/LuauAPI.hpp` as `kDefaultScriptDeadlineMs`.
+
+For ImGui limits and usage, see [Reference: imgui](../lua/reference/imgui.md).
 
 ## How errors reach you
 

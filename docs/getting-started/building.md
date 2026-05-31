@@ -13,6 +13,9 @@ cmake -B build
 cmake --build build
 ```
 
+The first `cmake -B build` also runs codegen listing at configure time. Python 3.11+ must be on PATH before configure.
+For platform builds, use the Geode CLI or the CI workflow in `.github/workflows/multi-platform.yml`.
+
 ## Code generation
 
 The build runs a Python code generator before it compiles.

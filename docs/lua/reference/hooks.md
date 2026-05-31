@@ -20,8 +20,8 @@ The target id format is `namespace.Class:method/argCount`, for example `geode.gd
 
 ```lua
 type HookCallbackTable = {
-    before: ((...any) -> ())?,
-    after: ((...any) -> ())?,
+    before: ((...any) -> any?)?,
+    after: ((...any) -> any?)?,
     priority: number?,
 }
 ```
@@ -50,27 +50,30 @@ You must provide at least one of `before` or `after`.
 geode.skip(value: any?) -> any
 ```
 
-Builds a skip marker for use as a `before` return. The original does not run, and the value becomes the return
- Use no argument for functions that return nothing.
+Builds a skip marker for use as a `before` return. The original does not run, and the value becomes the return.
+Use no argument for functions that return nothing.
 
 ## geode.fields
 
 ```lua
-geode.fields(self: any) -> { [string]: any }
+geode.fields(self: CCNode) -> { [string]: any }
 ```
 
-Returns a plain table tied to the given object. The table lives as long as the object. The `m_fields` property returns the same table.
+Returns a plain table tied to the given node. The table lives as long as the node. The `m_fields` property returns the same table.
+The argument must be a `CCNode` or a bound node subtype.
 
 ## HookHandle
 
 ```lua
 type HookHandle = {
-    enable: (self: HookHandle) -> boolean,
-    disable: (self: HookHandle) -> boolean,
+    enable: (self: HookHandle) -> (boolean, string?),
+    disable: (self: HookHandle) -> (boolean, string?),
     remove: (self: HookHandle) -> boolean,
     isEnabled: (self: HookHandle) -> boolean,
 }
 ```
+
+`enable` and `disable` return success as the first value. On failure they also return an error string as the second value.
 
 ## Limits
 

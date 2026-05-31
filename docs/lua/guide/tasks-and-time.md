@@ -9,7 +9,7 @@ Tasks run on the game tick and follow the game, so they freeze when the game pau
 
 ### task.spawn
 
-Runs a function immediately, under the callback budget (`50 ms`). Extra arguments are passed to the function
+Runs a function immediately, under the callback budget (`50 ms`). Extra arguments are passed to the function.
 Errors are logged rather than thrown, and the call returns nothing.
 
 ```lua

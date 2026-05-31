@@ -25,6 +25,7 @@ The C++ tests use Catch2 `v3.15.0` and build into the `luauapi_tests` executable
 - `tests/path_rules_tests.cpp` covers flat path rules and extension checks.
 - `tests/path_sandbox_tests.cpp` covers file containment and escape rejection.
 - `tests/require_path_tests.cpp` covers require child name rules and the `.luau` extension fill in.
+- `tests/loadstring_tests.cpp` covers `loadstring` compile and runtime behavior.
 
 CTest discovers the Catch2 cases at build time.
 
@@ -47,4 +48,5 @@ It is a large test that covers offsets, symbols, platform intersection, argument
 - `tests/path_rules_tests.cpp`
 - `tests/path_sandbox_tests.cpp`
 - `tests/require_path_tests.cpp`
+- `tests/loadstring_tests.cpp`
 - `tests/luau_codegen_hook_tests.py`

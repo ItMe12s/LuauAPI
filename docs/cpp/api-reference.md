@@ -115,6 +115,11 @@ enum class RuntimeStatus {
 };
 ```
 
+- `NotReady`: off the main thread, not initialized, or shutting down.
+- `Ready`: runtime is up and scripts can run.
+- `InitFailed`: startup failed.
+- `Panicked`: the runtime hit an unrecoverable Lua panic and will not run scripts again.
+
 ## Default deadline
 
 ```cpp

@@ -40,8 +40,8 @@ See [Limits and errors](../cpp/limits-and-errors.md) for the full table of value
 
 ## Native code generation (Luau JIT)
 
-Luau can compile hot functions to native code when the hardware supports it, and the runtime enables this whenever it can
- The host can check the current state with `codegenEnabled`.
+Luau can compile hot functions to native code when the hardware supports it. The runtime enables this whenever it can.
+The host can check the current state with `codegenEnabled`.
 
 ## Source
 

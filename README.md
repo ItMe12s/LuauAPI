@@ -16,6 +16,10 @@
   extend, or contribute to the project.
 </p>
 
+**Super-duper work in progress.**
+
+**Not meant for any kind of usage yet.**
+
 ## Getting started
 
 Start here regardless of your role.
@@ -41,8 +45,10 @@ For anyone writing `.luau` files that run inside the game.
 - Reference
   - [Globals](docs/lua/reference/globals.md)
   - [Hooks](docs/lua/reference/hooks.md)
+  - [mod](docs/lua/reference/mod.md)
   - [task](docs/lua/reference/task.md)
   - [time](docs/lua/reference/time.md)
+  - [imgui](docs/lua/reference/imgui.md)
   - [Type stubs and editor setup](docs/lua/reference/type-stubs.md)
 
 ## C++ host integrators
@@ -64,3 +70,4 @@ For anyone working on the runtime itself.
 - [Task scheduler](docs/dev/task-scheduler.md)
 - [Codegen](docs/dev/codegen.md)
 - [Testing](docs/dev/testing.md)
+- [ImGui draw scheduler](docs/dev/imgui-draw-scheduler.md)

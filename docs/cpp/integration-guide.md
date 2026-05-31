@@ -10,12 +10,29 @@ You depend on the mod, include the header, and call the run functions on the mai
 LuauAPI exports its public header, and the mod exposes `include/**/*.hpp` as its API in `mod.json`.
 Add a dependency on `imes.luauapi` in your own mod, then include the header.
 
+```json
+{
+    "dependencies": {
+        "imes.luauapi": ">=1.0.0"
+    },
+    "resources": {
+        "files": [
+            "mod/*.luau"
+        ]
+    }
+}
+```
+
+Put your `.luau` files under the resources path you declare. Pack them with your mod.
+
 ```cpp
 #include <imes.luauapi/include/LuauAPI.hpp>
 namespace lua = imes::luauapi;
 ```
 
 All public functions live in the `imes::luauapi` namespace.
+
+LuauAPI loads early with first priority. Check `status()` is `Ready` before you call `runFile`.
 
 ## You do not start the runtime
 
@@ -79,6 +96,8 @@ if (lua::status() != lua::RuntimeStatus::Ready) {
 log::info("codegen {}", lua::codegenEnabled() ? "on" : "off");
 log::info("memory {} / {}", lua::memoryUsage(), lua::memoryLimit());
 ```
+
+If status is `Panicked`, the runtime hit an unrecoverable Lua panic. Do not call run functions again.
 
 ## Read the last error
 

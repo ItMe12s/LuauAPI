@@ -11,6 +11,7 @@ This page gives the big picture for contributors. It names the main parts and tr
 - Bindings framework. Exposes C++ types to Lua. See [Bindings framework](bindings-framework.md).
 - Module system. Implements sandboxed `require`. See [Module system](module-system.md).
 - Task scheduler. Drives `task` callbacks on the game tick. See [Task scheduler](task-scheduler.md).
+- ImGui draw scheduler. Drives `imgui.onDraw` callbacks each frame. See [ImGui draw scheduler](imgui-draw-scheduler.md).
 - Codegen. Generates the game bindings and the type stubs. See [Codegen](codegen.md).
 
 ## Source layout
@@ -20,9 +21,12 @@ This page gives the big picture for contributors. It names the main parts and tr
 - `src/main.cpp`: the mod entry points that drive the runtime lifecycle.
 - `src/lua/Config.hpp`: the limits and deadlines.
 - `src/lua/runtime/`: the runtime and the memory allocator.
-- `src/lua/bindings/`: the binding registry, the framework, and the task binding.
+- `src/lua/bindings/`: the binding registry, the framework, task, imgui, and geode bindings.
 - `src/lua/bindings/framework/`: usertypes, the stack, references, and fields.
+- `src/lua/bindings/geode/`: handwritten `geode.Mod` binding.
+- `src/lua/bindings/imgui/`: ImGui binding and draw scheduler.
 - `src/lua/module/`: the requirer and the path rules.
+- `build/luauapi-gen/src/`: generated C++ bindings from codegen.
 - `tools/luau_codegen/`: the Python code generator.
 - `tests/`: the host tests.
 
@@ -51,6 +55,12 @@ This is the path for `runFile`:
 2. The generated hook function for that game method is installed.
 3. When the game calls the method, the generated function runs the `before` callbacks, then the original unless skipped, then the `after` callbacks.
 
+## How ImGui draw runs
+
+1. A script registers a callback with `imgui.onDraw`.
+2. `ImGuiDrawScheduler` stores the callback and runs it each frame inside an ImGui frame.
+3. The callback must finish within the ImGui deadline. See [ImGui draw scheduler](imgui-draw-scheduler.md).
+
 ## Threading
 
 The runtime is single threaded. Almost every call must run on the main thread, and the runtime enforces this.
@@ -62,3 +72,4 @@ The async API performs its file work off thread, then hops to the main thread to
 - `src/api.cpp`
 - `src/lua/runtime/Runtime.cpp`
 - `tools/luau_codegen/cxx_templates.py`
+- `src/lua/bindings/imgui/ImGuiDrawScheduler.cpp`

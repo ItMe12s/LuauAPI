@@ -50,6 +50,9 @@ The file must sit inside the resources directory you pass, and it must be `4 MiB
 - Host side: [Integration guide](../cpp/integration-guide.md)
 - Background: [Core concepts](concepts.md)
 
+LuauAPI also ships a built-in script executor. Turn it off with the `enable-executor` mod setting if you do not need it.
+It loads `executor_Bootstrap.luau` from LuauAPI resources.
+
 ## Source
 
 - `src/api.cpp`

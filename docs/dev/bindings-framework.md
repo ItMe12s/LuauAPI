@@ -23,6 +23,16 @@ LUAX_BINDING(my_lib, registerMyLib)
 `applyAllBindings` runs every binding in priority order at startup.
 The task library follows this pattern in `src/lua/bindings/task/TaskBinding.cpp`.
 
+## Handwritten bindings
+
+Most game types come from codegen. A few libraries are handwritten in C++:
+
+- `src/lua/bindings/geode/GeodeModBinding.cpp` exposes `geode.Mod`.
+- `src/lua/bindings/task/TaskBinding.cpp` exposes `task` and `time`.
+- `src/lua/bindings/imgui/ImGuiBinding.cpp` exposes `imgui`.
+
+Their Luau types come from `emit_luau_types.py` or `tools/luau_codegen/extra_bindings/`.
+
 ## Usertypes
 
 `Usertype<T>` exposes a C++ type as Lua userdata with a metatable. `T` must derive from `cocos2d::CCObject`. The main calls are:

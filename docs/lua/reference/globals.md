@@ -37,6 +37,7 @@ print(fn())
 
 The optional `chunkName` is used in diagnostics and debug output. If omitted, LuauAPI uses `=loadstring`.
 Sources over 4 MiB are rejected with `nil, "script exceeds maximum size"`.
+If the runtime is not ready, returns `nil, "luau runtime not ready"`.
 
 `loadstring` is always available, can compile any string, and ignores the `require` sandbox.
 Calling the returned function from Lua does not start a new script deadline.
@@ -73,6 +74,7 @@ The `task`, `time`, and `geode` globals are documented on their own pages.
 
 - [task](task.md)
 - [time](time.md)
+- [mod](mod.md)
 - [Hooks](hooks.md)
 
 ## Source

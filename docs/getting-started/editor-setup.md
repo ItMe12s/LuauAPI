@@ -29,8 +29,10 @@ Copy the whole `types/` folder from the LuauAPI repo into the root of your own m
 The generator writes a single stub file:
 
 ```text
-types/geode.d.luau   all bound classes, factories, enum aliases, and the geode namespace
+types/geode.d.luau   all bound classes, factories, enum aliases, geode namespace, task, time, loadstring, and imgui
 ```
+
+Extra binding stubs from `tools/luau_codegen/extra_bindings/` are merged into this file at build time.
 
 ## Step 4: add .luaurc
 
