@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 from typing import Dict, List, Sequence, Tuple
 
-from broma_parser import Class, Field, Method, Root
+from broma_parser import Class, Field, Function, Method, Root
 from fields import bindable_field
 from model import lua_namespace, short_name
 from plan import EmitPlan, collect_plan
@@ -12,6 +12,9 @@ from type_map import TypeInfo, classify_arg, classify_return, enum_lua_names
 TYPES_FILE = "geode.d.luau"
 cocos_namespace = "geode.cocos2d"
 gd_namespace = "geode.gd"
+geode_namespace = "geode"
+
+_DUMMY_CLS = Class(name="")
 
 LUAU_KEYWORDS = frozenset(
     {
@@ -161,6 +164,42 @@ def _emit_value_stub_block(names: set[str]) -> str:
     return "".join(_VALUE_STUB_BODY[n] for n in _VALUE_STUB_ORDER if n in expanded)
 
 
+def _free_fn_supported(fn: Function, objects: Dict[str, Class]) -> bool:
+    if classify_return(fn.ret, objects) is None:
+        return False
+    return all(classify_arg(arg.type, objects) is not None for arg in fn.args)
+
+
+def _build_function_tree(functions: List[Function], objects: Dict[str, Class]) -> dict:
+    tree: dict = {"children": {}, "functions": {}}
+    for fn in functions:
+        if not _free_fn_supported(fn, objects):
+            continue
+        node = tree
+        for seg in fn.lua_path.split(".")[1:]:
+            node = node["children"].setdefault(seg, {"children": {}, "functions": {}})
+        node["functions"].setdefault(fn.name, []).append(fn)
+    return tree
+
+
+def _emit_function_tree(
+    node: dict, objects: Dict[str, Class], indent: int
+) -> List[str]:
+    pad = "    " * indent
+    lines: List[str] = []
+    for name in sorted(node["functions"]):
+        methods = [
+            Method(name=fn.name, ret=fn.ret, args=fn.args, is_static=True)
+            for fn in node["functions"][name]
+        ]
+        lines.append(f"{pad}{name}: {_method_type(_DUMMY_CLS, methods, objects)},\n")
+    for seg in sorted(node["children"]):
+        lines.append(f"{pad}{seg}: {{\n")
+        lines.extend(_emit_function_tree(node["children"][seg], objects, indent + 1))
+        lines.append(f"{pad}}},\n")
+    return lines
+
+
 def _enum_block(namespace: str) -> str:
     names = sorted(enum_lua_names(namespace))
     if not names:
@@ -176,16 +215,11 @@ def _header(label: str) -> List[str]:
     ]
 
 
-def _emit_factories(
+def _emit_factory_records(
     factories: Dict[str, Dict[str, List[Method]]],
     objects: Dict[str, Class],
-    namespace: str,
 ) -> List[str]:
     lines: List[str] = []
-    if not factories:
-        lines.append(f"export type {_namespace_type_name(namespace)} = {{}}\n\n")
-        return lines
-
     for cls_name in sorted(factories):
         methods = factories[cls_name]
         lines.append(f"export type {cls_name}Factory = {{\n")
@@ -198,10 +232,21 @@ def _emit_factories(
                 type_str = _method_type(objects[cls_name], overloads, objects)
             lines.append(f"    {name}: {type_str},\n")
         lines.append("}\n\n")
+    return lines
 
+
+def _factory_field_lines(factories: Dict[str, Dict[str, List[Method]]]) -> List[str]:
+    return [f"    {cls_name}: {cls_name}Factory,\n" for cls_name in sorted(factories)]
+
+
+def _emit_factories(
+    factories: Dict[str, Dict[str, List[Method]]],
+    objects: Dict[str, Class],
+    namespace: str,
+) -> List[str]:
+    lines = _emit_factory_records(factories, objects)
     lines.append(f"export type {_namespace_type_name(namespace)} = {{\n")
-    for cls_name in sorted(factories):
-        lines.append(f"    {cls_name}: {cls_name}Factory,\n")
+    lines.extend(_factory_field_lines(factories))
     lines.append("}\n\n")
     return lines
 
@@ -498,16 +543,28 @@ def emit(
     gd_factories = _collect_factories(
         classes, grouped_by_class, skipped_classes, gd_namespace
     )
+    geode_factories = _collect_factories(
+        classes, grouped_by_class, skipped_classes, geode_namespace
+    )
     cocos_factory_text = "".join(
         _emit_factories(cocos_factories, objects, cocos_namespace)
     )
     gd_factory_text = "".join(_emit_factories(gd_factories, objects, gd_namespace))
 
+    geode_factory_text = "".join(_emit_factory_records(geode_factories, objects))
+
+    function_tree = _build_function_tree(root.functions, objects)
+    function_field_lines = _emit_function_tree(function_tree, objects, 1)
+
     defined = {name for name, _ in cocos_chunks} | {name for name, _ in gd_chunks}
     refs = _refs_from_classes(defined, grouped_by_class, objects, skipped_classes)
     refs |= _factory_object_refs(cocos_factories, objects)
     refs |= _factory_object_refs(gd_factories, objects)
-    refs |= _refs_from_text(cocos_body + gd_body + cocos_factory_text + gd_factory_text)
+    refs |= _factory_object_refs(geode_factories, objects)
+    refs |= _refs_from_text(
+        cocos_body + gd_body + cocos_factory_text + gd_factory_text + geode_factory_text
+    )
+    refs |= _refs_from_text("".join(function_field_lines))
     orphan_names = {
         name
         for name in refs
@@ -523,7 +580,7 @@ def emit(
         lines.append(value_block)
         lines.append("\n")
 
-    for namespace in (cocos_namespace, gd_namespace):
+    for namespace in (cocos_namespace, gd_namespace, geode_namespace):
         enum_block = _enum_block(namespace)
         if enum_block:
             lines.append(enum_block)
@@ -538,6 +595,7 @@ def emit(
 
     lines.append(cocos_factory_text)
     lines.append(gd_factory_text)
+    lines.append(geode_factory_text)
 
     lines.append("export type HookHandle = {\n")
     lines.append("    enable: (self: HookHandle) -> boolean,\n")
@@ -550,9 +608,26 @@ def emit(
     lines.append("    after: ((...any) -> ())?,\n")
     lines.append("    priority: number?,\n")
     lines.append("}\n\n")
+
+    lines.append("export type ModNamespace = {\n")
+    lines.append("    getSavedValue: (key: string) -> any,\n")
+    lines.append("    setSavedValue: (key: string, value: any) -> (),\n")
+    lines.append("    getSettingValue: (key: string) -> any,\n")
+    lines.append("    hasSetting: (key: string) -> boolean,\n")
+    lines.append("    getID: () -> string,\n")
+    lines.append("    getName: () -> string,\n")
+    lines.append("    getVersion: () -> string,\n")
+    lines.append("    getResourcesDir: () -> string,\n")
+    lines.append("    getSaveDir: () -> string,\n")
+    lines.append("    getConfigDir: () -> string,\n")
+    lines.append("}\n\n")
+
     lines.append("export type GeodeNamespace = {\n")
     lines.append("    cocos2d: Cocos2dNamespace,\n")
     lines.append("    gd: GDNamespace,\n")
+    lines.append("    Mod: ModNamespace,\n")
+    lines.extend(_factory_field_lines(geode_factories))
+    lines.extend(function_field_lines)
     lines.append(
         "    hook: (target: string, callback: HookCallbackTable) -> HookHandle,\n"
     )

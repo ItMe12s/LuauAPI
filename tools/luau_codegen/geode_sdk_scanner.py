@@ -4,7 +4,14 @@ import os
 import re
 from typing import List
 
-from broma_parser import Class, Method, _parse_method, split_top_level
+from broma_parser import (
+    Class,
+    Function,
+    Method,
+    _parse_method,
+    _split_arg,
+    split_top_level,
+)
 
 _LINE_COMMENT = re.compile(r"//[^\n]*")
 _BLOCK_COMMENT = re.compile(r"/\*.*?\*/", re.DOTALL)
@@ -36,6 +43,21 @@ _CLASS_DECL = re.compile(
 _ACCESS_LABEL = re.compile(r"(public|protected|private)\s*:")
 _NESTED_DECL = re.compile(r"(class|struct|enum)\s+")
 _TEMPLATE_DECL = re.compile(r"template\s*<")
+_ENUM_DECL = re.compile(r"\benum\s+(?:class\s+|struct\s+)?(\w+)\b")
+_NS_OPEN = re.compile(r"namespace\s+([\w:]+)\s*\{|namespace\s*\{")
+_BLOCK_OPEN = re.compile(r"\b(?:class|struct|union|enum)\b[^;{}]*\{")
+_FUNC_DECL = re.compile(
+    r"GEODE_DLL\s+([A-Za-z_][\w:<>,\s\*&]*?)\s+([A-Za-z_]\w*)\s*\(([^{};]*)\)\s*;"
+)
+
+_FUNCTION_SOURCES = (
+    (
+        "utils/general.hpp",
+        frozenset({"geode::utils::clipboard", "geode::utils::game"}),
+        None,
+    ),
+    ("ui/Popup.hpp", frozenset({"geode"}), frozenset({"createQuickPopup"})),
+)
 
 
 def _included_headers(sdk_path: str) -> set[str]:
@@ -71,6 +93,127 @@ def scan_geode_sdk(sdk_path: str) -> List[Class]:
 
             warnings.warn(f"[luauapi] failed to scan {filename}: {exc}")
     return classes
+
+
+def scan_geode_enums(sdk_path: str) -> dict[str, str]:
+    ui_dir = os.path.join(sdk_path, "loader", "include", "Geode", "ui")
+    if not os.path.isdir(ui_dir):
+        return {}
+    allowed = _included_headers(sdk_path)
+    out: dict[str, str] = {}
+    for filename in sorted(os.listdir(ui_dir)):
+        if not filename.endswith(".hpp"):
+            continue
+        if allowed and filename not in allowed:
+            continue
+        try:
+            out.update(_scan_header_enums(os.path.join(ui_dir, filename)))
+        except Exception as exc:
+            import warnings
+
+            warnings.warn(f"[luauapi] failed to scan enums {filename}: {exc}")
+    return out
+
+
+def scan_geode_functions(sdk_path: str) -> List[Function]:
+    include_dir = os.path.join(sdk_path, "loader", "include", "Geode")
+    out: List[Function] = []
+    for rel, namespaces, names in _FUNCTION_SOURCES:
+        path = os.path.join(include_dir, *rel.split("/"))
+        if not os.path.isfile(path):
+            continue
+        try:
+            out.extend(_scan_header_functions(path, namespaces, names))
+        except Exception as exc:
+            import warnings
+
+            warnings.warn(f"[luauapi] failed to scan functions {rel}: {exc}")
+    return out
+
+
+def _scan_header_functions(path: str, namespaces, names) -> List[Function]:
+    with open(path, "r", encoding="utf-8") as f:
+        text = f.read()
+    text = _strip_comments(text)
+    text = _strip_preproc(text)
+
+    out: List[Function] = []
+    ns_stack: List[str] = []
+    frames: List[str] = []
+    i = 0
+    n = len(text)
+    while i < n:
+        c = text[i]
+        if c in " \t\r\n":
+            i += 1
+            continue
+        m = _NS_OPEN.match(text, i)
+        if m:
+            ns_stack.append(m.group(1) or "")
+            frames.append("ns")
+            i = m.end()
+            continue
+        m = _BLOCK_OPEN.match(text, i)
+        if m:
+            frames.append("block")
+            i = m.end()
+            continue
+        if c == "{":
+            frames.append("block")
+            i += 1
+            continue
+        if c == "}":
+            if frames and frames.pop() == "ns" and ns_stack:
+                ns_stack.pop()
+            i += 1
+            continue
+        if "block" not in frames:
+            m = _FUNC_DECL.match(text, i)
+            if m:
+                ns = "::".join(seg for seg in ns_stack if seg)
+                name = m.group(2)
+                if ns in namespaces and (names is None or name in names):
+                    args = [
+                        a
+                        for a in (_split_arg(a) for a in split_top_level(m.group(3)))
+                        if a.type or a.name
+                    ]
+                    out.append(
+                        Function(
+                            name=name,
+                            namespace=ns,
+                            ret=m.group(1).strip(),
+                            args=args,
+                            line=text.count("\n", 0, i) + 1,
+                        )
+                    )
+                i = m.end()
+                continue
+        i += 1
+    return out
+
+
+def _scan_header_enums(path: str) -> dict[str, str]:
+    with open(path, "r", encoding="utf-8") as f:
+        text = f.read()
+    text = _strip_comments(text)
+    text = _strip_preproc(text)
+    namespace = _find_namespace(text)
+
+    class_ranges: list[tuple[int, int]] = []
+    for match in _CLASS_DECL.finditer(text):
+        brace_start = match.end() - 1
+        brace_end = _balanced_end(text, brace_start)
+        class_ranges.append((brace_start, brace_end))
+
+    out: dict[str, str] = {}
+    for m in _ENUM_DECL.finditer(text):
+        pos = m.start()
+        if any(start <= pos < end for start, end in class_ranges):
+            continue
+        name = m.group(1)
+        out[name] = f"{namespace}::{name}" if namespace else name
+    return out
 
 
 def _strip_comments(text: str) -> str:

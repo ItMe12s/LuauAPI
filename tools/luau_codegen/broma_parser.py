@@ -53,8 +53,23 @@ class Class:
 
 
 @dataclasses.dataclass
+class Function:
+    name: str
+    namespace: str = ""
+    ret: str = "void"
+    args: List[Arg] = dataclasses.field(default_factory=list)
+    attributes: List[str] = dataclasses.field(default_factory=list)
+    line: int = 0
+
+    @property
+    def lua_path(self) -> str:
+        return self.namespace.replace("::", ".") if self.namespace else "geode"
+
+
+@dataclasses.dataclass
 class Root:
     classes: List[Class] = dataclasses.field(default_factory=list)
+    functions: List["Function"] = dataclasses.field(default_factory=list)
 
 
 _PLATFORMS = ("win", "imac", "m1", "ios", "android", "android32", "android64", "mac")

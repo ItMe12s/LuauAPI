@@ -20,6 +20,8 @@ def cxx_name(cls: Class) -> str:
 def lua_namespace(cls: Class) -> str:
     if cls.namespace == "cocos2d" or cls.name.startswith("CC"):
         return "geode.cocos2d"
+    if cls.namespace == "geode":
+        return "geode"
     return "geode.gd"
 
 

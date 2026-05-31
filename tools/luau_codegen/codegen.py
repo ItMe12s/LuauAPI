@@ -54,9 +54,16 @@ def collect_bindings_root(
         parsed = broma_parser.parse_file(path)
         root.classes.extend(parsed.classes)
     if geode_sdk_path:
-        from geode_sdk_scanner import scan_geode_sdk
+        from geode_sdk_scanner import (
+            scan_geode_sdk,
+            scan_geode_enums,
+            scan_geode_functions,
+        )
+        from type_map import register_geode_enums
 
         root.classes.extend(scan_geode_sdk(geode_sdk_path))
+        register_geode_enums(scan_geode_enums(geode_sdk_path))
+        root.functions.extend(scan_geode_functions(geode_sdk_path))
     from filtering import method_key
 
     seen: dict[str, broma_parser.Class] = {}

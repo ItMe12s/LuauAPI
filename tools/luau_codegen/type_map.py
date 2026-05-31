@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
-from typing import Dict, Optional, Set
+from dataclasses import dataclass, field
+from typing import Dict, Optional, Set, Tuple
 
-from broma_parser import Class
+from broma_parser import Class, _split_arg, split_top_level
 from model import short_name
 
 
@@ -37,7 +37,15 @@ NUMERIC_TYPES = {
     "double",
 }
 
-STRING_TYPES = {"char const*", "const char*", "std::string", "gd::string"}
+STRING_TYPES = {
+    "char const*",
+    "const char*",
+    "std::string",
+    "gd::string",
+    "std::string_view",
+    "ZStringView",
+    "geode::ZStringView",
+}
 VALUE_TYPES = {
     "cocos2d::CCPoint": "CCPoint",
     "CCPoint": "CCPoint",
@@ -73,6 +81,8 @@ COCOS_ENUM_TYPES = {
     "CCLabelBMFontAlignment",
 }
 
+GEODE_ENUM_TYPES: set[str] = set()
+
 ENUM_CXX_NAMES: dict[str, str] = {
     **{name: name for name in GD_ENUM_TYPES},
     **{name: f"cocos2d::{name}" for name in COCOS_ENUM_TYPES},
@@ -80,6 +90,14 @@ ENUM_CXX_NAMES: dict[str, str] = {
 }
 
 ENUM_TYPES = frozenset(ENUM_CXX_NAMES.keys())
+
+
+def register_geode_enums(names_to_cxx: Dict[str, str]) -> None:
+    global ENUM_TYPES
+    for name, cxx in names_to_cxx.items():
+        GEODE_ENUM_TYPES.add(name)
+        ENUM_CXX_NAMES.setdefault(name, cxx)
+    ENUM_TYPES = frozenset(ENUM_CXX_NAMES.keys())
 
 
 @dataclass(frozen=True)
@@ -90,6 +108,35 @@ class TypeInfo:
     class_name: str = ""
     is_ref: bool = False
     is_out: bool = False
+    callback_ret: Optional["TypeInfo"] = None
+    callback_args: Tuple["TypeInfo", ...] = field(default_factory=tuple)
+
+
+_CALLBACK_PREFIXES = (
+    "geode::Function<",
+    "Function<",
+    "std::function<",
+    "geode::utils::MiniFunction<",
+    "utils::MiniFunction<",
+    "MiniFunction<",
+    "std::move_only_function<",
+)
+
+
+def _callback_inner(n: str) -> Optional[str]:
+    start = n.find("<")
+    if start == -1 or (n[:start] + "<") not in _CALLBACK_PREFIXES:
+        return None
+    depth = 0
+    for i in range(start, len(n)):
+        c = n[i]
+        if c == "<":
+            depth += 1
+        elif c == ">":
+            depth -= 1
+            if depth == 0:
+                return n[start + 1 : i]
+    return None
 
 
 def normalize_type(t: str) -> str:
@@ -150,6 +197,8 @@ def enum_cxx_type(n: str, base: str) -> str:
 def enum_lua_names(namespace: str) -> Set[str]:
     if namespace == "geode.cocos2d":
         return set(COCOS_ENUM_TYPES)
+    if namespace == "geode":
+        return set(GEODE_ENUM_TYPES)
     return set(GD_ENUM_TYPES)
 
 
@@ -165,6 +214,60 @@ def resolve_object_class(t: str, classes: Dict[str, Class]) -> Optional[Class]:
     if short in classes:
         return classes[short]
     return None
+
+
+def _parse_callback(n: str, object_classes: Dict[str, Class]) -> Optional[TypeInfo]:
+    inner = _callback_inner(n)
+    if inner is None:
+        return None
+    depth = 0
+    paren = -1
+    for i, c in enumerate(inner):
+        if c == "<":
+            depth += 1
+        elif c == ">":
+            depth -= 1
+        elif c == "(" and depth == 0:
+            paren = i
+            break
+    if paren == -1:
+        return None
+    ret_str = inner[:paren].strip()
+    pdepth = 0
+    close = -1
+    for i in range(paren, len(inner)):
+        if inner[i] == "(":
+            pdepth += 1
+        elif inner[i] == ")":
+            pdepth -= 1
+            if pdepth == 0:
+                close = i
+                break
+    if close == -1:
+        return None
+    ret_info = classify_return(ret_str, object_classes)
+    if ret_info is None or ret_info.kind != "void":
+        return None
+    arg_infos = []
+    for raw in split_top_level(inner[paren + 1 : close]):
+        raw = raw.strip()
+        if not raw:
+            continue
+        parsed = _split_arg(raw)
+        info = classify_arg(parsed.type, object_classes)
+        if info is None or info.kind == "callback":
+            return None
+        arg_infos.append(info)
+    lua_params = ", ".join(
+        f"arg{i}: {ai.lua_type}" for i, ai in enumerate(arg_infos, start=1)
+    )
+    return TypeInfo(
+        "callback",
+        n,
+        f"({lua_params}) -> ()",
+        callback_ret=ret_info,
+        callback_args=tuple(arg_infos),
+    )
 
 
 def _classify_core(
@@ -195,6 +298,10 @@ def _classify_core(
     if base in ENUM_TYPES or n in ENUM_TYPES:
         cxx = enum_cxx_type(n, base)
         return TypeInfo("enum", cxx, "number", is_ref=is_ref, is_out=is_out)
+    if not for_return:
+        callback = _parse_callback(n, object_classes)
+        if callback is not None:
+            return callback
     if n.endswith("*"):
         cls = resolve_object_class(n, object_classes)
         if cls:

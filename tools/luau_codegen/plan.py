@@ -10,7 +10,6 @@ from fields import bindable_field, field_key
 from filtering import group_supported, linkless_class_names, prune_skipped_class_refs
 from hooks import hookable
 from intersection import (
-    INTERSECTION_PLATFORMS,
     IntersectionResult,
     IntersectionStats,
     collect_intersection,
@@ -280,7 +279,11 @@ def plan_outputs(
 ) -> List[str]:
     if plan is None:
         plan = collect_plan(root, target_platform, plans_by_platform=plans_by_platform)
-    outputs = ["bindings_internal.hpp", "bindings_common.cpp"]
+    outputs = [
+        "bindings_internal.hpp",
+        "bindings_common.cpp",
+        "bindings_free_functions.cpp",
+    ]
     outputs.extend(_binding_filename(cls.name) for cls in plan.emitted_classes)
     return outputs
 

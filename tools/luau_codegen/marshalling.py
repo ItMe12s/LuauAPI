@@ -106,6 +106,30 @@ def check_arg(arg: Arg, info: TypeInfo, idx: int, var: str, label: str) -> list[
         return [
             f'        auto {var} = luax::Usertype<{info.cxx_type[:-1]}>::check(L, {idx}, "{label}");\n'
         ]
+    if info.kind == "callback":
+        params = ", ".join(
+            f"{cb.cxx_type} {var}_p{i}" for i, cb in enumerate(info.callback_args)
+        )
+        lines = [
+            f"        luaL_checktype(L, {idx}, LUA_TFUNCTION);\n",
+            f"        auto {var}_ref = std::make_shared<luax::LuaRef>(L, {idx});\n",
+            f"        auto {var} = [{var}_ref]({params}) {{\n",
+            f"            auto* {var}_rt = luax::Runtime::getIfInitialized();\n",
+            f"            if (!{var}_rt || !{var}_rt->ready()) return;\n",
+            f"            auto* L = {var}_rt->state();\n",
+            f"            if (!L) return;\n",
+            f"            int {var}_top = lua_gettop(L);\n",
+            f"            if (!{var}_ref->push()) {{ lua_settop(L, {var}_top); return; }}\n",
+            f"            luax::Runtime::ResourcesRootScope {var}_scope(*{var}_rt, {var}_ref->resourcesRoot());\n",
+        ]
+        for i, cb in enumerate(info.callback_args):
+            lines.extend(push_value(cb, f"{var}_p{i}", False))
+        lines.append(
+            f'            {var}_rt->protectedCall({len(info.callback_args)}, 0, "{label} callback", luax::kHookScriptDeadlineMs);\n'
+        )
+        lines.append(f"            lua_settop(L, {var}_top);\n")
+        lines.append("        };\n")
+        return lines
     raise ValueError(f"unsupported type kind: {info.kind}")
 
 
