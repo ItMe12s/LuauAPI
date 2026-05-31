@@ -49,7 +49,7 @@ TEST_CASE("loadstring result returns compiled function without running it") {
 
 TEST_CASE("loadstring result returns nil and error string on invalid source") {
     auto L = makeLuaState();
-    auto bytecode = compile("return ");
+    auto bytecode = compile("return (");
 
     auto status = luax::loadstringPushResult(L.get(), "CustomChunk", bytecode);
 
