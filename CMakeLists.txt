@@ -9,7 +9,7 @@ else()
 endif()
 set(CMAKE_CXX_VISIBILITY_PRESET hidden)
 
-project(LuauAPI VERSION 1.0.0)
+project(LuauAPI)
 
 include(FetchContent)
 include(CTest)
