@@ -84,6 +84,7 @@ from luau_codegen.model.domain import (  # type: ignore[import-unresolved]
     resolve_base,
 )
 from luau_codegen.emit.parity import collect_parity, emit_markdown  # type: ignore[import-unresolved]
+from luau_codegen.emit.audit import collect_audit, emit_markdown as emit_audit_markdown  # type: ignore[import-unresolved]
 from luau_codegen.emit.plan import (  # type: ignore[import-unresolved]
     collect_plan,
     collect_platform_plan,
@@ -180,6 +181,9 @@ __all__ = [
     # emit.parity
     "collect_parity",
     "emit_markdown",
+    # emit.audit
+    "collect_audit",
+    "emit_audit_markdown",
     # emit.plan
     "collect_plan",
     "collect_platform_plan",

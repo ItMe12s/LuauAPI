@@ -73,8 +73,9 @@ After generation, `build/luauapi-gen/` holds helper files for debugging codegen:
 - `schema.json` describes the binding plan.
 - `report.md` summarizes what was generated.
 - `parity.json` records overload and parity checks.
+- `audit.md` groups callback, delegate, container, and related skips by category. Regenerated on every codegen run, standalone via `--audit-report-out`.
 
-`emit/metadata.py` writes `schema.json` and `report.md`. The CLI only orchestrates paths and I/O.
+`emit/metadata.py` writes `schema.json` and `report.md`. `emit/audit.py` writes `audit.md`. The CLI only orchestrates paths and I/O.
 
 ## Free-function platform policy
 
@@ -197,6 +198,7 @@ See [Testing](testing.md).
 - `tools/luau_codegen/policy/filtering.py`
 - `tools/luau_codegen/model/denylist.py`
 - `tools/luau_codegen/emit/metadata.py`
+- `tools/luau_codegen/emit/audit.py`
 - `tools/luau_codegen/emit/hooks.py`
 - `tools/luau_codegen/emit/cxx_templates.py`
 - `tools/luau_codegen/emit/luau_types/`

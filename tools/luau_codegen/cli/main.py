@@ -20,6 +20,7 @@ from luau_codegen.cli.io import (
     _write_if_changed,
 )
 from luau_codegen.emit.metadata import emit_report, emit_schema
+from luau_codegen.emit import audit as emit_audit
 
 
 def log_info(message: str) -> None:
@@ -56,6 +57,10 @@ def main(argv: List[str]) -> int:
         help="Write runtime-safe cross-platform parity report and exit",
     )
     parser.add_argument(
+        "--audit-report-out",
+        help="Write skip audit report and exit",
+    )
+    parser.add_argument(
         "--fail-on-ambiguous-overload",
         action="store_true",
         help="Fail codegen when same-arity overloads require first-declared selection",
@@ -76,6 +81,8 @@ def main(argv: List[str]) -> int:
         args.geode_sdk = str(Path(args.geode_sdk).resolve())
     if args.parity_report_out:
         args.parity_report_out = str(Path(args.parity_report_out).resolve())
+    if args.audit_report_out:
+        args.audit_report_out = str(Path(args.audit_report_out).resolve())
 
     if not os.path.isdir(args.bindings):
         log_error(f"bindings dir missing: {args.bindings}")
@@ -117,6 +124,24 @@ def main(argv: List[str]) -> int:
             log_error(f"I/O failed while writing parity report: {exc}")
             return 4
         log_info(f"wrote {args.parity_report_out}")
+        return 0
+
+    if args.audit_report_out:
+        plan = emit_plan.collect_plan(
+            root, args.platform, plans_by_platform=plans_by_platform
+        )
+        if args.fail_on_ambiguous_overload and ambiguous_overloads(plan):
+            log_error("ambiguous overloads found")
+            return 6
+        try:
+            audit_data = emit_audit.collect_audit(plan, root)
+            _write_if_changed(
+                args.audit_report_out, emit_audit.emit_markdown(audit_data)
+            )
+        except OSError as exc:
+            log_error(f"I/O failed while writing audit report: {exc}")
+            return 4
+        log_info(f"wrote {args.audit_report_out}")
         return 0
 
     if args.list_outputs:
@@ -208,6 +233,13 @@ def main(argv: List[str]) -> int:
     except OSError as exc:
         log_error(f"I/O failed while writing report: {exc}")
         return 4
+    audit_path = os.path.join(args.out, "audit.md")
+    try:
+        audit_data = emit_audit.collect_audit(plan, root)
+        _write_if_changed(audit_path, emit_audit.emit_markdown(audit_data))
+    except OSError as exc:
+        log_error(f"I/O failed while writing audit report: {exc}")
+        return 4
     log_info(f"parsed {len(root.classes)} classes")
     log_info(f"target platform {args.platform}")
     log_info(f"hook targets {hook_count}")
@@ -218,4 +250,5 @@ def main(argv: List[str]) -> int:
         log_info(f"wrote {path}")
     log_info(f"wrote {parity_path}")
     log_info(f"wrote {report_path}")
+    log_info(f"wrote {audit_path}")
     return 0

@@ -228,7 +228,8 @@ endif()
 set(LUAUAPI_GENERATED_METADATA_FILES
     "${LUAUAPI_GEN_DIR}/schema.json"
     "${LUAUAPI_GEN_DIR}/report.md"
-    "${LUAUAPI_GEN_DIR}/parity.json")
+    "${LUAUAPI_GEN_DIR}/parity.json"
+    "${LUAUAPI_GEN_DIR}/audit.md")
 
 add_custom_command(
     OUTPUT ${LUAUAPI_CODEGEN_STAMP}
