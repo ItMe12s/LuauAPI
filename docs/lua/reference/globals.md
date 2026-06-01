@@ -75,6 +75,8 @@ The `task`, `time`, and `geode` globals are documented on their own pages.
 - [task](task.md)
 - [time](time.md)
 - [mod](mod.md)
+- [json](json.md)
+- [fs](fs.md)
 - [Hooks](hooks.md)
 
 ## Source

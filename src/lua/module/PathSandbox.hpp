@@ -229,4 +229,35 @@ namespace luax {
 
         return scriptOk(root);
     }
+
+    inline ScriptResult<std::filesystem::path> resolveInsideRoot(
+        std::filesystem::path const& root,
+        std::string_view relative
+    ) {
+        if (relative.empty()) {
+            return scriptErr<std::filesystem::path>("path is empty");
+        }
+
+        std::filesystem::path rel(relative);
+        if (rel.is_absolute()) {
+            return scriptErr<std::filesystem::path>("path must be relative");
+        }
+
+        auto canonRoot = canonicalRoot(root);
+        if (canonRoot.isErr()) {
+            return scriptErr<std::filesystem::path>(canonRoot.unwrapErr());
+        }
+
+        std::error_code ec;
+        auto resolved = std::filesystem::weakly_canonical(canonRoot.unwrap() / rel, ec);
+        if (ec) {
+            return scriptErr<std::filesystem::path>("path cannot be resolved: " + ec.message());
+        }
+
+        if (!pathInsideRootValue(resolved, canonRoot.unwrap())) {
+            return scriptErr<std::filesystem::path>("path escapes the root directory");
+        }
+
+        return scriptOk(resolved);
+    }
 }

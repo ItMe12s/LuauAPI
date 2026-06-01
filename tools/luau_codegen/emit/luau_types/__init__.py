@@ -193,10 +193,31 @@ def emit(
     lines.append("    getConfigDir: () -> string,\n")
     lines.append("}\n\n")
 
+    lines.append("export type JsonNamespace = {\n")
+    lines.append("    parse: (text: string) -> (any?, string?),\n")
+    lines.append("    dump: (value: any, indent: number?) -> string,\n")
+    lines.append("}\n\n")
+
+    lines.append(
+        'export type FsRoot = "save" | "config" | "persistent" | "resources"\n'
+    )
+    lines.append("export type FsNamespace = {\n")
+    lines.append("    read: (root: FsRoot, path: string) -> (string?, string?),\n")
+    lines.append(
+        "    write: (root: FsRoot, path: string, data: string) -> (boolean?, string?),\n"
+    )
+    lines.append("    exists: (root: FsRoot, path: string) -> boolean,\n")
+    lines.append("    list: (root: FsRoot, path: string) -> ({ string }?, string?),\n")
+    lines.append("    mkdir: (root: FsRoot, path: string) -> (boolean?, string?),\n")
+    lines.append("    remove: (root: FsRoot, path: string) -> (boolean?, string?),\n")
+    lines.append("}\n\n")
+
     lines.append("export type GeodeNamespace = {\n")
     lines.append("    cocos2d: Cocos2dNamespace,\n")
     lines.append("    gd: GDNamespace,\n")
     lines.append("    Mod: ModNamespace,\n")
+    lines.append("    json: JsonNamespace,\n")
+    lines.append("    fs: FsNamespace,\n")
     lines.extend(_factory_field_lines(geode_factories))
     lines.extend(function_field_lines)
     lines.append(
