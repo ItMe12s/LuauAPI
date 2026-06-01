@@ -9,6 +9,7 @@ from filtering import (
     call_label,
     returns_owned,
 )
+from free_fn_overrides import free_fn_allowed
 from cxx_templates import emit_hook_support, emit_internal_hpp, file_preamble
 from hooks import emit_hook_target, hook_address_expr, hook_id, hook_suffix
 from marshalling import check_arg, push_return, push_value
@@ -482,12 +483,26 @@ def _emit_free_dispatcher(fns: List[Function], objects: Dict[str, Class]) -> str
 
 
 def emit_free_functions_file(
-    functions: List[Function], objects: Dict[str, Class]
+    functions: List[Function],
+    objects: Dict[str, Class],
+    target_platform: str = "win",
+    skipped: list[tuple[str, str, str]] | None = None,
 ) -> str:
     by_key: dict[tuple[str, str], list[Function]] = defaultdict(list)
     for fn in functions:
-        if free_function_supported(fn, objects):
-            by_key[(fn.namespace, fn.name)].append(fn)
+        if not free_function_supported(fn, objects):
+            continue
+        if not free_fn_allowed(fn, target_platform):
+            if skipped is not None:
+                skipped.append(
+                    (
+                        fn.lua_path,
+                        fn.name,
+                        f"free-function-override-arity:{target_platform}",
+                    )
+                )
+            continue
+        by_key[(fn.namespace, fn.name)].append(fn)
 
     out = [
         file_preamble(),
@@ -536,7 +551,9 @@ def emit(
         "bindings_common.cpp": _emit_common_file(
             plan.emitted_classes, plan, target_platform
         ),
-        FREE_FUNCTIONS_FILE: emit_free_functions_file(root.functions, plan.objects),
+        FREE_FUNCTIONS_FILE: emit_free_functions_file(
+            root.functions, plan.objects, target_platform, plan.skipped
+        ),
     }
 
     for cls in plan.emitted_classes:
