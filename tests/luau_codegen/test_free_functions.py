@@ -72,3 +72,42 @@ class FreeFunctionOverrideTests(unittest.TestCase):
         out = types_text(emit_luau_types(root, "ios"))
         self.assertIn("restart:", out)
         self.assertNotIn("restart: (self: any, a0: boolean, a1: boolean)", out)
+
+
+class FreeFunctionSupportedTests(unittest.TestCase):
+    def test_supported_marshallable_signature(self) -> None:
+        fn = Function(
+            name="foo",
+            namespace="geode::utils",
+            ret="void",
+            args=[Arg("int", "x"), Arg("bool", "flag")],
+        )
+        self.assertTrue(free_function_supported(fn, {}))
+
+    def test_supported_object_pointer_return(self) -> None:
+        objects = {"CCNode": Class(name="CCNode", namespace="cocos2d")}
+        fn = Function(
+            name="getNode",
+            namespace="geode::utils",
+            ret="cocos2d::CCNode*",
+            args=[],
+        )
+        self.assertTrue(free_function_supported(fn, objects))
+
+    def test_unsupported_return_type(self) -> None:
+        fn = Function(
+            name="foo",
+            namespace="geode::utils",
+            ret="UnknownType*",
+            args=[],
+        )
+        self.assertFalse(free_function_supported(fn, {}))
+
+    def test_unsupported_arg_type(self) -> None:
+        fn = Function(
+            name="foo",
+            namespace="geode::utils",
+            ret="void",
+            args=[Arg("SomeUnknownClass*", "obj")],
+        )
+        self.assertFalse(free_function_supported(fn, {}))

@@ -367,6 +367,16 @@ class LuauTypeEmissionTests(unittest.TestCase):
         self.assertIn("before: ((...any) -> any?)?,", main)
         self.assertIn("after: ((...any) -> any?)?,", main)
 
+    def test_emit_includes_extra_bindings_dluau(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        text = types_text(emit_luau_types(Root(classes=[ccobject])))
+        self.assertIn(
+            "-- Custom definitions from tools/luau_codegen/extra_bindings/",
+            text,
+        )
+        self.assertIn("declare task: TaskNamespace", text)
+        self.assertIn("declare imgui: ImGuiNamespace", text)
+
     def test_dispatcher_uses_input_arg_count_for_out_refs(self) -> None:
         method = Method(
             name="getUnlockForAchievement",
