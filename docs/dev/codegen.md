@@ -55,6 +55,40 @@ After generation, `build/luauapi-gen/` holds helper files for debugging codegen:
 - `report.md` summarizes what was generated.
 - `parity.json` records overload and parity checks.
 
+`emit/metadata.py` writes `schema.json` and `report.md`. The CLI only orchestrates paths and I/O.
+
+## Free-function platform policy
+
+Namespace free functions (e.g. `geode::utils::game::restart`) are filtered in `policy/free_functions.py` before binding and type emission.
+
+### When to add an override
+
+Add a `FreeFnOverride` if Broma lists overloads not present on a platform and emitting them would break or mislead.
+Leave `win` unrestricted unless shown otherwise.
+
+Each override sets `namespace`, `name`, and `allowed_arities_by_platform` (platform ids to allowed argument counts).
+Platforms not listed get all arities.
+
+### Current overrides
+
+| Function | Platforms with restriction | Allowed arities |
+| --- | --- | --- |
+| `geode::utils::game::restart` | `android`, `android32`, `android64`, `ios`, `mac`, `imac`, `m1` | 1 only |
+
+`win` is unlisted, both overloads remain until two-argument support is checked on Windows.
+
+### Platform groups
+
+If multiple platforms use the same ABI rule, list each platform key in `allowed_arities_by_platform` (no group alias yet).
+For `restart`, all mobile and Apple targets allow one argument.
+
+- Android family: `android`, `android32`, `android64`
+- Apple family: `ios`, `mac`, `imac`, `m1`
+
+Only add a new platform key after confirming its SDK matches. Don’t copy from other families without checking.
+
+`free_function_supported()` skips functions with un-marshallable types.
+
 ## Tests
 
 The Python code generator has a unit test suite under `tests/luau_codegen/`, run through CTest as `luauapi_codegen_tests`.
@@ -64,6 +98,10 @@ See [Testing](testing.md).
 
 - `CMakeLists.txt`
 - `tools/luau_codegen/cli/main.py`
+- `tools/luau_codegen/cli/io.py`
+- `tools/luau_codegen/parse/collect.py`
+- `tools/luau_codegen/policy/free_functions.py`
+- `tools/luau_codegen/emit/metadata.py`
 - `tools/luau_codegen/emit/hooks.py`
 - `tools/luau_codegen/emit/cxx_templates.py`
 - `tools/luau_codegen/emit/luau_types/`

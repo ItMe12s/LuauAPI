@@ -44,3 +44,11 @@ def _cleanup_orphans(out_dir: str, current_files: set[str]) -> None:
     legacy_hpp = os.path.join(src_dir, "bindings_internal.hpp")
     if "src/bindings_internal.hpp" not in current_files and os.path.exists(legacy_hpp):
         os.remove(legacy_hpp)
+
+
+def _cleanup_type_orphans(types_out: str, type_files: dict[str, str]) -> None:
+    for pattern in ("*.d.luau", "luau-lsp.json"):
+        for orphan in glob.glob(os.path.join(types_out, pattern)):
+            name = os.path.basename(orphan)
+            if name not in type_files:
+                os.remove(orphan)

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import argparse
-import glob
 import os
 from pathlib import Path
 import sys
@@ -15,9 +14,12 @@ from luau_codegen.emit import parity
 from luau_codegen.emit import plan as emit_plan
 from luau_codegen.emit.plan import ambiguous_overloads
 from luau_codegen.parse.collect import collect_bindings_root
-from luau_codegen.cli.io import _cleanup_orphans, _write_if_changed
-from luau_codegen.cli.report import _emit_report
-from luau_codegen.cli.schema import _emit_schema
+from luau_codegen.cli.io import (
+    _cleanup_orphans,
+    _cleanup_type_orphans,
+    _write_if_changed,
+)
+from luau_codegen.emit.metadata import emit_report, emit_schema
 
 
 def log_info(message: str) -> None:
@@ -173,13 +175,8 @@ def main(argv: List[str]) -> int:
         type_files = emit_types.emit(root, args.platform, plan=plan)
         for filename, content in type_files.items():
             _write_if_changed(os.path.join(args.types_out, filename), content)
-        orphan_globs = ("*.d.luau", "luau-lsp.json")
-        for pattern in orphan_globs:
-            for orphan in glob.glob(os.path.join(args.types_out, pattern)):
-                name = os.path.basename(orphan)
-                if name not in type_files:
-                    os.remove(orphan)
-        _emit_schema(root, schema_path, plan)
+        _cleanup_type_orphans(args.types_out, type_files)
+        emit_schema(root, schema_path, plan)
         parity_path = os.path.join(args.out, "parity.json")
         parity_data = parity.collect_parity(
             root, plans_by_platform=plans_by_platform, target_platform=args.platform
@@ -196,7 +193,7 @@ def main(argv: List[str]) -> int:
     hook_count = emit_plan.hook_target_count(root, args.platform, plan=plan)
     field_count = emit_plan.field_target_count(root, args.platform, plan=plan)
     try:
-        _emit_report(
+        emit_report(
             root,
             report_path,
             written_paths,

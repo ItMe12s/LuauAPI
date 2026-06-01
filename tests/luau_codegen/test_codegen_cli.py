@@ -99,7 +99,7 @@ class F11ClassMergeTests(unittest.TestCase):
                 f.write(
                     "[[link(android)]]\n"
                     "class test::Foo {\n"
-                    "    void second() = win 0x2;\n"
+                    "    void second() = android 0x2;\n"
                     "}\n"
                 )
             for name in ("FMOD.bro", "Kazmath.bro", "GeometryDash.bro"):
@@ -108,5 +108,6 @@ class F11ClassMergeTests(unittest.TestCase):
             merged = next(c for c in root.classes if c.name == "Foo")
             self.assertIn("link(win)", merged.attributes)
             self.assertIn("link(android)", merged.attributes)
+            self.assertEqual({m.name for m in merged.methods}, {"first", "second"})
         finally:
             shutil.rmtree(tmpdir)
