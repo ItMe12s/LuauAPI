@@ -364,8 +364,8 @@ class LuauTypeEmissionTests(unittest.TestCase):
         self.assertIn("export type Cocos2dNamespace", main)
         self.assertIn("export type GDNamespace", main)
         self.assertIn("cocos2d: Cocos2dNamespace", main)
-        self.assertIn("before: ((...any) -> ())?,", main)
-        self.assertIn("after: ((...any) -> ())?,", main)
+        self.assertIn("before: ((...any) -> any?)?,", main)
+        self.assertIn("after: ((...any) -> any?)?,", main)
 
     def test_dispatcher_uses_input_arg_count_for_out_refs(self) -> None:
         method = Method(

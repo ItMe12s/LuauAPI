@@ -10,10 +10,11 @@ class FreeFunctionOverrideTests(unittest.TestCase):
             name="restart", namespace="geode::utils::game", ret="void", args=args
         )
 
-    def test_free_fn_allowed_drops_arity2_on_android(self) -> None:
+    def test_free_fn_allowed_drops_arity2_on_mobile(self) -> None:
         two = self._restart(2)
         one = self._restart(1)
-        for plat in ("android32", "android64"):
+        mobile = ("android32", "android64", "ios", "m1", "imac", "mac")
+        for plat in mobile:
             self.assertFalse(free_fn_allowed(two, plat))
             self.assertTrue(free_fn_allowed(one, plat))
         self.assertTrue(free_fn_allowed(two, "win"))
@@ -41,6 +42,18 @@ class FreeFunctionOverrideTests(unittest.TestCase):
             skipped,
         )
 
+    def test_emit_drops_restart_arity2_on_ios(self) -> None:
+        functions = [self._restart(1), self._restart(2)]
+        skipped: list[tuple[str, str, str]] = []
+        out = emit_free_functions_file(functions, {}, "ios", skipped)
+        self.assertIn("geode::utils::game::restart(arg0)", out)
+        self.assertNotIn("geode::utils::game::restart(arg0, arg1)", out)
+        self.assertNotIn("switch (lua_gettop(L))", out)
+        self.assertIn(
+            ("geode.utils.game", "restart", "free-function-override-arity:ios"),
+            skipped,
+        )
+
     def test_emit_keeps_both_overloads_on_win(self) -> None:
         functions = [self._restart(1), self._restart(2)]
         skipped: list[tuple[str, str, str]] = []
@@ -49,3 +62,13 @@ class FreeFunctionOverrideTests(unittest.TestCase):
         self.assertIn("geode::utils::game::restart(arg0, arg1)", out)
         self.assertIn("switch (lua_gettop(L))", out)
         self.assertEqual(skipped, [])
+
+    def test_types_emit_drops_restart_arity2_on_ios(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        root = Root(
+            classes=[ccobject],
+            functions=[self._restart(1), self._restart(2)],
+        )
+        out = types_text(emit_luau_types(root, "ios"))
+        self.assertIn("restart:", out)
+        self.assertNotIn("restart: (self: any, a0: boolean, a1: boolean)", out)

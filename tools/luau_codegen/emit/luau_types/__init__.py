@@ -100,7 +100,7 @@ def emit(
 
     geode_factory_text = "".join(_emit_factory_records(geode_factories, objects))
 
-    function_tree = _build_function_tree(root.functions, objects)
+    function_tree = _build_function_tree(root.functions, objects, target_platform)
     function_field_lines = _emit_function_tree(function_tree, objects, 1)
 
     defined = {name for name, _ in cocos_chunks} | {name for name, _ in gd_chunks}

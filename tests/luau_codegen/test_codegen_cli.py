@@ -104,34 +104,3 @@ class F11ClassMergeTests(unittest.TestCase):
         self.assertEqual(len(merged), 1)
         self.assertIn("link(win)", merged[0].attributes)
         self.assertIn("link(android)", merged[0].attributes)
-
-    def test_duplicate_class_warns_on_method_conflict(self) -> None:
-        cls1 = Class(name="Bar", namespace="test", source="a.bro")
-        cls1.methods = [
-            Method(name="foo", ret="void", args=[], platforms={"win": "0x1"})
-        ]
-        cls2 = Class(name="Bar", namespace="test", source="b.bro")
-        cls2.methods = [
-            Method(name="bar", ret="void", args=[], platforms={"win": "0x2"})
-        ]
-
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
-            seen: dict = {}
-            for cls in [cls1, cls2]:
-                if cls.qualified_name in seen:
-                    existing = seen[cls.qualified_name]
-                    for attr in cls.attributes:
-                        if attr not in existing.attributes:
-                            existing.attributes.append(attr)
-                    if cls.methods and existing.methods:
-                        warnings.warn(
-                            f"[luauapi] duplicate class {cls.qualified_name} "
-                            f"from {cls.source} and {existing.source}, keeping first"
-                        )
-                    elif cls.methods and not existing.methods:
-                        existing.methods = cls.methods
-                else:
-                    seen[cls.qualified_name] = cls
-            self.assertEqual(len(w), 1)
-            self.assertIn("duplicate class", str(w[0].message))

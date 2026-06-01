@@ -19,6 +19,10 @@ _OVERRIDES: tuple[FreeFnOverride, ...] = (
             "android": frozenset({1}),
             "android32": frozenset({1}),
             "android64": frozenset({1}),
+            "ios": frozenset({1}),
+            "mac": frozenset({1}),
+            "imac": frozenset({1}),
+            "m1": frozenset({1}),
         },
     ),
 )
