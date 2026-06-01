@@ -1,6 +1,9 @@
 #include "lua/bindings/Binding.hpp"
 #include "lua/bindings/framework/TableUtil.hpp"
+#include "lua/module/PathSandbox.hpp"
+#include "lua/runtime/Runtime.hpp"
 
+#include <Geode/loader/Loader.hpp>
 #include <Geode/loader/Mod.hpp>
 #include <Geode/utils/string.hpp>
 #include <matjson.hpp>
@@ -10,6 +13,7 @@
 
 #include <string>
 #include <string_view>
+#include <unordered_map>
 #include <vector>
 
 namespace {
@@ -121,9 +125,37 @@ namespace {
         return std::string_view(key, len);
     }
 
+    geode::Mod* currentMod() {
+        auto* runtime = luax::Runtime::getIfInitialized();
+        if (!runtime) {
+            return geode::Mod::get();
+        }
+        auto const& root = runtime->resourcesRoot();
+        if (root.empty()) {
+            return geode::Mod::get();
+        }
+
+        static std::unordered_map<std::string, geode::Mod*> cache;
+        auto key = normalizedPathString(root);
+        if (auto it = cache.find(key); it != cache.end()) {
+            return it->second ? it->second : geode::Mod::get();
+        }
+
+        geode::Mod* found = nullptr;
+        for (auto* mod : geode::Loader::get()->getAllMods()) {
+            auto modRoot = canonicalRoot(mod->getResourcesDir());
+            if (modRoot.isOk() && modRoot.unwrap() == root) {
+                found = mod;
+                break;
+            }
+        }
+        cache[key] = found;
+        return found ? found : geode::Mod::get();
+    }
+
     int modGetSavedValue(lua_State* L) {
         auto key = checkKey(L, 1);
-        auto result = geode::Mod::get()->getSaveContainer().get(key);
+        auto result = currentMod()->getSaveContainer().get(key);
         if (result.isErr()) {
             lua_pushnil(L);
             return 1;
@@ -135,13 +167,13 @@ namespace {
     int modSetSavedValue(lua_State* L) {
         auto key = checkKey(L, 1);
         auto value = toJson(L, 2, 0);
-        geode::Mod::get()->getSaveContainer().set(key, std::move(value));
+        currentMod()->getSaveContainer().set(key, std::move(value));
         return 0;
     }
 
     int modGetSettingValue(lua_State* L) {
         auto key = checkKey(L, 1);
-        auto result = geode::Mod::get()->getSavedSettingsData().get(key);
+        auto result = currentMod()->getSavedSettingsData().get(key);
         if (result.isErr()) {
             lua_pushnil(L);
             return 1;
@@ -151,37 +183,37 @@ namespace {
     }
 
     int modHasSetting(lua_State* L) {
-        lua_pushboolean(L, geode::Mod::get()->hasSetting(checkKey(L, 1)));
+        lua_pushboolean(L, currentMod()->hasSetting(checkKey(L, 1)));
         return 1;
     }
 
     int modGetID(lua_State* L) {
-        pushString(L, std::string(geode::Mod::get()->getID()));
+        pushString(L, std::string(currentMod()->getID()));
         return 1;
     }
 
     int modGetName(lua_State* L) {
-        pushString(L, std::string(geode::Mod::get()->getName()));
+        pushString(L, std::string(currentMod()->getName()));
         return 1;
     }
 
     int modGetVersion(lua_State* L) {
-        pushString(L, geode::Mod::get()->getVersion().toVString());
+        pushString(L, currentMod()->getVersion().toVString());
         return 1;
     }
 
     int modGetResourcesDir(lua_State* L) {
-        pushString(L, geode::utils::string::pathToString(geode::Mod::get()->getResourcesDir()));
+        pushString(L, geode::utils::string::pathToString(currentMod()->getResourcesDir()));
         return 1;
     }
 
     int modGetSaveDir(lua_State* L) {
-        pushString(L, geode::utils::string::pathToString(geode::Mod::get()->getSaveDir()));
+        pushString(L, geode::utils::string::pathToString(currentMod()->getSaveDir()));
         return 1;
     }
 
     int modGetConfigDir(lua_State* L) {
-        pushString(L, geode::utils::string::pathToString(geode::Mod::get()->getConfigDir()));
+        pushString(L, geode::utils::string::pathToString(currentMod()->getConfigDir()));
         return 1;
     }
 
