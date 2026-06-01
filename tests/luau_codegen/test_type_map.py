@@ -67,3 +67,31 @@ class GeodeEnumRegistrationTests(unittest.TestCase):
         assert info is not None
         self.assertEqual(info.kind, "callback")
         self.assertEqual(info.lua_type, "(arg1: CCObject) -> ()")
+
+    def test_method_input_arg_count_collapses_sel_pair(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        ccnode = Class(name="CCNode", namespace="cocos2d", bases=["CCObject"])
+        ccsprite = Class(name="CCSprite", namespace="cocos2d", bases=["CCObject"])
+        menu_item = Class(name="CCMenuItem", namespace="cocos2d", bases=["CCNode"])
+        method = Method(
+            name="initWithNormalSprite",
+            ret="bool",
+            args=[
+                Arg("cocos2d::CCSprite*", "normal"),
+                Arg("cocos2d::CCSprite*", "selected"),
+                Arg("cocos2d::CCObject*", "target"),
+                Arg("SEL_MenuHandler", "selector"),
+            ],
+        )
+        objects = {
+            "CCObject": ccobject,
+            "CCNode": ccnode,
+            "CCSprite": ccsprite,
+            "CCMenuItem": menu_item,
+            "cocos2d::CCObject": ccobject,
+            "cocos2d::CCNode": ccnode,
+            "cocos2d::CCSprite": ccsprite,
+            "cocos2d::CCMenuItem": menu_item,
+        }
+
+        self.assertEqual(_input_arg_count(method, objects), 3)

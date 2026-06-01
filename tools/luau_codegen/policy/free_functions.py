@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections import defaultdict
 from dataclasses import dataclass, field
 
+from luau_codegen.convert.sel_args import is_ccobject_ptr
 from luau_codegen.convert.type_map import classify_arg, classify_return
 from luau_codegen.model.denylist import INACCESSIBLE_CLASSES
 from luau_codegen.parse.broma import Class, Function
@@ -71,12 +72,18 @@ def free_function_unsupported_reason(
 ) -> str | None:
     if classify_return(fn.ret, objects) is None:
         return f"free-function-unsupported-return:{fn.ret}"
-    for arg in fn.args:
+    for i, arg in enumerate(fn.args):
         info = classify_arg(arg.type, objects)
         if info is None:
             return f"free-function-unsupported-arg:{arg.type}"
         if info.is_out:
             return f"free-function-out-arg:{arg.type}"
+        if info.kind == "sel":
+            if i == 0:
+                return f"free-function-unsupported-arg:{arg.type}"
+            prev = classify_arg(fn.args[i - 1].type, objects)
+            if prev is None or not is_ccobject_ptr(prev):
+                return f"free-function-unsupported-arg:{arg.type}"
     return None
 
 

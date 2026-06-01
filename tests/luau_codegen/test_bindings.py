@@ -46,6 +46,39 @@ class GeneratedSafetyTests(unittest.TestCase):
 
         self.assertIn("static_assert(1 < LUA_UTAG_LIMIT", text)
 
+    def test_common_file_release_hook_evicts_menu_handlers(self) -> None:
+        ccobject = Class(
+            name="CCObject",
+            namespace="cocos2d",
+            methods=[
+                Method(
+                    name="release",
+                    ret="void",
+                    args=[],
+                    platforms=all_platforms("0x1"),
+                )
+            ],
+        )
+        ccnode = Class(
+            name="CCNode",
+            namespace="cocos2d",
+            bases=["CCObject"],
+            methods=[
+                Method(
+                    name="getTag",
+                    ret="int",
+                    args=[],
+                    platforms=all_platforms("0x1"),
+                )
+            ],
+        )
+        root = Root(classes=[ccobject, ccnode])
+        plan = collect_plan(root, "win")
+        text = _emit_common_file(plan.emitted_classes, plan, "win")
+
+        self.assertIn("luax::evictMenuHandlersIfFinalRelease(self);", text)
+        self.assertIn('#include "lua/bindings/framework/LuaMenuHandler.hpp"', text)
+
     def test_hook_shutdown_clears_refs_and_disables_hooks(self) -> None:
         text = emit_hook_support()
 
@@ -565,3 +598,35 @@ class SelMenuHandlerBindingTests(unittest.TestCase):
         self.assertIn("menu_selector(luax::LuaMenuHandler::onCallback)", text)
         self.assertNotIn("arg2 = luax::Usertype<cocos2d::CCObject>", text)
         self.assertIn("anchorMenuHandler(self, sel3_handler)", text)
+
+
+class FreeFunctionSelMenuHandlerBindingTests(unittest.TestCase):
+    def test_sel_pair_collapses_and_anchors_on_result(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        ccnode = Class(name="CCNode", namespace="cocos2d", bases=["CCObject"])
+        menu_item = Class(name="CCMenuItem", namespace="cocos2d", bases=["CCNode"])
+        fn = Function(
+            name="makeItem",
+            namespace="geode::utils",
+            ret="cocos2d::CCMenuItem*",
+            args=[
+                Arg("cocos2d::CCObject*", "target"),
+                Arg("SEL_MenuHandler", "selector"),
+            ],
+        )
+        objects = {
+            "CCObject": ccobject,
+            "CCNode": ccnode,
+            "CCMenuItem": menu_item,
+            "cocos2d::CCObject": ccobject,
+            "cocos2d::CCNode": ccnode,
+            "cocos2d::CCMenuItem": menu_item,
+        }
+
+        text = emit_free_functions_file([fn], objects)
+
+        self.assertIn("expected 1 args", text)
+        self.assertIn("LuaMenuHandler::create", text)
+        self.assertIn("menu_selector(luax::LuaMenuHandler::onCallback)", text)
+        self.assertNotIn("arg0 = luax::Usertype<cocos2d::CCObject>", text)
+        self.assertIn("anchorMenuHandler(result, sel1_handler)", text)

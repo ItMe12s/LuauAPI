@@ -119,3 +119,63 @@ class SelMenuHandlerFilterTests(unittest.TestCase):
 
         self.assertFalse(ok)
         self.assertEqual(reason, "unsupported-arg:SEL_MenuHandler")
+
+    def test_valid_sel_pair_is_accepted(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        cls = Class(name="CCMenuItem", namespace="cocos2d", bases=["CCNode"])
+        method = Method(
+            name="initWithTarget",
+            ret="bool",
+            args=[
+                Arg("cocos2d::CCObject*", "target"),
+                Arg("SEL_MenuHandler", "selector"),
+            ],
+            platforms=all_platforms("0x1"),
+        )
+        ccnode = Class(name="CCNode", namespace="cocos2d", bases=["CCObject"])
+        objects = {
+            "CCObject": ccobject,
+            "CCNode": ccnode,
+            "CCMenuItem": cls,
+            "cocos2d::CCObject": ccobject,
+            "cocos2d::CCNode": ccnode,
+            "cocos2d::CCMenuItem": cls,
+        }
+
+        ok, reason = supported(cls, method, objects, "win")
+
+        self.assertTrue(ok)
+        self.assertEqual(reason, "")
+
+
+class FreeFunctionSelMenuHandlerFilterTests(unittest.TestCase):
+    def test_orphan_sel_menu_handler_is_rejected(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        fn = Function(
+            name="register",
+            namespace="geode::utils",
+            ret="void",
+            args=[Arg("SEL_MenuHandler", "selector")],
+        )
+        objects = {"CCObject": ccobject}
+
+        reason = free_function_unsupported_reason(fn, objects)
+
+        self.assertEqual(reason, "free-function-unsupported-arg:SEL_MenuHandler")
+
+    def test_valid_sel_pair_is_accepted(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        fn = Function(
+            name="attachHandler",
+            namespace="geode::utils",
+            ret="void",
+            args=[
+                Arg("cocos2d::CCObject*", "target"),
+                Arg("SEL_MenuHandler", "selector"),
+            ],
+        )
+        objects = {"CCObject": ccobject, "cocos2d::CCObject": ccobject}
+
+        reason = free_function_unsupported_reason(fn, objects)
+
+        self.assertIsNone(reason)

@@ -211,3 +211,54 @@ class HookApplyFnTests(unittest.TestCase):
 
         self.assertIn("if (lua_isnil(L, -1))", text)
         self.assertIn("arg0Override = nullptr", text)
+
+
+class HookableSelCallbackTests(unittest.TestCase):
+    def test_sel_arg_not_hookable(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        ccnode = Class(name="CCNode", namespace="cocos2d", bases=["CCObject"])
+        cls = Class(
+            name="CCMenuItem",
+            namespace="cocos2d",
+            bases=["CCNode"],
+            methods=[
+                Method(
+                    name="initWithTarget",
+                    ret="bool",
+                    args=[
+                        Arg("cocos2d::CCObject*", "target"),
+                        Arg("SEL_MenuHandler", "selector"),
+                    ],
+                    platforms=all_platforms("0x1"),
+                )
+            ],
+        )
+        objects = {
+            "CCObject": ccobject,
+            "CCNode": ccnode,
+            "CCMenuItem": cls,
+            "cocos2d::CCObject": ccobject,
+            "cocos2d::CCNode": ccnode,
+            "cocos2d::CCMenuItem": cls,
+        }
+
+        self.assertFalse(hookable(cls, cls.methods[0], objects, "win"))
+
+    def test_callback_arg_not_hookable(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        cls = Class(
+            name="CCNode",
+            namespace="cocos2d",
+            bases=["CCObject"],
+            methods=[
+                Method(
+                    name="runActionLater",
+                    ret="void",
+                    args=[Arg("std::function<void(cocos2d::CCObject*)>", "fn")],
+                    platforms=all_platforms("0x1"),
+                )
+            ],
+        )
+        objects = {"CCObject": ccobject, "CCNode": cls}
+
+        self.assertFalse(hookable(cls, cls.methods[0], objects, "win"))

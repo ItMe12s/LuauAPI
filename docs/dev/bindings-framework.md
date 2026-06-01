@@ -85,7 +85,8 @@ push the registry ref, apply `ResourcesRootScope`, call `Runtime::protectedCall`
 Generated bindings use `LuaCallback` when a method argument is a `std::function` / `Function` / `MiniFunction`.
 For cocos2d `SEL_MenuHandler` pairs `(CCObject* target, SEL_MenuHandler selector)`,
 codegen collapses the pair into one Luau function argument and creates a `LuaMenuHandler` trampoline (`CCObject` subclass).
-The handler is anchored on the returned object, on `self`, or in an orphan registry cleared at shutdown.
+Handlers are anchored to an object. When it's released, handlers are too.
+Orphaned handlers clear on shutdown, soft cap warns but never drops handlers.
 
 See [Reference: callbacks](../lua/reference/callbacks.md) for script-facing usage.
 

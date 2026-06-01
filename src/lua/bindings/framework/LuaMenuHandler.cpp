@@ -4,6 +4,9 @@
 #include "lua/Config.hpp"
 #include "lua/runtime/Runtime.hpp"
 
+#include <Geode/Geode.hpp>
+
+#include <unordered_map>
 #include <vector>
 
 namespace luax {
@@ -13,7 +16,14 @@ namespace luax {
             return *value;
         }
 
+        std::unordered_map<cocos2d::CCObject*, std::vector<LuaMenuHandler*>>& anchorMap() {
+            static auto* value =
+                new std::unordered_map<cocos2d::CCObject*, std::vector<LuaMenuHandler*>>();
+            return *value;
+        }
+
         bool g_shutdownHookRegistered = false;
+        bool g_orphanCapWarned = false;
     }
 
     LuaMenuHandler* LuaMenuHandler::create(lua_State* L, int fnIndex) {
@@ -44,14 +54,35 @@ namespace luax {
     }
 
     void anchorMenuHandler(cocos2d::CCObject* anchor, LuaMenuHandler* handler) {
-        if (!anchor || !handler) return;
-        registerOrphanMenuHandler(handler);
+        if (!handler) return;
+        if (!anchor) {
+            registerOrphanMenuHandler(handler);
+            return;
+        }
+        handler->retain();
+        anchorMap()[anchor].push_back(handler);
+        ensureMenuHandlerShutdownHook();
+    }
+
+    void evictMenuHandlersIfFinalRelease(cocos2d::CCObject* anchor) {
+        if (!anchor || anchor->retainCount() > 1) return;
+        auto& map = anchorMap();
+        auto it = map.find(anchor);
+        if (it == map.end()) return;
+        for (auto* handler : it->second) {
+            handler->release();
+        }
+        map.erase(it);
     }
 
     void registerOrphanMenuHandler(LuaMenuHandler* handler) {
         if (!handler) return;
-        if (orphanHandlers().size() >= kMaxCallbackTrampolines) {
-            return;
+        if (orphanHandlers().size() >= kMaxCallbackTrampolines && !g_orphanCapWarned) {
+            g_orphanCapWarned = true;
+            geode::log::warn(
+                "orphan menu handler registry exceeded soft cap ({})",
+                kMaxCallbackTrampolines
+            );
         }
         handler->retain();
         orphanHandlers().push_back(handler);
@@ -63,6 +94,12 @@ namespace luax {
             handler->release();
         }
         orphanHandlers().clear();
+        for (auto& [_, handlers] : anchorMap()) {
+            for (auto* handler : handlers) {
+                handler->release();
+            }
+        }
+        anchorMap().clear();
     }
 
     void ensureMenuHandlerShutdownHook() {

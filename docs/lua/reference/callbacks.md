@@ -42,18 +42,21 @@ The `(CCObject* target, SEL_MenuHandler selector)` pair counts as **one** Luau a
 
 ## Lifetime
 
-Menu handler trampolines are kept alive by anchoring to:
+Each menu handler trampoline is retained and associated with an anchor `CCObject*`:
 
 - The returned `CCObject*` when the method returns one.
 - `self` for instance methods that do not return an object.
-- An internal registry for static calls (cleared on runtime shutdown).
+- The orphan registry for static calls and void-return methods (cleared on runtime shutdown).
+
+When the anchor's retain count drops to one before `release`, all its handlers are cleaned up, like `geode.fields` tables.
+The orphan registry has a soft cap of `4096`. If exceeded, a warning is logged, but all handlers are still kept.
 
 ## Limits
 
 | Limit | Value |
 | --- | --- |
 | Callback script budget | `50 ms` (`kHookScriptDeadlineMs`) |
-| Orphan menu handler registry | `4096` (`kMaxCallbackTrampolines`) |
+| Orphan menu handler registry | `4096` soft cap (`kMaxCallbackTrampolines`). Warns once, never drops |
 
 ## Related
 

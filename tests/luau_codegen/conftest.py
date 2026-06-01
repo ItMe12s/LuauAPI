@@ -34,6 +34,7 @@ from luau_codegen.policy.free_functions import (  # type: ignore[import-unresolv
     free_function_allowed as free_fn_allowed,
     free_function_key,
     free_function_supported,
+    free_function_unsupported_reason,
     group_supported_free_functions,
 )
 from luau_codegen.emit.luau_types import TYPES_FILE  # type: ignore[import-unresolved]
@@ -132,6 +133,7 @@ __all__ = [
     "free_fn_allowed",
     "free_function_key",
     "free_function_supported",
+    "free_function_unsupported_reason",
     "group_supported_free_functions",
     # emit.luau_types
     "TYPES_FILE",

@@ -19,6 +19,7 @@ namespace luax {
 
     void anchorMenuHandler(cocos2d::CCObject* anchor, LuaMenuHandler* handler);
     void registerOrphanMenuHandler(LuaMenuHandler* handler);
+    void evictMenuHandlersIfFinalRelease(cocos2d::CCObject* anchor);
     void clearOrphanMenuHandlers();
     void ensureMenuHandlerShutdownHook();
 }

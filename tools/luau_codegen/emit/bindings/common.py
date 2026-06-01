@@ -39,6 +39,7 @@ def _emit_common_file(
     if release_address:
         out.append("void luaapi_fields_release_hook(cocos2d::CCObject* self) {\n")
         out.append("    luax::Fields::evictIfFinalRelease(self);\n")
+        out.append("    luax::evictMenuHandlersIfFinalRelease(self);\n")
         out.append("    self->release();\n")
         out.append("}\n\n")
         out.append("void installFieldsReleaseHook() {\n")
