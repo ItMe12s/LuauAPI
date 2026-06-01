@@ -22,12 +22,16 @@ def collect_bindings_root(
     if geode_sdk_path:
         from luau_codegen.parse.geode_sdk import (
             scan_geode_sdk,
+            scan_geode_ccnode_additions,
             scan_geode_enums,
             scan_geode_functions,
         )
 
         geode_enums = scan_geode_enums(geode_sdk_path)
         root.classes.extend(scan_geode_sdk(geode_sdk_path))
+        ccnode_additions = scan_geode_ccnode_additions(geode_sdk_path)
+        if ccnode_additions:
+            root.classes.append(ccnode_additions)
         root.functions.extend(scan_geode_functions(geode_sdk_path))
     from luau_codegen.policy.filtering import method_key
 

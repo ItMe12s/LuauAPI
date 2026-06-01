@@ -17,6 +17,15 @@ from luau_codegen.parse.text import strip_comments
 _PREPROCESSOR = re.compile(r"^\s*#[^\n]*$", re.MULTILINE)
 
 _SCANNED_LINK_ATTR = "link(win, android, android32, android64, imac, m1, ios)"
+_SCANNED_LINK_PLATFORMS = (
+    "win",
+    "android",
+    "android32",
+    "android64",
+    "imac",
+    "m1",
+    "ios",
+)
 
 _GL_TYPE_ALIASES = {
     "GLubyte": "unsigned char",
@@ -37,6 +46,10 @@ _CLASS_DECL = re.compile(
     r"(?:\s+final)?"
     r"\s*(?::\s*((?:(?:public|private|protected|virtual)\s+)?[^{]+?))?"
     r"\s*\{",
+    re.DOTALL,
+)
+_CCNODE_DECL = re.compile(
+    r"class\s+CC_DLL\s+CCNode\s*:\s*public\s+CCObject\s*\{",
     re.DOTALL,
 )
 _ACCESS_LABEL = re.compile(r"(public|protected|private)\s*:")
@@ -128,6 +141,55 @@ def scan_geode_functions(sdk_path: str) -> List[Function]:
 
             warnings.warn(f"[luauapi] failed to scan functions {rel}: {exc}")
     return out
+
+
+def scan_geode_ccnode_additions(sdk_path: str) -> Class | None:
+    path = os.path.join(
+        sdk_path,
+        "loader",
+        "include",
+        "Geode",
+        "cocos",
+        "base_nodes",
+        "CCNode.h",
+    )
+    if not os.path.isfile(path):
+        return None
+
+    with open(path, "r", encoding="utf-8") as f:
+        text = f.read()
+    text = strip_comments(text)
+    text = _strip_preproc(text)
+
+    match = _CCNODE_DECL.search(text)
+    if not match:
+        return None
+
+    brace_start = match.end() - 1
+    brace_end = _balanced_end(text, brace_start)
+    body = text[brace_start + 1 : brace_end]
+    line = text[: match.start()].count("\n") + 1
+    methods = _extract_public_methods(
+        "CCNode",
+        body,
+        line,
+        geode_only=True,
+        include_bodies=False,
+    )
+    if not methods:
+        return None
+    for method in methods:
+        for platform in _SCANNED_LINK_PLATFORMS:
+            method.platforms.setdefault(platform, "link")
+
+    return Class(
+        name="CCNode",
+        namespace="cocos2d",
+        bases=["CCObject"],
+        methods=methods,
+        source=path,
+        line=line,
+    )
 
 
 def _scan_header_functions(path: str, namespaces, names) -> List[Function]:
@@ -269,7 +331,14 @@ def _clean_method_text(text: str) -> str:
     return text
 
 
-def _extract_public_methods(class_name: str, body: str, base_line: int) -> List[Method]:
+def _extract_public_methods(
+    class_name: str,
+    body: str,
+    base_line: int,
+    *,
+    geode_only: bool = False,
+    include_bodies: bool = True,
+) -> List[Method]:
     methods: List[Method] = []
     access = "private"
 
@@ -326,7 +395,12 @@ def _extract_public_methods(class_name: str, body: str, base_line: int) -> List[
 
         if brace != -1 and (semi == -1 or brace < semi):
             stmt = body[i:brace].strip()
-            if "(" in stmt and access == "public":
+            if (
+                include_bodies
+                and "(" in stmt
+                and access == "public"
+                and _method_stmt_allowed(stmt, geode_only)
+            ):
                 cleaned = _clean_method_text(stmt)
                 m = parse_method(class_name, cleaned, base_line, access)
                 if m:
@@ -338,7 +412,12 @@ def _extract_public_methods(class_name: str, body: str, base_line: int) -> List[
 
         if semi != -1:
             stmt = body[i:semi].strip()
-            if "(" in stmt and ")" in stmt and access == "public":
+            if (
+                "(" in stmt
+                and ")" in stmt
+                and access == "public"
+                and _method_stmt_allowed(stmt, geode_only)
+            ):
                 cleaned = _clean_method_text(stmt)
                 m = parse_method(class_name, cleaned, base_line, access)
                 if m:
@@ -349,6 +428,10 @@ def _extract_public_methods(class_name: str, body: str, base_line: int) -> List[
         i += 1
 
     return methods
+
+
+def _method_stmt_allowed(stmt: str, geode_only: bool) -> bool:
+    return not geode_only or "GEODE_DLL" in stmt
 
 
 def _find_unbalanced(text: str, start: int, target: str) -> int:
