@@ -65,11 +65,12 @@ def _emit_invoke(cls: Class, m: Method, objects: Dict[str, Class], suffix: str) 
         lua_idx += 1
 
     args = ", ".join(call_args)
-    target = (
-        f"{cxx_name(cls)}::{m.name}({args})"
-        if m.is_static
-        else f"self->{m.name}({args})"
-    )
+    if m.is_bound_ctor:
+        target = f"new {cxx_name(cls)}({args})"
+    elif m.is_static:
+        target = f"{cxx_name(cls)}::{m.name}({args})"
+    else:
+        target = f"self->{m.name}({args})"
     out_refs = [
         (arg_idx, info)
         for arg_idx, (_, info) in enumerate(zip(m.args, arg_infos))
@@ -85,7 +86,9 @@ def _emit_invoke(cls: Class, m: Method, objects: Dict[str, Class], suffix: str) 
             out.extend(push_return(ret, "", False))
     else:
         out.append(f"        auto result = {target};\n")
-        out.extend(push_return(ret, "result", returns_owned(m)))
+        if m.is_bound_ctor:
+            out.append("        result->autorelease();\n")
+        out.extend(push_return(ret, "result", returns_owned(m) or m.is_bound_ctor))
     out.append("    }\n\n")
     return "".join(out)
 

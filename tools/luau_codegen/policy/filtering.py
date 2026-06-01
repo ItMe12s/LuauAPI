@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import dataclasses
 from collections import defaultdict
 from typing import Dict, List
 
 from luau_codegen.parse.broma import Class, Method
 from luau_codegen.model.denylist import (
+    BINDABLE_CONSTRUCTORS,
     INACCESSIBLE_CLASSES,
     INACCESSIBLE_METHODS,
     PREFERRED_OVERLOADS,
@@ -73,6 +75,26 @@ def method_key(cls: Class, m: Method) -> str:
     return f"{cls.qualified_name}.{m.name}({args})"
 
 
+def _ctor_signature(m: Method) -> tuple[str, ...]:
+    return tuple(normalize_type(a.type) for a in m.args)
+
+
+def _allowed_ctor(cls: Class, m: Method) -> bool:
+    allowed = BINDABLE_CONSTRUCTORS.get(cls.name)
+    return bool(allowed and _ctor_signature(m) in allowed)
+
+
+def as_new_factory(cls: Class, m: Method) -> Method:
+    return dataclasses.replace(
+        m,
+        name="new",
+        ret=f"{cls.name}*",
+        is_static=True,
+        is_ctor=False,
+        is_bound_ctor=True,
+    )
+
+
 def supported(
     cls: Class, m: Method, objects: Dict[str, Class], target_platform: str
 ) -> tuple[bool, str]:
@@ -80,7 +102,7 @@ def supported(
         return False, "inaccessible-class"
     if (cls.name, m.name) in INACCESSIBLE_METHODS:
         return False, "inaccessible"
-    if m.is_ctor:
+    if m.is_ctor and not _allowed_ctor(cls, m):
         return False, "constructor"
     if m.is_dtor:
         return False, "destructor"
@@ -143,6 +165,8 @@ def group_supported(
         if not ok:
             skipped.append((m, reason))
             continue
+        if m.is_ctor:
+            m = as_new_factory(cls, m)
         by_name[m.name].append(m)
 
     for name, methods in list(by_name.items()):

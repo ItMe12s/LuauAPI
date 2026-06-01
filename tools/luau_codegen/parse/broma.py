@@ -24,6 +24,7 @@ class Method:
     is_callback: bool = False
     is_ctor: bool = False
     is_dtor: bool = False
+    is_bound_ctor: bool = False
     access: str = "public"
     platforms: Dict[str, str] = dataclasses.field(default_factory=dict)
     attributes: List[str] = dataclasses.field(default_factory=list)

@@ -127,6 +127,38 @@ This is controlled by the `--fail-on-ambiguous-overload` CLI flag.
 This ensures you resolve overload ambiguities instead of relying on declaration order.
 Resolve ambiguities by moving the preferred overload to the top or excluding others.
 
+## Denylist maintenance
+
+`model/denylist.py` is hand-maintained. It has three structures:
+
+- `INACCESSIBLE_METHODS`: `(class, method)` pairs that must never bind (engine internals, editor-only delegates, unsafe helpers).
+- `INACCESSIBLE_CLASSES`: whole classes treated as opaque.
+- `PREFERRED_OVERLOADS`: for a `(class, method)` where overloads collide on input arity, the normalized arg signatures to keep. Others skip as `overload-superseded:<arity>`. Use this instead of **first-declared wins** when you need the `create` or script-friendly overload.
+
+Entries are conservative. Removing one can re-expose a method that breaks marshalling.
+Do not expand `PREFERRED_OVERLOADS` without a real overload clash.
+
+`tests/luau_codegen/test_denylist.py` catches rot.
+It loads the parsed Broma model and fails if any denylist entry or `PREFERRED_OVERLOADS` signature no longer resolves after a GD or SDK bump.
+It auto-skips when bindings are not checked out. Set `LUAUAPI_BINDINGS_DIR` to run it outside a build tree.
+
+Constructors are blocked here too. See below.
+
+## Constructor binding
+
+Constructors and destructors are rejected in `policy/filtering.py` (`supported()` returns `constructor` or `destructor`).
+Raw constructors are usually wrong. `new` on a `CCObject` without `autorelease()` leaks.
+Nearly every class already has a static `create()` factory.
+
+`BINDABLE_CONSTRUCTORS` in `model/denylist.py` is a narrow opt-in when `create()` is filtered out and Lua has no other way to construct the type.
+Each listed constructor signature becomes a synthetic static `new(...)` factory.
+The generated `new` calls `autorelease()` and is available as `<Class>Factory.new` in the stub.
+
+Keep the list small. Vet each entry. Plain `new T(args)` must produce a valid object.
+Classes that need a constructor plus a separate `init()` do not qualify. Destructors stay blocked.
+
+For how one type stub stays safe on every platform, see [Platform parity](platform-parity.md).
+
 ## Tests
 
 The Python code generator has a unit test suite under `tests/luau_codegen/`, run through CTest as `luauapi_codegen_tests`.
@@ -139,6 +171,8 @@ See [Testing](testing.md).
 - `tools/luau_codegen/cli/io.py`
 - `tools/luau_codegen/parse/collect.py`
 - `tools/luau_codegen/policy/free_functions.py`
+- `tools/luau_codegen/policy/filtering.py`
+- `tools/luau_codegen/model/denylist.py`
 - `tools/luau_codegen/emit/metadata.py`
 - `tools/luau_codegen/emit/hooks.py`
 - `tools/luau_codegen/emit/cxx_templates.py`
