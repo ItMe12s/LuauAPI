@@ -203,6 +203,7 @@ def main(argv: List[str]) -> int:
             hook_count,
             field_count,
             plan,
+            plans_by_platform,
         )
     except OSError as exc:
         log_error(f"I/O failed while writing report: {exc}")

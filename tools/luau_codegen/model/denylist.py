@@ -221,6 +221,13 @@ INACCESSIBLE_METHODS = {
     ("GJTransformControl", "updateMinMaxPositions"),
     ("GameLevelManager", "hasLikedItemFullCheck"),
     # ("LevelSearchLayer", "onPasteClipboard"),
+    # Editor-only or delegate callbacks that have overloads with the same number of arguments.
+    # These can't be called from scripts.
+    # Denied by full name so only one allowed overload stays (see PREFERRED_OVERLOADS below).
+    ("SongSelectNode", "onSongMode"),
+    ("EditorUI", "colorSelectClosed"),
+    ("EditorUI", "findSnapObject"),
+    ("ButtonSprite", "init"),
 }
 
 INACCESSIBLE_CLASSES = {
@@ -231,4 +238,52 @@ INACCESSIBLE_CLASSES = {
     "CCScriptHandlerEntry",
     "CCTexturePVR",
     "CCTouchScriptHandlerEntry",
+}
+
+# For overloads with the same argument count, only one can bind in Lua.
+# PREFERRED_OVERLOADS specifies the preferred argument signatures (normalized form) to keep.
+# Others are skipped as `overload-superseded:<arity>`.
+# Preference is given to script-friendly and `create` forms.
+# Please don't add new entries to this dict without a good reason.
+PREFERRED_OVERLOADS: dict[tuple[str, str], set[tuple[str, ...]]] = {
+    ("CCNode", "removeComponent"): {("char const*",)},
+    ("CCSpriteFrameCache", "addSpriteFramesWithFile"): {
+        ("char const*", "char const*"),
+    },
+    ("CCMotionStreak", "create"): {
+        ("float", "float", "float", "cocos2d::ccColor3B const&", "char const*"),
+    },
+    ("CCMotionStreak", "initWithFade"): {
+        ("float", "float", "float", "cocos2d::ccColor3B const&", "char const*"),
+    },
+    ("CCScale9Sprite", "create"): {("char const*", "cocos2d::CCRect")},
+    ("CCScale9Sprite", "initWithFile"): {("char const*", "cocos2d::CCRect")},
+    ("CCLabelAtlas", "initWithString"): {
+        ("char const*", "char const*", "unsigned int", "unsigned int", "unsigned int"),
+    },
+    ("CCControlSlider", "create"): {("char const*", "char const*", "char const*")},
+    ("GameLevelManager", "getSavedLevel"): {("int",)},
+    ("SongInfoObject", "create"): {("int",)},
+    ("GameObject", "slopeYPos"): {("float",)},
+    ("LabelGameObject", "updateLabel"): {("gd::string",)},
+    ("ButtonSprite", "create"): {
+        ("char const*",),
+        ("cocos2d::CCSprite*", "int", "bool", "float", "char const*", "float"),
+        ("char const*", "int", "bool", "char const*", "char const*", "float", "float"),
+        (
+            "char const*",
+            "int",
+            "int",
+            "float",
+            "bool",
+            "char const*",
+            "char const*",
+            "float",
+        ),
+    },
+    ("ScrollLayer", "create"): {("cocos2d::CCSize const&", "bool", "bool")},
+    ("Notification", "create"): {("ZStringView", "NotificationIcon", "float")},
+    ("Notification", "setIcon"): {("NotificationIcon",)},
+    ("ColorPickPopup", "create"): {("bool",)},
+    ("ColorSelectPopup", "create"): {("cocos2d::ccColor3B",)},
 }

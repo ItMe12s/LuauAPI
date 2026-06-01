@@ -175,6 +175,7 @@ execute_process(
             --list-outputs
             --platform ${LUAUAPI_CODEGEN_PLATFORM}
             --geode-sdk "${LUAUAPI_GEODE_SDK_PATH}"
+            --fail-on-ambiguous-overload
     RESULT_VARIABLE LUAUAPI_LIST_OUTPUTS_RESULT
     OUTPUT_VARIABLE LUAUAPI_LIST_OUTPUTS_STDOUT
     ERROR_VARIABLE LUAUAPI_LIST_OUTPUTS_STDERR
@@ -200,6 +201,7 @@ execute_process(
             --list-type-outputs
             --platform ${LUAUAPI_CODEGEN_PLATFORM}
             --geode-sdk "${LUAUAPI_GEODE_SDK_PATH}"
+            --fail-on-ambiguous-overload
     RESULT_VARIABLE LUAUAPI_LIST_TYPE_OUTPUTS_RESULT
     OUTPUT_VARIABLE LUAUAPI_LIST_TYPE_OUTPUTS_STDOUT
     ERROR_VARIABLE LUAUAPI_LIST_TYPE_OUTPUTS_STDERR
@@ -236,6 +238,7 @@ add_custom_command(
             --types-out ${LUAUAPI_TYPES_DIR}
             --platform ${LUAUAPI_CODEGEN_PLATFORM}
             --geode-sdk "${LUAUAPI_GEODE_SDK_PATH}"
+            --fail-on-ambiguous-overload
     COMMAND ${CMAKE_COMMAND} -E touch ${LUAUAPI_CODEGEN_STAMP}
     DEPENDS
         ${LUAUAPI_CODEGEN_PY}

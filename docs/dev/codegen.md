@@ -92,6 +92,41 @@ Only add a new platform key after confirming its SDK matches. Don’t copy from 
 
 `free_function_supported()` skips functions with un-marshallable types.
 
+## Field and encrypted-value policy
+
+Class fields are filtered in `policy/fields.py` by `bindable_field()`.
+
+A field is skipped when:
+
+- Its type cannot be marshalled
+- It's an array or reference
+- It's a function pointer or string pointer
+- It's listed in `INACCESSIBLE_FIELDS`.
+
+Skipped fields still appear as `-- skipped <name>: <reason>` comments in the type stub.
+
+Obfuscated or encrypted value fields, such as Geometry Dash's `SeedValue`, `SeedValueRR`, `SeedValueSFd`,
+and other similar types, are **not bound by policy**.
+These fields do not have a type that can be safely or correctly converted for Lua,
+so they are skipped by the generic `unsupported-arg` or `unsupported-return` rule.
+This is intentional. Encrypted or obfuscated fields are unsafe and useless in Lua.
+Keep them skipped unless a safe, **read-only** proxy is added, a plain field binding is never the answer.
+
+## Overload resolution
+
+Broma can declare several methods with the same name.
+The generator groups them by name and by input arity (`group_supported()` in `policy/filtering.py`).
+When two overloads share a name **and** the same input arity, only one can be bound, because Lua dispatches on arity, not on argument types.
+
+The rule is **first-declared wins**.
+Any later overload with the same name and number of arguments is skipped with the reason `ambiguous-overload-arity:<arity>`.
+These skipped overloads are listed in `report.md` and also in `schema.json` under `ambiguousOverloads`.
+
+By default, the build fails with exit code 6 if ambiguous overloads are found.
+This is controlled by the `--fail-on-ambiguous-overload` CLI flag.
+This ensures you resolve overload ambiguities instead of relying on declaration order.
+Resolve ambiguities by moving the preferred overload to the top or excluding others.
+
 ## Tests
 
 The Python code generator has a unit test suite under `tests/luau_codegen/`, run through CTest as `luauapi_codegen_tests`.

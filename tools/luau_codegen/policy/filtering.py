@@ -4,13 +4,18 @@ from collections import defaultdict
 from typing import Dict, List
 
 from luau_codegen.parse.broma import Class, Method
-from luau_codegen.model.denylist import INACCESSIBLE_CLASSES, INACCESSIBLE_METHODS
+from luau_codegen.model.denylist import (
+    INACCESSIBLE_CLASSES,
+    INACCESSIBLE_METHODS,
+    PREFERRED_OVERLOADS,
+)
 from luau_codegen.model.domain import build_class_lookup, resolve_base, status_for
 from luau_codegen.policy.link_attrs import is_link_platform, platform_aliases
 from luau_codegen.convert.type_map import (
     classify_arg,
     classify_return,
     method_input_arg_count,
+    normalize_type,
 )
 
 STRICT_DIRECT_PLATFORMS: set[str] = {"ios"}
@@ -145,9 +150,23 @@ def group_supported(
         for m in methods:
             by_arity[method_input_arg_count(m, objects)].append(m)
         kept: list[Method] = []
+        preferred = PREFERRED_OVERLOADS.get((cls.name, name))
         for arity, overloads in by_arity.items():
             if len(overloads) == 1:
                 kept.extend(overloads)
+                continue
+            chosen: Method | None = None
+            if preferred:
+                for m in overloads:
+                    sig = tuple(normalize_type(a.type) for a in m.args)
+                    if sig in preferred:
+                        chosen = m
+                        break
+            if chosen is not None:
+                kept.append(chosen)
+                for m in overloads:
+                    if m is not chosen:
+                        skipped.append((m, f"overload-superseded:{arity}"))
             else:
                 kept.append(overloads[0])
                 for m in overloads[1:]:

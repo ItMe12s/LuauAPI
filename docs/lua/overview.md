@@ -13,6 +13,7 @@ A script runs inside the game on the main thread. From a script you can:
 - Load other modules with `require`.
 - Hook and change game functions with `geode.hook`.
 - Read and create game objects through `geode.cocos2d` and `geode.gd`.
+- Build interface with the Geode UI factories on `geode` (layouts, buttons, popups). See [UI and layouts](guide/ui-and-layouts.md).
 - Store per object data with `geode.fields`.
 - Read mod metadata, paths, saves, and settings with `geode.Mod`. See [Reference: mod](reference/mod.md).
 - Draw a debug overlay with `imgui`. See [Reference: imgui](reference/imgui.md).

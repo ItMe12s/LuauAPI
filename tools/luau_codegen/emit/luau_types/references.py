@@ -146,8 +146,10 @@ def _emit_orphan_stubs(names: set[str]) -> str:
         return ""
     lines = [
         "-- Forward declarations for referenced classes without bindable members\n",
+        "-- @type-only: opaque handles, no members bound on this platform\n",
         "\n",
     ]
     for name in sorted(names):
+        lines.append("--- @type-only\n")
         lines.append(f"declare class {name} end\n\n")
     return "".join(lines)

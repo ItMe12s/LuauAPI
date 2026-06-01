@@ -81,6 +81,7 @@ def emit_report(
     hook_target_count: int,
     field_target_count: int,
     plan: EmitPlan | None = None,
+    plans_by_platform: dict[str, EmitPlan] | None = None,
 ) -> None:
     obj = object_classes(root)
     total_methods = sum(len(c.methods) for c in root.classes)
@@ -116,6 +117,20 @@ def emit_report(
     for cxx_path in cxx_paths:
         lines.append(f"  - `{cxx_path}`\n")
     lines.append(f"- Generated Luau types: `{types_path}`\n\n")
+    if plans_by_platform:
+        lines.append("## Linkless classes\n\n")
+        lines.append(
+            "Per platform, classes with no callable members "
+            "(linkless / skipped, treated as opaque).\n\n"
+        )
+        for platform in sorted(plans_by_platform):
+            names = sorted(plans_by_platform[platform].skipped_classes)
+            lines.append(f"### {platform}: {len(names)}\n\n")
+            for name in names[:2000]:
+                lines.append(f"- {name}\n")
+            if len(names) > 2000:
+                lines.append(f"- ... {len(names) - 2000} more\n")
+            lines.append("\n")
     lines.append("## Skip reasons\n\n")
     for reason, count in sorted(reasons.items(), key=lambda i: (-i[1], i[0])):
         lines.append(f"- {reason}: {count}\n")

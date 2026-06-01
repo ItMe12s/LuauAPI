@@ -376,6 +376,74 @@ class F5OverloadFirstDeclaredWinsTests(unittest.TestCase):
         finally:
             shutil.rmtree(tmpdir)
 
+    def test_preferred_overload_selected_over_first_declared(self) -> None:
+        cls = Class(
+            name="CCScale9Sprite",
+            namespace="cocos2d",
+            bases=["CCObject"],
+            attributes=["link(win)"],
+        )
+        loser = Method(
+            name="create",
+            ret="bool",
+            args=[
+                Arg(type="cocos2d::CCRect", name="rect"),
+                Arg(type="char const*", name="file"),
+            ],
+            is_static=True,
+            platforms={"win": "0x1"},
+        )
+        winner = Method(
+            name="create",
+            ret="bool",
+            args=[
+                Arg(type="char const*", name="file"),
+                Arg(type="cocos2d::CCRect", name="rect"),
+            ],
+            is_static=True,
+            platforms={"win": "0x2"},
+        )
+        cls.methods = [loser, winner]
+        objects = {"CCScale9Sprite": cls, "cocos2d::CCScale9Sprite": cls}
+        grouped, skipped = group_supported(cls, objects, "win")
+        self.assertEqual(len(grouped["create"]), 1)
+        self.assertIs(grouped["create"][0], winner)
+        reasons = [reason for _, reason in skipped]
+        self.assertIn("overload-superseded:2", reasons)
+        self.assertFalse(
+            any(r.startswith("ambiguous-overload-arity") for r in reasons),
+            f"resolved overload should not be flagged ambiguous: {reasons}",
+        )
+
+    def test_unmatched_preference_falls_back_to_ambiguous(self) -> None:
+        cls = Class(
+            name="CCScale9Sprite",
+            namespace="cocos2d",
+            bases=["CCObject"],
+            attributes=["link(win)"],
+        )
+        first = Method(
+            name="create",
+            ret="bool",
+            args=[Arg(type="int", name="a"), Arg(type="int", name="b")],
+            is_static=True,
+            platforms={"win": "0x1"},
+        )
+        second = Method(
+            name="create",
+            ret="bool",
+            args=[Arg(type="float", name="a"), Arg(type="float", name="b")],
+            is_static=True,
+            platforms={"win": "0x2"},
+        )
+        cls.methods = [first, second]
+        objects = {"CCScale9Sprite": cls, "cocos2d::CCScale9Sprite": cls}
+        grouped, skipped = group_supported(cls, objects, "win")
+        self.assertEqual(len(grouped["create"]), 1)
+        self.assertIs(grouped["create"][0], first)
+        reasons = [reason for _, reason in skipped]
+        self.assertIn("ambiguous-overload-arity:2", reasons)
+
 
 class F8ConstMethodManglingTests(unittest.TestCase):
     def test_const_method_has_K_qualifier(self) -> None:
