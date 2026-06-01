@@ -72,7 +72,7 @@ def collect_parity(
     for platform in platforms:
         if platform not in plans:
             plans[platform] = collect_platform_plan(root, platform)
-    final_plan = collect_plan(root, platforms[0], plans_by_platform=plans)
+    final_plan = collect_plan(root, target_platform, plans_by_platform=plans)
     total_methods = sum(len(cls.methods) for cls in root.classes)
     object_count = len(object_classes(root))
 
@@ -151,6 +151,7 @@ def collect_parity(
             }
 
     free_functions: dict[str, dict[str, Any]] = {}
+    final_free_skip_reasons = _free_function_skip_reasons(final_plan)
     for fn in root.functions:
         key = free_function_key(fn)
         supported_platforms = [
@@ -171,6 +172,7 @@ def collect_parity(
             "ret": fn.ret,
             "supportedPlatforms": supported_platforms,
             "skipReasons": skip_reasons,
+            "finalSkipReason": final_free_skip_reasons.get(key, ""),
         }
 
     hints = _collect_hints(plans, methods, platforms, target_platform)
@@ -298,7 +300,8 @@ def emit_markdown(data: dict[str, Any]) -> str:
         lines.append(f"- hooks removed: {final['hooksRemoved']}\n")
         lines.append(f"- fields removed: {final.get('fieldsRemoved', 0)}\n")
         lines.append(
-            f"- free functions removed: {final.get('freeFunctionsRemoved', 0)}\n"
+            f"- free functions removed from final surface: "
+            f"{final.get('freeFunctionsRemoved', 0)}\n"
         )
 
     lines.append("\n## Runtime-Safe Hints\n\n")

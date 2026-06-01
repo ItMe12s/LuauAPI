@@ -137,7 +137,7 @@ def emit_report(
                 f"- Methods removed by intersection: **{len(stats.removed_methods)}**\n",
                 f"- Hooks removed by intersection: **{len(stats.removed_hooks)}**\n",
                 (
-                    "- Free functions removed by intersection: "
+                    "- Free functions removed from final surface: "
                     f"**{len(stats.removed_free_functions)}**\n"
                 ),
             ]

@@ -43,7 +43,8 @@ Per method key (`Class.method(argtypes)`) it records:
 - `skipReasons`: per platform, why the platform plan dropped it (`missing-address`, `not-callable:<p>`, `inaccessible`, and others).
 
 The `summary` block has per-platform counts (methods emitted/skipped, hook targets, fields, skipped classes).
-The `freeFunctions` block records the same support and skip-reason shape for namespace free functions.
+The `freeFunctions` block records the same support and skip-reason shape for namespace free functions,
+plus `finalSkipReason` when final intersection or type pruning removes a free function from the common surface.
 The `intersection` block has final common counts and how many methods, hooks, fields, and free functions intersection removed.
 
 ### Hints

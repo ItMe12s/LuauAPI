@@ -26,6 +26,49 @@ class F12ParityReportTests(unittest.TestCase):
         self.assertEqual(data["intersection"]["freeFunctionsRemoved"], 1)
         self.assertIn("common free functions", emit_markdown(data))
 
+    def test_parity_reports_final_free_function_skip_reason(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        weak = Class(
+            name="WeakFreeFnType",
+            bases=["CCObject"],
+            methods=[
+                Method(name="winOnly", ret="void", args=[], platforms={"win": "0x1"}),
+                Method(name="m1Only", ret="void", args=[], platforms={"m1": "0x1"}),
+                Method(name="iosOnly", ret="void", args=[], platforms={"ios": "0x1"}),
+                Method(
+                    name="android32Only",
+                    ret="void",
+                    args=[],
+                    platforms={"android32": "0x1"},
+                ),
+                Method(
+                    name="android64Only",
+                    ret="void",
+                    args=[],
+                    platforms={"android64": "0x1"},
+                ),
+            ],
+        )
+        fn = Function(
+            name="makeWeak",
+            namespace="geode::utils",
+            ret="WeakFreeFnType*",
+            args=[],
+        )
+        root = Root(classes=[ccobject, weak], functions=[fn])
+
+        data = collect_parity(root)
+        key = free_function_key(fn)
+
+        self.assertEqual(
+            data["freeFunctions"][key]["supportedPlatforms"],
+            ["win", "m1", "ios", "android32", "android64"],
+        )
+        self.assertEqual(
+            data["freeFunctions"][key]["finalSkipReason"],
+            "not-callable-type:win:WeakFreeFnType",
+        )
+
     def test_intersection_keeps_only_all_platform_methods(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")
         foo = Class(

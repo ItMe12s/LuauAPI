@@ -200,6 +200,51 @@ class FreeFunctionIntersectionTests(unittest.TestCase):
         self.assertIn("geode::utils::game::restart(arg0)", win)
         self.assertNotIn("geode::utils::game::restart(arg0, arg1)", win)
 
+    def test_final_class_prune_drops_free_function_object_ref(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        weak = Class(
+            name="WeakFreeFnType",
+            bases=["CCObject"],
+            methods=[
+                Method(name="winOnly", ret="void", args=[], platforms={"win": "0x1"}),
+                Method(name="m1Only", ret="void", args=[], platforms={"m1": "0x1"}),
+                Method(name="iosOnly", ret="void", args=[], platforms={"ios": "0x1"}),
+                Method(
+                    name="android32Only",
+                    ret="void",
+                    args=[],
+                    platforms={"android32": "0x1"},
+                ),
+                Method(
+                    name="android64Only",
+                    ret="void",
+                    args=[],
+                    platforms={"android64": "0x1"},
+                ),
+            ],
+        )
+        fn = Function(
+            name="makeWeak",
+            namespace="geode::utils",
+            ret="WeakFreeFnType*",
+            args=[],
+        )
+        root = Root(classes=[ccobject, weak], functions=[fn])
+
+        plan = collect_plan(root, "win")
+
+        self.assertEqual(plan.supported_free_functions, [])
+        self.assertIn("WeakFreeFnType", plan.skipped_classes)
+        self.assertIn(
+            (
+                free_function_key(fn),
+                "geode.utils",
+                "makeWeak",
+                "not-callable-type:win:WeakFreeFnType",
+            ),
+            plan.skipped_free_functions,
+        )
+
 
 class FreeFunctionSupportedTests(unittest.TestCase):
     def test_supported_marshallable_signature(self) -> None:
