@@ -85,16 +85,19 @@ Namespace free functions (e.g. `geode::utils::game::restart`) are filtered in `p
 Add a `FreeFnOverride` if Broma lists overloads not present on a platform and emitting them would break or mislead.
 Leave `win` unrestricted unless shown otherwise.
 
-Each override sets `namespace`, `name`, and `allowed_arities_by_platform` (platform ids to allowed argument counts).
-Platforms not listed get all arities.
+Each override sets `namespace`, `name`, and optionally:
+
+- `allowed_arities_by_platform`: platform ids to allowed argument counts. Platforms not listed get all arities.
+- `excluded_platforms`: platform ids where the function is not bound at all (e.g. missing implementation).
 
 ### Current overrides
 
-| Function | Platforms with restriction | Allowed arities |
+| Function | Restriction | Details |
 | --- | --- | --- |
-| `geode::utils::game::restart` | `android`, `android32`, `android64`, `ios`, `mac`, `imac`, `m1` | 1 only |
+| `geode::utils::game::restart` | arity limit | `android`, `android32`, `android64`, `ios`, `mac`, `imac`, `m1`: 1 arg only |
+| `geode::utils::getEnvironmentVariable` | excluded | `ios` only, Geode iOS loader has no implementation |
 
-`win` is unlisted, both overloads remain until two-argument support is checked on Windows.
+`win` is unlisted for `restart`, both overloads remain until two-argument support is checked on Windows.
 
 ### Platform groups
 

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from luau_codegen.convert.type_map import classify_arg, classify_return
 from luau_codegen.parse.broma import Class, Function
@@ -10,7 +10,8 @@ from luau_codegen.parse.broma import Class, Function
 class FreeFnOverride:
     namespace: str
     name: str
-    allowed_arities_by_platform: dict[str, frozenset[int]]
+    allowed_arities_by_platform: dict[str, frozenset[int]] = field(default_factory=dict)
+    excluded_platforms: frozenset[str] = frozenset()
 
 
 _OVERRIDES: tuple[FreeFnOverride, ...] = (
@@ -27,6 +28,11 @@ _OVERRIDES: tuple[FreeFnOverride, ...] = (
             "m1": frozenset({1}),
         },
     ),
+    FreeFnOverride(
+        namespace="geode::utils",
+        name="getEnvironmentVariable",
+        excluded_platforms=frozenset({"ios"}),
+    ),
 )
 
 _BY_KEY: dict[tuple[str, str], FreeFnOverride] = {
@@ -34,14 +40,20 @@ _BY_KEY: dict[tuple[str, str], FreeFnOverride] = {
 }
 
 
-def free_function_allowed(fn: Function, target_platform: str) -> bool:
+def free_function_skip_reason(fn: Function, target_platform: str) -> str | None:
     rule = _BY_KEY.get((fn.namespace, fn.name))
     if rule is None:
-        return True
+        return None
+    if target_platform in rule.excluded_platforms:
+        return f"free-function-excluded:{target_platform}"
     arities = rule.allowed_arities_by_platform.get(target_platform)
-    if arities is None:
-        return True
-    return len(fn.args) in arities
+    if arities is not None and len(fn.args) not in arities:
+        return f"free-function-override-arity:{target_platform}"
+    return None
+
+
+def free_function_allowed(fn: Function, target_platform: str) -> bool:
+    return free_function_skip_reason(fn, target_platform) is None
 
 
 def free_function_supported(fn: Function, objects: dict[str, Class]) -> bool:

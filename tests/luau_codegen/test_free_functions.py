@@ -74,6 +74,50 @@ class FreeFunctionOverrideTests(unittest.TestCase):
         self.assertNotIn("restart: (self: any, a0: boolean, a1: boolean)", out)
 
 
+class GetEnvironmentVariableExclusionTests(unittest.TestCase):
+    def _get_env(self) -> Function:
+        return Function(
+            name="getEnvironmentVariable",
+            namespace="geode::utils",
+            ret="std::string",
+            args=[Arg("ZStringView", "name")],
+        )
+
+    def test_free_fn_excluded_on_ios(self) -> None:
+        fn = self._get_env()
+        self.assertFalse(free_fn_allowed(fn, "ios"))
+        for plat in ("win", "android64", "m1"):
+            self.assertTrue(free_fn_allowed(fn, plat))
+
+    def test_emit_drops_get_environment_variable_on_ios(self) -> None:
+        functions = [self._get_env()]
+        skipped: list[tuple[str, str, str]] = []
+        out = emit_free_functions_file(functions, {}, "ios", skipped)
+        self.assertNotIn("geode::utils::getEnvironmentVariable", out)
+        self.assertIn(
+            (
+                "geode.utils",
+                "getEnvironmentVariable",
+                "free-function-excluded:ios",
+            ),
+            skipped,
+        )
+
+    def test_emit_keeps_get_environment_variable_on_win(self) -> None:
+        functions = [self._get_env()]
+        skipped: list[tuple[str, str, str]] = []
+        out = emit_free_functions_file(functions, {}, "win", skipped)
+        self.assertIn("geode::utils::getEnvironmentVariable(arg0)", out)
+        self.assertEqual(skipped, [])
+
+    def test_emit_keeps_get_environment_variable_on_android64(self) -> None:
+        functions = [self._get_env()]
+        skipped: list[tuple[str, str, str]] = []
+        out = emit_free_functions_file(functions, {}, "android64", skipped)
+        self.assertIn("geode::utils::getEnvironmentVariable(arg0)", out)
+        self.assertEqual(skipped, [])
+
+
 class FreeFunctionSupportedTests(unittest.TestCase):
     def test_supported_marshallable_signature(self) -> None:
         fn = Function(

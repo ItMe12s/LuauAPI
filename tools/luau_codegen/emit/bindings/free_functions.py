@@ -6,6 +6,7 @@ from typing import Dict, List
 from luau_codegen.parse.broma import Class, Function
 from luau_codegen.policy.free_functions import (
     free_function_allowed,
+    free_function_skip_reason,
     free_function_supported,
 )
 from luau_codegen.util.identifiers import cxx_id
@@ -74,11 +75,12 @@ def emit_free_functions_file(
             continue
         if not free_function_allowed(fn, target_platform):
             if skipped is not None:
+                reason = free_function_skip_reason(fn, target_platform)
                 skipped.append(
                     (
                         fn.lua_path,
                         fn.name,
-                        f"free-function-override-arity:{target_platform}",
+                        reason or f"free-function-override-arity:{target_platform}",
                     )
                 )
             continue
