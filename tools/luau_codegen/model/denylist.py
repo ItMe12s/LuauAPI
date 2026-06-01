@@ -244,6 +244,12 @@ PREFERRED_OVERLOADS: dict[tuple[str, str], set[tuple[str, ...]]] = {
     ("Notification", "setIcon"): {("NotificationIcon",)},
     ("ColorPickPopup", "create"): {("bool",)},
     ("ColorSelectPopup", "create"): {("cocos2d::ccColor3B",)},
+    ("CCMenuItemSprite", "create"): {
+        ("cocos2d::CCNode*", "cocos2d::CCNode*", "cocos2d::CCNode*"),
+    },
+    ("CCMenuItemImage", "create"): {
+        ("char const*", "char const*", "char const*"),
+    },
 }
 
 # Constructors are blocked unless listed here. Use for rare cases where static `create()` is unavailable or filtered out.

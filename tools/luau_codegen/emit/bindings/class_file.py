@@ -7,7 +7,14 @@ from luau_codegen.policy.fields import bindable_field
 from luau_codegen.policy.filtering import call_label, returns_owned
 from luau_codegen.emit.cxx_templates import file_preamble
 from luau_codegen.emit.hooks import emit_hook_target, hook_id, hook_suffix
-from luau_codegen.convert.marshalling import check_arg, push_return, push_value
+from luau_codegen.convert.marshalling import (
+    check_arg,
+    check_sel_menu_handler,
+    push_return,
+    push_value,
+    sel_menu_call_args,
+)
+from luau_codegen.convert.sel_args import is_ccobject_ptr, iter_lua_method_args
 from luau_codegen.model.domain import cxx_name, lua_namespace, short_name
 from luau_codegen.convert.type_map import (
     TypeInfo,
@@ -26,17 +33,33 @@ def _gen_ns(cls: Class) -> str:
     return f"ns_{cxx_id(cls.name)}"
 
 
+def _emit_menu_handler_anchors(
+    menu_handlers: List[str],
+    ret,
+    m: Method,
+) -> List[str]:
+    if not menu_handlers:
+        return []
+    lines: List[str] = []
+    if ret.kind == "object":
+        for handler in menu_handlers:
+            lines.append(f"        luax::anchorMenuHandler(result, {handler});\n")
+    elif not m.is_static:
+        for handler in menu_handlers:
+            lines.append(f"        luax::anchorMenuHandler(self, {handler});\n")
+    else:
+        for handler in menu_handlers:
+            lines.append(f"        luax::registerOrphanMenuHandler({handler});\n")
+    return lines
+
+
 def _emit_invoke(cls: Class, m: Method, objects: Dict[str, Class], suffix: str) -> str:
     fn = f"luaapi_{cxx_id(cls.name)}_{cxx_id(m.name)}{suffix}"
     label = call_label(cls, m)
     ret = require_classify_return(m.ret, objects)
     arg_infos = _classify_method_args(m, objects)
 
-    input_count = 0
-    for arg, info in zip(m.args, arg_infos):
-        if ret.kind == "void" and info.is_out:
-            continue
-        input_count += 1
+    input_count = sum(1 for _ in iter_lua_method_args(m, arg_infos, ret_kind=ret.kind))
 
     out = [f"    int {fn}(lua_State* L) {{\n"]
     expected = input_count + (0 if m.is_static else 1)
@@ -44,6 +67,7 @@ def _emit_invoke(cls: Class, m: Method, objects: Dict[str, Class], suffix: str) 
         f'        if (lua_gettop(L) != {expected}) luaL_error(L, "{label} expected {expected} args");\n'
     )
     call_args: List[str] = []
+    menu_handlers: List[str] = []
     if not m.is_static:
         out.append(
             f'        auto self = luax::Usertype<{cxx_name(cls)}>::check(L, 1, "{label}");\n'
@@ -59,6 +83,19 @@ def _emit_invoke(cls: Class, m: Method, objects: Dict[str, Class], suffix: str) 
             else:
                 out.append(f"        {info.cxx_type} {var}{{}};\n")
             call_args.append(var)
+            continue
+        if (
+            arg_idx + 1 < len(m.args)
+            and is_ccobject_ptr(info)
+            and arg_infos[arg_idx + 1].kind == "sel"
+        ):
+            continue
+        if info.kind == "sel":
+            sel_var = f"sel{arg_idx}"
+            out.extend(check_sel_menu_handler(lua_idx, sel_var, label))
+            call_args.extend(sel_menu_call_args(sel_var))
+            menu_handlers.append(f"{sel_var}_handler")
+            lua_idx += 1
             continue
         out.extend(check_arg(arg, info, lua_idx, var, label))
         call_args.append(f"std::move({var})" if info.kind == "callback" else var)
@@ -78,6 +115,7 @@ def _emit_invoke(cls: Class, m: Method, objects: Dict[str, Class], suffix: str) 
     ]
     if ret.kind == "void":
         out.append(f"        {target};\n")
+        out.extend(_emit_menu_handler_anchors(menu_handlers, ret, m))
         if out_refs:
             for arg_idx, info in out_refs:
                 out.extend(push_value(info, f"arg{arg_idx}", False))
@@ -88,6 +126,7 @@ def _emit_invoke(cls: Class, m: Method, objects: Dict[str, Class], suffix: str) 
         out.append(f"        auto result = {target};\n")
         if m.is_bound_ctor:
             out.append("        result->autorelease();\n")
+        out.extend(_emit_menu_handler_anchors(menu_handlers, ret, m))
         out.extend(push_return(ret, "result", returns_owned(m) or m.is_bound_ctor))
     out.append("    }\n\n")
     return "".join(out)

@@ -98,7 +98,13 @@ def hookable(
         return False
     if any(is_out_reference(arg.type) for arg in m.args):
         return False
-    return all(classify_arg(arg.type, objects) is not None for arg in m.args)
+    for arg in m.args:
+        info = classify_arg(arg.type, objects)
+        if info is None:
+            return False
+        if info.kind in ("sel", "callback"):
+            return False
+    return True
 
 
 def _emit_apply_args_ctx(suffix: str, args: list[tuple]) -> str:

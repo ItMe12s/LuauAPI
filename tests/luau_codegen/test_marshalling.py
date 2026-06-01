@@ -49,6 +49,80 @@ class F6NumericMarshallingTests(unittest.TestCase):
         self.assertIn("check<int>", text)
 
 
+class CallbackMarshallingTests(unittest.TestCase):
+    def test_callback_arg_emits_lua_callback_helper(self) -> None:
+        sender = TypeInfo(
+            kind="object",
+            cxx_type="cocos2d::CCObject*",
+            lua_type="CCObject",
+            class_name="CCObject",
+        )
+        info = TypeInfo(
+            kind="callback",
+            cxx_type="std::function<void(cocos2d::CCObject*)>",
+            lua_type="(sender: CCObject) -> ()",
+            callback_args=(sender,),
+        )
+        text = "".join(
+            check_arg(
+                Arg("std::function<void(cocos2d::CCObject*)>", "cb"),
+                info,
+                2,
+                "cb",
+                "Test.method",
+            )
+        )
+        self.assertIn("std::make_shared<luax::LuaCallback>", text)
+        self.assertIn("cb_cb->invoke(1, 0", text)
+        self.assertIn("pushBorrowed", text)
+        self.assertNotIn("protectedCall", text)
+
+    def test_callback_ctx_struct_uses_semicolon_fields(self) -> None:
+        sender = TypeInfo(
+            kind="object",
+            cxx_type="FLAlertLayer*",
+            lua_type="FLAlertLayer",
+            class_name="FLAlertLayer",
+        )
+        ok = TypeInfo(kind="bool", cxx_type="bool", lua_type="boolean")
+        info = TypeInfo(
+            kind="callback",
+            cxx_type="std::function<void(FLAlertLayer*, bool)>",
+            lua_type="(arg1: FLAlertLayer, arg2: boolean) -> ()",
+            callback_args=(sender, ok),
+        )
+        text = "".join(
+            check_arg(
+                Arg("std::function<void(FLAlertLayer*, bool)>", "cb"),
+                info,
+                5,
+                "arg4",
+                "geode.createQuickPopup",
+            )
+        )
+        self.assertIn("FLAlertLayer* p0; bool p1;", text)
+        self.assertNotIn("p0, bool p1", text)
+
+    def test_sel_menu_handler_emits_trampoline(self) -> None:
+        info = TypeInfo(
+            kind="sel",
+            cxx_type="SEL_MenuHandler",
+            lua_type="(sender: CCObject) -> ()",
+        )
+        text = "".join(
+            check_arg(Arg("SEL_MenuHandler", "sel"), info, 3, "sel", "CCMenuItem.init")
+        )
+        self.assertIn("LuaMenuHandler::create", text)
+        self.assertIn("sel_handler", text)
+
+    def test_sel_menu_call_args(self) -> None:
+        text = sel_menu_call_args("sel2")
+        self.assertEqual(
+            text,
+            ["sel2_handler", "menu_selector(luax::LuaMenuHandler::onCallback)"],
+        )
+
+
 class EmitStackCheckTests(unittest.TestCase):
     def test_ccpoint_uses_check_specialization(self) -> None:
         info = TypeInfo(kind="value", cxx_type="cocos2d::CCPoint", lua_type="CCPoint")

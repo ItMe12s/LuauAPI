@@ -513,3 +513,55 @@ class F8ConstMethodManglingTests(unittest.TestCase):
         self.assertEqual(
             android_symbol(cls, method), "_ZN3Foo4takeEN2gd6vectorIiSaIiEEE"
         )
+
+
+class SelMenuHandlerBindingTests(unittest.TestCase):
+    def test_sel_pair_collapses_target_and_anchors_on_result(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        ccsprite = Class(name="CCSprite", namespace="cocos2d", bases=["CCObject"])
+        menu_item = Class(
+            name="CCMenuItem",
+            namespace="cocos2d",
+            bases=["CCNode"],
+            methods=[
+                Method(
+                    name="initWithNormalSprite",
+                    ret="bool",
+                    args=[
+                        Arg("cocos2d::CCSprite*", "normal"),
+                        Arg("cocos2d::CCSprite*", "selected"),
+                        Arg("cocos2d::CCObject*", "target"),
+                        Arg("SEL_MenuHandler", "selector"),
+                    ],
+                    platforms=all_platforms("0x1"),
+                )
+            ],
+        )
+        ccnode = Class(name="CCNode", namespace="cocos2d", bases=["CCObject"])
+        objects = {
+            "CCObject": ccobject,
+            "CCSprite": ccsprite,
+            "CCMenuItem": menu_item,
+            "CCNode": ccnode,
+            "cocos2d::CCObject": ccobject,
+            "cocos2d::CCSprite": ccsprite,
+            "cocos2d::CCMenuItem": menu_item,
+            "cocos2d::CCNode": ccnode,
+        }
+
+        text = _emit_class_file(
+            menu_item,
+            {"initWithNormalSprite": menu_item.methods},
+            [],
+            [],
+            objects,
+            set(),
+            1,
+            "win",
+        )
+
+        self.assertIn("expected 4 args", text)
+        self.assertIn("LuaMenuHandler::create", text)
+        self.assertIn("menu_selector(luax::LuaMenuHandler::onCallback)", text)
+        self.assertNotIn("arg2 = luax::Usertype<cocos2d::CCObject>", text)
+        self.assertIn("anchorMenuHandler(self, sel3_handler)", text)

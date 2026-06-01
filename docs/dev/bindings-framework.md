@@ -77,6 +77,18 @@ The generated hook runtime applies overrides through a pcall trampoline so decod
 `LuaRef` wraps a Lua registry reference with RAII. It records the runtime generation and the resources root,
 and it becomes invalid after a runtime restart. The task scheduler and the hook runtime store callbacks as `LuaRef`.
 
+## Callback bridge
+
+`LuaCallback` centralizes the pattern for invoking a stored Luau function from C++:
+push the registry ref, apply `ResourcesRootScope`, call `Runtime::protectedCall`, and restore the stack top.
+
+Generated bindings use `LuaCallback` when a method argument is a `std::function` / `Function` / `MiniFunction`.
+For cocos2d `SEL_MenuHandler` pairs `(CCObject* target, SEL_MenuHandler selector)`,
+codegen collapses the pair into one Luau function argument and creates a `LuaMenuHandler` trampoline (`CCObject` subclass).
+The handler is anchored on the returned object, on `self`, or in an orphan registry cleared at shutdown.
+
+See [Reference: callbacks](../lua/reference/callbacks.md) for script-facing usage.
+
 ## Per node fields
 
 `Fields` gives each `CCNode` a persistent Lua table and caches it in a map keyed by the node.
@@ -99,6 +111,8 @@ In practice most game types are generated. See [Codegen](codegen.md).
 - `src/lua/bindings/framework/UsertypeRegistry.cpp`
 - `src/lua/bindings/framework/Stack.hpp`
 - `src/lua/bindings/framework/LuaRef.hpp`
+- `src/lua/bindings/framework/LuaCallback.hpp`
+- `src/lua/bindings/framework/LuaMenuHandler.hpp`
 - `src/lua/bindings/framework/Ref.hpp`
 - `src/lua/bindings/framework/Types.hpp`
 - `src/lua/bindings/framework/Fields.cpp`

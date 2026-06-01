@@ -121,55 +121,86 @@ def emit_stack_check(
     raise ValueError(f"unsupported type kind: {info.kind}")
 
 
-def _push_impl(info: TypeInfo, expr: str, owned: bool) -> list[str]:
+def _push_impl(
+    info: TypeInfo, expr: str, owned: bool, *, indent: str = "        "
+) -> list[str]:
     if info.kind == "bool":
-        return [f"        luax::push(L, {expr});\n"]
+        return [f"{indent}luax::push(L, {expr});\n"]
     if info.kind == "number":
-        return [f"        lua_pushnumber(L, static_cast<double>({expr}));\n"]
+        return [f"{indent}lua_pushnumber(L, static_cast<double>({expr}));\n"]
     if info.kind == "wideint":
-        return [f"        luax::pushIntegerString(L, {expr});\n"]
+        return [f"{indent}luax::pushIntegerString(L, {expr});\n"]
     if info.kind == "enum":
         return [
-            f"        lua_pushnumber(L, static_cast<double>(static_cast<int>({expr})));\n"
+            f"{indent}lua_pushnumber(L, static_cast<double>(static_cast<int>({expr})));\n"
         ]
     if info.kind == "string":
         if info.cxx_type.endswith("*"):
-            return [f"        luax::push(L, {expr});\n"]
-        return [f"        luax::push(L, std::string({expr}));\n"]
+            return [f"{indent}luax::push(L, {expr});\n"]
+        return [f"{indent}luax::push(L, std::string({expr}));\n"]
     if info.kind == "value":
         if info.lua_type in _VALUE_CHECK_TYPES:
-            return [f"        luax::push(L, {expr});\n"]
+            return [f"{indent}luax::push(L, {expr});\n"]
     if info.kind == "object":
         push = "pushOwned" if owned else "pushBorrowed"
-        return [f"        luax::Usertype<{info.cxx_type[:-1]}>::{push}(L, {expr});\n"]
+        return [f"{indent}luax::Usertype<{info.cxx_type[:-1]}>::{push}(L, {expr});\n"]
     raise ValueError(f"unsupported type kind: {info.kind}")
+
+
+def _emit_callback_lambda(idx: int, var: str, info: TypeInfo, label: str) -> list[str]:
+    params = ", ".join(
+        f"{cb.cxx_type} {var}_p{i}" for i, cb in enumerate(info.callback_args)
+    )
+    lines = [
+        f"        luaL_checktype(L, {idx}, LUA_TFUNCTION);\n",
+        f"        auto {var}_cb = std::make_shared<luax::LuaCallback>(L, {idx});\n",
+        f"        auto {var} = [{var}_cb]({params}) {{\n",
+    ]
+    if info.callback_args:
+        ctx_fields = "; ".join(
+            f"{cb.cxx_type} p{i}" for i, cb in enumerate(info.callback_args)
+        )
+        ctx_init = ", ".join(f"{var}_p{i}" for i in range(len(info.callback_args)))
+        lines.append(f"            struct {var}_Ctx {{ {ctx_fields}; }};\n")
+        lines.append(f"            {var}_Ctx ctx{{ {ctx_init} }};\n")
+        lines.append(
+            f'            {var}_cb->invoke({len(info.callback_args)}, 0, "{label} callback", luax::kHookScriptDeadlineMs,\n'
+        )
+        lines.append(f"                +[](lua_State* L, void* raw) {{\n")
+        lines.append(f"                    auto* c = static_cast<{var}_Ctx*>(raw);\n")
+        for i, cb in enumerate(info.callback_args):
+            lines.extend(
+                _push_impl(cb, f"c->p{i}", False, indent="                    ")
+            )
+        lines.append("                }, &ctx);\n")
+    else:
+        lines.append(
+            f'            {var}_cb->invoke(0, 0, "{label} callback", luax::kHookScriptDeadlineMs);\n'
+        )
+    lines.append("        };\n")
+    return lines
+
+
+def check_sel_menu_handler(idx: int, var: str, label: str) -> list[str]:
+    return [
+        f"        luaL_checktype(L, {idx}, LUA_TFUNCTION);\n",
+        f"        auto {var}_handler = luax::LuaMenuHandler::create(L, {idx});\n",
+        f'        if (!{var}_handler) luaL_error(L, "{label}: failed to create menu handler");\n',
+    ]
+
+
+def sel_menu_call_args(var: str) -> list[str]:
+    return [
+        f"{var}_handler",
+        "menu_selector(luax::LuaMenuHandler::onCallback)",
+    ]
 
 
 def check_arg(arg: Arg, info: TypeInfo, idx: int, var: str, label: str) -> list[str]:
     if info.kind == "callback":
-        params = ", ".join(
-            f"{cb.cxx_type} {var}_p{i}" for i, cb in enumerate(info.callback_args)
-        )
-        lines = [
-            f"        luaL_checktype(L, {idx}, LUA_TFUNCTION);\n",
-            f"        auto {var}_ref = std::make_shared<luax::LuaRef>(L, {idx});\n",
-            f"        auto {var} = [{var}_ref]({params}) {{\n",
-            f"            auto* {var}_rt = luax::Runtime::getIfInitialized();\n",
-            f"            if (!{var}_rt || !{var}_rt->ready()) return;\n",
-            f"            auto* L = {var}_rt->state();\n",
-            f"            if (!L) return;\n",
-            f"            int {var}_top = lua_gettop(L);\n",
-            f"            if (!{var}_ref->push()) {{ lua_settop(L, {var}_top); return; }}\n",
-            f"            luax::Runtime::ResourcesRootScope {var}_scope(*{var}_rt, {var}_ref->resourcesRoot());\n",
-        ]
-        for i, cb in enumerate(info.callback_args):
-            lines.extend(push_value(cb, f"{var}_p{i}", False))
-        lines.append(
-            f'            {var}_rt->protectedCall({len(info.callback_args)}, 0, "{label} callback", luax::kHookScriptDeadlineMs);\n'
-        )
-        lines.append(f"            lua_settop(L, {var}_top);\n")
-        lines.append("        };\n")
-        return lines
+        return _emit_callback_lambda(idx, var, info, label)
+    if info.kind == "sel":
+        return check_sel_menu_handler(idx, var, label)
     return emit_stack_check(info, idx, var, label, declare=True)
 
 

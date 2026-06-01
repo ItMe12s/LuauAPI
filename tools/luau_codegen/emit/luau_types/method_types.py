@@ -4,6 +4,7 @@ from typing import Dict, List
 
 from luau_codegen.parse.broma import Class, Method
 from luau_codegen.convert.type_map import TypeInfo, classify_arg, classify_return
+from luau_codegen.convert.sel_args import iter_lua_method_args
 
 _DUMMY_CLS = Class(name="")
 
@@ -61,14 +62,15 @@ def _method_return_type(cls: Class, m: Method, objects: Dict[str, Class]) -> str
 def _classify_input_args(m: Method, objects: Dict[str, Class]) -> List[TypeInfo]:
     ret = classify_return(m.ret, objects)
     assert ret is not None
-    args: List[TypeInfo] = []
+    arg_infos = []
     for arg in m.args:
         info = classify_arg(arg.type, objects)
         assert info is not None
-        if ret.kind == "void" and info.is_out:
-            continue
-        args.append(info)
-    return args
+        arg_infos.append(info)
+    return [
+        lua_arg.info
+        for lua_arg in iter_lua_method_args(m, arg_infos, ret_kind=ret.kind)
+    ]
 
 
 def _method_type(cls: Class, methods: List[Method], objects: Dict[str, Class]) -> str:

@@ -11,6 +11,7 @@ namespace luax {
     constexpr std::size_t kMaxHookCallbacksPerTarget = 64;
     constexpr std::size_t kMaxScheduledTasks         = 4096;
     constexpr std::size_t kMaxImGuiDrawCallbacks     = 256;
+    constexpr std::size_t kMaxCallbackTrampolines    = 4096;
     constexpr int kDefaultScriptDeadlineMs           = 250;
     constexpr int kHookScriptDeadlineMs              = 50;
     constexpr int kImGuiScriptDeadlineMs             = 16;

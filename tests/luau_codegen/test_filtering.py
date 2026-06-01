@@ -98,3 +98,24 @@ class LinkClassFilterTests(unittest.TestCase):
 
         self.assertFalse(ok)
         self.assertEqual(reason, "inaccessible")
+
+
+class SelMenuHandlerFilterTests(unittest.TestCase):
+    def test_orphan_sel_menu_handler_is_rejected(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        cls = Class(name="Foo", namespace="cocos2d", bases=["CCObject"])
+        method = Method(
+            name="register",
+            ret="void",
+            args=[
+                Arg("char const*", "label"),
+                Arg("SEL_MenuHandler", "selector"),
+            ],
+            platforms=all_platforms("0x1"),
+        )
+        objects = {"CCObject": ccobject, "Foo": cls}
+
+        ok, reason = supported(cls, method, objects, "win")
+
+        self.assertFalse(ok)
+        self.assertEqual(reason, "unsupported-arg:SEL_MenuHandler")

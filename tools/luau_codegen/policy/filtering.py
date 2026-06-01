@@ -19,6 +19,7 @@ from luau_codegen.convert.type_map import (
     method_input_arg_count,
     normalize_type,
 )
+from luau_codegen.convert.sel_args import is_ccobject_ptr
 
 STRICT_DIRECT_PLATFORMS: set[str] = {"ios"}
 
@@ -123,9 +124,16 @@ def supported(
         return False, f"not-callable:{target_platform}"
     if classify_return(m.ret, objects) is None:
         return False, f"unsupported-return:{m.ret}"
-    for arg in m.args:
-        if classify_arg(arg.type, objects) is None:
+    for i, arg in enumerate(m.args):
+        info = classify_arg(arg.type, objects)
+        if info is None:
             return False, f"unsupported-arg:{arg.type}"
+        if info.kind == "sel":
+            if i == 0:
+                return False, f"unsupported-arg:{arg.type}"
+            prev = classify_arg(m.args[i - 1].type, objects)
+            if prev is None or not is_ccobject_ptr(prev):
+                return False, f"unsupported-arg:{arg.type}"
     return True, ""
 
 

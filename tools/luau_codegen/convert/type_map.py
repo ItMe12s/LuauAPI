@@ -7,6 +7,17 @@ from typing import AbstractSet, Dict, Optional, Set, Tuple
 from luau_codegen.parse.broma import Class, split_arg, split_top_level
 from luau_codegen.model.domain import short_name
 
+SEL_MENU_HANDLER_TYPES = frozenset(
+    {
+        "SEL_MenuHandler",
+        "cocos2d::SEL_MenuHandler",
+    }
+)
+
+
+def is_sel_menu_handler(t: str) -> bool:
+    return normalize_type(t) in SEL_MENU_HANDLER_TYPES
+
 
 WIDE_INTEGER_TYPES = {
     "long",
@@ -308,6 +319,16 @@ def _classify_core(
         callback = _parse_callback(n, object_classes)
         if callback is not None:
             return callback
+        if is_sel_menu_handler(n):
+            sender = classify_arg("cocos2d::CCObject*", object_classes)
+            if sender is None:
+                return None
+            return TypeInfo(
+                "sel",
+                n,
+                "(sender: CCObject) -> ()",
+                callback_args=(sender,),
+            )
     if n.endswith("*"):
         cls = resolve_object_class(n, object_classes)
         if cls:
@@ -360,13 +381,9 @@ def require_classify_return(t: str, object_classes: Dict[str, Class]) -> TypeInf
 
 
 def method_input_arg_count(method, object_classes: Dict[str, Class]) -> int:
+    from luau_codegen.convert.sel_args import count_lua_method_args
+
     ret = classify_return(method.ret, object_classes)
     if ret is None:
         return len(method.args)
-    count = 0
-    for arg in method.args:
-        info = classify_arg(arg.type, object_classes)
-        if info and ret.kind == "void" and info.is_out:
-            continue
-        count += 1
-    return count
+    return count_lua_method_args(method, object_classes, ret.kind)

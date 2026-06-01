@@ -49,3 +49,21 @@ class GeodeEnumRegistrationTests(unittest.TestCase):
         assert info is not None
         self.assertEqual(info.kind, "object")
         self.assertEqual(info.class_name, "CollidingClass")
+
+    def test_classify_sel_menu_handler(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        objects = {"CCObject": ccobject}
+        info = classify_arg("SEL_MenuHandler", objects)
+        self.assertIsNotNone(info)
+        assert info is not None
+        self.assertEqual(info.kind, "sel")
+        self.assertEqual(info.lua_type, "(sender: CCObject) -> ()")
+
+    def test_classify_std_function_callback(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        objects = {"CCObject": ccobject}
+        info = classify_arg("std::function<void(cocos2d::CCObject*)>", objects)
+        self.assertIsNotNone(info)
+        assert info is not None
+        self.assertEqual(info.kind, "callback")
+        self.assertEqual(info.lua_type, "(arg1: CCObject) -> ()")

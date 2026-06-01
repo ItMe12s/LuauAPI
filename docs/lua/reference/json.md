@@ -46,8 +46,8 @@ geode.json.dump({ 1, 2, 3 }, 2) -- pretty-printed array, 2-space indent
 
 ## Related
 
-- [Reference: mod](mod.md) saved values and settings use the same JSON model
-- [Reference: fs](fs.md) read and write JSON files on disk
+- [Reference: mod](mod.md)
+- [Reference: fs](fs.md)
 - [Globals](globals.md)
 
 ## Source

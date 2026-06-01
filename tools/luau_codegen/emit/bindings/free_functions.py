@@ -5,7 +5,13 @@ from typing import Dict, List
 
 from luau_codegen.parse.broma import Class, Function
 from luau_codegen.util.identifiers import cxx_id
-from luau_codegen.convert.marshalling import check_arg, push_return
+from luau_codegen.convert.marshalling import (
+    check_arg,
+    check_sel_menu_handler,
+    push_return,
+    sel_menu_call_args,
+)
+from luau_codegen.convert.sel_args import is_ccobject_ptr, iter_lua_method_args
 from luau_codegen.convert.type_map import require_classify_arg, require_classify_return
 from luau_codegen.emit.cxx_templates import file_preamble
 
@@ -21,23 +27,47 @@ def _emit_free_invoke(fn: Function, objects: Dict[str, Class], suffix: str) -> s
     label = f"{fn.lua_path}.{fn.name}"
     ret = require_classify_return(fn.ret, objects)
     arg_infos = [require_classify_arg(arg.type, objects) for arg in fn.args]
+    input_count = sum(1 for _ in iter_lua_method_args(fn, arg_infos, ret_kind=ret.kind))
 
     out = [f"    int {cname}(lua_State* L) {{\n"]
     out.append(
-        f'        if (lua_gettop(L) != {len(fn.args)}) luaL_error(L, "{label} expected {len(fn.args)} args");\n'
+        f'        if (lua_gettop(L) != {input_count}) luaL_error(L, "{label} expected {input_count} args");\n'
     )
     call_args: List[str] = []
+    menu_handlers: List[str] = []
+    lua_idx = 1
     for arg_idx, (arg, info) in enumerate(zip(fn.args, arg_infos)):
         var = f"arg{arg_idx}"
-        out.extend(check_arg(arg, info, arg_idx + 1, var, label))
+        if (
+            arg_idx + 1 < len(fn.args)
+            and is_ccobject_ptr(info)
+            and arg_infos[arg_idx + 1].kind == "sel"
+        ):
+            continue
+        if info.kind == "sel":
+            sel_var = f"sel{arg_idx}"
+            out.extend(check_sel_menu_handler(lua_idx, sel_var, label))
+            call_args.extend(sel_menu_call_args(sel_var))
+            menu_handlers.append(f"{sel_var}_handler")
+            lua_idx += 1
+            continue
+        out.extend(check_arg(arg, info, lua_idx, var, label))
         call_args.append(f"std::move({var})" if info.kind == "callback" else var)
+        lua_idx += 1
 
     target = f"{fn.namespace}::{fn.name}({', '.join(call_args)})"
     if ret.kind == "void":
         out.append(f"        {target};\n")
+        for handler in menu_handlers:
+            out.append(f"        luax::registerOrphanMenuHandler({handler});\n")
         out.extend(push_return(ret, "", False))
     else:
         out.append(f"        auto result = {target};\n")
+        for handler in menu_handlers:
+            if ret.kind == "object":
+                out.append(f"        luax::anchorMenuHandler(result, {handler});\n")
+            else:
+                out.append(f"        luax::registerOrphanMenuHandler({handler});\n")
         out.extend(push_return(ret, "result", False))
     out.append("    }\n\n")
     return "".join(out)
@@ -50,7 +80,12 @@ def _emit_free_dispatcher(fns: List[Function], objects: Dict[str, Class]) -> str
     label = f"{fns[0].lua_path}.{fns[0].name}"
     out = [f"    int {base}(lua_State* L) {{\n", "        switch (lua_gettop(L)) {\n"]
     for idx, fn in enumerate(fns):
-        out.append(f"            case {len(fn.args)}: return {base}_{idx}(L);\n")
+        arg_infos = [require_classify_arg(arg.type, objects) for arg in fn.args]
+        ret = require_classify_return(fn.ret, objects)
+        input_count = sum(
+            1 for _ in iter_lua_method_args(fn, arg_infos, ret_kind=ret.kind)
+        )
+        out.append(f"            case {input_count}: return {base}_{idx}(L);\n")
     out.append("            default: break;\n")
     out.append("        }\n")
     out.append(f'        luaL_error(L, "{label} unsupported overload arity");\n')

@@ -19,6 +19,7 @@ These values come from `src/lua/Config.hpp`.
 | Default script deadline | `250 ms` | Budget for a normal run |
 | Hook and task deadline | `50 ms` | Budget for a hook or task callback |
 | ImGui draw callbacks | `256` | Active `imgui.onDraw` handles at once |
+| Menu handler trampolines | `4096` | Orphan `SEL_MenuHandler` bridges kept in the registry |
 | ImGui draw deadline | `16 ms` | Budget for one ImGui draw callback |
 
 The public default deadline is also defined in `include/LuauAPI.hpp` as `kDefaultScriptDeadlineMs`.

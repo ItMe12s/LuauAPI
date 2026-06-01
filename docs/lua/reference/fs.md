@@ -93,8 +93,8 @@ geode.fs.remove("save", "state.json")
 
 ## Related
 
-- [Reference: json](json.md) encode and decode the data you store
-- [Reference: mod](mod.md) `getSaveDir`/`getConfigDir` return the same directories
+- [Reference: json](json.md)
+- [Reference: mod](mod.md)
 - [Globals](globals.md)
 
 ## Source
