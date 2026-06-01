@@ -30,6 +30,34 @@ if not label then return end
 label:setScale(0.5)
 ```
 
+Any node you create must get a mod-prefixed string ID. See below.
+
+## Node IDs (Mod Compatibility)
+
+Geode adds string IDs to `CCNode`. When you create a node, call `:setID()` before or right after you add it to the tree.
+This applies to sprites, labels, menus, layers, and any other `CCNode` subclass.
+
+Prefix the ID with your mod id plus a slash. Use lowercase kebab-case. No spaces.
+
+```lua
+local cocos2d = geode.cocos2d
+local modId = geode.Mod.getID()
+
+local sprite = cocos2d.CCSprite.createWithSpriteFrameName(modId .. "/coolSprite.png")
+if not sprite then return end
+sprite:setID(modId .. "/cool-sprite")
+
+local label = cocos2d.CCLabelBMFont.create("Hello!", "bigFont.fnt")
+if not label then return end
+label:setID(modId .. "/hello-label")
+```
+
+Child indexes change often. Other mods and game updates can move them around.
+String IDs let you find nodes with `getChildByID` and layouts instead of indexes.
+This is how Geode mods stay compatible with each other.
+
+For more info, see the [Geode nodetree tutorial](https://docs.geode-sdk.org/tutorials/nodetree/).
+
 ## Calling methods and reading properties
 
 Call methods with a colon. Read and write simple properties with a dot.

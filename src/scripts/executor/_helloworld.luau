@@ -1,4 +1,5 @@
 local cocos = geode.cocos2d
+local modId = geode.Mod.getID()
 
 local function helloWorld(self)
     local director = cocos.CCDirector.sharedDirector()
@@ -6,6 +7,7 @@ local function helloWorld(self)
     local winSize = director:getWinSize()
     local label = cocos.CCLabelBMFont.create("Hello, World!", "bigFont.fnt")
     if not label then return end
+    label:setID(modId .. "/hello-label")
     label:setPosition({ x = winSize.width / 2, y = winSize.height / 2 })
     self:addChild(label)
 end

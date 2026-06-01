@@ -45,6 +45,9 @@ geode.Mod.getID() -> string
 
 Returns the mod id, for example `my.mod.id`.
 
+Use this as the prefix when you call `:setID()` on nodes you create.
+See [Using game objects](../guide/using-game-objects.md).
+
 ## getName
 
 ```lua

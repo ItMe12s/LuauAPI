@@ -44,6 +44,7 @@ See [Type stubs and editor setup](reference/type-stubs.md).
 - Your script runs on the main thread.
 - Your script has a time budget, so avoid blocking and infinite loops.
 - Errors are caught and written to the log. They do not crash the game.
+- When you create a `CCNode`, call `:setID()` with your mod id as a prefix. See [Using game objects](guide/using-game-objects.md).
 
 ## Tools
 
