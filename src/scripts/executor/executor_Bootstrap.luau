@@ -37,13 +37,11 @@ imgui.onDraw(function()
         end
 
         imgui.sameLine()
-        if imgui.button("Paste (WIP)", { size = { x = buttonWidth, y = 0 } }) then
-            print("Paste (WIP)")
-        end
-
-        imgui.sameLine()
-        if imgui.button("Open File (WIP)", { size = { x = buttonWidth, y = 0 } }) then
-            print("Open File (WIP)")
+        if imgui.button("Paste", { size = { x = buttonWidth, y = 0 } }) then
+            local paste = geode.utils.clipboard.read()
+            if paste then
+                code = paste
+            end
         end
 
         imgui.sameLine()
