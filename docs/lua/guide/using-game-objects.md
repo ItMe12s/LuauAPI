@@ -78,5 +78,5 @@ You do not manage retain or release by hand. For the details, see the framework 
 
 - `src/lua/bindings/framework/Types.hpp`
 - `src/lua/bindings/framework/Fields.cpp`
-- `tools/luau_codegen/hooks.py`
-- `tools/luau_codegen/emit_luau_types.py`
+- `tools/luau_codegen/emit/hooks.py`
+- `tools/luau_codegen/emit/luau_types/`

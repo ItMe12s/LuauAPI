@@ -37,8 +37,9 @@ This keeps the tests fast and host only.
 
 ## The Python test
 
-`tests/luau_codegen_hook_tests.py` checks the hook generator. CTest registers it as `luauapi_codegen_hooks` and runs it with Python.
-It is a large test that covers offsets, symbols, platform intersection, argument marshalling, and return decoding.
+The test suite under `tests/luau_codegen/` checks the hook generator.
+CTest registers it as `luauapi_codegen_hooks` and runs it via `python -m unittest discover`.
+It covers offsets, symbols, platform intersection, argument marshalling, and return decoding.
 
 ## Source
 
@@ -49,4 +50,4 @@ It is a large test that covers offsets, symbols, platform intersection, argument
 - `tests/path_sandbox_tests.cpp`
 - `tests/require_path_tests.cpp`
 - `tests/loadstring_tests.cpp`
-- `tests/luau_codegen_hook_tests.py`
+- `tests/luau_codegen/`

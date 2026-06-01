@@ -55,6 +55,6 @@ See [Core concepts](../getting-started/concepts.md) for the full model.
 ## Source
 
 - `src/lua/bindings/task/TaskBinding.cpp`
-- `tools/luau_codegen/emit_luau_types.py`
+- `tools/luau_codegen/emit/luau_types/`
 - `src/lua/module/Requirer.cpp`
 - `src/lua/runtime/Runtime.cpp`

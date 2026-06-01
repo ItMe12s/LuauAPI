@@ -171,7 +171,7 @@ See [Limits and errors](../../cpp/limits-and-errors.md) for the full limits tabl
 
 ## Source
 
-- `tools/luau_codegen/cxx_templates.py`
-- `tools/luau_codegen/hooks.py`
-- `tools/luau_codegen/emit_luau_types.py`
+- `tools/luau_codegen/emit/cxx_templates.py`
+- `tools/luau_codegen/emit/hooks.py`
+- `tools/luau_codegen/emit/luau_types/`
 - `src/lua/Config.hpp`

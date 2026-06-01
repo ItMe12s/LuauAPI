@@ -37,7 +37,7 @@ The `definitionFiles` entry is a fixed single path, so after a rebuild you only 
 ## Source
 
 - `.luaurc`
-- `tools/luau_codegen/emit_luau_types.py`
+- `tools/luau_codegen/emit/luau_types/`
 - `tools/luau_codegen/extra_bindings/task.dluau`
 - `tools/luau_codegen/extra_bindings/imgui.dluau`
 - `CMakeLists.txt`

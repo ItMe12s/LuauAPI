@@ -29,7 +29,8 @@ The generator reads Broma binding files from the pinned Geode bindings checkout 
 Platform mapping and Geometry Dash version selection are described in [Codegen](../dev/codegen.md).
 The generated C++ sources are compiled with warnings disabled, because they are machine written.
 
-The generator entry point is `tools/luau_codegen/codegen.py`. The build calls it three times.
+The generator entry point is `python -m luau_codegen` (the package in `tools/luau_codegen/`, run with `tools/` on `PYTHONPATH`).
+The build calls it three times.
 Two of those calls list the expected outputs so that CMake knows the byproducts.
 The third call performs the real generation and writes a stamp file.
 
@@ -54,4 +55,4 @@ See [Testing](../dev/testing.md).
 ## Source
 
 - `CMakeLists.txt`
-- `tools/luau_codegen/codegen.py`
+- `tools/luau_codegen/cli/main.py`

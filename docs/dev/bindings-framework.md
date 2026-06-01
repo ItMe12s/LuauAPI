@@ -31,7 +31,7 @@ Most game types come from codegen. A few libraries are handwritten in C++:
 - `src/lua/bindings/task/TaskBinding.cpp` exposes `task` and `time`.
 - `src/lua/bindings/imgui/ImGuiBinding.cpp` exposes `imgui`.
 
-Their Luau types come from `emit_luau_types.py` or `tools/luau_codegen/extra_bindings/`.
+Their Luau types come from `tools/luau_codegen/emit/luau_types/` or `tools/luau_codegen/extra_bindings/`.
 
 ## Usertypes
 

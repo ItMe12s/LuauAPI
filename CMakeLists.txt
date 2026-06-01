@@ -154,7 +154,7 @@ if (NOT EXISTS "${LUAUAPI_BINDINGS_DIR}/GeometryDash.bro")
     message(FATAL_ERROR "LuauAPI bindings dir missing: ${LUAUAPI_BINDINGS_DIR}")
 endif()
 
-file(GLOB LUAUAPI_CODEGEN_PY CONFIGURE_DEPENDS
+file(GLOB_RECURSE LUAUAPI_CODEGEN_PY CONFIGURE_DEPENDS
     ${CMAKE_CURRENT_SOURCE_DIR}/tools/luau_codegen/*.py)
 file(GLOB LUAUAPI_BRO_FILES CONFIGURE_DEPENDS
     ${LUAUAPI_BINDINGS_DIR}/*.bro)
@@ -163,9 +163,12 @@ file(GLOB LUAUAPI_EXTRA_DLUAU_FILES CONFIGURE_DEPENDS
 file(GLOB LUAUAPI_GEODE_UI_HEADERS CONFIGURE_DEPENDS
     "${LUAUAPI_GEODE_SDK_PATH}/loader/include/Geode/ui/*.hpp")
 
+set(LUAUAPI_CODEGEN_CMD
+    ${CMAKE_COMMAND} -E env "PYTHONPATH=${CMAKE_CURRENT_SOURCE_DIR}/tools"
+    ${Python3_EXECUTABLE} -m luau_codegen)
+
 execute_process(
-    COMMAND ${Python3_EXECUTABLE}
-            ${CMAKE_CURRENT_SOURCE_DIR}/tools/luau_codegen/codegen.py
+    COMMAND ${LUAUAPI_CODEGEN_CMD}
             --bindings ${LUAUAPI_BINDINGS_DIR}
             --list-outputs
             --platform ${LUAUAPI_CODEGEN_PLATFORM}
@@ -190,8 +193,7 @@ if (LUAUAPI_LIST_OUTPUTS_STDOUT)
 endif()
 
 execute_process(
-    COMMAND ${Python3_EXECUTABLE}
-            ${CMAKE_CURRENT_SOURCE_DIR}/tools/luau_codegen/codegen.py
+    COMMAND ${LUAUAPI_CODEGEN_CMD}
             --bindings ${LUAUAPI_BINDINGS_DIR}
             --list-type-outputs
             --platform ${LUAUAPI_CODEGEN_PLATFORM}
@@ -226,8 +228,7 @@ add_custom_command(
             ${LUAUAPI_CODEGEN_BINDING_BYPRODUCTS}
             ${LUAUAPI_GENERATED_TYPE_FILES}
             ${LUAUAPI_GENERATED_METADATA_FILES}
-    COMMAND ${Python3_EXECUTABLE}
-            ${CMAKE_CURRENT_SOURCE_DIR}/tools/luau_codegen/codegen.py
+    COMMAND ${LUAUAPI_CODEGEN_CMD}
             --bindings ${LUAUAPI_BINDINGS_DIR}
             --out ${LUAUAPI_GEN_DIR}
             --types-out ${LUAUAPI_TYPES_DIR}
@@ -343,6 +344,9 @@ if(LUAUAPI_BUILD_TESTS)
     catch_discover_tests(luauapi_tests DISCOVERY_MODE PRE_TEST)
     add_test(
         NAME luauapi_codegen_hooks
-        COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/luau_codegen_hook_tests.py
+        COMMAND ${Python3_EXECUTABLE} -m unittest discover -s tests/luau_codegen -p "test_*.py"
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     )
+    set_tests_properties(luauapi_codegen_hooks PROPERTIES
+        ENVIRONMENT "PYTHONPATH=${CMAKE_CURRENT_SOURCE_DIR}/tools")
 endif()

@@ -110,6 +110,6 @@ When LuauAPI updates its bindings, rebuild it and recopy the `types/` folder int
 
 - `.luaurc` (shipped in the LuauAPI repo)
 - `.vscode/settings.json` (create in your mod, see Step 5)
-- `tools/luau_codegen/emit_luau_types.py`
+- `tools/luau_codegen/emit/luau_types/`
 - `docs/getting-started/building.md`
 - `CMakeLists.txt`

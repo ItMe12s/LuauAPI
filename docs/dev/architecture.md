@@ -71,5 +71,5 @@ The async API performs its file work off thread, then hops to the main thread to
 - `src/main.cpp`
 - `src/api.cpp`
 - `src/lua/runtime/Runtime.cpp`
-- `tools/luau_codegen/cxx_templates.py`
+- `tools/luau_codegen/emit/cxx_templates.py`
 - `src/lua/bindings/imgui/ImGuiDrawScheduler.cpp`
