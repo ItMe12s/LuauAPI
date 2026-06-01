@@ -65,10 +65,21 @@ _FUNC_DECL = re.compile(
 _FUNCTION_SOURCES = (
     (
         "utils/general.hpp",
-        frozenset({"geode::utils::clipboard", "geode::utils::game"}),
+        frozenset(
+            {
+                "geode::utils",
+                "geode::utils::clipboard",
+                "geode::utils::game",
+                "geode::utils::thread",
+                "geode::utils::platform",
+            }
+        ),
         None,
     ),
     ("ui/Popup.hpp", frozenset({"geode"}), frozenset({"createQuickPopup"})),
+    ("ui/GeodeUI.hpp", frozenset({"geode"}), None),
+    ("utils/string.hpp", frozenset({"geode::utils::string"}), None),
+    ("utils/random.hpp", frozenset({"geode::utils::random"}), None),
 )
 
 

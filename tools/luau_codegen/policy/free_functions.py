@@ -47,4 +47,10 @@ def free_function_allowed(fn: Function, target_platform: str) -> bool:
 def free_function_supported(fn: Function, objects: dict[str, Class]) -> bool:
     if classify_return(fn.ret, objects) is None:
         return False
-    return all(classify_arg(arg.type, objects) is not None for arg in fn.args)
+    for arg in fn.args:
+        info = classify_arg(arg.type, objects)
+        if info is None:
+            return False
+        if info.is_out:
+            return False
+    return True

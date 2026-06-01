@@ -111,3 +111,39 @@ class FreeFunctionSupportedTests(unittest.TestCase):
             args=[Arg("SomeUnknownClass*", "obj")],
         )
         self.assertFalse(free_function_supported(fn, {}))
+
+    def test_out_reference_arg_unsupported(self) -> None:
+        mutate = Function(
+            name="toLowerIP",
+            namespace="geode::utils::string",
+            ret="void",
+            args=[Arg("std::string&", "s")],
+        )
+        self.assertFalse(free_function_supported(mutate, {}))
+        read = Function(
+            name="contains",
+            namespace="geode::utils::string",
+            ret="bool",
+            args=[Arg("std::string const&", "s")],
+        )
+        self.assertTrue(free_function_supported(read, {}))
+
+
+class FreeFunctionOverloadDedupTests(unittest.TestCase):
+    def _contains(self, second: str) -> Function:
+        return Function(
+            name="contains",
+            namespace="geode::utils::string",
+            ret="bool",
+            args=[Arg("std::string", "s"), Arg(second, "x")],
+        )
+
+    def test_same_arity_overloads_deduped(self) -> None:
+        functions = [self._contains("std::string"), self._contains("char")]
+        skipped: list[tuple[str, str, str]] = []
+        out = emit_free_functions_file(functions, {}, "win", skipped)
+        self.assertNotIn("switch (lua_gettop(L))", out)
+        self.assertIn(
+            ("geode.utils.string", "contains", "free-function-ambiguous-arity:2"),
+            skipped,
+        )

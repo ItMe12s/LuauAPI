@@ -47,8 +47,24 @@ Static methods, constructors, and destructors are skipped.
 ## Inputs that trigger a rebuild
 
 The custom command depends on the Python sources, the Bromas, the extra stubs in `tools/luau_codegen/extra_bindings/`, and the Geode UI headers.
-Rebuild input also includes classes discovered by `tools/luau_codegen/parse/geode_sdk.py` from `Geode/ui/*.hpp`.
+Rebuild also triggers on extra classes from `Geode/ui/*.hpp` (via `parse/geode_sdk.py`)
+and utility free-function headers (`utils/general.hpp`, `utils/string.hpp`, `utils/random.hpp`).
 A change to any of these reruns codegen.
+
+## Geode SDK scan scope
+
+`parse/geode_sdk.py` discovers extra bindings straight from the installed Geode SDK headers:
+
+- **UI classes and enums**: from `Geode/ui/*.hpp` headers included by `UI.hpp`. Only these are bindable, as other headers aren't included in codegen.
+- **Free functions**: from the headers and namespaces listed in `_FUNCTION_SOURCES`, mainly `geode::utils` (including its subnamespaces), `geode::createQuickPopup`, and Geode UI functions. The free-function binding file has a fixed `#include` list, so new sources must be manually added there.
+
+Only `GEODE_DLL` declarations are processed. Functions must be marshallable (no out/non-const ref args), or they're dropped.
+For duplicate free functions with the same name and arity, keep the first and log the rest as `free-function-ambiguous-arity:<n>`.
+Remove headers that yield nothing after filtering.
+
+Some headers are purposely ignored:
+
+`web.hpp`, `utils/Task.hpp`, `utils/async.hpp`, and `utils/file.hpp` because async, HTTP, and file I/O are handled separately.
 
 ## Metadata outputs
 

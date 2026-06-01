@@ -64,3 +64,26 @@ class M1ScannerWarningTests(unittest.TestCase):
             self.assertEqual(reason, "")
         finally:
             shutil.rmtree(tmpdir)
+
+
+class ExtraScanScopeTests(unittest.TestCase):
+    def test_utils_namespace_free_functions_scanned(self) -> None:
+        from luau_codegen.parse.geode_sdk import scan_geode_functions  # type: ignore[import-unresolved]
+
+        tmpdir = tempfile.mkdtemp()
+        try:
+            utils_dir = os.path.join(tmpdir, "loader", "include", "Geode", "utils")
+            os.makedirs(utils_dir)
+            with open(
+                os.path.join(utils_dir, "random.hpp"), "w", encoding="utf-8"
+            ) as f:
+                f.write(
+                    "namespace geode::utils::random { "
+                    "GEODE_DLL std::string generateUUID(); "
+                    "}"
+                )
+            fns = {f.name: f for f in scan_geode_functions(tmpdir)}
+            self.assertIn("generateUUID", fns)
+            self.assertEqual(fns["generateUUID"].namespace, "geode::utils::random")
+        finally:
+            shutil.rmtree(tmpdir)

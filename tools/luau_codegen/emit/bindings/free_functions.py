@@ -84,10 +84,28 @@ def emit_free_functions_file(
             continue
         by_key[(fn.namespace, fn.name)].append(fn)
 
+    for key, fns in list(by_key.items()):
+        seen_arity: set[int] = set()
+        kept: list[Function] = []
+        for fn in fns:
+            arity = len(fn.args)
+            if arity in seen_arity:
+                if skipped is not None:
+                    skipped.append(
+                        (fn.lua_path, fn.name, f"free-function-ambiguous-arity:{arity}")
+                    )
+                continue
+            seen_arity.add(arity)
+            kept.append(fn)
+        by_key[key] = kept
+
     out = [
         file_preamble(),
         "#include <Geode/ui/Popup.hpp>\n",
-        "#include <Geode/utils/general.hpp>\n\n",
+        "#include <Geode/ui/GeodeUI.hpp>\n",
+        "#include <Geode/utils/general.hpp>\n",
+        "#include <Geode/utils/string.hpp>\n",
+        "#include <Geode/utils/random.hpp>\n\n",
         "namespace luauapi_gen::free_functions {\n\n",
         "namespace {\n\n",
     ]
