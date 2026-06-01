@@ -10,7 +10,7 @@ imgui.onDraw(function()
 
         code = imgui.inputTextMultiline("##code", code, { x = -1, y = -footer })
 
-        local buttonWidth = math.max((avail.x - spacing) / 4, 1)
+        local buttonWidth = math.max((avail.x - spacing) / 3, 1)
 
         if imgui.button("Execute", { size = { x = buttonWidth, y = 0 } }) then
             if code == "" then
