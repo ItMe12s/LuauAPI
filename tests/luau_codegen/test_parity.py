@@ -4,6 +4,28 @@ from conftest import *
 
 
 class F12ParityReportTests(unittest.TestCase):
+    def test_parity_reports_free_function_intersection_drop(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        fn = Function(
+            name="getEnvironmentVariable",
+            namespace="geode::utils",
+            ret="std::string",
+            args=[Arg("ZStringView", "name")],
+        )
+        root = Root(classes=[ccobject], functions=[fn])
+
+        data = collect_parity(root)
+        key = free_function_key(fn)
+
+        self.assertIn("win", data["freeFunctions"][key]["supportedPlatforms"])
+        self.assertNotIn("ios", data["freeFunctions"][key]["supportedPlatforms"])
+        self.assertEqual(
+            data["freeFunctions"][key]["skipReasons"]["ios"],
+            "free-function-excluded:ios",
+        )
+        self.assertEqual(data["intersection"]["freeFunctionsRemoved"], 1)
+        self.assertIn("common free functions", emit_markdown(data))
+
     def test_intersection_keeps_only_all_platform_methods(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")
         foo = Class(

@@ -32,32 +32,42 @@ class FreeFunctionOverrideTests(unittest.TestCase):
 
     def test_emit_drops_restart_arity2_on_android(self) -> None:
         functions = [self._restart(1), self._restart(2)]
-        skipped: list[tuple[str, str, str]] = []
-        out = emit_free_functions_file(functions, {}, "android64", skipped)
+        kept, skipped = group_supported_free_functions(functions, {}, "android64")
+        out = emit_free_functions_file(kept, {})
         self.assertIn("geode::utils::game::restart(arg0)", out)
         self.assertNotIn("geode::utils::game::restart(arg0, arg1)", out)
         self.assertNotIn("switch (lua_gettop(L))", out)
         self.assertIn(
-            ("geode.utils.game", "restart", "free-function-override-arity:android64"),
+            (
+                free_function_key(functions[1]),
+                "geode.utils.game",
+                "restart",
+                "free-function-override-arity:android64",
+            ),
             skipped,
         )
 
     def test_emit_drops_restart_arity2_on_ios(self) -> None:
         functions = [self._restart(1), self._restart(2)]
-        skipped: list[tuple[str, str, str]] = []
-        out = emit_free_functions_file(functions, {}, "ios", skipped)
+        kept, skipped = group_supported_free_functions(functions, {}, "ios")
+        out = emit_free_functions_file(kept, {})
         self.assertIn("geode::utils::game::restart(arg0)", out)
         self.assertNotIn("geode::utils::game::restart(arg0, arg1)", out)
         self.assertNotIn("switch (lua_gettop(L))", out)
         self.assertIn(
-            ("geode.utils.game", "restart", "free-function-override-arity:ios"),
+            (
+                free_function_key(functions[1]),
+                "geode.utils.game",
+                "restart",
+                "free-function-override-arity:ios",
+            ),
             skipped,
         )
 
     def test_emit_keeps_both_overloads_on_win(self) -> None:
         functions = [self._restart(1), self._restart(2)]
-        skipped: list[tuple[str, str, str]] = []
-        out = emit_free_functions_file(functions, {}, "win", skipped)
+        kept, skipped = group_supported_free_functions(functions, {}, "win")
+        out = emit_free_functions_file(kept, {})
         self.assertIn("geode::utils::game::restart(arg0)", out)
         self.assertIn("geode::utils::game::restart(arg0, arg1)", out)
         self.assertIn("switch (lua_gettop(L))", out)
@@ -91,11 +101,12 @@ class GetEnvironmentVariableExclusionTests(unittest.TestCase):
 
     def test_emit_drops_get_environment_variable_on_ios(self) -> None:
         functions = [self._get_env()]
-        skipped: list[tuple[str, str, str]] = []
-        out = emit_free_functions_file(functions, {}, "ios", skipped)
+        kept, skipped = group_supported_free_functions(functions, {}, "ios")
+        out = emit_free_functions_file(kept, {})
         self.assertNotIn("geode::utils::getEnvironmentVariable", out)
         self.assertIn(
             (
+                free_function_key(functions[0]),
                 "geode.utils",
                 "getEnvironmentVariable",
                 "free-function-excluded:ios",
@@ -105,17 +116,89 @@ class GetEnvironmentVariableExclusionTests(unittest.TestCase):
 
     def test_emit_keeps_get_environment_variable_on_win(self) -> None:
         functions = [self._get_env()]
-        skipped: list[tuple[str, str, str]] = []
-        out = emit_free_functions_file(functions, {}, "win", skipped)
+        kept, skipped = group_supported_free_functions(functions, {}, "win")
+        out = emit_free_functions_file(kept, {})
         self.assertIn("geode::utils::getEnvironmentVariable(arg0)", out)
         self.assertEqual(skipped, [])
 
     def test_emit_keeps_get_environment_variable_on_android64(self) -> None:
         functions = [self._get_env()]
-        skipped: list[tuple[str, str, str]] = []
-        out = emit_free_functions_file(functions, {}, "android64", skipped)
+        kept, skipped = group_supported_free_functions(functions, {}, "android64")
+        out = emit_free_functions_file(kept, {})
         self.assertIn("geode::utils::getEnvironmentVariable(arg0)", out)
         self.assertEqual(skipped, [])
+
+
+class FreeFunctionIntersectionTests(unittest.TestCase):
+    def _restart(self, arity: int) -> Function:
+        args = [Arg("bool", f"a{i}") for i in range(arity)]
+        return Function(
+            name="restart", namespace="geode::utils::game", ret="void", args=args
+        )
+
+    def _get_env(self) -> Function:
+        return Function(
+            name="getEnvironmentVariable",
+            namespace="geode::utils",
+            ret="std::string",
+            args=[Arg("ZStringView", "name")],
+        )
+
+    def test_collect_plan_drops_free_function_missing_one_platform(self) -> None:
+        fn = self._get_env()
+        root = Root(
+            classes=[Class(name="CCObject", namespace="cocos2d")], functions=[fn]
+        )
+
+        plan = collect_plan(root, "win")
+
+        self.assertEqual(plan.supported_free_functions, [])
+        self.assertIn(
+            (
+                free_function_key(fn),
+                "geode.utils",
+                "getEnvironmentVariable",
+                "intersection-missing-platform:ios",
+            ),
+            plan.skipped_free_functions,
+        )
+
+    def test_collect_plan_keeps_only_intersected_restart_arity(self) -> None:
+        one = self._restart(1)
+        two = self._restart(2)
+        root = Root(
+            classes=[Class(name="CCObject", namespace="cocos2d")],
+            functions=[one, two],
+        )
+
+        plan = collect_plan(root, "win")
+
+        self.assertEqual(
+            [free_function_key(fn) for fn in plan.supported_free_functions],
+            [free_function_key(one)],
+        )
+        self.assertIn(
+            (
+                free_function_key(two),
+                "geode.utils.game",
+                "restart",
+                "intersection-missing-platform:m1,ios,android32,android64",
+            ),
+            plan.skipped_free_functions,
+        )
+
+    def test_binding_emit_has_same_free_function_surface_on_win_and_ios(self) -> None:
+        root = Root(
+            classes=[Class(name="CCObject", namespace="cocos2d")],
+            functions=[self._restart(1), self._restart(2)],
+        )
+
+        win = emit_luau_bindings(root, "win")[0]["bindings_free_functions.cpp"]
+        ios = emit_luau_bindings(root, "ios")[0]["bindings_free_functions.cpp"]
+
+        self.assertEqual(win, ios)
+        self.assertIn("geode::utils::game::restart(arg0)", win)
+        self.assertNotIn("geode::utils::game::restart(arg0, arg1)", win)
 
 
 class FreeFunctionSupportedTests(unittest.TestCase):
@@ -184,10 +267,15 @@ class FreeFunctionOverloadDedupTests(unittest.TestCase):
 
     def test_same_arity_overloads_deduped(self) -> None:
         functions = [self._contains("std::string"), self._contains("char")]
-        skipped: list[tuple[str, str, str]] = []
-        out = emit_free_functions_file(functions, {}, "win", skipped)
+        kept, skipped = group_supported_free_functions(functions, {}, "win")
+        out = emit_free_functions_file(kept, {})
         self.assertNotIn("switch (lua_gettop(L))", out)
         self.assertIn(
-            ("geode.utils.string", "contains", "free-function-ambiguous-arity:2"),
+            (
+                free_function_key(functions[1]),
+                "geode.utils.string",
+                "contains",
+                "free-function-ambiguous-arity:2",
+            ),
             skipped,
         )

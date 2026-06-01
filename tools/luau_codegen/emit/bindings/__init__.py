@@ -30,7 +30,7 @@ def emit(
             plan.emitted_classes, plan, target_platform
         ),
         FREE_FUNCTIONS_FILE: emit_free_functions_file(
-            root.functions, plan.objects, target_platform, plan.skipped
+            plan.supported_free_functions, plan.objects
         ),
     }
 

@@ -5,6 +5,7 @@ from typing import Any
 
 from luau_codegen.policy.fields import field_key
 from luau_codegen.policy.filtering import method_key
+from luau_codegen.policy.free_functions import free_function_key
 from luau_codegen.util.platforms import INTERSECTION_PLATFORMS
 
 
@@ -19,9 +20,11 @@ class IntersectionResult:
     common_supported_method_keys: set[str]
     common_hook_method_keys: set[str]
     common_field_keys: set[str]
+    common_supported_free_function_keys: set[str]
     missing_supported_platforms_by_key: dict[str, tuple[str, ...]]
     missing_hook_platforms_by_key: dict[str, tuple[str, ...]]
     missing_field_platforms_by_key: dict[str, tuple[str, ...]]
+    missing_free_function_platforms_by_key: dict[str, tuple[str, ...]]
 
 
 @dataclass
@@ -31,9 +34,11 @@ class IntersectionStats:
     common_supported_methods: int = 0
     common_hook_targets: int = 0
     common_fields: int = 0
+    common_free_functions: int = 0
     removed_methods: list[tuple[str, str, str]] = field(default_factory=list)
     removed_hooks: list[tuple[str, str, str]] = field(default_factory=list)
     removed_fields: list[tuple[str, str, str]] = field(default_factory=list)
+    removed_free_functions: list[tuple[str, str, str]] = field(default_factory=list)
 
 
 def supported_method_keys(plan: Any) -> set[str]:
@@ -67,6 +72,12 @@ def bound_field_keys(plan: Any) -> set[str]:
     return out
 
 
+def supported_free_function_keys(plan: Any) -> set[str]:
+    return {
+        free_function_key(fn) for fn in getattr(plan, "supported_free_functions", [])
+    }
+
+
 def collect_intersection(
     plans_by_platform: dict[str, Any],
     platforms: tuple[str, ...] = INTERSECTION_PLATFORMS,
@@ -83,13 +94,19 @@ def collect_intersection(
         platform: bound_field_keys(plans_by_platform[platform])
         for platform in platforms
     }
+    free_functions_by_platform = {
+        platform: supported_free_function_keys(plans_by_platform[platform])
+        for platform in platforms
+    }
 
     all_supported = set().union(*supported_by_platform.values())
     all_hooks = set().union(*hooks_by_platform.values())
     all_fields = set().union(*fields_by_platform.values())
+    all_free_functions = set().union(*free_functions_by_platform.values())
     common_supported = set.intersection(*supported_by_platform.values())
     common_hooks = set.intersection(*hooks_by_platform.values())
     common_fields = set.intersection(*fields_by_platform.values())
+    common_free_functions = set.intersection(*free_functions_by_platform.values())
 
     missing_supported = {
         key: tuple(
@@ -116,13 +133,24 @@ def collect_intersection(
         for key in all_fields
         if key not in common_fields
     }
+    missing_free_functions = {
+        key: tuple(
+            platform
+            for platform in platforms
+            if key not in free_functions_by_platform[platform]
+        )
+        for key in all_free_functions
+        if key not in common_free_functions
+    }
 
     return IntersectionResult(
         platforms=platforms,
         common_supported_method_keys=common_supported,
         common_hook_method_keys=common_hooks,
         common_field_keys=common_fields,
+        common_supported_free_function_keys=common_free_functions,
         missing_supported_platforms_by_key=missing_supported,
         missing_hook_platforms_by_key=missing_hooks,
         missing_field_platforms_by_key=missing_fields,
+        missing_free_function_platforms_by_key=missing_free_functions,
     )

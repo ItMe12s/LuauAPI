@@ -59,7 +59,7 @@ A change to any of these reruns codegen.
 - **Free functions**: from the headers and namespaces listed in `_FUNCTION_SOURCES`, mainly `geode::utils` (including its subnamespaces), `geode::createQuickPopup`, and Geode UI functions. The free-function binding file has a fixed `#include` list, so new sources must be manually added there.
 
 Only `GEODE_DLL` declarations are processed. Functions must be marshallable (no out/non-const ref args), or they're dropped.
-For duplicate free functions with the same name and arity, keep the first and log the rest as `free-function-ambiguous-arity:<n>`.
+Keep only the first free function per name and arity, log others as `free-function-ambiguous-arity:<n>`.
 Remove headers that yield nothing after filtering.
 
 Some headers are purposely ignored:
@@ -78,7 +78,8 @@ After generation, `build/luauapi-gen/` holds helper files for debugging codegen:
 
 ## Free-function platform policy
 
-Namespace free functions (e.g. `geode::utils::game::restart`) are filtered in `policy/free_functions.py` before binding and type emission.
+Free functions are filtered per platform, then intersected just like class methods.
+Only functions supported on all key platforms are exposed in Lua, making the bindings platform-independent.
 
 ### When to add an override
 
@@ -97,7 +98,8 @@ Each override sets `namespace`, `name`, and optionally:
 | `geode::utils::game::restart` | arity limit | `android`, `android32`, `android64`, `ios`, `mac`, `imac`, `m1`: 1 arg only |
 | `geode::utils::getEnvironmentVariable` | excluded | `ios` only, Geode iOS loader has no implementation |
 
-`win` is unlisted for `restart`, both overloads remain until two-argument support is checked on Windows.
+`win` is unlisted for `restart`, so both overloads remain in the win platform plan.
+The final intersected plan still drops the two-argument overload because other intersection platforms only allow one argument.
 
 ### Platform groups
 
@@ -109,7 +111,9 @@ For `restart`, all mobile and Apple targets allow one argument.
 
 Only add a new platform key after confirming its SDK matches. Don’t copy from other families without checking.
 
-`free_function_supported()` skips functions with un-marshallable types.
+`group_supported_free_functions()` filters and deduplicates free functions per platform,
+intersection removes any not present on all main platforms, using `intersection-missing-platform:<platforms>`.
+Free functions that reference skipped or inaccessible object classes are dropped with `not-callable-type:<platform>:<Class>`.
 
 ## Field and encrypted-value policy
 

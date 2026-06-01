@@ -1,9 +1,13 @@
 from __future__ import annotations
 
+from collections import defaultdict
 from dataclasses import dataclass, field
 
 from luau_codegen.convert.type_map import classify_arg, classify_return
+from luau_codegen.model.denylist import INACCESSIBLE_CLASSES
 from luau_codegen.parse.broma import Class, Function
+
+FreeFunctionSkip = tuple[str, str, str, str]
 
 
 @dataclass(frozen=True)
@@ -56,13 +60,77 @@ def free_function_allowed(fn: Function, target_platform: str) -> bool:
     return free_function_skip_reason(fn, target_platform) is None
 
 
-def free_function_supported(fn: Function, objects: dict[str, Class]) -> bool:
+def free_function_key(fn: Function) -> str:
+    args = ",".join(arg.type for arg in fn.args)
+    name = f"{fn.namespace}::{fn.name}" if fn.namespace else fn.name
+    return f"{name}({args})"
+
+
+def free_function_unsupported_reason(
+    fn: Function, objects: dict[str, Class]
+) -> str | None:
     if classify_return(fn.ret, objects) is None:
-        return False
+        return f"free-function-unsupported-return:{fn.ret}"
     for arg in fn.args:
         info = classify_arg(arg.type, objects)
         if info is None:
-            return False
+            return f"free-function-unsupported-arg:{arg.type}"
         if info.is_out:
-            return False
-    return True
+            return f"free-function-out-arg:{arg.type}"
+    return None
+
+
+def free_function_supported(fn: Function, objects: dict[str, Class]) -> bool:
+    return free_function_unsupported_reason(fn, objects) is None
+
+
+def free_function_skipped_object_ref(
+    fn: Function, objects: dict[str, Class], skipped_classes: set[str]
+) -> str:
+    blocked = skipped_classes | INACCESSIBLE_CLASSES
+    ret = classify_return(fn.ret, objects)
+    if ret and ret.kind == "object" and ret.class_name in blocked:
+        return ret.class_name
+    for arg in fn.args:
+        info = classify_arg(arg.type, objects)
+        if info and info.kind == "object" and info.class_name in blocked:
+            return info.class_name
+    return ""
+
+
+def _skip_entry(fn: Function, reason: str) -> FreeFunctionSkip:
+    return (free_function_key(fn), fn.lua_path, fn.name, reason)
+
+
+def group_supported_free_functions(
+    functions: list[Function],
+    objects: dict[str, Class],
+    target_platform: str = "win",
+) -> tuple[list[Function], list[FreeFunctionSkip]]:
+    skipped: list[FreeFunctionSkip] = []
+    by_name: dict[tuple[str, str], list[Function]] = defaultdict(list)
+
+    for fn in functions:
+        reason = free_function_unsupported_reason(fn, objects)
+        if reason:
+            skipped.append(_skip_entry(fn, reason))
+            continue
+        reason = free_function_skip_reason(fn, target_platform)
+        if reason:
+            skipped.append(_skip_entry(fn, reason))
+            continue
+        by_name[(fn.namespace, fn.name)].append(fn)
+
+    kept_all: list[Function] = []
+    for fns in by_name.values():
+        seen_arity: set[int] = set()
+        for fn in fns:
+            arity = len(fn.args)
+            if arity in seen_arity:
+                skipped.append(
+                    _skip_entry(fn, f"free-function-ambiguous-arity:{arity}")
+                )
+                continue
+            seen_arity.add(arity)
+            kept_all.append(fn)
+    return kept_all, skipped

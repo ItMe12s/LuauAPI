@@ -32,7 +32,9 @@ from luau_codegen.emit.bindings.class_file import (  # type: ignore[import-unres
 from luau_codegen.emit.bindings.common import _emit_common_file  # type: ignore[import-unresolved]
 from luau_codegen.policy.free_functions import (  # type: ignore[import-unresolved]
     free_function_allowed as free_fn_allowed,
+    free_function_key,
     free_function_supported,
+    group_supported_free_functions,
 )
 from luau_codegen.emit.luau_types import TYPES_FILE  # type: ignore[import-unresolved]
 from luau_codegen.emit.luau_types import emit as emit_luau_types  # type: ignore[import-unresolved]
@@ -123,7 +125,9 @@ __all__ = [
     "_emit_common_file",
     # policy.free_functions
     "free_fn_allowed",
+    "free_function_key",
     "free_function_supported",
+    "group_supported_free_functions",
     # emit.luau_types
     "TYPES_FILE",
     "emit_luau_types",

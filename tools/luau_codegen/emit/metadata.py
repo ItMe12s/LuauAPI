@@ -6,6 +6,7 @@ import os
 from luau_codegen.parse.broma import Root
 from luau_codegen.emit.plan import EmitPlan, ambiguous_overloads
 from luau_codegen.policy.fields import field_key
+from luau_codegen.policy.free_functions import free_function_key
 from luau_codegen.model.domain import object_classes, status_for
 from luau_codegen.cli.io import _write_if_changed
 
@@ -58,12 +59,24 @@ def emit_schema(root: Root, path: str, plan: EmitPlan) -> None:
         {"class": cls, "method": method, "reason": reason}
         for cls, method, reason in ambiguous_overloads(plan)
     ]
+    supported_free_functions = [
+        {
+            "key": free_function_key(fn),
+            "namespace": fn.namespace,
+            "luaPath": fn.lua_path,
+            "name": fn.name,
+            "ret": fn.ret,
+            "args": [{"type": a.type, "name": a.name} for a in fn.args],
+        }
+        for fn in plan.supported_free_functions
+    ]
     _write_if_changed(
         path,
         json.dumps(
             {
                 "classes": classes,
                 "ambiguousOverloads": ambiguous,
+                "supportedFreeFunctions": supported_free_functions,
             },
             indent=2,
         )
@@ -89,6 +102,10 @@ def emit_report(
     reasons: dict[str, int] = {}
     for _, _, reason in skipped:
         reasons[reason] = reasons.get(reason, 0) + 1
+    free_reasons: dict[str, int] = {}
+    free_skips = plan.skipped_free_functions if plan else []
+    for _, _, _, reason in free_skips:
+        free_reasons[reason] = free_reasons.get(reason, 0) + 1
     lines = [
         "# LuauAPI codegen report\n\n",
         f"- Target platform: **{target_platform}**\n",
@@ -97,6 +114,12 @@ def emit_report(
         f"- Methods parsed: **{total_methods}**\n",
         f"- Methods emitted: **{emitted_methods}**\n",
         f"- Methods skipped: **{len(skipped)}**\n",
+        f"- Free functions parsed: **{len(root.functions)}**\n",
+        (
+            "- Free functions emitted: "
+            f"**{len(plan.supported_free_functions) if plan else 0}**\n"
+        ),
+        f"- Free functions skipped: **{len(free_skips)}**\n",
         f"- Hook targets emitted: **{hook_target_count}**\n",
         f"- Fields bound: **{field_target_count}**\n",
         f"- Generated binding files: **{len(cxx_paths)}**\n",
@@ -110,8 +133,13 @@ def emit_report(
                 f"- Common binding methods: **{stats.common_supported_methods}**\n",
                 f"- Common hook targets: **{stats.common_hook_targets}**\n",
                 f"- Common fields: **{stats.common_fields}**\n",
+                f"- Common free functions: **{stats.common_free_functions}**\n",
                 f"- Methods removed by intersection: **{len(stats.removed_methods)}**\n",
                 f"- Hooks removed by intersection: **{len(stats.removed_hooks)}**\n",
+                (
+                    "- Free functions removed by intersection: "
+                    f"**{len(stats.removed_free_functions)}**\n"
+                ),
             ]
         )
     for cxx_path in cxx_paths:
@@ -134,6 +162,12 @@ def emit_report(
     lines.append("## Skip reasons\n\n")
     for reason, count in sorted(reasons.items(), key=lambda i: (-i[1], i[0])):
         lines.append(f"- {reason}: {count}\n")
+    lines.append("\n## Free-function skip reasons\n\n")
+    if free_reasons:
+        for reason, count in sorted(free_reasons.items(), key=lambda i: (-i[1], i[0])):
+            lines.append(f"- {reason}: {count}\n")
+    else:
+        lines.append("- none\n")
     ambiguous = ambiguous_overloads(plan) if plan else []
     lines.append("\n## Ambiguous overloads\n\n")
     if ambiguous:
@@ -164,4 +198,9 @@ def emit_report(
         lines.append(f"- {cls}.{method}: {reason}\n")
     if len(skipped) > 2000:
         lines.append(f"- ... {len(skipped) - 2000} more\n")
+    lines.append("\n## Skipped free functions\n\n")
+    for _, lua_path, name, reason in free_skips[:2000]:
+        lines.append(f"- {lua_path}.{name}: {reason}\n")
+    if len(free_skips) > 2000:
+        lines.append(f"- ... {len(free_skips) - 2000} more\n")
     _write_if_changed(path, "".join(lines))

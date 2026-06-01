@@ -5,12 +5,18 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Dict, List, Set
 
-from luau_codegen.parse.broma import Class, Field, Method, Root
+from luau_codegen.parse.broma import Class, Field, Function, Method, Root
 from luau_codegen.policy.fields import bindable_field, field_key
 from luau_codegen.policy.filtering import (
     group_supported,
     linkless_class_names,
     prune_skipped_class_refs,
+)
+from luau_codegen.policy.free_functions import (
+    FreeFunctionSkip,
+    free_function_key,
+    free_function_skipped_object_ref,
+    group_supported_free_functions,
 )
 from luau_codegen.emit.hooks import hookable
 from luau_codegen.policy.intersection import (
@@ -40,6 +46,8 @@ class EmitPlan:
     hook_targets_by_class: dict[str, List[tuple[Class, Method]]]
     field_targets_by_class: dict[str, List[tuple[Class, Field]]]
     depths: dict[str, int]
+    supported_free_functions: List[Function] = field(default_factory=list)
+    skipped_free_functions: List[FreeFunctionSkip] = field(default_factory=list)
     emitted_classes: List[Class] = field(default_factory=list)
     intersection_stats: IntersectionStats = field(default_factory=IntersectionStats)
 
@@ -70,6 +78,24 @@ def _emitted_classes(plan: EmitPlan) -> List[Class]:
         ):
             out.append(cls)
     return out
+
+
+def _filter_free_function_object_refs(
+    functions: list[Function],
+    objects: dict[str, Class],
+    skipped_classes: set[str],
+    target_platform: str,
+) -> tuple[list[Function], list[FreeFunctionSkip]]:
+    kept: list[Function] = []
+    skipped: list[FreeFunctionSkip] = []
+    for fn in functions:
+        skipped_ref = free_function_skipped_object_ref(fn, objects, skipped_classes)
+        if skipped_ref:
+            reason = f"not-callable-type:{target_platform}:{skipped_ref}"
+            skipped.append((free_function_key(fn), fn.lua_path, fn.name, reason))
+            continue
+        kept.append(fn)
+    return kept, skipped
 
 
 def collect_platform_plan(root: Root, target_platform: str = "win") -> EmitPlan:
@@ -118,6 +144,14 @@ def collect_platform_plan(root: Root, target_platform: str = "win") -> EmitPlan:
             if ok:
                 field_targets_by_class[cls.name].append((cls, field))
 
+    supported_free_functions, skipped_free_functions = group_supported_free_functions(
+        root.functions, objects, target_platform
+    )
+    supported_free_functions, free_ref_skips = _filter_free_function_object_refs(
+        supported_free_functions, objects, skipped_classes, target_platform
+    )
+    skipped_free_functions.extend(free_ref_skips)
+
     plan = EmitPlan(
         classes=classes,
         objects=objects,
@@ -128,6 +162,8 @@ def collect_platform_plan(root: Root, target_platform: str = "win") -> EmitPlan:
         hook_targets_by_class=hook_targets_by_class,
         field_targets_by_class=field_targets_by_class,
         depths=depths,
+        supported_free_functions=supported_free_functions,
+        skipped_free_functions=skipped_free_functions,
     )
     plan.emitted_classes = _emitted_classes(plan)
     return plan
@@ -142,6 +178,57 @@ def _append_skip(plan: EmitPlan, cls: Class, method: Method, reason: str) -> Non
     plan.skipped_by_class.setdefault(cls.name, []).append((method, reason))
 
 
+def _append_free_function_skip(
+    plan: EmitPlan,
+    stats: IntersectionStats,
+    fn: Function,
+    reason: str,
+) -> None:
+    plan.skipped_free_functions.append(
+        (free_function_key(fn), fn.lua_path, fn.name, reason)
+    )
+    stats.removed_free_functions.append((fn.lua_path, fn.name, reason))
+
+
+def _apply_free_function_intersection(
+    plan: EmitPlan,
+    target_platform: str,
+    result: IntersectionResult,
+    stats: IntersectionStats,
+) -> None:
+    kept: list[Function] = []
+    for fn in plan.supported_free_functions:
+        key = free_function_key(fn)
+        if key in result.common_supported_free_function_keys:
+            kept.append(fn)
+            continue
+        missing = result.missing_free_function_platforms_by_key.get(key, ())
+        if not missing:
+            missing = tuple(
+                platform for platform in result.platforms if platform != target_platform
+            )
+        reason = _intersection_reason(missing)
+        _append_free_function_skip(plan, stats, fn, reason)
+    plan.supported_free_functions = kept
+
+
+def _prune_free_function_refs(
+    plan: EmitPlan,
+    target_platform: str,
+    stats: IntersectionStats,
+) -> None:
+    kept, skipped = _filter_free_function_object_refs(
+        plan.supported_free_functions,
+        plan.objects,
+        plan.skipped_classes,
+        target_platform,
+    )
+    plan.supported_free_functions = kept
+    for key, lua_path, name, reason in skipped:
+        plan.skipped_free_functions.append((key, lua_path, name, reason))
+        stats.removed_free_functions.append((lua_path, name, reason))
+
+
 def _apply_intersection(
     plan: EmitPlan,
     target_platform: str,
@@ -153,8 +240,10 @@ def _apply_intersection(
         common_supported_methods=len(result.common_supported_method_keys),
         common_hook_targets=len(result.common_hook_method_keys),
         common_fields=len(result.common_field_keys),
+        common_free_functions=len(result.common_supported_free_function_keys),
     )
     plan.intersection_stats = stats
+    _apply_free_function_intersection(plan, target_platform, result, stats)
 
     for cls in plan.classes:
         grouped = plan.supported_by_class[cls.name]
@@ -247,6 +336,7 @@ def _apply_intersection(
         cls.name: _inheritance_depth(cls, lookup, plan.skipped_classes)
         for cls in plan.classes
     }
+    _prune_free_function_refs(plan, target_platform, stats)
     plan.emitted_classes = _emitted_classes(plan)
     return plan
 

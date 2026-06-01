@@ -18,8 +18,10 @@ from luau_codegen.policy.intersection import (
     hook_method_keys,
     intersection_platforms,
     method_key,
+    supported_free_function_keys,
     supported_method_keys,
 )
+from luau_codegen.policy.free_functions import free_function_key
 from luau_codegen.model.domain import object_classes
 
 
@@ -29,6 +31,10 @@ def _supported_keys(plan: EmitPlan) -> set[str]:
 
 def _hookable_keys(plan: EmitPlan) -> set[str]:
     return hook_method_keys(plan)
+
+
+def _free_function_keys(plan: EmitPlan) -> set[str]:
+    return supported_free_function_keys(plan)
 
 
 def _skip_reasons(plan: EmitPlan) -> dict[str, str]:
@@ -50,6 +56,10 @@ def _skip_reasons(plan: EmitPlan) -> dict[str, str]:
     return out
 
 
+def _free_function_skip_reasons(plan: EmitPlan) -> dict[str, str]:
+    return {key: reason for key, _, _, reason in plan.skipped_free_functions}
+
+
 def collect_parity(
     root: Root,
     platforms: tuple[str, ...] | None = None,
@@ -69,21 +79,30 @@ def collect_parity(
     summary: dict[str, dict[str, int]] = {}
     supported_by_platform: dict[str, set[str]] = {}
     hookable_by_platform: dict[str, set[str]] = {}
+    free_functions_by_platform: dict[str, set[str]] = {}
     skip_reasons_by_platform: dict[str, dict[str, str]] = {}
+    free_skip_reasons_by_platform: dict[str, dict[str, str]] = {}
 
     for platform, plan in plans.items():
         supported = _supported_keys(plan)
         hookable_keys = _hookable_keys(plan)
+        free_function_keys = _free_function_keys(plan)
         skipped = _skip_reasons(plan)
+        free_skipped = _free_function_skip_reasons(plan)
         supported_by_platform[platform] = supported
         hookable_by_platform[platform] = hookable_keys
+        free_functions_by_platform[platform] = free_function_keys
         skip_reasons_by_platform[platform] = skipped
+        free_skip_reasons_by_platform[platform] = free_skipped
         summary[platform] = {
             "classesParsed": len(root.classes),
             "ccObjectClasses": object_count,
             "methodsParsed": total_methods,
             "methodsEmitted": total_methods - len(plan.skipped),
             "methodsSkipped": len(plan.skipped),
+            "freeFunctionsParsed": len(root.functions),
+            "freeFunctionsEmitted": len(plan.supported_free_functions),
+            "freeFunctionsSkipped": len(plan.skipped_free_functions),
             "hookTargets": hook_target_count(root, platform, plan=plan),
             "fieldsBound": field_target_count(root, platform, plan=plan),
             "generatedBindingFiles": len(plan_outputs(root, platform, plan=plan)),
@@ -131,12 +150,36 @@ def collect_parity(
                 "skipReasons": skip_reasons,
             }
 
+    free_functions: dict[str, dict[str, Any]] = {}
+    for fn in root.functions:
+        key = free_function_key(fn)
+        supported_platforms = [
+            platform
+            for platform in platforms
+            if key in free_functions_by_platform[platform]
+        ]
+        skip_reasons = {
+            platform: free_skip_reasons_by_platform[platform][key]
+            for platform in platforms
+            if key in free_skip_reasons_by_platform[platform]
+        }
+        free_functions[key] = {
+            "namespace": fn.namespace,
+            "luaPath": fn.lua_path,
+            "name": fn.name,
+            "signature": ",".join(arg.type for arg in fn.args),
+            "ret": fn.ret,
+            "supportedPlatforms": supported_platforms,
+            "skipReasons": skip_reasons,
+        }
+
     hints = _collect_hints(plans, methods, platforms, target_platform)
     return {
         "platforms": list(platforms),
         "summary": summary,
         "intersection": _intersection_summary(final_plan, total_methods),
         "methods": methods,
+        "freeFunctions": free_functions,
         "skippedClasses": {
             platform: sorted(plans[platform].skipped_classes) for platform in platforms
         },
@@ -152,8 +195,11 @@ def _intersection_summary(plan: EmitPlan, total_methods: int) -> dict[str, Any]:
         "commonBindingMethods": stats.common_supported_methods,
         "commonHookTargets": stats.common_hook_targets,
         "commonFields": stats.common_fields,
+        "commonFreeFunctions": stats.common_free_functions,
         "methodsEmitted": total_methods - len(plan.skipped),
         "methodsSkipped": len(plan.skipped),
+        "freeFunctionsEmitted": len(plan.supported_free_functions),
+        "freeFunctionsSkipped": len(plan.skipped_free_functions),
         "hookTargets": sum(
             len(targets) for targets in plan.hook_targets_by_class.values()
         ),
@@ -163,6 +209,7 @@ def _intersection_summary(plan: EmitPlan, total_methods: int) -> dict[str, Any]:
         "methodsRemoved": len(stats.removed_methods),
         "hooksRemoved": len(stats.removed_hooks),
         "fieldsRemoved": len(stats.removed_fields),
+        "freeFunctionsRemoved": len(stats.removed_free_functions),
     }
 
 
@@ -222,14 +269,17 @@ def emit_markdown(data: dict[str, Any]) -> str:
     lines = ["# LuauAPI parity report\n\n"]
     lines.append("## Summary\n\n")
     lines.append(
-        "| Platform | Methods emitted | Methods skipped | Hook targets | Fields bound | Binding files | Skipped classes |\n"
+        "| Platform | Methods emitted | Methods skipped | Free functions | "
+        "Hook targets | Fields bound | Binding files | Skipped classes |\n"
     )
-    lines.append("| --- | ---: | ---: | ---: | ---: | ---: | ---: |\n")
+    lines.append("| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |\n")
     for platform in data["platforms"]:
         row = data["summary"][platform]
         lines.append(
             f"| {platform} | {row['methodsEmitted']} | {row['methodsSkipped']} | "
-            f"{row['hookTargets']} | {row.get('fieldsBound', 0)} | {row['generatedBindingFiles']} | {row['skippedClasses']} |\n"
+            f"{row.get('freeFunctionsEmitted', 0)} | {row['hookTargets']} | "
+            f"{row.get('fieldsBound', 0)} | {row['generatedBindingFiles']} | "
+            f"{row['skippedClasses']} |\n"
         )
 
     if "intersection" in data:
@@ -240,10 +290,16 @@ def emit_markdown(data: dict[str, Any]) -> str:
         lines.append(f"- common binding methods: {final['commonBindingMethods']}\n")
         lines.append(f"- common hook targets: {final['commonHookTargets']}\n")
         lines.append(f"- common fields: {final.get('commonFields', 0)}\n")
+        lines.append(
+            f"- common free functions: {final.get('commonFreeFunctions', 0)}\n"
+        )
         lines.append(f"- generated binding files: {final['generatedBindingFiles']}\n")
         lines.append(f"- methods removed: {final['methodsRemoved']}\n")
         lines.append(f"- hooks removed: {final['hooksRemoved']}\n")
         lines.append(f"- fields removed: {final.get('fieldsRemoved', 0)}\n")
+        lines.append(
+            f"- free functions removed: {final.get('freeFunctionsRemoved', 0)}\n"
+        )
 
     lines.append("\n## Runtime-Safe Hints\n\n")
     hints = data["hints"]

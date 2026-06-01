@@ -4,11 +4,6 @@ from collections import defaultdict
 from typing import Dict, List
 
 from luau_codegen.parse.broma import Class, Function
-from luau_codegen.policy.free_functions import (
-    free_function_allowed,
-    free_function_skip_reason,
-    free_function_supported,
-)
 from luau_codegen.util.identifiers import cxx_id
 from luau_codegen.convert.marshalling import check_arg, push_return
 from luau_codegen.convert.type_map import require_classify_arg, require_classify_return
@@ -66,40 +61,10 @@ def _emit_free_dispatcher(fns: List[Function], objects: Dict[str, Class]) -> str
 def emit_free_functions_file(
     functions: List[Function],
     objects: Dict[str, Class],
-    target_platform: str = "win",
-    skipped: list[tuple[str, str, str]] | None = None,
 ) -> str:
     by_key: dict[tuple[str, str], list[Function]] = defaultdict(list)
     for fn in functions:
-        if not free_function_supported(fn, objects):
-            continue
-        if not free_function_allowed(fn, target_platform):
-            if skipped is not None:
-                reason = free_function_skip_reason(fn, target_platform)
-                skipped.append(
-                    (
-                        fn.lua_path,
-                        fn.name,
-                        reason or f"free-function-override-arity:{target_platform}",
-                    )
-                )
-            continue
         by_key[(fn.namespace, fn.name)].append(fn)
-
-    for key, fns in list(by_key.items()):
-        seen_arity: set[int] = set()
-        kept: list[Function] = []
-        for fn in fns:
-            arity = len(fn.args)
-            if arity in seen_arity:
-                if skipped is not None:
-                    skipped.append(
-                        (fn.lua_path, fn.name, f"free-function-ambiguous-arity:{arity}")
-                    )
-                continue
-            seen_arity.add(arity)
-            kept.append(fn)
-        by_key[key] = kept
 
     out = [
         file_preamble(),

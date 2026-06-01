@@ -20,9 +20,11 @@ Intersection platforms are `win`, `m1` (or `imac`), `ios`, `android32`, `android
 
 **Forced intersection.** `collect_plan()` calls `_apply_intersection()`, which keeps a method only when every intersection platform supports it.
 Anything supported on some but not all is dropped with reason `intersection-missing-platform:<platforms>`.
-Hooks and fields use the same rule. Classes with no members left are skipped, or become type-only stubs (see `emit/luau_types/references.py`).
+Hooks, fields, and namespace free functions use the same rule.
+Classes with no members left are skipped, or become type-only stubs (see `emit/luau_types/references.py`).
 
-The result is one common surface in `geode.d.luau`. If the stub type-checks a call, that call is valid on all supported platforms.
+The result is one common surface in generated bindings and `geode.d.luau`.
+If the stub type-checks a call, that call is valid on all supported platforms.
 Platform-only APIs never reach Lua authors.
 
 **iOS is strict.** `STRICT_DIRECT_PLATFORMS = {"ios"}` in `filtering.py`.
@@ -38,10 +40,11 @@ Per method key (`Class.method(argtypes)`) it records:
 - `supportedPlatforms`: platforms where the method binds.
 - `hookablePlatforms`: platforms where a `before`/`after` hook can attach.
 - `hookAddressMissingPlatforms`: callable but no hook address on a supported platform.
-- `skipReasons`: per platform, why it was dropped (`missing-address`, `not-callable:<p>`, `intersection-missing-platform:...`, `inaccessible`, and others).
+- `skipReasons`: per platform, why the platform plan dropped it (`missing-address`, `not-callable:<p>`, `inaccessible`, and others).
 
 The `summary` block has per-platform counts (methods emitted/skipped, hook targets, fields, skipped classes).
-The `intersection` block has final common counts and how many methods, hooks, and fields intersection removed.
+The `freeFunctions` block records the same support and skip-reason shape for namespace free functions.
+The `intersection` block has final common counts and how many methods, hooks, fields, and free functions intersection removed.
 
 ### Hints
 

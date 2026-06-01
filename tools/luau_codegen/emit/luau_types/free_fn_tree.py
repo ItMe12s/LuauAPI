@@ -3,24 +3,15 @@ from __future__ import annotations
 from typing import Dict, List
 
 from luau_codegen.parse.broma import Class, Function, Method
-from luau_codegen.policy.free_functions import (
-    free_function_allowed,
-    free_function_supported,
-)
 from luau_codegen.emit.luau_types.method_types import _DUMMY_CLS, _method_type
 
 
 def _build_function_tree(
     functions: List[Function],
     objects: Dict[str, Class],
-    target_platform: str = "win",
 ) -> dict:
     tree: dict = {"children": {}, "functions": {}}
     for fn in functions:
-        if not free_function_supported(fn, objects):
-            continue
-        if not free_function_allowed(fn, target_platform):
-            continue
         node = tree
         for seg in fn.lua_path.split(".")[1:]:
             node = node["children"].setdefault(seg, {"children": {}, "functions": {}})
