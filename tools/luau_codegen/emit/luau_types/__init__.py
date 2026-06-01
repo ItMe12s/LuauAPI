@@ -206,7 +206,7 @@ def emit(
     lines.append(
         "    write: (root: FsRoot, path: string, data: string) -> (boolean?, string?),\n"
     )
-    lines.append("    exists: (root: FsRoot, path: string) -> boolean,\n")
+    lines.append("    exists: (root: FsRoot, path: string) -> (boolean?, string?),\n")
     lines.append("    list: (root: FsRoot, path: string) -> ({ string }?, string?),\n")
     lines.append("    mkdir: (root: FsRoot, path: string) -> (boolean?, string?),\n")
     lines.append("    remove: (root: FsRoot, path: string) -> (boolean?, string?),\n")

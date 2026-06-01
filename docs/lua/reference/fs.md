@@ -25,8 +25,8 @@ without `pcall`.
 geode.fs.read(root: FsRoot, path: string) -> (string?, string?)
 ```
 
-Reads a file's contents. Returns the contents, or `nil` and an error message. Reads are
-capped at 16 MB.
+Reads a file's contents. Returns the contents, or `nil` and an error message.
+Reads are capped at 32 MB.
 
 ## write
 
@@ -40,10 +40,11 @@ and an error message. Writing to the read-only `resources` root fails.
 ## exists
 
 ```lua
-geode.fs.exists(root: FsRoot, path: string) -> boolean
+geode.fs.exists(root: FsRoot, path: string) -> (boolean?, string?)
 ```
 
-Returns whether a file or directory exists at `path`.
+Returns whether a file or directory exists at `path`,
+or `nil` and an error message when the path escapes the root.
 
 ## list
 

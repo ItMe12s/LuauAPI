@@ -16,9 +16,7 @@
   extend, or contribute to the project.
 </p>
 
-**Super-duper work in progress.**
-
-**Not meant for any kind of usage yet.**
+**Early and in active development, APIs may change.**
 
 ## Getting started
 
