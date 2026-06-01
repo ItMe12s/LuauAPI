@@ -343,10 +343,10 @@ if(LUAUAPI_BUILD_TESTS)
     include(Catch)
     catch_discover_tests(luauapi_tests DISCOVERY_MODE PRE_TEST)
     add_test(
-        NAME luauapi_codegen_hooks
+        NAME luauapi_codegen_tests
         COMMAND ${Python3_EXECUTABLE} -m unittest discover -s tests/luau_codegen -p "test_*.py"
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     )
-    set_tests_properties(luauapi_codegen_hooks PROPERTIES
+    set_tests_properties(luauapi_codegen_tests PROPERTIES
         ENVIRONMENT "PYTHONPATH=${CMAKE_CURRENT_SOURCE_DIR}/tools")
 endif()

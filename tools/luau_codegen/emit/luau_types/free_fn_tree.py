@@ -3,8 +3,10 @@ from __future__ import annotations
 from typing import Dict, List
 
 from luau_codegen.parse.broma import Class, Function, Method
-from luau_codegen.policy.free_functions import free_function_allowed
-from luau_codegen.emit.bindings.free_functions import free_function_supported
+from luau_codegen.policy.free_functions import (
+    free_function_allowed,
+    free_function_supported,
+)
 from luau_codegen.emit.luau_types.method_types import _DUMMY_CLS, _method_type
 
 

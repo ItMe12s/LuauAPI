@@ -20,7 +20,7 @@ class CodegenIoTests(unittest.TestCase):
             shutil.rmtree(tmpdir)
 
     def test_collect_bindings_root_warns_for_missing_bro_files(self) -> None:
-        from luau_codegen.cli.collect import collect_bindings_root  # type: ignore[import-unresolved]
+        from luau_codegen.parse.collect import collect_bindings_root  # type: ignore[import-unresolved]
 
         tmpdir = tempfile.mkdtemp()
         try:
@@ -82,25 +82,31 @@ class CodegenExitCodeTests(unittest.TestCase):
 
 class F11ClassMergeTests(unittest.TestCase):
     def test_duplicate_class_merges_attrs(self) -> None:
-        root = Root()
-        cls1 = Class(
-            name="Foo", namespace="test", attributes=["link(win)"], source="a.bro"
-        )
-        cls2 = Class(
-            name="Foo", namespace="test", attributes=["link(android)"], source="b.bro"
-        )
-        root.classes = [cls1, cls2]
-
-        seen: dict = {}
-        for cls in root.classes:
-            if cls.qualified_name in seen:
-                existing = seen[cls.qualified_name]
-                for attr in cls.attributes:
-                    if attr not in existing.attributes:
-                        existing.attributes.append(attr)
-            else:
-                seen[cls.qualified_name] = cls
-        merged = list(seen.values())
-        self.assertEqual(len(merged), 1)
-        self.assertIn("link(win)", merged[0].attributes)
-        self.assertIn("link(android)", merged[0].attributes)
+        tmpdir = tempfile.mkdtemp()
+        try:
+            bindings = os.path.join(tmpdir, "bindings")
+            os.makedirs(bindings)
+            bro_a = os.path.join(bindings, "Cocos2d.bro")
+            bro_b = os.path.join(bindings, "Extras.bro")
+            with open(bro_a, "w", encoding="utf-8") as f:
+                f.write(
+                    "[[link(win)]]\n"
+                    "class test::Foo {\n"
+                    "    void first() = win 0x1;\n"
+                    "}\n"
+                )
+            with open(bro_b, "w", encoding="utf-8") as f:
+                f.write(
+                    "[[link(android)]]\n"
+                    "class test::Foo {\n"
+                    "    void second() = win 0x2;\n"
+                    "}\n"
+                )
+            for name in ("FMOD.bro", "Kazmath.bro", "GeometryDash.bro"):
+                open(os.path.join(bindings, name), "w", encoding="utf-8").close()
+            root = collect_bindings_root(bindings)
+            merged = next(c for c in root.classes if c.name == "Foo")
+            self.assertIn("link(win)", merged.attributes)
+            self.assertIn("link(android)", merged.attributes)
+        finally:
+            shutil.rmtree(tmpdir)

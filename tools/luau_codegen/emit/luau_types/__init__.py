@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from typing import Dict, List, Tuple
 
 from luau_codegen.parse.broma import Root
@@ -38,6 +39,29 @@ gd_namespace = "geode.gd"
 geode_namespace = "geode"
 
 __all__ = ["emit", "TYPES_FILE"]
+
+_PACKAGE_DIR = os.path.dirname(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+)
+
+
+def _collect_extra_dluau() -> str:
+    extra_dir = os.path.join(_PACKAGE_DIR, "extra_bindings")
+    if not os.path.isdir(extra_dir):
+        return ""
+    parts: list[str] = []
+    for name in sorted(os.listdir(extra_dir)):
+        if name.endswith(".dluau"):
+            with open(os.path.join(extra_dir, name), "r", encoding="utf-8") as f:
+                parts.append(f.read().strip())
+    if not parts:
+        return ""
+    body = "\n\n".join(parts)
+    return (
+        "\n\n-- Custom definitions from tools/luau_codegen/extra_bindings/\n"
+        + body
+        + "\n"
+    )
 
 
 def _header(label: str) -> List[str]:
@@ -183,4 +207,8 @@ def emit(
     lines.append("}\n\n")
     lines.append("declare geode: GeodeNamespace\n")
 
-    return {TYPES_FILE: "".join(lines)}
+    content = "".join(lines)
+    extra_dluau = _collect_extra_dluau()
+    if extra_dluau:
+        content += extra_dluau
+    return {TYPES_FILE: content}

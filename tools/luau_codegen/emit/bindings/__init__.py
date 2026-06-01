@@ -9,13 +9,11 @@ from luau_codegen.emit.bindings.common import _emit_common_file
 from luau_codegen.emit.bindings.free_functions import (
     FREE_FUNCTIONS_FILE,
     emit_free_functions_file,
-    free_function_supported,
 )
 
 __all__ = [
     "emit",
     "emit_free_functions_file",
-    "free_function_supported",
     "FREE_FUNCTIONS_FILE",
 ]
 

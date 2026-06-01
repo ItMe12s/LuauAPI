@@ -14,7 +14,7 @@ from luau_codegen.emit import luau_types as emit_types
 from luau_codegen.emit import parity
 from luau_codegen.emit import plan as emit_plan
 from luau_codegen.emit.plan import ambiguous_overloads
-from luau_codegen.cli.collect import _collect_extra_dluau, collect_bindings_root
+from luau_codegen.parse.collect import collect_bindings_root
 from luau_codegen.cli.io import _cleanup_orphans, _write_if_changed
 from luau_codegen.cli.report import _emit_report
 from luau_codegen.cli.schema import _emit_schema
@@ -171,9 +171,6 @@ def main(argv: List[str]) -> int:
         schema_path = os.path.join(args.out, "schema.json")
         report_path = os.path.join(args.out, "report.md")
         type_files = emit_types.emit(root, args.platform, plan=plan)
-        extra_dluau = _collect_extra_dluau()
-        if extra_dluau and "geode.d.luau" in type_files:
-            type_files["geode.d.luau"] += extra_dluau
         for filename, content in type_files.items():
             _write_if_changed(os.path.join(args.types_out, filename), content)
         orphan_globs = ("*.d.luau", "luau-lsp.json")

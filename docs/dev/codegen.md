@@ -57,7 +57,7 @@ After generation, `build/luauapi-gen/` holds helper files for debugging codegen:
 
 ## Tests
 
-The hook generation logic has a Python test suite under `tests/luau_codegen/`, run through CTest.
+The Python code generator has a unit test suite under `tests/luau_codegen/`, run through CTest as `luauapi_codegen_tests`.
 See [Testing](testing.md).
 
 ## Source

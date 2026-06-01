@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from luau_codegen.parse.broma import Function
+
+from luau_codegen.convert.type_map import classify_arg, classify_return
+from luau_codegen.parse.broma import Class, Function
 
 
 @dataclass(frozen=True)
@@ -40,3 +42,9 @@ def free_function_allowed(fn: Function, target_platform: str) -> bool:
     if arities is None:
         return True
     return len(fn.args) in arities
+
+
+def free_function_supported(fn: Function, objects: dict[str, Class]) -> bool:
+    if classify_return(fn.ret, objects) is None:
+        return False
+    return all(classify_arg(arg.type, objects) is not None for arg in fn.args)

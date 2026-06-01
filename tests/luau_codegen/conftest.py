@@ -67,7 +67,7 @@ from luau_codegen.emit.cxx_templates import (  # type: ignore[import-unresolved]
     emit_internal_hpp,
 )
 from luau_codegen.policy.intersection import intersection_platforms  # type: ignore[import-unresolved]
-from luau_codegen.cli.collect import collect_bindings_root  # type: ignore[import-unresolved]
+from luau_codegen.parse.collect import collect_bindings_root  # type: ignore[import-unresolved]
 from luau_codegen.cli.main import main as codegen_main  # type: ignore[import-unresolved]
 from luau_codegen.convert.marshalling import check_arg, push_value  # type: ignore[import-unresolved]
 from luau_codegen.model.domain import (  # type: ignore[import-unresolved]

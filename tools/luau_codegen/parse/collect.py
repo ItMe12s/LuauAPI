@@ -6,8 +6,6 @@ import warnings
 from luau_codegen.parse import broma
 from luau_codegen.model.domain import BRO_FILES, object_classes
 
-_PACKAGE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
 
 def collect_bindings_root(
     bindings_dir: str, geode_sdk_path: str | None = None
@@ -64,22 +62,3 @@ def collect_bindings_root(
         skip = GD_ENUM_TYPES | COCOS_ENUM_TYPES | {c.name for c in object_classes(root)}
         register_geode_enums(geode_enums, skip=skip)
     return root
-
-
-def _collect_extra_dluau() -> str:
-    extra_dir = os.path.join(_PACKAGE_DIR, "extra_bindings")
-    if not os.path.isdir(extra_dir):
-        return ""
-    parts: list[str] = []
-    for name in sorted(os.listdir(extra_dir)):
-        if name.endswith(".dluau"):
-            with open(os.path.join(extra_dir, name), "r", encoding="utf-8") as f:
-                parts.append(f.read().strip())
-    if not parts:
-        return ""
-    body = "\n\n".join(parts)
-    return (
-        "\n\n-- Custom definitions from tools/luau_codegen/extra_bindings/\n"
-        + body
-        + "\n"
-    )

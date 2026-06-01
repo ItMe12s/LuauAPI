@@ -4,24 +4,16 @@ from collections import defaultdict
 from typing import Dict, List
 
 from luau_codegen.parse.broma import Class, Function
-from luau_codegen.policy.free_functions import free_function_allowed
-from luau_codegen.emit.cxx_templates import file_preamble
-from luau_codegen.convert.marshalling import check_arg, push_return
-from luau_codegen.convert.type_map import (
-    classify_arg,
-    classify_return,
-    require_classify_arg,
-    require_classify_return,
+from luau_codegen.policy.free_functions import (
+    free_function_allowed,
+    free_function_supported,
 )
 from luau_codegen.util.identifiers import cxx_id
+from luau_codegen.convert.marshalling import check_arg, push_return
+from luau_codegen.convert.type_map import require_classify_arg, require_classify_return
+from luau_codegen.emit.cxx_templates import file_preamble
 
 FREE_FUNCTIONS_FILE = "bindings_free_functions.cpp"
-
-
-def free_function_supported(fn: Function, objects: Dict[str, Class]) -> bool:
-    if classify_return(fn.ret, objects) is None:
-        return False
-    return all(classify_arg(arg.type, objects) is not None for arg in fn.args)
 
 
 def _free_fn_base(fn: Function) -> str:
