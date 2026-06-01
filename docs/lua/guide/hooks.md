@@ -66,8 +66,14 @@ A `before` callback controls what happens next through its return value:
 
 - Return `nil` or nothing to run the original as normal.
 - Return a table with an `args` field to replace the method arguments.
-- Return `geode.skip(value)` to skip the original. The value you pass becomes the return value. For a void function, call `geode.skip()` with no value.
-- Any other non-nil return is ignored. The runtime logs a warning and runs the original.
+- Return `geode.skip(value)` to skip the original and use `value` as the return. For void, use `geode.skip()`.
+- Any other non-nil return is ignored. The runtime logs an error and runs the original.
+
+Invalid override values are rejected strictly:
+
+- `{ args = { wrongType, ... } }` logs an error and the original arguments are kept.
+- `geode.skip(wrongType)` logs an error, the skip is rejected, and the original still runs.
+- An `after` return of the wrong type logs an error and the original return is kept.
 
 Change the arguments:
 
@@ -109,6 +115,7 @@ geode.hook("geode.gd.GameManager:getIntGameVariable/1", {
 
 To change the return value, return a new value.
 To keep it, return the value you received. Return `nil` to leave the original return in place.
+A return value of the wrong type is rejected and the original return is kept.
 
 ## Priority and order
 

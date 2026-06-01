@@ -36,6 +36,9 @@ The most involved part is the hook generator. `emit/hooks.py` emits one C++ func
 4. Runs the registered `after` callbacks, and applies a return override if one was given.
 
 `emit/cxx_templates.py` emits the shared hook runtime that stores callbacks, sorts them by priority, and calls them.
+Invalid hook overrides are type-checked via pcall, wrong types log an error and are ignored.
+
+Binding and hook decode share `convert/marshalling.py` `emit_stack_check`, which emits `luax::check<>` calls for all marshallable types.
 The Luau type emitter (`emit/luau_types/`) emits the `geode` namespace stub, including `HookHandle` and `HookCallbackTable`.
 
 A method is hookable only when its address is known on the target platform and its arguments and return can be marshalled.
@@ -105,4 +108,5 @@ See [Testing](testing.md).
 - `tools/luau_codegen/emit/hooks.py`
 - `tools/luau_codegen/emit/cxx_templates.py`
 - `tools/luau_codegen/emit/luau_types/`
+- `tools/luau_codegen/convert/marshalling.py`
 - `tools/luau_codegen/emit/bindings/`

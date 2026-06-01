@@ -65,15 +65,17 @@ When an owned userdata is collected, the retain is released, and on shutdown all
 It also provides helpers for reading numeric and boolean table fields,
 and helpers to write integers as strings, which avoids float precision loss for large values.
 
+## Value types
+
+`Types.hpp` provides `check<T>` specializations and `push(T)` overloads for cocos value types:
+points, sizes, rects, colors, and button configs.
+Generated binding and hook code uses these helpers to decode and push table-shaped values.
+The generated hook runtime applies overrides through a pcall trampoline so decode errors are safe.
+
 ## Lua references
 
 `LuaRef` wraps a Lua registry reference with RAII. It records the runtime generation and the resources root,
 and it becomes invalid after a runtime restart. The task scheduler and the hook runtime store callbacks as `LuaRef`.
-
-## Value types
-
-`Types.hpp` converts small structs to and from Lua tables. It covers points, sizes, rects, colors, and button configs.
-The generated hook code uses these helpers to decode table shaped arguments.
 
 ## Per node fields
 

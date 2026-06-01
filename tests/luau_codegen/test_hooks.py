@@ -79,9 +79,99 @@ class HookOffsetTests(unittest.TestCase):
 
 
 class F1GdStringReturnOverrideTests(unittest.TestCase):
-    def test_gd_string_return_uses_var_param(self) -> None:
-        info = TypeInfo(kind="string", lua_type="string", cxx_type="gd::string")
-        lines = emit_return_override(info, "my_var", "-1", "test")
-        text = "".join(lines)
-        self.assertIn("my_var = gd::string(", text)
-        self.assertNotIn("result = gd::string(", text)
+    def test_gd_string_return_uses_check_in_apply_fn(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        cls = Class(
+            name="CCNode",
+            namespace="cocos2d",
+            bases=["CCObject"],
+            methods=[
+                Method(
+                    name="getName",
+                    ret="gd::string",
+                    args=[],
+                    platforms=all_platforms("0x1"),
+                )
+            ],
+        )
+
+        text = _emit_class_file(
+            cls,
+            {"getName": cls.methods},
+            [(cls, cls.methods[0])],
+            [],
+            {"CCObject": ccobject, "CCNode": cls},
+            set(),
+            1,
+            "win",
+        )
+
+        self.assertIn("luaapi_apply_return_CCNode_getName_0", text)
+        self.assertIn("luax::check<std::string>", text)
+        self.assertIn("*ctx->result = valueOverride", text)
+
+
+class HookApplyFnTests(unittest.TestCase):
+    def test_apply_args_fn_strict_table_shape(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        cls = Class(
+            name="CCNode",
+            namespace="cocos2d",
+            bases=["CCObject"],
+            methods=[
+                Method(
+                    name="setTag",
+                    ret="void",
+                    args=[Arg("int", "tag")],
+                    platforms=all_platforms("0x1"),
+                )
+            ],
+        )
+
+        text = _emit_class_file(
+            cls,
+            {"setTag": cls.methods},
+            [(cls, cls.methods[0])],
+            [],
+            {"CCObject": ccobject, "CCNode": cls},
+            set(),
+            1,
+            "win",
+        )
+
+        self.assertIn('luaL_error(L, "hook args expected table")', text)
+        self.assertIn('luaL_error(L, "hook args table shape invalid")', text)
+
+    def test_object_override_allows_nil(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        cls = Class(
+            name="CCNode",
+            namespace="cocos2d",
+            bases=["CCObject"],
+            methods=[
+                Method(
+                    name="addChild",
+                    ret="void",
+                    args=[Arg("cocos2d::CCNode*", "child")],
+                    platforms=all_platforms("0x1"),
+                )
+            ],
+        )
+
+        text = _emit_class_file(
+            cls,
+            {"addChild": cls.methods},
+            [(cls, cls.methods[0])],
+            [],
+            {
+                "CCObject": ccobject,
+                "CCNode": cls,
+                "cocos2d::CCNode": cls,
+            },
+            set(),
+            1,
+            "win",
+        )
+
+        self.assertIn("if (lua_isnil(L, -1))", text)
+        self.assertIn("arg0Override = nullptr", text)

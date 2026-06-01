@@ -35,14 +35,16 @@ You must provide at least one of `before` or `after`.
 ## before return values
 
 - Return nothing or `nil` to run the original.
-- Return `{ args = {...} }` to replace the method arguments. The list is positional or keyed by argument name.
-- Return `geode.skip(value)` to skip the original and use `value` as the return.
-- Any other value is ignored, with a logged warning.
+- Return `{ args = {...} }` to replace the arguments (by position or name). Types must match.
+- Return `geode.skip(value)` to skip the original and use `value` as the return. The skip value must match the method return type.
+- Any other value is ignored, with a logged error.
+
+Invalid `args`, skip values, or return overrides are rejected. The runtime logs an error and keeps the original arguments or return.
 
 ## after return values
 
 - Return `nil` to keep the original return.
-- Return a value to replace the return.
+- Return a value to replace the return. The value must match the method return type.
 
 ## geode.skip
 

@@ -7,7 +7,7 @@ from luau_codegen.convert.symbols import android_symbol
 from luau_codegen.parse.broma import Class, Method
 from luau_codegen.policy.filtering import direct_callable, platform_value
 from luau_codegen.policy.link_attrs import class_link_platforms, platform_aliases
-from luau_codegen.convert.marshalling import push_value
+from luau_codegen.convert.marshalling import emit_stack_check, push_value
 from luau_codegen.model.domain import cxx_name, lua_namespace
 from luau_codegen.convert.type_map import (
     TypeInfo,
@@ -101,124 +101,101 @@ def hookable(
     return all(classify_arg(arg.type, objects) is not None for arg in m.args)
 
 
-def emit_value_decode(info: TypeInfo, var: str, idx: str, context: str) -> list[str]:
-    if info.kind == "void":
-        return ["        return true;\n"]
-    if info.kind == "bool":
-        return [
-            f"        if (!lua_isboolean(L, {idx})) return false;\n",
-            f"        {var} = lua_toboolean(L, {idx}) != 0;\n",
-            "        return true;\n",
-        ]
-    if info.kind in ("number", "enum"):
-        return [
-            f"        if (!lua_isnumber(L, {idx})) return false;\n",
-            f"        {var} = static_cast<{info.cxx_type}>(lua_tonumber(L, {idx}));\n",
-            "        return true;\n",
-        ]
-    if info.kind == "wideint":
-        return [
-            f"        return luax::tryIntegerString<{info.cxx_type}>(L, {idx}, &{var});\n"
-        ]
-    if info.kind == "string":
-        if info.cxx_type == "gd::string":
-            return [
-                f"        if (!lua_isstring(L, {idx})) return false;\n",
-                "        size_t len = 0;\n",
-                f"        char const* text = lua_tolstring(L, {idx}, &len);\n",
-                '        auto storage = std::string(text ? text : "", len);\n',
-                f"        {var} = gd::string(storage.c_str());\n",
-                "        return true;\n",
-            ]
-        return [
-            f"        if (!lua_isstring(L, {idx})) return false;\n",
-            "        size_t len = 0;\n",
-            f"        char const* text = lua_tolstring(L, {idx}, &len);\n",
-            f'        {var} = std::string(text ? text : "", len);\n',
-            "        return true;\n",
-        ]
-    if info.kind == "value":
-        if info.lua_type == "CCPoint":
-            return [
-                f"        if (!lua_istable(L, {idx})) return false;\n",
-                f'        lua_getfield(L, {idx}, "x");\n',
-                "        if (!lua_isnumber(L, -1)) { lua_pop(L, 1); return false; }\n",
-                "        auto x = static_cast<float>(lua_tonumber(L, -1));\n",
-                "        lua_pop(L, 1);\n",
-                f'        lua_getfield(L, {idx}, "y");\n',
-                "        if (!lua_isnumber(L, -1)) { lua_pop(L, 1); return false; }\n",
-                "        auto y = static_cast<float>(lua_tonumber(L, -1));\n",
-                "        lua_pop(L, 1);\n",
-                f"        {var} = cocos2d::CCPoint(x, y);\n",
-                "        return true;\n",
-            ]
-        if info.lua_type == "CCSize":
-            return [
-                f"        if (!lua_istable(L, {idx})) return false;\n",
-                f'        lua_getfield(L, {idx}, "width");\n',
-                "        if (!lua_isnumber(L, -1)) { lua_pop(L, 1); return false; }\n",
-                "        auto width = static_cast<float>(lua_tonumber(L, -1));\n",
-                "        lua_pop(L, 1);\n",
-                f'        lua_getfield(L, {idx}, "height");\n',
-                "        if (!lua_isnumber(L, -1)) { lua_pop(L, 1); return false; }\n",
-                "        auto height = static_cast<float>(lua_tonumber(L, -1));\n",
-                "        lua_pop(L, 1);\n",
-                f"        {var} = cocos2d::CCSize(width, height);\n",
-                "        return true;\n",
-            ]
-        if info.lua_type == "CCRect":
-            return [
-                f"        if (!lua_istable(L, {idx})) return false;\n",
-                f'        lua_getfield(L, {idx}, "origin");\n',
-                "        if (!lua_istable(L, -1)) { lua_pop(L, 1); return false; }\n",
-                f'        auto origin = luax::toPoint(L, -1, "{context}");\n',
-                "        lua_pop(L, 1);\n",
-                f'        lua_getfield(L, {idx}, "size");\n',
-                "        if (!lua_istable(L, -1)) { lua_pop(L, 1); return false; }\n",
-                f'        auto size = luax::toSize(L, -1, "{context}");\n',
-                "        lua_pop(L, 1);\n",
-                f"        {var} = cocos2d::CCRect(origin.x, origin.y, size.width, size.height);\n",
-                "        return true;\n",
-            ]
-        if info.lua_type == "RGBColor":
-            return [
-                f"        if (!lua_istable(L, {idx})) return false;\n",
-                f'        lua_getfield(L, {idx}, "r");\n',
-                "        if (!lua_isnumber(L, -1)) { lua_pop(L, 1); return false; }\n",
-                "        auto r = static_cast<GLubyte>(lua_tointeger(L, -1));\n",
-                "        lua_pop(L, 1);\n",
-                f'        lua_getfield(L, {idx}, "g");\n',
-                "        if (!lua_isnumber(L, -1)) { lua_pop(L, 1); return false; }\n",
-                "        auto g = static_cast<GLubyte>(lua_tointeger(L, -1));\n",
-                "        lua_pop(L, 1);\n",
-                f'        lua_getfield(L, {idx}, "b");\n',
-                "        if (!lua_isnumber(L, -1)) { lua_pop(L, 1); return false; }\n",
-                "        auto b = static_cast<GLubyte>(lua_tointeger(L, -1));\n",
-                "        lua_pop(L, 1);\n",
-                f"        {var} = cocos2d::ccColor3B{{r, g, b}};\n",
-                "        return true;\n",
-            ]
-        if info.lua_type == "UIButtonConfig":
-            return [
-                f"        if (!lua_istable(L, {idx})) return false;\n",
-                f'        {var} = luax::toUIButtonConfig(L, {idx}, "{context}");\n',
-                "        return true;\n",
-            ]
-    if info.kind == "object":
-        return [
-            f"        if (lua_isnil(L, {idx})) {{ {var} = nullptr; return true; }}\n",
-            f"        auto obj = luax::Usertype<{info.cxx_type[:-1]}>::tryCheck(L, {idx});\n",
-            "        if (!obj) return false;\n",
-            f"        {var} = obj;\n",
-            "        return true;\n",
-        ]
-    raise ValueError(f"unsupported type kind: {info.kind}")
+def _emit_apply_args_ctx(suffix: str, args: list[tuple]) -> str:
+    if not args:
+        return ""
+    fields = []
+    for _, info, name in args:
+        if info.kind == "string" and info.cxx_type.endswith("*"):
+            fields.append(f"        std::string* {name}Storage;")
+            fields.append(f"        char const** {name};")
+        else:
+            fields.append(f"        {info.cxx_type}* {name};")
+    body = "\n".join(fields)
+    return f"    struct ApplyArgsCtx_{suffix} {{\n{body}\n    }};\n\n"
 
 
-def emit_return_override(
-    info: TypeInfo, var: str, idx: str, target_id: str
-) -> list[str]:
-    return emit_value_decode(info, var, idx, "hook return")
+def _emit_apply_return_ctx(suffix: str, ret: TypeInfo) -> str:
+    if ret.kind == "void":
+        return ""
+    return (
+        f"    struct ApplyReturnCtx_{suffix} {{\n"
+        f"        {ret.cxx_type}* result;\n"
+        f"    }};\n\n"
+    )
+
+
+def _emit_apply_args_fn(
+    suffix: str,
+    args: list[tuple],
+    named_args: bool,
+) -> str:
+    if not args:
+        return (
+            f"    int luaapi_apply_args_{suffix}(lua_State* L) {{\n"
+            f'        if (!lua_istable(L, 1)) luaL_error(L, "hook args expected table");\n'
+            f'        if (lua_objlen(L, 1) != 0) luaL_error(L, "hook args expected empty table");\n'
+            f"        return 0;\n"
+            f"    }}\n\n"
+        )
+
+    arg_names = [arg.name for arg, _, _ in args]
+    lines = [
+        f"    int luaapi_apply_args_{suffix}(lua_State* L) {{\n",
+        f"        auto* ctx = static_cast<ApplyArgsCtx_{suffix}*>(lua_tolightuserdata(L, lua_upvalueindex(1)));\n",
+        f'        if (!lua_istable(L, 1)) luaL_error(L, "hook args expected table");\n',
+        f"        int idx = 1;\n",
+        f"        bool useArrayArgs = lua_objlen(L, idx) == {len(args)};\n",
+        f"        bool useNamedArgs = {'true' if named_args else 'false'};\n",
+        f'        if (!useArrayArgs && !useNamedArgs) luaL_error(L, "hook args table shape invalid");\n',
+    ]
+    for i, (arg, info, name) in enumerate(args, start=1):
+        tmp = f"{name}Override"
+        lines.append(
+            f'        if (useArrayArgs) lua_rawgeti(L, idx, {i}); else lua_getfield(L, idx, "{_cstr(arg.name)}");\n'
+        )
+        lines.extend(
+            f"        {line.lstrip()}"
+            for line in emit_stack_check(
+                info,
+                "-1",
+                tmp,
+                "hook args",
+                allow_nil_object=(info.kind == "object"),
+                declare=True,
+            )
+        )
+        lines.append("        lua_pop(L, 1);\n")
+    for _, info, name in args:
+        tmp = f"{name}Override"
+        if info.kind == "string" and info.cxx_type.endswith("*"):
+            lines.append(f"        *ctx->{name}Storage = {tmp}_storage;\n")
+            lines.append(f"        *ctx->{name} = ctx->{name}Storage->c_str();\n")
+        else:
+            lines.append(f"        *ctx->{name} = {tmp};\n")
+    lines.append("        return 0;\n")
+    lines.append("    }\n\n")
+    return "".join(lines)
+
+
+def _emit_apply_return_fn(suffix: str, ret: TypeInfo, label: str, fn_name: str) -> str:
+    if ret.kind == "void":
+        return (
+            f"    int {fn_name}(lua_State* L) {{\n" f"        return 0;\n" f"    }}\n\n"
+        )
+    tmp = "valueOverride"
+    lines = [
+        f"    int {fn_name}(lua_State* L) {{\n",
+        f"        auto* ctx = static_cast<ApplyReturnCtx_{suffix}*>(lua_tolightuserdata(L, lua_upvalueindex(1)));\n",
+    ]
+    lines.extend(
+        f"        {line.lstrip()}"
+        for line in emit_stack_check(ret, "1", tmp, label, declare=True)
+    )
+    lines.append(f"        *ctx->result = {tmp};\n")
+    lines.append("        return 0;\n")
+    lines.append("    }\n\n")
+    return "".join(lines)
 
 
 def emit_hook_target(
@@ -243,13 +220,45 @@ def emit_hook_target(
     params.extend(f"{info.cxx_type} {name}" for _, info, name in args)
     params_text = ", ".join(params)
     call = f"self->{m.name}({', '.join(call_args)})"
-    out = [f"    {ret_type} luaapi_hook_{suffix}({params_text}) {{\n"]
+    arg_names = [arg.name for arg, _, _ in args]
+    named_args = bool(arg_names) and len(set(arg_names)) == len(arg_names)
+
+    out: list[str] = []
+    out.append(_emit_apply_args_ctx(suffix, args))
+    out.append(_emit_apply_return_ctx(suffix, ret))
+    out.append(_emit_apply_args_fn(suffix, args, named_args))
+    if ret.kind != "void":
+        out.append(
+            _emit_apply_return_fn(
+                suffix, ret, "hook return", f"luaapi_apply_return_{suffix}"
+            )
+        )
+        out.append(
+            _emit_apply_return_fn(
+                suffix, ret, "hook skip", f"luaapi_apply_skip_{suffix}"
+            )
+        )
+
+    out.append(f"    {ret_type} luaapi_hook_{suffix}({params_text}) {{\n")
     if ret.kind != "void":
         out.append(f"        {ret.cxx_type} result{{}};\n")
     for _, info, name in args:
         if info.kind == "string" and info.cxx_type.endswith("*"):
             out.append(f"        std::string {name}Storage;\n")
     out.append("        bool skipOriginal = false;\n")
+    if args:
+        ctx_fields = []
+        for _, info, name in args:
+            if info.kind == "string" and info.cxx_type.endswith("*"):
+                ctx_fields.append(f"&{name}Storage")
+                ctx_fields.append(f"&{name}")
+            else:
+                ctx_fields.append(f"&{name}")
+        out.append(
+            f"        ApplyArgsCtx_{suffix} applyArgsCtx{{ {', '.join(ctx_fields)} }};\n"
+        )
+    if ret.kind != "void":
+        out.append(f"        ApplyReturnCtx_{suffix} applyReturnCtx{{ &result }};\n")
     out.append(
         f'        skipOriginal = luauapi_gen::runLuaPreHooks("{target_id}", {1 + len(args)}, [&](lua_State* L) {{\n'
     )
@@ -262,73 +271,15 @@ def emit_hook_target(
     for _, info, name in args:
         out.extend(f"    {line}" for line in push_value(info, name))
     out.append("        }, [&](lua_State* L, int idx) -> bool {\n")
-    if args:
-        arg_names = [arg.name for arg, _, _ in args]
-        named_args = all(arg_names) and len(set(arg_names)) == len(arg_names)
-        out.append("            if (!lua_istable(L, idx)) return false;\n")
-        out.append(
-            f"            bool useArrayArgs = lua_objlen(L, idx) == {len(args)};\n"
-        )
-        out.append(
-            f"            bool useNamedArgs = {'true' if named_args else 'false'};\n"
-        )
-        out.append("            if (!useArrayArgs && !useNamedArgs) return false;\n")
-        for _, info, name in args:
-            if info.kind == "string" and info.cxx_type.endswith("*"):
-                out.append(f"            std::string {name}StorageOverride;\n")
-            else:
-                out.append(f"            {info.cxx_type} {name}Override{{}};\n")
-        for i, (arg, info, name) in enumerate(args, start=1):
-            if info.kind == "string" and info.cxx_type.endswith("*"):
-                out.append(
-                    f'            if (useArrayArgs) lua_rawgeti(L, idx, {i}); else lua_getfield(L, idx, "{_cstr(arg.name)}");\n'
-                )
-                out.append(
-                    "            if (!lua_isstring(L, -1)) { lua_pop(L, 1); return false; }\n"
-                )
-                out.append(f"            size_t {name}Len = 0;\n")
-                out.append(
-                    f"            char const* {name}Text = lua_tolstring(L, -1, &{name}Len);\n"
-                )
-                out.append(
-                    f'            {name}StorageOverride = std::string({name}Text ? {name}Text : "", {name}Len);\n'
-                )
-                out.append("            lua_pop(L, 1);\n")
-                continue
-            tmp = f"{name}Override"
-            out.append(
-                f'            if (useArrayArgs) lua_rawgeti(L, idx, {i}); else lua_getfield(L, idx, "{_cstr(arg.name)}");\n'
-            )
-            out.append(
-                f"            auto decode_{name} = [&](int valueIdx) -> bool {{\n"
-            )
-            out.extend(
-                f"        {line}"
-                for line in emit_value_decode(info, tmp, "valueIdx", "hook args")
-            )
-            out.append("            };\n")
-            out.append(
-                f"            if (!decode_{name}(-1)) {{ lua_pop(L, 1); return false; }}\n"
-            )
-            out.append("            lua_pop(L, 1);\n")
-        for _, info, name in args:
-            if info.kind == "string" and info.cxx_type.endswith("*"):
-                out.append(f"            {name}Storage = {name}StorageOverride;\n")
-                out.append(f"            {name} = {name}Storage.c_str();\n")
-            else:
-                out.append(f"            {name} = {name}Override;\n")
-        out.append("            return true;\n")
-    else:
-        out.append(
-            "            return lua_istable(L, idx) && lua_objlen(L, idx) == 0;\n"
-        )
+    out.append(
+        f'            return luauapi_gen::applyHookOverride(L, idx, &luaapi_apply_args_{suffix}, &applyArgsCtx, "{target_id}");\n'
+    )
     out.append("        }, [&](lua_State* L, int idx) -> bool {\n")
     if ret.kind == "void":
         out.append("            return true;\n")
     else:
-        out.extend(
-            f"    {line}"
-            for line in emit_value_decode(ret, "result", "idx", "hook skip")
+        out.append(
+            f'            return luauapi_gen::applyHookOverride(L, idx, &luaapi_apply_skip_{suffix}, &applyReturnCtx, "{target_id}");\n'
         )
     out.append("        });\n")
     out.append("        if (!skipOriginal) {\n")
@@ -355,9 +306,8 @@ def emit_hook_target(
     if ret.kind == "void":
         out.append("            return true;\n")
     else:
-        out.extend(
-            f"    {line}"
-            for line in emit_return_override(ret, "result", "idx", target_id)
+        out.append(
+            f'            return luauapi_gen::applyHookOverride(L, idx, &luaapi_apply_return_{suffix}, &applyReturnCtx, "{target_id}");\n'
         )
     out.append("        });\n")
     if ret.kind != "void":

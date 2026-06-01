@@ -47,3 +47,45 @@ class F6NumericMarshallingTests(unittest.TestCase):
         lines = check_arg(arg, info, 1, "v", "test")
         text = "".join(lines)
         self.assertIn("check<int>", text)
+
+
+class EmitStackCheckTests(unittest.TestCase):
+    def test_ccpoint_uses_check_specialization(self) -> None:
+        info = TypeInfo(kind="value", cxx_type="cocos2d::CCPoint", lua_type="CCPoint")
+        text = "".join(emit_stack_check(info, 1, "pt", "test"))
+        self.assertIn("luax::check<cocos2d::CCPoint>", text)
+        self.assertNotIn("toPoint", text)
+
+    def test_ccrect_uses_check_specialization(self) -> None:
+        info = TypeInfo(kind="value", cxx_type="cocos2d::CCRect", lua_type="CCRect")
+        text = "".join(emit_stack_check(info, 1, "rect", "test"))
+        self.assertIn("luax::check<cocos2d::CCRect>", text)
+
+    def test_assign_mode_emits_assignment(self) -> None:
+        info = TypeInfo(kind="number", lua_type="number", cxx_type="int")
+        text = "".join(emit_stack_check(info, 1, "v", "test", declare=False))
+        self.assertIn("v = static_cast<int>", text)
+        self.assertNotIn("auto v", text)
+
+    def test_allow_nil_object_branch(self) -> None:
+        info = TypeInfo(
+            kind="object",
+            cxx_type="cocos2d::CCNode*",
+            lua_type="CCNode",
+            class_name="CCNode",
+        )
+        text = "".join(emit_stack_check(info, 1, "node", "test", allow_nil_object=True))
+        self.assertIn("lua_isnil(L, 1)", text)
+        self.assertIn("node = nullptr", text)
+        self.assertIn("Usertype<cocos2d::CCNode>::check", text)
+
+    def test_char_ptr_storage_assign_mode(self) -> None:
+        info = TypeInfo(kind="string", lua_type="string", cxx_type="char const*")
+        text = "".join(emit_stack_check(info, 1, "text", "test", declare=False))
+        self.assertIn("text = text_storage.c_str()", text)
+
+    def test_value_push_uses_push_overload(self) -> None:
+        info = TypeInfo(kind="value", cxx_type="cocos2d::CCPoint", lua_type="CCPoint")
+        text = "".join(push_value(info, "pt"))
+        self.assertIn("luax::push(L, pt)", text)
+        self.assertNotIn("pushPoint", text)

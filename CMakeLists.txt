@@ -85,7 +85,7 @@ endif()
 foreach(LUAU_TARGET Luau.VM Luau.CodeGen)
     if (TARGET ${LUAU_TARGET})
         # I could hardcode this.
-        target_compile_definitions(${LUAU_TARGET} PUBLIC LUA_UTAG_LIMIT=1024)
+        target_compile_definitions(${LUAU_TARGET} PUBLIC LUA_UTAG_LIMIT=2048)
     endif()
 endforeach()
 

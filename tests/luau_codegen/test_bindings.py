@@ -68,23 +68,24 @@ class GeneratedSafetyTests(unittest.TestCase):
         self.assertIn("luaapi_geode_skip", text)
         self.assertIn("luaapi_geode_fields", text)
 
-    def test_invalid_skip_value_continues_before_chain(self) -> None:
+    def test_invalid_skip_value_rejects_skip_and_continues_chain(self) -> None:
         text = emit_internal_hpp()
 
-        self.assertIn('returned invalid skip value", targetId', text)
+        self.assertIn("applyHookOverride", text)
+        self.assertIn("override rejected", text)
         self.assertIn("continue;", text)
-        self.assertIn("return true;", text)
+        self.assertNotIn('returned invalid skip value", targetId', text)
 
-    def test_ui_button_config_decode_supported_for_hook_overrides(self) -> None:
+    def test_ui_button_config_decode_uses_check_specialization(self) -> None:
         info = TypeInfo(
             kind="value", cxx_type="UIButtonConfig", lua_type="UIButtonConfig"
         )
-        text = "".join(emit_value_decode(info, "config", "-1", "hook args"))
+        text = "".join(emit_stack_check(info, "-1", "config", "hook args"))
 
-        self.assertIn("luax::toUIButtonConfig", text)
-        self.assertIn("config = ", text)
+        self.assertIn("luax::check<UIButtonConfig>", text)
+        self.assertNotIn("luax::toUIButtonConfig", text)
 
-    def test_generated_hook_thunk_runs_pre_branch(self) -> None:
+    def test_generated_hook_thunk_uses_apply_trampoline(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")
         cls = Class(
             name="CCNode",
@@ -113,10 +114,12 @@ class GeneratedSafetyTests(unittest.TestCase):
 
         self.assertIn("runLuaPreHooks", text)
         self.assertIn("skipOriginal", text)
-        self.assertIn("lua_objlen", text)
-        self.assertIn("useArrayArgs", text)
+        self.assertIn("ApplyArgsCtx_CCNode_setTag_1", text)
+        self.assertIn("luaapi_apply_args_CCNode_setTag_1", text)
+        self.assertIn("applyHookOverride", text)
         self.assertIn('lua_getfield(L, idx, "tag")', text)
-        self.assertIn("arg0 = arg0Override", text)
+        self.assertIn("luax::check<int>", text)
+        self.assertIn("*ctx->arg0 = arg0Override", text)
         self.assertIn("if (!skipOriginal)", text)
 
     def test_hook_named_args_disabled_for_duplicate_names(self) -> None:
@@ -147,6 +150,7 @@ class GeneratedSafetyTests(unittest.TestCase):
         )
 
         self.assertIn("bool useNamedArgs = false;", text)
+        self.assertIn("hook args table shape invalid", text)
 
     def test_luau_owned_attr_pushes_owned_instance_return(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")

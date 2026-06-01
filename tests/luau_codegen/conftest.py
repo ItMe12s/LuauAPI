@@ -57,8 +57,6 @@ from luau_codegen.policy.link_attrs import (  # type: ignore[import-unresolved]
 )
 from luau_codegen.emit.hooks import (  # type: ignore[import-unresolved]
     android_symbol,
-    emit_return_override,
-    emit_value_decode,
     hook_address_expr,
     hook_offset,
     hookable,
@@ -70,7 +68,7 @@ from luau_codegen.emit.cxx_templates import (  # type: ignore[import-unresolved]
 from luau_codegen.policy.intersection import intersection_platforms  # type: ignore[import-unresolved]
 from luau_codegen.parse.collect import collect_bindings_root  # type: ignore[import-unresolved]
 from luau_codegen.cli.main import main as codegen_main  # type: ignore[import-unresolved]
-from luau_codegen.convert.marshalling import check_arg, push_value  # type: ignore[import-unresolved]
+from luau_codegen.convert.marshalling import check_arg, emit_stack_check, push_value  # type: ignore[import-unresolved]
 from luau_codegen.model.domain import (  # type: ignore[import-unresolved]
     build_class_lookup,
     codegen_object_map,
@@ -147,8 +145,6 @@ __all__ = [
     "is_link_platform",
     # emit.hooks
     "android_symbol",
-    "emit_return_override",
-    "emit_value_decode",
     "hook_address_expr",
     "hook_offset",
     "hookable",
@@ -162,6 +158,7 @@ __all__ = [
     "codegen_main",
     # convert.marshalling
     "check_arg",
+    "emit_stack_check",
     "push_value",
     # model.domain
     "build_class_lookup",
