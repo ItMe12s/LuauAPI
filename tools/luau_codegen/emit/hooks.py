@@ -222,6 +222,7 @@ def emit_hook_target(
     call = f"self->{m.name}({', '.join(call_args)})"
     arg_names = [arg.name for arg, _, _ in args]
     named_args = bool(arg_names) and len(set(arg_names)) == len(arg_names)
+    apply_args_ctx = "&applyArgsCtx" if args else "nullptr"
 
     out: list[str] = []
     out.append(_emit_apply_args_ctx(suffix, args))
@@ -272,7 +273,7 @@ def emit_hook_target(
         out.extend(f"    {line}" for line in push_value(info, name))
     out.append("        }, [&](lua_State* L, int idx) -> bool {\n")
     out.append(
-        f'            return luauapi_gen::applyHookOverride(L, idx, &luaapi_apply_args_{suffix}, &applyArgsCtx, "{target_id}");\n'
+        f'            return luauapi_gen::applyHookOverride(L, idx, &luaapi_apply_args_{suffix}, {apply_args_ctx}, "{target_id}");\n'
     )
     out.append("        }, [&](lua_State* L, int idx) -> bool {\n")
     if ret.kind == "void":

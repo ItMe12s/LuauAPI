@@ -112,6 +112,42 @@ class F1GdStringReturnOverrideTests(unittest.TestCase):
 
 
 class HookApplyFnTests(unittest.TestCase):
+    def test_zero_arg_hook_uses_null_apply_args_ctx(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        cls = Class(
+            name="CCNode",
+            namespace="cocos2d",
+            bases=["CCObject"],
+            methods=[
+                Method(
+                    name="init",
+                    ret="bool",
+                    args=[],
+                    platforms=all_platforms("0x1"),
+                )
+            ],
+        )
+
+        text = _emit_class_file(
+            cls,
+            {"init": cls.methods},
+            [(cls, cls.methods[0])],
+            [],
+            {"CCObject": ccobject, "CCNode": cls},
+            set(),
+            1,
+            "win",
+        )
+
+        self.assertIn("luaapi_apply_args_CCNode_init_0", text)
+        self.assertIn("hook args expected empty table", text)
+        self.assertIn(
+            "applyHookOverride(L, idx, &luaapi_apply_args_CCNode_init_0, nullptr",
+            text,
+        )
+        self.assertNotIn("ApplyArgsCtx_CCNode_init_0", text)
+        self.assertIn("ApplyReturnCtx_CCNode_init_0", text)
+
     def test_apply_args_fn_strict_table_shape(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")
         cls = Class(
