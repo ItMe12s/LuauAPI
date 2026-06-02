@@ -325,6 +325,7 @@ if(LUAUAPI_BUILD_TESTS)
     add_executable(luauapi_tests
         src/api.cpp
         src/lua/bindings/Binding.cpp
+        src/lua/bindings/framework/BindingHost.cpp
         src/lua/bindings/framework/Fields.cpp
         src/lua/bindings/framework/Usertype.cpp
         src/lua/bindings/framework/UsertypeRegistry.cpp
