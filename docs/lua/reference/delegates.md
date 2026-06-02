@@ -45,7 +45,7 @@ The orphan registry has a soft cap of `4096` (warns once, never drops entries).
 When a bound method **returns** a delegate pointer:
 
 - If the native object is a Luau-bound trampoline, the runtime pushes the **same table** you originally passed in.
-- Otherwise it pushes **`nil`** (native C++ delegate; not round-trippable to Luau).
+- Otherwise it pushes **`nil`** (native C++ delegate, not round-trippable to Luau).
 
 ## Supported interfaces
 
@@ -72,6 +72,17 @@ Regenerate specs and C++ trampolines after Broma changes:
 python tools/scripts/generate_delegate_artifacts.py
 ```
 
+Generated delegate trampolines live under the codegen output tree:
+
+- `${LUAUAPI_GEN_DIR}/src/lua/bindings/framework/LuaDelegates.gen.hpp`
+- `${LUAUAPI_GEN_DIR}/src/lua/bindings/framework/LuaDelegates.gen.cpp`
+
+Regenerate with the main Broma codegen stamp (`luauapi_codegen`) or directly:
+
+```bash
+python -m luau_codegen --emit-delegates --bindings <bindings-dir> --out <gen-dir>
+```
+
 ## Limits
 
 | Limit | Value |
@@ -88,6 +99,5 @@ python tools/scripts/generate_delegate_artifacts.py
 ## Source
 
 - `src/lua/bindings/framework/LuaDelegate.hpp`
-- `src/lua/bindings/framework/LuaDelegates.gen.hpp`
 - `tools/luau_codegen/model/delegate_specs.py`
 - `tools/scripts/generate_delegate_artifacts.py`

@@ -96,24 +96,75 @@ class CodegenExitCodeTests(unittest.TestCase):
             ):
                 open(os.path.join(bindings, name), "w", encoding="utf-8").close()
             with mock.patch.object(cg, "collect_bindings_root", return_value=root):
-                with mock.patch.object(
-                    cg.emit_bindings,
-                    "emit",
-                    side_effect=ValueError("emit failed"),
-                ):
-                    rc = cg.main(
-                        [
-                            "--bindings",
-                            bindings,
-                            "--out",
-                            out_dir,
-                            "--types-out",
-                            types_dir,
-                            "--platform",
-                            "win",
-                        ]
-                    )
+                with mock.patch.object(cg, "_run_delegate_codegen", return_value=0):
+                    with mock.patch.object(
+                        cg.emit_bindings,
+                        "emit",
+                        side_effect=ValueError("emit failed"),
+                    ):
+                        rc = cg.main(
+                            [
+                                "--bindings",
+                                bindings,
+                                "--out",
+                                out_dir,
+                                "--types-out",
+                                types_dir,
+                                "--platform",
+                                "win",
+                            ]
+                        )
             self.assertEqual(rc, 5)
+        finally:
+            shutil.rmtree(tmpdir)
+
+    def test_emit_delegates_writes_specs_and_gen_files(self) -> None:
+        from luau_codegen.cli import main as cg  # type: ignore[import-unresolved]
+
+        tmpdir = tempfile.mkdtemp()
+        try:
+            bindings = os.path.join(
+                ROOT, "tests", "luau_codegen", "fixtures", "delegate_bindings"
+            )
+            out_dir = os.path.join(tmpdir, "out")
+            specs_path = os.path.join(tmpdir, "delegate_specs.py")
+            rc = cg.main(
+                [
+                    "--emit-delegates",
+                    "--bindings",
+                    bindings,
+                    "--out",
+                    out_dir,
+                    "--delegate-specs-out",
+                    specs_path,
+                ]
+            )
+            self.assertEqual(rc, 0)
+            self.assertTrue(os.path.isfile(specs_path))
+            self.assertTrue(
+                os.path.isfile(
+                    os.path.join(
+                        out_dir,
+                        "src",
+                        "lua",
+                        "bindings",
+                        "framework",
+                        "LuaDelegates.gen.hpp",
+                    )
+                )
+            )
+            self.assertTrue(
+                os.path.isfile(
+                    os.path.join(
+                        out_dir,
+                        "src",
+                        "lua",
+                        "bindings",
+                        "framework",
+                        "LuaDelegates.gen.cpp",
+                    )
+                )
+            )
         finally:
             shutil.rmtree(tmpdir)
 

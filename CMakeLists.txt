@@ -147,6 +147,8 @@ set(LUAUAPI_BINDINGS_DIR
     CACHE PATH "Path to Geode bindings/<gdver>/ dir")
 set(LUAUAPI_GEN_DIR "${CMAKE_BINARY_DIR}/luauapi-gen")
 set(LUAUAPI_TYPES_DIR "${CMAKE_CURRENT_SOURCE_DIR}/types")
+set(LUAUAPI_DELEGATE_SPECS_OUT
+    "${CMAKE_CURRENT_SOURCE_DIR}/tools/luau_codegen/model/delegate_specs.py")
 set(LUAUAPI_CODEGEN_STAMP "${LUAUAPI_GEN_DIR}/codegen.stamp")
 file(TO_CMAKE_PATH "$ENV{GEODE_SDK}" LUAUAPI_GEODE_SDK_PATH)
 
@@ -156,6 +158,8 @@ endif()
 
 file(GLOB_RECURSE LUAUAPI_CODEGEN_PY CONFIGURE_DEPENDS
     ${CMAKE_CURRENT_SOURCE_DIR}/tools/luau_codegen/**/*.py)
+list(REMOVE_ITEM LUAUAPI_CODEGEN_PY
+    "${CMAKE_CURRENT_SOURCE_DIR}/tools/luau_codegen/model/delegate_specs.py")
 file(GLOB LUAUAPI_BRO_FILES CONFIGURE_DEPENDS
     ${LUAUAPI_BINDINGS_DIR}/*.bro)
 file(GLOB LUAUAPI_EXTRA_DLUAU_FILES CONFIGURE_DEPENDS
@@ -238,12 +242,18 @@ add_custom_command(
             ${LUAUAPI_GENERATED_TYPE_FILES}
             ${LUAUAPI_GENERATED_METADATA_FILES}
     COMMAND ${LUAUAPI_CODEGEN_CMD}
+            --emit-delegates
+            --bindings ${LUAUAPI_BINDINGS_DIR}
+            --out ${LUAUAPI_GEN_DIR}
+            --delegate-specs-out ${LUAUAPI_DELEGATE_SPECS_OUT}
+    COMMAND ${LUAUAPI_CODEGEN_CMD}
             --bindings ${LUAUAPI_BINDINGS_DIR}
             --out ${LUAUAPI_GEN_DIR}
             --types-out ${LUAUAPI_TYPES_DIR}
             --platform ${LUAUAPI_CODEGEN_PLATFORM}
             --geode-sdk "${LUAUAPI_GEODE_SDK_PATH}"
             --fail-on-ambiguous-overload
+            --skip-delegate-emit
     COMMAND ${CMAKE_COMMAND} -E touch ${LUAUAPI_CODEGEN_STAMP}
     DEPENDS
         ${LUAUAPI_CODEGEN_PY}
@@ -266,9 +276,17 @@ set(LUAUAPI_GENERATED_BINDING_SOURCES ${LUAUAPI_CODEGEN_BINDING_BYPRODUCTS})
 list(FILTER LUAUAPI_GENERATED_BINDING_SOURCES INCLUDE REGEX "\\.cpp$")
 
 file(GLOB_RECURSE LUAUAPI_HANDWRITTEN_SOURCES CONFIGURE_DEPENDS src/*.cpp)
+list(FILTER LUAUAPI_HANDWRITTEN_SOURCES EXCLUDE REGEX "LuaDelegates\\.gen\\.cpp$")
 set(SOURCES ${LUAUAPI_HANDWRITTEN_SOURCES})
 list(APPEND SOURCES ${LUAUAPI_GENERATED_BINDING_SOURCES})
 set_source_files_properties(${LUAUAPI_GENERATED_BINDING_SOURCES} PROPERTIES GENERATED TRUE)
+set(LUAUAPI_DELEGATE_GEN_SOURCES
+    "${LUAUAPI_GEN_DIR}/src/lua/bindings/framework/LuaDelegates.gen.cpp"
+    "${LUAUAPI_GEN_DIR}/src/lua/bindings/framework/LuaDelegates.gen.hpp"
+)
+if(LUAUAPI_DELEGATE_GEN_SOURCES)
+    set_source_files_properties(${LUAUAPI_DELEGATE_GEN_SOURCES} PROPERTIES GENERATED TRUE)
+endif()
 list(LENGTH LUAUAPI_GENERATED_BINDING_SOURCES LUAUAPI_GENERATED_BINDING_COUNT)
 message(STATUS "LuauAPI GD bindings version: ${LUAUAPI_GD_VERSION} (platform ${LUAUAPI_CODEGEN_PLATFORM}, ${LUAUAPI_GENERATED_BINDING_COUNT} generated binding sources)")
 

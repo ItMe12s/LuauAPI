@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import os
 from pathlib import Path
+import subprocess
 import sys
 from typing import List
 
@@ -13,6 +14,11 @@ from luau_codegen.emit import luau_types as emit_types
 from luau_codegen.emit import parity
 from luau_codegen.emit import plan as emit_plan
 from luau_codegen.emit.plan import ambiguous_overloads
+from luau_codegen.emit.delegates import (
+    default_specs_path,
+    delegate_gen_rel_paths,
+    emit_delegate_artifacts,
+)
 from luau_codegen.parse.collect import collect_bindings_root
 from luau_codegen.cli.io import (
     _cleanup_orphans,
@@ -29,6 +35,31 @@ def log_info(message: str) -> None:
 
 def log_error(message: str) -> None:
     print(f"[luauapi] {message}", file=sys.stderr)
+
+
+def _repo_root() -> Path:
+    return Path(__file__).resolve().parents[3]
+
+
+def _run_delegate_codegen(bindings: str, out: str, specs_out: str) -> int:
+    cmd = [
+        sys.executable,
+        "-m",
+        "luau_codegen",
+        "--emit-delegates",
+        "--bindings",
+        bindings,
+        "--out",
+        out,
+        "--delegate-specs-out",
+        specs_out,
+    ]
+    env = os.environ.copy()
+    tools_dir = str(_repo_root() / "tools")
+    existing = env.get("PYTHONPATH", "")
+    env["PYTHONPATH"] = f"{tools_dir}{os.pathsep}{existing}" if existing else tools_dir
+    result = subprocess.run(cmd, env=env)
+    return result.returncode
 
 
 def main(argv: List[str]) -> int:
@@ -65,6 +96,20 @@ def main(argv: List[str]) -> int:
         action="store_true",
         help="Fail codegen when same-arity overloads require first-declared selection",
     )
+    parser.add_argument(
+        "--emit-delegates",
+        action="store_true",
+        help="Generate delegate_specs.py and LuaDelegates.gen.* only",
+    )
+    parser.add_argument(
+        "--delegate-specs-out",
+        help="Output path for delegate_specs.py (default: tools/luau_codegen/model/delegate_specs.py)",
+    )
+    parser.add_argument(
+        "--skip-delegate-emit",
+        action="store_true",
+        help="Skip delegate artifact generation (used when a prior build step already emitted them)",
+    )
     args = parser.parse_args(argv)
 
     if args.platform not in VALID_PLATFORMS:
@@ -84,9 +129,31 @@ def main(argv: List[str]) -> int:
     if args.audit_report_out:
         args.audit_report_out = str(Path(args.audit_report_out).resolve())
 
+    if args.delegate_specs_out:
+        args.delegate_specs_out = str(Path(args.delegate_specs_out).resolve())
+
     if not os.path.isdir(args.bindings):
         log_error(f"bindings dir missing: {args.bindings}")
         return 2
+
+    if args.emit_delegates:
+        if not args.out:
+            log_error("--out is required with --emit-delegates")
+            return 2
+        specs_out = args.delegate_specs_out or str(default_specs_path())
+        try:
+            specs = emit_delegate_artifacts(
+                args.bindings,
+                specs_out=specs_out,
+                gen_out=args.out,
+            )
+        except OSError as exc:
+            log_error(f"I/O failed while writing delegate artifacts: {exc}")
+            return 4
+        log_info(f"delegates: {len(specs)} specs -> {specs_out}")
+        for rel in delegate_gen_rel_paths():
+            log_info(f"wrote {os.path.join(args.out, rel)}")
+        return 0
 
     try:
         root = collect_bindings_root(args.bindings, geode_sdk_path=args.geode_sdk)
@@ -153,6 +220,8 @@ def main(argv: List[str]) -> int:
             return 6
         for rel in emit_plan.plan_outputs(root, args.platform, plan=plan):
             print(f"src/{rel}")
+        for rel in delegate_gen_rel_paths():
+            print(rel)
         return 0
 
     if args.list_type_outputs:
@@ -170,6 +239,12 @@ def main(argv: List[str]) -> int:
     if not args.out or not args.types_out:
         log_error("--out and --types-out are required")
         return 2
+
+    specs_out = args.delegate_specs_out or str(default_specs_path())
+    if not args.skip_delegate_emit:
+        delegate_status = _run_delegate_codegen(args.bindings, args.out, specs_out)
+        if delegate_status != 0:
+            return delegate_status
 
     plan = emit_plan.collect_plan(
         root, args.platform, plans_by_platform=plans_by_platform

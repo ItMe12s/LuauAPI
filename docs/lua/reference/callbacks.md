@@ -23,7 +23,7 @@ someObject:doLater(function(arg1: CCNode)
     print("called from C++", arg1)
 end)
 
--- non-void return (example shape; actual APIs vary)
+-- non-void return (example shape, actual APIs vary)
 local ok = someObject:tryAction(function(layer: FLAlertLayer, accepted: boolean): boolean
     return accepted
 end)
@@ -55,7 +55,7 @@ local item = CCMenuItemSpriteExtra:create(normal, selected, disabled, function(s
 end)
 ```
 
-Schedule example, `CCNode:schedule` / `scheduleOnce` take `(target, selector)` in C++; pass one function:
+Schedule example, `CCNode:schedule` / `scheduleOnce` take `(target, selector)` in C++, pass one function:
 
 ```lua
 node:schedule(function(dt: number)
@@ -63,7 +63,8 @@ node:schedule(function(dt: number)
 end, 1.0)
 ```
 
-When a method has `(CCObject* target, SEL_* selector)` the pair collapses to one Luau argument. Some schedule APIs accept a selector without an explicit target; pass the function alone and the handler object is used as the target.
+When a method has `(CCObject* target, SEL_* selector)` the pair collapses to one Luau argument.
+Some schedule APIs accept a selector without an explicit target, pass the function alone and the handler object is used as the target.
 
 ## Lifetime
 

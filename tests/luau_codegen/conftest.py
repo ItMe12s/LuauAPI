@@ -17,6 +17,34 @@ if TOOLS_DIR not in sys.path:
 if SCRIPTS_DIR not in sys.path:
     sys.path.insert(0, SCRIPTS_DIR)
 
+import types
+
+from luau_codegen.emit.delegates import (  # type: ignore[import-unresolved]
+    DelegateMethod,
+    DelegateSpec,
+    collect as collect_delegate_specs,
+    cpp_emit_supported,
+    emit_gen_hpp,
+    emit_override,
+    emit_specs_py,
+    fallback_bindings_dir,
+)
+
+
+def _install_fixture_delegate_specs() -> None:
+    fixture = fallback_bindings_dir()
+    if not fixture.is_dir():
+        return
+    name = "luau_codegen.model.delegate_specs"
+    module = types.ModuleType(name)
+    module.__file__ = str(fixture / "_fixture_delegate_specs.py")
+    sys.modules[name] = module
+    exec(emit_specs_py(collect_delegate_specs(fixture)), module.__dict__)
+
+
+_install_fixture_delegate_specs()
+DELEGATE_SPECS = sys.modules["luau_codegen.model.delegate_specs"].DELEGATE_SPECS
+
 from luau_codegen.parse.broma import (  # type: ignore[import-unresolved]
     Arg,
     Class,
@@ -97,15 +125,6 @@ from luau_codegen.emit.plan import (  # type: ignore[import-unresolved]
     collect_plan,
     collect_platform_plan,
     plan_outputs,
-)
-from luau_codegen.model.delegate_specs import DELEGATE_SPECS  # type: ignore[import-unresolved]
-from generate_delegate_artifacts import (  # type: ignore[import-unresolved]
-    DelegateMethod,
-    DelegateSpec,
-    collect as collect_delegate_specs,
-    cpp_emit_supported,
-    emit_gen_hpp,
-    emit_override,
 )
 
 
