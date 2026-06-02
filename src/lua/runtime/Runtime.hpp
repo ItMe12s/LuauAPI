@@ -82,6 +82,7 @@ namespace luax {
         using ResourcesRootScope = BindingHost::ResourcesRootScope;
 
         void setResourcesRoot(std::filesystem::path const& root) override;
+        void swapResourcesRoot(std::filesystem::path& root) override;
         std::filesystem::path const& resourcesRoot() const override { return m_resourcesRoot; }
 
         void clearLastError() { m_lastError.clear(); }
@@ -89,7 +90,7 @@ namespace luax {
 
         void registerShutdownHook(std::function<void()> fn) override;
 
-        std::string const& getOrCompileBytecode(std::string const& key, std::string_view source);
+        std::string const& getOrCompileBytecode(std::string const& key, std::string_view source, bool& ok);
 
         std::size_t bytecodeCacheBytes() const { return m_bytecodeCacheBytes; }
         std::size_t memoryUsage() const { return m_memoryUsage; }
@@ -120,6 +121,9 @@ namespace luax {
         void runShutdownHooks();
         void removeBytecodeCacheEntry(std::list<BytecodeCacheEntry>::iterator it);
         void trimBytecodeCacheForInsert(std::size_t incomingBytes);
+        bool reserveExternalMemory(std::size_t bytes);
+        void releaseExternalMemory(std::size_t bytes);
+        bool tryCacheCompiledBytecode(std::string const& key, std::string compiled, long long compileMs);
 
         lua_State* m_state = nullptr;
         std::thread::id m_ownerThread;

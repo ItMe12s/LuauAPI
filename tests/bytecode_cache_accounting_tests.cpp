@@ -15,3 +15,15 @@ TEST_CASE("bytecode cache accounting detects when eviction is needed") {
     REQUIRE(luax::bytecodeCacheNeedsEviction(0, 100, 1, 512, 512));
     REQUIRE_FALSE(luax::bytecodeCacheNeedsEviction(0, 100, 200, 0, 512));
 }
+
+TEST_CASE("bytecode cache accounting enforces compile time budget") {
+    REQUIRE(luax::compileTimeWithinBudget(0, 5000));
+    REQUIRE(luax::compileTimeWithinBudget(5000, 5000));
+    REQUIRE_FALSE(luax::compileTimeWithinBudget(5001, 5000));
+}
+
+TEST_CASE("bytecode cache accounting checks unified memory budget") {
+    REQUIRE(luax::memoryBudgetAllows(100, 512, 400));
+    REQUIRE_FALSE(luax::memoryBudgetAllows(100, 512, 413));
+    REQUIRE(luax::memoryBudgetAllows(0, 512, 512));
+}

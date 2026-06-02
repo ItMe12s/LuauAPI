@@ -31,4 +31,12 @@ namespace luax {
         }
         return usage + incomingBytes > limit && entryCount > 0;
     }
+
+    inline bool compileTimeWithinBudget(long long compileMs, int budgetMs) {
+        return budgetMs <= 0 || compileMs <= budgetMs;
+    }
+
+    inline bool memoryBudgetAllows(std::size_t usage, std::size_t limit, std::size_t additional) {
+        return additional <= limit && usage <= limit - additional;
+    }
 }

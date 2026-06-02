@@ -84,11 +84,41 @@ TEST_CASE("Runtime bytecode cache tracks total bytes and evicts by size") {
 
     for (int i = 0; i < 3; ++i) {
         auto key = "key_" + std::to_string(i);
-        (void)runtime->getOrCompileBytecode(key, source);
+        bool ok = false;
+        (void)runtime->getOrCompileBytecode(key, source, ok);
+        REQUIRE(ok);
     }
 
     REQUIRE(runtime->bytecodeCacheBytes() <= luax::kMaxBytecodeCacheBytes);
     REQUIRE(runtime->bytecodeCacheBytes() > 0);
+    REQUIRE(runtime->memoryUsage() >= runtime->bytecodeCacheBytes());
+}
+
+TEST_CASE("Runtime bytecode cache counts toward memory usage") {
+    RuntimeGuard guard;
+    auto* runtime = luax::Runtime::getOrCreate();
+    REQUIRE(runtime != nullptr);
+
+    std::size_t before = runtime->memoryUsage();
+    std::string source = "return 42";
+    bool ok = false;
+    (void)runtime->getOrCompileBytecode("memory_usage_key", source, ok);
+    REQUIRE(ok);
+    REQUIRE(runtime->memoryUsage() > before);
+    REQUIRE(runtime->memoryUsage() >= runtime->bytecodeCacheBytes());
+}
+
+TEST_CASE("Runtime bytecode cache hits bypass compile budget checks") {
+    RuntimeGuard guard;
+    auto* runtime = luax::Runtime::getOrCreate();
+    REQUIRE(runtime != nullptr);
+
+    std::string source = "return 99";
+    bool ok = false;
+    (void)runtime->getOrCompileBytecode("cache_hit_key", source, ok);
+    REQUIRE(ok);
+    (void)runtime->getOrCompileBytecode("cache_hit_key", source, ok);
+    REQUIRE(ok);
 }
 
 TEST_CASE("geode.fs.read rejects directories") {
@@ -109,6 +139,39 @@ TEST_CASE("geode.fs.read rejects directories") {
     REQUIRE(lua_isstring(L, -1));
     std::string err(lua_tostring(L, -1));
     REQUIRE(err.find("regular file") != std::string::npos);
+    lua_pop(L, 2);
+
+    std::filesystem::remove_all(dir);
+    geode::Mod::destroy(mod);
+}
+
+TEST_CASE("geode.fs.list rejects directories with too many name bytes") {
+    RuntimeGuard guard;
+    auto dir = makeTempDir();
+    auto* mod = geode::Mod::create(dir);
+
+    auto* runtime = luax::Runtime::getOrCreate();
+    runtime->setResourcesRoot(dir);
+    auto* L = runtime->state();
+    registerResourceBindings(L);
+
+    auto listDir = dir / "save" / "long_names";
+    REQUIRE(std::filesystem::create_directories(listDir));
+
+    for (std::size_t i = 0; i < luax::kMaxFsListEntries; ++i) {
+        std::string name(60, 'a');
+        name += std::to_string(i);
+        name += ".txt";
+        std::ofstream out(listDir / name);
+        REQUIRE(out.good());
+        out << "x";
+    }
+
+    REQUIRE(callFsList(L, "long_names") == 0);
+    REQUIRE(lua_isnil(L, -2));
+    REQUIRE(lua_isstring(L, -1));
+    std::string err(lua_tostring(L, -1));
+    REQUIRE(err.find("name bytes") != std::string::npos);
     lua_pop(L, 2);
 
     std::filesystem::remove_all(dir);

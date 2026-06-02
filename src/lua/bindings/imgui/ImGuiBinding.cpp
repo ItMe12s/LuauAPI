@@ -21,6 +21,16 @@
 namespace {
     using namespace luax;
 
+    thread_local std::vector<char> g_inputTextBuffer;
+
+    std::vector<char>& inputTextBuffer(std::size_t cap) {
+        if (g_inputTextBuffer.size() < cap + 1) {
+            g_inputTextBuffer.resize(cap + 1);
+        }
+        std::fill(g_inputTextBuffer.begin(), g_inputTextBuffer.end(), '\0');
+        return g_inputTextBuffer;
+    }
+
     constexpr char const* kHandleMeta          = "luax.ImGuiDrawHandle";
     constexpr std::size_t kInputTextDefaultCap = 16384;
     constexpr std::size_t kInputTextMaxCap     = 65536;
@@ -219,7 +229,7 @@ namespace {
             cap = std::min(static_cast<std::size_t>(requested), kInputTextMaxCap);
         }
 
-        std::vector<char> buffer(cap + 1, '\0');
+        std::vector<char>& buffer = inputTextBuffer(cap);
         std::size_t copy = std::min(value.size(), cap);
         std::copy_n(value.data(), copy, buffer.data());
 
@@ -245,7 +255,7 @@ namespace {
             cap = std::min(static_cast<std::size_t>(requested), kInputTextMaxCap);
         }
 
-        std::vector<char> buffer(cap + 1, '\0');
+        std::vector<char>& buffer = inputTextBuffer(cap);
         std::size_t copy = std::min(value.size(), cap);
         std::copy_n(value.data(), copy, buffer.data());
 

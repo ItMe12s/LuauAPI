@@ -6,7 +6,7 @@
 
 namespace luax {
     namespace {
-        void pushString(lua_State* L, std::string const& s) {
+        void pushString(lua_State* L, std::string_view s) {
             lua_pushlstring(L, s.data(), s.size());
         }
 
@@ -28,9 +28,15 @@ namespace luax {
             case matjson::Type::Number:
                 lua_pushnumber(L, value.asDouble().unwrapOr(0.0));
                 break;
-            case matjson::Type::String:
-                pushString(L, value.asString().unwrapOr(std::string()));
+            case matjson::Type::String: {
+                auto str = value.asString();
+                if (str.isOk()) {
+                    pushString(L, str.unwrap());
+                } else {
+                    lua_pushnil(L);
+                }
                 break;
+            }
             case matjson::Type::Array: {
                 lua_checkstack(L, 4);
                 lua_newtable(L);
@@ -70,7 +76,7 @@ namespace luax {
             case LUA_TSTRING: {
                 std::size_t len = 0;
                 char const* s = lua_tolstring(L, idx, &len);
-                return matjson::Value(std::string(s, len));
+                return matjson::Value(std::string_view(s, len));
             }
             case LUA_TTABLE: {
                 if (depth > kMaxJsonDepth) return matjson::Value(nullptr);

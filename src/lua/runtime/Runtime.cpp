@@ -270,7 +270,18 @@ namespace luax {
 
     void Runtime::setResourcesRoot(std::filesystem::path const& root) {
         if (!assertMainThread()) return;
+        if (m_resourcesRoot == root) return;
         m_resourcesRoot = root;
+#if !defined(LUAUAPI_HOST_TESTS)
+        if (m_requirer) {
+            m_requirer->setResourcesRoot(m_resourcesRoot);
+        }
+#endif
+    }
+
+    void Runtime::swapResourcesRoot(std::filesystem::path& root) {
+        if (!assertMainThread()) return;
+        m_resourcesRoot.swap(root);
 #if !defined(LUAUAPI_HOST_TESTS)
         if (m_requirer) {
             m_requirer->setResourcesRoot(m_resourcesRoot);
@@ -327,7 +338,13 @@ namespace luax {
 
         char const* chunkData = luaL_optstring(L, 2, "=loadstring");
         std::string_view chunk(chunkData ? chunkData : "=loadstring");
-        auto const& bytecode = self->getOrCompileBytecode(loadstringBytecodeKey(chunk, source), source);
+        bool ok = false;
+        auto const& bytecode = self->getOrCompileBytecode(loadstringBytecodeKey(chunk, source), source, ok);
+        if (!ok) {
+            lua_pushnil(L);
+            lua_pushlstring(L, self->lastError().data(), self->lastError().size());
+            return 2;
+        }
         if (loadstringPushResult(L, chunk, bytecode) == LoadstringStatus::Failure) {
             return 2;
         }
@@ -396,7 +413,51 @@ namespace luax {
         return Luau::compile(std::string(source), opts);
     }
 
-    std::string const& Runtime::getOrCompileBytecode(std::string const& key, std::string_view source) {
+    bool Runtime::reserveExternalMemory(std::size_t bytes) {
+        if (!memoryBudgetAllows(m_memoryUsage, m_memoryLimit, bytes)) {
+            return false;
+        }
+        m_memoryUsage += bytes;
+        return true;
+    }
+
+    void Runtime::releaseExternalMemory(std::size_t bytes) {
+        m_memoryUsage = allocatorUsageAfterFree(m_memoryUsage, bytes);
+    }
+
+    bool Runtime::tryCacheCompiledBytecode(std::string const& key, std::string compiled, long long compileMs) {
+        if (!compileTimeWithinBudget(compileMs, kMaxCompileDeadlineMs)) {
+            setLastError(fmt::format("luau compile exceeded {} ms budget", kMaxCompileDeadlineMs));
+            geode::log::warn("luau compile [{}] exceeded {}ms budget ({}ms)", key, kMaxCompileDeadlineMs, compileMs);
+            return false;
+        }
+
+        std::size_t const entryBytes = bytecodeEntryBytes(compiled);
+        if (entryBytes > kMaxBytecodeCacheBytes) {
+            m_bytecodeScratch = std::move(compiled);
+            geode::log::debug("luau compile [{}] {}ms (not cached)", key, compileMs);
+            return true;
+        }
+
+        trimBytecodeCacheForInsert(entryBytes);
+        while (!memoryBudgetAllows(m_memoryUsage, m_memoryLimit, entryBytes) && !m_bytecodeLru.empty()) {
+            removeBytecodeCacheEntry(std::prev(m_bytecodeLru.end()));
+        }
+        if (!reserveExternalMemory(entryBytes)) {
+            setLastError("luau memory limit exceeded");
+            geode::log::error("luau memory limit exceeded ({} bytes)", m_memoryLimit);
+            return false;
+        }
+
+        m_bytecodeLru.push_front({key, std::move(compiled)});
+        m_bytecodeIndex[key] = m_bytecodeLru.begin();
+        m_bytecodeCacheBytes = bytecodeCacheUsageAfterInsert(m_bytecodeCacheBytes, entryBytes);
+        geode::log::debug("luau compile [{}] {}ms", key, compileMs);
+        return true;
+    }
+
+    std::string const& Runtime::getOrCompileBytecode(std::string const& key, std::string_view source, bool& ok) {
+        ok = true;
         auto it = m_bytecodeIndex.find(key);
         if (it != m_bytecodeIndex.end()) {
             m_bytecodeLru.splice(m_bytecodeLru.begin(), m_bytecodeLru, it->second);
@@ -408,23 +469,22 @@ namespace luax {
         auto compileMs = std::chrono::duration_cast<std::chrono::milliseconds>(
             std::chrono::steady_clock::now() - compileStart).count();
 
-        std::size_t const entryBytes = bytecodeEntryBytes(compiled);
-        if (entryBytes <= kMaxBytecodeCacheBytes) {
-            trimBytecodeCacheForInsert(entryBytes);
-            m_bytecodeLru.push_front({key, std::move(compiled)});
-            m_bytecodeIndex[key] = m_bytecodeLru.begin();
-            m_bytecodeCacheBytes = bytecodeCacheUsageAfterInsert(m_bytecodeCacheBytes, entryBytes);
-            geode::log::debug("luau compile [{}] {}ms", key, compileMs);
-            return m_bytecodeLru.front().bytecode;
+        if (!tryCacheCompiledBytecode(key, std::move(compiled), compileMs)) {
+            ok = false;
+            m_bytecodeScratch.clear();
+            return m_bytecodeScratch;
         }
 
-        m_bytecodeScratch = std::move(compiled);
-        geode::log::debug("luau compile [{}] {}ms (not cached)", key, compileMs);
-        return m_bytecodeScratch;
+        if (m_bytecodeLru.empty() || m_bytecodeLru.front().key != key) {
+            return m_bytecodeScratch;
+        }
+        return m_bytecodeLru.front().bytecode;
     }
 
     void Runtime::removeBytecodeCacheEntry(std::list<BytecodeCacheEntry>::iterator it) {
-        m_bytecodeCacheBytes = bytecodeCacheUsageAfterRemove(m_bytecodeCacheBytes, bytecodeEntryBytes(it->bytecode));
+        std::size_t const entryBytes = bytecodeEntryBytes(it->bytecode);
+        releaseExternalMemory(entryBytes);
+        m_bytecodeCacheBytes = bytecodeCacheUsageAfterRemove(m_bytecodeCacheBytes, entryBytes);
         m_bytecodeIndex.erase(it->key);
         m_bytecodeLru.erase(it);
     }
@@ -462,7 +522,12 @@ namespace luax {
         std::string chunk(chunkName);
         auto bytecodeKey = runScriptBytecodeKey(m_resourcesRoot, chunk, src);
 
-        std::string const& bytecode = getOrCompileBytecode(bytecodeKey, src);
+        bool compileOk = false;
+        std::string const& bytecode = getOrCompileBytecode(bytecodeKey, src, compileOk);
+        if (!compileOk) {
+            geode::log::error("luau compile failed [{}] {}", chunk, lastError());
+            return false;
+        }
 
         if (luau_load(m_state, chunk.c_str(), bytecode.data(), bytecode.size(), 0) != 0) {
             auto err = formatLuaError(chunk.c_str());

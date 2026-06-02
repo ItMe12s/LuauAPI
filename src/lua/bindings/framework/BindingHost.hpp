@@ -6,6 +6,7 @@
 
 #include <filesystem>
 #include <functional>
+#include <optional>
 #include <string_view>
 
 namespace luax {
@@ -31,6 +32,7 @@ namespace luax {
         ) = 0;
         virtual void registerShutdownHook(std::function<void()> fn) = 0;
         virtual void setResourcesRoot(std::filesystem::path const& root) = 0;
+        virtual void swapResourcesRoot(std::filesystem::path& root) = 0;
         virtual std::filesystem::path const& resourcesRoot() const = 0;
 
         class ResourcesRootScope final {
@@ -43,7 +45,7 @@ namespace luax {
 
         private:
             BindingHost& m_host;
-            std::filesystem::path m_previous;
+            std::optional<std::filesystem::path> m_saved;
         };
     };
 }

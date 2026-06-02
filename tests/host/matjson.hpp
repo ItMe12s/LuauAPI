@@ -44,11 +44,16 @@ namespace matjson {
         Value(bool value) : m_data(value) {}
         Value(double value) : m_data(value) {}
         Value(std::string value) : m_data(std::move(value)) {}
+        Value(std::string_view value) : m_data(std::string(value)) {}
         Value(std::vector<Value> value) : m_data(std::move(value)) {}
 
         static Value object() { return Value(std::vector<std::pair<std::string, Value>>{}); }
 
         static geode::Result<Value> parse(std::string const& text) {
+            return parse(std::string_view(text));
+        }
+
+        static geode::Result<Value> parse(std::string_view text) {
             if (text.empty()) {
                 return geode::Err("empty json input");
             }

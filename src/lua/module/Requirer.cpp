@@ -99,7 +99,21 @@ namespace luax {
             }
             auto const& contents = contentsResult.unwrap();
 
-            std::string const& bytecode = req->runtime().getOrCompileBytecode(bytecodeCacheKey(filePath, contents), contents);
+            bool compileOk = false;
+            std::string const& bytecode = req->runtime().getOrCompileBytecode(
+                bytecodeCacheKey(filePath, contents),
+                contents,
+                compileOk
+            );
+            if (!compileOk) {
+                auto const& err = req->runtime().lastError();
+                luaL_error(
+                    L,
+                    "module '%s' compile failed: %s",
+                    chunkname,
+                    err.empty() ? "compile failed" : err.c_str()
+                );
+            }
 
             lua_State* GL = lua_mainthread(L);
             lua_State* ML = lua_newthread(GL);

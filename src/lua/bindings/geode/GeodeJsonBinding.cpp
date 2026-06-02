@@ -10,6 +10,7 @@
 #include <lualib.h>
 
 #include <string>
+#include <string_view>
 
 namespace {
     using namespace luax;
@@ -22,8 +23,7 @@ namespace {
             push(L, std::string("json exceeds maximum size"));
             return 2;
         }
-        auto text = std::string(textData, textLen);
-        auto result = matjson::Value::parse(text);
+        auto result = matjson::Value::parse(std::string_view(textData, textLen));
         if (result.isErr()) {
             lua_pushnil(L);
             push(L, std::string(result.unwrapErr()));

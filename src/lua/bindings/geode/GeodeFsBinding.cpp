@@ -157,6 +157,7 @@ namespace {
 
         lua_newtable(L);
         int index = 1;
+        std::size_t totalNameBytes = 0;
         for (auto const& entry : entries.unwrap()) {
             if (static_cast<std::size_t>(index) > kMaxFsListEntries) {
                 lua_pop(L, 1);
@@ -164,7 +165,15 @@ namespace {
                 push(L, std::string("directory listing exceeds maximum entries"));
                 return 2;
             }
-            push(L, geode::utils::string::pathToString(entry.filename()));
+            auto name = geode::utils::string::pathToString(entry.filename());
+            if (totalNameBytes + name.size() > kMaxFsListNameBytes) {
+                lua_pop(L, 1);
+                lua_pushnil(L);
+                push(L, std::string("directory listing exceeds maximum name bytes"));
+                return 2;
+            }
+            totalNameBytes += name.size();
+            push(L, std::move(name));
             lua_rawseti(L, -2, index++);
         }
         return 1;
