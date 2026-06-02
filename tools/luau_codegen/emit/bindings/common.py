@@ -106,11 +106,9 @@ def _emit_common_file(
     out.append('    lua_setfield(L, -2, "fields");\n')
     out.append("    lua_pop(L, 1);\n")
     out.append("    installFieldsReleaseHook();\n")
-    out.append(
-        "    if (auto* runtime = static_cast<luax::Runtime*>(lua_callbacks(L)->userdata)) {\n"
-    )
-    out.append("        runtime->registerShutdownHook(&clearHookRegistry);\n")
-    out.append("        runtime->registerShutdownHook(&luax::Fields::clear);\n")
+    out.append("    if (auto* host = luax::BindingHost::fromState(L)) {\n")
+    out.append("        host->registerShutdownHook(&clearHookRegistry);\n")
+    out.append("        host->registerShutdownHook(&luax::Fields::clear);\n")
     out.append("    }\n")
     out.append("    return geode::Ok();\n")
     out.append("}\n\n")

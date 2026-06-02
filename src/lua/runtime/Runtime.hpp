@@ -1,6 +1,7 @@
 #pragma once
 
 #include "lua/Config.hpp"
+#include "lua/bindings/framework/BindingHost.hpp"
 
 #include <Geode/Geode.hpp>
 #include <RuntimeTypes.hpp>
@@ -24,7 +25,7 @@
 namespace luax {
     class Requirer;
 
-    class Runtime final {
+    class Runtime final : public BindingHost {
     public:
         Runtime();
         ~Runtime();
@@ -43,13 +44,18 @@ namespace luax {
         static void setMainThreadId(std::thread::id id);
         static bool isMainThread();
 
-        lua_State* state();
-        bool ready() const;
+        lua_State* state() override;
+        bool ready() const override;
         imes::luauapi::RuntimeStatus status() const;
         bool assertMainThread() const;
 
         bool runScript(std::string_view src, std::string_view chunkName, int deadlineMs = kDefaultScriptDeadlineMs);
-        bool protectedCall(int nargs, int nresults, std::string_view context, int deadlineMs = kDefaultScriptDeadlineMs);
+        bool protectedCall(
+            int nargs,
+            int nresults,
+            std::string_view context,
+            int deadlineMs = kDefaultScriptDeadlineMs
+        ) override;
         static std::string compileSource(std::string_view source);
 
         class ScriptBudgetGuard final {
@@ -67,26 +73,15 @@ namespace luax {
             std::chrono::steady_clock::time_point m_previousDeadline{};
         };
 
-        class ResourcesRootScope final {
-        public:
-            ResourcesRootScope(Runtime& runtime, std::filesystem::path root);
-            ~ResourcesRootScope();
+        using ResourcesRootScope = BindingHost::ResourcesRootScope;
 
-            ResourcesRootScope(ResourcesRootScope const&) = delete;
-            ResourcesRootScope& operator=(ResourcesRootScope const&) = delete;
-
-        private:
-            Runtime& m_runtime;
-            std::filesystem::path m_previous;
-        };
-
-        void setResourcesRoot(std::filesystem::path const& root);
-        std::filesystem::path const& resourcesRoot() const { return m_resourcesRoot; }
+        void setResourcesRoot(std::filesystem::path const& root) override;
+        std::filesystem::path const& resourcesRoot() const override { return m_resourcesRoot; }
 
         void clearLastError() { m_lastError.clear(); }
         std::string const& lastError() const { return m_lastError; }
 
-        void registerShutdownHook(std::function<void()> fn);
+        void registerShutdownHook(std::function<void()> fn) override;
 
         std::string const& getOrCompileBytecode(std::string const& key, std::string_view source);
 

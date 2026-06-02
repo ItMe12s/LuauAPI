@@ -93,6 +93,37 @@ class GeneratedSafetyTests(unittest.TestCase):
         self.assertIn("luax::kHookScriptDeadlineMs", text)
         self.assertNotIn("targetId, 50", text)
 
+    def test_generated_hooks_use_binding_host(self) -> None:
+        text = emit_internal_hpp()
+
+        self.assertIn("luax::BindingHost::getIfInitialized()", text)
+        self.assertIn("luax::BindingHost::ResourcesRootScope", text)
+        self.assertNotIn("luax::Runtime::getIfInitialized()", text)
+        self.assertNotIn("lua/runtime/Runtime.hpp", text)
+        self.assertIn('#include "lua/bindings/framework/BindingHost.hpp"', text)
+
+    def test_common_bind_registers_shutdown_hooks_via_binding_host(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        ccnode = Class(
+            name="CCNode",
+            namespace="cocos2d",
+            bases=["CCObject"],
+            methods=[
+                Method(
+                    name="getTag",
+                    ret="int",
+                    args=[],
+                    platforms=all_platforms("0x1"),
+                )
+            ],
+        )
+        root = Root(classes=[ccobject, ccnode])
+        plan = collect_plan(root, "win")
+        text = _emit_common_file(plan.emitted_classes, plan, "win")
+
+        self.assertIn("luax::BindingHost::fromState(L)", text)
+        self.assertNotIn("static_cast<luax::Runtime*>", text)
+
     def test_hook_api_is_table_only_with_skip_fields(self) -> None:
         text = emit_hook_support()
 

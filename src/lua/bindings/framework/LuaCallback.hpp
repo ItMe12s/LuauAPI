@@ -1,7 +1,7 @@
 #pragma once
 
+#include "lua/bindings/framework/BindingHost.hpp"
 #include "lua/bindings/framework/LuaRef.hpp"
-#include "lua/runtime/Runtime.hpp"
 
 #include <lua.h>
 
@@ -43,17 +43,17 @@ namespace luax {
             PopResultsFn popResults = nullptr,
             void* popCtx = nullptr
         ) const {
-            auto* runtime = Runtime::getIfInitialized();
-            if (!runtime || !runtime->ready()) return false;
-            auto* L = runtime->state();
+            auto* host = BindingHost::getIfInitialized();
+            if (!host || !host->ready()) return false;
+            auto* L = host->state();
             if (!L || !m_ref || !m_ref->push()) return false;
 
             int top = lua_gettop(L);
             if (pushArgs) {
                 pushArgs(L, pushCtx);
             }
-            Runtime::ResourcesRootScope scope(*runtime, m_ref->resourcesRoot());
-            bool ok = runtime->protectedCall(nargs, nresults, context, deadlineMs);
+            BindingHost::ResourcesRootScope scope(*host, m_ref->resourcesRoot());
+            bool ok = host->protectedCall(nargs, nresults, context, deadlineMs);
             if (ok && popResults && nresults > 0) {
                 popResults(L, popCtx);
             }

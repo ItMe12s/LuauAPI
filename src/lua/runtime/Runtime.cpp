@@ -266,15 +266,6 @@ namespace luax {
 #endif
     }
 
-    Runtime::ResourcesRootScope::ResourcesRootScope(Runtime& runtime, std::filesystem::path root)
-        : m_runtime(runtime), m_previous(runtime.resourcesRoot()) {
-        m_runtime.setResourcesRoot(root);
-    }
-
-    Runtime::ResourcesRootScope::~ResourcesRootScope() {
-        m_runtime.setResourcesRoot(m_previous);
-    }
-
     void Runtime::installTraceback() {
         lua_pushcfunction(m_state, &Runtime::luaTraceback, kTracebackName);
         m_tracebackRef = lua_ref(m_state, -1);
