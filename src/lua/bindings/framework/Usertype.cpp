@@ -14,6 +14,22 @@
 
 namespace luax::detail {
     namespace {
+        bool invokeFieldAccessor(
+            BindingHost* host,
+            int nargs,
+            int nresults,
+            std::string_view context,
+            int deadlineMs
+        ) {
+            if (!host) {
+                return false;
+            }
+            if (host->ready()) {
+                return host->protectedCall(nargs, nresults, context, deadlineMs);
+            }
+            return host->protectedCallWithTraceback(nargs, nresults, context);
+        }
+
         int usertypeIndex(lua_State* L) {
             if (!lua_getmetatable(L, 1)) {
                 lua_pushnil(L);
@@ -35,16 +51,16 @@ namespace luax::detail {
                 lua_getfield(L, -1, "get");
                 if (lua_isfunction(L, -1)) {
                     lua_pushvalue(L, 1);
-                    if (auto* host = BindingHost::getIfInitialized(); host && host->ready()) {
-                        if (host->protectedCall(1, 1, "usertype field get", kHookScriptDeadlineMs)) {
+                    if (auto* host = BindingHost::getIfInitialized()) {
+                        if (invokeFieldAccessor(host, 1, 1, "usertype field get", kHookScriptDeadlineMs)) {
                             return 1;
                         }
                         lua_settop(L, top);
                         lua_pushnil(L);
                         return 1;
                     }
-                    lua_call(L, 1, 1);
-                    return 1;
+                    lua_settop(L, top);
+                    luaL_error(L, "luau runtime not available");
                 }
                 lua_settop(L, top);
             }
@@ -80,15 +96,15 @@ namespace luax::detail {
                 if (lua_isfunction(L, -1)) {
                     lua_pushvalue(L, 1);
                     lua_pushvalue(L, 3);
-                    if (auto* host = BindingHost::getIfInitialized(); host && host->ready()) {
-                        if (!host->protectedCall(2, 0, "usertype field set", kHookScriptDeadlineMs)) {
+                    if (auto* host = BindingHost::getIfInitialized()) {
+                        if (!invokeFieldAccessor(host, 2, 0, "usertype field set", kHookScriptDeadlineMs)) {
                             lua_settop(L, top);
                             luaL_error(L, "usertype field set failed");
                         }
                         return 0;
                     }
-                    lua_call(L, 2, 0);
-                    return 0;
+                    lua_settop(L, top);
+                    luaL_error(L, "luau runtime not available");
                 }
                 lua_settop(L, top);
             }

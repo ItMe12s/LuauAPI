@@ -504,6 +504,44 @@ namespace luax {
         return true;
     }
 
+    bool Runtime::protectedCallWithTraceback(int nargs, int nresults, std::string_view context) {
+        if (!assertMainThread()) {
+            setLastError("luau runtime accessed off main thread");
+            return false;
+        }
+        if (!m_state || !m_tracebackRef) {
+            if (m_lastError.empty()) {
+                setLastError(m_initError.empty() ? "luau runtime not available" : m_initError);
+            }
+            return false;
+        }
+        int baseTop = lua_gettop(m_state) - nargs;
+        if (nargs < 0 || baseTop < 1 || !lua_isfunction(m_state, baseTop)) {
+            auto err = fmt::format("[{}] luau protectedCall missing function", context);
+            setLastError(err);
+            geode::log::error("{}", err);
+            return false;
+        }
+
+        lua_getref(m_state, m_tracebackRef);
+        lua_insert(m_state, -nargs - 2);
+        int errfunc = lua_gettop(m_state) - nargs - 1;
+
+        int status = lua_pcall(m_state, nargs, nresults, errfunc);
+        lua_remove(m_state, errfunc);
+
+        if (status != 0) {
+            std::string ctx(context);
+            auto err = formatLuaError(ctx.c_str());
+            setLastError(err);
+            geode::log::error("{}", err);
+            lua_pop(m_state, 1);
+            return false;
+        }
+
+        return true;
+    }
+
     bool Runtime::assertMainThread() const {
         auto const& registered = mainThreadIdStorage();
         if (registered != std::thread::id{}) {

@@ -24,6 +24,11 @@ namespace luax {
             std::string_view context,
             int deadlineMs = kDefaultScriptDeadlineMs
         ) = 0;
+        virtual bool protectedCallWithTraceback(
+            int nargs,
+            int nresults,
+            std::string_view context
+        ) = 0;
         virtual void registerShutdownHook(std::function<void()> fn) = 0;
         virtual void setResourcesRoot(std::filesystem::path const& root) = 0;
         virtual std::filesystem::path const& resourcesRoot() const = 0;

@@ -2,6 +2,8 @@
 #include "lua/bindings/framework/Usertype.hpp"
 #include "lua/runtime/Runtime.hpp"
 
+#include <RuntimeTypes.hpp>
+
 #include <catch2/catch_test_macros.hpp>
 #include <lua.h>
 #include <lualib.h>
@@ -30,6 +32,16 @@ namespace {
 
     int setTestField(lua_State* L) {
         (void)L;
+        return 0;
+    }
+
+    int erroringGetField(lua_State* L) {
+        luaL_error(L, "field getter boom");
+        return 0;
+    }
+
+    int erroringSetField(lua_State* L) {
+        luaL_error(L, "field setter boom");
         return 0;
     }
 
@@ -115,5 +127,67 @@ TEST_CASE("Usertype rejects writes to read-only m_fields") {
     REQUIRE(lua_pcall(L, 2, 0, 0) != 0);
     lua_pop(L, 1);
 
+    node->release();
+}
+
+TEST_CASE("Usertype field getter uses traceback when runtime is not ready") {
+    RuntimeGuard guard;
+    auto* runtime = luax::Runtime::getOrCreate();
+    auto* L = runtime->state();
+
+    REQUIRE(luax::Usertype<TestNode>::registerType(L, "TestNode").isOk());
+    luax::Usertype<TestNode>::field(L, "boomField", &erroringGetField, &setTestField);
+
+    auto* node = new TestNode();
+    luax::Usertype<TestNode>::pushBorrowed(L, node);
+
+    runtime->clearLastError();
+    runtime->setStatusForTests(imes::luauapi::RuntimeStatus::NotReady);
+
+    int topBefore = lua_gettop(L);
+    lua_getfield(L, -1, "boomField");
+    REQUIRE(lua_gettop(L) == topBefore + 1);
+    REQUIRE(lua_isnil(L, -1));
+
+    auto const& err = runtime->lastError();
+    REQUIRE(err.find("field getter boom") != std::string::npos);
+    REQUIRE(err.find("stack:") != std::string::npos);
+
+    lua_pop(L, 2);
+    node->release();
+}
+
+TEST_CASE("Usertype field setter uses traceback when runtime is not ready") {
+    RuntimeGuard guard;
+    auto* runtime = luax::Runtime::getOrCreate();
+    auto* L = runtime->state();
+
+    REQUIRE(luax::Usertype<TestNode>::registerType(L, "TestNode").isOk());
+    luax::Usertype<TestNode>::field(L, "boomField", &getTestField, &erroringSetField);
+
+    auto* node = new TestNode();
+    luax::Usertype<TestNode>::pushBorrowed(L, node);
+
+    runtime->clearLastError();
+    runtime->setStatusForTests(imes::luauapi::RuntimeStatus::NotReady);
+
+    lua_pushcfunction(
+        L,
+        [](lua_State* S) -> int {
+            lua_pushliteral(S, "value");
+            lua_setfield(S, 1, "boomField");
+            return 0;
+        },
+        "assignBoomField"
+    );
+    lua_pushvalue(L, -2);
+    REQUIRE(lua_pcall(L, 1, 0, 0) != 0);
+    lua_pop(L, 1);
+
+    auto const& err = runtime->lastError();
+    REQUIRE(err.find("field setter boom") != std::string::npos);
+    REQUIRE(err.find("stack:") != std::string::npos);
+
+    lua_pop(L, 1);
     node->release();
 }

@@ -57,6 +57,11 @@ namespace luax {
             std::string_view context,
             int deadlineMs = kDefaultScriptDeadlineMs
         ) override;
+        bool protectedCallWithTraceback(
+            int nargs,
+            int nresults,
+            std::string_view context
+        ) override;
         static std::string compileSource(std::string_view source);
 
         class ScriptBudgetGuard final {
