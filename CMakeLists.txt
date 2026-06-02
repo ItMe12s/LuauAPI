@@ -338,7 +338,7 @@ if(LUAUAPI_BUILD_TESTS)
     FetchContent_Declare(
         fmt
         GIT_REPOSITORY https://github.com/fmtlib/fmt.git
-        GIT_TAG        11.0.2
+        GIT_TAG        12.1.0
     )
     FetchContent_MakeAvailable(fmt)
 
@@ -349,6 +349,7 @@ if(LUAUAPI_BUILD_TESTS)
         src/lua/bindings/framework/Fields.cpp
         src/lua/bindings/framework/Usertype.cpp
         src/lua/bindings/framework/UsertypeRegistry.cpp
+        src/lua/bindings/geode/CurrentMod.cpp
         src/lua/bindings/imgui/ImGuiDrawScheduler.cpp
         src/lua/bindings/task/TaskScheduler.cpp
         src/lua/module/BytecodeCacheKey.cpp
@@ -357,6 +358,7 @@ if(LUAUAPI_BUILD_TESTS)
         tests/allocator_accounting_tests.cpp
         tests/api_tests.cpp
         tests/binding_tests.cpp
+        tests/current_mod_tests.cpp
         tests/fields_tests.cpp
         tests/bytecode_cache_key_tests.cpp
         tests/geode_fs_path_tests.cpp

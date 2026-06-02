@@ -28,7 +28,7 @@ namespace {
 
     int modGetSavedValue(lua_State* L) {
         auto key = checkKey(L, 1);
-        auto result = currentMod()->getSaveContainer().get(key);
+        auto result = requireCurrentMod(L)->getSaveContainer().get(key);
         if (result.isErr()) {
             lua_pushnil(L);
             return 1;
@@ -40,13 +40,13 @@ namespace {
     int modSetSavedValue(lua_State* L) {
         auto key = checkKey(L, 1);
         auto value = toJson(L, 2, 0);
-        currentMod()->getSaveContainer().set(key, std::move(value));
+        requireCurrentMod(L)->getSaveContainer().set(key, std::move(value));
         return 0;
     }
 
     int modGetSettingValue(lua_State* L) {
         auto key = checkKey(L, 1);
-        auto result = currentMod()->getSavedSettingsData().get(key);
+        auto result = requireCurrentMod(L)->getSavedSettingsData().get(key);
         if (result.isErr()) {
             lua_pushnil(L);
             return 1;
@@ -56,37 +56,37 @@ namespace {
     }
 
     int modHasSetting(lua_State* L) {
-        lua_pushboolean(L, currentMod()->hasSetting(checkKey(L, 1)));
+        lua_pushboolean(L, requireCurrentMod(L)->hasSetting(checkKey(L, 1)));
         return 1;
     }
 
     int modGetID(lua_State* L) {
-        pushString(L, std::string(currentMod()->getID()));
+        pushString(L, std::string(requireCurrentMod(L)->getID()));
         return 1;
     }
 
     int modGetName(lua_State* L) {
-        pushString(L, std::string(currentMod()->getName()));
+        pushString(L, std::string(requireCurrentMod(L)->getName()));
         return 1;
     }
 
     int modGetVersion(lua_State* L) {
-        pushString(L, currentMod()->getVersion().toVString());
+        pushString(L, requireCurrentMod(L)->getVersion().toVString());
         return 1;
     }
 
     int modGetResourcesDir(lua_State* L) {
-        pushString(L, geode::utils::string::pathToString(currentMod()->getResourcesDir()));
+        pushString(L, geode::utils::string::pathToString(requireCurrentMod(L)->getResourcesDir()));
         return 1;
     }
 
     int modGetSaveDir(lua_State* L) {
-        pushString(L, geode::utils::string::pathToString(currentMod()->getSaveDir()));
+        pushString(L, geode::utils::string::pathToString(requireCurrentMod(L)->getSaveDir()));
         return 1;
     }
 
     int modGetConfigDir(lua_State* L) {
-        pushString(L, geode::utils::string::pathToString(currentMod()->getConfigDir()));
+        pushString(L, geode::utils::string::pathToString(requireCurrentMod(L)->getConfigDir()));
         return 1;
     }
 

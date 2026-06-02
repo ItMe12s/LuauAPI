@@ -2,6 +2,7 @@
 
 #include "AllocatorAccounting.hpp"
 #include "Loadstring.hpp"
+#include "lua/bindings/geode/CurrentMod.hpp"
 #if !defined(LUAUAPI_HOST_TESTS)
 #include "lua/bindings/Binding.hpp"
 #include "lua/bindings/framework/Ref.hpp"
@@ -186,6 +187,7 @@ namespace luax {
 
     void Runtime::shutdown() {
         shuttingDownStorage().store(true, std::memory_order_release);
+        invalidateCurrentModCache();
         auto& runtime = runtimeStorage();
         if (runtime) {
             runtime.reset();
@@ -199,6 +201,7 @@ namespace luax {
 #if defined(LUAUAPI_HOST_TESTS)
     void Runtime::resetForTests() {
         shuttingDownStorage().store(false, std::memory_order_release);
+        invalidateCurrentModCache();
         auto& runtime = runtimeStorage();
         runtime.reset();
     }

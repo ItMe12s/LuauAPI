@@ -20,8 +20,8 @@
 namespace {
     using namespace luax;
 
-    bool rootDir(std::string const& name, std::filesystem::path& out, bool& writable) {
-        auto* mod = currentMod();
+    bool rootDir(lua_State* L, std::string const& name, std::filesystem::path& out, bool& writable) {
+        auto* mod = requireCurrentMod(L);
         if (name == "save") {
             out = mod->getSaveDir();
             writable = true;
@@ -56,7 +56,7 @@ namespace {
 
         std::filesystem::path dir;
         bool writable = false;
-        if (!rootDir(root, dir, writable)) {
+        if (!rootDir(L, root, dir, writable)) {
             luaL_error(
                 L,
                 "%s: unknown root '%s' (expected save/config/persistent/resources)",

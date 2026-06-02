@@ -6,35 +6,90 @@
 #include <Geode/loader/Loader.hpp>
 #include <Geode/loader/Mod.hpp>
 
+#include <lua.h>
+
 #include <string>
 #include <unordered_map>
 
-namespace luax {
-    geode::Mod* currentMod() {
-        auto* runtime = luax::Runtime::getIfInitialized();
-        if (!runtime) {
-            return geode::Mod::get();
+namespace {
+    bool modStillRegistered(geode::Mod* mod) {
+        if (!mod) {
+            return false;
         }
-        auto const& root = runtime->resourcesRoot();
-        if (root.empty()) {
-            return geode::Mod::get();
-        }
-
-        static std::unordered_map<std::string, geode::Mod*> cache;
-        auto key = normalizedPathString(root);
-        if (auto it = cache.find(key); it != cache.end()) {
-            return it->second ? it->second : geode::Mod::get();
-        }
-
-        geode::Mod* found = nullptr;
-        for (auto* mod : geode::Loader::get()->getAllMods()) {
-            auto modRoot = canonicalRoot(mod->getResourcesDir());
-            if (modRoot.isOk() && modRoot.unwrap() == root) {
-                found = mod;
-                break;
+        for (auto* candidate : geode::Loader::get()->getAllMods()) {
+            if (candidate == mod) {
+                return true;
             }
         }
-        cache[key] = found;
-        return found ? found : geode::Mod::get();
+        return false;
+    }
+
+    bool modMatchesRoot(geode::Mod* mod, std::filesystem::path const& root) {
+        if (!modStillRegistered(mod)) {
+            return false;
+        }
+        auto modRoot = luax::canonicalRoot(mod->getResourcesDir());
+        return modRoot.isOk() && modRoot.unwrap() == root;
+    }
+
+    geode::Mod* findModForRoot(std::filesystem::path const& root) {
+        for (auto* mod : geode::Loader::get()->getAllMods()) {
+            if (modMatchesRoot(mod, root)) {
+                return mod;
+            }
+        }
+        return nullptr;
+    }
+
+    std::unordered_map<std::string, geode::Mod*>& modCache() {
+        static std::unordered_map<std::string, geode::Mod*> cache;
+        return cache;
+    }
+}
+
+namespace luax {
+    void invalidateCurrentModCache() {
+        modCache().clear();
+    }
+
+    geode::Mod* currentMod() {
+        auto* runtime = Runtime::getIfInitialized();
+        if (!runtime) {
+            return nullptr;
+        }
+
+        auto const& root = runtime->resourcesRoot();
+        if (root.empty()) {
+            return nullptr;
+        }
+
+        auto rootResult = canonicalRoot(root);
+        if (rootResult.isErr()) {
+            return nullptr;
+        }
+        auto const& canonical = rootResult.unwrap();
+        auto key = normalizedPathString(canonical);
+
+        auto& cache = modCache();
+        if (auto it = cache.find(key); it != cache.end()) {
+            if (modMatchesRoot(it->second, canonical)) {
+                return it->second;
+            }
+            cache.erase(it);
+        }
+
+        geode::Mod* found = findModForRoot(canonical);
+        if (found) {
+            cache[key] = found;
+        }
+        return found;
+    }
+
+    geode::Mod* requireCurrentMod(lua_State* L) {
+        auto* mod = currentMod();
+        if (!mod) {
+            luaL_error(L, "current mod is unavailable");
+        }
+        return mod;
     }
 }
