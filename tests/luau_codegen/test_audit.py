@@ -119,6 +119,34 @@ class AuditReportTests(unittest.TestCase):
 
         self.assertEqual(bucket["count"], 0)
 
+    def test_audit_supported_map_and_set_not_in_container_bucket(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        target = Class(
+            name="Foo",
+            bases=["CCObject"],
+            methods=[
+                Method(
+                    name="takeMap",
+                    ret="void",
+                    args=[Arg("gd::map<int, bool>", "values")],
+                    platforms=all_platforms(),
+                ),
+                Method(
+                    name="takeSet",
+                    ret="void",
+                    args=[Arg("gd::set<int>", "values")],
+                    platforms=all_platforms(),
+                ),
+            ],
+        )
+        root = Root(classes=[ccobject, target])
+        plan = collect_plan(root, "win")
+
+        data = collect_audit(plan, root)
+        bucket = data["buckets"]["container_arg"]
+
+        self.assertEqual(bucket["count"], 0)
+
     def test_audit_supported_object_vector_method_not_in_container_bucket(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")
         ccnode = Class(

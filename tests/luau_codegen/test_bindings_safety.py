@@ -591,6 +591,76 @@ class GeneratedSafetyTests(unittest.TestCase):
             file_preamble(),
         )
 
+    def test_method_map_input_checks_lua_table(self) -> None:
+        cls = Class(
+            name="Foo",
+            methods=[
+                Method(
+                    name="takeMap",
+                    ret="void",
+                    args=[Arg("gd::map<int, bool>", "values")],
+                    platforms=all_platforms("0x1"),
+                )
+            ],
+        )
+        grouped, _ = group_supported(cls, {}, "win")
+
+        text = _emit_class_file(cls, grouped, [], [], {}, set(), 1, "win")
+
+        self.assertIn("checkMap<int, bool>", text)
+        self.assertIn("self->takeMap(arg0)", text)
+
+    def test_method_map_return_pushes_table_copy(self) -> None:
+        cls = Class(
+            name="Foo",
+            methods=[
+                Method(
+                    name="getMap",
+                    ret="gd::map<int, bool>",
+                    args=[],
+                    platforms=all_platforms("0x1"),
+                )
+            ],
+        )
+        grouped, _ = group_supported(cls, {}, "win")
+
+        text = _emit_class_file(cls, grouped, [], [], {}, set(), 1, "win")
+
+        self.assertIn("pushMap<int, bool>", text)
+        self.assertIn("self->getMap()", text)
+
+    def test_method_set_input_checks_lua_table(self) -> None:
+        cls = Class(
+            name="Foo",
+            methods=[
+                Method(
+                    name="takeSet",
+                    ret="void",
+                    args=[Arg("gd::set<int>", "values")],
+                    platforms=all_platforms("0x1"),
+                )
+            ],
+        )
+        grouped, _ = group_supported(cls, {}, "win")
+
+        text = _emit_class_file(cls, grouped, [], [], {}, set(), 1, "win")
+
+        self.assertIn("checkSet<int>", text)
+        self.assertIn("self->takeSet(arg0)", text)
+
+    def test_free_function_unordered_map_return_pushes_table_copy(self) -> None:
+        fn = Function(
+            name="values",
+            namespace="geode::utils",
+            ret="gd::unordered_map<int, int>",
+            args=[],
+        )
+        kept, _ = group_supported_free_functions([fn], {}, "win")
+        text = emit_free_functions_file(kept, {})
+
+        self.assertIn("pushUnorderedMap<int, int>", text)
+        self.assertIn("geode::utils::values()", text)
+
     def test_field_plan_and_types_include_ccnode_m_fields_only(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")
         ccnode = Class(

@@ -342,6 +342,76 @@ class ContainerFilterTests(unittest.TestCase):
         self.assertFalse(ok)
         self.assertEqual(reason, "unsupported-arg:gd::vector<int>*")
 
+    def test_map_input_arg_is_supported(self) -> None:
+        cls = Class(name="Foo")
+        method = Method(
+            name="takeMap",
+            ret="void",
+            args=[Arg("gd::map<int, bool>", "values")],
+            platforms=all_platforms("0x1"),
+        )
+
+        ok, reason = supported(cls, method, {}, "win")
+
+        self.assertTrue(ok)
+        self.assertEqual(reason, "")
+
+    def test_leading_const_container_ref_input_arg_is_supported(self) -> None:
+        cls = Class(name="Foo")
+        method = Method(
+            name="takeUsedIds",
+            ret="int",
+            args=[Arg("const gd::unordered_set<int>&", "used")],
+            platforms=all_platforms("0x1"),
+        )
+
+        ok, reason = supported(cls, method, {}, "win")
+
+        self.assertTrue(ok)
+        self.assertEqual(reason, "")
+
+    def test_map_return_is_supported(self) -> None:
+        cls = Class(name="Foo")
+        method = Method(
+            name="getMap",
+            ret="gd::map<int, bool>",
+            args=[],
+            platforms=all_platforms("0x1"),
+        )
+
+        ok, reason = supported(cls, method, {}, "win")
+
+        self.assertTrue(ok)
+        self.assertEqual(reason, "")
+
+    def test_set_input_arg_is_supported(self) -> None:
+        cls = Class(name="Foo")
+        method = Method(
+            name="takeSet",
+            ret="void",
+            args=[Arg("gd::set<int>", "values")],
+            platforms=all_platforms("0x1"),
+        )
+
+        ok, reason = supported(cls, method, {}, "win")
+
+        self.assertTrue(ok)
+        self.assertEqual(reason, "")
+
+    def test_map_out_arg_non_void_return_stays_unsupported(self) -> None:
+        cls = Class(name="Foo")
+        method = Method(
+            name="fillMap",
+            ret="bool",
+            args=[Arg("gd::map<int, bool>*", "values")],
+            platforms=all_platforms("0x1"),
+        )
+
+        ok, reason = supported(cls, method, {}, "win")
+
+        self.assertFalse(ok)
+        self.assertEqual(reason, "unsupported-arg:gd::map<int, bool>*")
+
 
 class FmodFilterTests(unittest.TestCase):
     def _fmod_engine(self) -> tuple[Class, dict[str, Class]]:

@@ -410,6 +410,15 @@ class ContainerTypeMapTests(unittest.TestCase):
         assert info.element_type is not None
         self.assertEqual(info.element_type.kind, "number")
 
+    def test_classify_leading_const_container_ref_is_not_out(self) -> None:
+        info = classify_arg("const gd::unordered_set<int>&", {})
+
+        self.assertIsNotNone(info)
+        assert info is not None
+        self.assertEqual(info.kind, "unordered_set")
+        self.assertTrue(info.is_ref)
+        self.assertFalse(info.is_out)
+
     def test_classify_gd_map_rejects_object_keys(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")
         objects = {"CCObject": ccobject, "cocos2d::CCObject": ccobject}

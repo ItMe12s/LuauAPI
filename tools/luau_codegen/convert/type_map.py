@@ -264,7 +264,10 @@ def is_reference_type(t: str) -> bool:
 
 
 def is_const_reference(t: str) -> bool:
-    s = normalize_type(t)
+    s = re.sub(r"\s+", " ", t.strip())
+    s = s.replace(" *", "*").replace("* ", "*")
+    s = s.replace(" &", "&").replace("& ", "&")
+    s = s.replace(" :: ", "::").replace(":: ", "::").replace(" ::", "::")
     if not s.endswith("&"):
         return False
     inner = s[:-1].strip()

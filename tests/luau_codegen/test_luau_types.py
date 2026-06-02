@@ -327,6 +327,42 @@ class LuauTypeEmissionTests(unittest.TestCase):
         self.assertIn("function take(self, arg1: { number })", text)
         self.assertIn("function getValues(self): { number }", text)
 
+    def test_map_and_set_method_types_use_table_shapes(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        child = Class(name="ChildNode", namespace="cocos2d", bases=["CCObject"])
+        foo = Class(
+            name="Foo",
+            bases=["CCObject"],
+            methods=[
+                Method(
+                    name="takeMap",
+                    ret="void",
+                    args=[Arg("gd::map<int, bool>", "values")],
+                    platforms=all_platforms("0x1"),
+                ),
+                Method(
+                    name="getChildrenById",
+                    ret="gd::map<int, cocos2d::ChildNode*>",
+                    args=[],
+                    platforms=all_platforms("0x1"),
+                ),
+                Method(
+                    name="takeSet",
+                    ret="void",
+                    args=[Arg("gd::set<int>", "values")],
+                    platforms=all_platforms("0x1"),
+                ),
+            ],
+        )
+        root = Root(classes=[ccobject, child, foo])
+
+        text = types_text(emit_luau_types(root))
+
+        self.assertIn("declare class ChildNode", text)
+        self.assertIn("function takeMap(self, arg1: { [number]: boolean })", text)
+        self.assertIn("function getChildrenById(self): { [number]: ChildNode? }", text)
+        self.assertIn("function takeSet(self, arg1: { number })", text)
+
     def test_orphan_forward_decls_exclude_value_types(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")
         ccnode = Class(

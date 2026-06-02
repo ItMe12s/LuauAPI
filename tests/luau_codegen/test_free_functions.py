@@ -154,6 +154,30 @@ class FreeFunctionContainerTests(unittest.TestCase):
 
         self.assertIsNone(reason)
 
+    def test_map_input_arg_is_supported(self) -> None:
+        fn = Function(
+            name="takeMap",
+            namespace="geode::utils",
+            ret="void",
+            args=[Arg("gd::map<int, bool>", "values")],
+        )
+
+        reason = free_function_unsupported_reason(fn, {})
+
+        self.assertIsNone(reason)
+
+    def test_set_return_is_supported(self) -> None:
+        fn = Function(
+            name="values",
+            namespace="geode::utils",
+            ret="gd::set<int>",
+            args=[],
+        )
+
+        reason = free_function_unsupported_reason(fn, {})
+
+        self.assertIsNone(reason)
+
 
 class GetEnvironmentVariableExclusionTests(unittest.TestCase):
     def _get_env(self) -> Function:

@@ -487,6 +487,92 @@ class EmitStackCheckTests(unittest.TestCase):
         self.assertIn("luax::pushPrimitiveVector<uint64_t>", push_text)
 
 
+class ContainerTableMarshallingTests(unittest.TestCase):
+    def test_map_check_and_push_use_table_helpers(self) -> None:
+        key = TypeInfo(kind="number", cxx_type="int", lua_type="number")
+        value = TypeInfo(kind="bool", cxx_type="bool", lua_type="boolean")
+        info = TypeInfo(
+            kind="map",
+            cxx_type="gd::map<int, bool>",
+            lua_type="{ [number]: boolean }",
+            key_type=key,
+            value_type=value,
+        )
+
+        check_text = "".join(
+            check_arg(Arg("gd::map<int, bool>", "values"), info, 1, "arg0", "test")
+        )
+        push_text = "".join(push_value(info, "values"))
+
+        self.assertIn("luax::checkMap<int, bool>", check_text)
+        self.assertIn("luax::pushMap<int, bool>", push_text)
+
+    def test_unordered_map_check_and_push_use_table_helpers(self) -> None:
+        key = TypeInfo(kind="string", cxx_type="std::string", lua_type="string")
+        value = TypeInfo(kind="number", cxx_type="int", lua_type="number")
+        info = TypeInfo(
+            kind="unordered_map",
+            cxx_type="gd::unordered_map<std::string, int>",
+            lua_type="{ [string]: number }",
+            key_type=key,
+            value_type=value,
+        )
+
+        check_text = "".join(
+            check_arg(
+                Arg("gd::unordered_map<std::string, int>", "values"),
+                info,
+                1,
+                "arg0",
+                "test",
+            )
+        )
+        push_text = "".join(push_value(info, "values"))
+
+        self.assertIn("luax::checkUnorderedMap<std::string, int>", check_text)
+        self.assertIn("luax::pushUnorderedMap<std::string, int>", push_text)
+
+    def test_set_check_and_push_use_table_helpers(self) -> None:
+        element = TypeInfo(kind="number", cxx_type="int", lua_type="number")
+        info = TypeInfo(
+            kind="set",
+            cxx_type="gd::set<int>",
+            lua_type="{ number }",
+            element_type=element,
+        )
+
+        check_text = "".join(
+            check_arg(Arg("gd::set<int>", "values"), info, 1, "arg0", "test")
+        )
+        push_text = "".join(push_value(info, "values"))
+
+        self.assertIn("luax::checkSet<int>", check_text)
+        self.assertIn("luax::pushSet<int>", push_text)
+
+    def test_unordered_set_check_and_push_use_table_helpers(self) -> None:
+        element = TypeInfo(kind="number", cxx_type="int", lua_type="number")
+        info = TypeInfo(
+            kind="unordered_set",
+            cxx_type="gd::unordered_set<int>",
+            lua_type="{ number }",
+            element_type=element,
+        )
+
+        check_text = "".join(
+            check_arg(
+                Arg("gd::unordered_set<int>", "values"),
+                info,
+                1,
+                "arg0",
+                "test",
+            )
+        )
+        push_text = "".join(push_value(info, "values"))
+
+        self.assertIn("luax::checkUnorderedSet<int>", check_text)
+        self.assertIn("luax::pushUnorderedSet<int>", push_text)
+
+
 class FmodMarshallingTests(unittest.TestCase):
     def test_fmod_enum_arg_uses_numeric_check(self) -> None:
         info = TypeInfo(kind="enum", cxx_type="FMOD_RESULT", lua_type="number")

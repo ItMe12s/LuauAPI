@@ -386,6 +386,31 @@ class HookableSelCallbackTests(unittest.TestCase):
 
         self.assertFalse(hookable(cls, cls.methods[0], objects, "win"))
 
+    def test_table_copy_containers_not_hookable(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        cls = Class(
+            name="Foo",
+            bases=["CCObject"],
+            methods=[
+                Method(
+                    name="takeInts",
+                    ret="void",
+                    args=[Arg("gd::vector<int>", "values")],
+                    platforms=all_platforms("0x1"),
+                ),
+                Method(
+                    name="getMap",
+                    ret="gd::map<int, bool>",
+                    args=[],
+                    platforms=all_platforms("0x2"),
+                ),
+            ],
+        )
+        objects = {"CCObject": ccobject, "Foo": cls}
+
+        for method in cls.methods:
+            self.assertFalse(hookable(cls, method, objects, "win"))
+
     def test_opaque_handle_arg_not_hookable(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")
         cls = Class(
