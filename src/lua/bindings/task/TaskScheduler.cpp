@@ -44,10 +44,10 @@ namespace luax {
     bool TaskScheduler::fire(Task& task) {
         auto* runtime = Runtime::getIfInitialized();
         if (!runtime) return false;
-        if (!task.callback.push()) return false;
         auto* L = task.callback.luaState();
         if (!L) return false;
         int top = lua_gettop(L);
+        if (!task.callback.push()) return false;
         Runtime::ResourcesRootScope scope(*runtime, task.callback.resourcesRoot());
         bool ok = runtime->protectedCall(0, 0, "task", kHookScriptDeadlineMs);
         lua_settop(L, top);
