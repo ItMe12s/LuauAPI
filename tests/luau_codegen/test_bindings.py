@@ -78,6 +78,13 @@ class GeneratedSafetyTests(unittest.TestCase):
 
         self.assertIn("luax::evictMenuHandlersIfFinalRelease(self);", text)
         self.assertIn('#include "lua/bindings/framework/LuaMenuHandler.hpp"', text)
+        self.assertIn("geode::Result<void> installFieldsReleaseHook()", text)
+        self.assertIn(
+            "if (auto hookResult = installFieldsReleaseHook(); hookResult.isErr())",
+            text,
+        )
+        self.assertIn("return geode::Err(hookResult.unwrapErr());", text)
+        self.assertNotIn("luau fields release hook failed", text)
 
     def test_hook_shutdown_clears_refs_and_disables_hooks(self) -> None:
         text = emit_hook_support()

@@ -6,9 +6,32 @@
 
 namespace luax {
     namespace {
-        std::unordered_map<cocos2d::CCNode*, LuaRef>& fieldTables() {
-            static auto* value = new std::unordered_map<cocos2d::CCNode*, LuaRef>();
+        struct FieldEntry {
+            LuaRef table;
+            geode::WeakRef<cocos2d::CCNode> owner;
+        };
+
+        std::unordered_map<cocos2d::CCNode*, FieldEntry>& fieldTables() {
+            static auto* value = new std::unordered_map<cocos2d::CCNode*, FieldEntry>();
             return *value;
+        }
+
+        bool entryStillOwnsNode(FieldEntry const& entry, cocos2d::CCNode* node) {
+            auto lock = entry.owner.lock();
+            return lock && lock.data() == node;
+        }
+
+        void purgeStaleFieldEntries() {
+            auto& tables = fieldTables();
+            for (auto it = tables.begin(); it != tables.end();) {
+                auto lock = it->second.owner.lock();
+                if (!lock || lock.data() != it->first) {
+                    it->second.table.reset();
+                    it = tables.erase(it);
+                    continue;
+                }
+                ++it;
+            }
         }
     }
 
@@ -18,19 +41,24 @@ namespace luax {
             lua_pushnil(L);
             return;
         }
+
+        purgeStaleFieldEntries();
+
         auto& tables = fieldTables();
         auto it = tables.find(node);
-        if (it != tables.end() && it->second.push()) {
-            return;
-        }
         if (it != tables.end()) {
-            it->second.reset();
+            if (entryStillOwnsNode(it->second, node) && it->second.table.push()) {
+                return;
+            }
+            it->second.table.reset();
             tables.erase(it);
         }
+
         lua_createtable(L, 0, 4);
-        LuaRef ref;
-        ref.reset(L, -1);
-        tables.emplace(node, std::move(ref));
+        FieldEntry entry;
+        entry.table.reset(L, -1);
+        entry.owner = geode::WeakRef<cocos2d::CCNode>(node);
+        tables.emplace(node, std::move(entry));
     }
 
     void Fields::evict(cocos2d::CCNode* node) {
@@ -38,7 +66,7 @@ namespace luax {
         auto& tables = fieldTables();
         auto it = tables.find(node);
         if (it == tables.end()) return;
-        it->second.reset();
+        it->second.table.reset();
         tables.erase(it);
     }
 
@@ -56,8 +84,8 @@ namespace luax {
 
     void Fields::clear() {
         auto& tables = fieldTables();
-        for (auto& [_, ref] : tables) {
-            ref.reset();
+        for (auto& [_, entry] : tables) {
+            entry.table.reset();
         }
         tables.clear();
     }

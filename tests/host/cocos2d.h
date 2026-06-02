@@ -1,11 +1,45 @@
 #pragma once
 
 #include <cstdint>
+#include <unordered_set>
+
+namespace cocos2d {
+    class CCObject;
+}
+
+namespace geode::detail {
+    inline std::unordered_set<cocos2d::CCObject const*>& liveCocosObjects() {
+        static std::unordered_set<cocos2d::CCObject const*> objects;
+        return objects;
+    }
+
+    inline void trackCocosObject(cocos2d::CCObject const* object) {
+        if (object) {
+            liveCocosObjects().insert(object);
+        }
+    }
+
+    inline void untrackCocosObject(cocos2d::CCObject const* object) {
+        if (object) {
+            liveCocosObjects().erase(object);
+        }
+    }
+
+    inline bool isLiveCocosObject(cocos2d::CCObject const* object) {
+        return object && liveCocosObjects().contains(object);
+    }
+}
 
 namespace cocos2d {
     class CCObject {
     public:
-        virtual ~CCObject() = default;
+        CCObject() {
+            geode::detail::trackCocosObject(this);
+        }
+
+        virtual ~CCObject() {
+            geode::detail::untrackCocosObject(this);
+        }
 
         void retain() { ++m_retainCount; }
         void release() {
@@ -50,6 +84,8 @@ namespace geode {
     class WeakRef {
     public:
         struct Lock {
+            explicit operator bool() const { return ptr != nullptr; }
+
             T* data() const { return ptr; }
             T* ptr = nullptr;
         };
@@ -57,7 +93,12 @@ namespace geode {
         WeakRef() = default;
         explicit WeakRef(T* ptr) : m_ptr(ptr) {}
 
-        Lock lock() const { return Lock{m_ptr}; }
+        Lock lock() const {
+            if (!m_ptr || !detail::isLiveCocosObject(m_ptr)) {
+                return Lock{};
+            }
+            return Lock{m_ptr};
+        }
 
     private:
         T* m_ptr = nullptr;

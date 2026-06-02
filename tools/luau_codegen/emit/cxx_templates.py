@@ -36,6 +36,7 @@ def file_preamble() -> str:
         "#include <cstddef>\n"
         "#include <algorithm>\n"
         "#include <memory>\n"
+        "#include <optional>\n"
         "#include <string>\n"
         "#include <string_view>\n"
         "#include <unordered_map>\n"

@@ -357,6 +357,7 @@ if(LUAUAPI_BUILD_TESTS)
         tests/allocator_accounting_tests.cpp
         tests/api_tests.cpp
         tests/binding_tests.cpp
+        tests/fields_tests.cpp
         tests/bytecode_cache_key_tests.cpp
         tests/geode_fs_path_tests.cpp
         tests/imgui_scheduler_tests.cpp

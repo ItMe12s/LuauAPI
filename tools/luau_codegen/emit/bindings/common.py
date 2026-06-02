@@ -42,30 +42,33 @@ def _emit_common_file(
         out.append("    luax::evictMenuHandlersIfFinalRelease(self);\n")
         out.append("    self->release();\n")
         out.append("}\n\n")
-        out.append("void installFieldsReleaseHook() {\n")
-        out.append("    static bool attempted = false;\n")
-        out.append("    static geode::Hook* hook = nullptr;\n")
-        out.append("    if (attempted) return;\n")
-        out.append("    attempted = true;\n")
+        out.append("geode::Result<void> installFieldsReleaseHook() {\n")
+        out.append("    static std::optional<geode::Result<void>> installResult;\n")
+        out.append("    if (installResult) return *installResult;\n")
         out.append(
             f'    auto result = geode::Mod::get()->hook({release_address}, &luaapi_fields_release_hook, "LuauAPI CCObject::release fields cleanup", tulip::hook::TulipConvention::Default);\n'
         )
         out.append("    if (result.isErr()) {\n")
-        out.append(
-            '        geode::log::warn("luau fields release hook failed: {}", result.unwrapErr());\n'
-        )
-        out.append("        return;\n")
+        out.append("        installResult = geode::Err(result.unwrapErr());\n")
+        out.append("        return *installResult;\n")
         out.append("    }\n")
-        out.append("    hook = result.unwrap();\n")
+        out.append("    auto* hook = result.unwrap();\n")
         out.append("    if (hook && !hook->isEnabled()) {\n")
         out.append("        auto enableResult = hook->enable();\n")
+        out.append("        if (enableResult.isErr()) {\n")
         out.append(
-            '        if (enableResult.isErr()) geode::log::warn("luau fields release hook enable failed: {}", enableResult.unwrapErr());\n'
+            "            installResult = geode::Err(enableResult.unwrapErr());\n"
         )
+        out.append("            return *installResult;\n")
+        out.append("        }\n")
         out.append("    }\n")
+        out.append("    installResult = geode::Ok();\n")
+        out.append("    return *installResult;\n")
         out.append("}\n\n")
     else:
-        out.append("void installFieldsReleaseHook() {}\n\n")
+        out.append(
+            "geode::Result<void> installFieldsReleaseHook() { return geode::Ok(); }\n\n"
+        )
 
     if emitted_classes:
         out.append("struct HookRange {\n")
@@ -105,7 +108,11 @@ def _emit_common_file(
     out.append('    lua_pushcfunction(L, &luaapi_geode_fields, "geode.fields");\n')
     out.append('    lua_setfield(L, -2, "fields");\n')
     out.append("    lua_pop(L, 1);\n")
-    out.append("    installFieldsReleaseHook();\n")
+    out.append(
+        "    if (auto hookResult = installFieldsReleaseHook(); hookResult.isErr()) {\n"
+    )
+    out.append("        return geode::Err(hookResult.unwrapErr());\n")
+    out.append("    }\n")
     out.append("    if (auto* host = luax::BindingHost::fromState(L)) {\n")
     out.append("        host->registerShutdownHook(&clearHookRegistry);\n")
     out.append("        host->registerShutdownHook(&luax::Fields::clear);\n")
