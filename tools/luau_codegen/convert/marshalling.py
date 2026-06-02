@@ -238,6 +238,35 @@ def _emit_callback_pop(var: str, ret: TypeInfo) -> list[str]:
     raise ValueError(f"unsupported callback return kind: {ret.kind}")
 
 
+def _emit_invoke_failure_return(ret: TypeInfo) -> str:
+    if ret.kind == "void":
+        return ""
+    if ret.kind == "bool":
+        return "false"
+    if ret.kind == "object":
+        return "nullptr"
+    if ret.kind == "number":
+        cxx = ret.cxx_type
+        if cxx in ("float", "double"):
+            suffix = "f" if cxx == "float" else ""
+            return f"static_cast<{cxx}>(0{suffix})"
+        return f"static_cast<{cxx}>(0)"
+    if ret.kind == "enum":
+        return f"static_cast<{ret.cxx_type}>(0)"
+    if ret.kind == "value":
+        return "{}"
+    raise ValueError(f"unsupported callback return kind: {ret.kind}")
+
+
+def _emit_invoke_failure_handler(label: str, ret: TypeInfo) -> list[str]:
+    lines = [f'                geode::log::error("{label} callback failed");\n']
+    if ret.kind == "void":
+        lines.append("                return;\n")
+        return lines
+    lines.append(f"                return {_emit_invoke_failure_return(ret)};\n")
+    return lines
+
+
 def _emit_callback_lambda(idx: int, var: str, info: TypeInfo, label: str) -> list[str]:
     ret = info.callback_ret or TypeInfo("void", "void", "()")
     ret_type = _callback_return_type(info)
@@ -262,7 +291,8 @@ def _emit_callback_lambda(idx: int, var: str, info: TypeInfo, label: str) -> lis
         lines.append(f"            {var}_Ctx ctx{{ {ctx_init} }};\n")
         nresults = 0 if ret.kind == "void" else 1
         lines.append(
-            f'            {var}_cb->invoke({len(info.callback_args)}, {nresults}, "{label} callback", luax::kHookScriptDeadlineMs,\n'
+            f"            if (!{var}_cb->invoke({len(info.callback_args)}, {nresults}, "
+            f'"{label} callback", luax::kHookScriptDeadlineMs,\n'
         )
         lines.append(f"                +[](lua_State* L, void* raw) {{\n")
         lines.append(f"                    auto* c = static_cast<{var}_Ctx*>(raw);\n")
@@ -275,17 +305,22 @@ def _emit_callback_lambda(idx: int, var: str, info: TypeInfo, label: str) -> lis
             lines.append(f",\n")
             lines.extend(_emit_callback_pop(var, ret))
             lines.append(f"                &{var}_ret")
-        lines.append(");\n")
+        lines.append(")) {\n")
+        lines.extend(_emit_invoke_failure_handler(label, ret))
+        lines.append("            }\n")
     else:
         nresults = 0 if ret.kind == "void" else 1
         lines.append(
-            f'            {var}_cb->invoke(0, {nresults}, "{label} callback", luax::kHookScriptDeadlineMs'
+            f"            if (!{var}_cb->invoke(0, {nresults}, "
+            f'"{label} callback", luax::kHookScriptDeadlineMs'
         )
         if ret.kind != "void":
             lines.append(", nullptr, nullptr")
             lines.extend(_emit_callback_pop(var, ret))
             lines.append(f", &{var}_ret")
-        lines.append(");\n")
+        lines.append(")) {\n")
+        lines.extend(_emit_invoke_failure_handler(label, ret))
+        lines.append("            }\n")
     if ret_type != "void":
         lines.append(f"            return {var}_ret;\n")
     lines.append("        };\n")

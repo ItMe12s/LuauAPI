@@ -41,7 +41,9 @@ namespace {
         luaL_checktype(L, 1, LUA_TFUNCTION);
         int nargs = lua_gettop(L) - 1;
         auto* runtime = Runtime::getIfInitialized();
-        if (!runtime) return 0;
+        if (!runtime || !runtime->ready()) {
+            luaL_error(L, "task.spawn requires an initialized runtime");
+        }
         runtime->protectedCall(nargs, 0, "task.spawn", kHookScriptDeadlineMs);
         return 0;
     }

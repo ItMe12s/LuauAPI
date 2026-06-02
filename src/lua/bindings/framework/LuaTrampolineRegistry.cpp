@@ -49,12 +49,15 @@ namespace luax {
 
     void registerOrphanTrampoline(cocos2d::CCObject* trampoline) {
         if (!trampoline) return;
-        if (orphanTrampolines().size() >= kMaxCallbackTrampolines && !g_orphanCapWarned) {
-            g_orphanCapWarned = true;
-            geode::log::warn(
-                "orphan trampoline registry exceeded soft cap ({})",
-                kMaxCallbackTrampolines
-            );
+        if (orphanTrampolines().size() >= kMaxCallbackTrampolines) {
+            if (!g_orphanCapWarned) {
+                g_orphanCapWarned = true;
+                geode::log::warn(
+                    "orphan trampoline registry exceeded cap ({}), dropping new trampolines",
+                    kMaxCallbackTrampolines
+                );
+            }
+            return;
         }
         trampoline->retain();
         orphanTrampolines().push_back(trampoline);

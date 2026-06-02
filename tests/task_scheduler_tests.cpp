@@ -95,6 +95,28 @@ TEST_CASE("TaskScheduler advance restores stack when protectedCall fails early")
     REQUIRE(lua_gettop(L) == topBefore);
 }
 
+TEST_CASE("TaskScheduler interval task fires once after large frame delta") {
+    RuntimeGuard guard;
+    auto* runtime = luax::Runtime::getOrCreate();
+    auto* L = runtime->state();
+
+    lua_pushinteger(L, 0);
+    lua_setglobal(L, "bigDtHits");
+
+    auto ref = luauapi_test::makeCallback(L, "_G.bigDtHits = (_G.bigDtHits or 0) + 1");
+
+    auto& scheduler = luax::TaskScheduler::get();
+    auto id = scheduler.add(std::move(ref), 0.0, 0.5);
+    REQUIRE(id != 0);
+
+    scheduler.advance(2.0, L);
+    REQUIRE(scheduler.activeCount() == 1);
+
+    lua_getglobal(L, "bigDtHits");
+    REQUIRE(lua_tointeger(L, -1) == 1);
+    lua_pop(L, 1);
+}
+
 TEST_CASE("TaskScheduler cancels tasks that error") {
     RuntimeGuard guard;
     auto* runtime = luax::Runtime::getOrCreate();

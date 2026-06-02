@@ -2,6 +2,7 @@
 
 #include <Geode/Geode.hpp>
 
+#include <fmt/format.h>
 #include <new>
 
 namespace luax::detail {
@@ -25,20 +26,26 @@ namespace luax::detail {
         return inserted.first->second.tag;
     }
 
-    TypeInfo& UsertypeRegistry::infoFor(std::type_index idx) {
-        auto it = m_byType.find(idx);
-        if (it != m_byType.end()) return it->second;
+    geode::Result<TypeInfo*> UsertypeRegistry::ensureInfo(std::type_index idx) {
+        if (auto it = m_byType.find(idx); it != m_byType.end()) {
+            return geode::Ok(&it->second);
+        }
+        if (m_next >= LUA_UTAG_LIMIT) {
+            return geode::Err(fmt::format(
+                "UsertypeRegistry: userdata tag limit exceeded ({})",
+                LUA_UTAG_LIMIT
+            ));
+        }
         TypeInfo info;
         info.tag = m_next++;
-        if (info.tag >= LUA_UTAG_LIMIT) {
-            geode::log::error("UsertypeRegistry: tag {} exceeds LUA_UTAG_LIMIT ({})", info.tag, LUA_UTAG_LIMIT);
-            --m_next;
-            static TypeInfo invalid{};
-            return invalid;
-        }
         auto inserted = m_byType.emplace(idx, std::move(info));
         m_byTag.insert_or_assign(inserted.first->second.tag, idx);
-        return inserted.first->second;
+        return geode::Ok(&inserted.first->second);
+    }
+
+    TypeInfo const* UsertypeRegistry::findInfo(std::type_index idx) const {
+        auto it = m_byType.find(idx);
+        return it == m_byType.end() ? nullptr : &it->second;
     }
 
     TypeInfo const* UsertypeRegistry::findByTag(std::uint32_t tag) const {
@@ -47,4 +54,10 @@ namespace luax::detail {
         auto typeIt = m_byType.find(tagIt->second);
         return typeIt == m_byType.end() ? nullptr : &typeIt->second;
     }
+
+#if defined(LUAUAPI_HOST_TESTS)
+    void UsertypeRegistry::setNextTagForTests(std::uint32_t tag) {
+        m_next = tag;
+    }
+#endif
 }

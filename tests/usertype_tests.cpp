@@ -39,6 +39,18 @@ namespace {
     }
 }
 
+TEST_CASE("UsertypeRegistry returns error when tag limit is exceeded") {
+    RuntimeGuard guard;
+    auto* runtime = luax::Runtime::getOrCreate();
+    auto* L = runtime->state();
+
+    auto& reg = luax::detail::UsertypeRegistry::get();
+    reg.setNextTagForTests(LUA_UTAG_LIMIT);
+
+    auto result = luax::Usertype<TestNode>::registerType(L, "OverflowNode");
+    REQUIRE(result.isErr());
+}
+
 TEST_CASE("UsertypeRegistry assigns unique tags") {
     RuntimeGuard guard;
     auto& reg = luax::detail::UsertypeRegistry::get();

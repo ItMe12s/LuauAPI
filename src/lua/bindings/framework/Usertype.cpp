@@ -1,6 +1,8 @@
 #include "Usertype.hpp"
 
 #include "Fields.hpp"
+#include "lua/bindings/framework/BindingHost.hpp"
+#include "lua/Config.hpp"
 
 #include <Geode/Geode.hpp>
 #include <lua.h>
@@ -29,12 +31,22 @@ namespace luax::detail {
             lua_pushvalue(L, 2);
             lua_gettable(L, -2);
             if (lua_istable(L, -1)) {
+                int top = lua_gettop(L);
                 lua_getfield(L, -1, "get");
                 if (lua_isfunction(L, -1)) {
                     lua_pushvalue(L, 1);
+                    if (auto* host = BindingHost::getIfInitialized(); host && host->ready()) {
+                        if (host->protectedCall(1, 1, "usertype field get", kHookScriptDeadlineMs)) {
+                            return 1;
+                        }
+                        lua_settop(L, top);
+                        lua_pushnil(L);
+                        return 1;
+                    }
                     lua_call(L, 1, 1);
                     return 1;
                 }
+                lua_settop(L, top);
             }
             lua_pop(L, 2);
 
@@ -63,13 +75,22 @@ namespace luax::detail {
             lua_pushvalue(L, 2);
             lua_gettable(L, -2);
             if (lua_istable(L, -1)) {
+                int top = lua_gettop(L);
                 lua_getfield(L, -1, "set");
                 if (lua_isfunction(L, -1)) {
                     lua_pushvalue(L, 1);
                     lua_pushvalue(L, 3);
+                    if (auto* host = BindingHost::getIfInitialized(); host && host->ready()) {
+                        if (!host->protectedCall(2, 0, "usertype field set", kHookScriptDeadlineMs)) {
+                            lua_settop(L, top);
+                            luaL_error(L, "usertype field set failed");
+                        }
+                        return 0;
+                    }
                     lua_call(L, 2, 0);
                     return 0;
                 }
+                lua_settop(L, top);
             }
             lua_pop(L, 3);
 
@@ -266,8 +287,9 @@ namespace luax::detail {
         if (auto* typed = geode::cast::typeinfo_cast<cocos2d::CCNode*>(candidate.obj)) {
             return typed;
         }
-        auto const& nodeInfo = UsertypeRegistry::get().infoFor(std::type_index(typeid(cocos2d::CCNode)));
-        if (nodeInfo.tag != 0 && hasBase(*candidate.info, nodeInfo.tag)) {
+        auto const* nodeInfo = UsertypeRegistry::get().findInfo(std::type_index(typeid(cocos2d::CCNode)));
+        if (!nodeInfo) return nullptr;
+        if (nodeInfo->tag != 0 && hasBase(*candidate.info, nodeInfo->tag)) {
             return static_cast<cocos2d::CCNode*>(candidate.obj);
         }
         return nullptr;

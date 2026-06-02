@@ -134,7 +134,8 @@ namespace luax {
         detail::ensureReadOnlyVectorViewMetatable<T>(L);
         auto* storage = lua_newuserdata(L, sizeof(detail::ReadOnlyVectorViewBlock<T>));
         auto* block = new (storage) detail::ReadOnlyVectorViewBlock<T>();
-        block->vector = &vector;
+        block->owned = std::make_unique<gd::vector<T*>>(vector);
+        block->vector = block->owned.get();
         block->owner = geode::WeakRef<cocos2d::CCObject>(owner);
         luaL_getmetatable(L, detail::readOnlyVectorViewMetatable<T>());
         lua_setmetatable(L, -2);

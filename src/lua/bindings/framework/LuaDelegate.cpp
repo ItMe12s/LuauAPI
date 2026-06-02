@@ -14,6 +14,17 @@ namespace luax {
             static auto* value = new std::unordered_map<void*, std::weak_ptr<LuaRef>>();
             return *value;
         }
+
+        void pruneExpiredDelegateTables() {
+            auto& tables = delegateTables();
+            for (auto it = tables.begin(); it != tables.end();) {
+                if (it->second.expired()) {
+                    it = tables.erase(it);
+                } else {
+                    ++it;
+                }
+            }
+        }
     }
 
     bool LuaDelegateBase::invokeTableField(
@@ -153,6 +164,7 @@ namespace luax {
 
     void LuaDelegateBase::registerInterface(void* ptr, std::shared_ptr<LuaRef> const& table) {
         if (!ptr || !table) return;
+        pruneExpiredDelegateTables();
         delegateTables()[ptr] = table;
     }
 
@@ -165,6 +177,7 @@ namespace luax {
             lua_pushnil(L);
             return true;
         }
+        pruneExpiredDelegateTables();
         auto it = delegateTables().find(delegatePtr);
         if (it == delegateTables().end()) {
             lua_pushnil(L);

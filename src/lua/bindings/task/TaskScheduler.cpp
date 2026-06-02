@@ -86,10 +86,7 @@ namespace luax {
             if (!ok) {
                 task->cancelled = true;
             } else if (task->interval > 0.0) {
-                task->remaining += task->interval;
-                if (task->remaining <= 0.0) {
-                    task->remaining = task->interval;
-                }
+                task->remaining = task->interval;
             } else {
                 task->cancelled = true;
             }

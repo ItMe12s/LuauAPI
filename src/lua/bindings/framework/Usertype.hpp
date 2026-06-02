@@ -45,8 +45,12 @@ namespace luax {
             static UsertypeRegistry& get();
 
             std::uint32_t tagFor(std::type_index idx);
-            TypeInfo& infoFor(std::type_index idx);
+            geode::Result<TypeInfo*> ensureInfo(std::type_index idx);
+            TypeInfo const* findInfo(std::type_index idx) const;
             TypeInfo const* findByTag(std::uint32_t tag) const;
+#if defined(LUAUAPI_HOST_TESTS)
+            void setNextTagForTests(std::uint32_t tag);
+#endif
 
         private:
             std::unordered_map<std::type_index, TypeInfo> m_byType;
@@ -79,12 +83,19 @@ namespace luax {
         }
 
         static char const* name() {
-            return detail::UsertypeRegistry::get().infoFor(std::type_index(typeid(T))).name.c_str();
+            if (auto const* info = detail::UsertypeRegistry::get().findInfo(std::type_index(typeid(T)))) {
+                return info->name.c_str();
+            }
+            return "";
         }
 
         static geode::Result<void> registerType(lua_State* L, char const* nm, std::initializer_list<std::uint32_t> baseTags = {}) {
             auto& reg = detail::UsertypeRegistry::get();
-            auto& info = reg.infoFor(std::type_index(typeid(T)));
+            auto infoResult = reg.ensureInfo(std::type_index(typeid(T)));
+            if (infoResult.isErr()) {
+                return geode::Err(infoResult.unwrapErr());
+            }
+            auto& info = *infoResult.unwrap();
             (void)reg.tagFor(std::type_index(typeid(T)));
             if (info.tag == 0 || info.tag >= LUA_UTAG_LIMIT) {
                 return geode::Err(fmt::format("{} userdata tag {} exceeds LUA_UTAG_LIMIT ({})", nm, info.tag, LUA_UTAG_LIMIT));
@@ -120,18 +131,21 @@ namespace luax {
         }
 
         static void method(lua_State* L, char const* methodName, lua_CFunction fn) {
-            auto const& info = detail::UsertypeRegistry::get().infoFor(std::type_index(typeid(T)));
-            detail::appendMethod(L, info, methodName, fn);
+            auto const* info = detail::UsertypeRegistry::get().findInfo(std::type_index(typeid(T)));
+            if (!info) return;
+            detail::appendMethod(L, *info, methodName, fn);
         }
 
         static void field(lua_State* L, char const* fieldName, lua_CFunction getter, lua_CFunction setter) {
-            auto const& info = detail::UsertypeRegistry::get().infoFor(std::type_index(typeid(T)));
-            detail::appendField(L, info, fieldName, getter, setter);
+            auto const* info = detail::UsertypeRegistry::get().findInfo(std::type_index(typeid(T)));
+            if (!info) return;
+            detail::appendField(L, *info, fieldName, getter, setter);
         }
 
         static void readonlyField(lua_State* L, char const* fieldName, lua_CFunction getter) {
-            auto const& info = detail::UsertypeRegistry::get().infoFor(std::type_index(typeid(T)));
-            detail::appendReadOnlyField(L, info, fieldName, getter);
+            auto const* info = detail::UsertypeRegistry::get().findInfo(std::type_index(typeid(T)));
+            if (!info) return;
+            detail::appendReadOnlyField(L, *info, fieldName, getter);
         }
 
         static T* check(lua_State* L, int idx, char const* method) {
@@ -156,9 +170,10 @@ namespace luax {
 
         static void pushOwned(lua_State* L, T* obj) {
             if (!obj) { lua_pushnil(L); return; }
-            auto const& info = detail::UsertypeRegistry::get().infoFor(std::type_index(typeid(T)));
-            detail::pushUserdataOwned(L, static_cast<cocos2d::CCObject*>(obj), info);
-            if (!retainLuaRef(static_cast<cocos2d::CCObject*>(obj), info.name.c_str())) {
+            auto const* info = detail::UsertypeRegistry::get().findInfo(std::type_index(typeid(T)));
+            if (!info) { lua_pushnil(L); return; }
+            detail::pushUserdataOwned(L, static_cast<cocos2d::CCObject*>(obj), *info);
+            if (!retainLuaRef(static_cast<cocos2d::CCObject*>(obj), info->name.c_str())) {
                 lua_pop(L, 1);
                 lua_pushnil(L);
             }
@@ -166,8 +181,9 @@ namespace luax {
 
         static void pushBorrowed(lua_State* L, T* obj) {
             if (!obj) { lua_pushnil(L); return; }
-            auto const& info = detail::UsertypeRegistry::get().infoFor(std::type_index(typeid(T)));
-            detail::pushUserdataBorrowed(L, static_cast<cocos2d::CCObject*>(obj), info);
+            auto const* info = detail::UsertypeRegistry::get().findInfo(std::type_index(typeid(T)));
+            if (!info) { lua_pushnil(L); return; }
+            detail::pushUserdataBorrowed(L, static_cast<cocos2d::CCObject*>(obj), *info);
         }
     };
 }

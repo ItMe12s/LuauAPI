@@ -73,7 +73,8 @@ class CallbackMarshallingTests(unittest.TestCase):
             )
         )
         self.assertIn("std::make_shared<luax::LuaCallback>", text)
-        self.assertIn("cb_cb->invoke(1, 0", text)
+        self.assertIn("if (!cb_cb->invoke(1, 0", text)
+        self.assertIn("callback failed", text)
         self.assertIn("pushBorrowed", text)
         self.assertNotIn("protectedCall", text)
 
@@ -234,7 +235,9 @@ class CallbackMarshallingTests(unittest.TestCase):
         self.assertIn("-> bool", text)
         self.assertIn("cb_ret", text)
         self.assertIn("check<bool>", text)
-        self.assertIn("invoke(1, 1", text)
+        self.assertIn("if (!cb_cb->invoke(1, 1", text)
+        self.assertIn("callback failed", text)
+        self.assertIn("return false", text)
 
     def test_cc_director_delegate_arg_emits_trampoline(self) -> None:
         info = TypeInfo(

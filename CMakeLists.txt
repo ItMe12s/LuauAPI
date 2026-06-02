@@ -349,6 +349,9 @@ if(LUAUAPI_BUILD_TESTS)
         src/lua/bindings/framework/Fields.cpp
         src/lua/bindings/framework/Usertype.cpp
         src/lua/bindings/framework/UsertypeRegistry.cpp
+        src/lua/bindings/framework/LuaDelegate.cpp
+        src/lua/bindings/framework/LuaTrampolineRegistry.cpp
+        src/lua/bindings/task/TaskBinding.cpp
         src/lua/bindings/geode/CurrentMod.cpp
         src/lua/bindings/imgui/ImGuiDrawScheduler.cpp
         src/lua/bindings/task/TaskScheduler.cpp
@@ -370,6 +373,8 @@ if(LUAUAPI_BUILD_TESTS)
         tests/runtime_tests.cpp
         tests/task_scheduler_tests.cpp
         tests/usertype_tests.cpp
+        tests/vector_view_tests.cpp
+        tests/misc_correctness_tests.cpp
     )
     target_compile_features(luauapi_tests PRIVATE cxx_std_23)
     target_include_directories(luauapi_tests PRIVATE
