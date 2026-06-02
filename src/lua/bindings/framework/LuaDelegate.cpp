@@ -18,7 +18,8 @@ namespace luax {
         void pruneExpiredDelegateTables() {
             auto& tables = delegateTables();
             for (auto it = tables.begin(); it != tables.end();) {
-                if (it->second.expired()) {
+                auto table = it->second.lock();
+                if (!table || !table->valid()) {
                     it = tables.erase(it);
                 } else {
                     ++it;
@@ -185,6 +186,7 @@ namespace luax {
         }
         auto table = it->second.lock();
         if (!table || !table->valid()) {
+            delegateTables().erase(it);
             lua_pushnil(L);
             return true;
         }

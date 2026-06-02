@@ -50,6 +50,7 @@ namespace luax {
             TypeInfo const* findByTag(std::uint32_t tag) const;
 #if defined(LUAUAPI_HOST_TESTS)
             void setNextTagForTests(std::uint32_t tag);
+            void resetForTests();
 #endif
 
         private:
@@ -96,7 +97,6 @@ namespace luax {
                 return geode::Err(infoResult.unwrapErr());
             }
             auto& info = *infoResult.unwrap();
-            (void)reg.tagFor(std::type_index(typeid(T)));
             if (info.tag == 0 || info.tag >= LUA_UTAG_LIMIT) {
                 return geode::Err(fmt::format("{} userdata tag {} exceeds LUA_UTAG_LIMIT ({})", nm, info.tag, LUA_UTAG_LIMIT));
             }

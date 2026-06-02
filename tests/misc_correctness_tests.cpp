@@ -50,6 +50,30 @@ TEST_CASE("Orphan trampoline registry rejects registrations past cap") {
     luax::clearOrphanTrampolines();
 }
 
+TEST_CASE("Delegate table lookup prunes invalid refs while shared_ptr is alive") {
+    RuntimeGuard guard;
+    auto* runtime = luax::Runtime::getOrCreate();
+    auto* L = runtime->state();
+
+    void* key = reinterpret_cast<void*>(0xDEF);
+    auto table = std::make_shared<luax::LuaRef>();
+    lua_newtable(L);
+    table->reset(L, -1);
+    lua_pop(L, 1);
+    luax::LuaDelegateBase::registerInterface(key, table);
+
+    table->reset();
+    REQUIRE_FALSE(table->valid());
+
+    REQUIRE(luax::tryPushBoundDelegateTable(L, key));
+    REQUIRE(lua_isnil(L, -1));
+    lua_pop(L, 1);
+
+    REQUIRE(luax::tryPushBoundDelegateTable(L, key));
+    REQUIRE(lua_isnil(L, -1));
+    lua_pop(L, 1);
+}
+
 TEST_CASE("Delegate table lookup prunes expired weak entries") {
     RuntimeGuard guard;
     auto* runtime = luax::Runtime::getOrCreate();

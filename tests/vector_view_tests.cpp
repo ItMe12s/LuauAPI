@@ -20,6 +20,16 @@ namespace {
             luax::Runtime::resetForTests();
         }
     };
+
+    void indexReadOnlyVectorView(lua_State* L, int viewIndex, int elementIndex) {
+        viewIndex = lua_absindex(L, viewIndex);
+        lua_getmetatable(L, viewIndex);
+        lua_getfield(L, -1, "__index");
+        lua_pushvalue(L, viewIndex);
+        lua_pushinteger(L, elementIndex);
+        lua_call(L, 2, 1);
+        lua_remove(L, -2);
+    }
 }
 
 TEST_CASE("ReadOnlyVectorView snapshots borrowed vector storage") {
@@ -31,16 +41,15 @@ TEST_CASE("ReadOnlyVectorView snapshots borrowed vector storage") {
     REQUIRE(luax::Usertype<TestObj>::registerType(L, "TestObj").isOk());
 
     auto* owner = new TestObj();
-    gd::vector<cocos2d::CCObject*> members;
+    gd::vector<TestObj*> members;
     auto* child = new TestObj();
     members.push_back(child);
 
-    luax::pushReadOnlyVectorView<cocos2d::CCObject>(L, members, owner);
+    luax::pushReadOnlyVectorView<TestObj>(L, members, owner);
     REQUIRE(lua_isuserdata(L, -1));
 
     members.clear();
-    lua_pushnumber(L, 1);
-    REQUIRE(lua_pcall(L, 1, 1, 0) == 0);
+    indexReadOnlyVectorView(L, -1, 1);
     REQUIRE(lua_isuserdata(L, -1));
 
     child->release();
@@ -48,7 +57,7 @@ TEST_CASE("ReadOnlyVectorView snapshots borrowed vector storage") {
     lua_pop(L, 1);
 }
 
-TEST_CASE("ReadOnlyVectorView errors when owner is gone") {
+TEST_CASE("ReadOnlyVectorView remains usable after owner release") {
     RuntimeGuard guard;
     auto* runtime = luax::Runtime::getOrCreate();
     auto* L = runtime->state();
@@ -56,11 +65,15 @@ TEST_CASE("ReadOnlyVectorView errors when owner is gone") {
     REQUIRE(luax::Usertype<TestObj>::registerType(L, "TestObj").isOk());
 
     auto* owner = new TestObj();
-    gd::vector<cocos2d::CCObject*> members;
-    luax::pushReadOnlyVectorView<cocos2d::CCObject>(L, members, owner);
+    auto* child = new TestObj();
+    gd::vector<TestObj*> members;
+    members.push_back(child);
+    luax::pushReadOnlyVectorView<TestObj>(L, members, owner);
     owner->release();
 
-    lua_pushnumber(L, 1);
-    REQUIRE(lua_pcall(L, 1, 1, 0) != 0);
+    indexReadOnlyVectorView(L, -1, 1);
+    REQUIRE(lua_isuserdata(L, -1));
+
+    child->release();
     lua_pop(L, 1);
 }

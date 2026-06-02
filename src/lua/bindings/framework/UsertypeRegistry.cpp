@@ -12,18 +12,12 @@ namespace luax::detail {
     }
 
     std::uint32_t UsertypeRegistry::tagFor(std::type_index idx) {
-        auto it = m_byType.find(idx);
-        if (it != m_byType.end()) return it->second.tag;
-        TypeInfo info;
-        info.tag = m_next++;
-        if (info.tag >= LUA_UTAG_LIMIT) {
-            geode::log::error("UsertypeRegistry: tag {} exceeds LUA_UTAG_LIMIT ({})", info.tag, LUA_UTAG_LIMIT);
-            --m_next;
+        auto result = ensureInfo(idx);
+        if (result.isErr()) {
+            geode::log::error("UsertypeRegistry: {}", result.unwrapErr());
             return 0;
         }
-        auto inserted = m_byType.emplace(idx, std::move(info));
-        m_byTag.insert_or_assign(inserted.first->second.tag, idx);
-        return inserted.first->second.tag;
+        return result.unwrap()->tag;
     }
 
     geode::Result<TypeInfo*> UsertypeRegistry::ensureInfo(std::type_index idx) {
@@ -58,6 +52,12 @@ namespace luax::detail {
 #if defined(LUAUAPI_HOST_TESTS)
     void UsertypeRegistry::setNextTagForTests(std::uint32_t tag) {
         m_next = tag;
+    }
+
+    void UsertypeRegistry::resetForTests() {
+        m_byType.clear();
+        m_byTag.clear();
+        m_next = 1;
     }
 #endif
 }

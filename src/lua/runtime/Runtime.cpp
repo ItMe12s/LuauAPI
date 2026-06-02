@@ -10,6 +10,9 @@
 #endif
 #include "lua/module/BytecodeCacheKey.hpp"
 #include "lua/module/PathSandbox.hpp"
+#if defined(LUAUAPI_HOST_TESTS)
+#include "lua/bindings/framework/Usertype.hpp"
+#endif
 
 #include <Geode/Geode.hpp>
 #include <Luau/CodeGen.h>
@@ -202,6 +205,7 @@ namespace luax {
     void Runtime::resetForTests() {
         shuttingDownStorage().store(false, std::memory_order_release);
         invalidateCurrentModCache();
+        detail::UsertypeRegistry::get().resetForTests();
         auto& runtime = runtimeStorage();
         runtime.reset();
     }

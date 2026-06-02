@@ -95,7 +95,7 @@ TEST_CASE("TaskScheduler advance restores stack when protectedCall fails early")
     REQUIRE(lua_gettop(L) == topBefore);
 }
 
-TEST_CASE("TaskScheduler interval task fires once after large frame delta") {
+TEST_CASE("TaskScheduler interval task drop-tick fires once after large frame delta") {
     RuntimeGuard guard;
     auto* runtime = luax::Runtime::getOrCreate();
     auto* L = runtime->state();

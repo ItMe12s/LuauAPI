@@ -13,6 +13,7 @@
 
 namespace {
     struct TestNode : cocos2d::CCNode {};
+    struct OverflowNode : cocos2d::CCNode {};
 
     struct RuntimeGuard {
         RuntimeGuard() {
@@ -51,6 +52,14 @@ namespace {
     }
 }
 
+TEST_CASE("UsertypeRegistry tagFor returns zero when tag limit is exceeded") {
+    RuntimeGuard guard;
+    auto& reg = luax::detail::UsertypeRegistry::get();
+    reg.setNextTagForTests(LUA_UTAG_LIMIT);
+
+    REQUIRE(reg.tagFor(std::type_index(typeid(OverflowNode))) == 0);
+}
+
 TEST_CASE("UsertypeRegistry returns error when tag limit is exceeded") {
     RuntimeGuard guard;
     auto* runtime = luax::Runtime::getOrCreate();
@@ -59,7 +68,7 @@ TEST_CASE("UsertypeRegistry returns error when tag limit is exceeded") {
     auto& reg = luax::detail::UsertypeRegistry::get();
     reg.setNextTagForTests(LUA_UTAG_LIMIT);
 
-    auto result = luax::Usertype<TestNode>::registerType(L, "OverflowNode");
+    auto result = luax::Usertype<OverflowNode>::registerType(L, "OverflowNode");
     REQUIRE(result.isErr());
 }
 
