@@ -315,11 +315,112 @@ class ContainerTypeMapTests(unittest.TestCase):
     def test_classify_gd_vector_rejects_nested_containers(self) -> None:
         self.assertIsNone(classify_arg("gd::vector<gd::vector<int>>", {}))
 
-    def test_classify_gd_map_stays_unsupported(self) -> None:
+    def test_classify_gd_map_int_object_pointer(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")
         objects = {"CCObject": ccobject, "cocos2d::CCObject": ccobject}
 
-        self.assertIsNone(classify_arg("gd::map<int, cocos2d::CCObject*>", objects))
+        info = classify_arg("gd::map<int, cocos2d::CCObject*>", objects)
+
+        self.assertIsNotNone(info)
+        assert info is not None
+        self.assertEqual(info.kind, "map")
+        self.assertEqual(info.cxx_type, "gd::map<int, cocos2d::CCObject*>")
+        self.assertEqual(info.lua_type, "{ [number]: CCObject? }")
+        assert info.key_type is not None
+        assert info.value_type is not None
+        self.assertEqual(info.key_type.kind, "number")
+        self.assertEqual(info.value_type.kind, "object")
+        self.assertEqual(info.value_type.class_name, "CCObject")
+        self.assertFalse(info.is_ref)
+        self.assertFalse(info.is_out)
+
+    def test_classify_gd_map_primitive_value_pair(self) -> None:
+        info = classify_arg("gd::map<int, bool>", {})
+
+        self.assertIsNotNone(info)
+        assert info is not None
+        self.assertEqual(info.kind, "map")
+        self.assertEqual(info.lua_type, "{ [number]: boolean }")
+        assert info.key_type is not None
+        assert info.value_type is not None
+        self.assertEqual(info.key_type.kind, "number")
+        self.assertEqual(info.value_type.kind, "bool")
+
+    def test_classify_gd_map_string_key(self) -> None:
+        info = classify_arg("gd::map<std::string, int>", {})
+
+        self.assertIsNotNone(info)
+        assert info is not None
+        self.assertEqual(info.kind, "map")
+        self.assertEqual(info.lua_type, "{ [string]: number }")
+        assert info.key_type is not None
+        self.assertEqual(info.key_type.kind, "string")
+
+    def test_classify_gd_map_const_ref(self) -> None:
+        info = classify_arg("gd::map<int, int> const&", {})
+
+        assert info is not None
+        self.assertEqual(info.kind, "map")
+        self.assertTrue(info.is_ref)
+        self.assertFalse(info.is_out)
+
+    def test_classify_gd_unordered_map_primitive_pair(self) -> None:
+        info = classify_arg("gd::unordered_map<int, int>", {})
+
+        self.assertIsNotNone(info)
+        assert info is not None
+        self.assertEqual(info.kind, "unordered_map")
+        self.assertEqual(info.cxx_type, "gd::unordered_map<int, int>")
+        self.assertEqual(info.lua_type, "{ [number]: number }")
+        assert info.key_type is not None
+        assert info.value_type is not None
+        self.assertEqual(info.key_type.kind, "number")
+        self.assertEqual(info.value_type.kind, "number")
+
+    def test_classify_gd_set_int(self) -> None:
+        info = classify_arg("gd::set<int>", {})
+
+        self.assertIsNotNone(info)
+        assert info is not None
+        self.assertEqual(info.kind, "set")
+        self.assertEqual(info.cxx_type, "gd::set<int>")
+        self.assertEqual(info.lua_type, "{ number }")
+        assert info.element_type is not None
+        self.assertEqual(info.element_type.kind, "number")
+        self.assertFalse(info.is_ref)
+        self.assertFalse(info.is_out)
+
+    def test_classify_gd_set_string(self) -> None:
+        info = classify_arg("gd::set<std::string>", {})
+
+        assert info is not None
+        self.assertEqual(info.kind, "set")
+        self.assertEqual(info.lua_type, "{ string }")
+        assert info.element_type is not None
+        self.assertEqual(info.element_type.kind, "string")
+
+    def test_classify_gd_unordered_set_int(self) -> None:
+        info = classify_arg("gd::unordered_set<int>", {})
+
+        self.assertIsNotNone(info)
+        assert info is not None
+        self.assertEqual(info.kind, "unordered_set")
+        self.assertEqual(info.cxx_type, "gd::unordered_set<int>")
+        self.assertEqual(info.lua_type, "{ number }")
+        assert info.element_type is not None
+        self.assertEqual(info.element_type.kind, "number")
+
+    def test_classify_gd_map_rejects_object_keys(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        objects = {"CCObject": ccobject, "cocos2d::CCObject": ccobject}
+
+        self.assertIsNone(classify_arg("gd::map<cocos2d::CCObject*, int>", objects))
+
+    def test_classify_gd_map_rejects_nested_containers(self) -> None:
+        self.assertIsNone(classify_arg("gd::map<int, gd::vector<int>>", {}))
+
+    def test_classify_gd_set_rejects_nested_containers(self) -> None:
+        self.assertIsNone(classify_arg("gd::set<gd::vector<int>>", {}))
 
 
 class FmodTypeMapTests(unittest.TestCase):
