@@ -37,6 +37,44 @@ class CodegenIoTests(unittest.TestCase):
             shutil.rmtree(tmpdir)
 
 
+class AuditReportCliTests(unittest.TestCase):
+    def test_audit_report_out_writes_markdown(self) -> None:
+        from luau_codegen.cli import main as cg  # type: ignore[import-unresolved]
+
+        root = Root(classes=[Class(name="CCObject", namespace="cocos2d")])
+        tmpdir = tempfile.mkdtemp()
+        try:
+            bindings = os.path.join(tmpdir, "bindings")
+            audit_path = os.path.join(tmpdir, "audit.md")
+            os.makedirs(bindings)
+            for name in (
+                "Cocos2d.bro",
+                "Extras.bro",
+                "FMOD.bro",
+                "Kazmath.bro",
+                "GeometryDash.bro",
+            ):
+                open(os.path.join(bindings, name), "w", encoding="utf-8").close()
+            with mock.patch.object(cg, "collect_bindings_root", return_value=root):
+                rc = cg.main(
+                    [
+                        "--bindings",
+                        bindings,
+                        "--audit-report-out",
+                        audit_path,
+                        "--platform",
+                        "win",
+                    ]
+                )
+            self.assertEqual(rc, 0)
+            with open(audit_path, encoding="utf-8") as f:
+                content = f.read()
+            self.assertIn("# LuauAPI skip audit", content)
+            self.assertIn("## Summary", content)
+        finally:
+            shutil.rmtree(tmpdir)
+
+
 class CodegenExitCodeTests(unittest.TestCase):
     def test_emit_exception_returns_exit_code_5(self) -> None:
         from luau_codegen.cli import main as cg  # type: ignore[import-unresolved]

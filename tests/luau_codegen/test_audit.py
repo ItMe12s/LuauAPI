@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from conftest import *
 
+from luau_codegen.emit.plan import EmitPlan  # type: ignore[import-unresolved]
+
 
 class AuditReportTests(unittest.TestCase):
     def test_audit_classifies_callback_method(self) -> None:
@@ -157,3 +159,206 @@ class AuditReportTests(unittest.TestCase):
 
         self.assertIn("setHandler", plan.supported_by_class.get("PopupLayer", []))
         self.assertEqual(callback_skips, 0)
+
+    def test_audit_classifies_std_function_arg(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        target = Class(
+            name="PopupLayer",
+            bases=["CCObject"],
+            methods=[
+                Method(
+                    name="setHandler",
+                    ret="void",
+                    args=[Arg("std::function<bool()>", "callback")],
+                    platforms=all_platforms(),
+                )
+            ],
+        )
+        root = Root(classes=[ccobject, target])
+        plan = collect_plan(root, "win")
+
+        data = collect_audit(plan, root)
+        bucket = data["buckets"]["std_function_arg"]
+
+        self.assertEqual(bucket["count"], 1)
+        self.assertIn(
+            "unsupported-arg:std::function<bool()>",
+            bucket["reasonHistogram"],
+        )
+
+    def test_audit_classifies_callback_alias(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        target = Class(
+            name="MenuLayer",
+            bases=["CCObject"],
+            methods=[
+                Method(
+                    name="registerCallback",
+                    ret="void",
+                    args=[Arg("Callback", "cb")],
+                    platforms=all_platforms(),
+                )
+            ],
+        )
+        root = Root(classes=[ccobject, target])
+        plan = collect_plan(root, "win")
+
+        data = collect_audit(plan, root)
+        bucket = data["buckets"]["callback_alias"]
+
+        self.assertEqual(bucket["count"], 1)
+        self.assertIn(
+            "MenuLayer.registerCallback: unsupported-arg:Callback", bucket["samples"]
+        )
+
+    def test_audit_classifies_value_type_arg(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        target = Class(
+            name="FMODAudioEngine",
+            bases=["CCObject"],
+            methods=[
+                Method(
+                    name="playSound",
+                    ret="void",
+                    args=[Arg("FMOD::Sound*", "sound")],
+                    platforms=all_platforms(),
+                )
+            ],
+        )
+        root = Root(classes=[ccobject, target])
+        plan = collect_plan(root, "win")
+
+        data = collect_audit(plan, root)
+        bucket = data["buckets"]["value_type_arg"]
+
+        self.assertEqual(bucket["count"], 1)
+        self.assertIn("unsupported-arg:FMOD::Sound*", bucket["reasonHistogram"])
+
+    def test_audit_classifies_http_async_excluded(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        fn = Function(
+            name="fetch",
+            namespace="web",
+            ret="geode::Task<void>",
+            args=[Arg("std::string", "url")],
+        )
+        root = Root(classes=[ccobject], functions=[fn])
+        plan = collect_plan(root, "win")
+
+        data = collect_audit(plan, root)
+        bucket = data["buckets"]["http_async_excluded"]
+
+        self.assertEqual(bucket["count"], 1)
+        self.assertIn(
+            "free-function-unsupported-return:geode::Task<void>",
+            bucket["reasonHistogram"],
+        )
+        self.assertTrue(
+            any("web.fetch" in sample for sample in bucket["samples"]),
+            bucket["samples"],
+        )
+
+    def test_audit_classifies_other(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        target = Class(
+            name="CCGrabber",
+            bases=["CCObject"],
+            methods=[
+                Method(
+                    name="grab",
+                    ret="void",
+                    args=[],
+                    platforms=all_platforms(),
+                )
+            ],
+        )
+        root = Root(classes=[ccobject, target])
+        plan = collect_plan(root, "win")
+
+        data = collect_audit(plan, root)
+        bucket = data["buckets"]["other"]
+
+        self.assertEqual(bucket["count"], 1)
+        self.assertIn("inaccessible-class", bucket["reasonHistogram"])
+
+    def test_audit_totals_match_plan_skips(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        root = Root(classes=[ccobject])
+        plan = EmitPlan(
+            classes=[ccobject],
+            objects={"CCObject": ccobject},
+            skipped=[
+                ("Foo", "a", "callback"),
+                ("Foo", "b", "unsupported-arg:gd::vector<int>"),
+            ],
+            skipped_by_class={},
+            skipped_classes=set(),
+            supported_by_class={},
+            hook_targets_by_class={},
+            field_targets_by_class={},
+            depths={},
+            skipped_free_functions=[
+                (
+                    "web::fetch()",
+                    "web",
+                    "fetch",
+                    "free-function-unsupported-return:geode::Task<void>",
+                ),
+            ],
+        )
+
+        data = collect_audit(plan, root)
+
+        self.assertEqual(data["totalSkippedMethods"], 2)
+        self.assertEqual(data["totalSkippedFreeFunctions"], 1)
+
+    def test_audit_markdown_omits_empty_buckets(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        target = Class(
+            name="Foo",
+            bases=["CCObject"],
+            methods=[
+                Method(
+                    name="onComplete",
+                    ret="void",
+                    args=[],
+                    is_callback=True,
+                    platforms=all_platforms(),
+                )
+            ],
+        )
+        root = Root(classes=[ccobject, target])
+        plan = collect_plan(root, "win")
+        md = emit_audit_markdown(collect_audit(plan, root))
+
+        self.assertIn("callback_method", md)
+        self.assertNotIn("| delegate_arg |", md)
+        self.assertNotIn("### delegate_arg", md)
+
+    def test_audit_markdown_sample_cap(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        root = Root(classes=[ccobject])
+        skipped = [
+            (
+                f"GameLevelManager",
+                f"load{i}",
+                "unsupported-arg:gd::vector<int>",
+            )
+            for i in range(30)
+        ]
+        plan = EmitPlan(
+            classes=[ccobject],
+            objects={"CCObject": ccobject},
+            skipped=skipped,
+            skipped_by_class={},
+            skipped_classes=set(),
+            supported_by_class={},
+            hook_targets_by_class={},
+            field_targets_by_class={},
+            depths={},
+        )
+
+        md = emit_audit_markdown(collect_audit(plan, root))
+
+        self.assertIn("... 5 more", md)
+        self.assertEqual(md.count("GameLevelManager.load"), 25)
