@@ -254,6 +254,78 @@ class ContainerFilterTests(unittest.TestCase):
         self.assertEqual(reason, "unsupported-arg:gd::vector<int>")
 
 
+class FmodFilterTests(unittest.TestCase):
+    def _fmod_engine(self) -> tuple[Class, dict[str, Class]]:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        cls = Class(
+            name="FMODAudioEngine",
+            bases=["CCObject"],
+            attributes=["link(win)"],
+        )
+        objects = {"CCObject": ccobject, "FMODAudioEngine": cls}
+        return cls, objects
+
+    def test_fmod_enum_methods_are_supported(self) -> None:
+        cls, objects = self._fmod_engine()
+        methods = [
+            Method(
+                name="printResult",
+                ret="void",
+                args=[Arg("FMOD_RESULT", "result")],
+                platforms=all_platforms("0x1"),
+            ),
+            Method(
+                name="waitUntilSoundReady",
+                ret="FMOD_OPENSTATE",
+                args=[],
+                platforms=all_platforms("0x2"),
+            ),
+        ]
+        for method in methods:
+            ok, reason = supported(cls, method, objects, "win")
+            self.assertTrue(ok, reason)
+            self.assertEqual(reason, "")
+
+    def test_fmod_opaque_handle_methods_are_supported(self) -> None:
+        cls, objects = self._fmod_engine()
+        methods = [
+            Method(
+                name="getActiveMusicChannel",
+                ret="FMOD::Channel*",
+                args=[],
+                platforms=all_platforms("0x1"),
+            ),
+            Method(
+                name="isSoundReady",
+                ret="bool",
+                args=[Arg("FMOD::Sound*", "sound")],
+                platforms=all_platforms("0x2"),
+            ),
+            Method(
+                name="getChannelGroup",
+                ret="FMOD::ChannelGroup*",
+                args=[],
+                platforms=all_platforms("0x3"),
+            ),
+        ]
+        for method in methods:
+            ok, reason = supported(cls, method, objects, "win")
+            self.assertTrue(ok, reason)
+            self.assertEqual(reason, "")
+
+    def test_unlisted_fmod_pointer_stays_unsupported(self) -> None:
+        cls, objects = self._fmod_engine()
+        method = Method(
+            name="takeDSP",
+            ret="void",
+            args=[Arg("FMOD::DSP*", "dsp")],
+            platforms=all_platforms("0x4"),
+        )
+        ok, reason = supported(cls, method, objects, "win")
+        self.assertFalse(ok)
+        self.assertEqual(reason, "unsupported-arg:FMOD::DSP*")
+
+
 class FreeFunctionSelMenuHandlerFilterTests(unittest.TestCase):
     def test_orphan_sel_menu_handler_is_rejected(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")

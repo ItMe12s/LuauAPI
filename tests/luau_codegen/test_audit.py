@@ -240,9 +240,9 @@ class AuditReportTests(unittest.TestCase):
             bases=["CCObject"],
             methods=[
                 Method(
-                    name="playSound",
+                    name="takeDSP",
                     ret="void",
-                    args=[Arg("FMOD::Sound*", "sound")],
+                    args=[Arg("FMOD::DSP*", "dsp")],
                     platforms=all_platforms(),
                 )
             ],
@@ -254,7 +254,40 @@ class AuditReportTests(unittest.TestCase):
         bucket = data["buckets"]["value_type_arg"]
 
         self.assertEqual(bucket["count"], 1)
-        self.assertIn("unsupported-arg:FMOD::Sound*", bucket["reasonHistogram"])
+        self.assertIn("unsupported-arg:FMOD::DSP*", bucket["reasonHistogram"])
+
+    def test_audit_supported_fmod_types_not_in_value_type_bucket(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        target = Class(
+            name="FMODAudioEngine",
+            bases=["CCObject"],
+            attributes=["link(win)"],
+            methods=[
+                Method(
+                    name="getActiveMusicChannel",
+                    ret="FMOD::Channel*",
+                    args=[],
+                    platforms=all_platforms("0x1"),
+                ),
+                Method(
+                    name="printResult",
+                    ret="void",
+                    args=[Arg("FMOD_RESULT", "result")],
+                    platforms=all_platforms("0x2"),
+                ),
+            ],
+        )
+        root = Root(classes=[ccobject, target])
+        plan = collect_plan(root, "win")
+
+        data = collect_audit(plan, root)
+        bucket = data["buckets"]["value_type_arg"]
+
+        self.assertEqual(bucket["count"], 0)
+        self.assertNotIn(
+            "FMODAudioEngine.getActiveMusicChannel", "".join(bucket["samples"])
+        )
+        self.assertNotIn("FMODAudioEngine.printResult", "".join(bucket["samples"]))
 
     def test_audit_classifies_http_async_excluded(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")

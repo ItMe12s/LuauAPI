@@ -101,6 +101,25 @@ def emit_stack_check(
         return [
             f'        {_prefix(declare, var)} = luax::check<{check_type}>(L, {idx}, "{label}");\n'
         ]
+    if info.kind == "opaque_handle":
+        cxx = info.cxx_type
+        if allow_nil_object:
+            lines = [f"        {cxx} {var};\n"]
+            lines.extend(
+                [
+                    f"        if (lua_isnil(L, {idx})) {{\n",
+                    f"            {var} = nullptr;\n",
+                    "        } else {\n",
+                    f'            if (!lua_islightuserdata(L, {idx})) luaL_error(L, "{label} expected opaque handle at arg %d", {idx});\n',
+                    f"            {var} = static_cast<{cxx}>(lua_touserdata(L, {idx}));\n",
+                    "        }\n",
+                ]
+            )
+            return lines
+        return [
+            f'        if (!lua_islightuserdata(L, {idx})) luaL_error(L, "{label} expected opaque handle at arg %d", {idx});\n',
+            f"        {_prefix(declare, var)} = static_cast<{cxx}>(lua_touserdata(L, {idx}));\n",
+        ]
     if info.kind == "object":
         obj_type = info.cxx_type[:-1]
         if allow_nil_object:
@@ -154,6 +173,14 @@ def _push_impl(
     if info.kind == "value":
         if info.lua_type in _VALUE_CHECK_TYPES:
             return [f"{indent}luax::push(L, {expr});\n"]
+    if info.kind == "opaque_handle":
+        return [
+            f"{indent}if ({expr} == nullptr) {{\n",
+            f"{indent}    lua_pushnil(L);\n",
+            f"{indent}}} else {{\n",
+            f"{indent}    lua_pushlightuserdata(L, {expr});\n",
+            f"{indent}}}\n",
+        ]
     if info.kind == "object":
         push = "pushOwned" if owned else "pushBorrowed"
         return [f"{indent}luax::Usertype<{info.cxx_type[:-1]}>::{push}(L, {expr});\n"]

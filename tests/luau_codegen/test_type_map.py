@@ -163,3 +163,38 @@ class ContainerTypeMapTests(unittest.TestCase):
         objects = {"CCObject": ccobject, "cocos2d::CCObject": ccobject}
 
         self.assertIsNone(classify_arg("gd::map<int, cocos2d::CCObject*>", objects))
+
+
+class FmodTypeMapTests(unittest.TestCase):
+    def test_classify_fmod_enums(self) -> None:
+        for name in ("FMOD_RESULT", "FMOD_OPENSTATE"):
+            info = classify_arg(name, {})
+            self.assertIsNotNone(info)
+            assert info is not None
+            self.assertEqual(info.kind, "enum")
+            self.assertEqual(info.lua_type, "number")
+            self.assertEqual(info.cxx_type, name)
+
+    def test_classify_fmod_opaque_handles(self) -> None:
+        cases = {
+            "FMOD::Channel*": "FMODChannel",
+            "FMOD::Sound*": "FMODSound",
+            "FMOD::ChannelGroup*": "FMODChannelGroup",
+        }
+        for cxx, lua in cases.items():
+            info = classify_arg(cxx, {})
+            self.assertIsNotNone(info)
+            assert info is not None
+            self.assertEqual(info.kind, "opaque_handle")
+            self.assertEqual(info.cxx_type, cxx)
+            self.assertEqual(info.lua_type, lua)
+
+    def test_classify_fmod_channel_return_is_optional(self) -> None:
+        info = classify_return("FMOD::Channel*", {})
+        self.assertIsNotNone(info)
+        assert info is not None
+        self.assertEqual(info.kind, "opaque_handle")
+        self.assertEqual(info.lua_type, "FMODChannel?")
+
+    def test_classify_unlisted_fmod_pointer_stays_unsupported(self) -> None:
+        self.assertIsNone(classify_arg("FMOD::DSP*", {}))

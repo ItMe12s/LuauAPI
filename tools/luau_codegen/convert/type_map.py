@@ -92,12 +92,24 @@ COCOS_ENUM_TYPES = {
     "CCLabelBMFontAlignment",
 }
 
+FMOD_ENUM_TYPES = {
+    "FMOD_RESULT",
+    "FMOD_OPENSTATE",
+}
+
+OPAQUE_HANDLE_TYPES: dict[str, str] = {
+    "FMOD::Channel*": "FMODChannel",
+    "FMOD::Sound*": "FMODSound",
+    "FMOD::ChannelGroup*": "FMODChannelGroup",
+}
+
 GEODE_ENUM_TYPES: set[str] = set()
 
 ENUM_CXX_NAMES: dict[str, str] = {
     **{name: name for name in GD_ENUM_TYPES},
     **{name: f"cocos2d::{name}" for name in COCOS_ENUM_TYPES},
     **{f"cocos2d::{name}": f"cocos2d::{name}" for name in COCOS_ENUM_TYPES},
+    **{name: name for name in FMOD_ENUM_TYPES},
 }
 
 ENUM_TYPES = frozenset(ENUM_CXX_NAMES.keys())
@@ -377,6 +389,14 @@ def _classify_core(
     if base in ENUM_TYPES or n in ENUM_TYPES:
         cxx = enum_cxx_type(n, base)
         return TypeInfo("enum", cxx, "number", is_ref=is_ref, is_out=is_out)
+    if n in OPAQUE_HANDLE_TYPES:
+        return TypeInfo(
+            "opaque_handle",
+            n,
+            OPAQUE_HANDLE_TYPES[n],
+            is_ref=is_ref,
+            is_out=is_out,
+        )
     if not for_return:
         callback = _parse_callback(n, object_classes)
         if callback is not None:
@@ -425,6 +445,15 @@ def classify_return(t: str, object_classes: Dict[str, Class]) -> Optional[TypeIn
                 info.is_ref,
                 info.is_out,
                 info.is_vector_ptr,
+            )
+        elif info.kind == "opaque_handle" and not info.lua_type.endswith("?"):
+            info = TypeInfo(
+                info.kind,
+                info.cxx_type,
+                f"{info.lua_type}?",
+                is_ref=info.is_ref,
+                is_out=info.is_out,
+                is_vector_ptr=info.is_vector_ptr,
             )
     return info
 

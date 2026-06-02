@@ -288,3 +288,22 @@ class HookableSelCallbackTests(unittest.TestCase):
         }
 
         self.assertFalse(hookable(cls, cls.methods[0], objects, "win"))
+
+    def test_opaque_handle_arg_not_hookable(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        cls = Class(
+            name="FMODAudioEngine",
+            bases=["CCObject"],
+            attributes=["link(win)"],
+            methods=[
+                Method(
+                    name="stopChannel",
+                    ret="void",
+                    args=[Arg("FMOD::Channel*", "channel")],
+                    platforms=all_platforms("0x1"),
+                )
+            ],
+        )
+        objects = {"CCObject": ccobject, "FMODAudioEngine": cls}
+
+        self.assertFalse(hookable(cls, cls.methods[0], objects, "win"))

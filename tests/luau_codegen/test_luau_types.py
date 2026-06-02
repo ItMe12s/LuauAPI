@@ -338,6 +338,51 @@ class LuauTypeEmissionTests(unittest.TestCase):
         self.assertGreaterEqual(ccsize_pos, 0)
         self.assertGreater(ccrect_pos, ccsize_pos)
 
+    def test_fmod_opaque_handle_type_stubs(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        engine = Class(
+            name="FMODAudioEngine",
+            bases=["CCObject"],
+            attributes=["link(win)"],
+            methods=[
+                Method(
+                    name="getActiveMusicChannel",
+                    ret="FMOD::Channel*",
+                    args=[],
+                    platforms=all_platforms("0x1"),
+                ),
+                Method(
+                    name="isSoundReady",
+                    ret="bool",
+                    args=[Arg("FMOD::Sound*", "sound")],
+                    platforms=all_platforms("0x2"),
+                ),
+                Method(
+                    name="printResult",
+                    ret="void",
+                    args=[Arg("FMOD_RESULT", "result")],
+                    platforms=all_platforms("0x3"),
+                ),
+                Method(
+                    name="applyConfig",
+                    ret="void",
+                    args=[Arg("UIButtonConfig", "config")],
+                    platforms=all_platforms("0x4"),
+                ),
+            ],
+        )
+        root = Root(classes=[ccobject, engine])
+        text = types_text(emit_luau_types(root))
+        self.assertIn("declare class FMODChannel end", text)
+        self.assertIn("declare class FMODSound end", text)
+        self.assertIn("}\n\n--- @type-only: opaque FMOD handle", text)
+        channel_pos = text.find("declare class FMODChannel end")
+        sig_pos = text.find("function getActiveMusicChannel(self): FMODChannel?")
+        self.assertGreaterEqual(channel_pos, 0)
+        self.assertGreater(sig_pos, channel_pos)
+        self.assertIn("function isSoundReady(self, arg1: FMODSound): boolean", text)
+        self.assertIn("function printResult(self, arg1: number)", text)
+
     @staticmethod
     def _stub_method(name: str = "init", addr: str = "0x1") -> Method:
         return Method(name=name, ret="bool", args=[], platforms=all_platforms(addr))

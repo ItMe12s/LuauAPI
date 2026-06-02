@@ -31,7 +31,17 @@ _VALUE_STUB_BODY: Dict[str, str] = {
     ),
 }
 
+_OPAQUE_STUB_BODY: Dict[str, str] = {
+    "FMODChannel": "--- @type-only: opaque FMOD handle\ndeclare class FMODChannel end\n\n",
+    "FMODSound": "--- @type-only: opaque FMOD handle\ndeclare class FMODSound end\n\n",
+    "FMODChannelGroup": (
+        "--- @type-only: opaque FMOD handle\n" "declare class FMODChannelGroup end\n\n"
+    ),
+}
+
 _VALUE_STUB_ORDER = ("CCPoint", "CCSize", "RGBColor", "CCRect", "UIButtonConfig")
+_OPAQUE_STUB_ORDER = ("FMODChannel", "FMODSound", "FMODChannelGroup")
+_TYPE_STUB_ORDER = _VALUE_STUB_ORDER + _OPAQUE_STUB_ORDER
 
 _VALUE_STUB_DEPS: Dict[str, Tuple[str, ...]] = {
     "CCRect": ("CCPoint", "CCSize"),
@@ -46,15 +56,32 @@ def _expand_value_refs(names: set[str]) -> set[str]:
     return {n for n in out if n in _VALUE_STUB_BODY}
 
 
+def _all_type_stub_bodies() -> Dict[str, str]:
+    return {**_VALUE_STUB_BODY, **_OPAQUE_STUB_BODY}
+
+
 def _value_refs_in_text(text: str) -> set[str]:
-    return {name for name in _VALUE_STUB_BODY if re.search(rf"\b{name}\b", text)}
+    bodies = _all_type_stub_bodies()
+    return {name for name in bodies if re.search(rf"\b{name}\b", text)}
 
 
 def _emit_value_stub_block(names: set[str]) -> str:
     expanded = _expand_value_refs(names)
+    expanded |= {n for n in names if n in _OPAQUE_STUB_BODY}
     if not expanded:
         return ""
-    return "".join(_VALUE_STUB_BODY[n] for n in _VALUE_STUB_ORDER if n in expanded)
+    bodies = _all_type_stub_bodies()
+    parts: list[str] = []
+    prev_was_value = False
+    for name in _TYPE_STUB_ORDER:
+        if name not in expanded:
+            continue
+        is_opaque = name in _OPAQUE_STUB_BODY
+        if is_opaque and prev_was_value:
+            parts.append("\n")
+        parts.append(bodies[name])
+        prev_was_value = name in _VALUE_STUB_BODY
+    return "".join(parts)
 
 
 def _object_type_name(info: TypeInfo) -> str:
