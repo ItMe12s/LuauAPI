@@ -130,7 +130,7 @@ class FreeFunctionContainerTests(unittest.TestCase):
 
         self.assertIsNone(reason)
 
-    def test_primitive_vector_arg_stays_unsupported(self) -> None:
+    def test_primitive_vector_input_arg_is_supported(self) -> None:
         fn = Function(
             name="take",
             namespace="geode::utils",
@@ -140,7 +140,19 @@ class FreeFunctionContainerTests(unittest.TestCase):
 
         reason = free_function_unsupported_reason(fn, {})
 
-        self.assertEqual(reason, "free-function-unsupported-arg:gd::vector<int>")
+        self.assertIsNone(reason)
+
+    def test_primitive_vector_return_is_supported(self) -> None:
+        fn = Function(
+            name="values",
+            namespace="geode::utils",
+            ret="gd::vector<int>",
+            args=[],
+        )
+
+        reason = free_function_unsupported_reason(fn, {})
+
+        self.assertIsNone(reason)
 
 
 class GetEnvironmentVariableExclusionTests(unittest.TestCase):

@@ -243,8 +243,77 @@ class ContainerTypeMapTests(unittest.TestCase):
         self.assertTrue(info.is_vector_ptr)
         self.assertEqual(info.class_name, "GameObject")
 
-    def test_classify_gd_vector_rejects_non_object_elements(self) -> None:
-        self.assertIsNone(classify_arg("gd::vector<int>", {}))
+    def test_classify_gd_vector_int_as_primitive_vector(self) -> None:
+        info = classify_arg("gd::vector<int>", {})
+
+        self.assertIsNotNone(info)
+        assert info is not None
+        self.assertEqual(info.kind, "primitive_vector")
+        self.assertEqual(info.cxx_type, "gd::vector<int>")
+        self.assertEqual(info.lua_type, "{ number }")
+        self.assertIsNotNone(info.element_type)
+        assert info.element_type is not None
+        self.assertEqual(info.element_type.kind, "number")
+        self.assertFalse(info.is_ref)
+        self.assertFalse(info.is_out)
+
+    def test_classify_gd_vector_int_const_ref(self) -> None:
+        info = classify_arg("gd::vector<int> const&", {})
+
+        assert info is not None
+        self.assertEqual(info.kind, "primitive_vector")
+        self.assertTrue(info.is_ref)
+        self.assertFalse(info.is_out)
+
+    def test_classify_gd_vector_bool_as_primitive_vector(self) -> None:
+        info = classify_arg("gd::vector<bool>", {})
+
+        assert info is not None
+        self.assertEqual(info.kind, "primitive_vector")
+        self.assertEqual(info.lua_type, "{ boolean }")
+        assert info.element_type is not None
+        self.assertEqual(info.element_type.kind, "bool")
+
+    def test_classify_gd_vector_string_as_primitive_vector(self) -> None:
+        info = classify_arg("gd::vector<std::string>", {})
+
+        assert info is not None
+        self.assertEqual(info.kind, "primitive_vector")
+        self.assertEqual(info.lua_type, "{ string }")
+        assert info.element_type is not None
+        self.assertEqual(info.element_type.kind, "string")
+
+    def test_classify_gd_vector_wideint_as_primitive_vector(self) -> None:
+        info = classify_arg("gd::vector<uint64_t>", {})
+
+        assert info is not None
+        self.assertEqual(info.kind, "primitive_vector")
+        self.assertEqual(info.lua_type, "{ string }")
+        assert info.element_type is not None
+        self.assertEqual(info.element_type.kind, "wideint")
+
+    def test_classify_gd_vector_enum_as_primitive_vector(self) -> None:
+        info = classify_arg("gd::vector<FMOD_RESULT>", {})
+
+        assert info is not None
+        self.assertEqual(info.kind, "primitive_vector")
+        self.assertEqual(info.lua_type, "{ number }")
+        assert info.element_type is not None
+        self.assertEqual(info.element_type.kind, "enum")
+        self.assertEqual(info.element_type.cxx_type, "FMOD_RESULT")
+
+    def test_classify_gd_vector_object_pointer_stays_vector_view(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        objects = {"CCObject": ccobject, "cocos2d::CCObject": ccobject}
+
+        info = classify_arg("gd::vector<cocos2d::CCObject*>", objects)
+
+        assert info is not None
+        self.assertEqual(info.kind, "vector_view")
+        self.assertEqual(info.lua_type, "{ CCObject? }")
+
+    def test_classify_gd_vector_rejects_nested_containers(self) -> None:
+        self.assertIsNone(classify_arg("gd::vector<gd::vector<int>>", {}))
 
     def test_classify_gd_map_stays_unsupported(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")

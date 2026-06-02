@@ -97,7 +97,7 @@ class AuditReportTests(unittest.TestCase):
             "addStandardDelegate", plan.supported_by_class.get("CCTouchDispatcher", [])
         )
 
-    def test_audit_classifies_container_arg_for_primitive_vector(self) -> None:
+    def test_audit_supported_primitive_vector_not_in_container_bucket(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")
         target = Class(
             name="Foo",
@@ -117,8 +117,7 @@ class AuditReportTests(unittest.TestCase):
         data = collect_audit(plan, root)
         bucket = data["buckets"]["container_arg"]
 
-        self.assertEqual(bucket["count"], 1)
-        self.assertEqual(bucket["id"], "container_arg")
+        self.assertEqual(bucket["count"], 0)
 
     def test_audit_supported_object_vector_method_not_in_container_bucket(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")

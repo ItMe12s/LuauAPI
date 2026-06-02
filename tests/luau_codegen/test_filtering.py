@@ -286,7 +286,7 @@ class ContainerFilterTests(unittest.TestCase):
         self.assertTrue(ok)
         self.assertEqual(reason, "")
 
-    def test_primitive_vector_arg_stays_unsupported(self) -> None:
+    def test_primitive_vector_input_arg_is_supported(self) -> None:
         cls = Class(name="Foo")
         method = Method(
             name="take",
@@ -297,8 +297,50 @@ class ContainerFilterTests(unittest.TestCase):
 
         ok, reason = supported(cls, method, {}, "win")
 
+        self.assertTrue(ok)
+        self.assertEqual(reason, "")
+
+    def test_primitive_vector_return_is_supported(self) -> None:
+        cls = Class(name="Foo")
+        method = Method(
+            name="getValues",
+            ret="gd::vector<int>",
+            args=[],
+            platforms=all_platforms("0x1"),
+        )
+
+        ok, reason = supported(cls, method, {}, "win")
+
+        self.assertTrue(ok)
+        self.assertEqual(reason, "")
+
+    def test_primitive_vector_out_arg_void_return_is_supported(self) -> None:
+        cls = Class(name="Foo")
+        method = Method(
+            name="fillValues",
+            ret="void",
+            args=[Arg("gd::vector<int>*", "values")],
+            platforms=all_platforms("0x1"),
+        )
+
+        ok, reason = supported(cls, method, {}, "win")
+
+        self.assertTrue(ok)
+        self.assertEqual(reason, "")
+
+    def test_primitive_vector_out_arg_non_void_return_stays_unsupported(self) -> None:
+        cls = Class(name="Foo")
+        method = Method(
+            name="fillValues",
+            ret="bool",
+            args=[Arg("gd::vector<int>*", "values")],
+            platforms=all_platforms("0x1"),
+        )
+
+        ok, reason = supported(cls, method, {}, "win")
+
         self.assertFalse(ok)
-        self.assertEqual(reason, "unsupported-arg:gd::vector<int>")
+        self.assertEqual(reason, "unsupported-arg:gd::vector<int>*")
 
 
 class FmodFilterTests(unittest.TestCase):

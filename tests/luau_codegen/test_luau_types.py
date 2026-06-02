@@ -300,6 +300,33 @@ class LuauTypeEmissionTests(unittest.TestCase):
         self.assertIn("declare class ChildNode", cocos)
         self.assertIn("function getChildren(self): { ChildNode? }", cocos)
 
+    def test_primitive_vector_method_types_use_table_arrays(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        foo = Class(
+            name="Foo",
+            bases=["CCObject"],
+            methods=[
+                Method(
+                    name="take",
+                    ret="void",
+                    args=[Arg("gd::vector<int>", "values")],
+                    platforms=all_platforms("0x1"),
+                ),
+                Method(
+                    name="getValues",
+                    ret="gd::vector<int>",
+                    args=[],
+                    platforms=all_platforms("0x1"),
+                ),
+            ],
+        )
+        root = Root(classes=[ccobject, foo])
+
+        text = types_text(emit_luau_types(root))
+
+        self.assertIn("function take(self, values: { number })", text)
+        self.assertIn("function getValues(self): { number }", text)
+
     def test_orphan_forward_decls_exclude_value_types(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")
         ccnode = Class(

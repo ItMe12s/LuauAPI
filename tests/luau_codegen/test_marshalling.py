@@ -416,6 +416,76 @@ class EmitStackCheckTests(unittest.TestCase):
         self.assertIn("luax::checkObjectVectorView<cocos2d::CCObject>", text)
         self.assertIn("arg0", text)
 
+    def test_primitive_vector_check_uses_table_helper(self) -> None:
+        element = TypeInfo(kind="number", cxx_type="int", lua_type="number")
+        info = TypeInfo(
+            kind="primitive_vector",
+            cxx_type="gd::vector<int>",
+            lua_type="{ number }",
+            element_type=element,
+        )
+
+        text = "".join(
+            check_arg(
+                Arg("gd::vector<int>", "values"),
+                info,
+                2,
+                "arg0",
+                "Foo.take",
+            )
+        )
+
+        self.assertIn("luax::checkPrimitiveVector<int>", text)
+        self.assertIn("arg0", text)
+
+    def test_primitive_vector_push_uses_table_helper(self) -> None:
+        element = TypeInfo(kind="number", cxx_type="int", lua_type="number")
+        info = TypeInfo(
+            kind="primitive_vector",
+            cxx_type="gd::vector<int>",
+            lua_type="{ number }",
+            element_type=element,
+        )
+
+        text = "".join(push_return(info, "result", False))
+
+        self.assertIn("luax::pushPrimitiveVector<int>", text)
+        self.assertIn("result", text)
+
+    def test_primitive_vector_bool_check_and_push(self) -> None:
+        element = TypeInfo(kind="bool", cxx_type="bool", lua_type="boolean")
+        info = TypeInfo(
+            kind="primitive_vector",
+            cxx_type="gd::vector<bool>",
+            lua_type="{ boolean }",
+            element_type=element,
+        )
+
+        check_text = "".join(
+            check_arg(Arg("gd::vector<bool>", "flags"), info, 1, "arg0", "test")
+        )
+        push_text = "".join(push_value(info, "flags"))
+
+        self.assertIn("luax::checkPrimitiveVector<bool>", check_text)
+        self.assertIn("luax::pushPrimitiveVector<bool>", push_text)
+
+    def test_primitive_vector_wideint_check_and_push(self) -> None:
+        element = TypeInfo(kind="wideint", cxx_type="uint64_t", lua_type="string")
+        info = TypeInfo(
+            kind="primitive_vector",
+            cxx_type="gd::vector<uint64_t>",
+            lua_type="{ string }",
+            element_type=element,
+        )
+
+        check_text = "".join(
+            check_arg(Arg("gd::vector<uint64_t>", "ids"), info, 1, "arg0", "test")
+        )
+        push_text = "".join(push_value(info, "ids"))
+
+        self.assertIn("luax::checkPrimitiveVector<uint64_t>", check_text)
+        self.assertIn("luax::pushPrimitiveVector<uint64_t>", push_text)
+
 
 class FmodMarshallingTests(unittest.TestCase):
     def test_fmod_enum_arg_uses_numeric_check(self) -> None:

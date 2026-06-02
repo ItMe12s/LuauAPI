@@ -486,6 +486,85 @@ class GeneratedSafetyTests(unittest.TestCase):
         self.assertIn("pushOwnedReadOnlyVectorView<cocos2d::CCObject>", text)
         self.assertIn("geode::utils::children()", text)
 
+    def test_method_primitive_vector_input_checks_lua_table(self) -> None:
+        cls = Class(
+            name="Foo",
+            methods=[
+                Method(
+                    name="take",
+                    ret="void",
+                    args=[Arg("gd::vector<int>", "values")],
+                    platforms=all_platforms("0x1"),
+                )
+            ],
+        )
+        grouped, _ = group_supported(cls, {}, "win")
+
+        text = _emit_class_file(cls, grouped, [], [], {}, set(), 1, "win")
+
+        self.assertIn("checkPrimitiveVector<int>", text)
+        self.assertIn("self->take(arg0)", text)
+
+    def test_method_primitive_vector_return_pushes_table_copy(self) -> None:
+        cls = Class(
+            name="Foo",
+            methods=[
+                Method(
+                    name="getValues",
+                    ret="gd::vector<int>",
+                    args=[],
+                    platforms=all_platforms("0x1"),
+                )
+            ],
+        )
+        grouped, _ = group_supported(cls, {}, "win")
+
+        text = _emit_class_file(cls, grouped, [], [], {}, set(), 1, "win")
+
+        self.assertIn("pushPrimitiveVector<int>", text)
+        self.assertIn("self->getValues()", text)
+
+    def test_method_primitive_vector_out_arg_pushes_table_copy(self) -> None:
+        cls = Class(
+            name="Foo",
+            methods=[
+                Method(
+                    name="fillValues",
+                    ret="void",
+                    args=[Arg("gd::vector<int>*", "values")],
+                    platforms=all_platforms("0x1"),
+                )
+            ],
+        )
+        grouped, _ = group_supported(cls, {}, "win")
+
+        text = _emit_class_file(cls, grouped, [], [], {}, set(), 1, "win")
+
+        self.assertIn("gd::vector<int> arg0{}", text)
+        self.assertIn("self->fillValues(&arg0)", text)
+        self.assertIn("pushPrimitiveVector<int>", text)
+
+    def test_free_function_primitive_vector_return_pushes_table_copy(self) -> None:
+        fn = Function(
+            name="values",
+            namespace="geode::utils",
+            ret="gd::vector<int>",
+            args=[],
+        )
+        kept, _ = group_supported_free_functions([fn], {}, "win")
+        text = emit_free_functions_file(kept, {})
+
+        self.assertIn("pushPrimitiveVector<int>", text)
+        self.assertIn("geode::utils::values()", text)
+
+    def test_generated_bindings_include_container_tables_header(self) -> None:
+        from luau_codegen.emit.cxx_templates import file_preamble  # type: ignore[import-unresolved]
+
+        self.assertIn(
+            '#include "lua/bindings/framework/ContainerTables.hpp"',
+            file_preamble(),
+        )
+
     def test_field_plan_and_types_include_ccnode_m_fields_only(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")
         ccnode = Class(
