@@ -262,40 +262,56 @@ add_custom_target(luauapi_codegen
 
 set(LUAUAPI_GENERATED_BINDING_SOURCES ${LUAUAPI_CODEGEN_BINDING_BYPRODUCTS})
 list(FILTER LUAUAPI_GENERATED_BINDING_SOURCES INCLUDE REGEX "\\.cpp$")
+set_source_files_properties(${LUAUAPI_GENERATED_BINDING_SOURCES} PROPERTIES GENERATED TRUE)
 
 file(GLOB_RECURSE LUAUAPI_HANDWRITTEN_SOURCES CONFIGURE_DEPENDS src/*.cpp)
 list(FILTER LUAUAPI_HANDWRITTEN_SOURCES EXCLUDE REGEX "LuaDelegates\\.gen\\.cpp$")
-set(SOURCES ${LUAUAPI_HANDWRITTEN_SOURCES})
-list(APPEND SOURCES ${LUAUAPI_GENERATED_BINDING_SOURCES})
-set_source_files_properties(${LUAUAPI_GENERATED_BINDING_SOURCES} PROPERTIES GENERATED TRUE)
-set(LUAUAPI_DELEGATE_GEN_SOURCES
-    "${LUAUAPI_GEN_DIR}/src/lua/bindings/framework/LuaDelegates.gen.cpp"
-    "${LUAUAPI_GEN_DIR}/src/lua/bindings/framework/LuaDelegates.gen.hpp"
-)
-if(LUAUAPI_DELEGATE_GEN_SOURCES)
-    set_source_files_properties(${LUAUAPI_DELEGATE_GEN_SOURCES} PROPERTIES GENERATED TRUE)
-endif()
+set(LUAUAPI_RUNTIME_SOURCES ${LUAUAPI_HANDWRITTEN_SOURCES})
+list(FILTER LUAUAPI_RUNTIME_SOURCES EXCLUDE REGEX "[/\\\\]main\\.cpp$")
+
 list(LENGTH LUAUAPI_GENERATED_BINDING_SOURCES LUAUAPI_GENERATED_BINDING_COUNT)
 message(STATUS "LuauAPI GD bindings version: ${LUAUAPI_GD_VERSION} (platform ${LUAUAPI_CODEGEN_PLATFORM}, ${LUAUAPI_GENERATED_BINDING_COUNT} generated binding sources)")
 
-add_library(${PROJECT_NAME} SHARED ${SOURCES})
-add_dependencies(${PROJECT_NAME} luauapi_codegen)
+function(luauapi_apply_compile_settings TARGET)
+    target_compile_features(${TARGET} PRIVATE cxx_std_23)
+    target_compile_definitions(${TARGET} PRIVATE LUAUAPI_EXPORTING=1)
 
-setup_geode_mod(${PROJECT_NAME})
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC" OR CMAKE_CXX_COMPILER MATCHES "clang-cl")
+        target_compile_options(${TARGET} PRIVATE /W4)
+    elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+        target_compile_options(${TARGET} PRIVATE -Wall -Wextra -Wpedantic -Wno-dollar-in-identifier-extension)
+    endif()
+    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+        target_compile_options(${TARGET} PRIVATE -Wno-gnu-zero-variadic-macro-arguments)
+    endif()
 
-target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_23)
-target_include_directories(${PROJECT_NAME} PRIVATE include src ${LUAUAPI_GEN_DIR}/src)
-target_link_libraries(${PROJECT_NAME} Luau.VM Luau.Compiler Luau.Ast Luau.Require Luau.CodeGen imgui-cocos)
-target_compile_definitions(${PROJECT_NAME} PRIVATE LUAUAPI_EXPORTING=1)
+    if(WIN32)
+        if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC" OR CMAKE_CXX_COMPILER MATCHES "clang-cl")
+            target_compile_options(${TARGET} PRIVATE /bigobj)
+        elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+            target_compile_options(${TARGET} PRIVATE -Wa,-mbig-obj)
+        endif()
+    endif()
+endfunction()
 
-if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC" OR CMAKE_CXX_COMPILER MATCHES "clang-cl")
-    target_compile_options(${PROJECT_NAME} PRIVATE /W4)
-elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
-    target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Wpedantic -Wno-dollar-in-identifier-extension)
-endif()
-if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-    target_compile_options(${PROJECT_NAME} PRIVATE -Wno-gnu-zero-variadic-macro-arguments)
-endif()
+add_library(LuauAPI_Runtime STATIC ${LUAUAPI_RUNTIME_SOURCES})
+luauapi_apply_compile_settings(LuauAPI_Runtime)
+target_include_directories(LuauAPI_Runtime PUBLIC include src)
+target_link_libraries(LuauAPI_Runtime PUBLIC
+    Luau.VM
+    Luau.Compiler
+    Luau.Ast
+    Luau.Require
+    Luau.CodeGen
+    imgui-cocos
+    geode-sdk
+)
+
+add_library(LuauAPI_GeneratedBindings STATIC ${LUAUAPI_GENERATED_BINDING_SOURCES})
+add_dependencies(LuauAPI_GeneratedBindings luauapi_codegen)
+luauapi_apply_compile_settings(LuauAPI_GeneratedBindings)
+target_include_directories(LuauAPI_GeneratedBindings PUBLIC ${LUAUAPI_GEN_DIR}/src)
+target_link_libraries(LuauAPI_GeneratedBindings PUBLIC LuauAPI_Runtime)
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC" OR CMAKE_CXX_COMPILER MATCHES "clang-cl")
     set_source_files_properties(${LUAUAPI_GENERATED_BINDING_SOURCES} PROPERTIES COMPILE_OPTIONS "/w")
@@ -303,13 +319,10 @@ elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
     set_source_files_properties(${LUAUAPI_GENERATED_BINDING_SOURCES} PROPERTIES COMPILE_OPTIONS "-w")
 endif()
 
-if(WIN32)
-    if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC" OR CMAKE_CXX_COMPILER MATCHES "clang-cl")
-        target_compile_options(${PROJECT_NAME} PRIVATE /bigobj)
-    elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-        target_compile_options(${PROJECT_NAME} PRIVATE -Wa,-mbig-obj)
-    endif()
-endif()
+add_library(${PROJECT_NAME} SHARED src/main.cpp)
+target_link_libraries(${PROJECT_NAME} LuauAPI_Runtime LuauAPI_GeneratedBindings)
+luauapi_apply_compile_settings(${PROJECT_NAME})
+setup_geode_mod(${PROJECT_NAME})
 endif()
 
 if(LUAUAPI_BUILD_TESTS)
