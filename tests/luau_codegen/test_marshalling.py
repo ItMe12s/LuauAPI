@@ -269,3 +269,22 @@ class FmodMarshallingTests(unittest.TestCase):
         self.assertIn("lua_pushlightuserdata(L, result)", text)
         self.assertIn("lua_pushnil(L)", text)
         self.assertNotIn("Usertype<FMOD::Channel>", text)
+
+    def test_fmod_sound_alias_arg_uses_lightuserdata(self) -> None:
+        info = TypeInfo(
+            kind="opaque_handle",
+            cxx_type="FMODSound*",
+            lua_type="FMODSound",
+        )
+        text = "".join(check_arg(Arg("FMODSound*", "sound"), info, 2, "arg0", "test"))
+        self.assertIn("lua_islightuserdata", text)
+        self.assertIn("static_cast<FMODSound*>", text)
+        self.assertNotIn("Usertype<FMODSound>", text)
+
+    def test_fmod_speaker_mode_enum_arg_uses_numeric_check(self) -> None:
+        info = TypeInfo(kind="enum", cxx_type="FMOD_SPEAKERMODE", lua_type="number")
+        text = "".join(
+            check_arg(Arg("FMOD_SPEAKERMODE", "mode"), info, 2, "arg0", "test")
+        )
+        self.assertIn("static_cast<FMOD_SPEAKERMODE>", text)
+        self.assertIn("check<int>", text)

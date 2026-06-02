@@ -358,6 +358,24 @@ class LuauTypeEmissionTests(unittest.TestCase):
                     platforms=all_platforms("0x2"),
                 ),
                 Method(
+                    name="channelLinkSound",
+                    ret="void",
+                    args=[Arg("int", "id"), Arg("FMODSound*", "sound")],
+                    platforms=all_platforms("0x2a"),
+                ),
+                Method(
+                    name="preloadEffect",
+                    ret="FMODSound*",
+                    args=[Arg("gd::string", "path")],
+                    platforms=all_platforms("0x2b"),
+                ),
+                Method(
+                    name="storeEffect",
+                    ret="FMODSound*",
+                    args=[Arg("FMOD::Sound*", "sound"), Arg("gd::string", "path")],
+                    platforms=all_platforms("0x2c"),
+                ),
+                Method(
                     name="printResult",
                     ret="void",
                     args=[Arg("FMOD_RESULT", "result")],
@@ -381,6 +399,18 @@ class LuauTypeEmissionTests(unittest.TestCase):
         self.assertGreaterEqual(channel_pos, 0)
         self.assertGreater(sig_pos, channel_pos)
         self.assertIn("function isSoundReady(self, arg1: FMODSound): boolean", text)
+        self.assertIn(
+            "function channelLinkSound(self, arg1: number, arg2: FMODSound)",
+            text,
+        )
+        self.assertIn(
+            "function preloadEffect(self, arg1: string): FMODSound?",
+            text,
+        )
+        self.assertIn(
+            "function storeEffect(self, arg1: FMODSound, arg2: string): FMODSound?",
+            text,
+        )
         self.assertIn("function printResult(self, arg1: number)", text)
 
     @staticmethod

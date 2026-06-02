@@ -280,6 +280,16 @@ class FmodFilterTests(unittest.TestCase):
                 args=[],
                 platforms=all_platforms("0x2"),
             ),
+            Method(
+                name="setSoftwareFormat",
+                ret="FMOD_RESULT",
+                args=[
+                    Arg("int", "sampleRate"),
+                    Arg("FMOD_SPEAKERMODE", "speakerMode"),
+                    Arg("int", "numRawSpeakers"),
+                ],
+                platforms=all_platforms("0x3"),
+            ),
         ]
         for method in methods:
             ok, reason = supported(cls, method, objects, "win")
@@ -306,6 +316,24 @@ class FmodFilterTests(unittest.TestCase):
                 ret="FMOD::ChannelGroup*",
                 args=[],
                 platforms=all_platforms("0x3"),
+            ),
+            Method(
+                name="channelLinkSound",
+                ret="void",
+                args=[Arg("int", "id"), Arg("FMODSound*", "sound")],
+                platforms=all_platforms("0x4"),
+            ),
+            Method(
+                name="preloadEffect",
+                ret="FMODSound*",
+                args=[Arg("gd::string", "path")],
+                platforms=all_platforms("0x5"),
+            ),
+            Method(
+                name="storeEffect",
+                ret="FMODSound*",
+                args=[Arg("FMOD::Sound*", "sound"), Arg("gd::string", "path")],
+                platforms=all_platforms("0x6"),
             ),
         ]
         for method in methods:

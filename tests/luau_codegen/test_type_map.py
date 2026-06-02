@@ -167,7 +167,7 @@ class ContainerTypeMapTests(unittest.TestCase):
 
 class FmodTypeMapTests(unittest.TestCase):
     def test_classify_fmod_enums(self) -> None:
-        for name in ("FMOD_RESULT", "FMOD_OPENSTATE"):
+        for name in ("FMOD_RESULT", "FMOD_OPENSTATE", "FMOD_SPEAKERMODE"):
             info = classify_arg(name, {})
             self.assertIsNotNone(info)
             assert info is not None
@@ -180,6 +180,7 @@ class FmodTypeMapTests(unittest.TestCase):
             "FMOD::Channel*": "FMODChannel",
             "FMOD::Sound*": "FMODSound",
             "FMOD::ChannelGroup*": "FMODChannelGroup",
+            "FMODSound*": "FMODSound",
         }
         for cxx, lua in cases.items():
             info = classify_arg(cxx, {})
@@ -195,6 +196,14 @@ class FmodTypeMapTests(unittest.TestCase):
         assert info is not None
         self.assertEqual(info.kind, "opaque_handle")
         self.assertEqual(info.lua_type, "FMODChannel?")
+
+    def test_classify_fmod_sound_alias_return_is_optional(self) -> None:
+        info = classify_return("FMODSound*", {})
+        self.assertIsNotNone(info)
+        assert info is not None
+        self.assertEqual(info.kind, "opaque_handle")
+        self.assertEqual(info.cxx_type, "FMODSound*")
+        self.assertEqual(info.lua_type, "FMODSound?")
 
     def test_classify_unlisted_fmod_pointer_stays_unsupported(self) -> None:
         self.assertIsNone(classify_arg("FMOD::DSP*", {}))

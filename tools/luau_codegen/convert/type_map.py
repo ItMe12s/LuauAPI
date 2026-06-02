@@ -95,12 +95,14 @@ COCOS_ENUM_TYPES = {
 FMOD_ENUM_TYPES = {
     "FMOD_RESULT",
     "FMOD_OPENSTATE",
+    "FMOD_SPEAKERMODE",
 }
 
 OPAQUE_HANDLE_TYPES: dict[str, str] = {
     "FMOD::Channel*": "FMODChannel",
     "FMOD::Sound*": "FMODSound",
     "FMOD::ChannelGroup*": "FMODChannelGroup",
+    "FMODSound*": "FMODSound",
 }
 
 GEODE_ENUM_TYPES: set[str] = set()

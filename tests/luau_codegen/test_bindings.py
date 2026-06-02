@@ -783,6 +783,18 @@ class FmodBindingTests(unittest.TestCase):
                     args=[Arg("FMOD_RESULT", "result")],
                     platforms=all_platforms("0x3"),
                 ),
+                Method(
+                    name="channelLinkSound",
+                    ret="void",
+                    args=[Arg("int", "id"), Arg("FMODSound*", "sound")],
+                    platforms=all_platforms("0x4"),
+                ),
+                Method(
+                    name="preloadEffect",
+                    ret="FMODSound*",
+                    args=[Arg("gd::string", "path")],
+                    platforms=all_platforms("0x5"),
+                ),
             ],
         )
         objects = {"CCObject": ccobject, "FMODAudioEngine": cls}
@@ -800,9 +812,12 @@ class FmodBindingTests(unittest.TestCase):
 
         self.assertIn("self->stopChannel(arg0)", text)
         self.assertIn("static_cast<FMOD::Channel*>(lua_touserdata", text)
+        self.assertIn("self->channelLinkSound(arg0, arg1)", text)
+        self.assertIn("static_cast<FMODSound*>(lua_touserdata", text)
         self.assertIn("auto result = self->getActiveMusicChannel();", text)
         self.assertIn("lua_pushlightuserdata(L, result)", text)
         self.assertIn("static_cast<FMOD_RESULT>", text)
+        self.assertIn("auto result = self->preloadEffect(arg0);", text)
         self.assertNotIn("Usertype<FMOD::Channel>", text)
         self.assertNotIn("pushBorrowed", text)
 
