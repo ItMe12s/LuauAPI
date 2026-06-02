@@ -30,6 +30,37 @@ class AuditReportTests(unittest.TestCase):
         self.assertEqual(bucket["count"], 1)
         self.assertIn("Foo.onComplete: callback", bucket["samples"])
 
+    def test_audit_cc_director_delegate_get_set_delegate_supported(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        target = Class(
+            name="CCDirector",
+            bases=["CCObject"],
+            methods=[
+                Method(
+                    name="setDelegate",
+                    ret="void",
+                    args=[Arg("cocos2d::CCDirectorDelegate*", "delegate")],
+                    platforms=all_platforms(),
+                ),
+                Method(
+                    name="getDelegate",
+                    ret="cocos2d::CCDirectorDelegate*",
+                    args=[],
+                    platforms=all_platforms(),
+                ),
+            ],
+        )
+        root = Root(classes=[ccobject, target])
+        plan = collect_plan(root, "win")
+
+        data = collect_audit(plan, root)
+        bucket = data["buckets"]["delegate_arg"]
+
+        self.assertEqual(bucket["count"], 0)
+        supported = plan.supported_by_class.get("CCDirector", [])
+        self.assertIn("setDelegate", supported)
+        self.assertIn("getDelegate", supported)
+
     def test_audit_classifies_delegate_arg(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")
         target = Class(

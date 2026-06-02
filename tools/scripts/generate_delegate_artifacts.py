@@ -73,6 +73,9 @@ COCOS_DELEGATES: dict[str, list[tuple[str, str, list[tuple[str, str]]]]] = {
     "cocos2d::CCAccelerometerDelegate": [
         ("didAccelerate", "void", [("cocos2d::CCAcceleration*", "acceleration")]),
     ],
+    "cocos2d::CCDirectorDelegate": [
+        ("updateProjection", "void", []),
+    ],
     "cocos2d::CCIMEDelegate": [
         ("attachWithIME", "bool", []),
         ("detachWithIME", "bool", []),
@@ -146,8 +149,6 @@ SKIP = frozenset(
         "AppDelegate",
         "cocos2d::AppDelegate",
         "cocos2d::CCScriptEngineProtocol",
-        "cocos2d::CCDirectorDelegate",
-        "CCDirectorDelegate",
         "cocos2d::EGLTouchDelegate",
         "EGLTouchDelegate",
     }

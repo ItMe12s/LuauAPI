@@ -689,6 +689,13 @@ DELEGATE_SPECS: Dict[str, DelegateSpec] = {
             DelegateMethodSpec("forceReloadList", "()", ('number',)),
         ),
     ),
+    "cocos2d::CCDirectorDelegate": DelegateSpec(
+        cxx_type="cocos2d::CCDirectorDelegate", lua_name="CCDirectorDelegate",
+        cpp_class="LuaCCDirectorDelegate", create_fn="LuaCCDirectorDelegate::create",
+        methods=(
+            DelegateMethodSpec("updateProjection", "()", ()),
+        ),
+    ),
     "cocos2d::CCIMEDelegate": DelegateSpec(
         cxx_type="cocos2d::CCIMEDelegate", lua_name="CCIMEDelegate",
         cpp_class="LuaCCIMEDelegate", create_fn="LuaCCIMEDelegate::create",

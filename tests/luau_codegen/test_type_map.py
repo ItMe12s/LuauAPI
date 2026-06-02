@@ -120,6 +120,16 @@ class GeodeEnumRegistrationTests(unittest.TestCase):
         self.assertEqual(info.class_name, "CCTouchDelegate")
         self.assertIn("ccTouchBegan", info.lua_type)
 
+    def test_classify_cc_director_delegate(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        objects = {"CCObject": ccobject}
+        info = classify_arg("cocos2d::CCDirectorDelegate*", objects)
+        self.assertIsNotNone(info)
+        assert info is not None
+        self.assertEqual(info.kind, "delegate")
+        self.assertEqual(info.class_name, "CCDirectorDelegate")
+        self.assertIn("updateProjection", info.lua_type)
+
     def test_classify_cccolor4b_value(self) -> None:
         info = classify_arg("cocos2d::ccColor4B const&", {})
         self.assertIsNotNone(info)

@@ -2162,6 +2162,19 @@ namespace luax {
         std::shared_ptr<LuaRef> m_table;
     };
 
+    class LuaCCDirectorDelegate : public cocos2d::CCDirectorDelegate, public cocos2d::CCObject {
+    public:
+        static LuaCCDirectorDelegate* create(lua_State* L, int tableIndex);
+        ~LuaCCDirectorDelegate() override {
+            LuaDelegateBase::unregisterInterface(static_cast<CCDirectorDelegate*>(this));
+        }
+        void updateProjection() override {
+            LuaDelegateBase::invokeTableVoid(m_table, "updateProjection", "CCDirectorDelegate.updateProjection", 0);
+        }
+    private:
+        std::shared_ptr<LuaRef> m_table;
+    };
+
     class LuaCCIMEDelegate : public cocos2d::CCIMEDelegate, public cocos2d::CCObject {
     public:
         static LuaCCIMEDelegate* create(lua_State* L, int tableIndex);

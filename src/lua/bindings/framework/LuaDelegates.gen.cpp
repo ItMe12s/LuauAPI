@@ -730,6 +730,15 @@ LuaUserListDelegate* LuaUserListDelegate::create(lua_State* L, int tableIndex) {
     return self;
 }
 
+LuaCCDirectorDelegate* LuaCCDirectorDelegate::create(lua_State* L, int tableIndex) {
+    LuaDelegateBase::checkDelegateTable(L, tableIndex);
+    auto* self = new LuaCCDirectorDelegate();
+    self->m_table = LuaDelegateBase::captureTable(L, tableIndex);
+    LuaDelegateBase::registerInterface(static_cast<cocos2d::CCDirectorDelegate*>(self), self->m_table);
+    self->autorelease();
+    return self;
+}
+
 LuaCCIMEDelegate* LuaCCIMEDelegate::create(lua_State* L, int tableIndex) {
     LuaDelegateBase::checkDelegateTable(L, tableIndex);
     auto* self = new LuaCCIMEDelegate();

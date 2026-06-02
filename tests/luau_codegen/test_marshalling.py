@@ -236,6 +236,26 @@ class CallbackMarshallingTests(unittest.TestCase):
         self.assertIn("check<bool>", text)
         self.assertIn("invoke(1, 1", text)
 
+    def test_cc_director_delegate_arg_emits_trampoline(self) -> None:
+        info = TypeInfo(
+            kind="delegate",
+            cxx_type="cocos2d::CCDirectorDelegate*",
+            lua_type="{ updateProjection: ... }",
+            class_name="CCDirectorDelegate",
+        )
+        text = "".join(
+            check_arg(
+                Arg("cocos2d::CCDirectorDelegate*", "delegate"),
+                info,
+                2,
+                "delegate",
+                "CCDirector.setDelegate",
+            )
+        )
+        self.assertIn("lua_istable", text)
+        self.assertIn("luax::LuaCCDirectorDelegate::create", text)
+        self.assertIn("delegate_trampoline", text)
+
     def test_delegate_arg_emits_trampoline(self) -> None:
         info = TypeInfo(
             kind="delegate",

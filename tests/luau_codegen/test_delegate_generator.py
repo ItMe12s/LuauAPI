@@ -6,6 +6,18 @@ from conftest import *
 
 
 class DelegateGeneratorTests(unittest.TestCase):
+    def test_collect_delegate_specs_includes_cc_director_delegate(self) -> None:
+        specs = collect_delegate_specs()
+        self.assertIn("cocos2d::CCDirectorDelegate", specs)
+        spec = specs["cocos2d::CCDirectorDelegate"]
+        self.assertEqual(spec.lua_name, "CCDirectorDelegate")
+        self.assertEqual(spec.cpp_class, "LuaCCDirectorDelegate")
+        method_names = [m.name for m in spec.methods]
+        self.assertIn("updateProjection", method_names)
+        update = next(m for m in spec.methods if m.name == "updateProjection")
+        self.assertEqual(update.ret, "void")
+        self.assertEqual(update.args, [])
+
     def test_delegate_spec_cpp_parity(self) -> None:
         specs = collect_delegate_specs()
         hpp = emit_gen_hpp(specs)
