@@ -125,6 +125,33 @@ class LinkClassFilterTests(unittest.TestCase):
             self.assertFalse(ok, name)
             self.assertEqual(reason, "inaccessible", name)
 
+    def test_cccontrol_picker_protected_touch_handlers_denied(self) -> None:
+        protected = [
+            ("CCControlColourPicker", "ccTouchBegan", "bool"),
+            ("CCControlHuePicker", "ccTouchBegan", "bool"),
+            ("CCControlHuePicker", "ccTouchMoved", "void"),
+            ("CCControlSaturationBrightnessPicker", "ccTouchBegan", "bool"),
+            ("CCControlSaturationBrightnessPicker", "ccTouchMoved", "void"),
+        ]
+        for class_name, method_name, ret in protected:
+            cls = Class(
+                name=class_name,
+                namespace="cocos2d::extension",
+                attributes=["link(win, android)"],
+            )
+            method = Method(
+                name=method_name,
+                ret=ret,
+                args=[
+                    Arg("cocos2d::CCTouch*", "touch"),
+                    Arg("cocos2d::CCEvent*", "event"),
+                ],
+                platforms={"imac": "0x1", "m1": "0x2", "ios": "0x3"},
+            )
+            ok, reason = supported(cls, method, {class_name: cls}, "m1")
+            self.assertFalse(ok, f"{class_name}::{method_name}")
+            self.assertEqual(reason, "inaccessible", f"{class_name}::{method_name}")
+
     def test_touch_handler_impl_classes_are_inaccessible(self) -> None:
         for name in ("CCStandardTouchHandler", "CCTargetedTouchHandler"):
             cls = Class(
