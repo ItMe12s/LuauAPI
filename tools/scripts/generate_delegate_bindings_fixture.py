@@ -26,7 +26,7 @@ def scan_delegate_ptrs(bindings_dir: Path) -> set[str]:
 
 
 def emit_fixture_bro(bindings_dir: Path) -> str:
-    broma = parse_broma()
+    broma = parse_broma(bindings_dir)
     ptrs = scan_delegate_ptrs(bindings_dir)
     short_ptrs = {ptr.split("::")[-1] for ptr in ptrs}
 
@@ -42,7 +42,7 @@ def emit_fixture_bro(bindings_dir: Path) -> str:
             args = ", ".join(
                 f"{arg_type} {arg_name}" for arg_type, arg_name in method.args
             )
-            lines.append(f"    virtual {method.ret} {method.name}({args}) {{}}")
+            lines.append(f"    virtual {method.ret} {method.name}({args}) = inline;")
         lines.append("};")
         lines.append("")
 
@@ -51,7 +51,7 @@ def emit_fixture_bro(bindings_dir: Path) -> str:
         short = ptr.split("::")[-1]
         prefix = ptr.rsplit("::", 1)[0] if "::" in ptr else ""
         cxx_type = f"{prefix}::{short}*" if prefix else f"{short}*"
-        lines.append(f"    void set_{short}({cxx_type} delegate) {{}}")
+        lines.append(f"    void set_{short}({cxx_type} delegate);")
     lines.append("};")
     return "\n".join(lines) + "\n"
 
