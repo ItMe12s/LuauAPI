@@ -309,4 +309,42 @@ namespace luax {
     void pushUnorderedSet(lua_State* L, gd::unordered_set<T> const* set) {
         pushUnorderedSet(L, const_cast<gd::unordered_set<T>*>(set));
     }
+
+    namespace detail {
+        template <class Map>
+        void assignAssociativeMap(Map& dest, Map src) {
+            dest.clear();
+            for (auto& entry : src) {
+                dest[std::move(entry.first)] = std::move(entry.second);
+            }
+        }
+
+        template <class Set>
+        void assignSetContainer(Set& dest, Set src) {
+            dest.clear();
+            for (auto& elem : src) {
+                dest.insert(std::move(elem));
+            }
+        }
+    }
+
+    template <class K, class V>
+    void assignMap(gd::map<K, V>& dest, gd::map<K, V> src) {
+        detail::assignAssociativeMap(dest, std::move(src));
+    }
+
+    template <class K, class V>
+    void assignUnorderedMap(gd::unordered_map<K, V>& dest, gd::unordered_map<K, V> src) {
+        detail::assignAssociativeMap(dest, std::move(src));
+    }
+
+    template <class T>
+    void assignSet(gd::set<T>& dest, gd::set<T> src) {
+        detail::assignSetContainer(dest, std::move(src));
+    }
+
+    template <class T>
+    void assignUnorderedSet(gd::unordered_set<T>& dest, gd::unordered_set<T> src) {
+        detail::assignSetContainer(dest, std::move(src));
+    }
 }

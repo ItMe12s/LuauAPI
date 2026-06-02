@@ -390,6 +390,22 @@ def _emit_field_accessors(
         out.append(f'                luaL_error(L, "{label} field pointer is null");\n')
         out.append("            }\n")
         out.append(f"            *self->{field.name} = std::move(value);\n")
+    elif arg_info.kind == "map":
+        out.append(
+            f"            luax::assignMap(self->{field.name}, std::move(value));\n"
+        )
+    elif arg_info.kind == "unordered_map":
+        out.append(
+            f"            luax::assignUnorderedMap(self->{field.name}, std::move(value));\n"
+        )
+    elif arg_info.kind == "set":
+        out.append(
+            f"            luax::assignSet(self->{field.name}, std::move(value));\n"
+        )
+    elif arg_info.kind == "unordered_set":
+        out.append(
+            f"            luax::assignUnorderedSet(self->{field.name}, std::move(value));\n"
+        )
     else:
         out.append(
             f"            self->{field.name} = static_cast<decltype(self->{field.name})>(value);\n"

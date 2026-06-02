@@ -583,6 +583,54 @@ class GeneratedSafetyTests(unittest.TestCase):
         self.assertIn("*self->m_pSplitTimes = std::move(value)", text)
         self.assertIn("field pointer is null", text)
 
+    def test_map_field_setter_uses_assign_map(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        foo = Class(
+            name="Foo",
+            namespace="cocos2d",
+            bases=["CCObject"],
+            fields=[Field("m_values", "gd::map<int, bool>")],
+        )
+        grouped, _ = group_supported(foo, {}, "win")
+        text = _emit_class_file(
+            foo,
+            grouped,
+            [],
+            [(foo, foo.fields[0])],
+            {"CCObject": ccobject, "cocos2d::CCObject": ccobject},
+            set(),
+            1,
+            "win",
+        )
+
+        self.assertIn("checkMap<int, bool>", text)
+        self.assertIn("luax::assignMap(self->m_values, std::move(value))", text)
+        self.assertNotIn("self->m_values =", text)
+
+    def test_set_field_setter_uses_assign_set(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        foo = Class(
+            name="Foo",
+            namespace="cocos2d",
+            bases=["CCObject"],
+            fields=[Field("m_ids", "gd::set<int>")],
+        )
+        grouped, _ = group_supported(foo, {}, "win")
+        text = _emit_class_file(
+            foo,
+            grouped,
+            [],
+            [(foo, foo.fields[0])],
+            {"CCObject": ccobject, "cocos2d::CCObject": ccobject},
+            set(),
+            1,
+            "win",
+        )
+
+        self.assertIn("checkSet<int>", text)
+        self.assertIn("luax::assignSet(self->m_ids, std::move(value))", text)
+        self.assertNotIn("self->m_ids =", text)
+
     def test_generated_bindings_include_container_tables_header(self) -> None:
         from luau_codegen.emit.cxx_templates import file_preamble  # type: ignore[import-unresolved]
 

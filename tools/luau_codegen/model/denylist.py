@@ -186,9 +186,6 @@ INACCESSIBLE_METHODS = {
     ("GJTransformControl", "spriteByTag"),
     ("GJTransformControl", "updateMinMaxPositions"),
     ("GameLevelManager", "hasLikedItemFullCheck"),
-    # Editor-only or delegate callbacks that have overloads with the same number of arguments.
-    # These can't be called from scripts.
-    # Denied by full name so only one allowed overload stays (see PREFERRED_OVERLOADS below).
     ("SongSelectNode", "onSongMode"),
     ("EditorUI", "colorSelectClosed"),
     ("EditorUI", "findSnapObject"),

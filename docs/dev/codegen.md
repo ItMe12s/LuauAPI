@@ -136,6 +136,9 @@ so they are skipped by the generic `unsupported-arg` or `unsupported-return` rul
 This is intentional. Encrypted or obfuscated fields are unsafe and useless in Lua.
 Keep them skipped unless a safe, **read-only** proxy is added, a plain field binding is never the answer.
 
+`gd::map` and `gd::set` field setters use `luax::assignMap` / `luax::assignSet` (clear plus per-entry insert) instead of whole-container `operator=`,
+because Geode gnustl on Android does not implement `_Rb_tree::_M_move_assign`.
+
 ## Overload resolution
 
 Broma can declare several methods with the same name.
