@@ -474,3 +474,25 @@ class FmodTypeMapTests(unittest.TestCase):
 
     def test_classify_unlisted_fmod_pointer_stays_unsupported(self) -> None:
         self.assertIsNone(classify_arg("FMOD::DSP*", {}))
+
+
+class CocosOpaqueHandleTests(unittest.TestCase):
+    def test_classify_cocos_delegate_opaque_handles(self) -> None:
+        cases = {
+            "cocos2d::CCEvent*": "CCEvent",
+            "cocos2d::extension::CCEditBox*": "CCEditBox",
+        }
+        for cxx, lua in cases.items():
+            info = classify_arg(cxx, {})
+            self.assertIsNotNone(info)
+            assert info is not None
+            self.assertEqual(info.kind, "opaque_handle")
+            self.assertEqual(info.cxx_type, cxx)
+            self.assertEqual(info.lua_type, lua)
+
+    def test_classify_cc_event_return_is_optional(self) -> None:
+        info = classify_return("cocos2d::CCEvent*", {})
+        self.assertIsNotNone(info)
+        assert info is not None
+        self.assertEqual(info.kind, "opaque_handle")
+        self.assertEqual(info.lua_type, "CCEvent?")

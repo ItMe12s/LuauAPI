@@ -265,6 +265,7 @@ PREFERRED_OVERLOADS: dict[tuple[str, str], set[tuple[str, ...]]] = {
     ("CCMenuItemImage", "create"): {
         ("char const*", "char const*", "char const*"),
     },
+    ("Border", "setPadding"): {("float",)},
 }
 
 # Constructors are blocked unless listed here. Use for rare cases where static `create()` is unavailable or filtered out.

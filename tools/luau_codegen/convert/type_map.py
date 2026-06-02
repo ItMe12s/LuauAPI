@@ -149,6 +149,8 @@ OPAQUE_HANDLE_TYPES: dict[str, str] = {
     "FMOD::Sound*": "FMODSound",
     "FMOD::ChannelGroup*": "FMODChannelGroup",
     "FMODSound*": "FMODSound",
+    "cocos2d::CCEvent*": "CCEvent",
+    "cocos2d::extension::CCEditBox*": "CCEditBox",
 }
 
 STATIC_ENUM_CXX_NAMES: dict[str, str] = {

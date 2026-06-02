@@ -42,6 +42,10 @@ _OPAQUE_STUB_BODY: Dict[str, str] = {
     "FMODChannelGroup": (
         "--- @type-only: opaque FMOD handle\n" "declare class FMODChannelGroup end\n\n"
     ),
+    "CCEvent": "--- @type-only: opaque cocos2d handle\ndeclare class CCEvent end\n\n",
+    "CCEditBox": (
+        "--- @type-only: opaque cocos2d handle\n" "declare class CCEditBox end\n\n"
+    ),
 }
 
 _VALUE_STUB_ORDER = (
@@ -52,7 +56,13 @@ _VALUE_STUB_ORDER = (
     "CCRect",
     "UIButtonConfig",
 )
-_OPAQUE_STUB_ORDER = ("FMODChannel", "FMODSound", "FMODChannelGroup")
+_OPAQUE_STUB_ORDER = (
+    "FMODChannel",
+    "FMODSound",
+    "FMODChannelGroup",
+    "CCEvent",
+    "CCEditBox",
+)
 _TYPE_STUB_ORDER = _VALUE_STUB_ORDER + _OPAQUE_STUB_ORDER
 
 _VALUE_STUB_DEPS: Dict[str, Tuple[str, ...]] = {

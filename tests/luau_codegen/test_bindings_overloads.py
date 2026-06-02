@@ -129,6 +129,46 @@ class F5OverloadFirstDeclaredWinsTests(unittest.TestCase):
             f"resolved overload should not be flagged ambiguous: {reasons}",
         )
 
+    def test_border_set_padding_prefers_scalar_over_point(self) -> None:
+        cls = Class(
+            name="Border",
+            namespace="geode",
+            bases=["CCObject"],
+            attributes=["link(win)"],
+        )
+        point = Method(
+            name="setPadding",
+            ret="void",
+            args=[Arg(type="cocos2d::CCPoint const&", name="padding")],
+            platforms={"win": "0x1"},
+        )
+        xy = Method(
+            name="setPadding",
+            ret="void",
+            args=[Arg(type="float", name="x"), Arg(type="float", name="y")],
+            platforms={"win": "0x2"},
+        )
+        scalar = Method(
+            name="setPadding",
+            ret="void",
+            args=[Arg(type="float", name="padding")],
+            platforms={"win": "0x3"},
+        )
+        cls.methods = [point, xy, scalar]
+        objects = {"Border": cls, "geode::Border": cls}
+        grouped, skipped = group_supported(cls, objects, "win")
+        kept = grouped["setPadding"]
+        self.assertEqual(len(kept), 2)
+        kept_by_arity = {len(m.args): m for m in kept}
+        self.assertIs(kept_by_arity[1], scalar)
+        self.assertIs(kept_by_arity[2], xy)
+        reasons = [reason for _, reason in skipped]
+        self.assertIn("overload-superseded:1", reasons)
+        self.assertFalse(
+            any(r.startswith("ambiguous-overload-arity") for r in reasons),
+            f"resolved overload should not be flagged ambiguous: {reasons}",
+        )
+
     def test_unmatched_preference_falls_back_to_ambiguous(self) -> None:
         cls = Class(
             name="CCScale9Sprite",

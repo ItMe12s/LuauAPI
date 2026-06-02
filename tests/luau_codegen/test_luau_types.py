@@ -493,6 +493,38 @@ class LuauTypeEmissionTests(unittest.TestCase):
         )
         self.assertIn("function printResult(self, arg1: number)", text)
 
+    def test_cocos_opaque_delegate_type_stubs(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        dispatcher = Class(
+            name="CCTouchDispatcher",
+            namespace="cocos2d",
+            bases=["CCObject"],
+            methods=[
+                Method(
+                    name="addTargetedDelegate",
+                    ret="void",
+                    args=[
+                        Arg("cocos2d::CCTouchDelegate*", "pDelegate"),
+                        Arg("int", "priority"),
+                        Arg("bool", "bSwallowsTouches"),
+                    ],
+                    platforms=all_platforms("0x1"),
+                ),
+            ],
+        )
+        root = Root(classes=[ccobject, dispatcher])
+        text = types_text(emit_luau_types(root))
+        self.assertIn("declare class CCEvent end", text)
+        self.assertIn("declare class CCEditBox end", text)
+        event_pos = text.find("declare class CCEvent end")
+        edit_box_pos = text.find("declare class CCEditBox end")
+        touch_delegate_pos = text.find("export type CCTouchDelegate =")
+        edit_box_delegate_pos = text.find("export type CCEditBoxDelegate =")
+        self.assertGreaterEqual(event_pos, 0)
+        self.assertGreaterEqual(edit_box_pos, 0)
+        self.assertGreater(touch_delegate_pos, event_pos)
+        self.assertGreater(edit_box_delegate_pos, edit_box_pos)
+
     @staticmethod
     def _stub_method(name: str = "init", addr: str = "0x1") -> Method:
         return Method(name=name, ret="bool", args=[], platforms=all_platforms(addr))

@@ -155,14 +155,16 @@ def emit(
 
     lines = _header("Geode type stubs")
 
+    delegate_block = _emit_delegate_stub_block()
     value_block = _emit_value_stub_block(
-        _value_refs_in_text(cocos_body + gd_body + cocos_factory_text + gd_factory_text)
+        _value_refs_in_text(
+            cocos_body + gd_body + cocos_factory_text + gd_factory_text + delegate_block
+        )
     )
     if value_block:
         lines.append(value_block)
         lines.append("\n")
 
-    delegate_block = _emit_delegate_stub_block()
     if delegate_block:
         lines.append(delegate_block)
         lines.append("\n")
