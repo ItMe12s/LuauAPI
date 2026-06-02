@@ -72,7 +72,7 @@ def _emit_free_invoke(
         arg_idx = lua_arg.arg_index
         var = f"arg{arg_idx}"
         if lua_arg.out_only:
-            if info.kind == "vector_view":
+            if info.kind in ("vector_view", "primitive_vector"):
                 out.append(f"        {info.cxx_type} {var}{{}};\n")
                 call_args.append(f"&{var}" if info.is_vector_ptr else var)
             else:

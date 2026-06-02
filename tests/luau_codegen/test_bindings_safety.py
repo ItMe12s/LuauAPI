@@ -557,6 +557,32 @@ class GeneratedSafetyTests(unittest.TestCase):
         self.assertIn("pushPrimitiveVector<int>", text)
         self.assertIn("geode::utils::values()", text)
 
+    def test_primitive_vector_pointer_field_get_dereferences_and_set_assigns(
+        self,
+    ) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        ccanimate = Class(
+            name="CCAnimate",
+            namespace="cocos2d",
+            bases=["CCObject"],
+            fields=[Field("m_pSplitTimes", "gd::vector<float>*")],
+        )
+        grouped, _ = group_supported(ccanimate, {}, "win")
+        text = _emit_class_file(
+            ccanimate,
+            grouped,
+            [],
+            [(ccanimate, ccanimate.fields[0])],
+            {"CCObject": ccobject, "cocos2d::CCObject": ccobject},
+            set(),
+            1,
+            "win",
+        )
+
+        self.assertIn("pushPrimitiveVector<float>(L, self->m_pSplitTimes)", text)
+        self.assertIn("*self->m_pSplitTimes = std::move(value)", text)
+        self.assertIn("field pointer is null", text)
+
     def test_generated_bindings_include_container_tables_header(self) -> None:
         from luau_codegen.emit.cxx_templates import file_preamble  # type: ignore[import-unresolved]
 

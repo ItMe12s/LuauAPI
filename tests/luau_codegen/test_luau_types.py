@@ -324,7 +324,7 @@ class LuauTypeEmissionTests(unittest.TestCase):
 
         text = types_text(emit_luau_types(root))
 
-        self.assertIn("function take(self, values: { number })", text)
+        self.assertIn("function take(self, arg1: { number })", text)
         self.assertIn("function getValues(self): { number }", text)
 
     def test_orphan_forward_decls_exclude_value_types(self) -> None:

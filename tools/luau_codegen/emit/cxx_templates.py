@@ -14,6 +14,7 @@ def file_preamble() -> str:
         '#include "lua/bindings/framework/LuaSelectorHandler.hpp"\n'
         '#include "lua/bindings/framework/LuaTrampolineRegistry.hpp"\n'
         '#include "lua/bindings/framework/ReadOnlyVectorView.hpp"\n'
+        '#include "lua/bindings/framework/ContainerTables.hpp"\n'
         '#include "lua/bindings/framework/Stack.hpp"\n'
         '#include "lua/bindings/framework/TableUtil.hpp"\n'
         '#include "lua/bindings/framework/Types.hpp"\n'

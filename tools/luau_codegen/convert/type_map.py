@@ -315,6 +315,33 @@ def _template_inner(n: str, prefix: str) -> Optional[str]:
     return None
 
 
+_PRIMITIVE_VECTOR_ELEMENT_KINDS = frozenset(
+    {"bool", "number", "wideint", "string", "enum", "value"}
+)
+
+
+def _parse_primitive_vector(
+    n: str,
+    object_classes: Dict[str, Class],
+    ctx: CodegenContext | None = None,
+) -> Optional[TypeInfo]:
+    inner = _template_inner(n, "gd::vector")
+    if inner is None:
+        return None
+    parts = split_top_level(inner)
+    if len(parts) != 1:
+        return None
+    element = classify_arg(parts[0], object_classes, ctx=ctx)
+    if element is None or element.kind not in _PRIMITIVE_VECTOR_ELEMENT_KINDS:
+        return None
+    return TypeInfo(
+        "primitive_vector",
+        f"gd::vector<{element.cxx_type}>",
+        f"{{ {element.lua_type} }}",
+        element_type=element,
+    )
+
+
 def _parse_vector_view(
     n: str,
     object_classes: Dict[str, Class],
@@ -414,6 +441,18 @@ def _classify_core(
 
     if n.endswith("*"):
         base = n[:-1].strip()
+        ptr_primitive = _parse_primitive_vector(base, object_classes, ctx=ctx)
+        if ptr_primitive is not None:
+            return TypeInfo(
+                ptr_primitive.kind,
+                ptr_primitive.cxx_type,
+                ptr_primitive.lua_type,
+                ptr_primitive.class_name,
+                is_ref=False,
+                is_out=True,
+                is_vector_ptr=True,
+                element_type=ptr_primitive.element_type,
+            )
         ptr_vector = _parse_vector_view(base, object_classes, ctx=ctx)
         if ptr_vector is not None:
             return TypeInfo(
@@ -426,6 +465,18 @@ def _classify_core(
                 is_vector_ptr=True,
                 element_type=ptr_vector.element_type,
             )
+
+    primitive_vector = _parse_primitive_vector(n, object_classes, ctx=ctx)
+    if primitive_vector is not None:
+        return TypeInfo(
+            primitive_vector.kind,
+            primitive_vector.cxx_type,
+            primitive_vector.lua_type,
+            primitive_vector.class_name,
+            is_ref,
+            is_out,
+            element_type=primitive_vector.element_type,
+        )
 
     vector_view = _parse_vector_view(n, object_classes, ctx=ctx)
     if vector_view is not None:

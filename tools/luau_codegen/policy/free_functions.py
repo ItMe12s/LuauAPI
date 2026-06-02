@@ -81,18 +81,22 @@ def free_function_unsupported_reason(
     ret = classify_return(fn.ret, objects, ctx=ctx)
     if ret is None:
         return f"free-function-unsupported-return:{fn.ret}"
-    if ret.kind == "vector_view" and not vector_view_supported_as_return(ret):
+    if ret.kind in (
+        "vector_view",
+        "primitive_vector",
+    ) and not vector_view_supported_as_return(ret):
         return f"free-function-unsupported-return:{fn.ret}"
     ret_kind = ret.kind
     for i, arg in enumerate(fn.args):
         info = classify_arg(arg.type, objects, ctx=ctx)
         if info is None:
             return f"free-function-unsupported-arg:{arg.type}"
-        if info.kind == "vector_view" and not vector_view_supported_as_arg(
-            info, ret_kind
-        ):
+        if info.kind in (
+            "vector_view",
+            "primitive_vector",
+        ) and not vector_view_supported_as_arg(info, ret_kind):
             return f"free-function-unsupported-arg:{arg.type}"
-        if info.is_out and info.kind != "vector_view":
+        if info.is_out and info.kind not in ("vector_view", "primitive_vector"):
             return f"free-function-out-arg:{arg.type}"
         if info.kind == "sel":
             continue

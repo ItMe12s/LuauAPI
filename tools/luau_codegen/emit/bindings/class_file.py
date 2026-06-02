@@ -122,7 +122,7 @@ def _emit_out_arg(info: TypeInfo, var: str) -> tuple[List[str], str]:
         return [f"        UIButtonConfig {var}{{}};\n"], var
     if info.kind == "enum":
         return [f"        {info.cxx_type} {var}{{}};\n"], var
-    if info.kind == "vector_view":
+    if info.kind in ("vector_view", "primitive_vector"):
         return [f"        {info.cxx_type} {var}{{}};\n"], (
             f"&{var}" if info.is_vector_ptr else var
         )
@@ -384,9 +384,15 @@ def _emit_field_accessors(
         f"    int {setter_impl}(lua_State* L, T* self, {arg_info.cxx_type} value) {{\n"
     )
     out.append(f"        if constexpr (requires(T* obj) {{ obj->{field.name}; }}) {{\n")
-    out.append(
-        f"            self->{field.name} = static_cast<decltype(self->{field.name})>(value);\n"
-    )
+    if arg_info.is_vector_ptr:
+        out.append(f"            if (self->{field.name} == nullptr) {{\n")
+        out.append(f'                luaL_error(L, "{label} field pointer is null");\n')
+        out.append("            }\n")
+        out.append(f"            *self->{field.name} = std::move(value);\n")
+    else:
+        out.append(
+            f"            self->{field.name} = static_cast<decltype(self->{field.name})>(value);\n"
+        )
     out.append("            return 0;\n")
     out.append("        } else {\n")
     out.append(

@@ -14,6 +14,12 @@ def _prefix(declare: bool, var: str) -> str:
     return f"auto {var}" if declare else var
 
 
+def _primitive_vector_elem_cxx(info: TypeInfo) -> str:
+    if info.element_type is None:
+        raise ValueError("primitive vector requires element type")
+    return info.element_type.cxx_type
+
+
 def emit_stack_check(
     info: TypeInfo,
     idx: str | int,
@@ -122,6 +128,11 @@ def emit_stack_check(
         return [
             f'        {_prefix(declare, var)} = luax::checkObjectVectorView<{elem}>(L, {idx}, "{label}");\n'
         ]
+    if info.kind == "primitive_vector":
+        elem = _primitive_vector_elem_cxx(info)
+        return [
+            f'        {_prefix(declare, var)} = luax::checkPrimitiveVector<{elem}>(L, {idx}, "{label}");\n'
+        ]
     raise ValueError(f"unsupported type kind: {info.kind}")
 
 
@@ -171,6 +182,9 @@ def _push_impl(
         return [
             f"{indent}luax::pushReadOnlyVectorView<{elem}>(L, {expr}, {owner_expr});\n"
         ]
+    if info.kind == "primitive_vector":
+        elem = _primitive_vector_elem_cxx(info)
+        return [f"{indent}luax::pushPrimitiveVector<{elem}>(L, {expr});\n"]
     if info.kind == "delegate":
         return [f"{indent}luax::tryPushBoundDelegateTable(L, {expr});\n"]
     if info.kind == "result":
