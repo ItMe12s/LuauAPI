@@ -8,6 +8,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 BRO_DIR = ROOT / "build/_deps/bindings-src/bindings/2.2081"
+FALLBACK_BRO_DIR = ROOT / "tests/luau_codegen/fixtures/delegate_bindings"
 SPECS_OUT = ROOT / "tools/luau_codegen/model/delegate_specs.py"
 GEN_HPP = ROOT / "src/lua/bindings/framework/LuaDelegates.gen.hpp"
 GEN_CPP = ROOT / "src/lua/bindings/framework/LuaDelegates.gen.cpp"
@@ -244,9 +245,19 @@ def lua_for(cxx: str) -> str | None:
     return None
 
 
-def parse_broma() -> dict[str, list[DelegateMethod]]:
+def resolve_bro_dir(bindings_dir: Path | None = None) -> Path:
+    if bindings_dir is not None:
+        return bindings_dir
+    if BRO_DIR.is_dir() and any(BRO_DIR.glob("*.bro")):
+        return BRO_DIR
+    if FALLBACK_BRO_DIR.is_dir() and any(FALLBACK_BRO_DIR.glob("*.bro")):
+        return FALLBACK_BRO_DIR
+    return BRO_DIR
+
+
+def parse_broma(bindings_dir: Path | None = None) -> dict[str, list[DelegateMethod]]:
     out: dict[str, list[DelegateMethod]] = {}
-    for bro in BRO_DIR.glob("*.bro"):
+    for bro in resolve_bro_dir(bindings_dir).glob("*.bro"):
         text = bro.read_text(encoding="utf-8", errors="replace")
         for m in re.finditer(r"class\s+([\w:]+)\s*\{([^}]*)\}", text, re.DOTALL):
             name = m.group(1)
@@ -275,10 +286,11 @@ def parse_broma() -> dict[str, list[DelegateMethod]]:
     return out
 
 
-def collect() -> dict[str, DelegateSpec]:
-    broma = parse_broma()
+def collect(bindings_dir: Path | None = None) -> dict[str, DelegateSpec]:
+    bro_dir = resolve_bro_dir(bindings_dir)
+    broma = parse_broma(bro_dir)
     ptrs: set[str] = set()
-    for bro in BRO_DIR.glob("*.bro"):
+    for bro in bro_dir.glob("*.bro"):
         for m in re.finditer(
             r"([\w:]+(?:Delegate|Protocol))\*",
             bro.read_text(encoding="utf-8", errors="replace"),
