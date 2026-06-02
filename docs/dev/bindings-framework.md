@@ -82,13 +82,18 @@ and it becomes invalid after a runtime restart. The task scheduler and the hook 
 `LuaCallback` centralizes the pattern for invoking a stored Luau function from C++:
 push the registry ref, apply `ResourcesRootScope`, call `Runtime::protectedCall`, and restore the stack top.
 
-Generated bindings use `LuaCallback` when a method argument is a `std::function` / `Function` / `MiniFunction`.
-For cocos2d `SEL_MenuHandler` pairs `(CCObject* target, SEL_MenuHandler selector)`,
-codegen collapses the pair into one Luau function argument and creates a `LuaMenuHandler` trampoline (`CCObject` subclass).
-Handlers are anchored to an object. When it's released, handlers are too.
-Orphaned handlers clear on shutdown, soft cap warns but never drops handlers.
+Generated bindings use `LuaCallback` when a method argument is a:
 
-See [Reference: callbacks](../lua/reference/callbacks.md) for script-facing usage.
+- `std::function`
+- `Function`
+- `MiniFunction`
+- `Callback` (including non-void returns).
+
+For cocos2d `SEL_*` pairs `(CCObject* target, SEL_... selector)`, codegen collapses the pair into one Luau function
+and creates the matching handler trampoline (`LuaMenuHandler`, `LuaScheduleHandler`, `LuaCallFunc*Handler`).
+For delegate pointer arguments, codegen accepts a Luau table and creates a `Lua*` delegate trampoline (`LuaDelegate` + generated subclasses).
+
+See [Reference: callbacks](../lua/reference/callbacks.md) and [Reference: delegates](../lua/reference/delegates.md) for script-facing usage.
 
 ## Per node fields
 

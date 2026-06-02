@@ -99,9 +99,26 @@ class LinkClassFilterTests(unittest.TestCase):
         self.assertFalse(ok)
         self.assertEqual(reason, "inaccessible")
 
+    def test_cctouch_dispatcher_protected_helpers_denied(self) -> None:
+        cls = Class(name="CCTouchDispatcher", namespace="cocos2d")
+        objects = {"CCTouchDispatcher": cls, "cocos2d::CCTouchDispatcher": cls}
+        for name in ("findHandler", "forceRemoveDelegate"):
+            method = Method(
+                name=name,
+                ret=(
+                    "void"
+                    if name == "forceRemoveDelegate"
+                    else "cocos2d::CCTouchHandler*"
+                ),
+                args=[Arg("cocos2d::CCTouchDelegate*", "delegate")],
+            )
+            ok, reason = supported(cls, method, objects, "win")
+            self.assertFalse(ok, name)
+            self.assertEqual(reason, "inaccessible", name)
+
 
 class SelMenuHandlerFilterTests(unittest.TestCase):
-    def test_orphan_sel_menu_handler_is_rejected(self) -> None:
+    def test_orphan_sel_menu_handler_is_accepted(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")
         cls = Class(name="Foo", namespace="cocos2d", bases=["CCObject"])
         method = Method(
@@ -117,8 +134,8 @@ class SelMenuHandlerFilterTests(unittest.TestCase):
 
         ok, reason = supported(cls, method, objects, "win")
 
-        self.assertFalse(ok)
-        self.assertEqual(reason, "unsupported-arg:SEL_MenuHandler")
+        self.assertTrue(ok)
+        self.assertEqual(reason, "")
 
     def test_valid_sel_pair_is_accepted(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")
@@ -355,7 +372,7 @@ class FmodFilterTests(unittest.TestCase):
 
 
 class FreeFunctionSelMenuHandlerFilterTests(unittest.TestCase):
-    def test_orphan_sel_menu_handler_is_rejected(self) -> None:
+    def test_orphan_sel_menu_handler_is_accepted(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")
         fn = Function(
             name="register",
@@ -367,7 +384,7 @@ class FreeFunctionSelMenuHandlerFilterTests(unittest.TestCase):
 
         reason = free_function_unsupported_reason(fn, objects)
 
-        self.assertEqual(reason, "free-function-unsupported-arg:SEL_MenuHandler")
+        self.assertIsNone(reason)
 
     def test_valid_sel_pair_is_accepted(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")

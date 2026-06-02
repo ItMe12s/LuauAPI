@@ -91,11 +91,7 @@ def free_function_unsupported_reason(
         if info.is_out and info.kind != "vector_view":
             return f"free-function-out-arg:{arg.type}"
         if info.kind == "sel":
-            if i == 0:
-                return f"free-function-unsupported-arg:{arg.type}"
-            prev = classify_arg(fn.args[i - 1].type, objects)
-            if prev is None or not is_ccobject_ptr(prev):
-                return f"free-function-unsupported-arg:{arg.type}"
+            continue
     return None
 
 

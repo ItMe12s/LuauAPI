@@ -25,6 +25,7 @@ from luau_codegen.emit.luau_types.free_fn_tree import (
 )
 from luau_codegen.emit.luau_types.references import (
     _VALUE_STUB_BODY,
+    _emit_delegate_stub_block,
     _emit_orphan_stubs,
     _emit_value_stub_block,
     _factory_object_refs,
@@ -149,6 +150,11 @@ def emit(
     )
     if value_block:
         lines.append(value_block)
+        lines.append("\n")
+
+    delegate_block = _emit_delegate_stub_block()
+    if delegate_block:
+        lines.append(delegate_block)
         lines.append("\n")
 
     for namespace in (cocos_namespace, gd_namespace, geode_namespace):

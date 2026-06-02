@@ -33,6 +33,15 @@ namespace luax {
     }
 
     template <>
+    inline cocos2d::ccColor4B check<cocos2d::ccColor4B>(lua_State* L, int idx, char const* method) {
+        auto r = static_cast<unsigned char>(fieldNumber(L, idx, "r", method));
+        auto g = static_cast<unsigned char>(fieldNumber(L, idx, "g", method));
+        auto b = static_cast<unsigned char>(fieldNumber(L, idx, "b", method));
+        auto a = static_cast<unsigned char>(fieldNumber(L, idx, "a", method));
+        return { r, g, b, a };
+    }
+
+    template <>
     inline UIButtonConfig check<UIButtonConfig>(lua_State* L, int idx, char const* method) {
         UIButtonConfig config{};
         config.m_width = static_cast<int>(fieldNumber(L, idx, "width", method));
@@ -75,6 +84,14 @@ namespace luax {
         lua_pushinteger(L, color.r); lua_setfield(L, -2, "r");
         lua_pushinteger(L, color.g); lua_setfield(L, -2, "g");
         lua_pushinteger(L, color.b); lua_setfield(L, -2, "b");
+    }
+
+    inline void push(lua_State* L, cocos2d::ccColor4B const& color) {
+        lua_createtable(L, 0, 4);
+        lua_pushinteger(L, color.r); lua_setfield(L, -2, "r");
+        lua_pushinteger(L, color.g); lua_setfield(L, -2, "g");
+        lua_pushinteger(L, color.b); lua_setfield(L, -2, "b");
+        lua_pushinteger(L, color.a); lua_setfield(L, -2, "a");
     }
 
     inline void push(lua_State* L, UIButtonConfig const& config) {

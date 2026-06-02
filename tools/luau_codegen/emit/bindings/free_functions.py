@@ -7,12 +7,14 @@ from luau_codegen.parse.broma import Class, Function
 from luau_codegen.util.identifiers import cxx_id
 from luau_codegen.convert.marshalling import (
     check_arg,
-    check_sel_menu_handler,
+    check_sel_handler,
+    emit_stack_check,
     push_return,
     push_value,
-    sel_menu_call_args,
+    sel_call_args,
+    sel_selector_call_arg,
 )
-from luau_codegen.convert.sel_args import is_ccobject_ptr, iter_lua_method_args
+from luau_codegen.convert.sel_args import iter_lua_method_args
 from luau_codegen.convert.type_map import (
     TypeInfo,
     require_classify_arg,
@@ -44,18 +46,24 @@ def _emit_free_invoke(fn: Function, objects: Dict[str, Class], suffix: str) -> s
     label = f"{fn.lua_path}.{fn.name}"
     ret = require_classify_return(fn.ret, objects)
     arg_infos = [require_classify_arg(arg.type, objects) for arg in fn.args]
-    input_count = sum(1 for _ in iter_lua_method_args(fn, arg_infos, ret_kind=ret.kind))
+    input_count = sum(
+        1
+        for lua_arg in iter_lua_method_args(fn, arg_infos, ret_kind=ret.kind)
+        if not lua_arg.out_only
+    )
 
     out = [f"    int {cname}(lua_State* L) {{\n"]
     out.append(
         f'        if (lua_gettop(L) != {input_count}) luaL_error(L, "{label} expected {input_count} args");\n'
     )
     call_args: List[str] = []
-    menu_handlers: List[str] = []
+    selector_handlers: List[tuple[str, str]] = []
     lua_idx = 1
-    for arg_idx, (arg, info) in enumerate(zip(fn.args, arg_infos)):
+    for lua_arg in iter_lua_method_args(fn, arg_infos, ret_kind=ret.kind):
+        info = lua_arg.info
+        arg_idx = lua_arg.arg_index
         var = f"arg{arg_idx}"
-        if ret.kind == "void" and info.is_out:
+        if lua_arg.out_only:
             if info.kind == "vector_view":
                 out.append(f"        {info.cxx_type} {var}{{}};\n")
                 call_args.append(f"&{var}" if info.is_vector_ptr else var)
@@ -63,20 +71,30 @@ def _emit_free_invoke(fn: Function, objects: Dict[str, Class], suffix: str) -> s
                 out.append(f"        {info.cxx_type} {var}{{}};\n")
                 call_args.append(var)
             continue
-        if (
-            arg_idx + 1 < len(fn.args)
-            and is_ccobject_ptr(info)
-            and arg_infos[arg_idx + 1].kind == "sel"
-        ):
-            continue
-        if info.kind == "sel":
+        if lua_arg.orphan:
             sel_var = f"sel{arg_idx}"
-            out.extend(check_sel_menu_handler(lua_idx, sel_var, label))
-            call_args.extend(sel_menu_call_args(sel_var))
-            menu_handlers.append(f"{sel_var}_handler")
+            out.extend(check_sel_handler(lua_idx, sel_var, info, label))
+            call_args.append(sel_selector_call_arg(info))
+            selector_handlers.append((f"{sel_var}_handler", info.class_name or "menu"))
             lua_idx += 1
             continue
-        out.extend(check_arg(arg, info, lua_idx, var, label))
+        if lua_arg.sel_pair and not lua_arg.implicit_self_target:
+            sel_var = f"sel{arg_idx}"
+            out.extend(check_sel_handler(lua_idx, sel_var, info, label))
+            call_args.extend(
+                sel_call_args(sel_var, info, handler_first=lua_arg.handler_first)
+            )
+            selector_handlers.append((f"{sel_var}_handler", info.class_name or "menu"))
+            lua_idx += 1
+            continue
+        if lua_arg.orphan:
+            sel_var = f"sel{arg_idx}"
+            out.extend(check_sel_handler(lua_idx, sel_var, info, label))
+            call_args.append(sel_selector_call_arg(info))
+            selector_handlers.append((f"{sel_var}_handler", info.class_name or "menu"))
+            lua_idx += 1
+            continue
+        out.extend(check_arg(lua_arg.arg, info, lua_idx, var, label))
         call_args.append(f"std::move({var})" if info.kind == "callback" else var)
         lua_idx += 1
 
@@ -88,8 +106,11 @@ def _emit_free_invoke(fn: Function, objects: Dict[str, Class], suffix: str) -> s
     ]
     if ret.kind == "void":
         out.append(f"        {target};\n")
-        for handler in menu_handlers:
-            out.append(f"        luax::registerOrphanMenuHandler({handler});\n")
+        for handler, variant in selector_handlers:
+            if variant == "menu":
+                out.append(f"        luax::registerOrphanMenuHandler({handler});\n")
+            else:
+                out.append(f"        luax::registerOrphanTrampoline({handler});\n")
         if out_refs:
             for arg_idx, info in out_refs:
                 out.extend(_emit_vector_out_push(info, f"arg{arg_idx}"))
@@ -98,11 +119,15 @@ def _emit_free_invoke(fn: Function, objects: Dict[str, Class], suffix: str) -> s
             out.extend(push_return(ret, "", False))
     else:
         out.append(f"        auto result = {target};\n")
-        for handler in menu_handlers:
-            if ret.kind == "object":
+        for handler, variant in selector_handlers:
+            if ret.kind == "object" and variant == "menu":
                 out.append(f"        luax::anchorMenuHandler(result, {handler});\n")
-            else:
+            elif ret.kind == "object":
+                out.append(f"        luax::anchorTrampoline(result, {handler});\n")
+            elif variant == "menu":
                 out.append(f"        luax::registerOrphanMenuHandler({handler});\n")
+            else:
+                out.append(f"        luax::registerOrphanTrampoline({handler});\n")
         out.extend(_emit_vector_return_push(ret, "result"))
     out.append("    }\n\n")
     return "".join(out)
@@ -118,7 +143,9 @@ def _emit_free_dispatcher(fns: List[Function], objects: Dict[str, Class]) -> str
         arg_infos = [require_classify_arg(arg.type, objects) for arg in fn.args]
         ret = require_classify_return(fn.ret, objects)
         input_count = sum(
-            1 for _ in iter_lua_method_args(fn, arg_infos, ret_kind=ret.kind)
+            1
+            for lua_arg in iter_lua_method_args(fn, arg_infos, ret_kind=ret.kind)
+            if not lua_arg.out_only
         )
         out.append(f"            case {input_count}: return {base}_{idx}(L);\n")
     out.append("            default: break;\n")

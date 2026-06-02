@@ -146,8 +146,10 @@ INACCESSIBLE_METHODS = {
     ("CCTileMapAtlas", "updateAtlasValueAt"),
     ("CCTileMapAtlas", "updateAtlasValues"),
     ("CCTouchDispatcher", "decrementForcePrio"),
+    ("CCTouchDispatcher", "findHandler"),
     ("CCTouchDispatcher", "forceAddHandler"),
     ("CCTouchDispatcher", "forceRemoveAllDelegates"),
+    ("CCTouchDispatcher", "forceRemoveDelegate"),
     ("CCTouchDispatcher", "incrementForcePrio"),
     ("CCTouchDispatcher", "rearrangeHandlers"),
     ("CCTransitionFadeTR", "sceneOrder"),
@@ -186,6 +188,7 @@ INACCESSIBLE_METHODS = {
     ("EditorUI", "colorSelectClosed"),
     ("EditorUI", "findSnapObject"),
     ("ButtonSprite", "init"),
+    ("MDPopup", "void"),
 }
 
 INACCESSIBLE_CLASSES = {
@@ -204,6 +207,16 @@ INACCESSIBLE_CLASSES = {
 # Preference is given to script-friendly and `create` forms.
 # Please don't add new entries to this dict without a good reason.
 PREFERRED_OVERLOADS: dict[tuple[str, str], set[tuple[str, ...]]] = {
+    ("EditorUI", "getSpriteButton"): {
+        (
+            "char const*",
+            "cocos2d::SEL_MenuHandler",
+            "cocos2d::CCMenu*",
+            "float",
+            "int",
+            "cocos2d::CCPoint",
+        ),
+    },
     ("CCNode", "removeComponent"): {("char const*",)},
     ("CCSpriteFrameCache", "addSpriteFramesWithFile"): {
         ("char const*", "char const*"),

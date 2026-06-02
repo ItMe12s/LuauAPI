@@ -716,6 +716,27 @@ class LuauOverloadWideningTests(unittest.TestCase):
             self._class_slice(text, "Bar"),
         )
 
+    def test_lazy_sprite_callback_luau_type(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        lazy_sprite = Class(
+            name="LazySprite",
+            bases=["CCObject"],
+            methods=[
+                Method(
+                    name="setLoadCallback",
+                    ret="void",
+                    args=[Arg("Callback", "cb")],
+                    platforms=all_platforms("0x1"),
+                )
+            ],
+        )
+        root = Root(classes=[ccobject, lazy_sprite])
+        text = types_text(emit_luau_types(root))
+        self.assertIn(
+            "arg1: (arg1: boolean | string) -> ()",
+            self._class_slice(text, "LazySprite"),
+        )
+
 
 class F9SingleFileTests(unittest.TestCase):
     def test_each_class_appears_in_single_file(self) -> None:

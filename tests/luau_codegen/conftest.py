@@ -11,8 +11,11 @@ from unittest import mock
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 TOOLS_DIR = os.path.join(ROOT, "tools")
+SCRIPTS_DIR = os.path.join(TOOLS_DIR, "scripts")
 if TOOLS_DIR not in sys.path:
     sys.path.insert(0, TOOLS_DIR)
+if SCRIPTS_DIR not in sys.path:
+    sys.path.insert(0, SCRIPTS_DIR)
 
 from luau_codegen.parse.broma import (  # type: ignore[import-unresolved]
     Arg,
@@ -73,11 +76,14 @@ from luau_codegen.policy.intersection import intersection_platforms  # type: ign
 from luau_codegen.parse.collect import collect_bindings_root  # type: ignore[import-unresolved]
 from luau_codegen.cli.main import main as codegen_main  # type: ignore[import-unresolved]
 from luau_codegen.convert.marshalling import (  # type: ignore[import-unresolved]
+    _push_impl,
     check_arg,
     emit_stack_check,
     push_return,
     push_value,
+    sel_call_args,
     sel_menu_call_args,
+    sel_selector_call_arg,
 )
 from luau_codegen.model.domain import (  # type: ignore[import-unresolved]
     build_class_lookup,
@@ -91,6 +97,15 @@ from luau_codegen.emit.plan import (  # type: ignore[import-unresolved]
     collect_plan,
     collect_platform_plan,
     plan_outputs,
+)
+from luau_codegen.model.delegate_specs import DELEGATE_SPECS  # type: ignore[import-unresolved]
+from generate_delegate_artifacts import (  # type: ignore[import-unresolved]
+    DelegateMethod,
+    DelegateSpec,
+    collect as collect_delegate_specs,
+    cpp_emit_supported,
+    emit_gen_hpp,
+    emit_override,
 )
 
 
@@ -172,11 +187,14 @@ __all__ = [
     "collect_bindings_root",
     "codegen_main",
     # convert.marshalling
+    "_push_impl",
     "check_arg",
     "emit_stack_check",
     "push_return",
     "push_value",
+    "sel_call_args",
     "sel_menu_call_args",
+    "sel_selector_call_arg",
     # model.domain
     "build_class_lookup",
     "codegen_object_map",
@@ -192,6 +210,14 @@ __all__ = [
     "collect_plan",
     "collect_platform_plan",
     "plan_outputs",
+    # delegate generator
+    "DELEGATE_SPECS",
+    "DelegateMethod",
+    "DelegateSpec",
+    "collect_delegate_specs",
+    "cpp_emit_supported",
+    "emit_gen_hpp",
+    "emit_override",
     # helpers
     "all_platforms",
     "types_text",

@@ -24,6 +24,10 @@ from luau_codegen.policy.containers import (
     vector_view_supported_as_arg,
     vector_view_supported_as_return,
 )
+from luau_codegen.policy.delegates import (
+    delegate_supported_as_arg,
+    delegate_supported_as_return,
+)
 
 STRICT_DIRECT_PLATFORMS: set[str] = {"ios"}
 
@@ -131,20 +135,20 @@ def supported(
         return False, f"unsupported-return:{m.ret}"
     if ret.kind == "vector_view" and not vector_view_supported_as_return(ret):
         return False, f"unsupported-return:{m.ret}"
+    if ret.kind == "delegate" and not delegate_supported_as_return(ret):
+        return False, f"unsupported-return:{m.ret}"
     for i, arg in enumerate(m.args):
-        info = classify_arg(arg.type, objects)
+        info = classify_arg(arg.type, objects, owner_class=cls.name)
         if info is None:
             return False, f"unsupported-arg:{arg.type}"
         if info.kind == "vector_view" and not vector_view_supported_as_arg(
             info, ret.kind
         ):
             return False, f"unsupported-arg:{arg.type}"
+        if info.kind == "delegate" and not delegate_supported_as_arg(info):
+            return False, f"unsupported-arg:{arg.type}"
         if info.kind == "sel":
-            if i == 0:
-                return False, f"unsupported-arg:{arg.type}"
-            prev = classify_arg(m.args[i - 1].type, objects)
-            if prev is None or not is_ccobject_ptr(prev):
-                return False, f"unsupported-arg:{arg.type}"
+            continue
     return True, ""
 
 
@@ -191,7 +195,7 @@ def group_supported(
     for name, methods in list(by_name.items()):
         by_arity: dict[int, list[Method]] = defaultdict(list)
         for m in methods:
-            by_arity[method_input_arg_count(m, objects)].append(m)
+            by_arity[method_input_arg_count(m, objects, owner_class=cls.name)].append(m)
         kept: list[Method] = []
         preferred = PREFERRED_OVERLOADS.get((cls.name, name))
         for arity, overloads in by_arity.items():

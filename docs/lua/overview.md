@@ -17,7 +17,7 @@ A script runs inside the game on the main thread. From a script you can:
 - Store per object data with `geode.fields`.
 - Read mod metadata, paths, saves, and settings with `geode.Mod`. See [Reference: mod](reference/mod.md).
 - Encode/decode JSON with `geode.json`, and read/write mod files with `geode.fs`. See [Reference: json](reference/json.md) and [Reference: fs](reference/fs.md).
-- Pass Luau functions as C++ callbacks and menu handlers where bindings support it. See [Reference: callbacks](reference/callbacks.md).
+- Pass Luau functions as C++ callbacks, selector handlers, and delegate tables where bindings support it. See [Reference: callbacks](reference/callbacks.md) and [Reference: delegates](reference/delegates.md).
 - Draw a debug overlay with `imgui`. See [Reference: imgui](reference/imgui.md).
 - Share an API with other mods through the global table. See [Sharing APIs between mods](guide/sharing-apis-between-mods.md).
 

@@ -48,7 +48,7 @@ def _method_return_type(cls: Class, m: Method, objects: Dict[str, Class]) -> str
         out_types.append(ret.lua_type)
     if ret.kind == "void":
         for arg in m.args:
-            info = classify_arg(arg.type, objects)
+            info = classify_arg(arg.type, objects, owner_class=cls.name)
             assert info is not None
             if info.is_out:
                 out_types.append(info.lua_type)
@@ -59,24 +59,27 @@ def _method_return_type(cls: Class, m: Method, objects: Dict[str, Class]) -> str
     return "(" + ", ".join(out_types) + ")"
 
 
-def _classify_input_args(m: Method, objects: Dict[str, Class]) -> List[TypeInfo]:
+def _classify_input_args(
+    cls: Class, m: Method, objects: Dict[str, Class]
+) -> List[TypeInfo]:
     ret = classify_return(m.ret, objects)
     assert ret is not None
     arg_infos = []
     for arg in m.args:
-        info = classify_arg(arg.type, objects)
+        info = classify_arg(arg.type, objects, owner_class=cls.name)
         assert info is not None
         arg_infos.append(info)
     return [
         lua_arg.info
         for lua_arg in iter_lua_method_args(m, arg_infos, ret_kind=ret.kind)
+        if not lua_arg.out_only
     ]
 
 
 def _method_type(cls: Class, methods: List[Method], objects: Dict[str, Class]) -> str:
     parts = []
     for m in methods:
-        args = _classify_input_args(m, objects)
+        args = _classify_input_args(cls, m, objects)
         ret_type = _method_return_type(cls, m, objects)
         params = []
         if not m.is_static:
@@ -90,7 +93,7 @@ def _method_type(cls: Class, methods: List[Method], objects: Dict[str, Class]) -
 def _widened_method_type(
     cls: Class, methods: List[Method], objects: Dict[str, Class], *, static: bool
 ) -> str:
-    arg_lists = [_classify_input_args(m, objects) for m in methods]
+    arg_lists = [_classify_input_args(cls, m, objects) for m in methods]
     prefix: List[str] = []
     for i in range(min(len(a) for a in arg_lists)):
         types_at_i = {a[i].lua_type for a in arg_lists}

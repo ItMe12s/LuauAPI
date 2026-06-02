@@ -106,7 +106,7 @@ def hookable(
         info = classify_arg(arg.type, objects)
         if info is None:
             return False
-        if info.kind in ("sel", "callback", "vector_view", "opaque_handle"):
+        if info.kind in ("sel", "callback", "vector_view", "opaque_handle", "delegate"):
             return False
     return True
 

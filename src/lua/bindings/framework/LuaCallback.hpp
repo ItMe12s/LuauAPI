@@ -13,6 +13,7 @@ namespace luax {
     class LuaCallback {
     public:
         using PushArgsFn = void (*)(lua_State* L, void* ctx);
+        using PopResultsFn = void (*)(lua_State* L, void* ctx);
 
         LuaCallback() = default;
 
@@ -38,7 +39,9 @@ namespace luax {
             std::string_view context,
             int deadlineMs,
             PushArgsFn pushArgs = nullptr,
-            void* pushCtx = nullptr
+            void* pushCtx = nullptr,
+            PopResultsFn popResults = nullptr,
+            void* popCtx = nullptr
         ) const {
             auto* runtime = Runtime::getIfInitialized();
             if (!runtime || !runtime->ready()) return false;
@@ -51,6 +54,9 @@ namespace luax {
             }
             Runtime::ResourcesRootScope scope(*runtime, m_ref->resourcesRoot());
             bool ok = runtime->protectedCall(nargs, nresults, context, deadlineMs);
+            if (ok && popResults && nresults > 0) {
+                popResults(L, popCtx);
+            }
             lua_settop(L, top);
             return ok;
         }

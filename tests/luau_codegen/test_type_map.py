@@ -68,6 +68,65 @@ class GeodeEnumRegistrationTests(unittest.TestCase):
         self.assertEqual(info.kind, "callback")
         self.assertEqual(info.lua_type, "(arg1: CCObject) -> ()")
 
+    def test_classify_std_function_non_void_return(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        objects = {"CCObject": ccobject}
+        info = classify_arg("std::function<bool(cocos2d::CCObject*)>", objects)
+        self.assertIsNotNone(info)
+        assert info is not None
+        self.assertEqual(info.kind, "callback")
+        self.assertEqual(info.lua_type, "(arg1: CCObject) -> boolean")
+        assert info.callback_ret is not None
+        self.assertEqual(info.callback_ret.kind, "bool")
+
+    def test_classify_callback_alias(self) -> None:
+        info = classify_arg("Callback", {})
+        self.assertIsNotNone(info)
+        assert info is not None
+        self.assertEqual(info.kind, "callback")
+        self.assertEqual(info.lua_type, "() -> ()")
+
+    def test_classify_lazy_sprite_callback_alias(self) -> None:
+        info = classify_arg("Callback", {}, owner_class="LazySprite")
+        self.assertIsNotNone(info)
+        assert info is not None
+        self.assertEqual(info.kind, "callback")
+        self.assertEqual(info.lua_type, "(arg1: boolean | string) -> ()")
+        assert info.callback_args
+        self.assertEqual(info.callback_args[0].kind, "result")
+
+    def test_classify_geode_result_void(self) -> None:
+        info = classify_arg("geode::Result<>", {})
+        self.assertIsNotNone(info)
+        assert info is not None
+        self.assertEqual(info.kind, "result")
+        self.assertEqual(info.lua_type, "boolean | string")
+
+    def test_classify_sel_schedule(self) -> None:
+        info = classify_arg("SEL_SCHEDULE", {})
+        self.assertIsNotNone(info)
+        assert info is not None
+        self.assertEqual(info.kind, "sel")
+        self.assertEqual(info.lua_type, "(dt: number) -> ()")
+        self.assertEqual(info.class_name, "schedule")
+
+    def test_classify_cctouch_delegate(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        objects = {"CCObject": ccobject}
+        info = classify_arg("cocos2d::CCTouchDelegate*", objects)
+        self.assertIsNotNone(info)
+        assert info is not None
+        self.assertEqual(info.kind, "delegate")
+        self.assertEqual(info.class_name, "CCTouchDelegate")
+        self.assertIn("ccTouchBegan", info.lua_type)
+
+    def test_classify_cccolor4b_value(self) -> None:
+        info = classify_arg("cocos2d::ccColor4B const&", {})
+        self.assertIsNotNone(info)
+        assert info is not None
+        self.assertEqual(info.kind, "value")
+        self.assertEqual(info.lua_type, "RGBAColor")
+
     def test_method_input_arg_count_collapses_sel_pair(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")
         ccnode = Class(name="CCNode", namespace="cocos2d", bases=["CCObject"])
@@ -95,6 +154,21 @@ class GeodeEnumRegistrationTests(unittest.TestCase):
         }
 
         self.assertEqual(_input_arg_count(method, objects), 3)
+
+    def test_method_input_arg_count_lazy_sprite_callback_uses_owner_class(
+        self,
+    ) -> None:
+        method = Method(
+            name="setLoadCallback",
+            ret="void",
+            args=[Arg("Callback", "cb")],
+        )
+        objects: dict[str, Class] = {}
+
+        self.assertEqual(_input_arg_count(method, objects, owner_class="LazySprite"), 1)
+        info = classify_arg("Callback", objects, owner_class="LazySprite")
+        assert info is not None
+        self.assertEqual(len(info.callback_args), 1)
 
 
 class ContainerTypeMapTests(unittest.TestCase):

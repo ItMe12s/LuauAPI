@@ -122,6 +122,151 @@ class CallbackMarshallingTests(unittest.TestCase):
             ["sel2_handler", "menu_selector(luax::LuaMenuHandler::onCallback)"],
         )
 
+    def test_sel_schedule_handler_emits_trampoline(self) -> None:
+        info = TypeInfo(
+            kind="sel",
+            cxx_type="SEL_SCHEDULE",
+            lua_type="(dt: number) -> ()",
+            class_name="schedule",
+        )
+        text = "".join(
+            check_arg(Arg("SEL_SCHEDULE", "sel"), info, 2, "sel", "CCNode.schedule")
+        )
+        self.assertIn("LuaScheduleHandler::create", text)
+        self.assertIn("sel_handler", text)
+
+    def test_sel_schedule_call_args_handler_first(self) -> None:
+        info = TypeInfo(
+            kind="sel",
+            cxx_type="SEL_SCHEDULE",
+            lua_type="(dt: number) -> ()",
+            class_name="schedule",
+        )
+        text = sel_call_args("sel", info, handler_first=True)
+        self.assertEqual(
+            text,
+            ["sel_handler", "schedule_selector(luax::LuaScheduleHandler::onSchedule)"],
+        )
+
+    def test_sel_schedule_call_args_selector_first(self) -> None:
+        info = TypeInfo(
+            kind="sel",
+            cxx_type="SEL_SCHEDULE",
+            lua_type="(dt: number) -> ()",
+            class_name="schedule",
+        )
+        text = sel_call_args("sel", info, handler_first=False)
+        self.assertEqual(
+            text,
+            ["schedule_selector(luax::LuaScheduleHandler::onSchedule)", "sel_handler"],
+        )
+
+    def test_result_callback_arg_push(self) -> None:
+        info = TypeInfo(
+            kind="result",
+            cxx_type="geode::Result<>",
+            lua_type="boolean | string",
+        )
+        text = "".join(_push_impl(info, "c->result", False, indent=""))
+        self.assertIn(".isOk()", text)
+        self.assertIn(".unwrapErr()", text)
+        self.assertIn("lua_pushboolean", text)
+
+    def test_callback_with_result_arg_emits_lambda(self) -> None:
+        info = TypeInfo(
+            kind="callback",
+            cxx_type="geode::Function<void(geode::Result<>)>",
+            lua_type="(arg1: boolean | string) -> ()",
+            callback_ret=TypeInfo("void", "void", "()"),
+            callback_args=(
+                TypeInfo(
+                    kind="result",
+                    cxx_type="geode::Result<>",
+                    lua_type="boolean | string",
+                ),
+            ),
+        )
+        text = "".join(
+            check_arg(
+                Arg("Callback", "cb"), info, 2, "arg0", "LazySprite.setLoadCallback"
+            )
+        )
+        self.assertIn("geode::Result<> arg0_p0", text)
+        self.assertIn(".isOk()", text)
+        self.assertIn("invoke(1, 0", text)
+
+    def test_sel_selector_call_arg_orphan(self) -> None:
+        info = TypeInfo(
+            kind="sel",
+            cxx_type="SEL_MenuHandler",
+            lua_type="(sender: CCObject) -> ()",
+            class_name="menu",
+        )
+        self.assertEqual(
+            sel_selector_call_arg(info),
+            "menu_selector(luax::LuaMenuHandler::onCallback)",
+        )
+
+    def test_callback_non_void_return_emits_result_reader(self) -> None:
+        sender = TypeInfo(
+            kind="object",
+            cxx_type="cocos2d::CCObject*",
+            lua_type="CCObject",
+            class_name="CCObject",
+        )
+        ret = TypeInfo(kind="bool", cxx_type="bool", lua_type="boolean")
+        info = TypeInfo(
+            kind="callback",
+            cxx_type="std::function<bool(cocos2d::CCObject*)>",
+            lua_type="(arg1: CCObject) -> boolean",
+            callback_args=(sender,),
+            callback_ret=ret,
+        )
+        text = "".join(
+            check_arg(
+                Arg("std::function<bool(cocos2d::CCObject*)>", "cb"),
+                info,
+                2,
+                "cb",
+                "Test.method",
+            )
+        )
+        self.assertIn("-> bool", text)
+        self.assertIn("cb_ret", text)
+        self.assertIn("check<bool>", text)
+        self.assertIn("invoke(1, 1", text)
+
+    def test_delegate_arg_emits_trampoline(self) -> None:
+        info = TypeInfo(
+            kind="delegate",
+            cxx_type="cocos2d::CCTouchDelegate*",
+            lua_type="{ ccTouchBegan: ... }",
+            class_name="CCTouchDelegate",
+        )
+        text = "".join(
+            check_arg(
+                Arg("cocos2d::CCTouchDelegate*", "delegate"),
+                info,
+                2,
+                "delegate",
+                "CCLayer.registerWithTouchDispatcher",
+            )
+        )
+        self.assertIn("lua_istable", text)
+        self.assertIn("luax::LuaCCTouchDelegate::create", text)
+        self.assertIn("delegate_trampoline", text)
+
+    def test_delegate_return_pushes_bound_table(self) -> None:
+        info = TypeInfo(
+            kind="delegate",
+            cxx_type="cocos2d::CCTouchDelegate*",
+            lua_type="CCTouchDelegate?",
+            class_name="CCTouchDelegate",
+        )
+        text = "".join(push_return(info, "result", False))
+        self.assertIn("tryPushBoundDelegateTable", text)
+        self.assertIn("return 1", text)
+
 
 class EmitStackCheckTests(unittest.TestCase):
     def test_ccpoint_uses_check_specialization(self) -> None:
@@ -288,3 +433,17 @@ class FmodMarshallingTests(unittest.TestCase):
         )
         self.assertIn("static_cast<FMOD_SPEAKERMODE>", text)
         self.assertIn("check<int>", text)
+
+
+class ResultPushTests(unittest.TestCase):
+    def test_result_push_ok_branch(self) -> None:
+        info = TypeInfo("result", "geode::Result<>", "boolean | string")
+        text = "".join(_push_impl(info, "value", False))
+        self.assertIn("value.isOk()", text)
+        self.assertIn("lua_pushboolean(L, true)", text)
+
+    def test_result_push_err_branch(self) -> None:
+        info = TypeInfo("result", "geode::Result<>", "boolean | string")
+        text = "".join(_push_impl(info, "value", False))
+        self.assertIn("value.unwrapErr()", text)
+        self.assertIn("luax::push(L, value.unwrapErr())", text)

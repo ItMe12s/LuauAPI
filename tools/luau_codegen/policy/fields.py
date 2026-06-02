@@ -42,7 +42,8 @@ def bindable_field(
         return False, "reference", None, None
     if _is_function_pointer(normalized):
         return False, "function-pointer", None, None
-    arg = classify_arg(field.type, objects)
+    owner_class = cls.name if cls else ""
+    arg = classify_arg(field.type, objects, owner_class=owner_class)
     ret = classify_return(field.type, objects)
     if arg is None:
         return False, f"unsupported-arg:{field.type}", None, ret

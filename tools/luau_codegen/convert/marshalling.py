@@ -2,12 +2,14 @@ from __future__ import annotations
 
 from luau_codegen.parse.broma import Arg
 from luau_codegen.convert.type_map import TypeInfo
+from luau_codegen.model.delegate_specs import lookup_delegate
 
 _VALUE_CHECK_TYPES = {
     "CCPoint": "cocos2d::CCPoint",
     "CCSize": "cocos2d::CCSize",
     "CCRect": "cocos2d::CCRect",
     "RGBColor": "cocos2d::ccColor3B",
+    "RGBAColor": "cocos2d::ccColor4B",
     "UIButtonConfig": "UIButtonConfig",
 }
 
@@ -193,18 +195,88 @@ def _push_impl(
         return [
             f"{indent}luax::pushReadOnlyVectorView<{elem}>(L, {expr}, {owner_expr});\n"
         ]
+    if info.kind == "delegate":
+        return [f"{indent}luax::tryPushBoundDelegateTable(L, {expr});\n"]
+    if info.kind == "result":
+        return [
+            f"{indent}if ({expr}.isOk()) {{\n",
+            f"{indent}    lua_pushboolean(L, true);\n",
+            f"{indent}}} else {{\n",
+            f"{indent}    luax::push(L, {expr}.unwrapErr());\n",
+            f"{indent}}}\n",
+        ]
     raise ValueError(f"unsupported type kind: {info.kind}")
 
 
+def _callback_return_type(info: TypeInfo) -> str:
+    ret = info.callback_ret
+    if ret is None or ret.kind == "void":
+        return "void"
+    return ret.cxx_type
+
+
+def _emit_callback_pop(var: str, ret: TypeInfo) -> list[str]:
+    if ret.kind == "void":
+        return []
+    if ret.kind == "bool":
+        return [
+            f"                +[](lua_State* L, void* raw) {{\n",
+            f'                    *static_cast<bool*>(raw) = luax::check<bool>(L, -1, "{var} callback return");\n',
+            "                },\n",
+        ]
+    if ret.kind == "number":
+        cxx = ret.cxx_type
+        if cxx in ("float", "double"):
+            check = cxx
+        elif cxx in _UNSIGNED:
+            check = "unsigned"
+        else:
+            check = "int"
+        return [
+            f"                +[](lua_State* L, void* raw) {{\n",
+            f'                    *static_cast<{cxx}*>(raw) = static_cast<{cxx}>(luax::check<{check}>(L, -1, "{var} callback return"));\n',
+            "                },\n",
+        ]
+    if ret.kind == "enum":
+        return [
+            f"                +[](lua_State* L, void* raw) {{\n",
+            f'                    *static_cast<{ret.cxx_type}*>(raw) = static_cast<{ret.cxx_type}>(static_cast<int>(luax::check<int>(L, -1, "{var} callback return")));\n',
+            "                },\n",
+        ]
+    if ret.kind == "object":
+        obj = ret.cxx_type[:-1]
+        return [
+            f"                +[](lua_State* L, void* raw) {{\n",
+            f'                    *static_cast<{ret.cxx_type}*>(raw) = luax::Usertype<{obj}>::check(L, -1, "{var} callback return");\n',
+            "                },\n",
+        ]
+    if ret.kind == "value":
+        check_type = _VALUE_CHECK_TYPES.get(ret.lua_type)
+        if check_type is None:
+            raise ValueError(f"unsupported callback return value: {ret.lua_type}")
+        return [
+            f"                +[](lua_State* L, void* raw) {{\n",
+            f'                    *static_cast<{ret.cxx_type}*>(raw) = luax::check<{check_type}>(L, -1, "{var} callback return");\n',
+            "                },\n",
+        ]
+    raise ValueError(f"unsupported callback return kind: {ret.kind}")
+
+
 def _emit_callback_lambda(idx: int, var: str, info: TypeInfo, label: str) -> list[str]:
+    ret = info.callback_ret or TypeInfo("void", "void", "()")
+    ret_type = _callback_return_type(info)
     params = ", ".join(
         f"{cb.cxx_type} {var}_p{i}" for i, cb in enumerate(info.callback_args)
     )
     lines = [
         f"        luaL_checktype(L, {idx}, LUA_TFUNCTION);\n",
         f"        auto {var}_cb = std::make_shared<luax::LuaCallback>(L, {idx});\n",
-        f"        auto {var} = [{var}_cb]({params}) {{\n",
     ]
+    if ret_type == "void":
+        lines.append(f"        auto {var} = [{var}_cb]({params}) {{\n")
+    else:
+        lines.append(f"        auto {var} = [{var}_cb]({params}) -> {ret_type} {{\n")
+        lines.append(f"            {ret_type} {var}_ret{{}};\n")
     if info.callback_args:
         ctx_fields = "; ".join(
             f"{cb.cxx_type} p{i}" for i, cb in enumerate(info.callback_args)
@@ -212,8 +284,9 @@ def _emit_callback_lambda(idx: int, var: str, info: TypeInfo, label: str) -> lis
         ctx_init = ", ".join(f"{var}_p{i}" for i in range(len(info.callback_args)))
         lines.append(f"            struct {var}_Ctx {{ {ctx_fields}; }};\n")
         lines.append(f"            {var}_Ctx ctx{{ {ctx_init} }};\n")
+        nresults = 0 if ret.kind == "void" else 1
         lines.append(
-            f'            {var}_cb->invoke({len(info.callback_args)}, 0, "{label} callback", luax::kHookScriptDeadlineMs,\n'
+            f'            {var}_cb->invoke({len(info.callback_args)}, {nresults}, "{label} callback", luax::kHookScriptDeadlineMs,\n'
         )
         lines.append(f"                +[](lua_State* L, void* raw) {{\n")
         lines.append(f"                    auto* c = static_cast<{var}_Ctx*>(raw);\n")
@@ -221,35 +294,127 @@ def _emit_callback_lambda(idx: int, var: str, info: TypeInfo, label: str) -> lis
             lines.extend(
                 _push_impl(cb, f"c->p{i}", False, indent="                    ")
             )
-        lines.append("                }, &ctx);\n")
+        lines.append("                }, &ctx")
+        if ret.kind != "void":
+            lines.append(f",\n")
+            lines.extend(_emit_callback_pop(var, ret))
+            lines.append(f"                &{var}_ret")
+        lines.append(");\n")
     else:
+        nresults = 0 if ret.kind == "void" else 1
         lines.append(
-            f'            {var}_cb->invoke(0, 0, "{label} callback", luax::kHookScriptDeadlineMs);\n'
+            f'            {var}_cb->invoke(0, {nresults}, "{label} callback", luax::kHookScriptDeadlineMs'
         )
+        if ret.kind != "void":
+            lines.append(", nullptr, nullptr")
+            lines.extend(_emit_callback_pop(var, ret))
+            lines.append(f", &{var}_ret")
+        lines.append(");\n")
+    if ret_type != "void":
+        lines.append(f"            return {var}_ret;\n")
     lines.append("        };\n")
     return lines
 
 
-def check_sel_menu_handler(idx: int, var: str, label: str) -> list[str]:
+_SEL_VARIANTS: dict[str, tuple[str, str, str]] = {
+    "menu": (
+        "LuaMenuHandler",
+        "LuaMenuHandler::create",
+        "menu_selector(luax::LuaMenuHandler::onCallback)",
+    ),
+    "schedule": (
+        "LuaScheduleHandler",
+        "LuaScheduleHandler::create",
+        "schedule_selector(luax::LuaScheduleHandler::onSchedule)",
+    ),
+    "callfunc": (
+        "LuaCallFuncHandler",
+        "LuaCallFuncHandler::create",
+        "callfunc_selector(luax::LuaCallFuncHandler::onCallFunc)",
+    ),
+    "callfuncn": (
+        "LuaCallFuncNHandler",
+        "LuaCallFuncNHandler::create",
+        "callfuncN_selector(luax::LuaCallFuncNHandler::onCallFuncN)",
+    ),
+    "callfuncnd": (
+        "LuaCallFuncNDHandler",
+        "LuaCallFuncNDHandler::create",
+        "callfuncND_selector(luax::LuaCallFuncNDHandler::onCallFuncND)",
+    ),
+    "callfunco": (
+        "LuaCallFuncOHandler",
+        "LuaCallFuncOHandler::create",
+        "callfuncO_selector(luax::LuaCallFuncOHandler::onCallFuncO)",
+    ),
+}
+_DEFAULT_SEL_VARIANT = "menu"
+
+
+def _sel_variant(info: TypeInfo) -> tuple[str, str, str]:
+    variant = info.class_name or _DEFAULT_SEL_VARIANT
+    return _SEL_VARIANTS.get(variant, _SEL_VARIANTS[_DEFAULT_SEL_VARIANT])
+
+
+def check_sel_handler(idx: int, var: str, info: TypeInfo, label: str) -> list[str]:
+    _, create, _ = _sel_variant(info)
     return [
         f"        luaL_checktype(L, {idx}, LUA_TFUNCTION);\n",
-        f"        auto {var}_handler = luax::LuaMenuHandler::create(L, {idx});\n",
-        f'        if (!{var}_handler) luaL_error(L, "{label}: failed to create menu handler");\n',
+        f"        auto {var}_handler = luax::{create}(L, {idx});\n",
+        f'        if (!{var}_handler) luaL_error(L, "{label}: failed to create selector handler");\n',
     ]
+
+
+def _sel_selector_expr(info: TypeInfo) -> str:
+    _, _, selector = _sel_variant(info)
+    return selector
+
+
+def sel_selector_call_arg(info: TypeInfo) -> str:
+    return _sel_selector_expr(info)
+
+
+def sel_call_args(var: str, info: TypeInfo, *, handler_first: bool = True) -> list[str]:
+    handler = f"{var}_handler"
+    selector = _sel_selector_expr(info)
+    if handler_first:
+        return [handler, selector]
+    return [selector, handler]
+
+
+def check_sel_menu_handler(idx: int, var: str, label: str) -> list[str]:
+    return check_sel_handler(
+        idx,
+        var,
+        TypeInfo(
+            "sel", "SEL_MenuHandler", "(sender: CCObject) -> ()", class_name="menu"
+        ),
+        label,
+    )
 
 
 def sel_menu_call_args(var: str) -> list[str]:
-    return [
-        f"{var}_handler",
-        "menu_selector(luax::LuaMenuHandler::onCallback)",
-    ]
+    menu = TypeInfo(
+        "sel", "SEL_MenuHandler", "(sender: CCObject) -> ()", class_name="menu"
+    )
+    return sel_call_args(var, menu, handler_first=True)
 
 
 def check_arg(arg: Arg, info: TypeInfo, idx: int, var: str, label: str) -> list[str]:
     if info.kind == "callback":
         return _emit_callback_lambda(idx, var, info, label)
     if info.kind == "sel":
-        return check_sel_menu_handler(idx, var, label)
+        return check_sel_handler(idx, var, info, label)
+    if info.kind == "delegate":
+        spec = lookup_delegate(info.cxx_type)
+        if spec is None:
+            raise ValueError(f"unknown delegate: {info.cxx_type}")
+        return [
+            f'        if (!lua_istable(L, {idx})) luaL_error(L, "{label} expected delegate table at arg %d", {idx});\n',
+            f"        auto {var}_trampoline = luax::{spec.create_fn}(L, {idx});\n",
+            f'        if (!{var}_trampoline) luaL_error(L, "{label}: failed to create delegate");\n',
+            f"        auto {var} = static_cast<{spec.cxx_type}*>({var}_trampoline);\n",
+        ]
     return emit_stack_check(info, idx, var, label, declare=True)
 
 

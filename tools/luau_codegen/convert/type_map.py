@@ -7,16 +7,34 @@ from typing import AbstractSet, Dict, Optional, Set, Tuple
 from luau_codegen.parse.broma import Class, split_arg, split_top_level
 from luau_codegen.model.domain import short_name
 
-SEL_MENU_HANDLER_TYPES = frozenset(
-    {
-        "SEL_MenuHandler",
-        "cocos2d::SEL_MenuHandler",
-    }
-)
+from luau_codegen.model.delegate_specs import lookup_delegate
+
+SEL_TYPES: dict[str, tuple[str, str]] = {
+    "SEL_MenuHandler": ("menu", "(sender: CCObject) -> ()"),
+    "cocos2d::SEL_MenuHandler": ("menu", "(sender: CCObject) -> ()"),
+    "SEL_SCHEDULE": ("schedule", "(dt: number) -> ()"),
+    "cocos2d::SEL_SCHEDULE": ("schedule", "(dt: number) -> ()"),
+    "SEL_CallFunc": ("callfunc", "() -> ()"),
+    "cocos2d::SEL_CallFunc": ("callfunc", "() -> ()"),
+    "SEL_CallFuncN": ("callfuncn", "(node: CCNode) -> ()"),
+    "cocos2d::SEL_CallFuncN": ("callfuncn", "(node: CCNode) -> ()"),
+    "SEL_CallFuncND": ("callfuncnd", "(node: CCNode, data: userdata) -> ()"),
+    "cocos2d::SEL_CallFuncND": ("callfuncnd", "(node: CCNode, data: userdata) -> ()"),
+    "SEL_CallFuncO": ("callfunco", "(obj: CCObject) -> ()"),
+    "cocos2d::SEL_CallFuncO": ("callfunco", "(obj: CCObject) -> ()"),
+}
 
 
-def is_sel_menu_handler(t: str) -> bool:
-    return normalize_type(t) in SEL_MENU_HANDLER_TYPES
+def is_sel_type(t: str) -> bool:
+    return normalize_type(t) in SEL_TYPES
+
+
+def sel_variant(t: str) -> str:
+    return SEL_TYPES[normalize_type(t)][0]
+
+
+def sel_lua_type(t: str) -> str:
+    return SEL_TYPES[normalize_type(t)][1]
 
 
 WIDE_INTEGER_TYPES = {
@@ -66,7 +84,19 @@ VALUE_TYPES = {
     "CCRect": "CCRect",
     "cocos2d::ccColor3B": "RGBColor",
     "ccColor3B": "RGBColor",
+    "cocos2d::ccColor4B": "RGBAColor",
+    "ccColor4B": "RGBAColor",
     "UIButtonConfig": "UIButtonConfig",
+}
+
+CALLBACK_ALIASES: dict[str, str] = {
+    "Callback": "std::function<void()>",
+}
+
+CLASS_CALLBACK_ALIASES: dict[str, dict[str, str]] = {
+    "LazySprite": {
+        "Callback": "geode::Function<void(geode::Result<>)>",
+    },
 }
 
 GD_ENUM_TYPES = {
@@ -169,6 +199,17 @@ def _callback_inner(n: str) -> Optional[str]:
             depth -= 1
             if depth == 0:
                 return n[start + 1 : i]
+    return None
+
+
+def _parse_result_type(n: str) -> Optional[TypeInfo]:
+    s = strip_ref(n)
+    for prefix in ("geode::Result<", "Result<"):
+        if s.startswith(prefix) and s.endswith(">"):
+            inner = s[len(prefix) : -1].strip()
+            if inner not in ("", "void"):
+                return None
+            return TypeInfo("result", "geode::Result<>", "boolean | string")
     return None
 
 
@@ -313,7 +354,7 @@ def _parse_callback(n: str, object_classes: Dict[str, Class]) -> Optional[TypeIn
     if close == -1:
         return None
     ret_info = classify_return(ret_str, object_classes)
-    if ret_info is None or ret_info.kind != "void":
+    if ret_info is None:
         return None
     arg_infos = []
     for raw in split_top_level(inner[paren + 1 : close]):
@@ -328,10 +369,14 @@ def _parse_callback(n: str, object_classes: Dict[str, Class]) -> Optional[TypeIn
     lua_params = ", ".join(
         f"arg{i}: {ai.lua_type}" for i, ai in enumerate(arg_infos, start=1)
     )
+    if ret_info.kind == "void":
+        lua_ret = "()"
+    else:
+        lua_ret = ret_info.lua_type
     return TypeInfo(
         "callback",
         n,
-        f"({lua_params}) -> ()",
+        f"({lua_params}) -> {lua_ret}",
         callback_ret=ret_info,
         callback_args=tuple(arg_infos),
     )
@@ -399,19 +444,37 @@ def _classify_core(
             is_ref=is_ref,
             is_out=is_out,
         )
+    result = _parse_result_type(n)
+    if result is not None:
+        return TypeInfo(
+            result.kind,
+            result.cxx_type,
+            result.lua_type,
+            is_ref=is_ref,
+            is_out=is_out,
+        )
     if not for_return:
         callback = _parse_callback(n, object_classes)
         if callback is not None:
             return callback
-        if is_sel_menu_handler(n):
-            sender = classify_arg("cocos2d::CCObject*", object_classes)
-            if sender is None:
-                return None
+        if is_sel_type(n):
             return TypeInfo(
                 "sel",
                 n,
-                "(sender: CCObject) -> ()",
-                callback_args=(sender,),
+                sel_lua_type(n),
+                class_name=sel_variant(n),
+            )
+    if n.endswith("*"):
+        spec = lookup_delegate(n)
+        if spec is not None:
+            lua_table = _delegate_lua_type(spec)
+            return TypeInfo(
+                "delegate",
+                n,
+                lua_table,
+                class_name=spec.lua_name,
+                is_ref=is_ref,
+                is_out=is_out,
             )
     if n.endswith("*"):
         cls = resolve_object_class(n, object_classes)
@@ -428,8 +491,29 @@ def _classify_core(
     return None
 
 
-def classify_arg(t: str, object_classes: Dict[str, Class]) -> Optional[TypeInfo]:
+def classify_arg(
+    t: str, object_classes: Dict[str, Class], *, owner_class: str = ""
+) -> Optional[TypeInfo]:
+    n = normalize_type(t)
+    if owner_class:
+        class_aliases = CLASS_CALLBACK_ALIASES.get(owner_class, {})
+        alias = class_aliases.get(n) or class_aliases.get(short_name(n))
+        if alias:
+            return classify_arg(alias, object_classes, owner_class=owner_class)
+    alias = CALLBACK_ALIASES.get(n) or CALLBACK_ALIASES.get(short_name(n))
+    if alias:
+        return classify_arg(alias, object_classes, owner_class=owner_class)
     return _classify_core(t, object_classes, for_return=False)
+
+
+def _delegate_lua_type(spec) -> str:
+    fields = []
+    for m in spec.methods:
+        params = ", ".join(f"arg{i}: {t}" for i, t in enumerate(m.args_lua, start=1))
+        ret = m.ret_lua
+        fn = f"({params}) -> ()" if ret == "()" else f"({params}) -> {ret}"
+        fields.append(f"{m.name}: ({fn})?")
+    return "{ " + ", ".join(fields) + " }"
 
 
 def classify_return(t: str, object_classes: Dict[str, Class]) -> Optional[TypeInfo]:
@@ -457,11 +541,23 @@ def classify_return(t: str, object_classes: Dict[str, Class]) -> Optional[TypeIn
                 is_out=info.is_out,
                 is_vector_ptr=info.is_vector_ptr,
             )
+        elif info.kind == "delegate":
+            info = TypeInfo(
+                info.kind,
+                info.cxx_type,
+                f"{info.lua_type}?",
+                info.class_name,
+                info.is_ref,
+                info.is_out,
+                info.is_vector_ptr,
+            )
     return info
 
 
-def require_classify_arg(t: str, object_classes: Dict[str, Class]) -> TypeInfo:
-    info = classify_arg(t, object_classes)
+def require_classify_arg(
+    t: str, object_classes: Dict[str, Class], *, owner_class: str = ""
+) -> TypeInfo:
+    info = classify_arg(t, object_classes, owner_class=owner_class)
     if info is None:
         raise ValueError(f"unsupported arg type: {t}")
     return info
@@ -474,10 +570,14 @@ def require_classify_return(t: str, object_classes: Dict[str, Class]) -> TypeInf
     return info
 
 
-def method_input_arg_count(method, object_classes: Dict[str, Class]) -> int:
+def method_input_arg_count(
+    method, object_classes: Dict[str, Class], *, owner_class: str = ""
+) -> int:
     from luau_codegen.convert.sel_args import count_lua_method_args
 
     ret = classify_return(method.ret, object_classes)
     if ret is None:
         return len(method.args)
-    return count_lua_method_args(method, object_classes, ret.kind)
+    return count_lua_method_args(
+        method, object_classes, ret.kind, owner_class=owner_class
+    )

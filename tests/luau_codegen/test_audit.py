@@ -50,10 +50,9 @@ class AuditReportTests(unittest.TestCase):
         data = collect_audit(plan, root)
         bucket = data["buckets"]["delegate_arg"]
 
-        self.assertEqual(bucket["count"], 1)
+        self.assertEqual(bucket["count"], 0)
         self.assertIn(
-            "unsupported-arg:cocos2d::CCTouchDelegate*",
-            bucket["reasonHistogram"],
+            "addStandardDelegate", plan.supported_by_class.get("CCTouchDispatcher", [])
         )
 
     def test_audit_classifies_container_arg_for_primitive_vector(self) -> None:
@@ -104,26 +103,27 @@ class AuditReportTests(unittest.TestCase):
 
     def test_audit_classifies_sel_arg(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")
-        target = Class(
+        ccnode = Class(
             name="CCNode",
+            namespace="cocos2d",
             bases=["CCObject"],
             methods=[
                 Method(
-                    name="scheduleSelector",
+                    name="schedule",
                     ret="void",
-                    args=[Arg("cocos2d::SEL_CallFunc", "selector")],
+                    args=[Arg("cocos2d::SEL_SCHEDULE", "selector")],
                     platforms=all_platforms(),
                 )
             ],
         )
-        root = Root(classes=[ccobject, target])
+        root = Root(classes=[ccobject, ccnode])
         plan = collect_plan(root, "win")
 
         data = collect_audit(plan, root)
         bucket = data["buckets"]["sel_arg"]
 
-        self.assertEqual(bucket["count"], 1)
-        self.assertEqual(bucket["id"], "sel_arg")
+        self.assertEqual(bucket["count"], 0)
+        self.assertIn("schedule", plan.supported_by_class.get("CCNode", []))
 
     def test_audit_emits_markdown_sections(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")
@@ -202,11 +202,8 @@ class AuditReportTests(unittest.TestCase):
         data = collect_audit(plan, root)
         bucket = data["buckets"]["std_function_arg"]
 
-        self.assertEqual(bucket["count"], 1)
-        self.assertIn(
-            "unsupported-arg:std::function<bool()>",
-            bucket["reasonHistogram"],
-        )
+        self.assertEqual(bucket["count"], 0)
+        self.assertIn("setHandler", plan.supported_by_class.get("PopupLayer", []))
 
     def test_audit_classifies_callback_alias(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")
@@ -228,10 +225,8 @@ class AuditReportTests(unittest.TestCase):
         data = collect_audit(plan, root)
         bucket = data["buckets"]["callback_alias"]
 
-        self.assertEqual(bucket["count"], 1)
-        self.assertIn(
-            "MenuLayer.registerCallback: unsupported-arg:Callback", bucket["samples"]
-        )
+        self.assertEqual(bucket["count"], 0)
+        self.assertIn("registerCallback", plan.supported_by_class.get("MenuLayer", []))
 
     def test_audit_classifies_value_type_arg(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")

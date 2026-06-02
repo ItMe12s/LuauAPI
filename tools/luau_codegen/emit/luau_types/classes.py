@@ -77,7 +77,7 @@ def _emit_class(
         for name, methods in sorted(instance_methods.items()):
             if len(methods) == 1:
                 m = methods[0]
-                args = _classify_input_args(m, objects)
+                args = _classify_input_args(cls, m, objects)
                 ret_type = _method_return_type(cls, m, objects)
                 arg_text = ", ".join(
                     f"arg{i}: {arg.lua_type}" for i, arg in enumerate(args, start=1)

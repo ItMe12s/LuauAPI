@@ -7,9 +7,11 @@ from luau_codegen.parse.broma import Class, Field, Method
 from luau_codegen.policy.fields import bindable_field
 from luau_codegen.model.domain import short_name
 from luau_codegen.convert.type_map import TypeInfo, classify_arg, classify_return
+from luau_codegen.model.delegate_specs import DELEGATE_SPECS
 
 _VALUE_STUB_BODY: Dict[str, str] = {
     "RGBColor": "export type RGBColor = { r: number, g: number, b: number }\n",
+    "RGBAColor": "export type RGBAColor = { r: number, g: number, b: number, a: number }\n",
     "CCSize": "export type CCSize = { width: number, height: number }\n",
     "CCPoint": "export type CCPoint = { x: number, y: number }\n",
     "CCRect": "export type CCRect = { origin: CCPoint, size: CCSize }\n",
@@ -39,7 +41,14 @@ _OPAQUE_STUB_BODY: Dict[str, str] = {
     ),
 }
 
-_VALUE_STUB_ORDER = ("CCPoint", "CCSize", "RGBColor", "CCRect", "UIButtonConfig")
+_VALUE_STUB_ORDER = (
+    "CCPoint",
+    "CCSize",
+    "RGBColor",
+    "RGBAColor",
+    "CCRect",
+    "UIButtonConfig",
+)
 _OPAQUE_STUB_ORDER = ("FMODChannel", "FMODSound", "FMODChannelGroup")
 _TYPE_STUB_ORDER = _VALUE_STUB_ORDER + _OPAQUE_STUB_ORDER
 
@@ -88,6 +97,26 @@ def _object_type_name(info: TypeInfo) -> str:
     if info.class_name:
         return info.class_name
     return info.lua_type.removesuffix("?")
+
+
+def _emit_delegate_stub_block() -> str:
+    lines = ["-- Delegate table types\n\n"]
+    seen: set[str] = set()
+    for spec in DELEGATE_SPECS.values():
+        if spec.lua_name in seen:
+            continue
+        seen.add(spec.lua_name)
+        fields = []
+        for m in spec.methods:
+            params = ", ".join(
+                f"arg{i}: {t}" for i, t in enumerate(m.args_lua, start=1)
+            )
+            ret = m.ret_lua
+            fn = f"({params}) -> ()" if ret == "()" else f"({params}) -> {ret}"
+            fields.append(f"    {m.name}: ({fn})?")
+        body = ",\n".join(fields)
+        lines.append(f"export type {spec.lua_name} = {{\n{body}\n}}\n\n")
+    return "".join(lines)
 
 
 def _refs_from_method(method: Method, objects: Dict[str, Class]) -> set[str]:
