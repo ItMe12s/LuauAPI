@@ -389,7 +389,16 @@ def _emit_field_accessors(
         out.append(f"            if (self->{field.name} == nullptr) {{\n")
         out.append(f'                luaL_error(L, "{label} field pointer is null");\n')
         out.append("            }\n")
-        out.append(f"            *self->{field.name} = std::move(value);\n")
+        if arg_info.kind == "primitive_vector":
+            out.append(
+                f"            luax::assignPrimitiveVector(*self->{field.name}, std::move(value));\n"
+            )
+        else:
+            out.append(f"            *self->{field.name} = std::move(value);\n")
+    elif arg_info.kind == "primitive_vector":
+        out.append(
+            f"            luax::assignPrimitiveVector(self->{field.name}, std::move(value));\n"
+        )
     elif arg_info.kind == "map":
         out.append(
             f"            luax::assignMap(self->{field.name}, std::move(value));\n"

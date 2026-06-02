@@ -580,8 +580,67 @@ class GeneratedSafetyTests(unittest.TestCase):
         )
 
         self.assertIn("pushPrimitiveVector<float>(L, self->m_pSplitTimes)", text)
-        self.assertIn("*self->m_pSplitTimes = std::move(value)", text)
+        self.assertIn(
+            "luax::assignPrimitiveVector(*self->m_pSplitTimes, std::move(value))", text
+        )
+        self.assertNotIn("*self->m_pSplitTimes = std::move(value)", text)
         self.assertIn("field pointer is null", text)
+
+    def test_primitive_vector_bool_field_setter_uses_assign_primitive_vector(
+        self,
+    ) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        foo = Class(
+            name="Foo",
+            namespace="cocos2d",
+            bases=["CCObject"],
+            fields=[Field("m_flags", "gd::vector<bool>")],
+        )
+        grouped, _ = group_supported(foo, {}, "win")
+        text = _emit_class_file(
+            foo,
+            grouped,
+            [],
+            [(foo, foo.fields[0])],
+            {"CCObject": ccobject, "cocos2d::CCObject": ccobject},
+            set(),
+            1,
+            "win",
+        )
+
+        self.assertIn("checkPrimitiveVector<bool>", text)
+        self.assertIn(
+            "luax::assignPrimitiveVector(self->m_flags, std::move(value))", text
+        )
+        self.assertNotIn("self->m_flags =", text)
+
+    def test_primitive_vector_int_pointer_field_setter_uses_assign_primitive_vector(
+        self,
+    ) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        foo = Class(
+            name="Foo",
+            namespace="cocos2d",
+            bases=["CCObject"],
+            fields=[Field("m_pInts", "gd::vector<int>*")],
+        )
+        grouped, _ = group_supported(foo, {}, "win")
+        text = _emit_class_file(
+            foo,
+            grouped,
+            [],
+            [(foo, foo.fields[0])],
+            {"CCObject": ccobject, "cocos2d::CCObject": ccobject},
+            set(),
+            1,
+            "win",
+        )
+
+        self.assertIn("checkPrimitiveVector<int>", text)
+        self.assertIn(
+            "luax::assignPrimitiveVector(*self->m_pInts, std::move(value))", text
+        )
+        self.assertNotIn("*self->m_pInts = std::move(value)", text)
 
     def test_map_field_setter_uses_assign_map(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")

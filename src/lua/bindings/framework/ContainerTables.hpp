@@ -347,4 +347,19 @@ namespace luax {
     void assignUnorderedSet(gd::unordered_set<T>& dest, gd::unordered_set<T> src) {
         detail::assignSetContainer(dest, std::move(src));
     }
+
+    template <class T>
+    void assignPrimitiveVector(gd::vector<T>& dest, gd::vector<T> src) {
+        dest.clear();
+        dest.reserve(src.size());
+        if constexpr (std::is_same_v<T, bool>) {
+            for (std::size_t i = 0; i < src.size(); ++i) {
+                dest.push_back(src[i]);
+            }
+        } else {
+            for (auto& elem : src) {
+                dest.push_back(std::move(elem));
+            }
+        }
+    }
 }

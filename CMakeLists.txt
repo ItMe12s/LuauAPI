@@ -98,6 +98,12 @@ if (NOT LUAUAPI_HOST_ONLY)
         message(STATUS "Found Geode: $ENV{GEODE_SDK}")
     endif()
 
+    if (NOT DEFINED ENV{GEODE_BINDINGS_REPO_PATH} AND NOT GEODE_BINDINGS_REPO_PATH)
+        set(GEODE_BINDINGS_REPO_PATH "${geode_bindings_SOURCE_DIR}"
+            CACHE PATH "Geode bindings repo (LuauAPI LUAUAPI_BINDINGS_GIT_TAG pin)" FORCE)
+        message(STATUS "LuauAPI GEODE_BINDINGS_REPO_PATH: ${GEODE_BINDINGS_REPO_PATH}")
+    endif()
+
     add_subdirectory($ENV{GEODE_SDK} ${CMAKE_CURRENT_BINARY_DIR}/geode)
 endif()
 

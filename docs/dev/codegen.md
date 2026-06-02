@@ -139,6 +139,10 @@ Keep them skipped unless a safe, **read-only** proxy is added, a plain field bin
 `gd::map` and `gd::set` field setters use `luax::assignMap` / `luax::assignSet` (clear plus per-entry insert) instead of whole-container `operator=`,
 because Geode gnustl on Android does not implement `_Rb_tree::_M_move_assign`.
 
+`gd::vector` primitive field setters (`gd::vector<int>`, `gd::vector<bool>`,
+and pointer fields such as `gd::vector<float>*`) use `luax::assignPrimitiveVector` (clear plus `push_back`) instead of whole-container `operator=`.
+This is required for `vector<bool>` on Android, where gnustl's `vector<bool>::swap` does not accept `_Bit_iterator` arguments.
+
 ## Overload resolution
 
 Broma can declare several methods with the same name.

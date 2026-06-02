@@ -44,6 +44,9 @@ CMake downloads these for you during configuration, so you do not install them b
 To bump bindings for a new Geometry Dash version,
 update `mod.json` and the `LUAUAPI_BINDINGS_GIT_TAG` cache variable to a matching commit from the Geode bindings repo.
 
+LuauAPI sets `GEODE_BINDINGS_REPO_PATH` to that same pinned fetch for Geode SDK configure, so Geode Codegen does not clone bindings `main` separately.
+Override with the `GEODE_BINDINGS_REPO_PATH` environment variable only if you intentionally use another bindings checkout.
+
 ## Supported platforms
 
 `CMakeLists.txt` configures code generation for the following targets:
