@@ -197,6 +197,8 @@ INACCESSIBLE_CLASSES = {
     "CCProfilingTimer",
     "CCSchedulerScriptHandlerEntry",
     "CCScriptHandlerEntry",
+    "CCStandardTouchHandler",
+    "CCTargetedTouchHandler",
     "CCTexturePVR",
     "CCTouchScriptHandlerEntry",
 }

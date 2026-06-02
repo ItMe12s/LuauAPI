@@ -116,6 +116,27 @@ class LinkClassFilterTests(unittest.TestCase):
             self.assertFalse(ok, name)
             self.assertEqual(reason, "inaccessible", name)
 
+    def test_touch_handler_impl_classes_are_inaccessible(self) -> None:
+        for name in ("CCStandardTouchHandler", "CCTargetedTouchHandler"):
+            cls = Class(
+                name=name,
+                namespace="cocos2d",
+                attributes=["link(win, android)"],
+            )
+            method = Method(
+                name="handlerWithDelegate",
+                ret=f"{name}*",
+                is_static=True,
+                args=[
+                    Arg("cocos2d::CCTouchDelegate*", "delegate"),
+                    Arg("int", "priority"),
+                ],
+                platforms={"m1": "0x1", "imac": "0x2", "ios": "0x3"},
+            )
+            ok, reason = supported(cls, method, {name: cls}, "m1")
+            self.assertFalse(ok, name)
+            self.assertEqual(reason, "inaccessible-class", name)
+
 
 class SelMenuHandlerFilterTests(unittest.TestCase):
     def test_orphan_sel_menu_handler_is_accepted(self) -> None:
