@@ -62,8 +62,8 @@ from luau_codegen.policy.link_attrs import (  # type: ignore[import-unresolved]
     class_link_platforms,
     is_link_platform,
 )
-from luau_codegen.emit.hooks import (  # type: ignore[import-unresolved]
-    android_symbol,
+from luau_codegen.convert.symbols import android_symbol  # type: ignore[import-unresolved]
+from luau_codegen.policy.hooks import (  # type: ignore[import-unresolved]
     hook_address_expr,
     hook_offset,
     hookable,
@@ -173,7 +173,7 @@ __all__ = [
     "supported",
     "class_link_platforms",
     "is_link_platform",
-    # emit.hooks
+    # convert.symbols / policy.hooks
     "android_symbol",
     "hook_address_expr",
     "hook_offset",

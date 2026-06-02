@@ -27,8 +27,6 @@
 #include <utility>
 
 namespace luax {
-    static_assert(imes::luauapi::kDefaultScriptDeadlineMs == kDefaultScriptDeadlineMs);
-
     namespace {
         constexpr char const kTracebackName[] = "luax:traceback";
 

@@ -22,16 +22,9 @@
     #endif
 #endif
 
+#include <RuntimeTypes.hpp>
+
 namespace imes::luauapi {
-    inline constexpr int kDefaultScriptDeadlineMs = 250;
-
-    enum class RuntimeStatus {
-        NotReady,
-        Ready,
-        InitFailed,
-        Panicked,
-    };
-
     LUAUAPI_DLL geode::Result<void> runFile(
         std::filesystem::path const& resourcesRoot,
         std::filesystem::path const& relativePath,

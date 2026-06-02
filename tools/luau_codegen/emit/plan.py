@@ -18,7 +18,7 @@ from luau_codegen.policy.free_functions import (
     free_function_skipped_object_ref,
     group_supported_free_functions,
 )
-from luau_codegen.emit.hooks import hookable
+from luau_codegen.policy.hooks import hookable
 from luau_codegen.policy.intersection import (
     IntersectionResult,
     IntersectionStats,

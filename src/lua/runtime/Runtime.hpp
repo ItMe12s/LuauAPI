@@ -3,7 +3,7 @@
 #include "lua/Config.hpp"
 
 #include <Geode/Geode.hpp>
-#include <LuauAPI.hpp>
+#include <RuntimeTypes.hpp>
 #include <lua.h>
 #include <lualib.h>
 

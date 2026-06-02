@@ -13,7 +13,7 @@ from luau_codegen.emit.plan import (
     hook_target_count,
     plan_outputs,
 )
-from luau_codegen.emit.hooks import hook_address_expr
+from luau_codegen.policy.hooks import hook_address_expr
 from luau_codegen.policy.intersection import (
     hook_method_keys,
     intersection_platforms,

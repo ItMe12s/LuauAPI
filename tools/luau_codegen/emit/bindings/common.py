@@ -4,7 +4,7 @@ from typing import List
 
 from luau_codegen.parse.broma import Class
 from luau_codegen.emit.cxx_templates import emit_hook_support, file_preamble
-from luau_codegen.emit.hooks import hook_address_expr
+from luau_codegen.policy.hooks import hook_address_expr
 from luau_codegen.emit.plan import EmitPlan
 from luau_codegen.emit.bindings.class_file import _gen_ns
 
