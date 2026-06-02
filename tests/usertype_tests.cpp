@@ -72,13 +72,13 @@ TEST_CASE("Usertype metatable dispatches methods and fields") {
     lua_pushvalue(L, -2);
     REQUIRE(lua_pcall(L, 1, 1, 0) == 0);
     REQUIRE(std::string_view(lua_tostring(L, -1)) == "called");
-    lua_pop(L, 2);
+    lua_pop(L, 1);
 
     lua_getfield(L, -1, "answer");
+    REQUIRE(lua_isstring(L, -1));
     REQUIRE(std::string_view(lua_tostring(L, -1)) == "value");
     lua_pop(L, 2);
 
-    lua_pop(L, 1);
     node->release();
 }
 

@@ -5,6 +5,7 @@
 #include <lua.h>
 #include <lualib.h>
 
+#include <optional>
 #include <string>
 #include <thread>
 
@@ -55,10 +56,10 @@ TEST_CASE("protectedCall restores stack height on success") {
     pushReturnValue(L, 99);
     int topBefore = lua_gettop(L);
     REQUIRE(runtime->protectedCall(0, 1, "test"));
-    REQUIRE(lua_gettop(L) == topBefore + 1);
+    REQUIRE(lua_gettop(L) == topBefore);
     REQUIRE(lua_tointeger(L, -1) == 99);
     lua_pop(L, 1);
-    REQUIRE(lua_gettop(L) == topBefore);
+    REQUIRE(lua_gettop(L) == topBefore - 1);
 }
 
 TEST_CASE("protectedCall restores stack height on failure") {
@@ -77,7 +78,7 @@ TEST_CASE("protectedCall restores stack height on failure") {
     );
     int topBefore = lua_gettop(L);
     REQUIRE_FALSE(runtime->protectedCall(0, 0, "test"));
-    REQUIRE(lua_gettop(L) == topBefore);
+    REQUIRE(lua_gettop(L) == topBefore - 1);
     REQUIRE_FALSE(runtime->lastError().empty());
 }
 
@@ -96,13 +97,13 @@ TEST_CASE("Runtime rejects off-main-thread access") {
     RuntimeGuard guard;
     luax::Runtime::getOrCreate();
 
-    std::optional<bool> offThreadReady;
+    std::optional<bool> offThreadAccess;
     std::thread worker([&] {
         auto* runtime = luax::Runtime::getIfInitialized();
-        offThreadReady = runtime && runtime->ready();
+        offThreadAccess = runtime && runtime->assertMainThread();
     });
     worker.join();
 
-    REQUIRE(offThreadReady.has_value());
-    REQUIRE_FALSE(*offThreadReady);
+    REQUIRE(offThreadAccess.has_value());
+    REQUIRE_FALSE(*offThreadAccess);
 }

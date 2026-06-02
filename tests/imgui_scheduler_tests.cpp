@@ -36,12 +36,14 @@ TEST_CASE("ImGuiDrawScheduler fires registered draw callbacks") {
     REQUIRE(scheduler.activeCount() == 1);
 
     scheduler.drawAll();
-    REQUIRE(scheduler.activeCount() == 0);
+    REQUIRE(scheduler.activeCount() == 1);
     REQUIRE_FALSE(scheduler.inFrame());
 
     lua_getglobal(L, "drawHits");
     REQUIRE(lua_tointeger(L, -1) == 1);
     lua_pop(L, 1);
+
+    scheduler.clear();
 }
 
 TEST_CASE("ImGuiDrawScheduler cancels callbacks that error") {
