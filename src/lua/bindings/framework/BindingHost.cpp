@@ -12,7 +12,7 @@ namespace luax {
         return static_cast<BindingHost*>(lua_callbacks(L)->userdata);
     }
 
-    BindingHost::ResourcesRootScope::ResourcesRootScope(BindingHost& host, std::filesystem::path root)
+    BindingHost::ResourcesRootScope::ResourcesRootScope(BindingHost& host, std::filesystem::path const& root)
         : m_host(host), m_previous(host.resourcesRoot()) {
         m_host.setResourcesRoot(root);
     }

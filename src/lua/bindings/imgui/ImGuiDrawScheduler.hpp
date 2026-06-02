@@ -4,6 +4,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <unordered_map>
 #include <vector>
 
 namespace luax {
@@ -29,8 +30,10 @@ namespace luax {
 
         DrawCb* find(std::uint64_t id);
         bool fire(DrawCb& cb);
+        void eraseAt(std::size_t index);
 
         std::vector<DrawCb> m_callbacks;
+        std::unordered_map<std::uint64_t, std::size_t> m_index;
         std::uint64_t m_nextId = 1;
         bool m_inFrame = false;
     };

@@ -52,6 +52,22 @@ namespace {
     }
 }
 
+TEST_CASE("Fields tryPush returns false without materializing a table") {
+    RuntimeGuard guard;
+    auto* runtime = luax::Runtime::getOrCreate();
+    auto* L = runtime->state();
+
+    auto* node = new TestNode();
+    REQUIRE_FALSE(luax::Fields::tryPush(L, node));
+    REQUIRE(lua_gettop(L) == 0);
+
+    luax::Fields::push(L, node);
+    REQUIRE(lua_istable(L, -1));
+    lua_pop(L, 1);
+
+    node->release();
+}
+
 TEST_CASE("Fields evictIfFinalRelease removes entry on final release") {
     RuntimeGuard guard;
     auto* runtime = luax::Runtime::getOrCreate();

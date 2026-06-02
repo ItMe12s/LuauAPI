@@ -79,7 +79,7 @@ namespace {
         ensureCapacity(L);
         LuaRef ref;
         ref.reset(L, 1);
-        std::uint64_t id = TaskScheduler::get().add(std::move(ref), 0.0, -1.0);
+        std::uint64_t id = TaskScheduler::get().addDeferred(std::move(ref));
         pushHandle(L, id);
         return 1;
     }
@@ -117,7 +117,9 @@ namespace {
         }
         lua_pop(L, 1);
     }
+}
 
+namespace luax {
     geode::Result<void> registerTask(lua_State* L) {
         timeOrigin() = std::chrono::steady_clock::now();
 

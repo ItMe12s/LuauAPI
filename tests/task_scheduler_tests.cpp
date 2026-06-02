@@ -85,7 +85,7 @@ TEST_CASE("TaskScheduler advance restores stack when protectedCall fails early")
     REQUIRE(L != nullptr);
 
     int topBefore = lua_gettop(L);
-    auto ref = luauapi_test::makeCallback(L, "()");
+    auto ref = luauapi_test::makeCallback(L, "return");
     auto& scheduler = luax::TaskScheduler::get();
     auto id = scheduler.add(std::move(ref), 0.0, 0.0);
     REQUIRE(id != 0);
@@ -113,6 +113,26 @@ TEST_CASE("TaskScheduler interval task drop-tick fires once after large frame de
     REQUIRE(scheduler.activeCount() == 1);
 
     lua_getglobal(L, "bigDtHits");
+    REQUIRE(lua_tointeger(L, -1) == 1);
+    lua_pop(L, 1);
+}
+
+TEST_CASE("TaskScheduler defer fires on the next advance") {
+    RuntimeGuard guard;
+    auto* runtime = luax::Runtime::getOrCreate();
+    auto* L = runtime->state();
+
+    auto ref = luauapi_test::makeCallback(L, "_G.deferHits = (_G.deferHits or 0) + 1");
+
+    auto& scheduler = luax::TaskScheduler::get();
+    auto id = scheduler.addDeferred(std::move(ref));
+    REQUIRE(id != 0);
+    REQUIRE(scheduler.activeCount() == 1);
+
+    scheduler.advance(0.0, L);
+    REQUIRE(scheduler.activeCount() == 0);
+
+    lua_getglobal(L, "deferHits");
     REQUIRE(lua_tointeger(L, -1) == 1);
     lua_pop(L, 1);
 }

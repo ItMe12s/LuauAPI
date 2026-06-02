@@ -33,7 +33,7 @@ namespace geode::detail {
 namespace cocos2d {
     class CCObject {
     public:
-        CCObject() {
+        CCObject() : m_objectId(++s_nextObjectId) {
             geode::detail::trackCocosObject(this);
         }
 
@@ -52,8 +52,11 @@ namespace cocos2d {
         }
 
         unsigned int retainCount() const { return m_retainCount; }
+        std::uint64_t objectId() const { return m_objectId; }
 
     private:
+        static inline std::uint64_t s_nextObjectId = 0;
+        std::uint64_t m_objectId = 0;
         unsigned int m_retainCount = 1;
     };
 
@@ -91,10 +94,13 @@ namespace geode {
         };
 
         WeakRef() = default;
-        explicit WeakRef(T* ptr) : m_ptr(ptr) {}
+        explicit WeakRef(T* ptr) : m_ptr(ptr), m_objectId(ptr ? ptr->objectId() : 0) {}
 
         Lock lock() const {
             if (!m_ptr || !detail::isLiveCocosObject(m_ptr)) {
+                return Lock{};
+            }
+            if (m_ptr->objectId() != m_objectId) {
                 return Lock{};
             }
             return Lock{m_ptr};
@@ -102,6 +108,7 @@ namespace geode {
 
     private:
         T* m_ptr = nullptr;
+        std::uint64_t m_objectId = 0;
     };
 
     namespace cast {

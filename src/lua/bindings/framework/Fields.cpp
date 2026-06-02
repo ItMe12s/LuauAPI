@@ -35,6 +35,26 @@ namespace luax {
         }
     }
 
+    bool Fields::tryPush(lua_State* L, cocos2d::CCNode* node) {
+        if (!L || !node) {
+            return false;
+        }
+
+        purgeStaleFieldEntries();
+
+        auto& tables = fieldTables();
+        auto it = tables.find(node);
+        if (it == tables.end()) {
+            return false;
+        }
+        if (!entryStillOwnsNode(it->second, node)) {
+            it->second.table.reset();
+            tables.erase(it);
+            return false;
+        }
+        return it->second.table.push();
+    }
+
     void Fields::push(lua_State* L, cocos2d::CCNode* node) {
         if (!L) return;
         if (!node) {

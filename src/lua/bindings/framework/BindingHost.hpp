@@ -35,7 +35,7 @@ namespace luax {
 
         class ResourcesRootScope final {
         public:
-            ResourcesRootScope(BindingHost& host, std::filesystem::path root);
+            ResourcesRootScope(BindingHost& host, std::filesystem::path const& root);
             ~ResourcesRootScope();
 
             ResourcesRootScope(ResourcesRootScope const&) = delete;

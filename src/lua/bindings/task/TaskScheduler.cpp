@@ -14,7 +14,7 @@ namespace luax {
     }
 
     std::uint64_t TaskScheduler::add(LuaRef callback, double delaySeconds, double intervalSeconds) {
-        if (m_tasks.size() >= kMaxScheduledTasks) {
+        if (full()) {
             return 0;
         }
         Task task;
@@ -22,8 +22,21 @@ namespace luax {
         task.callback = std::move(callback);
         task.remaining = delaySeconds;
         task.interval = intervalSeconds;
-        m_tasks.push_back(std::move(task));
-        return m_tasks.back().id;
+        m_index[task.id] = TaskLoc{false, m_timed.size()};
+        m_timed.push_back(std::move(task));
+        return m_timed.back().id;
+    }
+
+    std::uint64_t TaskScheduler::addDeferred(LuaRef callback) {
+        if (full()) {
+            return 0;
+        }
+        Task task;
+        task.id = m_nextId++;
+        task.callback = std::move(callback);
+        m_index[task.id] = TaskLoc{true, m_deferred.size()};
+        m_deferred.push_back(std::move(task));
+        return m_deferred.back().id;
     }
 
     void TaskScheduler::cancel(std::uint64_t id) {
@@ -33,12 +46,20 @@ namespace luax {
     }
 
     TaskScheduler::Task* TaskScheduler::find(std::uint64_t id) {
-        for (auto& task : m_tasks) {
-            if (task.id == id && !task.cancelled) {
-                return &task;
-            }
+        auto it = m_index.find(id);
+        if (it == m_index.end()) {
+            return nullptr;
         }
-        return nullptr;
+        auto& loc = it->second;
+        auto& tasks = loc.deferred ? m_deferred : m_timed;
+        if (loc.index >= tasks.size()) {
+            return nullptr;
+        }
+        Task& task = tasks[loc.index];
+        if (task.id != id || task.cancelled) {
+            return nullptr;
+        }
+        return &task;
     }
 
     bool TaskScheduler::fire(Task& task) {
@@ -54,67 +75,118 @@ namespace luax {
         return ok;
     }
 
-    void TaskScheduler::advance(double dt, lua_State* L) {
-        (void)L;
-        auto* runtime = Runtime::getIfInitialized();
-        if (!runtime || m_tasks.empty()) return;
+    void TaskScheduler::fireDeferred() {
+        std::vector<std::size_t> due;
+        due.reserve(m_deferred.size());
+        for (std::size_t i = 0; i < m_deferred.size(); ++i) {
+            if (!m_deferred[i].cancelled) {
+                due.push_back(i);
+            }
+        }
 
-        std::vector<std::uint64_t> due;
-        std::size_t count = m_tasks.size();
-        for (std::size_t i = 0; i < count; ++i) {
-            Task& task = m_tasks[i];
+        for (std::size_t i : due) {
+            if (i >= m_deferred.size()) continue;
+            Task& task = m_deferred[i];
             if (task.cancelled) continue;
-            if (task.interval < 0.0) {
-                due.push_back(task.id);
-            } else {
-                task.remaining -= dt;
-                if (task.remaining <= 0.0) {
-                    due.push_back(task.id);
+
+            bool ok = fire(task);
+            (void)ok;
+            m_deferred[i].cancelled = true;
+        }
+    }
+
+    void TaskScheduler::fireTimedDue(std::vector<std::size_t> const& due) {
+        for (std::size_t i : due) {
+            if (i >= m_timed.size()) continue;
+            Task& task = m_timed[i];
+            if (task.cancelled) continue;
+
+            bool ok = fire(task);
+            Task& current = m_timed[i];
+            if (!current.cancelled) {
+                if (!ok) {
+                    current.cancelled = true;
+                } else if (current.interval > 0.0) {
+                    current.remaining = current.interval;
+                } else {
+                    current.cancelled = true;
                 }
             }
         }
+    }
 
-        for (std::uint64_t id : due) {
-            Task* task = find(id);
-            if (!task) continue;
+    void TaskScheduler::eraseAt(std::vector<Task>& tasks, bool deferred, std::size_t index) {
+        std::size_t last = tasks.size() - 1;
+        m_index.erase(tasks[index].id);
+        if (index != last) {
+            tasks[index] = std::move(tasks[last]);
+            m_index[tasks[index].id] = TaskLoc{deferred, index};
+        }
+        tasks.pop_back();
+    }
 
-            bool ok = fire(*task);
+    void TaskScheduler::compact(std::vector<Task>& tasks, bool deferred) {
+        for (std::size_t i = 0; i < tasks.size();) {
+            if (!tasks[i].cancelled) {
+                ++i;
+                continue;
+            }
+            tasks[i].callback.reset();
+            eraseAt(tasks, deferred, i);
+        }
+    }
 
-            task = find(id);
-            if (!task) continue;
+    void TaskScheduler::advance(double dt, lua_State* L) {
+        (void)L;
+        auto* runtime = Runtime::getIfInitialized();
+        if (!runtime) return;
 
-            if (!ok) {
-                task->cancelled = true;
-            } else if (task->interval > 0.0) {
-                task->remaining = task->interval;
-            } else {
-                task->cancelled = true;
+        if (!m_deferred.empty()) {
+            fireDeferred();
+            compact(m_deferred, true);
+        }
+
+        if (m_timed.empty()) return;
+
+        std::vector<std::size_t> due;
+        due.reserve(m_timed.size());
+        for (std::size_t i = 0; i < m_timed.size(); ++i) {
+            Task& task = m_timed[i];
+            if (task.cancelled) continue;
+            task.remaining -= dt;
+            if (task.remaining <= 0.0) {
+                due.push_back(i);
             }
         }
 
-        for (auto& task : m_tasks) {
-            if (task.cancelled) task.callback.reset();
+        if (!due.empty()) {
+            fireTimedDue(due);
+            compact(m_timed, false);
         }
-        m_tasks.erase(
-            std::remove_if(m_tasks.begin(), m_tasks.end(), [](Task const& t) { return t.cancelled; }),
-            m_tasks.end()
-        );
     }
 
     void TaskScheduler::clear() {
-        for (auto& task : m_tasks) {
+        for (auto& task : m_timed) {
             task.callback.reset();
         }
-        m_tasks.clear();
+        for (auto& task : m_deferred) {
+            task.callback.reset();
+        }
+        m_timed.clear();
+        m_deferred.clear();
+        m_index.clear();
     }
 
     bool TaskScheduler::full() const {
-        return m_tasks.size() >= kMaxScheduledTasks;
+        return m_timed.size() + m_deferred.size() >= kMaxScheduledTasks;
     }
 
     std::size_t TaskScheduler::activeCount() const {
         std::size_t n = 0;
-        for (auto const& task : m_tasks) {
+        for (auto const& task : m_timed) {
+            if (!task.cancelled) ++n;
+        }
+        for (auto const& task : m_deferred) {
             if (!task.cancelled) ++n;
         }
         return n;

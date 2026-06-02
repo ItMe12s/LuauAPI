@@ -78,6 +78,8 @@ def emit_internal_hpp() -> str:
         "    LuaHookTarget const* target = nullptr;\n"
         "    geode::Hook* hook = nullptr;\n"
         "    std::vector<std::shared_ptr<LuaHookCallback>> callbacks;\n"
+        "    std::vector<std::shared_ptr<LuaHookCallback>> preSorted;\n"
+        "    std::vector<std::shared_ptr<LuaHookCallback>> postSorted;\n"
         "};\n\n"
         "std::unordered_map<std::string, LuaHookState>& hookStates();\n\n"
         "#if defined(GEODE_IS_ANDROID)\n"
@@ -106,12 +108,7 @@ def emit_internal_hpp() -> str:
         "bool runLuaPreHooks(char const* targetId, int nargs, PushContext pushContext, ApplyArgs applyArgs, ApplySkip applySkip) {\n"
         "    auto it = hookStates().find(targetId);\n"
         "    if (it == hookStates().end()) return false;\n"
-        "    auto callbacks = it->second.callbacks;\n"
-        "    std::stable_sort(callbacks.begin(), callbacks.end(), [](auto const& a, auto const& b) {\n"
-        "        if (!a || !b) return static_cast<bool>(b);\n"
-        "        if (a->priority != b->priority) return a->priority < b->priority;\n"
-        "        return a->installOrder < b->installOrder;\n"
-        "    });\n"
+        "    auto const& callbacks = it->second.preSorted;\n"
         "    auto* host = luax::BindingHost::getIfInitialized();\n"
         "    if (!host || !host->ready()) return false;\n"
         "    auto* L = host->state();\n"
@@ -157,16 +154,11 @@ def emit_internal_hpp() -> str:
         "void runLuaPostHooks(char const* targetId, int nargs, PushContext pushContext, ApplyReturn applyReturn) {\n"
         "    auto it = hookStates().find(targetId);\n"
         "    if (it == hookStates().end()) return;\n"
-        "    auto callbacks = it->second.callbacks;\n"
+        "    auto const& callbacks = it->second.postSorted;\n"
         "    auto* host = luax::BindingHost::getIfInitialized();\n"
         "    if (!host || !host->ready()) return;\n"
         "    auto* L = host->state();\n"
         "    if (!L) return;\n"
-        "    std::stable_sort(callbacks.begin(), callbacks.end(), [](auto const& a, auto const& b) {\n"
-        "        if (!a || !b) return static_cast<bool>(b);\n"
-        "        if (a->priority != b->priority) return a->priority > b->priority;\n"
-        "        return a->installOrder > b->installOrder;\n"
-        "    });\n"
         "    for (auto const& callback : callbacks) {\n"
         "        if (!callback || callback->kind != 1 || callback->removed || !callback->ref.valid()) continue;\n"
         "        int top = lua_gettop(L);\n"
@@ -251,6 +243,59 @@ def emit_hook_support() -> str:
 
     bool stateHasLiveCallbacks(LuaHookState const& state);
 
+    bool preHookCallbackLess(std::shared_ptr<LuaHookCallback> const& a, std::shared_ptr<LuaHookCallback> const& b) {
+        if (!a || !b) return static_cast<bool>(b);
+        if (a->priority != b->priority) return a->priority < b->priority;
+        return a->installOrder < b->installOrder;
+    }
+
+    bool postHookCallbackLess(std::shared_ptr<LuaHookCallback> const& a, std::shared_ptr<LuaHookCallback> const& b) {
+        if (!a || !b) return static_cast<bool>(b);
+        if (a->priority != b->priority) return a->priority > b->priority;
+        return a->installOrder > b->installOrder;
+    }
+
+    void insertPreSorted(LuaHookState& state, std::shared_ptr<LuaHookCallback> const& callback) {
+        auto& list = state.preSorted;
+        auto it = std::lower_bound(
+            list.begin(),
+            list.end(),
+            callback,
+            [](auto const& left, auto const& right) { return preHookCallbackLess(left, right); }
+        );
+        list.insert(it, callback);
+    }
+
+    void insertPostSorted(LuaHookState& state, std::shared_ptr<LuaHookCallback> const& callback) {
+        auto& list = state.postSorted;
+        auto it = std::lower_bound(
+            list.begin(),
+            list.end(),
+            callback,
+            [](auto const& left, auto const& right) { return postHookCallbackLess(left, right); }
+        );
+        list.insert(it, callback);
+    }
+
+    void removeFromSortedLists(LuaHookState& state, std::shared_ptr<LuaHookCallback> const& callback) {
+        if (!callback) return;
+        auto& list = callback->kind == 0 ? state.preSorted : state.postSorted;
+        list.erase(std::remove(list.begin(), list.end(), callback), list.end());
+    }
+
+    void rebuildSortedHookLists(LuaHookState& state) {
+        state.preSorted.clear();
+        state.postSorted.clear();
+        for (auto const& callback : state.callbacks) {
+            if (!callback || callback->removed) continue;
+            if (callback->kind == 0) {
+                insertPreSorted(state, callback);
+            } else {
+                insertPostSorted(state, callback);
+            }
+        }
+    }
+
     bool removeHookCallbacks(std::size_t callbackId) {
         bool removed = false;
         for (auto& [_, state] : hookStates()) {
@@ -258,6 +303,7 @@ def emit_hook_support() -> str:
                 if (callback && callback->id == callbackId && !callback->removed) {
                     callback->removed = true;
                     callback->ref.reset();
+                    removeFromSortedLists(state, callback);
                     removed = true;
                 }
             }
@@ -286,6 +332,7 @@ def emit_hook_support() -> str:
             }
         }
         state.callbacks.resize(out);
+        rebuildSortedHookLists(state);
     }
 
     std::size_t compactAndCountLiveCallbacks() {
@@ -406,6 +453,11 @@ def emit_hook_support() -> str:
         callback->installOrder = nextHookInstallOrder()++;
         callback->ref.reset(L, fnIndex);
         state.callbacks.push_back(callback);
+        if (kind == 0) {
+            insertPreSorted(state, callback);
+        } else {
+            insertPostSorted(state, callback);
+        }
     }
 
     int luaapi_geode_hook(lua_State* L) {

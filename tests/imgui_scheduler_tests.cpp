@@ -55,7 +55,7 @@ TEST_CASE("ImGuiDrawScheduler drawAll restores stack when protectedCall fails ea
     REQUIRE(L != nullptr);
 
     int topBefore = lua_gettop(L);
-    auto ref = luauapi_test::makeCallback(L, "()");
+    auto ref = luauapi_test::makeCallback(L, "return");
     auto& scheduler = luax::ImGuiDrawScheduler::get();
     auto id = scheduler.add(std::move(ref));
     REQUIRE(id != 0);

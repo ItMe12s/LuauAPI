@@ -115,6 +115,24 @@ TEST_CASE("Usertype metatable dispatches methods and fields") {
     node->release();
 }
 
+TEST_CASE("Usertype __index returns nil for unknown field without materializing m_fields") {
+    RuntimeGuard guard;
+    auto* runtime = luax::Runtime::getOrCreate();
+    auto* L = runtime->state();
+
+    REQUIRE(luax::Usertype<TestNode>::registerType(L, "TestNode").isOk());
+
+    auto* node = new TestNode();
+    luax::Usertype<TestNode>::pushBorrowed(L, node);
+
+    lua_getfield(L, -1, "missingField");
+    REQUIRE(lua_isnil(L, -1));
+    REQUIRE_FALSE(luax::Fields::tryPush(L, node));
+
+    lua_pop(L, 2);
+    node->release();
+}
+
 TEST_CASE("Usertype rejects writes to read-only m_fields") {
     RuntimeGuard guard;
     auto* runtime = luax::Runtime::getOrCreate();

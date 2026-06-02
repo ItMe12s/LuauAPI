@@ -15,6 +15,10 @@
 
 #include <thread>
 
+namespace luax {
+    geode::Result<void> registerTask(lua_State* L);
+}
+
 namespace {
     struct TestNode : cocos2d::CCNode {};
 
@@ -97,12 +101,16 @@ TEST_CASE("task.spawn errors when runtime is not ready") {
     RuntimeGuard guard;
     auto* runtime = luax::Runtime::getOrCreate();
     auto* L = runtime->state();
-    REQUIRE_FALSE(luax::applyAllBindings(L).has_value());
 
-    luauapi_test::loadFunction(L, "function() end");
+    luax::registerBinding({"task_lib", &luax::registerTask, 10});
+    REQUIRE(luax::applyAllBindings(L) == std::nullopt);
+
+    auto callback = luauapi_test::makeCallback(L, "return");
     lua_getglobal(L, "task");
     lua_getfield(L, -1, "spawn");
-    lua_pushvalue(L, -3);
+    if (!callback.push()) {
+        FAIL("expected task callback ref to remain valid");
+    }
 
     runtime->setStatusForTests(imes::luauapi::RuntimeStatus::NotReady);
     REQUIRE(lua_pcall(L, 1, 0, 0) != 0);

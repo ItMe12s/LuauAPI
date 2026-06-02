@@ -66,6 +66,14 @@ class HookOffsetTests(unittest.TestCase):
             hook_address_expr(cls, method, "android64"),
         )
 
+    def test_emit_internal_hpp_presorts_hook_callbacks_at_install(self) -> None:
+        header = emit_internal_hpp()
+        support = emit_hook_support()
+        self.assertIn("preSorted", header)
+        self.assertIn("postSorted", header)
+        self.assertIn("insertPreSorted", support)
+        self.assertNotIn("std::stable_sort(callbacks.begin()", header)
+
     def test_emit_hook_support_caches_android_dlopen(self) -> None:
         text = emit_hook_support()
         self.assertIn("luaapi_android_libcocos()", text)

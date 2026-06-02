@@ -9,8 +9,8 @@
 #include <luaconf.h>
 #include <lualib.h>
 
+#include <cstring>
 #include <new>
-#include <string>
 
 namespace luax::detail {
     namespace {
@@ -68,14 +68,17 @@ namespace luax::detail {
 
             auto* key = lua_tostring(L, 2);
             auto* node = tryNodeCandidate(L, 1);
-            if (node && key && std::string(key) == "m_fields") {
+            if (node && key && std::strcmp(key, "m_fields") == 0) {
                 Fields::push(L, node);
                 return 1;
             }
             if (node) {
-                Fields::push(L, node);
-                lua_pushvalue(L, 2);
-                lua_gettable(L, -2);
+                if (Fields::tryPush(L, node)) {
+                    lua_pushvalue(L, 2);
+                    lua_gettable(L, -2);
+                } else {
+                    lua_pushnil(L);
+                }
                 return 1;
             }
             lua_pushnil(L);
@@ -111,7 +114,7 @@ namespace luax::detail {
             lua_pop(L, 3);
 
             auto* key = lua_tostring(L, 2);
-            if (key && std::string(key) == "m_fields") {
+            if (key && std::strcmp(key, "m_fields") == 0) {
                 luaL_error(L, "m_fields is read-only");
                 return 0;
             }
