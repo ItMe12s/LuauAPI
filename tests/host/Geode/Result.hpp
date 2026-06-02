@@ -27,6 +27,10 @@ namespace geode {
         T const& unwrap() const { return *m_value; }
         std::string const& unwrapErr() const { return m_error; }
 
+        T unwrapOr(T fallback) const {
+            return m_value ? *m_value : std::move(fallback);
+        }
+
     private:
         std::optional<T> m_value;
         std::string m_error;

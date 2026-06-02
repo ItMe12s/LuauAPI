@@ -84,6 +84,13 @@ namespace {
         auto target = resolveTarget(L, "geode.fs.read");
         if (!target) return 2;
 
+        std::error_code ec;
+        if (!std::filesystem::is_regular_file(target->path, ec)) {
+            lua_pushnil(L);
+            push(L, std::string("path is not a regular file"));
+            return 2;
+        }
+
         auto contents = geode::utils::file::readString(target->path);
         if (contents.isErr()) {
             lua_pushnil(L);
@@ -151,6 +158,12 @@ namespace {
         lua_newtable(L);
         int index = 1;
         for (auto const& entry : entries.unwrap()) {
+            if (static_cast<std::size_t>(index) > kMaxFsListEntries) {
+                lua_pop(L, 1);
+                lua_pushnil(L);
+                push(L, std::string("directory listing exceeds maximum entries"));
+                return 2;
+            }
             push(L, geode::utils::string::pathToString(entry.filename()));
             lua_rawseti(L, -2, index++);
         }
@@ -188,6 +201,9 @@ namespace {
         return 1;
     }
 
+}
+
+namespace luax {
     geode::Result<void> registerGeodeFs(lua_State* L) {
         luax::getOrCreateTable(L, "geode");
         lua_newtable(L);
@@ -203,4 +219,6 @@ namespace {
     }
 }
 
+#if !defined(LUAUAPI_HOST_TESTS)
 LUAX_BINDING(geode_fs_lib, registerGeodeFs)
+#endif

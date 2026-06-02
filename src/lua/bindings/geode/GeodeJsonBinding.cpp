@@ -1,3 +1,4 @@
+#include "lua/Config.hpp"
 #include "lua/bindings/Binding.hpp"
 #include "lua/bindings/framework/Stack.hpp"
 #include "lua/bindings/framework/TableUtil.hpp"
@@ -14,7 +15,14 @@ namespace {
     using namespace luax;
 
     int jsonParse(lua_State* L) {
-        auto text = check<std::string>(L, 1, "geode.json.parse");
+        size_t textLen = 0;
+        char const* textData = luaL_checklstring(L, 1, &textLen);
+        if (textLen > kMaxJsonParseBytes) {
+            lua_pushnil(L);
+            push(L, std::string("json exceeds maximum size"));
+            return 2;
+        }
+        auto text = std::string(textData, textLen);
         auto result = matjson::Value::parse(text);
         if (result.isErr()) {
             lua_pushnil(L);
@@ -34,7 +42,9 @@ namespace {
         push(L, value.dump(indent));
         return 1;
     }
+}
 
+namespace luax {
     geode::Result<void> registerGeodeJson(lua_State* L) {
         luax::getOrCreateTable(L, "geode");
         lua_newtable(L);
@@ -46,4 +56,6 @@ namespace {
     }
 }
 
+#if !defined(LUAUAPI_HOST_TESTS)
 LUAX_BINDING(geode_json_lib, registerGeodeJson)
+#endif

@@ -1,6 +1,7 @@
 #include "Runtime.hpp"
 
 #include "AllocatorAccounting.hpp"
+#include "BytecodeCacheAccounting.hpp"
 #include "Loadstring.hpp"
 #include "lua/bindings/geode/CurrentMod.hpp"
 #if !defined(LUAUAPI_HOST_TESTS)
@@ -402,19 +403,42 @@ namespace luax {
             return it->second->bytecode;
         }
 
-        if (m_bytecodeIndex.size() >= kMaxBytecodeCacheEntries) {
-            m_bytecodeIndex.erase(m_bytecodeLru.back().key);
-            m_bytecodeLru.pop_back();
-        }
-
         auto compileStart = std::chrono::steady_clock::now();
         std::string compiled = compileSource(source);
         auto compileMs = std::chrono::duration_cast<std::chrono::milliseconds>(
             std::chrono::steady_clock::now() - compileStart).count();
-        m_bytecodeLru.push_front({key, std::move(compiled)});
-        m_bytecodeIndex[key] = m_bytecodeLru.begin();
-        geode::log::debug("luau compile [{}] {}ms", key, compileMs);
-        return m_bytecodeLru.front().bytecode;
+
+        std::size_t const entryBytes = bytecodeEntryBytes(compiled);
+        if (entryBytes <= kMaxBytecodeCacheBytes) {
+            trimBytecodeCacheForInsert(entryBytes);
+            m_bytecodeLru.push_front({key, std::move(compiled)});
+            m_bytecodeIndex[key] = m_bytecodeLru.begin();
+            m_bytecodeCacheBytes = bytecodeCacheUsageAfterInsert(m_bytecodeCacheBytes, entryBytes);
+            geode::log::debug("luau compile [{}] {}ms", key, compileMs);
+            return m_bytecodeLru.front().bytecode;
+        }
+
+        m_bytecodeScratch = std::move(compiled);
+        geode::log::debug("luau compile [{}] {}ms (not cached)", key, compileMs);
+        return m_bytecodeScratch;
+    }
+
+    void Runtime::removeBytecodeCacheEntry(std::list<BytecodeCacheEntry>::iterator it) {
+        m_bytecodeCacheBytes = bytecodeCacheUsageAfterRemove(m_bytecodeCacheBytes, bytecodeEntryBytes(it->bytecode));
+        m_bytecodeIndex.erase(it->key);
+        m_bytecodeLru.erase(it);
+    }
+
+    void Runtime::trimBytecodeCacheForInsert(std::size_t incomingBytes) {
+        while (bytecodeCacheNeedsEviction(
+            m_bytecodeCacheBytes,
+            kMaxBytecodeCacheBytes,
+            incomingBytes,
+            m_bytecodeIndex.size(),
+            kMaxBytecodeCacheEntries
+        )) {
+            removeBytecodeCacheEntry(std::prev(m_bytecodeLru.end()));
+        }
     }
 
     bool Runtime::runScript(std::string_view src, std::string_view chunkName, int deadlineMs) {

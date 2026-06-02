@@ -91,6 +91,7 @@ namespace luax {
 
         std::string const& getOrCompileBytecode(std::string const& key, std::string_view source);
 
+        std::size_t bytecodeCacheBytes() const { return m_bytecodeCacheBytes; }
         std::size_t memoryUsage() const { return m_memoryUsage; }
         std::size_t memoryLimit() const { return m_memoryLimit; }
 
@@ -108,14 +109,17 @@ namespace luax {
         void installTraceback();
         void installPrint();
         void installLoadstring();
-        std::string formatLuaError(char const* chunk);
-        void setLastError(std::string error);
-        void runShutdownHooks();
 
         struct BytecodeCacheEntry {
             std::string key;
             std::string bytecode;
         };
+
+        std::string formatLuaError(char const* chunk);
+        void setLastError(std::string error);
+        void runShutdownHooks();
+        void removeBytecodeCacheEntry(std::list<BytecodeCacheEntry>::iterator it);
+        void trimBytecodeCacheForInsert(std::size_t incomingBytes);
 
         lua_State* m_state = nullptr;
         std::thread::id m_ownerThread;
@@ -139,6 +143,8 @@ namespace luax {
 
         std::list<BytecodeCacheEntry> m_bytecodeLru;
         std::unordered_map<std::string, std::list<BytecodeCacheEntry>::iterator> m_bytecodeIndex;
+        std::size_t m_bytecodeCacheBytes = 0;
+        std::string m_bytecodeScratch;
 
 #if !defined(LUAUAPI_HOST_TESTS)
         std::unique_ptr<Requirer> m_requirer;

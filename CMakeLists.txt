@@ -353,6 +353,9 @@ if(LUAUAPI_BUILD_TESTS)
         src/lua/bindings/framework/LuaTrampolineRegistry.cpp
         src/lua/bindings/task/TaskBinding.cpp
         src/lua/bindings/geode/CurrentMod.cpp
+        src/lua/bindings/geode/GeodeFsBinding.cpp
+        src/lua/bindings/geode/GeodeJsonBinding.cpp
+        src/lua/bindings/geode/JsonConvert.cpp
         src/lua/bindings/imgui/ImGuiDrawScheduler.cpp
         src/lua/bindings/task/TaskScheduler.cpp
         src/lua/module/BytecodeCacheKey.cpp
@@ -361,6 +364,7 @@ if(LUAUAPI_BUILD_TESTS)
         tests/allocator_accounting_tests.cpp
         tests/api_tests.cpp
         tests/binding_tests.cpp
+        tests/bytecode_cache_accounting_tests.cpp
         tests/current_mod_tests.cpp
         tests/fields_tests.cpp
         tests/bytecode_cache_key_tests.cpp
@@ -371,6 +375,7 @@ if(LUAUAPI_BUILD_TESTS)
         tests/path_sandbox_tests.cpp
         tests/path_rules_tests.cpp
         tests/require_path_tests.cpp
+        tests/resource_bounds_tests.cpp
         tests/runtime_tests.cpp
         tests/task_scheduler_tests.cpp
         tests/usertype_tests.cpp
