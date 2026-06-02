@@ -1,6 +1,13 @@
 from __future__ import annotations
 
-from conftest import *
+import unittest
+from helpers import (
+    Class,  # type: ignore[import-unresolved]
+    Root,  # type: ignore[import-unresolved]
+    build_class_lookup,  # type: ignore[import-unresolved]
+    codegen_object_map,  # type: ignore[import-unresolved]
+    resolve_base,  # type: ignore[import-unresolved]
+)
 
 
 class F4ClassLookupCollisionTests(unittest.TestCase):

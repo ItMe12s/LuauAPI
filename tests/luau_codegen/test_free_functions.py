@@ -1,6 +1,23 @@
 from __future__ import annotations
 
-from conftest import *
+import unittest
+from helpers import (
+    Arg,  # type: ignore[import-unresolved]
+    Class,  # type: ignore[import-unresolved]
+    Function,  # type: ignore[import-unresolved]
+    Method,  # type: ignore[import-unresolved]
+    Root,  # type: ignore[import-unresolved]
+    collect_plan,  # type: ignore[import-unresolved]
+    emit_free_functions_file,  # type: ignore[import-unresolved]
+    emit_luau_bindings,  # type: ignore[import-unresolved]
+    emit_luau_types,  # type: ignore[import-unresolved]
+    free_fn_allowed,  # type: ignore[import-unresolved]
+    free_function_key,  # type: ignore[import-unresolved]
+    free_function_supported,  # type: ignore[import-unresolved]
+    free_function_unsupported_reason,  # type: ignore[import-unresolved]
+    group_supported_free_functions,  # type: ignore[import-unresolved]
+    types_text,  # type: ignore[import-unresolved]
+)
 
 
 class FreeFunctionOverrideTests(unittest.TestCase):

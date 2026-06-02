@@ -1,6 +1,20 @@
 from __future__ import annotations
 
-from conftest import *
+import unittest
+from helpers import (
+    Arg,  # type: ignore[import-unresolved]
+    COCOS_ENUM_TYPES,  # type: ignore[import-unresolved]
+    Class,  # type: ignore[import-unresolved]
+    GD_ENUM_TYPES,  # type: ignore[import-unresolved]
+    Method,  # type: ignore[import-unresolved]
+    Root,  # type: ignore[import-unresolved]
+    _input_arg_count,  # type: ignore[import-unresolved]
+    classify_arg,  # type: ignore[import-unresolved]
+    classify_return,  # type: ignore[import-unresolved]
+    codegen_object_map,  # type: ignore[import-unresolved]
+    object_classes,  # type: ignore[import-unresolved]
+    register_geode_enums,  # type: ignore[import-unresolved]
+)
 
 
 class GeodeEnumRegistrationTests(unittest.TestCase):

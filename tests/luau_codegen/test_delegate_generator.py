@@ -2,7 +2,15 @@ from __future__ import annotations
 
 import unittest
 
-from conftest import *
+from helpers import (
+    DELEGATE_SPECS,  # type: ignore[import-unresolved]
+    DelegateMethod,  # type: ignore[import-unresolved]
+    DelegateSpec,  # type: ignore[import-unresolved]
+    collect_delegate_specs,  # type: ignore[import-unresolved]
+    cpp_emit_supported,  # type: ignore[import-unresolved]
+    emit_gen_hpp,  # type: ignore[import-unresolved]
+    emit_override,  # type: ignore[import-unresolved]
+)
 
 
 class DelegateGeneratorTests(unittest.TestCase):

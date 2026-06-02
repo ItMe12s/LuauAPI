@@ -2,7 +2,20 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from conftest import *
+import unittest
+from helpers import (
+    Arg,  # type: ignore[import-unresolved]
+    Class,  # type: ignore[import-unresolved]
+    Method,  # type: ignore[import-unresolved]
+    _emit_class_file,  # type: ignore[import-unresolved]
+    all_platforms,  # type: ignore[import-unresolved]
+    android_symbol,  # type: ignore[import-unresolved]
+    emit_hook_support,  # type: ignore[import-unresolved]
+    emit_internal_hpp,  # type: ignore[import-unresolved]
+    hook_address_expr,  # type: ignore[import-unresolved]
+    hook_offset,  # type: ignore[import-unresolved]
+    hookable,  # type: ignore[import-unresolved]
+)
 
 
 @dataclass(frozen=True)

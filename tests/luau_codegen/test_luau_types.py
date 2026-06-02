@@ -1,6 +1,23 @@
 from __future__ import annotations
 
-from conftest import *
+import re
+import unittest
+from helpers import (
+    Arg,  # type: ignore[import-unresolved]
+    Class,  # type: ignore[import-unresolved]
+    Field,  # type: ignore[import-unresolved]
+    Method,  # type: ignore[import-unresolved]
+    Root,  # type: ignore[import-unresolved]
+    TYPES_FILE,  # type: ignore[import-unresolved]
+    _emit_dispatcher,  # type: ignore[import-unresolved]
+    _input_arg_count,  # type: ignore[import-unresolved]
+    all_platforms,  # type: ignore[import-unresolved]
+    classify_arg,  # type: ignore[import-unresolved]
+    emit_luau_types,  # type: ignore[import-unresolved]
+    is_const_reference,  # type: ignore[import-unresolved]
+    is_out_reference,  # type: ignore[import-unresolved]
+    types_text,  # type: ignore[import-unresolved]
+)
 
 
 class LuauTypeEmissionTests(unittest.TestCase):

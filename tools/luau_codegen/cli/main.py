@@ -348,3 +348,7 @@ def main(argv: List[str]) -> int:
     log_info(f"wrote {report_path}")
     log_info(f"wrote {audit_path}")
     return 0
+
+
+def cli() -> int:
+    return main(sys.argv[1:])
