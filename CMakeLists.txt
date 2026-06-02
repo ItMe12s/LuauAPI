@@ -15,6 +15,7 @@ include(FetchContent)
 include(CTest)
 
 option(LUAUAPI_BUILD_TESTS "Build LuauAPI host unit tests" OFF)
+option(LUAUAPI_HOST_ONLY "Host-only configure without Geode SDK or configure-time codegen listing" OFF)
 
 set(LUAU_BUILD_CLI   OFF CACHE BOOL "" FORCE)
 set(LUAU_BUILD_TESTS OFF CACHE BOOL "" FORCE)
@@ -89,26 +90,35 @@ foreach(LUAU_TARGET Luau.VM Luau.CodeGen)
     endif()
 endforeach()
 
-if (NOT DEFINED ENV{GEODE_SDK})
-    message(FATAL_ERROR "Unable to find Geode SDK! Please define GEODE_SDK environment variable to point to Geode")
-else()
-    message(STATUS "Found Geode: $ENV{GEODE_SDK}")
+if (NOT LUAUAPI_HOST_ONLY)
+    if (NOT DEFINED ENV{GEODE_SDK})
+        message(FATAL_ERROR "Unable to find Geode SDK! Please define GEODE_SDK environment variable to point to Geode")
+    else()
+        message(STATUS "Found Geode: $ENV{GEODE_SDK}")
+    endif()
+
+    add_subdirectory($ENV{GEODE_SDK} ${CMAKE_CURRENT_BINARY_DIR}/geode)
 endif()
 
-add_subdirectory($ENV{GEODE_SDK} ${CMAKE_CURRENT_BINARY_DIR}/geode)
-
-set(LUAUAPI_IMGUI_COCOS_GIT_TAG "b93f08ccef778a53ebba09b20c347f6a63980119"
-    CACHE STRING "Pinned gd-imgui-cocos commit")
-FetchContent_Declare(
-    gd_imgui_cocos
-    GIT_REPOSITORY https://github.com/matcool/gd-imgui-cocos.git
-    GIT_TAG        ${LUAUAPI_IMGUI_COCOS_GIT_TAG}
-)
-FetchContent_MakeAvailable(gd_imgui_cocos)
-message(STATUS "LuauAPI imgui-cocos: ${LUAUAPI_IMGUI_COCOS_GIT_TAG}")
+if (NOT LUAUAPI_HOST_ONLY)
+    set(LUAUAPI_IMGUI_COCOS_GIT_TAG "b93f08ccef778a53ebba09b20c347f6a63980119"
+        CACHE STRING "Pinned gd-imgui-cocos commit")
+    FetchContent_Declare(
+        gd_imgui_cocos
+        GIT_REPOSITORY https://github.com/matcool/gd-imgui-cocos.git
+        GIT_TAG        ${LUAUAPI_IMGUI_COCOS_GIT_TAG}
+    )
+    FetchContent_MakeAvailable(gd_imgui_cocos)
+    message(STATUS "LuauAPI imgui-cocos: ${LUAUAPI_IMGUI_COCOS_GIT_TAG}")
+endif()
 
 find_package(Python3 3.11 REQUIRED COMPONENTS Interpreter)
 
+if (LUAUAPI_HOST_ONLY)
+    message(STATUS "LuauAPI host-only configure: skipping Geode SDK and configure-time codegen listing")
+endif()
+
+if (NOT LUAUAPI_HOST_ONLY)
 file(READ ${CMAKE_CURRENT_SOURCE_DIR}/mod.json LUAUAPI_MOD_JSON)
 string(REGEX MATCH "\"win\"[ \t\r\n]*:[ \t\r\n]*\"([^\"]+)\"" LUAUAPI_GD_MATCH "${LUAUAPI_MOD_JSON}")
 if (CMAKE_MATCH_1)
@@ -180,51 +190,29 @@ set(LUAUAPI_CODEGEN_CMD
 execute_process(
     COMMAND ${LUAUAPI_CODEGEN_CMD}
             --bindings ${LUAUAPI_BINDINGS_DIR}
-            --list-outputs
+            --list-all-outputs
             --platform ${LUAUAPI_CODEGEN_PLATFORM}
             --geode-sdk "${LUAUAPI_GEODE_SDK_PATH}"
             --fail-on-ambiguous-overload
-    RESULT_VARIABLE LUAUAPI_LIST_OUTPUTS_RESULT
-    OUTPUT_VARIABLE LUAUAPI_LIST_OUTPUTS_STDOUT
-    ERROR_VARIABLE LUAUAPI_LIST_OUTPUTS_STDERR
+    RESULT_VARIABLE LUAUAPI_LIST_ALL_OUTPUTS_RESULT
+    OUTPUT_VARIABLE LUAUAPI_LIST_ALL_OUTPUTS_STDOUT
+    ERROR_VARIABLE LUAUAPI_LIST_ALL_OUTPUTS_STDERR
     OUTPUT_STRIP_TRAILING_WHITESPACE
 )
-if (NOT LUAUAPI_LIST_OUTPUTS_RESULT EQUAL 0)
-    message(FATAL_ERROR "LuauAPI codegen output listing failed: ${LUAUAPI_LIST_OUTPUTS_STDERR}")
+if (NOT LUAUAPI_LIST_ALL_OUTPUTS_RESULT EQUAL 0)
+    message(FATAL_ERROR "LuauAPI codegen output listing failed: ${LUAUAPI_LIST_ALL_OUTPUTS_STDERR}")
 endif()
 set(LUAUAPI_CODEGEN_BINDING_BYPRODUCTS)
-if (LUAUAPI_LIST_OUTPUTS_STDOUT)
-    string(REPLACE "\n" ";" LUAUAPI_GENERATED_BINDING_RELS "${LUAUAPI_LIST_OUTPUTS_STDOUT}")
-    foreach(LUAUAPI_GENERATED_BINDING_REL IN LISTS LUAUAPI_GENERATED_BINDING_RELS)
-        if (LUAUAPI_GENERATED_BINDING_REL)
-            list(APPEND LUAUAPI_CODEGEN_BINDING_BYPRODUCTS
-                "${LUAUAPI_GEN_DIR}/${LUAUAPI_GENERATED_BINDING_REL}")
-        endif()
-    endforeach()
-endif()
-
-execute_process(
-    COMMAND ${LUAUAPI_CODEGEN_CMD}
-            --bindings ${LUAUAPI_BINDINGS_DIR}
-            --list-type-outputs
-            --platform ${LUAUAPI_CODEGEN_PLATFORM}
-            --geode-sdk "${LUAUAPI_GEODE_SDK_PATH}"
-            --fail-on-ambiguous-overload
-    RESULT_VARIABLE LUAUAPI_LIST_TYPE_OUTPUTS_RESULT
-    OUTPUT_VARIABLE LUAUAPI_LIST_TYPE_OUTPUTS_STDOUT
-    ERROR_VARIABLE LUAUAPI_LIST_TYPE_OUTPUTS_STDERR
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-)
-if (NOT LUAUAPI_LIST_TYPE_OUTPUTS_RESULT EQUAL 0)
-    message(FATAL_ERROR "LuauAPI type output listing failed: ${LUAUAPI_LIST_TYPE_OUTPUTS_STDERR}")
-endif()
 set(LUAUAPI_GENERATED_TYPE_FILES)
-if (LUAUAPI_LIST_TYPE_OUTPUTS_STDOUT)
-    string(REPLACE "\n" ";" LUAUAPI_GENERATED_TYPE_RELS "${LUAUAPI_LIST_TYPE_OUTPUTS_STDOUT}")
-    foreach(LUAUAPI_GENERATED_TYPE_REL IN LISTS LUAUAPI_GENERATED_TYPE_RELS)
-        if (LUAUAPI_GENERATED_TYPE_REL)
+if (LUAUAPI_LIST_ALL_OUTPUTS_STDOUT)
+    string(REPLACE "\n" ";" LUAUAPI_LIST_ALL_OUTPUTS_LINES "${LUAUAPI_LIST_ALL_OUTPUTS_STDOUT}")
+    foreach(LUAUAPI_LIST_ALL_OUTPUTS_LINE IN LISTS LUAUAPI_LIST_ALL_OUTPUTS_LINES)
+        if (LUAUAPI_LIST_ALL_OUTPUTS_LINE MATCHES "^binding:(.+)$")
+            list(APPEND LUAUAPI_CODEGEN_BINDING_BYPRODUCTS
+                "${LUAUAPI_GEN_DIR}/${CMAKE_MATCH_1}")
+        elseif (LUAUAPI_LIST_ALL_OUTPUTS_LINE MATCHES "^type:(.+)$")
             list(APPEND LUAUAPI_GENERATED_TYPE_FILES
-                "${LUAUAPI_TYPES_DIR}/${LUAUAPI_GENERATED_TYPE_REL}")
+                "${LUAUAPI_TYPES_DIR}/${CMAKE_MATCH_1}")
         endif()
     endforeach()
 endif()
@@ -321,6 +309,7 @@ if(WIN32)
     elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
         target_compile_options(${PROJECT_NAME} PRIVATE -Wa,-mbig-obj)
     endif()
+endif()
 endif()
 
 if(LUAUAPI_BUILD_TESTS)

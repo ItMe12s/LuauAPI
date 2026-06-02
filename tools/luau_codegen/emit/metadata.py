@@ -185,7 +185,7 @@ def emit_report(
         "- geode_bindings is pinned via LUAUAPI_BINDINGS_GIT_TAG in CMake, bump mod.json GD version and the pin together\n"
     )
     lines.append(
-        "- generated binding .cpp files are listed at CMake configure via --list-outputs, reconfigure when new bindings_<Class>.cpp are emitted\n"
+        "- generated binding .cpp files are listed at CMake configure via --list-all-outputs, reconfigure when new bindings_<Class>.cpp are emitted\n"
     )
     lines.append(
         "- userdata tag budget assert remains generated-class based, runtime distinct-type tightening is deferred\n"

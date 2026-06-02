@@ -84,6 +84,11 @@ def main(argv: List[str]) -> int:
         help="Print generated type file names, one per line",
     )
     parser.add_argument(
+        "--list-all-outputs",
+        action="store_true",
+        help="Print binding and type outputs (binding: and type: prefixes)",
+    )
+    parser.add_argument(
         "--parity-report-out",
         help="Write runtime-safe cross-platform parity report and exit",
     )
@@ -234,6 +239,22 @@ def main(argv: List[str]) -> int:
         type_files = emit_types.emit(root, args.platform, plan=plan)
         for name in sorted(type_files):
             print(name)
+        return 0
+
+    if args.list_all_outputs:
+        plan = emit_plan.collect_plan(
+            root, args.platform, plans_by_platform=plans_by_platform
+        )
+        if args.fail_on_ambiguous_overload and ambiguous_overloads(plan):
+            log_error("ambiguous overloads found")
+            return 6
+        for rel in emit_plan.plan_outputs(root, args.platform, plan=plan):
+            print(f"binding:src/{rel}")
+        for rel in delegate_gen_rel_paths():
+            print(f"binding:{rel}")
+        type_files = emit_types.emit(root, args.platform, plan=plan)
+        for name in sorted(type_files):
+            print(f"type:{name}")
         return 0
 
     if not args.out or not args.types_out:

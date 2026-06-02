@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import io
+
 from conftest import *
 
 
@@ -165,6 +167,56 @@ class CodegenExitCodeTests(unittest.TestCase):
                     )
                 )
             )
+        finally:
+            shutil.rmtree(tmpdir)
+
+
+class ListAllOutputsCliTests(unittest.TestCase):
+    def test_list_all_outputs_emits_binding_and_type_prefixes(self) -> None:
+        from luau_codegen.cli import main as cg  # type: ignore[import-unresolved]
+
+        root = Root(classes=[Class(name="CCObject", namespace="cocos2d")])
+        tmpdir = tempfile.mkdtemp()
+        try:
+            bindings = os.path.join(tmpdir, "bindings")
+            os.makedirs(bindings)
+            for name in (
+                "Cocos2d.bro",
+                "Extras.bro",
+                "FMOD.bro",
+                "Kazmath.bro",
+                "GeometryDash.bro",
+            ):
+                open(os.path.join(bindings, name), "w", encoding="utf-8").close()
+            with mock.patch.object(cg, "collect_bindings_root", return_value=root):
+                with mock.patch.object(
+                    cg.emit_plan,
+                    "plan_outputs",
+                    return_value=["lua/bindings/bindings_CCObject.cpp"],
+                ):
+                    with mock.patch.object(
+                        cg.emit_types,
+                        "emit",
+                        return_value={"geode.d.luau": "-- stub\n"},
+                    ):
+                        buf = io.StringIO()
+                        with mock.patch("sys.stdout", buf):
+                            rc = cg.main(
+                                [
+                                    "--bindings",
+                                    bindings,
+                                    "--list-all-outputs",
+                                    "--platform",
+                                    "win",
+                                ]
+                            )
+            self.assertEqual(rc, 0)
+            lines = [line for line in buf.getvalue().splitlines() if line]
+            self.assertIn("binding:src/lua/bindings/bindings_CCObject.cpp", lines)
+            self.assertIn(
+                "binding:src/lua/bindings/framework/LuaDelegates.gen.hpp", lines
+            )
+            self.assertIn("type:geode.d.luau", lines)
         finally:
             shutil.rmtree(tmpdir)
 
