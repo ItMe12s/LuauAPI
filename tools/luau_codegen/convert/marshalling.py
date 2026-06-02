@@ -20,6 +20,42 @@ def _primitive_vector_elem_cxx(info: TypeInfo) -> str:
     return info.element_type.cxx_type
 
 
+def _map_key_value_cxx(info: TypeInfo) -> tuple[str, str]:
+    if info.key_type is None or info.value_type is None:
+        raise ValueError("map container requires key and value types")
+    return info.key_type.cxx_type, info.value_type.cxx_type
+
+
+def _set_elem_cxx(info: TypeInfo) -> str:
+    if info.element_type is None:
+        raise ValueError("set container requires element type")
+    return info.element_type.cxx_type
+
+
+def _map_check_fn(kind: str) -> str:
+    if kind == "unordered_map":
+        return "checkUnorderedMap"
+    return "checkMap"
+
+
+def _map_push_fn(kind: str) -> str:
+    if kind == "unordered_map":
+        return "pushUnorderedMap"
+    return "pushMap"
+
+
+def _set_check_fn(kind: str) -> str:
+    if kind == "unordered_set":
+        return "checkUnorderedSet"
+    return "checkSet"
+
+
+def _set_push_fn(kind: str) -> str:
+    if kind == "unordered_set":
+        return "pushUnorderedSet"
+    return "pushSet"
+
+
 def emit_stack_check(
     info: TypeInfo,
     idx: str | int,
@@ -133,6 +169,18 @@ def emit_stack_check(
         return [
             f'        {_prefix(declare, var)} = luax::checkPrimitiveVector<{elem}>(L, {idx}, "{label}");\n'
         ]
+    if info.kind in ("map", "unordered_map"):
+        key, value = _map_key_value_cxx(info)
+        check_fn = _map_check_fn(info.kind)
+        return [
+            f'        {_prefix(declare, var)} = luax::{check_fn}<{key}, {value}>(L, {idx}, "{label}");\n'
+        ]
+    if info.kind in ("set", "unordered_set"):
+        elem = _set_elem_cxx(info)
+        check_fn = _set_check_fn(info.kind)
+        return [
+            f'        {_prefix(declare, var)} = luax::{check_fn}<{elem}>(L, {idx}, "{label}");\n'
+        ]
     raise ValueError(f"unsupported type kind: {info.kind}")
 
 
@@ -185,6 +233,14 @@ def _push_impl(
     if info.kind == "primitive_vector":
         elem = _primitive_vector_elem_cxx(info)
         return [f"{indent}luax::pushPrimitiveVector<{elem}>(L, {expr});\n"]
+    if info.kind in ("map", "unordered_map"):
+        key, value = _map_key_value_cxx(info)
+        push_fn = _map_push_fn(info.kind)
+        return [f"{indent}luax::{push_fn}<{key}, {value}>(L, {expr});\n"]
+    if info.kind in ("set", "unordered_set"):
+        elem = _set_elem_cxx(info)
+        push_fn = _set_push_fn(info.kind)
+        return [f"{indent}luax::{push_fn}<{elem}>(L, {expr});\n"]
     if info.kind == "delegate":
         return [f"{indent}luax::tryPushBoundDelegateTable(L, {expr});\n"]
     if info.kind == "result":

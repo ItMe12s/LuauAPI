@@ -13,6 +13,7 @@ from luau_codegen.convert.type_map import (
     is_out_reference,
     normalize_type,
 )
+from luau_codegen.policy.containers import _CONTAINER_KINDS
 from luau_codegen.parse.broma import Class, Method
 from luau_codegen.policy.filtering import direct_callable, platform_value
 from luau_codegen.policy.link_attrs import class_link_platforms, platform_aliases
@@ -83,7 +84,7 @@ def hookable(
         return False
     if ret.kind == "string" and ret.cxx_type.endswith("*"):
         return False
-    if ret.kind == "vector_view":
+    if ret.kind in _CONTAINER_KINDS:
         return False
     if ret.kind == "opaque_handle":
         return False
@@ -93,6 +94,9 @@ def hookable(
         info = classify_arg(arg.type, objects, ctx=ctx)
         if info is None:
             return False
-        if info.kind in ("sel", "callback", "vector_view", "opaque_handle", "delegate"):
+        if (
+            info.kind in ("sel", "callback", "opaque_handle", "delegate")
+            or info.kind in _CONTAINER_KINDS
+        ):
             return False
     return True

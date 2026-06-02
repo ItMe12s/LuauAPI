@@ -7,6 +7,7 @@ if TYPE_CHECKING:
 
 from luau_codegen.parse.broma import Arg, Class, Field, Method
 from luau_codegen.policy.fields import bindable_field
+from luau_codegen.policy.containers import _CONTAINER_KINDS
 from luau_codegen.policy.filtering import call_label, returns_owned
 from luau_codegen.emit.cxx_templates import file_preamble
 from luau_codegen.emit.hooks import emit_hook_target, hook_id, hook_suffix
@@ -122,7 +123,7 @@ def _emit_out_arg(info: TypeInfo, var: str) -> tuple[List[str], str]:
         return [f"        UIButtonConfig {var}{{}};\n"], var
     if info.kind == "enum":
         return [f"        {info.cxx_type} {var}{{}};\n"], var
-    if info.kind in ("vector_view", "primitive_vector"):
+    if info.kind in _CONTAINER_KINDS:
         return [f"        {info.cxx_type} {var}{{}};\n"], (
             f"&{var}" if info.is_vector_ptr else var
         )

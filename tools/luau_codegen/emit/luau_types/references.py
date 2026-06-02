@@ -132,11 +132,17 @@ def _refs_from_method(
             refs.add(_object_type_name(info))
         elif info and info.kind == "vector_view" and info.element_type:
             refs.add(_object_type_name(info.element_type))
+        elif info and info.kind in ("map", "unordered_map") and info.value_type:
+            if info.value_type.kind == "object":
+                refs.add(_object_type_name(info.value_type))
     ret = classify_return(method.ret, objects, ctx=ctx)
     if ret and ret.kind == "object":
         refs.add(_object_type_name(ret))
     elif ret and ret.kind == "vector_view" and ret.element_type:
         refs.add(_object_type_name(ret.element_type))
+    elif ret and ret.kind in ("map", "unordered_map") and ret.value_type:
+        if ret.value_type.kind == "object":
+            refs.add(_object_type_name(ret.value_type))
     return refs
 
 
@@ -153,6 +159,9 @@ def _refs_from_fields(
             refs.add(_object_type_name(ret))
         elif ok and ret and ret.kind == "vector_view" and ret.element_type:
             refs.add(_object_type_name(ret.element_type))
+        elif ok and ret and ret.kind in ("map", "unordered_map") and ret.value_type:
+            if ret.value_type.kind == "object":
+                refs.add(_object_type_name(ret.value_type))
     return refs
 
 

@@ -24,6 +24,7 @@ from luau_codegen.convert.type_map import (
     require_classify_return,
 )
 from luau_codegen.emit.cxx_templates import file_preamble
+from luau_codegen.policy.containers import _CONTAINER_KINDS
 
 FREE_FUNCTIONS_FILE = "bindings_free_functions.cpp"
 
@@ -72,7 +73,7 @@ def _emit_free_invoke(
         arg_idx = lua_arg.arg_index
         var = f"arg{arg_idx}"
         if lua_arg.out_only:
-            if info.kind in ("vector_view", "primitive_vector"):
+            if info.kind in _CONTAINER_KINDS:
                 out.append(f"        {info.cxx_type} {var}{{}};\n")
                 call_args.append(f"&{var}" if info.is_vector_ptr else var)
             else:

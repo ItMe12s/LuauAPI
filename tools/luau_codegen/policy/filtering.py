@@ -24,8 +24,9 @@ from luau_codegen.convert.type_map import (
 )
 from luau_codegen.convert.sel_args import is_ccobject_ptr
 from luau_codegen.policy.containers import (
-    vector_view_supported_as_arg,
-    vector_view_supported_as_return,
+    _CONTAINER_KINDS,
+    container_supported_as_arg,
+    container_supported_as_return,
 )
 from luau_codegen.policy.delegates import (
     delegate_supported_as_arg,
@@ -140,10 +141,7 @@ def supported(
     ret = classify_return(m.ret, objects, ctx=ctx)
     if ret is None:
         return False, f"unsupported-return:{m.ret}"
-    if ret.kind in (
-        "vector_view",
-        "primitive_vector",
-    ) and not vector_view_supported_as_return(ret):
+    if ret.kind in _CONTAINER_KINDS and not container_supported_as_return(ret):
         return False, f"unsupported-return:{m.ret}"
     if ret.kind == "delegate" and not delegate_supported_as_return(ret):
         return False, f"unsupported-return:{m.ret}"
@@ -151,10 +149,9 @@ def supported(
         info = classify_arg(arg.type, objects, owner_class=cls.name, ctx=ctx)
         if info is None:
             return False, f"unsupported-arg:{arg.type}"
-        if info.kind in (
-            "vector_view",
-            "primitive_vector",
-        ) and not vector_view_supported_as_arg(info, ret.kind):
+        if info.kind in _CONTAINER_KINDS and not container_supported_as_arg(
+            info, ret.kind
+        ):
             return False, f"unsupported-arg:{arg.type}"
         if info.kind == "delegate" and not delegate_supported_as_arg(info):
             return False, f"unsupported-arg:{arg.type}"

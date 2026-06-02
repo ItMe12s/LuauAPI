@@ -9,8 +9,9 @@ if TYPE_CHECKING:
 
 from luau_codegen.convert.sel_args import is_ccobject_ptr
 from luau_codegen.policy.containers import (
-    vector_view_supported_as_arg,
-    vector_view_supported_as_return,
+    _CONTAINER_KINDS,
+    container_supported_as_arg,
+    container_supported_as_return,
 )
 from luau_codegen.convert.type_map import classify_arg, classify_return
 from luau_codegen.model.denylist import INACCESSIBLE_CLASSES
@@ -81,22 +82,18 @@ def free_function_unsupported_reason(
     ret = classify_return(fn.ret, objects, ctx=ctx)
     if ret is None:
         return f"free-function-unsupported-return:{fn.ret}"
-    if ret.kind in (
-        "vector_view",
-        "primitive_vector",
-    ) and not vector_view_supported_as_return(ret):
+    if ret.kind in _CONTAINER_KINDS and not container_supported_as_return(ret):
         return f"free-function-unsupported-return:{fn.ret}"
     ret_kind = ret.kind
     for i, arg in enumerate(fn.args):
         info = classify_arg(arg.type, objects, ctx=ctx)
         if info is None:
             return f"free-function-unsupported-arg:{arg.type}"
-        if info.kind in (
-            "vector_view",
-            "primitive_vector",
-        ) and not vector_view_supported_as_arg(info, ret_kind):
+        if info.kind in _CONTAINER_KINDS and not container_supported_as_arg(
+            info, ret_kind
+        ):
             return f"free-function-unsupported-arg:{arg.type}"
-        if info.is_out and info.kind not in ("vector_view", "primitive_vector"):
+        if info.is_out and info.kind not in _CONTAINER_KINDS:
             return f"free-function-out-arg:{arg.type}"
         if info.kind == "sel":
             continue

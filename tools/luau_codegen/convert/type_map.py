@@ -191,6 +191,8 @@ class TypeInfo:
     callback_ret: Optional["TypeInfo"] = None
     callback_args: Tuple["TypeInfo", ...] = field(default_factory=tuple)
     element_type: Optional["TypeInfo"] = None
+    key_type: Optional["TypeInfo"] = None
+    value_type: Optional["TypeInfo"] = None
 
 
 _CALLBACK_PREFIXES = (
@@ -319,6 +321,142 @@ _PRIMITIVE_VECTOR_ELEMENT_KINDS = frozenset(
     {"bool", "number", "wideint", "string", "enum", "value"}
 )
 
+_MAP_KEY_KINDS = frozenset({"bool", "number", "wideint", "string", "enum"})
+
+_MAP_VALUE_KINDS = _PRIMITIVE_VECTOR_ELEMENT_KINDS | {"object"}
+
+_SET_ELEMENT_KINDS = _PRIMITIVE_VECTOR_ELEMENT_KINDS
+
+_NESTED_CONTAINER_KINDS = frozenset(
+    {
+        "vector_view",
+        "primitive_vector",
+        "map",
+        "unordered_map",
+        "set",
+        "unordered_set",
+    }
+)
+
+_MAP_CONTAINER_PREFIXES = (
+    ("gd::map", "map"),
+    ("gd::unordered_map", "unordered_map"),
+)
+
+_SET_CONTAINER_PREFIXES = (
+    ("gd::set", "set"),
+    ("gd::unordered_set", "unordered_set"),
+)
+
+
+def _is_nested_container(info: TypeInfo) -> bool:
+    return info.kind in _NESTED_CONTAINER_KINDS
+
+
+def _map_value_lua_type(value: TypeInfo) -> str:
+    if value.kind == "object":
+        return f"{value.class_name}?"
+    return value.lua_type
+
+
+def _map_lua_type(key: TypeInfo, value: TypeInfo) -> str:
+    return f"{{ [{key.lua_type}]: {_map_value_lua_type(value)} }}"
+
+
+def _parse_map_container(
+    n: str,
+    prefix: str,
+    kind: str,
+    object_classes: Dict[str, Class],
+    ctx: CodegenContext | None = None,
+) -> Optional[TypeInfo]:
+    inner = _template_inner(n, prefix)
+    if inner is None:
+        return None
+    parts = split_top_level(inner)
+    if len(parts) != 2:
+        return None
+    key = classify_arg(parts[0], object_classes, ctx=ctx)
+    value = classify_arg(parts[1], object_classes, ctx=ctx)
+    if key is None or value is None:
+        return None
+    if key.kind not in _MAP_KEY_KINDS or _is_nested_container(key):
+        return None
+    if value.kind not in _MAP_VALUE_KINDS or _is_nested_container(value):
+        return None
+    return TypeInfo(
+        kind,
+        f"{prefix}<{key.cxx_type}, {value.cxx_type}>",
+        _map_lua_type(key, value),
+        key_type=key,
+        value_type=value,
+    )
+
+
+def _parse_set_container(
+    n: str,
+    prefix: str,
+    kind: str,
+    object_classes: Dict[str, Class],
+    ctx: CodegenContext | None = None,
+) -> Optional[TypeInfo]:
+    inner = _template_inner(n, prefix)
+    if inner is None:
+        return None
+    parts = split_top_level(inner)
+    if len(parts) != 1:
+        return None
+    element = classify_arg(parts[0], object_classes, ctx=ctx)
+    if element is None or element.kind not in _SET_ELEMENT_KINDS:
+        return None
+    if _is_nested_container(element):
+        return None
+    return TypeInfo(
+        kind,
+        f"{prefix}<{element.cxx_type}>",
+        f"{{ {element.lua_type} }}",
+        element_type=element,
+    )
+
+
+def _parse_container(
+    n: str,
+    object_classes: Dict[str, Class],
+    ctx: CodegenContext | None = None,
+) -> Optional[TypeInfo]:
+    for prefix, kind in _MAP_CONTAINER_PREFIXES:
+        parsed = _parse_map_container(n, prefix, kind, object_classes, ctx=ctx)
+        if parsed is not None:
+            return parsed
+    for prefix, kind in _SET_CONTAINER_PREFIXES:
+        parsed = _parse_set_container(n, prefix, kind, object_classes, ctx=ctx)
+        if parsed is not None:
+            return parsed
+    return None
+
+
+def _with_container_ref_flags(
+    info: TypeInfo,
+    *,
+    is_ref: bool,
+    is_out: bool,
+    is_vector_ptr: bool = False,
+) -> TypeInfo:
+    return TypeInfo(
+        info.kind,
+        info.cxx_type,
+        info.lua_type,
+        info.class_name,
+        is_ref,
+        is_out,
+        is_vector_ptr,
+        info.callback_ret,
+        info.callback_args,
+        element_type=info.element_type,
+        key_type=info.key_type,
+        value_type=info.value_type,
+    )
+
 
 def _parse_primitive_vector(
     n: str,
@@ -441,6 +579,14 @@ def _classify_core(
 
     if n.endswith("*"):
         base = n[:-1].strip()
+        ptr_container = _parse_container(base, object_classes, ctx=ctx)
+        if ptr_container is not None:
+            return _with_container_ref_flags(
+                ptr_container,
+                is_ref=False,
+                is_out=True,
+                is_vector_ptr=True,
+            )
         ptr_primitive = _parse_primitive_vector(base, object_classes, ctx=ctx)
         if ptr_primitive is not None:
             return TypeInfo(
@@ -488,6 +634,14 @@ def _classify_core(
             is_ref,
             is_out,
             element_type=vector_view.element_type,
+        )
+
+    container = _parse_container(n, object_classes, ctx=ctx)
+    if container is not None:
+        return _with_container_ref_flags(
+            container,
+            is_ref=is_ref,
+            is_out=is_out,
         )
     if n == "bool":
         return TypeInfo("bool", n, "boolean", is_ref=is_ref, is_out=is_out)
