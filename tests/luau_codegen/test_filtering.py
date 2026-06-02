@@ -148,6 +148,24 @@ class SelMenuHandlerFilterTests(unittest.TestCase):
         self.assertEqual(reason, "")
 
 
+class ContainerFilterTests(unittest.TestCase):
+    def test_vector_return_method_stays_unsupported(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        cls = Class(name="CCNode", namespace="cocos2d", bases=["CCObject"])
+        method = Method(
+            name="getChildren",
+            ret="gd::vector<cocos2d::CCObject*>",
+            args=[],
+            platforms=all_platforms("0x1"),
+        )
+        objects = {"CCObject": ccobject, "cocos2d::CCObject": ccobject, "CCNode": cls}
+
+        ok, reason = supported(cls, method, objects, "win")
+
+        self.assertFalse(ok)
+        self.assertEqual(reason, "unsupported-return:gd::vector<cocos2d::CCObject*>")
+
+
 class FreeFunctionSelMenuHandlerFilterTests(unittest.TestCase):
     def test_orphan_sel_menu_handler_is_rejected(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")

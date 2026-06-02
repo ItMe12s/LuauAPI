@@ -122,7 +122,12 @@ def emit_stack_check(
 
 
 def _push_impl(
-    info: TypeInfo, expr: str, owned: bool, *, indent: str = "        "
+    info: TypeInfo,
+    expr: str,
+    owned: bool,
+    *,
+    indent: str = "        ",
+    owner_expr: str | None = None,
 ) -> list[str]:
     if info.kind == "bool":
         return [f"{indent}luax::push(L, {expr});\n"]
@@ -144,6 +149,13 @@ def _push_impl(
     if info.kind == "object":
         push = "pushOwned" if owned else "pushBorrowed"
         return [f"{indent}luax::Usertype<{info.cxx_type[:-1]}>::{push}(L, {expr});\n"]
+    if info.kind == "vector_view":
+        if info.element_type is None or info.element_type.kind != "object":
+            raise ValueError("vector view requires object element type")
+        owner = owner_expr or "nullptr"
+        return [
+            f"{indent}luax::pushReadOnlyVectorView<{info.element_type.cxx_type[:-1]}>(L, {expr}, {owner});\n"
+        ]
     raise ValueError(f"unsupported type kind: {info.kind}")
 
 
@@ -211,7 +223,9 @@ def push_return(info: TypeInfo, expr: str, owned: bool) -> list[str]:
     return lines + ["        return 1;\n"]
 
 
-def push_value(info: TypeInfo, expr: str, owned: bool = False) -> list[str]:
+def push_value(
+    info: TypeInfo, expr: str, owned: bool = False, *, owner_expr: str | None = None
+) -> list[str]:
     if info.kind == "void":
         return ["        lua_pushnil(L);\n"]
-    return _push_impl(info, expr, owned)
+    return _push_impl(info, expr, owned, owner_expr=owner_expr)

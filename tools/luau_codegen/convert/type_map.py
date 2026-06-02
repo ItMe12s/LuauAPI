@@ -127,6 +127,7 @@ class TypeInfo:
     is_out: bool = False
     callback_ret: Optional["TypeInfo"] = None
     callback_args: Tuple["TypeInfo", ...] = field(default_factory=tuple)
+    element_type: Optional["TypeInfo"] = None
 
 
 _CALLBACK_PREFIXES = (
@@ -233,6 +234,40 @@ def resolve_object_class(t: str, classes: Dict[str, Class]) -> Optional[Class]:
     return None
 
 
+def _template_inner(n: str, prefix: str) -> Optional[str]:
+    marker = f"{prefix}<"
+    if not n.startswith(marker) or not n.endswith(">"):
+        return None
+    depth = 0
+    for i, c in enumerate(n[len(prefix) :], start=len(prefix)):
+        if c == "<":
+            depth += 1
+        elif c == ">":
+            depth -= 1
+            if depth == 0 and i == len(n) - 1:
+                return n[len(marker) : i]
+    return None
+
+
+def _parse_vector_view(n: str, object_classes: Dict[str, Class]) -> Optional[TypeInfo]:
+    inner = _template_inner(n, "gd::vector")
+    if inner is None:
+        return None
+    parts = split_top_level(inner)
+    if len(parts) != 1:
+        return None
+    element = classify_arg(parts[0], object_classes)
+    if element is None or element.kind != "object":
+        return None
+    return TypeInfo(
+        "vector_view",
+        f"gd::vector<{element.cxx_type}>",
+        f"{{ {element.class_name}? }}",
+        element.class_name,
+        element_type=element,
+    )
+
+
 def _parse_callback(n: str, object_classes: Dict[str, Class]) -> Optional[TypeInfo]:
     inner = _callback_inner(n)
     if inner is None:
@@ -296,6 +331,17 @@ def _classify_core(
     n = normalize_type(s)
     base = short_name(without_pointer(n)) if n.endswith("*") else short_name(n)
 
+    vector_view = _parse_vector_view(n, object_classes)
+    if vector_view is not None:
+        return TypeInfo(
+            vector_view.kind,
+            vector_view.cxx_type,
+            vector_view.lua_type,
+            vector_view.class_name,
+            is_ref,
+            is_out,
+            element_type=vector_view.element_type,
+        )
     if n == "bool":
         return TypeInfo("bool", n, "boolean", is_ref=is_ref, is_out=is_out)
     if n in WIDE_INTEGER_TYPES:

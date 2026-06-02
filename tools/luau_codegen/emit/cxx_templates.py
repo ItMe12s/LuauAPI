@@ -9,6 +9,7 @@ def file_preamble() -> str:
         '#include "lua/bindings/framework/LuaRef.hpp"\n'
         '#include "lua/bindings/framework/LuaCallback.hpp"\n'
         '#include "lua/bindings/framework/LuaMenuHandler.hpp"\n'
+        '#include "lua/bindings/framework/ReadOnlyVectorView.hpp"\n'
         '#include "lua/bindings/framework/Stack.hpp"\n'
         '#include "lua/bindings/framework/TableUtil.hpp"\n'
         '#include "lua/bindings/framework/Types.hpp"\n'

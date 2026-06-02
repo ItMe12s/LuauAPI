@@ -70,11 +70,16 @@ def free_function_key(fn: Function) -> str:
 def free_function_unsupported_reason(
     fn: Function, objects: dict[str, Class]
 ) -> str | None:
-    if classify_return(fn.ret, objects) is None:
+    ret = classify_return(fn.ret, objects)
+    if ret is None:
+        return f"free-function-unsupported-return:{fn.ret}"
+    if ret.kind == "vector_view":
         return f"free-function-unsupported-return:{fn.ret}"
     for i, arg in enumerate(fn.args):
         info = classify_arg(arg.type, objects)
         if info is None:
+            return f"free-function-unsupported-arg:{arg.type}"
+        if info.kind == "vector_view":
             return f"free-function-unsupported-arg:{arg.type}"
         if info.is_out:
             return f"free-function-out-arg:{arg.type}"

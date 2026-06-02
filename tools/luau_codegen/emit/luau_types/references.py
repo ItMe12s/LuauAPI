@@ -83,6 +83,8 @@ def _refs_from_fields(
         ok, _, _, ret = bindable_field(field, objects, cls)
         if ok and ret and ret.kind == "object":
             refs.add(_object_type_name(ret))
+        elif ok and ret and ret.kind == "vector_view" and ret.element_type:
+            refs.add(_object_type_name(ret.element_type))
     return refs
 
 

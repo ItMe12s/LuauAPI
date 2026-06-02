@@ -89,6 +89,12 @@ namespace luax::detail {
             lua_settable(L, -3);
             return 0;
         }
+
+        int readOnlyFieldSetter(lua_State* L) {
+            auto* field = lua_tostring(L, lua_upvalueindex(1));
+            luaL_error(L, "%s is read-only", field ? field : "field");
+            return 0;
+        }
     }
 
     cocos2d::CCObject* liveObject(UserdataBlock* block) {
@@ -197,6 +203,19 @@ namespace luax::detail {
         lua_pushcfunction(L, getter, name);
         lua_setfield(L, -2, "get");
         lua_pushcfunction(L, setter, name);
+        lua_setfield(L, -2, "set");
+        lua_setfield(L, -2, name);
+        lua_pop(L, 2);
+    }
+
+    void appendReadOnlyField(lua_State* L, TypeInfo const& info, char const* name, lua_CFunction getter) {
+        luaL_getmetatable(L, info.mtName.c_str());
+        lua_getfield(L, -1, "__fields");
+        lua_createtable(L, 0, 2);
+        lua_pushcfunction(L, getter, name);
+        lua_setfield(L, -2, "get");
+        lua_pushstring(L, name);
+        lua_pushcclosure(L, &readOnlyFieldSetter, "readonlyFieldSetter", 1);
         lua_setfield(L, -2, "set");
         lua_setfield(L, -2, name);
         lua_pop(L, 2);

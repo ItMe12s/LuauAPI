@@ -84,6 +84,24 @@ class FreeFunctionOverrideTests(unittest.TestCase):
         self.assertNotIn("restart: (self: any, a0: boolean, a1: boolean)", out)
 
 
+class FreeFunctionContainerTests(unittest.TestCase):
+    def test_vector_return_stays_unsupported(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        fn = Function(
+            name="children",
+            namespace="geode::utils",
+            ret="gd::vector<cocos2d::CCObject*>",
+            args=[],
+        )
+        objects = {"CCObject": ccobject, "cocos2d::CCObject": ccobject}
+
+        reason = free_function_unsupported_reason(fn, objects)
+
+        self.assertEqual(
+            reason, "free-function-unsupported-return:gd::vector<cocos2d::CCObject*>"
+        )
+
+
 class GetEnvironmentVariableExclusionTests(unittest.TestCase):
     def _get_env(self) -> Function:
         return Function(

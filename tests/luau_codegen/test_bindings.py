@@ -270,6 +270,50 @@ class GeneratedSafetyTests(unittest.TestCase):
         self.assertIn("luaapi_CCNode_field_register_m_nTag<cocos2d::CCNode>(L);", text)
         self.assertIn('luax::Usertype<T>::field(L, "m_nTag"', text)
 
+    def test_generated_vector_field_accessor_is_readonly_view(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        cls = Class(
+            name="CCNode",
+            namespace="cocos2d",
+            bases=["CCObject"],
+            fields=[Field("m_children", "gd::vector<cocos2d::CCObject*>")],
+        )
+        objects = {"CCObject": ccobject, "cocos2d::CCObject": ccobject, "CCNode": cls}
+
+        text = _emit_class_file(
+            cls,
+            {},
+            [],
+            [(cls, cls.fields[0])],
+            objects,
+            set(),
+            1,
+            "win",
+        )
+
+        self.assertIn("luaapi_CCNode_field_get_m_children", text)
+        self.assertIn("pushReadOnlyVectorView<cocos2d::CCObject>", text)
+        self.assertIn('luax::Usertype<T>::readonlyField(L, "m_children"', text)
+        self.assertNotIn("self->m_children =", text)
+
+    def test_vector_field_plan_and_types_are_bound(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        ccnode = Class(
+            name="CCNode",
+            namespace="cocos2d",
+            bases=["CCObject"],
+            fields=[Field("m_children", "gd::vector<cocos2d::CCObject*>")],
+        )
+        root = Root(classes=[ccobject, ccnode])
+
+        plan = collect_plan(root, "win")
+        files = emit_luau_types(root, "win", plan=plan)
+
+        self.assertEqual(len(plan.field_targets_by_class["CCNode"]), 1)
+        text = types_text(files)
+        self.assertIn("m_children: { CCObject? }", text)
+        self.assertNotIn("-- skipped m_children", text)
+
     def test_field_plan_and_types_include_ccnode_m_fields_only(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")
         ccnode = Class(

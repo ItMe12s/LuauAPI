@@ -163,3 +163,24 @@ class EmitStackCheckTests(unittest.TestCase):
         text = "".join(push_value(info, "pt"))
         self.assertIn("luax::push(L, pt)", text)
         self.assertNotIn("pushPoint", text)
+
+    def test_vector_view_push_uses_readonly_helper(self) -> None:
+        element = TypeInfo(
+            kind="object",
+            cxx_type="cocos2d::CCObject*",
+            lua_type="CCObject",
+            class_name="CCObject",
+        )
+        info = TypeInfo(
+            kind="vector_view",
+            cxx_type="gd::vector<cocos2d::CCObject*>",
+            lua_type="{ CCObject? }",
+            class_name="CCObject",
+            element_type=element,
+        )
+
+        text = "".join(push_value(info, "self->m_children", owner_expr="self"))
+
+        self.assertIn("luax::pushReadOnlyVectorView<cocos2d::CCObject>", text)
+        self.assertIn("self->m_children", text)
+        self.assertIn("self", text)

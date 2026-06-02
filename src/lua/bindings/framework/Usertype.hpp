@@ -61,6 +61,7 @@ namespace luax {
         void chainMethodTable(lua_State* L, TypeInfo const& info, std::uint32_t baseTag);
         void appendMethod(lua_State* L, TypeInfo const& info, char const* name, lua_CFunction fn);
         void appendField(lua_State* L, TypeInfo const& info, char const* name, lua_CFunction getter, lua_CFunction setter);
+        void appendReadOnlyField(lua_State* L, TypeInfo const& info, char const* name, lua_CFunction getter);
         UserdataCandidate checkCandidate(lua_State* L, int idx, char const* targetName, char const* method);
         UserdataCandidate tryCandidate(lua_State* L, int idx);
         cocos2d::CCNode* tryNodeCandidate(lua_State* L, int idx);
@@ -126,6 +127,11 @@ namespace luax {
         static void field(lua_State* L, char const* fieldName, lua_CFunction getter, lua_CFunction setter) {
             auto const& info = detail::UsertypeRegistry::get().infoFor(std::type_index(typeid(T)));
             detail::appendField(L, info, fieldName, getter, setter);
+        }
+
+        static void readonlyField(lua_State* L, char const* fieldName, lua_CFunction getter) {
+            auto const& info = detail::UsertypeRegistry::get().infoFor(std::type_index(typeid(T)));
+            detail::appendReadOnlyField(L, info, fieldName, getter);
         }
 
         static T* check(lua_State* L, int idx, char const* method) {

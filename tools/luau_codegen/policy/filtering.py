@@ -122,11 +122,16 @@ def supported(
             return False, "inaccessible"
     elif not direct_callable(cls, m, target_platform):
         return False, f"not-callable:{target_platform}"
-    if classify_return(m.ret, objects) is None:
+    ret = classify_return(m.ret, objects)
+    if ret is None:
+        return False, f"unsupported-return:{m.ret}"
+    if ret.kind == "vector_view":
         return False, f"unsupported-return:{m.ret}"
     for i, arg in enumerate(m.args):
         info = classify_arg(arg.type, objects)
         if info is None:
+            return False, f"unsupported-arg:{arg.type}"
+        if info.kind == "vector_view":
             return False, f"unsupported-arg:{arg.type}"
         if info.kind == "sel":
             if i == 0:

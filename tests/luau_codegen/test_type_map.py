@@ -95,3 +95,26 @@ class GeodeEnumRegistrationTests(unittest.TestCase):
         }
 
         self.assertEqual(_input_arg_count(method, objects), 3)
+
+
+class ContainerTypeMapTests(unittest.TestCase):
+    def test_classify_gd_vector_object_pointer_as_readonly_view(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        objects = {"CCObject": ccobject, "cocos2d::CCObject": ccobject}
+
+        info = classify_arg("gd::vector<cocos2d::CCObject*>", objects)
+
+        self.assertIsNotNone(info)
+        assert info is not None
+        self.assertEqual(info.kind, "vector_view")
+        self.assertEqual(info.class_name, "CCObject")
+        self.assertEqual(info.lua_type, "{ CCObject? }")
+
+    def test_classify_gd_vector_rejects_non_object_elements(self) -> None:
+        self.assertIsNone(classify_arg("gd::vector<int>", {}))
+
+    def test_classify_gd_map_stays_unsupported(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        objects = {"CCObject": ccobject, "cocos2d::CCObject": ccobject}
+
+        self.assertIsNone(classify_arg("gd::map<int, cocos2d::CCObject*>", objects))

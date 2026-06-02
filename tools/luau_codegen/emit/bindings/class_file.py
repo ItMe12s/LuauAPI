@@ -142,6 +142,46 @@ def _emit_field_accessors(cls: Class, field: Field, objects: Dict[str, Class]) -
     register = f"luaapi_{cxx_id(cls.name)}_field_register_{cxx_id(field.name)}"
     getter_impl = f"{getter}_impl"
     setter_impl = f"{setter}_impl"
+    if ret_info.kind == "vector_view":
+        out = [f"    template <class T>\n"]
+        out.append(f"    int {getter_impl}(lua_State* L, T* self) {{\n")
+        out.append(
+            f"        if constexpr (requires(T* obj) {{ obj->{field.name}; }}) {{\n"
+        )
+        out.extend(
+            f"    {line}"
+            for line in push_value(
+                ret_info, f"self->{field.name}", False, owner_expr="self"
+            )
+        )
+        out.append("            return 1;\n")
+        out.append("        } else {\n")
+        out.append(
+            f'            luaL_error(L, "{label} field is not available in current SDK headers");\n'
+        )
+        out.append("            return 0;\n")
+        out.append("        }\n")
+        out.append("    }\n\n")
+        out.append(f"    int {getter}(lua_State* L) {{\n")
+        out.append(
+            f'        if (lua_gettop(L) != 1) luaL_error(L, "{label} getter expected 1 arg");\n'
+        )
+        out.append(
+            f'        auto self = luax::Usertype<{cxx_name(cls)}>::check(L, 1, "{label}");\n'
+        )
+        out.append(f"        return {getter_impl}(L, self);\n")
+        out.append("    }\n\n")
+        out.append(f"    template <class T>\n")
+        out.append(f"    void {register}(lua_State* L) {{\n")
+        out.append(
+            f"        if constexpr (requires(T* obj) {{ obj->{field.name}; }}) {{\n"
+        )
+        out.append(
+            f'            luax::Usertype<T>::readonlyField(L, "{field.name}", &{getter});\n'
+        )
+        out.append("        }\n")
+        out.append("    }\n\n")
+        return "".join(out)
     out = [f"    template <class T>\n"]
     out.append(f"    int {getter_impl}(lua_State* L, T* self) {{\n")
     out.append(f"        if constexpr (requires(T* obj) {{ obj->{field.name}; }}) {{\n")

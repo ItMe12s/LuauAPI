@@ -241,6 +241,24 @@ class LuauTypeEmissionTests(unittest.TestCase):
         self.assertIn("declare class CCNode", cocos)
         self.assertIn("m_pGrid: CCGridBase?", cocos)
 
+    def test_vector_field_element_type_is_declared(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        ccnode = Class(name="CCNode", namespace="cocos2d", bases=["CCObject"])
+        child = Class(name="ChildNode", namespace="cocos2d", bases=["CCNode"])
+        owner = Class(
+            name="OwnerNode",
+            namespace="cocos2d",
+            bases=["CCNode"],
+            fields=[Field("m_children", "gd::vector<cocos2d::ChildNode*>")],
+        )
+        root = Root(classes=[ccobject, ccnode, child, owner])
+
+        cocos = types_text(emit_luau_types(root))
+
+        self.assertIn("declare class ChildNode", cocos)
+        self.assertIn("m_children: { ChildNode? }", cocos)
+        self.assertNotIn("-- skipped m_children", cocos)
+
     def test_orphan_forward_decls_exclude_value_types(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")
         ccnode = Class(
