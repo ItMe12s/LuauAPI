@@ -3,7 +3,9 @@
 #include "lua/module/PathSandbox.hpp"
 #include "lua/runtime/Runtime.hpp"
 
+#if !defined(LUAUAPI_HOST_TESTS)
 #include <Geode/utils/async.hpp>
+#endif
 
 #include <string>
 #include <string_view>
@@ -173,6 +175,7 @@ namespace imes::luauapi {
         );
     }
 
+#if !defined(LUAUAPI_HOST_TESTS)
     arc::Future<geode::Result<void>> runFileAsync(
         std::filesystem::path resourcesRoot,
         std::filesystem::path relativePath,
@@ -253,6 +256,7 @@ namespace imes::luauapi {
         }
         co_return std::move(*result);
     }
+#endif
 
     bool isReady() {
         if (luax::Runtime::isShuttingDown()) return false;

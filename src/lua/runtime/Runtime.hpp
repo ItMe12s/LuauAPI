@@ -37,6 +37,9 @@ namespace luax {
         static Runtime* getIfInitialized();
         static void shutdown();
         static bool isShuttingDown();
+#if defined(LUAUAPI_HOST_TESTS)
+        static void resetForTests();
+#endif
         static void setMainThreadId(std::thread::id id);
         static bool isMainThread();
 
@@ -136,7 +139,9 @@ namespace luax {
         std::list<BytecodeCacheEntry> m_bytecodeLru;
         std::unordered_map<std::string, std::list<BytecodeCacheEntry>::iterator> m_bytecodeIndex;
 
+#if !defined(LUAUAPI_HOST_TESTS)
         std::unique_ptr<Requirer> m_requirer;
+#endif
 
         std::vector<std::function<void()>> m_shutdownHooks;
     };

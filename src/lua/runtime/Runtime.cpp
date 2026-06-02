@@ -2,16 +2,20 @@
 
 #include "AllocatorAccounting.hpp"
 #include "Loadstring.hpp"
+#if !defined(LUAUAPI_HOST_TESTS)
 #include "lua/bindings/Binding.hpp"
 #include "lua/bindings/framework/Ref.hpp"
+#include "lua/module/Requirer.hpp"
+#endif
 #include "lua/module/BytecodeCacheKey.hpp"
 #include "lua/module/PathSandbox.hpp"
-#include "lua/module/Requirer.hpp"
 
 #include <Geode/Geode.hpp>
 #include <Luau/CodeGen.h>
 #include <Luau/Compiler.h>
+#if !defined(LUAUAPI_HOST_TESTS)
 #include <Luau/Require.h>
+#endif
 #include <fmt/format.h>
 #include <lua.h>
 #include <lualib.h>
@@ -101,6 +105,7 @@ namespace luax {
         cb->panic = &Runtime::panicCallback;
         cb->userdata = this;
 
+#if !defined(LUAUAPI_HOST_TESTS)
         m_requirer = std::make_unique<Requirer>(*this);
         luaopen_require(m_state, &Requirer::initConfig, m_requirer.get());
 
@@ -118,6 +123,7 @@ namespace luax {
             m_status.store(imes::luauapi::RuntimeStatus::InitFailed, std::memory_order_release);
             return;
         }
+#endif
 
         lua_pushvalue(m_state, LUA_GLOBALSINDEX);
         lua_setsafeenv(m_state, -1, true);
@@ -140,7 +146,9 @@ namespace luax {
             m_state = nullptr;
         }
 
+#if !defined(LUAUAPI_HOST_TESTS)
         clearLuaRetains();
+#endif
         geode::log::info("luau runtime shutdown");
     }
 
@@ -189,6 +197,14 @@ namespace luax {
     bool Runtime::isShuttingDown() {
         return shuttingDownStorage().load(std::memory_order_acquire);
     }
+
+#if defined(LUAUAPI_HOST_TESTS)
+    void Runtime::resetForTests() {
+        shuttingDownStorage().store(false, std::memory_order_release);
+        auto& runtime = runtimeStorage();
+        runtime.reset();
+    }
+#endif
 
     void Runtime::setMainThreadId(std::thread::id id) {
         mainThreadIdStorage() = id;
@@ -245,9 +261,11 @@ namespace luax {
     void Runtime::setResourcesRoot(std::filesystem::path const& root) {
         if (!assertMainThread()) return;
         m_resourcesRoot = root;
+#if !defined(LUAUAPI_HOST_TESTS)
         if (m_requirer) {
             m_requirer->setResourcesRoot(m_resourcesRoot);
         }
+#endif
     }
 
     Runtime::ResourcesRootScope::ResourcesRootScope(Runtime& runtime, std::filesystem::path root)

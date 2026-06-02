@@ -17,6 +17,10 @@ namespace luax {
 
     void registerBinding(Binding const& binding);
     std::optional<std::string> applyAllBindings(lua_State* L);
+
+#if defined(LUAUAPI_HOST_TESTS)
+    void resetBindingsForTests();
+#endif
 }
 
 #define LUAX_BINDING_PRIORITY(NAME, FN, PRIO)                \

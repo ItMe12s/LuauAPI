@@ -1,0 +1,45 @@
+{
+    "version": 6,
+    "cmakeMinimumRequired": {
+        "major": 3,
+        "minor": 21,
+        "patch": 0
+    },
+    "configurePresets": [
+        {
+            "name": "dev",
+            "displayName": "Developer",
+            "description": "Local development configure with host tests enabled",
+            "binaryDir": "${sourceDir}/build",
+            "cacheVariables": {
+                "LUAUAPI_BUILD_TESTS": "ON"
+            }
+        },
+        {
+            "name": "dev-tests",
+            "inherits": "dev",
+            "displayName": "Developer (tests only)",
+            "description": "Configure for host unit tests without building the mod target"
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "dev",
+            "configurePreset": "dev"
+        },
+        {
+            "name": "dev-tests",
+            "configurePreset": "dev-tests",
+            "targets": ["luauapi_tests"]
+        }
+    ],
+    "testPresets": [
+        {
+            "name": "dev",
+            "configurePreset": "dev",
+            "output": {
+                "outputOnFailure": true
+            }
+        }
+    ]
+}

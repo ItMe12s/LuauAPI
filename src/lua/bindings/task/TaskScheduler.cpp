@@ -118,6 +118,7 @@ namespace luax {
         return n;
     }
 
+#if !defined(LUAUAPI_HOST_TESTS)
     namespace {
         class TaskTickNode : public cocos2d::CCNode {
         public:
@@ -154,4 +155,9 @@ namespace luax {
         g_tickNode->release();
         g_tickNode = nullptr;
     }
+#else
+    void armTaskTick() {}
+
+    void disarmTaskTick() {}
+#endif
 }

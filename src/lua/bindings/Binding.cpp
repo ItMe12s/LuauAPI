@@ -34,4 +34,10 @@ namespace luax {
         }
         return std::nullopt;
     }
+
+#if defined(LUAUAPI_HOST_TESTS)
+    void resetBindingsForTests() {
+        bindings().clear();
+    }
+#endif
 }

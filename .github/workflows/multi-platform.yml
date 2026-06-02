@@ -23,6 +23,38 @@ jobs:
       - name: Run tests
         run: ctest --test-dir build --output-on-failure
 
+  macos-tests:
+    name: macOS Tests
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build tests
+        uses: geode-sdk/build-geode-mod@main
+        with:
+          configure-args: -DLUAUAPI_BUILD_TESTS=ON
+          build-args: --target luauapi_tests
+
+      - name: Run tests
+        run: ctest --test-dir build --output-on-failure
+
+  linux-codegen-tests:
+    name: Linux Codegen Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run Python codegen tests
+        run: python -m unittest discover -s tests/luau_codegen -p "test_*.py"
+        env:
+          PYTHONPATH: tools
+
   build:
     strategy:
       fail-fast: false
