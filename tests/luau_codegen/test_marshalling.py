@@ -184,3 +184,51 @@ class EmitStackCheckTests(unittest.TestCase):
         self.assertIn("luax::pushReadOnlyVectorView<cocos2d::CCObject>", text)
         self.assertIn("self->m_children", text)
         self.assertIn("self", text)
+
+    def test_vector_view_owned_push_uses_owned_helper(self) -> None:
+        element = TypeInfo(
+            kind="object",
+            cxx_type="cocos2d::CCObject*",
+            lua_type="CCObject",
+            class_name="CCObject",
+        )
+        info = TypeInfo(
+            kind="vector_view",
+            cxx_type="gd::vector<cocos2d::CCObject*>",
+            lua_type="{ CCObject? }",
+            class_name="CCObject",
+            element_type=element,
+        )
+
+        text = "".join(push_return(info, "result", False, vector_owned=True))
+
+        self.assertIn("luax::pushOwnedReadOnlyVectorView<cocos2d::CCObject>", text)
+        self.assertIn("result", text)
+
+    def test_vector_view_check_uses_object_vector_helper(self) -> None:
+        element = TypeInfo(
+            kind="object",
+            cxx_type="cocos2d::CCObject*",
+            lua_type="CCObject",
+            class_name="CCObject",
+        )
+        info = TypeInfo(
+            kind="vector_view",
+            cxx_type="gd::vector<cocos2d::CCObject*>",
+            lua_type="{ CCObject? }",
+            class_name="CCObject",
+            element_type=element,
+        )
+
+        text = "".join(
+            check_arg(
+                Arg("gd::vector<cocos2d::CCObject*>", "children"),
+                info,
+                2,
+                "arg0",
+                "CCNode.setChildren",
+            )
+        )
+
+        self.assertIn("luax::checkObjectVectorView<cocos2d::CCObject>", text)
+        self.assertIn("arg0", text)

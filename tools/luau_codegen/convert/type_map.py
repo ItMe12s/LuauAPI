@@ -125,6 +125,7 @@ class TypeInfo:
     class_name: str = ""
     is_ref: bool = False
     is_out: bool = False
+    is_vector_ptr: bool = False
     callback_ret: Optional["TypeInfo"] = None
     callback_args: Tuple["TypeInfo", ...] = field(default_factory=tuple)
     element_type: Optional["TypeInfo"] = None
@@ -331,6 +332,21 @@ def _classify_core(
     n = normalize_type(s)
     base = short_name(without_pointer(n)) if n.endswith("*") else short_name(n)
 
+    if n.endswith("*"):
+        base = n[:-1].strip()
+        ptr_vector = _parse_vector_view(base, object_classes)
+        if ptr_vector is not None:
+            return TypeInfo(
+                ptr_vector.kind,
+                ptr_vector.cxx_type,
+                ptr_vector.lua_type,
+                ptr_vector.class_name,
+                is_ref=False,
+                is_out=True,
+                is_vector_ptr=True,
+                element_type=ptr_vector.element_type,
+            )
+
     vector_view = _parse_vector_view(n, object_classes)
     if vector_view is not None:
         return TypeInfo(
@@ -408,6 +424,7 @@ def classify_return(t: str, object_classes: Dict[str, Class]) -> Optional[TypeIn
                 info.class_name,
                 info.is_ref,
                 info.is_out,
+                info.is_vector_ptr,
             )
     return info
 

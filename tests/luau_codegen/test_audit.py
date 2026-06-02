@@ -56,22 +56,21 @@ class AuditReportTests(unittest.TestCase):
             bucket["reasonHistogram"],
         )
 
-    def test_audit_classifies_container_arg(self) -> None:
+    def test_audit_classifies_container_arg_for_primitive_vector(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")
-        game_object = Class(name="GameObject", bases=["CCObject"])
         target = Class(
-            name="GameLevelManager",
+            name="Foo",
             bases=["CCObject"],
             methods=[
                 Method(
-                    name="loadObjects",
+                    name="takeInts",
                     ret="void",
-                    args=[Arg("gd::vector<GameObject*>*", "objects")],
+                    args=[Arg("gd::vector<int>", "values")],
                     platforms=all_platforms(),
                 )
             ],
         )
-        root = Root(classes=[ccobject, game_object, target])
+        root = Root(classes=[ccobject, target])
         plan = collect_plan(root, "win")
 
         data = collect_audit(plan, root)
@@ -79,6 +78,29 @@ class AuditReportTests(unittest.TestCase):
 
         self.assertEqual(bucket["count"], 1)
         self.assertEqual(bucket["id"], "container_arg")
+
+    def test_audit_supported_object_vector_method_not_in_container_bucket(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        ccnode = Class(
+            name="CCNode",
+            namespace="cocos2d",
+            bases=["CCObject"],
+            methods=[
+                Method(
+                    name="getChildren",
+                    ret="gd::vector<cocos2d::CCObject*>",
+                    args=[],
+                    platforms=all_platforms(),
+                )
+            ],
+        )
+        root = Root(classes=[ccobject, ccnode])
+        plan = collect_plan(root, "win")
+
+        data = collect_audit(plan, root)
+        bucket = data["buckets"]["container_arg"]
+
+        self.assertEqual(bucket["count"], 0)
 
     def test_audit_classifies_sel_arg(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")

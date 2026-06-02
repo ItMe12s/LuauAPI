@@ -9,10 +9,15 @@ from luau_codegen.convert.marshalling import (
     check_arg,
     check_sel_menu_handler,
     push_return,
+    push_value,
     sel_menu_call_args,
 )
 from luau_codegen.convert.sel_args import is_ccobject_ptr, iter_lua_method_args
-from luau_codegen.convert.type_map import require_classify_arg, require_classify_return
+from luau_codegen.convert.type_map import (
+    TypeInfo,
+    require_classify_arg,
+    require_classify_return,
+)
 from luau_codegen.emit.cxx_templates import file_preamble
 
 FREE_FUNCTIONS_FILE = "bindings_free_functions.cpp"
@@ -20,6 +25,18 @@ FREE_FUNCTIONS_FILE = "bindings_free_functions.cpp"
 
 def _free_fn_base(fn: Function) -> str:
     return f"luaapi_fn_{cxx_id(fn.namespace)}_{cxx_id(fn.name)}"
+
+
+def _emit_vector_return_push(ret: TypeInfo, expr: str) -> list[str]:
+    if ret.kind != "vector_view":
+        return push_return(ret, expr, False)
+    return push_return(ret, expr, False, vector_owned=True)
+
+
+def _emit_vector_out_push(info: TypeInfo, var: str) -> list[str]:
+    if info.kind == "vector_view":
+        return push_value(info, var, False, vector_owned=True)
+    return push_value(info, var, False)
 
 
 def _emit_free_invoke(fn: Function, objects: Dict[str, Class], suffix: str) -> str:
@@ -38,6 +55,14 @@ def _emit_free_invoke(fn: Function, objects: Dict[str, Class], suffix: str) -> s
     lua_idx = 1
     for arg_idx, (arg, info) in enumerate(zip(fn.args, arg_infos)):
         var = f"arg{arg_idx}"
+        if ret.kind == "void" and info.is_out:
+            if info.kind == "vector_view":
+                out.append(f"        {info.cxx_type} {var}{{}};\n")
+                call_args.append(f"&{var}" if info.is_vector_ptr else var)
+            else:
+                out.append(f"        {info.cxx_type} {var}{{}};\n")
+                call_args.append(var)
+            continue
         if (
             arg_idx + 1 < len(fn.args)
             and is_ccobject_ptr(info)
@@ -56,11 +81,21 @@ def _emit_free_invoke(fn: Function, objects: Dict[str, Class], suffix: str) -> s
         lua_idx += 1
 
     target = f"{fn.namespace}::{fn.name}({', '.join(call_args)})"
+    out_refs = [
+        (arg_idx, info)
+        for arg_idx, (_, info) in enumerate(zip(fn.args, arg_infos))
+        if ret.kind == "void" and info.is_out
+    ]
     if ret.kind == "void":
         out.append(f"        {target};\n")
         for handler in menu_handlers:
             out.append(f"        luax::registerOrphanMenuHandler({handler});\n")
-        out.extend(push_return(ret, "", False))
+        if out_refs:
+            for arg_idx, info in out_refs:
+                out.extend(_emit_vector_out_push(info, f"arg{arg_idx}"))
+            out.append(f"        return {len(out_refs)};\n")
+        else:
+            out.extend(push_return(ret, "", False))
     else:
         out.append(f"        auto result = {target};\n")
         for handler in menu_handlers:
@@ -68,7 +103,7 @@ def _emit_free_invoke(fn: Function, objects: Dict[str, Class], suffix: str) -> s
                 out.append(f"        luax::anchorMenuHandler(result, {handler});\n")
             else:
                 out.append(f"        luax::registerOrphanMenuHandler({handler});\n")
-        out.extend(push_return(ret, "result", False))
+        out.extend(_emit_vector_return_push(ret, "result"))
     out.append("    }\n\n")
     return "".join(out)
 

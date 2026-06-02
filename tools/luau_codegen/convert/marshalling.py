@@ -118,6 +118,13 @@ def emit_stack_check(
         return [
             f'        {_prefix(declare, var)} = luax::Usertype<{obj_type}>::check(L, {idx}, "{label}");\n'
         ]
+    if info.kind == "vector_view":
+        if info.element_type is None or info.element_type.kind != "object":
+            raise ValueError("vector view requires object element type")
+        elem = info.element_type.cxx_type[:-1]
+        return [
+            f'        {_prefix(declare, var)} = luax::checkObjectVectorView<{elem}>(L, {idx}, "{label}");\n'
+        ]
     raise ValueError(f"unsupported type kind: {info.kind}")
 
 
@@ -128,6 +135,7 @@ def _push_impl(
     *,
     indent: str = "        ",
     owner_expr: str | None = None,
+    vector_owned: bool = False,
 ) -> list[str]:
     if info.kind == "bool":
         return [f"{indent}luax::push(L, {expr});\n"]
@@ -152,9 +160,11 @@ def _push_impl(
     if info.kind == "vector_view":
         if info.element_type is None or info.element_type.kind != "object":
             raise ValueError("vector view requires object element type")
-        owner = owner_expr or "nullptr"
+        elem = info.element_type.cxx_type[:-1]
+        if vector_owned or not owner_expr:
+            return [f"{indent}luax::pushOwnedReadOnlyVectorView<{elem}>(L, {expr});\n"]
         return [
-            f"{indent}luax::pushReadOnlyVectorView<{info.element_type.cxx_type[:-1]}>(L, {expr}, {owner});\n"
+            f"{indent}luax::pushReadOnlyVectorView<{elem}>(L, {expr}, {owner_expr});\n"
         ]
     raise ValueError(f"unsupported type kind: {info.kind}")
 
@@ -216,16 +226,32 @@ def check_arg(arg: Arg, info: TypeInfo, idx: int, var: str, label: str) -> list[
     return emit_stack_check(info, idx, var, label, declare=True)
 
 
-def push_return(info: TypeInfo, expr: str, owned: bool) -> list[str]:
+def push_return(
+    info: TypeInfo,
+    expr: str,
+    owned: bool,
+    *,
+    owner_expr: str | None = None,
+    vector_owned: bool = False,
+) -> list[str]:
     if info.kind == "void":
         return ["        return 0;\n"]
-    lines = _push_impl(info, expr, owned)
+    lines = _push_impl(
+        info, expr, owned, owner_expr=owner_expr, vector_owned=vector_owned
+    )
     return lines + ["        return 1;\n"]
 
 
 def push_value(
-    info: TypeInfo, expr: str, owned: bool = False, *, owner_expr: str | None = None
+    info: TypeInfo,
+    expr: str,
+    owned: bool = False,
+    *,
+    owner_expr: str | None = None,
+    vector_owned: bool = False,
 ) -> list[str]:
     if info.kind == "void":
         return ["        lua_pushnil(L);\n"]
-    return _push_impl(info, expr, owned, owner_expr=owner_expr)
+    return _push_impl(
+        info, expr, owned, owner_expr=owner_expr, vector_owned=vector_owned
+    )

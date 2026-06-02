@@ -149,7 +149,7 @@ class SelMenuHandlerFilterTests(unittest.TestCase):
 
 
 class ContainerFilterTests(unittest.TestCase):
-    def test_vector_return_method_stays_unsupported(self) -> None:
+    def test_vector_return_method_is_supported(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")
         cls = Class(name="CCNode", namespace="cocos2d", bases=["CCObject"])
         method = Method(
@@ -162,8 +162,96 @@ class ContainerFilterTests(unittest.TestCase):
 
         ok, reason = supported(cls, method, objects, "win")
 
+        self.assertTrue(ok)
+        self.assertEqual(reason, "")
+
+    def test_vector_const_ref_return_method_is_supported(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        cls = Class(name="CCNode", namespace="cocos2d", bases=["CCObject"])
+        method = Method(
+            name="getChildrenRef",
+            ret="gd::vector<cocos2d::CCObject*> const&",
+            args=[],
+            platforms=all_platforms("0x1"),
+        )
+        objects = {"CCObject": ccobject, "cocos2d::CCObject": ccobject, "CCNode": cls}
+
+        ok, reason = supported(cls, method, objects, "win")
+
+        self.assertTrue(ok)
+        self.assertEqual(reason, "")
+
+    def test_vector_input_arg_method_is_supported(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        cls = Class(name="CCNode", namespace="cocos2d", bases=["CCObject"])
+        method = Method(
+            name="setChildren",
+            ret="void",
+            args=[Arg("gd::vector<cocos2d::CCObject*> const&", "children")],
+            platforms=all_platforms("0x1"),
+        )
+        objects = {"CCObject": ccobject, "cocos2d::CCObject": ccobject, "CCNode": cls}
+
+        ok, reason = supported(cls, method, objects, "win")
+
+        self.assertTrue(ok)
+        self.assertEqual(reason, "")
+
+    def test_vector_out_arg_requires_void_return(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        game_object = Class(name="GameObject", bases=["CCObject"])
+        cls = Class(name="GameLevelManager", bases=["CCObject"])
+        method = Method(
+            name="loadObjects",
+            ret="bool",
+            args=[Arg("gd::vector<GameObject*>*", "objects")],
+            platforms=all_platforms("0x1"),
+        )
+        objects = {
+            "CCObject": ccobject,
+            "GameObject": game_object,
+            "GameLevelManager": cls,
+        }
+
+        ok, reason = supported(cls, method, objects, "win")
+
         self.assertFalse(ok)
-        self.assertEqual(reason, "unsupported-return:gd::vector<cocos2d::CCObject*>")
+        self.assertEqual(reason, "unsupported-arg:gd::vector<GameObject*>*")
+
+    def test_vector_out_arg_void_return_is_supported(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        game_object = Class(name="GameObject", bases=["CCObject"])
+        cls = Class(name="GameLevelManager", bases=["CCObject"])
+        method = Method(
+            name="loadObjects",
+            ret="void",
+            args=[Arg("gd::vector<GameObject*>*", "objects")],
+            platforms=all_platforms("0x1"),
+        )
+        objects = {
+            "CCObject": ccobject,
+            "GameObject": game_object,
+            "GameLevelManager": cls,
+        }
+
+        ok, reason = supported(cls, method, objects, "win")
+
+        self.assertTrue(ok)
+        self.assertEqual(reason, "")
+
+    def test_primitive_vector_arg_stays_unsupported(self) -> None:
+        cls = Class(name="Foo")
+        method = Method(
+            name="take",
+            ret="void",
+            args=[Arg("gd::vector<int>", "values")],
+            platforms=all_platforms("0x1"),
+        )
+
+        ok, reason = supported(cls, method, {}, "win")
+
+        self.assertFalse(ok)
+        self.assertEqual(reason, "unsupported-arg:gd::vector<int>")
 
 
 class FreeFunctionSelMenuHandlerFilterTests(unittest.TestCase):

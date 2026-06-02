@@ -262,3 +262,29 @@ class HookableSelCallbackTests(unittest.TestCase):
         objects = {"CCObject": ccobject, "CCNode": cls}
 
         self.assertFalse(hookable(cls, cls.methods[0], objects, "win"))
+
+    def test_vector_arg_not_hookable(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        game_object = Class(name="GameObject", bases=["CCObject"])
+        cls = Class(
+            name="GJBaseGameLayer",
+            bases=["CCObject"],
+            methods=[
+                Method(
+                    name="collisionCheckObjects",
+                    ret="void",
+                    args=[
+                        Arg("GameObject*", "object"),
+                        Arg("gd::vector<GameObject*>*", "objects"),
+                    ],
+                    platforms=all_platforms("0x1"),
+                )
+            ],
+        )
+        objects = {
+            "CCObject": ccobject,
+            "GameObject": game_object,
+            "GJBaseGameLayer": cls,
+        }
+
+        self.assertFalse(hookable(cls, cls.methods[0], objects, "win"))

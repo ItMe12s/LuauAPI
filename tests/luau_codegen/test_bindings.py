@@ -314,6 +314,119 @@ class GeneratedSafetyTests(unittest.TestCase):
         self.assertIn("m_children: { CCObject? }", text)
         self.assertNotIn("-- skipped m_children", text)
 
+    def test_instance_method_vector_return_uses_owner_backed_view(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        cls = Class(
+            name="CCNode",
+            namespace="cocos2d",
+            bases=["CCObject"],
+            methods=[
+                Method(
+                    name="getChildrenRef",
+                    ret="gd::vector<cocos2d::CCObject*> const&",
+                    args=[],
+                    platforms=all_platforms("0x1"),
+                )
+            ],
+        )
+        objects = {"CCObject": ccobject, "cocos2d::CCObject": ccobject, "CCNode": cls}
+        grouped, _ = group_supported(cls, objects, "win")
+
+        text = _emit_class_file(cls, grouped, [], [], objects, set(), 1, "win")
+
+        self.assertIn("pushReadOnlyVectorView<cocos2d::CCObject>", text)
+        self.assertIn("result, self", text)
+        self.assertNotIn("pushOwnedReadOnlyVectorView", text)
+
+    def test_instance_method_vector_value_return_uses_owned_view(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        cls = Class(
+            name="CCNode",
+            namespace="cocos2d",
+            bases=["CCObject"],
+            methods=[
+                Method(
+                    name="getChildren",
+                    ret="gd::vector<cocos2d::CCObject*>",
+                    args=[],
+                    platforms=all_platforms("0x1"),
+                )
+            ],
+        )
+        objects = {"CCObject": ccobject, "cocos2d::CCObject": ccobject, "CCNode": cls}
+        grouped, _ = group_supported(cls, objects, "win")
+
+        text = _emit_class_file(cls, grouped, [], [], objects, set(), 1, "win")
+
+        self.assertIn("pushOwnedReadOnlyVectorView<cocos2d::CCObject>", text)
+        self.assertIn("result", text)
+
+    def test_method_vector_input_arg_checks_lua_table(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        cls = Class(
+            name="CCNode",
+            namespace="cocos2d",
+            bases=["CCObject"],
+            methods=[
+                Method(
+                    name="setChildren",
+                    ret="void",
+                    args=[Arg("gd::vector<cocos2d::CCObject*> const&", "children")],
+                    platforms=all_platforms("0x1"),
+                )
+            ],
+        )
+        objects = {"CCObject": ccobject, "cocos2d::CCObject": ccobject, "CCNode": cls}
+        grouped, _ = group_supported(cls, objects, "win")
+
+        text = _emit_class_file(cls, grouped, [], [], objects, set(), 1, "win")
+
+        self.assertIn("checkObjectVectorView<cocos2d::CCObject>", text)
+        self.assertIn("self->setChildren(arg0)", text)
+
+    def test_method_vector_out_arg_returns_owned_view(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        game_object = Class(name="GameObject", bases=["CCObject"])
+        cls = Class(
+            name="GameLevelManager",
+            bases=["CCObject"],
+            methods=[
+                Method(
+                    name="loadObjects",
+                    ret="void",
+                    args=[Arg("gd::vector<GameObject*>*", "objects")],
+                    platforms=all_platforms("0x1"),
+                )
+            ],
+        )
+        objects = {
+            "CCObject": ccobject,
+            "GameObject": game_object,
+            "GameLevelManager": cls,
+        }
+        grouped, _ = group_supported(cls, objects, "win")
+
+        text = _emit_class_file(cls, grouped, [], [], objects, set(), 1, "win")
+
+        self.assertIn("gd::vector<GameObject*> arg0{}", text)
+        self.assertIn("self->loadObjects(&arg0)", text)
+        self.assertIn("pushOwnedReadOnlyVectorView<GameObject>", text)
+
+    def test_free_function_vector_return_uses_owned_view(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        fn = Function(
+            name="children",
+            namespace="geode::utils",
+            ret="gd::vector<cocos2d::CCObject*>",
+            args=[],
+        )
+        objects = {"CCObject": ccobject, "cocos2d::CCObject": ccobject}
+        kept, _ = group_supported_free_functions([fn], objects, "win")
+        text = emit_free_functions_file(kept, objects)
+
+        self.assertIn("pushOwnedReadOnlyVectorView<cocos2d::CCObject>", text)
+        self.assertIn("geode::utils::children()", text)
+
     def test_field_plan_and_types_include_ccnode_m_fields_only(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")
         ccnode = Class(

@@ -85,7 +85,7 @@ class FreeFunctionOverrideTests(unittest.TestCase):
 
 
 class FreeFunctionContainerTests(unittest.TestCase):
-    def test_vector_return_stays_unsupported(self) -> None:
+    def test_vector_return_is_supported(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")
         fn = Function(
             name="children",
@@ -97,9 +97,33 @@ class FreeFunctionContainerTests(unittest.TestCase):
 
         reason = free_function_unsupported_reason(fn, objects)
 
-        self.assertEqual(
-            reason, "free-function-unsupported-return:gd::vector<cocos2d::CCObject*>"
+        self.assertIsNone(reason)
+
+    def test_vector_input_arg_is_supported(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        fn = Function(
+            name="applyChildren",
+            namespace="geode::utils",
+            ret="void",
+            args=[Arg("gd::vector<cocos2d::CCObject*> const&", "children")],
         )
+        objects = {"CCObject": ccobject, "cocos2d::CCObject": ccobject}
+
+        reason = free_function_unsupported_reason(fn, objects)
+
+        self.assertIsNone(reason)
+
+    def test_primitive_vector_arg_stays_unsupported(self) -> None:
+        fn = Function(
+            name="take",
+            namespace="geode::utils",
+            ret="void",
+            args=[Arg("gd::vector<int>", "values")],
+        )
+
+        reason = free_function_unsupported_reason(fn, {})
+
+        self.assertEqual(reason, "free-function-unsupported-arg:gd::vector<int>")
 
 
 class GetEnvironmentVariableExclusionTests(unittest.TestCase):

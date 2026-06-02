@@ -20,6 +20,10 @@ from luau_codegen.convert.type_map import (
     normalize_type,
 )
 from luau_codegen.convert.sel_args import is_ccobject_ptr
+from luau_codegen.policy.containers import (
+    vector_view_supported_as_arg,
+    vector_view_supported_as_return,
+)
 
 STRICT_DIRECT_PLATFORMS: set[str] = {"ios"}
 
@@ -125,13 +129,15 @@ def supported(
     ret = classify_return(m.ret, objects)
     if ret is None:
         return False, f"unsupported-return:{m.ret}"
-    if ret.kind == "vector_view":
+    if ret.kind == "vector_view" and not vector_view_supported_as_return(ret):
         return False, f"unsupported-return:{m.ret}"
     for i, arg in enumerate(m.args):
         info = classify_arg(arg.type, objects)
         if info is None:
             return False, f"unsupported-arg:{arg.type}"
-        if info.kind == "vector_view":
+        if info.kind == "vector_view" and not vector_view_supported_as_arg(
+            info, ret.kind
+        ):
             return False, f"unsupported-arg:{arg.type}"
         if info.kind == "sel":
             if i == 0:

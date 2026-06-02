@@ -29,6 +29,20 @@ def _classify_method_args(m: Method, objects: Dict[str, Class]) -> List[TypeInfo
     return [require_classify_arg(arg.type, objects) for arg in m.args]
 
 
+def _emit_vector_return_push(ret: TypeInfo, m: Method, expr: str) -> List[str]:
+    if ret.kind != "vector_view":
+        return push_return(ret, expr, returns_owned(m) or m.is_bound_ctor)
+    if ret.is_ref and not m.is_static:
+        return push_return(ret, expr, False, owner_expr="self")
+    return push_return(ret, expr, False, vector_owned=True)
+
+
+def _emit_vector_out_push(info: TypeInfo, var: str) -> List[str]:
+    if info.kind == "vector_view":
+        return push_value(info, var, False, vector_owned=True)
+    return push_value(info, var, False)
+
+
 def _gen_ns(cls: Class) -> str:
     return f"ns_{cxx_id(cls.name)}"
 
@@ -78,11 +92,16 @@ def _emit_invoke(cls: Class, m: Method, objects: Dict[str, Class], suffix: str) 
         if ret.kind == "void" and info.is_out:
             if info.kind == "value" and info.lua_type == "UIButtonConfig":
                 out.append(f"        UIButtonConfig {var}{{}};\n")
+                call_args.append(var)
             elif info.kind == "enum":
                 out.append(f"        {info.cxx_type} {var}{{}};\n")
+                call_args.append(var)
+            elif info.kind == "vector_view":
+                out.append(f"        {info.cxx_type} {var}{{}};\n")
+                call_args.append(f"&{var}" if info.is_vector_ptr else var)
             else:
                 out.append(f"        {info.cxx_type} {var}{{}};\n")
-            call_args.append(var)
+                call_args.append(var)
             continue
         if (
             arg_idx + 1 < len(m.args)
@@ -118,7 +137,7 @@ def _emit_invoke(cls: Class, m: Method, objects: Dict[str, Class], suffix: str) 
         out.extend(_emit_menu_handler_anchors(menu_handlers, ret, m))
         if out_refs:
             for arg_idx, info in out_refs:
-                out.extend(push_value(info, f"arg{arg_idx}", False))
+                out.extend(_emit_vector_out_push(info, f"arg{arg_idx}"))
             out.append(f"        return {len(out_refs)};\n")
         else:
             out.extend(push_return(ret, "", False))
@@ -127,7 +146,7 @@ def _emit_invoke(cls: Class, m: Method, objects: Dict[str, Class], suffix: str) 
         if m.is_bound_ctor:
             out.append("        result->autorelease();\n")
         out.extend(_emit_menu_handler_anchors(menu_handlers, ret, m))
-        out.extend(push_return(ret, "result", returns_owned(m) or m.is_bound_ctor))
+        out.extend(_emit_vector_return_push(ret, m, "result"))
     out.append("    }\n\n")
     return "".join(out)
 

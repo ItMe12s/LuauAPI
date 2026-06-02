@@ -69,9 +69,13 @@ def _refs_from_method(method: Method, objects: Dict[str, Class]) -> set[str]:
         info = classify_arg(arg.type, objects)
         if info and info.kind == "object":
             refs.add(_object_type_name(info))
+        elif info and info.kind == "vector_view" and info.element_type:
+            refs.add(_object_type_name(info.element_type))
     ret = classify_return(method.ret, objects)
     if ret and ret.kind == "object":
         refs.add(_object_type_name(ret))
+    elif ret and ret.kind == "vector_view" and ret.element_type:
+        refs.add(_object_type_name(ret.element_type))
     return refs
 
 

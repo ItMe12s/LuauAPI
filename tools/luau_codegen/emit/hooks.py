@@ -96,13 +96,15 @@ def hookable(
         return False
     if ret.kind == "string" and ret.cxx_type.endswith("*"):
         return False
+    if ret.kind == "vector_view":
+        return False
     if any(is_out_reference(arg.type) for arg in m.args):
         return False
     for arg in m.args:
         info = classify_arg(arg.type, objects)
         if info is None:
             return False
-        if info.kind in ("sel", "callback"):
+        if info.kind in ("sel", "callback", "vector_view"):
             return False
     return True
 

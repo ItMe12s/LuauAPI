@@ -109,6 +109,51 @@ class ContainerTypeMapTests(unittest.TestCase):
         self.assertEqual(info.kind, "vector_view")
         self.assertEqual(info.class_name, "CCObject")
         self.assertEqual(info.lua_type, "{ CCObject? }")
+        self.assertFalse(info.is_ref)
+        self.assertFalse(info.is_out)
+        self.assertFalse(info.is_vector_ptr)
+
+    def test_classify_gd_vector_const_ref(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        objects = {"CCObject": ccobject, "cocos2d::CCObject": ccobject}
+
+        info = classify_arg("gd::vector<cocos2d::CCObject*> const&", objects)
+
+        assert info is not None
+        self.assertEqual(info.kind, "vector_view")
+        self.assertTrue(info.is_ref)
+        self.assertFalse(info.is_out)
+        self.assertFalse(info.is_vector_ptr)
+
+    def test_classify_gd_vector_out_ref(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        objects = {"CCObject": ccobject, "cocos2d::CCObject": ccobject}
+
+        info = classify_arg("gd::vector<cocos2d::CCObject*>&", objects)
+
+        assert info is not None
+        self.assertEqual(info.kind, "vector_view")
+        self.assertTrue(info.is_ref)
+        self.assertTrue(info.is_out)
+        self.assertFalse(info.is_vector_ptr)
+
+    def test_classify_gd_vector_pointer_out(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        game_object = Class(name="GameObject", bases=["CCObject"])
+        objects = {
+            "CCObject": ccobject,
+            "GameObject": game_object,
+            "cocos2d::CCObject": ccobject,
+        }
+
+        info = classify_arg("gd::vector<GameObject*>*", objects)
+
+        assert info is not None
+        self.assertEqual(info.kind, "vector_view")
+        self.assertFalse(info.is_ref)
+        self.assertTrue(info.is_out)
+        self.assertTrue(info.is_vector_ptr)
+        self.assertEqual(info.class_name, "GameObject")
 
     def test_classify_gd_vector_rejects_non_object_elements(self) -> None:
         self.assertIsNone(classify_arg("gd::vector<int>", {}))

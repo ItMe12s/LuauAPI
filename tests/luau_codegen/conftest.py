@@ -74,6 +74,7 @@ from luau_codegen.cli.main import main as codegen_main  # type: ignore[import-un
 from luau_codegen.convert.marshalling import (  # type: ignore[import-unresolved]
     check_arg,
     emit_stack_check,
+    push_return,
     push_value,
     sel_menu_call_args,
 )
@@ -171,6 +172,7 @@ __all__ = [
     # convert.marshalling
     "check_arg",
     "emit_stack_check",
+    "push_return",
     "push_value",
     "sel_menu_call_args",
     # model.domain
