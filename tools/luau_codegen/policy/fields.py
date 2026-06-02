@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import re
-from typing import Dict
+from typing import TYPE_CHECKING, Dict
+
+if TYPE_CHECKING:
+    from luau_codegen.model.codegen_context import CodegenContext
 
 from luau_codegen.parse.broma import Class, Field
 from luau_codegen.model.denylist import INACCESSIBLE_CLASSES
@@ -31,7 +34,10 @@ def _is_function_pointer(t: str) -> bool:
 
 
 def bindable_field(
-    field: Field, objects: Dict[str, Class], cls: Class | None = None
+    field: Field,
+    objects: Dict[str, Class],
+    cls: Class | None = None,
+    ctx: CodegenContext | None = None,
 ) -> tuple[bool, str, TypeInfo | None, TypeInfo | None]:
     normalized = normalize_type(field.type)
     if cls and (cls.name, field.name) in INACCESSIBLE_FIELDS:
@@ -43,8 +49,8 @@ def bindable_field(
     if _is_function_pointer(normalized):
         return False, "function-pointer", None, None
     owner_class = cls.name if cls else ""
-    arg = classify_arg(field.type, objects, owner_class=owner_class)
-    ret = classify_return(field.type, objects)
+    arg = classify_arg(field.type, objects, owner_class=owner_class, ctx=ctx)
+    ret = classify_return(field.type, objects, ctx=ctx)
     if arg is None:
         return False, f"unsupported-arg:{field.type}", None, ret
     if ret is None:

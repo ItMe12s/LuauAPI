@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import re
-from typing import Dict, List, Sequence, Tuple
+from typing import TYPE_CHECKING, Dict, List, Sequence, Tuple
+
+if TYPE_CHECKING:
+    from luau_codegen.model.codegen_context import CodegenContext
 
 from luau_codegen.parse.broma import Class, Field, Method
 from luau_codegen.policy.fields import bindable_field
@@ -119,15 +122,17 @@ def _emit_delegate_stub_block() -> str:
     return "".join(lines)
 
 
-def _refs_from_method(method: Method, objects: Dict[str, Class]) -> set[str]:
+def _refs_from_method(
+    method: Method, objects: Dict[str, Class], ctx: CodegenContext | None = None
+) -> set[str]:
     refs: set[str] = set()
     for arg in method.args:
-        info = classify_arg(arg.type, objects)
+        info = classify_arg(arg.type, objects, ctx=ctx)
         if info and info.kind == "object":
             refs.add(_object_type_name(info))
         elif info and info.kind == "vector_view" and info.element_type:
             refs.add(_object_type_name(info.element_type))
-    ret = classify_return(method.ret, objects)
+    ret = classify_return(method.ret, objects, ctx=ctx)
     if ret and ret.kind == "object":
         refs.add(_object_type_name(ret))
     elif ret and ret.kind == "vector_view" and ret.element_type:
@@ -136,11 +141,14 @@ def _refs_from_method(method: Method, objects: Dict[str, Class]) -> set[str]:
 
 
 def _refs_from_fields(
-    cls: Class, fields: Sequence[Field], objects: Dict[str, Class]
+    cls: Class,
+    fields: Sequence[Field],
+    objects: Dict[str, Class],
+    ctx: CodegenContext | None = None,
 ) -> set[str]:
     refs: set[str] = set()
     for field in fields:
-        ok, _, _, ret = bindable_field(field, objects, cls)
+        ok, _, _, ret = bindable_field(field, objects, cls, ctx=ctx)
         if ok and ret and ret.kind == "object":
             refs.add(_object_type_name(ret))
         elif ok and ret and ret.kind == "vector_view" and ret.element_type:
@@ -164,6 +172,7 @@ def _refs_from_classes(
     grouped_by_class: Dict[str, Dict[str, List[Method]]],
     objects: Dict[str, Class],
     skipped_classes: set,
+    ctx: CodegenContext | None = None,
 ) -> set[str]:
     refs: set[str] = set()
     for name in class_names:
@@ -171,22 +180,23 @@ def _refs_from_classes(
         if not cls or name in skipped_classes:
             continue
         refs.update(_base_type_refs(cls, objects, skipped_classes))
-        refs.update(_refs_from_fields(cls, cls.fields, objects))
+        refs.update(_refs_from_fields(cls, cls.fields, objects, ctx=ctx))
         for methods in grouped_by_class.get(name, {}).values():
             for method in methods:
-                refs.update(_refs_from_method(method, objects))
+                refs.update(_refs_from_method(method, objects, ctx=ctx))
     return refs
 
 
 def _factory_object_refs(
     factories: Dict[str, Dict[str, List[Method]]],
     objects: Dict[str, Class],
+    ctx: CodegenContext | None = None,
 ) -> set[str]:
     refs: set[str] = set()
     for methods in factories.values():
         for overloads in methods.values():
             for method in overloads:
-                refs.update(_refs_from_method(method, objects))
+                refs.update(_refs_from_method(method, objects, ctx=ctx))
     return refs
 
 

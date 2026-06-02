@@ -1,8 +1,11 @@
 from __future__ import annotations
 
-from typing import Dict, List
+from typing import TYPE_CHECKING, Dict, List
 
 from luau_codegen.parse.broma import Class, Method
+
+if TYPE_CHECKING:
+    from luau_codegen.model.codegen_context import CodegenContext
 from luau_codegen.convert.type_map import TypeInfo, classify_arg, classify_return
 from luau_codegen.convert.sel_args import iter_lua_method_args
 
@@ -40,15 +43,17 @@ LUAU_KEYWORDS = frozenset(
 )
 
 
-def _method_return_type(cls: Class, m: Method, objects: Dict[str, Class]) -> str:
-    ret = classify_return(m.ret, objects)
+def _method_return_type(
+    cls: Class, m: Method, objects: Dict[str, Class], ctx: CodegenContext | None = None
+) -> str:
+    ret = classify_return(m.ret, objects, ctx=ctx)
     assert ret is not None
     out_types: List[str] = []
     if ret.kind != "void":
         out_types.append(ret.lua_type)
     if ret.kind == "void":
         for arg in m.args:
-            info = classify_arg(arg.type, objects, owner_class=cls.name)
+            info = classify_arg(arg.type, objects, owner_class=cls.name, ctx=ctx)
             assert info is not None
             if info.is_out:
                 out_types.append(info.lua_type)
@@ -60,13 +65,13 @@ def _method_return_type(cls: Class, m: Method, objects: Dict[str, Class]) -> str
 
 
 def _classify_input_args(
-    cls: Class, m: Method, objects: Dict[str, Class]
+    cls: Class, m: Method, objects: Dict[str, Class], ctx: CodegenContext | None = None
 ) -> List[TypeInfo]:
-    ret = classify_return(m.ret, objects)
+    ret = classify_return(m.ret, objects, ctx=ctx)
     assert ret is not None
     arg_infos = []
     for arg in m.args:
-        info = classify_arg(arg.type, objects, owner_class=cls.name)
+        info = classify_arg(arg.type, objects, owner_class=cls.name, ctx=ctx)
         assert info is not None
         arg_infos.append(info)
     return [
@@ -76,11 +81,16 @@ def _classify_input_args(
     ]
 
 
-def _method_type(cls: Class, methods: List[Method], objects: Dict[str, Class]) -> str:
+def _method_type(
+    cls: Class,
+    methods: List[Method],
+    objects: Dict[str, Class],
+    ctx: CodegenContext | None = None,
+) -> str:
     parts = []
     for m in methods:
-        args = _classify_input_args(cls, m, objects)
-        ret_type = _method_return_type(cls, m, objects)
+        args = _classify_input_args(cls, m, objects, ctx=ctx)
+        ret_type = _method_return_type(cls, m, objects, ctx=ctx)
         params = []
         if not m.is_static:
             params.append(f"self: {cls.name}")
@@ -91,9 +101,14 @@ def _method_type(cls: Class, methods: List[Method], objects: Dict[str, Class]) -
 
 
 def _widened_method_type(
-    cls: Class, methods: List[Method], objects: Dict[str, Class], *, static: bool
+    cls: Class,
+    methods: List[Method],
+    objects: Dict[str, Class],
+    *,
+    static: bool,
+    ctx: CodegenContext | None = None,
 ) -> str:
-    arg_lists = [_classify_input_args(cls, m, objects) for m in methods]
+    arg_lists = [_classify_input_args(cls, m, objects, ctx=ctx) for m in methods]
     prefix: List[str] = []
     for i in range(min(len(a) for a in arg_lists)):
         types_at_i = {a[i].lua_type for a in arg_lists}
@@ -101,7 +116,7 @@ def _widened_method_type(
             prefix.append(arg_lists[0][i].lua_type)
         else:
             break
-    returns = {_method_return_type(cls, m, objects) for m in methods}
+    returns = {_method_return_type(cls, m, objects, ctx=ctx) for m in methods}
     ret = returns.pop() if len(returns) == 1 else "any?"
     params: List[str] = []
     if not static:

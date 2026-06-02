@@ -1,8 +1,11 @@
 from __future__ import annotations
 
-from typing import Dict, List, Tuple
+from typing import TYPE_CHECKING, Dict, List, Tuple
 
 from luau_codegen.parse.broma import Class, Field, Method
+
+if TYPE_CHECKING:
+    from luau_codegen.model.codegen_context import CodegenContext
 
 from luau_codegen.policy.fields import bindable_field
 from luau_codegen.model.domain import short_name
@@ -20,12 +23,13 @@ def _should_emit_type_class(
     objects: Dict[str, Class],
     field_targets: list[tuple[Class, Field]],
     skipped_classes: set,
+    ctx: CodegenContext | None = None,
 ) -> bool:
     if cls.name not in skipped_classes:
         return True
     bound = {field.name for _, field in field_targets}
     for field in cls.fields:
-        ok, reason, _, ret = bindable_field(field, objects, cls)
+        ok, reason, _, ret = bindable_field(field, objects, cls, ctx=ctx)
         if ok and field.name in bound and ret:
             return True
         if reason:
@@ -49,6 +53,7 @@ def _emit_class(
     field_targets: list[tuple[Class, Field]],
     objects: Dict[str, Class],
     skipped_classes: set,
+    ctx: CodegenContext | None = None,
 ) -> List[str]:
     lines: List[str] = []
     base_name = _emitted_base_name(cls, objects, skipped_classes)
@@ -63,7 +68,7 @@ def _emit_class(
     if _is_ccnode_descendant(cls, objects, skipped_classes):
         field_lines.append("    m_fields: { [string]: any }\n")
     for field in cls.fields:
-        ok, reason, _, ret = bindable_field(field, objects, cls)
+        ok, reason, _, ret = bindable_field(field, objects, cls, ctx=ctx)
         if ok and field.name in bound_field_names and ret:
             field_lines.append(f"    {field.name}: {ret.lua_type}\n")
         elif reason:
@@ -77,8 +82,8 @@ def _emit_class(
         for name, methods in sorted(instance_methods.items()):
             if len(methods) == 1:
                 m = methods[0]
-                args = _classify_input_args(cls, m, objects)
-                ret_type = _method_return_type(cls, m, objects)
+                args = _classify_input_args(cls, m, objects, ctx=ctx)
+                ret_type = _method_return_type(cls, m, objects, ctx=ctx)
                 arg_text = ", ".join(
                     f"arg{i}: {arg.lua_type}" for i, arg in enumerate(args, start=1)
                 )
@@ -93,7 +98,9 @@ def _emit_class(
                         f"    function {name}({self_prefix}{arg_text}){': ' + ret_type if ret_type != '()' else ''}\n"
                     )
             else:
-                widened = _widened_method_type(cls, methods, objects, static=False)
+                widened = _widened_method_type(
+                    cls, methods, objects, static=False, ctx=ctx
+                )
                 lines.append(f"    {name}: {widened}\n")
         lines.append("end\n\n")
     return lines

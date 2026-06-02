@@ -2,6 +2,10 @@ from __future__ import annotations
 
 from collections import defaultdict
 from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from luau_codegen.model.codegen_context import CodegenContext
 
 from luau_codegen.convert.sel_args import is_ccobject_ptr
 from luau_codegen.policy.containers import (
@@ -72,16 +76,16 @@ def free_function_key(fn: Function) -> str:
 
 
 def free_function_unsupported_reason(
-    fn: Function, objects: dict[str, Class]
+    fn: Function, objects: dict[str, Class], ctx: CodegenContext | None = None
 ) -> str | None:
-    ret = classify_return(fn.ret, objects)
+    ret = classify_return(fn.ret, objects, ctx=ctx)
     if ret is None:
         return f"free-function-unsupported-return:{fn.ret}"
     if ret.kind == "vector_view" and not vector_view_supported_as_return(ret):
         return f"free-function-unsupported-return:{fn.ret}"
     ret_kind = ret.kind
     for i, arg in enumerate(fn.args):
-        info = classify_arg(arg.type, objects)
+        info = classify_arg(arg.type, objects, ctx=ctx)
         if info is None:
             return f"free-function-unsupported-arg:{arg.type}"
         if info.kind == "vector_view" and not vector_view_supported_as_arg(
@@ -95,19 +99,24 @@ def free_function_unsupported_reason(
     return None
 
 
-def free_function_supported(fn: Function, objects: dict[str, Class]) -> bool:
-    return free_function_unsupported_reason(fn, objects) is None
+def free_function_supported(
+    fn: Function, objects: dict[str, Class], ctx: CodegenContext | None = None
+) -> bool:
+    return free_function_unsupported_reason(fn, objects, ctx=ctx) is None
 
 
 def free_function_skipped_object_ref(
-    fn: Function, objects: dict[str, Class], skipped_classes: set[str]
+    fn: Function,
+    objects: dict[str, Class],
+    skipped_classes: set[str],
+    ctx: CodegenContext | None = None,
 ) -> str:
     blocked = skipped_classes | INACCESSIBLE_CLASSES
-    ret = classify_return(fn.ret, objects)
+    ret = classify_return(fn.ret, objects, ctx=ctx)
     if ret and ret.kind == "object" and ret.class_name in blocked:
         return ret.class_name
     for arg in fn.args:
-        info = classify_arg(arg.type, objects)
+        info = classify_arg(arg.type, objects, ctx=ctx)
         if info and info.kind == "object" and info.class_name in blocked:
             return info.class_name
     return ""
@@ -121,12 +130,13 @@ def group_supported_free_functions(
     functions: list[Function],
     objects: dict[str, Class],
     target_platform: str = "win",
+    ctx: CodegenContext | None = None,
 ) -> tuple[list[Function], list[FreeFunctionSkip]]:
     skipped: list[FreeFunctionSkip] = []
     by_name: dict[tuple[str, str], list[Function]] = defaultdict(list)
 
     for fn in functions:
-        reason = free_function_unsupported_reason(fn, objects)
+        reason = free_function_unsupported_reason(fn, objects, ctx=ctx)
         if reason:
             skipped.append(_skip_entry(fn, reason))
             continue

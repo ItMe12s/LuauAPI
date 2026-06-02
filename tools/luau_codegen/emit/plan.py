@@ -32,7 +32,12 @@ from luau_codegen.model.domain import (
     object_classes,
     resolve_base,
 )
+from luau_codegen.model.codegen_context import CodegenContext
 from luau_codegen.util.paths import binding_filename
+
+
+def _ctx_from_root(root: Root) -> CodegenContext:
+    return root.codegen_ctx or CodegenContext.static()
 
 
 @dataclass
@@ -50,6 +55,7 @@ class EmitPlan:
     skipped_free_functions: List[FreeFunctionSkip] = field(default_factory=list)
     emitted_classes: List[Class] = field(default_factory=list)
     intersection_stats: IntersectionStats = field(default_factory=IntersectionStats)
+    ctx: CodegenContext = field(default_factory=CodegenContext.static)
 
 
 def _inheritance_depth(
@@ -85,11 +91,14 @@ def _filter_free_function_object_refs(
     objects: dict[str, Class],
     skipped_classes: set[str],
     target_platform: str,
+    ctx: CodegenContext | None = None,
 ) -> tuple[list[Function], list[FreeFunctionSkip]]:
     kept: list[Function] = []
     skipped: list[FreeFunctionSkip] = []
     for fn in functions:
-        skipped_ref = free_function_skipped_object_ref(fn, objects, skipped_classes)
+        skipped_ref = free_function_skipped_object_ref(
+            fn, objects, skipped_classes, ctx=ctx
+        )
         if skipped_ref:
             reason = f"not-callable-type:{target_platform}:{skipped_ref}"
             skipped.append((free_function_key(fn), fn.lua_path, fn.name, reason))
@@ -101,20 +110,26 @@ def _filter_free_function_object_refs(
 def collect_platform_plan(root: Root, target_platform: str = "win") -> EmitPlan:
     classes = object_classes(root)
     objects = codegen_object_map(root)
+    ctx = _ctx_from_root(root)
     lookup = build_class_lookup(classes)
     skipped: list[tuple[str, str, str]] = []
     supported_by_class: dict[str, dict[str, list[Method]]] = {}
     skipped_by_class: dict[str, list[tuple[Method, str]]] = {}
 
     for cls in classes:
-        grouped, cls_skipped = group_supported(cls, objects, target_platform)
+        grouped, cls_skipped = group_supported(cls, objects, target_platform, ctx=ctx)
         supported_by_class[cls.name] = grouped
         skipped_by_class[cls.name] = cls_skipped
         for method, reason in cls_skipped:
             skipped.append((cls.name, method.name, reason))
 
     skipped_classes = linkless_class_names(
-        classes, objects, supported_by_class, skipped_by_class, target_platform
+        classes,
+        objects,
+        supported_by_class,
+        skipped_by_class,
+        target_platform,
+        ctx=ctx,
     )
     skipped.extend(
         prune_skipped_class_refs(
@@ -123,6 +138,7 @@ def collect_platform_plan(root: Root, target_platform: str = "win") -> EmitPlan:
             objects,
             skipped_classes,
             target_platform,
+            ctx=ctx,
         )
     )
     depths = {
@@ -137,24 +153,25 @@ def collect_platform_plan(root: Root, target_platform: str = "win") -> EmitPlan:
         grouped = supported_by_class[cls.name]
         for methods in grouped.values():
             for method in methods:
-                if hookable(cls, method, objects, target_platform):
+                if hookable(cls, method, objects, target_platform, ctx=ctx):
                     hook_targets_by_class[cls.name].append((cls, method))
         for field in cls.fields:
-            ok, _, _, _ = bindable_field(field, objects, cls)
+            ok, _, _, _ = bindable_field(field, objects, cls, ctx=ctx)
             if ok:
                 field_targets_by_class[cls.name].append((cls, field))
 
     supported_free_functions, skipped_free_functions = group_supported_free_functions(
-        root.functions, objects, target_platform
+        root.functions, objects, target_platform, ctx=ctx
     )
     supported_free_functions, free_ref_skips = _filter_free_function_object_refs(
-        supported_free_functions, objects, skipped_classes, target_platform
+        supported_free_functions, objects, skipped_classes, target_platform, ctx=ctx
     )
     skipped_free_functions.extend(free_ref_skips)
 
     plan = EmitPlan(
         classes=classes,
         objects=objects,
+        ctx=ctx,
         skipped=skipped,
         skipped_by_class=skipped_by_class,
         skipped_classes=skipped_classes,
@@ -222,6 +239,7 @@ def _prune_free_function_refs(
         plan.objects,
         plan.skipped_classes,
         target_platform,
+        ctx=plan.ctx,
     )
     plan.supported_free_functions = kept
     for key, lua_path, name, reason in skipped:
@@ -312,6 +330,7 @@ def _apply_intersection(
             plan.objects,
             plan.skipped_classes,
             target_platform,
+            ctx=plan.ctx,
         )
         if pruned:
             plan.skipped.extend(pruned)

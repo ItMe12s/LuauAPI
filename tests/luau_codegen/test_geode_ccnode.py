@@ -243,8 +243,8 @@ public:
             )
 
             enums = scan_geode_enums(tmpdir)
-            register_geode_enums(enums)
-            info = classify_arg("geode::Anchor", {})
+            ctx = register_geode_enums(enums)
+            info = classify_arg("geode::Anchor", {}, ctx=ctx)
             self.assertIsNotNone(info)
             assert info is not None
             self.assertEqual(info.kind, "enum")

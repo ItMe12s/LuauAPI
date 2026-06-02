@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import re
-from typing import Dict
+from typing import TYPE_CHECKING, Dict
+
+if TYPE_CHECKING:
+    from luau_codegen.model.codegen_context import CodegenContext
 
 from luau_codegen.convert.symbols import android_symbol
 from luau_codegen.convert.type_map import (
@@ -61,7 +64,11 @@ def hook_address_expr(cls: Class, m: Method, target_platform: str) -> str:
 
 
 def hookable(
-    cls: Class, m: Method, objects: Dict[str, Class], target_platform: str
+    cls: Class,
+    m: Method,
+    objects: Dict[str, Class],
+    target_platform: str,
+    ctx: CodegenContext | None = None,
 ) -> bool:
     if m.is_static or m.is_ctor or m.is_dtor:
         return False
@@ -69,7 +76,7 @@ def hookable(
         return False
     if not hook_address_expr(cls, m, target_platform):
         return False
-    ret = classify_return(m.ret, objects)
+    ret = classify_return(m.ret, objects, ctx=ctx)
     if ret is None:
         return False
     if "&" in normalize_type(m.ret):
@@ -83,7 +90,7 @@ def hookable(
     if any(is_out_reference(arg.type) for arg in m.args):
         return False
     for arg in m.args:
-        info = classify_arg(arg.type, objects)
+        info = classify_arg(arg.type, objects, ctx=ctx)
         if info is None:
             return False
         if info.kind in ("sel", "callback", "vector_view", "opaque_handle", "delegate"):

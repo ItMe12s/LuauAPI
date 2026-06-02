@@ -87,11 +87,15 @@ def emit(
     gd_chunks: List[Tuple[str, str]] = []
     for cls in classes:
         field_targets = plan.field_targets_by_class.get(cls.name, [])
-        if not _should_emit_type_class(cls, objects, field_targets, skipped_classes):
+        if not _should_emit_type_class(
+            cls, objects, field_targets, skipped_classes, ctx=plan.ctx
+        ):
             continue
         grouped = grouped_by_class[cls.name]
         chunk = "".join(
-            _emit_class(cls, grouped, field_targets, objects, skipped_classes)
+            _emit_class(
+                cls, grouped, field_targets, objects, skipped_classes, ctx=plan.ctx
+            )
         )
         if lua_namespace(cls) == cocos_namespace:
             cocos_chunks.append((cls.name, chunk))
@@ -119,20 +123,26 @@ def emit(
         classes, grouped_by_class, skipped_classes, geode_namespace
     )
     cocos_factory_text = "".join(
-        _emit_factories(cocos_factories, objects, cocos_namespace)
+        _emit_factories(cocos_factories, objects, cocos_namespace, ctx=plan.ctx)
     )
-    gd_factory_text = "".join(_emit_factories(gd_factories, objects, gd_namespace))
+    gd_factory_text = "".join(
+        _emit_factories(gd_factories, objects, gd_namespace, ctx=plan.ctx)
+    )
 
-    geode_factory_text = "".join(_emit_factory_records(geode_factories, objects))
+    geode_factory_text = "".join(
+        _emit_factory_records(geode_factories, objects, ctx=plan.ctx)
+    )
 
     function_tree = _build_function_tree(plan.supported_free_functions, objects)
-    function_field_lines = _emit_function_tree(function_tree, objects, 1)
+    function_field_lines = _emit_function_tree(function_tree, objects, 1, ctx=plan.ctx)
 
     defined = {name for name, _ in cocos_chunks} | {name for name, _ in gd_chunks}
-    refs = _refs_from_classes(defined, grouped_by_class, objects, skipped_classes)
-    refs |= _factory_object_refs(cocos_factories, objects)
-    refs |= _factory_object_refs(gd_factories, objects)
-    refs |= _factory_object_refs(geode_factories, objects)
+    refs = _refs_from_classes(
+        defined, grouped_by_class, objects, skipped_classes, ctx=plan.ctx
+    )
+    refs |= _factory_object_refs(cocos_factories, objects, ctx=plan.ctx)
+    refs |= _factory_object_refs(gd_factories, objects, ctx=plan.ctx)
+    refs |= _factory_object_refs(geode_factories, objects, ctx=plan.ctx)
     refs |= _refs_from_text(
         cocos_body + gd_body + cocos_factory_text + gd_factory_text + geode_factory_text
     )
@@ -158,7 +168,7 @@ def emit(
         lines.append("\n")
 
     for namespace in (cocos_namespace, gd_namespace, geode_namespace):
-        enum_block = _enum_block(namespace)
+        enum_block = _enum_block(namespace, plan.ctx)
         if enum_block:
             lines.append(enum_block)
             lines.append("\n")

@@ -2,7 +2,10 @@ from __future__ import annotations
 
 import dataclasses
 from collections import defaultdict
-from typing import Dict, List
+from typing import TYPE_CHECKING, Dict, List
+
+if TYPE_CHECKING:
+    from luau_codegen.model.codegen_context import CodegenContext
 
 from luau_codegen.parse.broma import Class, Method
 from luau_codegen.model.denylist import (
@@ -105,7 +108,11 @@ def as_new_factory(cls: Class, m: Method) -> Method:
 
 
 def supported(
-    cls: Class, m: Method, objects: Dict[str, Class], target_platform: str
+    cls: Class,
+    m: Method,
+    objects: Dict[str, Class],
+    target_platform: str,
+    ctx: CodegenContext | None = None,
 ) -> tuple[bool, str]:
     if cls.name in INACCESSIBLE_CLASSES:
         return False, "inaccessible-class"
@@ -130,7 +137,7 @@ def supported(
             return False, "inaccessible"
     elif not direct_callable(cls, m, target_platform):
         return False, f"not-callable:{target_platform}"
-    ret = classify_return(m.ret, objects)
+    ret = classify_return(m.ret, objects, ctx=ctx)
     if ret is None:
         return False, f"unsupported-return:{m.ret}"
     if ret.kind == "vector_view" and not vector_view_supported_as_return(ret):
@@ -138,7 +145,7 @@ def supported(
     if ret.kind == "delegate" and not delegate_supported_as_return(ret):
         return False, f"unsupported-return:{m.ret}"
     for i, arg in enumerate(m.args):
-        info = classify_arg(arg.type, objects, owner_class=cls.name)
+        info = classify_arg(arg.type, objects, owner_class=cls.name, ctx=ctx)
         if info is None:
             return False, f"unsupported-arg:{arg.type}"
         if info.kind == "vector_view" and not vector_view_supported_as_arg(
@@ -174,6 +181,7 @@ def group_supported(
     cls: Class,
     objects: Dict[str, Class],
     target_platform: str = "win",
+    ctx: CodegenContext | None = None,
 ) -> tuple[dict[str, list[Method]], list[tuple[Method, str]]]:
     skipped: list[tuple[Method, str]] = []
     by_name: dict[str, list[Method]] = defaultdict(list)
@@ -184,7 +192,7 @@ def group_supported(
             skipped.append((m, "duplicate-signature"))
             continue
         seen.add(key)
-        ok, reason = supported(cls, m, objects, target_platform)
+        ok, reason = supported(cls, m, objects, target_platform, ctx=ctx)
         if not ok:
             skipped.append((m, reason))
             continue
@@ -195,7 +203,9 @@ def group_supported(
     for name, methods in list(by_name.items()):
         by_arity: dict[int, list[Method]] = defaultdict(list)
         for m in methods:
-            by_arity[method_input_arg_count(m, objects, owner_class=cls.name)].append(m)
+            by_arity[
+                method_input_arg_count(m, objects, owner_class=cls.name, ctx=ctx)
+            ].append(m)
         kept: list[Method] = []
         preferred = PREFERRED_OVERLOADS.get((cls.name, name))
         for arity, overloads in by_arity.items():
@@ -246,16 +256,17 @@ def linkless_class_names(
     supported_by_class: dict[str, dict[str, list[Method]]],
     skipped_by_class: dict[str, list[tuple[Method, str]]],
     target_platform: str,
+    ctx: CodegenContext | None = None,
 ) -> set[str]:
     referenced: set[str] = set()
     for grouped in supported_by_class.values():
         for methods in grouped.values():
             for m in methods:
-                ret = classify_return(m.ret, objects)
+                ret = classify_return(m.ret, objects, ctx=ctx)
                 if ret and ret.kind == "object":
                     referenced.add(ret.class_name)
                 for arg in m.args:
-                    info = classify_arg(arg.type, objects)
+                    info = classify_arg(arg.type, objects, ctx=ctx)
                     if info and info.kind == "object":
                         referenced.add(info.class_name)
 
@@ -301,9 +312,12 @@ def _is_skipped_object_type(class_name: str, skipped_classes: set[str]) -> bool:
 
 
 def _skipped_object_ref(
-    m: Method, objects: Dict[str, Class], skipped_classes: set[str]
+    m: Method,
+    objects: Dict[str, Class],
+    skipped_classes: set[str],
+    ctx: CodegenContext | None = None,
 ) -> str:
-    ret = classify_return(m.ret, objects)
+    ret = classify_return(m.ret, objects, ctx=ctx)
     if (
         ret
         and ret.kind == "object"
@@ -311,7 +325,7 @@ def _skipped_object_ref(
     ):
         return ret.class_name
     for arg in m.args:
-        info = classify_arg(arg.type, objects)
+        info = classify_arg(arg.type, objects, ctx=ctx)
         if (
             info
             and info.kind == "object"
@@ -327,13 +341,14 @@ def prune_skipped_class_refs(
     objects: Dict[str, Class],
     skipped_classes: set[str],
     target_platform: str,
+    ctx: CodegenContext | None = None,
 ) -> list[tuple[str, str, str]]:
     pruned: list[tuple[str, str, str]] = []
     for cls_name, grouped in supported_by_class.items():
         for name, methods in list(grouped.items()):
             kept: list[Method] = []
             for m in methods:
-                skipped_ref = _skipped_object_ref(m, objects, skipped_classes)
+                skipped_ref = _skipped_object_ref(m, objects, skipped_classes, ctx=ctx)
                 if skipped_ref:
                     reason = f"not-callable-type:{target_platform}:{skipped_ref}"
                     skipped_by_class[cls_name].append((m, reason))

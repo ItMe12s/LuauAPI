@@ -57,12 +57,9 @@ def collect_bindings_root(
     root.classes = list(seen.values())
     root.classes.sort(key=lambda c: (c.namespace, c.name))
     if geode_enums is not None:
-        from luau_codegen.convert.type_map import (
-            COCOS_ENUM_TYPES,
-            GD_ENUM_TYPES,
-            register_geode_enums,
-        )
+        from luau_codegen.convert.type_map import COCOS_ENUM_TYPES, GD_ENUM_TYPES
+        from luau_codegen.model.codegen_context import CodegenContext
 
         skip = GD_ENUM_TYPES | COCOS_ENUM_TYPES | {c.name for c in object_classes(root)}
-        register_geode_enums(geode_enums, skip=skip)
+        root.codegen_ctx = CodegenContext.with_geode_enums(geode_enums, skip=skip)
     return root

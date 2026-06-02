@@ -1,6 +1,9 @@
 from __future__ import annotations
 
-from typing import Dict
+from typing import TYPE_CHECKING, Dict
+
+if TYPE_CHECKING:
+    from luau_codegen.model.codegen_context import CodegenContext
 
 from luau_codegen.parse.broma import Class, Method
 from luau_codegen.policy.hooks import hook_address_expr
@@ -120,14 +123,18 @@ def _emit_apply_return_fn(suffix: str, ret: TypeInfo, label: str, fn_name: str) 
 
 
 def emit_hook_target(
-    cls: Class, m: Method, objects: Dict[str, Class], target_platform: str
+    cls: Class,
+    m: Method,
+    objects: Dict[str, Class],
+    target_platform: str,
+    ctx: CodegenContext | None = None,
 ) -> str:
-    ret = classify_return(m.ret, objects)
+    ret = classify_return(m.ret, objects, ctx=ctx)
     assert ret is not None
     args = []
     call_args = []
     for i, arg in enumerate(m.args):
-        info = classify_arg(arg.type, objects)
+        info = classify_arg(arg.type, objects, ctx=ctx)
         assert info is not None
         name = f"arg{i}"
         args.append((arg, info, name))

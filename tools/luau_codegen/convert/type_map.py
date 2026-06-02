@@ -2,12 +2,15 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
-from typing import AbstractSet, Dict, Optional, Set, Tuple
+from typing import TYPE_CHECKING, Dict, Optional, Set, Tuple
 
 from luau_codegen.parse.broma import Class, split_arg, split_top_level
 from luau_codegen.model.domain import short_name
 
 from luau_codegen.model.delegate_specs import lookup_delegate
+
+if TYPE_CHECKING:
+    from luau_codegen.model.codegen_context import CodegenContext
 
 SEL_TYPES: dict[str, tuple[str, str]] = {
     "SEL_MenuHandler": ("menu", "(sender: CCObject) -> ()"),
@@ -66,6 +69,10 @@ NUMERIC_TYPES = {
     "double",
 }
 
+UNSIGNED_NUMERIC_TYPES = frozenset(
+    t for t in NUMERIC_TYPES if "unsigned" in t or t.startswith("uint")
+)
+
 STRING_TYPES = {
     "char const*",
     "const char*",
@@ -75,6 +82,15 @@ STRING_TYPES = {
     "ZStringView",
     "geode::ZStringView",
 }
+VALUE_CHECK_CXX_TYPES: dict[str, str] = {
+    "CCPoint": "cocos2d::CCPoint",
+    "CCSize": "cocos2d::CCSize",
+    "CCRect": "cocos2d::CCRect",
+    "RGBColor": "cocos2d::ccColor3B",
+    "RGBAColor": "cocos2d::ccColor4B",
+    "UIButtonConfig": "UIButtonConfig",
+}
+
 VALUE_TYPES = {
     "cocos2d::CCPoint": "CCPoint",
     "CCPoint": "CCPoint",
@@ -135,30 +151,32 @@ OPAQUE_HANDLE_TYPES: dict[str, str] = {
     "FMODSound*": "FMODSound",
 }
 
-GEODE_ENUM_TYPES: set[str] = set()
-
-ENUM_CXX_NAMES: dict[str, str] = {
+STATIC_ENUM_CXX_NAMES: dict[str, str] = {
     **{name: name for name in GD_ENUM_TYPES},
     **{name: f"cocos2d::{name}" for name in COCOS_ENUM_TYPES},
     **{f"cocos2d::{name}": f"cocos2d::{name}" for name in COCOS_ENUM_TYPES},
     **{name: name for name in FMOD_ENUM_TYPES},
 }
 
-ENUM_TYPES = frozenset(ENUM_CXX_NAMES.keys())
+# Back-compat alias for tests and callers that referenced the static table name.
+ENUM_CXX_NAMES = STATIC_ENUM_CXX_NAMES
+
+
+def _resolve_ctx(ctx: CodegenContext | None) -> CodegenContext:
+    if ctx is not None:
+        return ctx
+    from luau_codegen.model.codegen_context import CodegenContext as Ctx
+
+    return Ctx.static()
 
 
 def register_geode_enums(
     names_to_cxx: Dict[str, str],
-    skip: AbstractSet[str] = frozenset(),
-) -> None:
-    global ENUM_TYPES
-    GEODE_ENUM_TYPES.clear()
-    for name, cxx in names_to_cxx.items():
-        if name in skip:
-            continue
-        GEODE_ENUM_TYPES.add(name)
-        ENUM_CXX_NAMES.setdefault(name, cxx)
-    ENUM_TYPES = frozenset(ENUM_CXX_NAMES.keys())
+    skip: frozenset[str] | set[str] = frozenset(),
+) -> CodegenContext:
+    from luau_codegen.model.codegen_context import CodegenContext as Ctx
+
+    return Ctx.with_geode_enums(names_to_cxx, skip=skip)
 
 
 @dataclass(frozen=True)
@@ -260,20 +278,12 @@ def without_pointer(t: str) -> str:
     return s[:-1].strip() if s.endswith("*") else s
 
 
-def enum_cxx_type(n: str, base: str) -> str:
-    if n in ENUM_CXX_NAMES:
-        return ENUM_CXX_NAMES[n]
-    if base in ENUM_CXX_NAMES:
-        return ENUM_CXX_NAMES[base]
-    return "int"
+def enum_cxx_type(n: str, base: str, ctx: CodegenContext | None = None) -> str:
+    return _resolve_ctx(ctx).enum_cxx_type(n, base)
 
 
-def enum_lua_names(namespace: str) -> Set[str]:
-    if namespace == "geode.cocos2d":
-        return set(COCOS_ENUM_TYPES)
-    if namespace == "geode":
-        return set(GEODE_ENUM_TYPES)
-    return set(GD_ENUM_TYPES)
+def enum_lua_names(namespace: str, ctx: CodegenContext | None = None) -> Set[str]:
+    return _resolve_ctx(ctx).enum_lua_names(namespace)
 
 
 def cxx_class_name(cls: Class) -> str:
@@ -305,14 +315,18 @@ def _template_inner(n: str, prefix: str) -> Optional[str]:
     return None
 
 
-def _parse_vector_view(n: str, object_classes: Dict[str, Class]) -> Optional[TypeInfo]:
+def _parse_vector_view(
+    n: str,
+    object_classes: Dict[str, Class],
+    ctx: CodegenContext | None = None,
+) -> Optional[TypeInfo]:
     inner = _template_inner(n, "gd::vector")
     if inner is None:
         return None
     parts = split_top_level(inner)
     if len(parts) != 1:
         return None
-    element = classify_arg(parts[0], object_classes)
+    element = classify_arg(parts[0], object_classes, ctx=ctx)
     if element is None or element.kind != "object":
         return None
     return TypeInfo(
@@ -324,7 +338,9 @@ def _parse_vector_view(n: str, object_classes: Dict[str, Class]) -> Optional[Typ
     )
 
 
-def _parse_callback(n: str, object_classes: Dict[str, Class]) -> Optional[TypeInfo]:
+def _parse_callback(
+    n: str, object_classes: Dict[str, Class], ctx: CodegenContext | None = None
+) -> Optional[TypeInfo]:
     inner = _callback_inner(n)
     if inner is None:
         return None
@@ -353,7 +369,7 @@ def _parse_callback(n: str, object_classes: Dict[str, Class]) -> Optional[TypeIn
                 break
     if close == -1:
         return None
-    ret_info = classify_return(ret_str, object_classes)
+    ret_info = classify_return(ret_str, object_classes, ctx=ctx)
     if ret_info is None:
         return None
     arg_infos = []
@@ -362,7 +378,7 @@ def _parse_callback(n: str, object_classes: Dict[str, Class]) -> Optional[TypeIn
         if not raw:
             continue
         parsed = split_arg(raw)
-        info = classify_arg(parsed.type, object_classes)
+        info = classify_arg(parsed.type, object_classes, ctx=ctx)
         if info is None or info.kind == "callback":
             return None
         arg_infos.append(info)
@@ -383,8 +399,13 @@ def _parse_callback(n: str, object_classes: Dict[str, Class]) -> Optional[TypeIn
 
 
 def _classify_core(
-    t: str, object_classes: Dict[str, Class], *, for_return: bool
+    t: str,
+    object_classes: Dict[str, Class],
+    *,
+    for_return: bool,
+    ctx: CodegenContext | None = None,
 ) -> Optional[TypeInfo]:
+    resolved = _resolve_ctx(ctx)
     is_ref = is_reference_type(t)
     is_out = is_out_reference(t)
     s = strip_ref(t)
@@ -393,7 +414,7 @@ def _classify_core(
 
     if n.endswith("*"):
         base = n[:-1].strip()
-        ptr_vector = _parse_vector_view(base, object_classes)
+        ptr_vector = _parse_vector_view(base, object_classes, ctx=ctx)
         if ptr_vector is not None:
             return TypeInfo(
                 ptr_vector.kind,
@@ -406,7 +427,7 @@ def _classify_core(
                 element_type=ptr_vector.element_type,
             )
 
-    vector_view = _parse_vector_view(n, object_classes)
+    vector_view = _parse_vector_view(n, object_classes, ctx=ctx)
     if vector_view is not None:
         return TypeInfo(
             vector_view.kind,
@@ -433,8 +454,8 @@ def _classify_core(
             is_ref=is_ref,
             is_out=is_out,
         )
-    if base in ENUM_TYPES or n in ENUM_TYPES:
-        cxx = enum_cxx_type(n, base)
+    if base in resolved.enum_types or n in resolved.enum_types:
+        cxx = resolved.enum_cxx_type(n, base)
         return TypeInfo("enum", cxx, "number", is_ref=is_ref, is_out=is_out)
     if n in OPAQUE_HANDLE_TYPES:
         return TypeInfo(
@@ -454,7 +475,7 @@ def _classify_core(
             is_out=is_out,
         )
     if not for_return:
-        callback = _parse_callback(n, object_classes)
+        callback = _parse_callback(n, object_classes, ctx=ctx)
         if callback is not None:
             return callback
         if is_sel_type(n):
@@ -492,18 +513,22 @@ def _classify_core(
 
 
 def classify_arg(
-    t: str, object_classes: Dict[str, Class], *, owner_class: str = ""
+    t: str,
+    object_classes: Dict[str, Class],
+    *,
+    owner_class: str = "",
+    ctx: CodegenContext | None = None,
 ) -> Optional[TypeInfo]:
     n = normalize_type(t)
     if owner_class:
         class_aliases = CLASS_CALLBACK_ALIASES.get(owner_class, {})
         alias = class_aliases.get(n) or class_aliases.get(short_name(n))
         if alias:
-            return classify_arg(alias, object_classes, owner_class=owner_class)
+            return classify_arg(alias, object_classes, owner_class=owner_class, ctx=ctx)
     alias = CALLBACK_ALIASES.get(n) or CALLBACK_ALIASES.get(short_name(n))
     if alias:
-        return classify_arg(alias, object_classes, owner_class=owner_class)
-    return _classify_core(t, object_classes, for_return=False)
+        return classify_arg(alias, object_classes, owner_class=owner_class, ctx=ctx)
+    return _classify_core(t, object_classes, for_return=False, ctx=ctx)
 
 
 def _delegate_lua_type(spec) -> str:
@@ -516,11 +541,13 @@ def _delegate_lua_type(spec) -> str:
     return "{ " + ", ".join(fields) + " }"
 
 
-def classify_return(t: str, object_classes: Dict[str, Class]) -> Optional[TypeInfo]:
+def classify_return(
+    t: str, object_classes: Dict[str, Class], *, ctx: CodegenContext | None = None
+) -> Optional[TypeInfo]:
     n = strip_ref(t)
     if n in ("", "void"):
         return TypeInfo("void", "void", "()")
-    info = _classify_core(t, object_classes, for_return=True)
+    info = _classify_core(t, object_classes, for_return=True, ctx=ctx)
     if info and info.kind != "void":
         if info.kind == "object" and not info.lua_type.endswith("?"):
             info = TypeInfo(
@@ -555,29 +582,39 @@ def classify_return(t: str, object_classes: Dict[str, Class]) -> Optional[TypeIn
 
 
 def require_classify_arg(
-    t: str, object_classes: Dict[str, Class], *, owner_class: str = ""
+    t: str,
+    object_classes: Dict[str, Class],
+    *,
+    owner_class: str = "",
+    ctx: CodegenContext | None = None,
 ) -> TypeInfo:
-    info = classify_arg(t, object_classes, owner_class=owner_class)
+    info = classify_arg(t, object_classes, owner_class=owner_class, ctx=ctx)
     if info is None:
         raise ValueError(f"unsupported arg type: {t}")
     return info
 
 
-def require_classify_return(t: str, object_classes: Dict[str, Class]) -> TypeInfo:
-    info = classify_return(t, object_classes)
+def require_classify_return(
+    t: str, object_classes: Dict[str, Class], *, ctx: CodegenContext | None = None
+) -> TypeInfo:
+    info = classify_return(t, object_classes, ctx=ctx)
     if info is None:
         raise ValueError(f"unsupported return type: {t}")
     return info
 
 
 def method_input_arg_count(
-    method, object_classes: Dict[str, Class], *, owner_class: str = ""
+    method,
+    object_classes: Dict[str, Class],
+    *,
+    owner_class: str = "",
+    ctx: CodegenContext | None = None,
 ) -> int:
     from luau_codegen.convert.sel_args import count_lua_method_args
 
-    ret = classify_return(method.ret, object_classes)
+    ret = classify_return(method.ret, object_classes, ctx=ctx)
     if ret is None:
         return len(method.args)
     return count_lua_method_args(
-        method, object_classes, ret.kind, owner_class=owner_class
+        method, object_classes, ret.kind, owner_class=owner_class, ctx=ctx
     )

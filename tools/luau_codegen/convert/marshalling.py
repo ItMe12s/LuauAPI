@@ -1,37 +1,13 @@
 from __future__ import annotations
 
 from luau_codegen.parse.broma import Arg
-from luau_codegen.convert.type_map import TypeInfo
+from luau_codegen.convert.type_map import (
+    TypeInfo,
+    UNSIGNED_NUMERIC_TYPES,
+    VALUE_CHECK_CXX_TYPES,
+    WIDE_INTEGER_TYPES,
+)
 from luau_codegen.model.delegate_specs import lookup_delegate
-
-_VALUE_CHECK_TYPES = {
-    "CCPoint": "cocos2d::CCPoint",
-    "CCSize": "cocos2d::CCSize",
-    "CCRect": "cocos2d::CCRect",
-    "RGBColor": "cocos2d::ccColor3B",
-    "RGBAColor": "cocos2d::ccColor4B",
-    "UIButtonConfig": "UIButtonConfig",
-}
-
-_UNSIGNED = {
-    "unsigned",
-    "unsigned int",
-    "unsigned char",
-    "unsigned short",
-    "uint8_t",
-    "uint16_t",
-    "uint32_t",
-}
-_WIDE = {
-    "long long",
-    "unsigned long long",
-    "int64_t",
-    "uint64_t",
-    "unsigned long",
-    "long",
-    "size_t",
-    "ptrdiff_t",
-}
 
 
 def _prefix(declare: bool, var: str) -> str:
@@ -59,9 +35,9 @@ def emit_stack_check(
             return [
                 f'        {_prefix(declare, var)} = luax::check<{cxx}>(L, {idx}, "{label}");\n'
             ]
-        if cxx in _WIDE:
+        if cxx in WIDE_INTEGER_TYPES:
             check_type = "double"
-        elif cxx in _UNSIGNED:
+        elif cxx in UNSIGNED_NUMERIC_TYPES:
             check_type = "unsigned"
         else:
             check_type = "int"
@@ -97,7 +73,7 @@ def emit_stack_check(
             f'        {_prefix(declare, var)} = luax::check<std::string>(L, {idx}, "{label}");\n'
         ]
     if info.kind == "value":
-        check_type = _VALUE_CHECK_TYPES.get(info.lua_type)
+        check_type = VALUE_CHECK_CXX_TYPES.get(info.lua_type)
         if check_type is None:
             raise ValueError(f"unsupported value type: {info.lua_type}")
         return [
@@ -173,7 +149,7 @@ def _push_impl(
             return [f"{indent}luax::push(L, {expr});\n"]
         return [f"{indent}luax::push(L, std::string({expr}));\n"]
     if info.kind == "value":
-        if info.lua_type in _VALUE_CHECK_TYPES:
+        if info.lua_type in VALUE_CHECK_CXX_TYPES:
             return [f"{indent}luax::push(L, {expr});\n"]
     if info.kind == "opaque_handle":
         return [
@@ -228,7 +204,7 @@ def _emit_callback_pop(var: str, ret: TypeInfo) -> list[str]:
         cxx = ret.cxx_type
         if cxx in ("float", "double"):
             check = cxx
-        elif cxx in _UNSIGNED:
+        elif cxx in UNSIGNED_NUMERIC_TYPES:
             check = "unsigned"
         else:
             check = "int"
@@ -251,7 +227,7 @@ def _emit_callback_pop(var: str, ret: TypeInfo) -> list[str]:
             "                },\n",
         ]
     if ret.kind == "value":
-        check_type = _VALUE_CHECK_TYPES.get(ret.lua_type)
+        check_type = VALUE_CHECK_CXX_TYPES.get(ret.lua_type)
         if check_type is None:
             raise ValueError(f"unsupported callback return value: {ret.lua_type}")
         return [

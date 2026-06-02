@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from typing import Dict, List
+from typing import TYPE_CHECKING, Dict, List
+
+if TYPE_CHECKING:
+    from luau_codegen.model.codegen_context import CodegenContext
 
 from luau_codegen.parse.broma import Class, Function
 from luau_codegen.util.identifiers import cxx_id
@@ -41,11 +44,16 @@ def _emit_vector_out_push(info: TypeInfo, var: str) -> list[str]:
     return push_value(info, var, False)
 
 
-def _emit_free_invoke(fn: Function, objects: Dict[str, Class], suffix: str) -> str:
+def _emit_free_invoke(
+    fn: Function,
+    objects: Dict[str, Class],
+    suffix: str,
+    ctx: CodegenContext | None = None,
+) -> str:
     cname = _free_fn_base(fn) + suffix
     label = f"{fn.lua_path}.{fn.name}"
-    ret = require_classify_return(fn.ret, objects)
-    arg_infos = [require_classify_arg(arg.type, objects) for arg in fn.args]
+    ret = require_classify_return(fn.ret, objects, ctx=ctx)
+    arg_infos = [require_classify_arg(arg.type, objects, ctx=ctx) for arg in fn.args]
     input_count = sum(
         1
         for lua_arg in iter_lua_method_args(fn, arg_infos, ret_kind=ret.kind)
@@ -133,15 +141,19 @@ def _emit_free_invoke(fn: Function, objects: Dict[str, Class], suffix: str) -> s
     return "".join(out)
 
 
-def _emit_free_dispatcher(fns: List[Function], objects: Dict[str, Class]) -> str:
+def _emit_free_dispatcher(
+    fns: List[Function], objects: Dict[str, Class], ctx: CodegenContext | None = None
+) -> str:
     if len(fns) == 1:
         return ""
     base = _free_fn_base(fns[0])
     label = f"{fns[0].lua_path}.{fns[0].name}"
     out = [f"    int {base}(lua_State* L) {{\n", "        switch (lua_gettop(L)) {\n"]
     for idx, fn in enumerate(fns):
-        arg_infos = [require_classify_arg(arg.type, objects) for arg in fn.args]
-        ret = require_classify_return(fn.ret, objects)
+        arg_infos = [
+            require_classify_arg(arg.type, objects, ctx=ctx) for arg in fn.args
+        ]
+        ret = require_classify_return(fn.ret, objects, ctx=ctx)
         input_count = sum(
             1
             for lua_arg in iter_lua_method_args(fn, arg_infos, ret_kind=ret.kind)
@@ -158,6 +170,7 @@ def _emit_free_dispatcher(fns: List[Function], objects: Dict[str, Class]) -> str
 def emit_free_functions_file(
     functions: List[Function],
     objects: Dict[str, Class],
+    ctx: CodegenContext | None = None,
 ) -> str:
     by_key: dict[tuple[str, str], list[Function]] = defaultdict(list)
     for fn in functions:
@@ -176,8 +189,8 @@ def emit_free_functions_file(
     for fns in by_key.values():
         for idx, fn in enumerate(fns):
             suffix = "" if len(fns) == 1 else f"_{idx}"
-            out.append(_emit_free_invoke(fn, objects, suffix))
-        out.append(_emit_free_dispatcher(fns, objects))
+            out.append(_emit_free_invoke(fn, objects, suffix, ctx=ctx))
+        out.append(_emit_free_dispatcher(fns, objects, ctx=ctx))
     out.append("} // namespace\n\n")
 
     by_ns: dict[str, list[tuple[str, str]]] = defaultdict(list)

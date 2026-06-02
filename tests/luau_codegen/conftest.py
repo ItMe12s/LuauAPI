@@ -43,10 +43,10 @@ from luau_codegen.policy.free_functions import (  # type: ignore[import-unresolv
 from luau_codegen.emit.luau_types import TYPES_FILE  # type: ignore[import-unresolved]
 from luau_codegen.emit.luau_types import emit as emit_luau_types  # type: ignore[import-unresolved]
 from luau_codegen.convert import type_map as type_map_module  # type: ignore[import-unresolved]
+from luau_codegen.model.codegen_context import CodegenContext  # type: ignore[import-unresolved]
 from luau_codegen.convert.type_map import (  # type: ignore[import-unresolved]
     COCOS_ENUM_TYPES,
     GD_ENUM_TYPES,
-    GEODE_ENUM_TYPES,
     TypeInfo,
     classify_arg,
     classify_return,
@@ -158,9 +158,9 @@ __all__ = [
     "emit_luau_types",
     # convert.type_map
     "type_map_module",
+    "CodegenContext",
     "COCOS_ENUM_TYPES",
     "GD_ENUM_TYPES",
-    "GEODE_ENUM_TYPES",
     "TypeInfo",
     "classify_arg",
     "classify_return",

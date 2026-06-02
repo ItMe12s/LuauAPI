@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict, Iterator, List, Optional, Union
+from typing import TYPE_CHECKING, Dict, Iterator, List, Optional, Union
 
 from luau_codegen.parse.broma import Arg, Class, Function, Method
 from luau_codegen.convert.type_map import TypeInfo, classify_arg
+
+if TYPE_CHECKING:
+    from luau_codegen.model.codegen_context import CodegenContext
 
 CallableWithArgs = Union[Method, Function]
 
@@ -105,10 +108,11 @@ def count_lua_method_args(
     ret_kind: str,
     *,
     owner_class: str = "",
+    ctx: CodegenContext | None = None,
 ) -> int:
     arg_infos = []
     for arg in m.args:
-        info = classify_arg(arg.type, objects, owner_class=owner_class)
+        info = classify_arg(arg.type, objects, owner_class=owner_class, ctx=ctx)
         if info is None:
             return len(m.args)
         arg_infos.append(info)

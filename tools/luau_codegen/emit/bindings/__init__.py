@@ -30,7 +30,7 @@ def emit(
             plan.emitted_classes, plan, target_platform
         ),
         FREE_FUNCTIONS_FILE: emit_free_functions_file(
-            plan.supported_free_functions, plan.objects
+            plan.supported_free_functions, plan.objects, ctx=plan.ctx
         ),
     }
 
@@ -44,6 +44,7 @@ def emit(
             plan.skipped_classes,
             plan.depths[cls.name],
             target_platform,
+            ctx=plan.ctx,
         )
 
     return files, plan.skipped

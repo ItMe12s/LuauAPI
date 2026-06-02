@@ -1,6 +1,9 @@
 from __future__ import annotations
 
-from typing import Dict, List, Set
+from typing import TYPE_CHECKING, Dict, List, Set
+
+if TYPE_CHECKING:
+    from luau_codegen.model.codegen_context import CodegenContext
 
 from luau_codegen.parse.broma import Arg, Class, Field, Method
 from luau_codegen.policy.fields import bindable_field
@@ -27,10 +30,14 @@ from luau_codegen.util.identifiers import cxx_id
 
 
 def _classify_method_args(
-    cls: Class, m: Method, objects: Dict[str, Class]
+    cls: Class,
+    m: Method,
+    objects: Dict[str, Class],
+    ctx: CodegenContext | None = None,
 ) -> List[TypeInfo]:
     return [
-        require_classify_arg(arg.type, objects, owner_class=cls.name) for arg in m.args
+        require_classify_arg(arg.type, objects, owner_class=cls.name, ctx=ctx)
+        for arg in m.args
     ]
 
 
@@ -169,11 +176,17 @@ def _emit_lua_method_arg(
     return out, lua_idx + 1
 
 
-def _emit_invoke(cls: Class, m: Method, objects: Dict[str, Class], suffix: str) -> str:
+def _emit_invoke(
+    cls: Class,
+    m: Method,
+    objects: Dict[str, Class],
+    suffix: str,
+    ctx: CodegenContext | None = None,
+) -> str:
     fn = f"luaapi_{cxx_id(cls.name)}_{cxx_id(m.name)}{suffix}"
     label = call_label(cls, m)
-    ret = require_classify_return(m.ret, objects)
-    arg_infos = _classify_method_args(cls, m, objects)
+    ret = require_classify_return(m.ret, objects, ctx=ctx)
+    arg_infos = _classify_method_args(cls, m, objects, ctx=ctx)
 
     input_count = sum(
         1
@@ -288,8 +301,13 @@ def _emit_invoke(cls: Class, m: Method, objects: Dict[str, Class], suffix: str) 
     return "".join(out)
 
 
-def _emit_field_accessors(cls: Class, field: Field, objects: Dict[str, Class]) -> str:
-    ok, reason, arg_info, ret_info = bindable_field(field, objects, cls)
+def _emit_field_accessors(
+    cls: Class,
+    field: Field,
+    objects: Dict[str, Class],
+    ctx: CodegenContext | None = None,
+) -> str:
+    ok, reason, arg_info, ret_info = bindable_field(field, objects, cls, ctx=ctx)
     if not ok or not arg_info or not ret_info:
         raise ValueError(f"unsupported field {cls.name}.{field.name}: {reason}")
     label = f"{cls.name}.{field.name}"
@@ -399,7 +417,11 @@ def _emit_field_accessors(cls: Class, field: Field, objects: Dict[str, Class]) -
 
 
 def _emit_dispatcher(
-    cls: Class, name: str, methods: List[Method], objects: Dict[str, Class]
+    cls: Class,
+    name: str,
+    methods: List[Method],
+    objects: Dict[str, Class],
+    ctx: CodegenContext | None = None,
 ) -> str:
     if len(methods) == 1:
         return ""
@@ -410,7 +432,7 @@ def _emit_dispatcher(
     out.append(f"        switch (lua_gettop(L) - {adjust}) {{\n")
     for idx, m in enumerate(methods):
         out.append(
-            f"            case {method_input_arg_count(m, objects, owner_class=cls.name)}: return luaapi_{cxx_id(cls.name)}_{cxx_id(name)}_{idx}(L);\n"
+            f"            case {method_input_arg_count(m, objects, owner_class=cls.name, ctx=ctx)}: return luaapi_{cxx_id(cls.name)}_{cxx_id(name)}_{idx}(L);\n"
         )
     out.append("            default: break;\n")
     out.append("        }\n")
@@ -430,6 +452,7 @@ def _emit_class_file(
     skipped_classes: Set[str],
     depth: int,
     target_platform: str,
+    ctx: CodegenContext | None = None,
 ) -> str:
     ns_name = cxx_id(cls.name)
     gen_ns = _gen_ns(cls)
@@ -440,14 +463,14 @@ def _emit_class_file(
     for methods in grouped.values():
         for idx, m in enumerate(methods):
             suffix = "" if len(methods) == 1 else f"_{idx}"
-            out.append(_emit_invoke(cls, m, objects, suffix))
-        out.append(_emit_dispatcher(cls, methods[0].name, methods, objects))
+            out.append(_emit_invoke(cls, m, objects, suffix, ctx=ctx))
+        out.append(_emit_dispatcher(cls, methods[0].name, methods, objects, ctx=ctx))
 
     for _, field in field_targets:
-        out.append(_emit_field_accessors(cls, field, objects))
+        out.append(_emit_field_accessors(cls, field, objects, ctx=ctx))
 
     for _, m in hook_targets:
-        out.append(emit_hook_target(cls, m, objects, target_platform))
+        out.append(emit_hook_target(cls, m, objects, target_platform, ctx=ctx))
 
     out.append("} // namespace\n\n")
 

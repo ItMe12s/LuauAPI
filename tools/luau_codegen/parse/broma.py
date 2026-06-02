@@ -2,9 +2,12 @@ from __future__ import annotations
 
 import dataclasses
 import re
-from typing import Dict, List, Optional
+from typing import TYPE_CHECKING, Dict, List, Optional
 
 from luau_codegen.parse.text import strip_comments
+
+if TYPE_CHECKING:
+    from luau_codegen.model.codegen_context import CodegenContext
 
 
 @dataclasses.dataclass
@@ -73,6 +76,7 @@ class Function:
 class Root:
     classes: List[Class] = dataclasses.field(default_factory=list)
     functions: List["Function"] = dataclasses.field(default_factory=list)
+    codegen_ctx: CodegenContext | None = None
 
 
 _PLATFORMS = ("win", "imac", "m1", "ios", "android", "android32", "android64", "mac")
