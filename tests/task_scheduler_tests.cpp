@@ -2,6 +2,8 @@
 #include "lua/runtime/Runtime.hpp"
 #include "lua_test_helpers.hpp"
 
+#include <RuntimeTypes.hpp>
+
 #include <catch2/catch_test_macros.hpp>
 #include <lua.h>
 #include <lualib.h>
@@ -74,6 +76,23 @@ TEST_CASE("TaskScheduler repeats interval tasks until cancelled") {
     lua_getglobal(L, "intervalHits");
     REQUIRE(lua_tointeger(L, -1) == 2);
     lua_pop(L, 1);
+}
+
+TEST_CASE("TaskScheduler advance restores stack when protectedCall fails early") {
+    RuntimeGuard guard;
+    auto* runtime = luax::Runtime::getOrCreate();
+    auto* L = runtime->state();
+    REQUIRE(L != nullptr);
+
+    int topBefore = lua_gettop(L);
+    auto ref = luauapi_test::makeCallback(L, "()");
+    auto& scheduler = luax::TaskScheduler::get();
+    auto id = scheduler.add(std::move(ref), 0.0, 0.0);
+    REQUIRE(id != 0);
+
+    runtime->setStatusForTests(imes::luauapi::RuntimeStatus::NotReady);
+    scheduler.advance(0.0, L);
+    REQUIRE(lua_gettop(L) == topBefore);
 }
 
 TEST_CASE("TaskScheduler cancels tasks that error") {

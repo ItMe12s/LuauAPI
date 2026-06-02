@@ -41,8 +41,13 @@ namespace luax {
         auto* runtime = Runtime::getIfInitialized();
         if (!runtime) return false;
         if (!cb.callback.push()) return false;
+        auto* L = cb.callback.luaState();
+        if (!L) return false;
+        int top = lua_gettop(L);
         Runtime::ResourcesRootScope scope(*runtime, cb.callback.resourcesRoot());
-        return runtime->protectedCall(0, 0, "imgui.draw", kImGuiScriptDeadlineMs);
+        bool ok = runtime->protectedCall(0, 0, "imgui.draw", kImGuiScriptDeadlineMs);
+        lua_settop(L, top);
+        return ok;
     }
 
     void ImGuiDrawScheduler::drawAll() {

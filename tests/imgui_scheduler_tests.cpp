@@ -2,6 +2,8 @@
 #include "lua/runtime/Runtime.hpp"
 #include "lua_test_helpers.hpp"
 
+#include <RuntimeTypes.hpp>
+
 #include <catch2/catch_test_macros.hpp>
 #include <lua.h>
 #include <lualib.h>
@@ -44,6 +46,23 @@ TEST_CASE("ImGuiDrawScheduler fires registered draw callbacks") {
     lua_pop(L, 1);
 
     scheduler.clear();
+}
+
+TEST_CASE("ImGuiDrawScheduler drawAll restores stack when protectedCall fails early") {
+    RuntimeGuard guard;
+    auto* runtime = luax::Runtime::getOrCreate();
+    auto* L = runtime->state();
+    REQUIRE(L != nullptr);
+
+    int topBefore = lua_gettop(L);
+    auto ref = luauapi_test::makeCallback(L, "()");
+    auto& scheduler = luax::ImGuiDrawScheduler::get();
+    auto id = scheduler.add(std::move(ref));
+    REQUIRE(id != 0);
+
+    runtime->setStatusForTests(imes::luauapi::RuntimeStatus::NotReady);
+    scheduler.drawAll();
+    REQUIRE(lua_gettop(L) == topBefore);
 }
 
 TEST_CASE("ImGuiDrawScheduler cancels callbacks that error") {

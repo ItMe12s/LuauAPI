@@ -202,6 +202,10 @@ namespace luax {
         auto& runtime = runtimeStorage();
         runtime.reset();
     }
+
+    void Runtime::setStatusForTests(imes::luauapi::RuntimeStatus status) {
+        m_status.store(status, std::memory_order_release);
+    }
 #endif
 
     void Runtime::setMainThreadId(std::thread::id id) {

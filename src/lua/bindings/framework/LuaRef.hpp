@@ -74,6 +74,10 @@ namespace luax {
             return true;
         }
 
+        lua_State* luaState() const noexcept {
+            return m_state;
+        }
+
         std::filesystem::path const& resourcesRoot() const {
             return m_resourcesRoot;
         }
