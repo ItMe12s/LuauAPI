@@ -1,6 +1,82 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 from conftest import *
+
+
+@dataclass(frozen=True)
+class _HookCb:
+    priority: int
+    install_order: int
+    kind: int = 0
+
+
+def _pre_hook_less(a: _HookCb, b: _HookCb) -> bool:
+    if a.priority != b.priority:
+        return a.priority < b.priority
+    return a.install_order < b.install_order
+
+
+def _post_hook_less(a: _HookCb, b: _HookCb) -> bool:
+    if a.priority != b.priority:
+        return a.priority > b.priority
+    return a.install_order > b.install_order
+
+
+def _insert_sorted(items: list[_HookCb], item: _HookCb, less) -> None:
+    lo = 0
+    hi = len(items)
+    while lo < hi:
+        mid = (lo + hi) // 2
+        if less(items[mid], item):
+            lo = mid + 1
+        else:
+            hi = mid
+    items.insert(lo, item)
+
+
+def _build_sorted(installs: list[_HookCb], *, pre: bool) -> list[_HookCb]:
+    less = _pre_hook_less if pre else _post_hook_less
+    sorted_list: list[_HookCb] = []
+    for item in installs:
+        _insert_sorted(sorted_list, item, less)
+    return sorted_list
+
+
+class HookRuntimeOrderTests(unittest.TestCase):
+    def test_pre_hook_fire_order_matches_runtime_pre_sorted_list(self) -> None:
+        installs = [
+            _HookCb(priority=10, install_order=0, kind=0),
+            _HookCb(priority=5, install_order=1, kind=0),
+            _HookCb(priority=5, install_order=2, kind=0),
+            _HookCb(priority=0, install_order=3, kind=0),
+        ]
+        fire_order = [cb.install_order for cb in _build_sorted(installs, pre=True)]
+        self.assertEqual(fire_order, [3, 1, 2, 0])
+
+    def test_post_hook_fire_order_matches_runtime_post_sorted_list(self) -> None:
+        installs = [
+            _HookCb(priority=10, install_order=0, kind=1),
+            _HookCb(priority=5, install_order=1, kind=1),
+            _HookCb(priority=5, install_order=2, kind=1),
+            _HookCb(priority=0, install_order=3, kind=1),
+        ]
+        fire_order = [cb.install_order for cb in _build_sorted(installs, pre=False)]
+        self.assertEqual(fire_order, [0, 2, 1, 3])
+
+    def test_emit_hook_support_uses_matching_priority_comparators(self) -> None:
+        text = emit_hook_support()
+        self.assertIn("return a->priority < b->priority", text)
+        self.assertIn("return a->priority > b->priority", text)
+        self.assertIn("return a->installOrder < b->installOrder", text)
+        self.assertIn("return a->installOrder > b->installOrder", text)
+        self.assertIn(
+            "auto const& callbacks = it->second.preSorted", emit_internal_hpp()
+        )
+        self.assertIn(
+            "auto const& callbacks = it->second.postSorted", emit_internal_hpp()
+        )
 
 
 class HookOffsetTests(unittest.TestCase):

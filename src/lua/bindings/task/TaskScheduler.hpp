@@ -23,6 +23,10 @@ namespace luax {
         std::size_t activeCount() const;
         bool full() const;
 
+#if defined(LUAUAPI_HOST_TESTS)
+        bool isScheduled(std::uint64_t id) const;
+#endif
+
     private:
         struct Task {
             std::uint64_t id = 0;

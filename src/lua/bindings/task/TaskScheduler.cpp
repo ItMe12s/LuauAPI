@@ -192,6 +192,22 @@ namespace luax {
         return n;
     }
 
+#if defined(LUAUAPI_HOST_TESTS)
+    bool TaskScheduler::isScheduled(std::uint64_t id) const {
+        auto it = m_index.find(id);
+        if (it == m_index.end()) {
+            return false;
+        }
+        auto const& loc = it->second;
+        auto const& tasks = loc.deferred ? m_deferred : m_timed;
+        if (loc.index >= tasks.size()) {
+            return false;
+        }
+        Task const& task = tasks[loc.index];
+        return task.id == id && !task.cancelled;
+    }
+#endif
+
 #if !defined(LUAUAPI_HOST_TESTS)
     namespace {
         class TaskTickNode : public cocos2d::CCNode {

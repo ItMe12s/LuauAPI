@@ -151,3 +151,113 @@ TEST_CASE("TaskScheduler cancels tasks that error") {
     scheduler.advance(0.0, L);
     REQUIRE(scheduler.activeCount() == 0);
 }
+
+TEST_CASE("TaskScheduler m_index stays valid after timed swap-and-pop compaction") {
+    RuntimeGuard guard;
+    auto* runtime = luax::Runtime::getOrCreate();
+    auto* L = runtime->state();
+
+    auto refHead = luauapi_test::makeCallback(L, "_G.headHit = (_G.headHit or 0) + 1");
+    auto refMid = luauapi_test::makeCallback(L, "_G.midHit = (_G.midHit or 0) + 1");
+    auto refTail = luauapi_test::makeCallback(L, "_G.tailHit = (_G.tailHit or 0) + 1");
+
+    auto& scheduler = luax::TaskScheduler::get();
+    auto headId = scheduler.add(std::move(refHead), 0.0, 0.0);
+    auto midId = scheduler.add(std::move(refMid), 1.0, 0.5);
+    auto tailId = scheduler.add(std::move(refTail), 1.0, 0.0);
+    REQUIRE(headId != 0);
+    REQUIRE(midId != 0);
+    REQUIRE(tailId != 0);
+
+    scheduler.advance(0.0, L);
+    REQUIRE_FALSE(scheduler.isScheduled(headId));
+    REQUIRE(scheduler.isScheduled(midId));
+    REQUIRE(scheduler.isScheduled(tailId));
+
+    scheduler.cancel(midId);
+    REQUIRE_FALSE(scheduler.isScheduled(midId));
+    REQUIRE(scheduler.isScheduled(tailId));
+
+    scheduler.advance(1.0, L);
+    REQUIRE_FALSE(scheduler.isScheduled(tailId));
+
+    lua_getglobal(L, "headHit");
+    REQUIRE(lua_tointeger(L, -1) == 1);
+    lua_pop(L, 1);
+    lua_getglobal(L, "midHit");
+    REQUIRE(lua_isnil(L, -1));
+    lua_pop(L, 1);
+    lua_getglobal(L, "tailHit");
+    REQUIRE(lua_tointeger(L, -1) == 1);
+    lua_pop(L, 1);
+}
+
+TEST_CASE("TaskScheduler m_index stays valid after deferred compaction") {
+    RuntimeGuard guard;
+    auto* runtime = luax::Runtime::getOrCreate();
+    auto* L = runtime->state();
+
+    auto refFirst = luauapi_test::makeCallback(L, "_G.deferFirst = (_G.deferFirst or 0) + 1");
+    auto refSecond = luauapi_test::makeCallback(L, "_G.deferSecond = (_G.deferSecond or 0) + 1");
+
+    auto& scheduler = luax::TaskScheduler::get();
+    auto firstId = scheduler.addDeferred(std::move(refFirst));
+    auto secondId = scheduler.addDeferred(std::move(refSecond));
+    REQUIRE(firstId != 0);
+    REQUIRE(secondId != 0);
+
+    scheduler.advance(0.0, L);
+    REQUIRE_FALSE(scheduler.isScheduled(firstId));
+    REQUIRE_FALSE(scheduler.isScheduled(secondId));
+
+    auto refThird = luauapi_test::makeCallback(L, "_G.deferThird = (_G.deferThird or 0) + 1");
+    auto thirdId = scheduler.addDeferred(std::move(refThird));
+    REQUIRE(thirdId != 0);
+    REQUIRE(scheduler.isScheduled(thirdId));
+
+    scheduler.cancel(thirdId);
+    REQUIRE_FALSE(scheduler.isScheduled(thirdId));
+    scheduler.advance(0.0, L);
+    REQUIRE(scheduler.activeCount() == 0);
+
+    lua_getglobal(L, "deferFirst");
+    REQUIRE(lua_tointeger(L, -1) == 1);
+    lua_pop(L, 1);
+    lua_getglobal(L, "deferSecond");
+    REQUIRE(lua_tointeger(L, -1) == 1);
+    lua_pop(L, 1);
+    lua_getglobal(L, "deferThird");
+    REQUIRE(lua_isnil(L, -1));
+    lua_pop(L, 1);
+}
+
+TEST_CASE("TaskScheduler cancel still resolves tasks after mixed timed and deferred compaction") {
+    RuntimeGuard guard;
+    auto* runtime = luax::Runtime::getOrCreate();
+    auto* L = runtime->state();
+
+    auto refDefer = luauapi_test::makeCallback(L, "_G.mixDefer = (_G.mixDefer or 0) + 1");
+    auto refTimed = luauapi_test::makeCallback(L, "_G.mixTimed = (_G.mixTimed or 0) + 1");
+
+    auto& scheduler = luax::TaskScheduler::get();
+    auto deferId = scheduler.addDeferred(std::move(refDefer));
+    auto timedId = scheduler.add(std::move(refTimed), 1.0, 0.0);
+    REQUIRE(deferId != 0);
+    REQUIRE(timedId != 0);
+
+    scheduler.advance(0.0, L);
+    REQUIRE_FALSE(scheduler.isScheduled(deferId));
+    REQUIRE(scheduler.isScheduled(timedId));
+
+    scheduler.cancel(timedId);
+    REQUIRE_FALSE(scheduler.isScheduled(timedId));
+    scheduler.advance(1.0, L);
+    REQUIRE(scheduler.activeCount() == 0);
+
+    lua_getglobal(L, "mixDefer");
+    REQUIRE(lua_tointeger(L, -1) == 1);
+    lua_pop(L, 1);
+    lua_getglobal(L, "mixTimed");
+    REQUIRE(lua_isnil(L, -1));
+    lua_pop(L, 1);
+}
