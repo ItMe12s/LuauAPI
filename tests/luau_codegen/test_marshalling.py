@@ -728,6 +728,91 @@ class ContainerTableMarshallingTests(unittest.TestCase):
         self.assertIn("luax::checkUnorderedSet<cocos2d::CCObject*>", check_text)
         self.assertIn("luax::pushUnorderedSet<cocos2d::CCObject*>", push_text)
 
+    def test_pair_check_and_push_use_record_helpers(self) -> None:
+        first = TypeInfo(kind="number", cxx_type="int", lua_type="number")
+        second = TypeInfo(kind="number", cxx_type="int", lua_type="number")
+        info = TypeInfo(
+            kind="pair",
+            cxx_type="std::pair<int, int>",
+            lua_type="{ first: number, second: number }",
+            key_type=first,
+            value_type=second,
+        )
+
+        check_text = "".join(
+            check_arg(Arg("std::pair<int, int>", "entry"), info, 1, "arg0", "test")
+        )
+        push_text = "".join(push_value(info, "entry"))
+
+        self.assertIn("luax::checkPair<int, int>", check_text)
+        self.assertIn("luax::pushPair<int, int>", push_text)
+
+    def test_map_pair_value_check_and_push(self) -> None:
+        key = TypeInfo(kind="number", cxx_type="int", lua_type="number")
+        first = TypeInfo(kind="number", cxx_type="int", lua_type="number")
+        second = TypeInfo(kind="number", cxx_type="int", lua_type="number")
+        pair_val = TypeInfo(
+            kind="pair",
+            cxx_type="std::pair<int, int>",
+            lua_type="{ first: number, second: number }",
+            key_type=first,
+            value_type=second,
+        )
+        info = TypeInfo(
+            kind="unordered_map",
+            cxx_type="gd::unordered_map<int, std::pair<int, int>>",
+            lua_type="{ [number]: { first: number, second: number } }",
+            key_type=key,
+            value_type=pair_val,
+        )
+
+        check_text = "".join(
+            check_arg(
+                Arg("gd::unordered_map<int, std::pair<int, int>>", "groups"),
+                info,
+                1,
+                "arg0",
+                "test",
+            )
+        )
+        push_text = "".join(push_value(info, "groups"))
+
+        self.assertIn("luax::checkUnorderedMap<int, std::pair<int, int>>", check_text)
+        self.assertIn("luax::pushUnorderedMap<int, std::pair<int, int>>", push_text)
+
+    def test_map_pair_key_check_and_push_use_entry_list_helpers(self) -> None:
+        first = TypeInfo(kind="number", cxx_type="int", lua_type="number")
+        second = TypeInfo(kind="number", cxx_type="int", lua_type="number")
+        pair_key = TypeInfo(
+            kind="pair",
+            cxx_type="std::pair<int, int>",
+            lua_type="{ first: number, second: number }",
+            key_type=first,
+            value_type=second,
+        )
+        value = TypeInfo(kind="number", cxx_type="int", lua_type="number")
+        info = TypeInfo(
+            kind="map",
+            cxx_type="gd::map<std::pair<int, int>, int>",
+            lua_type="{ { first: number, second: number, value: number } }",
+            key_type=pair_key,
+            value_type=value,
+        )
+
+        check_text = "".join(
+            check_arg(
+                Arg("gd::map<std::pair<int, int>, int>", "accounts"),
+                info,
+                1,
+                "arg0",
+                "test",
+            )
+        )
+        push_text = "".join(push_value(info, "accounts"))
+
+        self.assertIn("luax::checkPairKeyMap<int, int, int>", check_text)
+        self.assertIn("luax::pushPairKeyMap<int, int, int>", push_text)
+
 
 class FmodMarshallingTests(unittest.TestCase):
     def test_fmod_enum_arg_uses_numeric_check(self) -> None:

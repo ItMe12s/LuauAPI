@@ -26,10 +26,42 @@ def _map_key_value_cxx(info: TypeInfo) -> tuple[str, str]:
     return info.key_type.cxx_type, info.value_type.cxx_type
 
 
+def _map_check_call(info: TypeInfo) -> str:
+    if info.key_type is not None and info.key_type.kind == "pair":
+        if info.value_type is None:
+            raise ValueError("map container requires value type")
+        first, second = _pair_component_cxx(info.key_type)
+        value = info.value_type.cxx_type
+        if info.kind == "unordered_map":
+            return f"checkUnorderedPairKeyMap<{first}, {second}, {value}>"
+        return f"checkPairKeyMap<{first}, {second}, {value}>"
+    key, value = _map_key_value_cxx(info)
+    return f"{_map_check_fn(info.kind)}<{key}, {value}>"
+
+
+def _map_push_call(info: TypeInfo) -> str:
+    if info.key_type is not None and info.key_type.kind == "pair":
+        if info.value_type is None:
+            raise ValueError("map container requires value type")
+        first, second = _pair_component_cxx(info.key_type)
+        value = info.value_type.cxx_type
+        if info.kind == "unordered_map":
+            return f"pushUnorderedPairKeyMap<{first}, {second}, {value}>"
+        return f"pushPairKeyMap<{first}, {second}, {value}>"
+    key, value = _map_key_value_cxx(info)
+    return f"{_map_push_fn(info.kind)}<{key}, {value}>"
+
+
 def _set_elem_cxx(info: TypeInfo) -> str:
     if info.element_type is None:
         raise ValueError("set container requires element type")
     return info.element_type.cxx_type
+
+
+def _pair_component_cxx(info: TypeInfo) -> tuple[str, str]:
+    if info.key_type is None or info.value_type is None:
+        raise ValueError("pair type requires first and second types")
+    return info.key_type.cxx_type, info.value_type.cxx_type
 
 
 def _map_check_fn(kind: str) -> str:
@@ -197,16 +229,20 @@ def emit_stack_check(
             f'        {_prefix(declare, var)} = luax::checkPrimitiveVector<{elem}>(L, {idx}, "{label}");\n'
         ]
     if info.kind in ("map", "unordered_map"):
-        key, value = _map_key_value_cxx(info)
-        check_fn = _map_check_fn(info.kind)
+        check_fn = _map_check_call(info)
         return [
-            f'        {_prefix(declare, var)} = luax::{check_fn}<{key}, {value}>(L, {idx}, "{label}");\n'
+            f'        {_prefix(declare, var)} = luax::{check_fn}(L, {idx}, "{label}");\n'
         ]
     if info.kind in ("set", "unordered_set"):
         elem = _set_elem_cxx(info)
         check_fn = _set_check_fn(info.kind)
         return [
             f'        {_prefix(declare, var)} = luax::{check_fn}<{elem}>(L, {idx}, "{label}");\n'
+        ]
+    if info.kind == "pair":
+        first, second = _pair_component_cxx(info)
+        return [
+            f'        {_prefix(declare, var)} = luax::checkPair<{first}, {second}>(L, {idx}, "{label}");\n'
         ]
     raise ValueError(f"unsupported type kind: {info.kind}")
 
@@ -264,13 +300,15 @@ def _push_impl(
         elem = _primitive_vector_elem_cxx(info)
         return [f"{indent}luax::pushPrimitiveVector<{elem}>(L, {expr});\n"]
     if info.kind in ("map", "unordered_map"):
-        key, value = _map_key_value_cxx(info)
-        push_fn = _map_push_fn(info.kind)
-        return [f"{indent}luax::{push_fn}<{key}, {value}>(L, {expr});\n"]
+        push_fn = _map_push_call(info)
+        return [f"{indent}luax::{push_fn}(L, {expr});\n"]
     if info.kind in ("set", "unordered_set"):
         elem = _set_elem_cxx(info)
         push_fn = _set_push_fn(info.kind)
         return [f"{indent}luax::{push_fn}<{elem}>(L, {expr});\n"]
+    if info.kind == "pair":
+        first, second = _pair_component_cxx(info)
+        return [f"{indent}luax::pushPair<{first}, {second}>(L, {expr});\n"]
     if info.kind == "delegate":
         return [f"{indent}luax::tryPushBoundDelegateTable(L, {expr});\n"]
     if info.kind == "result":

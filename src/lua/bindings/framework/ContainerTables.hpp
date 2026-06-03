@@ -13,7 +13,31 @@
 #include <type_traits>
 #include <utility>
 
+namespace luax {
+    template <class F, class S>
+    std::pair<F, S> checkPair(lua_State* L, int idx, char const* label);
+
+    template <class F, class S>
+    void pushPair(lua_State* L, std::pair<F, S> const& pair);
+}
+
 namespace luax::detail {
+    template <class T>
+    struct is_std_pair : std::false_type {};
+
+    template <class F, class S>
+    struct is_std_pair<std::pair<F, S>> : std::true_type {};
+
+    template <class T>
+    inline constexpr bool is_std_pair_v = is_std_pair<T>::value;
+
+    inline void requireTableField(lua_State* L, int idx, char const* name, char const* label) {
+        lua_getfield(L, idx, name);
+        if (lua_isnil(L, -1)) {
+            luaL_error(L, "%s missing field %s", label, name);
+        }
+    }
+
     template <class T>
     inline T checkPrimitiveVectorElement(lua_State* L, int idx, char const* label) {
         if constexpr (std::is_same_v<T, bool>) {
@@ -45,6 +69,8 @@ namespace luax::detail {
                 return value;
             }
             return static_cast<T>(check<int>(L, idx, label));
+        } else if constexpr (is_std_pair_v<T>) {
+            return luax::checkPair<typename T::first_type, typename T::second_type>(L, idx, label);
         } else {
             return check<T>(L, idx, label);
         }
@@ -72,6 +98,8 @@ namespace luax::detail {
             } else {
                 lua_pushnumber(L, static_cast<double>(value));
             }
+        } else if constexpr (is_std_pair_v<T>) {
+            luax::pushPair<typename T::first_type, typename T::second_type>(L, value);
         } else {
             push(L, value);
         }
@@ -79,6 +107,42 @@ namespace luax::detail {
 }
 
 namespace luax {
+    template <class F, class S>
+    std::pair<F, S> checkPair(lua_State* L, int idx, char const* label) {
+        idx = lua_absindex(L, idx);
+        luaL_checktype(L, idx, LUA_TTABLE);
+        detail::requireTableField(L, idx, "first", label);
+        F first = detail::checkPrimitiveVectorElement<F>(L, -1, label);
+        lua_pop(L, 1);
+        detail::requireTableField(L, idx, "second", label);
+        S second = detail::checkPrimitiveVectorElement<S>(L, -1, label);
+        lua_pop(L, 1);
+        return std::make_pair(std::move(first), std::move(second));
+    }
+
+    template <class F, class S>
+    void pushPair(lua_State* L, std::pair<F, S> const& pair) {
+        lua_createtable(L, 0, 2);
+        int tableIndex = lua_gettop(L);
+        detail::pushPrimitiveVectorElement(L, pair.first);
+        lua_setfield(L, tableIndex, "first");
+        detail::pushPrimitiveVectorElement(L, pair.second);
+        lua_setfield(L, tableIndex, "second");
+    }
+
+    template <class F, class S>
+    void pushPair(lua_State* L, std::pair<F, S>* pair) {
+        if (pair == nullptr) {
+            lua_pushnil(L);
+            return;
+        }
+        pushPair(L, *pair);
+    }
+
+    template <class F, class S>
+    void pushPair(lua_State* L, std::pair<F, S> const* pair) {
+        pushPair(L, const_cast<std::pair<F, S>*>(pair));
+    }
     template <class T>
     gd::vector<T> checkPrimitiveVector(lua_State* L, int idx, char const* label) {
         idx = lua_absindex(L, idx);
@@ -127,6 +191,11 @@ namespace luax {
         return detail::checkPrimitiveVectorElement<K>(L, idx, label);
     }
 
+    template <class F, class S>
+    inline std::pair<F, S> checkMapValue(lua_State* L, int idx, char const* label) {
+        return checkPair<F, S>(L, idx, label);
+    }
+
     template <class V>
     inline V checkMapValue(lua_State* L, int idx, char const* label) {
         if constexpr (std::is_pointer_v<V>) {
@@ -144,6 +213,11 @@ namespace luax {
         detail::pushPrimitiveVectorElement(L, key);
     }
 
+    template <class F, class S>
+    inline void pushMapValue(lua_State* L, std::pair<F, S> const& value) {
+        pushPair(L, value);
+    }
+
     template <class V>
     inline void pushMapValue(lua_State* L, V const& value) {
         if constexpr (std::is_pointer_v<V>) {
@@ -159,6 +233,56 @@ namespace luax {
     }
 
     namespace detail {
+        template <class K1, class K2, class V, class Map>
+        Map checkPairKeyAssociativeMap(lua_State* L, int idx, char const* label) {
+            idx = lua_absindex(L, idx);
+            luaL_checktype(L, idx, LUA_TTABLE);
+            auto len = static_cast<lua_Integer>(lua_objlen(L, idx));
+            if (len < 0) {
+                luaL_error(L, "%s: invalid map length", label);
+            }
+            Map out;
+            for (lua_Integer i = 1; i <= len; ++i) {
+                lua_rawgeti(L, idx, i);
+                requireTableField(L, -1, "first", label);
+                K1 keyFirst = checkMapKey<K1>(L, -1, label);
+                lua_pop(L, 1);
+                requireTableField(L, -1, "second", label);
+                K2 keySecond = checkMapKey<K2>(L, -1, label);
+                lua_pop(L, 1);
+                requireTableField(L, -1, "value", label);
+                V value = checkMapValue<V>(L, -1, label);
+                lua_pop(L, 2);
+                out.emplace(std::make_pair(std::move(keyFirst), std::move(keySecond)), std::move(value));
+            }
+            return out;
+        }
+
+        template <class K1, class K2, class V, class Map>
+        void pushPairKeyAssociativeMap(lua_State* L, Map const& map) {
+            lua_createtable(L, static_cast<int>(map.size()), 0);
+            int tableIndex = lua_gettop(L);
+            int i = 1;
+            for (auto const& entry : map) {
+                lua_createtable(L, 0, 3);
+                int entryIndex = lua_gettop(L);
+                pushMapKey(L, entry.first.first);
+                lua_setfield(L, entryIndex, "first");
+                pushMapKey(L, entry.first.second);
+                lua_setfield(L, entryIndex, "second");
+                pushMapValue(L, entry.second);
+                lua_setfield(L, entryIndex, "value");
+                lua_rawseti(L, tableIndex, i++);
+            }
+        }
+
+        template <class Map>
+        void assignPairKeyAssociativeMap(Map& dest, Map src) {
+            dest.clear();
+            for (auto& entry : src) {
+                dest.emplace(std::move(entry.first), std::move(entry.second));
+            }
+        }
         template <class K, class V, class Map>
         Map checkAssociativeMap(lua_State* L, int idx, char const* label) {
             idx = lua_absindex(L, idx);
@@ -214,6 +338,21 @@ namespace luax {
         }
     }
 
+    template <class K1, class K2, class V>
+    gd::map<std::pair<K1, K2>, V> checkPairKeyMap(lua_State* L, int idx, char const* label) {
+        return detail::checkPairKeyAssociativeMap<K1, K2, V, gd::map<std::pair<K1, K2>, V>>(
+            L, idx, label
+        );
+    }
+
+    template <class K1, class K2, class V>
+    gd::unordered_map<std::pair<K1, K2>, V> checkUnorderedPairKeyMap(
+        lua_State* L, int idx, char const* label
+    ) {
+        return detail::checkPairKeyAssociativeMap<
+            K1, K2, V, gd::unordered_map<std::pair<K1, K2>, V>>(L, idx, label);
+    }
+
     template <class K, class V>
     gd::map<K, V> checkMap(lua_State* L, int idx, char const* label) {
         return detail::checkAssociativeMap<K, V, gd::map<K, V>>(L, idx, label);
@@ -222,6 +361,19 @@ namespace luax {
     template <class K, class V>
     gd::unordered_map<K, V> checkUnorderedMap(lua_State* L, int idx, char const* label) {
         return detail::checkAssociativeMap<K, V, gd::unordered_map<K, V>>(L, idx, label);
+    }
+
+    template <class K1, class K2, class V>
+    void pushPairKeyMap(lua_State* L, gd::map<std::pair<K1, K2>, V> const& map) {
+        detail::pushPairKeyAssociativeMap<K1, K2, V, gd::map<std::pair<K1, K2>, V>>(L, map);
+    }
+
+    template <class K1, class K2, class V>
+    void pushUnorderedPairKeyMap(
+        lua_State* L, gd::unordered_map<std::pair<K1, K2>, V> const& map
+    ) {
+        detail::pushPairKeyAssociativeMap<
+            K1, K2, V, gd::unordered_map<std::pair<K1, K2>, V>>(L, map);
     }
 
     template <class K, class V>
@@ -326,6 +478,19 @@ namespace luax {
                 dest.insert(std::move(elem));
             }
         }
+    }
+
+    template <class K1, class K2, class V>
+    void assignPairKeyMap(gd::map<std::pair<K1, K2>, V>& dest, gd::map<std::pair<K1, K2>, V> src) {
+        detail::assignPairKeyAssociativeMap(dest, std::move(src));
+    }
+
+    template <class K1, class K2, class V>
+    void assignUnorderedPairKeyMap(
+        gd::unordered_map<std::pair<K1, K2>, V>& dest,
+        gd::unordered_map<std::pair<K1, K2>, V> src
+    ) {
+        detail::assignPairKeyAssociativeMap(dest, std::move(src));
     }
 
     template <class K, class V>

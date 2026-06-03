@@ -143,6 +143,11 @@ because Geode gnustl on Android does not implement `_Rb_tree::_M_move_assign`.
 and pointer fields such as `gd::vector<float>*`) use `luax::assignPrimitiveVector` (clear plus `push_back`) instead of whole-container `operator=`.
 This is required for `vector<bool>` on Android, where gnustl's `vector<bool>::swap` does not accept `_Bit_iterator` arguments.
 
+`std::pair` inside containers is bound. Pair bodies use `{ first, second }`.
+Maps with a pair key use an entry list with `first`, `second`, and `value`.
+Maps with a nested container value (for example `gd::vector<T*>` as the value type) stay unsupported.
+See [Pair containers](pair-containers.md).
+
 ## Overload resolution
 
 Broma can declare several methods with the same name.

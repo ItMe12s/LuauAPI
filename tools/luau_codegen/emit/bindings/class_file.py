@@ -311,10 +311,23 @@ _CONTAINER_FIELD_ASSIGN_FNS = {
 }
 
 
+def _container_field_assign_fn(info: TypeInfo) -> str | None:
+    if info.kind in ("map", "unordered_map") and info.key_type is not None:
+        if info.key_type.kind == "pair":
+            return (
+                "assignPairKeyMap"
+                if info.kind == "map"
+                else "assignUnorderedPairKeyMap"
+            )
+    return _CONTAINER_FIELD_ASSIGN_FNS.get(info.kind)
+
+
 def _emit_container_field_assign_lines(
-    field: Field, label: str, kind: str
+    field: Field, label: str, info: TypeInfo
 ) -> list[str]:
-    fn = _CONTAINER_FIELD_ASSIGN_FNS[kind]
+    fn = _container_field_assign_fn(info)
+    if fn is None:
+        raise ValueError(f"unsupported container field assign: {info.kind}")
     name = field.name
     return [
         "            if constexpr (std::is_pointer_v<std::remove_reference_t<decltype("
@@ -412,8 +425,8 @@ def _emit_field_accessors(
         f"    int {setter_impl}(lua_State* L, T* self, {arg_info.cxx_type} value) {{\n"
     )
     out.append(f"        if constexpr (requires(T* obj) {{ obj->{field.name}; }}) {{\n")
-    if arg_info.kind in _CONTAINER_FIELD_ASSIGN_FNS:
-        out.extend(_emit_container_field_assign_lines(field, label, arg_info.kind))
+    if _container_field_assign_fn(arg_info) is not None:
+        out.extend(_emit_container_field_assign_lines(field, label, arg_info))
     elif arg_info.is_vector_ptr:
         out.append(f"            if (self->{field.name} == nullptr) {{\n")
         out.append(f'                luaL_error(L, "{label} field pointer is null");\n')

@@ -72,6 +72,13 @@ points, sizes, rects, colors, and button configs.
 Generated binding and hook code uses these helpers to decode and push table-shaped values.
 The generated hook runtime applies overrides through a pcall trampoline so decode errors are safe.
 
+## Container tables
+
+`ContainerTables.hpp` marshals `gd::vector`, `gd::map`, `gd::set`, and related types to Luau tables.
+Primitives and objects use array or dictionary shapes. `std::pair` uses `{ first, second }`.
+Maps with a pair key use an entry list (see [Pair containers](pair-containers.md)).
+Field setters call `assignMap`, `assignSet`, or `assignPrimitiveVector` instead of assigning whole containers.
+
 ## Lua references
 
 `LuaRef` wraps a Lua registry reference with RAII. It records the runtime generation and the resources root,
@@ -121,4 +128,5 @@ In practice most game types are generated. See [Codegen](codegen.md).
 - `src/lua/bindings/framework/LuaMenuHandler.hpp`
 - `src/lua/bindings/framework/Ref.hpp`
 - `src/lua/bindings/framework/Types.hpp`
+- `src/lua/bindings/framework/ContainerTables.hpp`
 - `src/lua/bindings/framework/Fields.cpp`

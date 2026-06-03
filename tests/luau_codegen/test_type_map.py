@@ -507,6 +507,49 @@ class ContainerTypeMapTests(unittest.TestCase):
         self.assertEqual(info.element_type.kind, "object")
         self.assertEqual(info.element_type.class_name, "CCObject")
 
+    def test_classify_std_pair_int_int(self) -> None:
+        info = classify_arg("std::pair<int, int>", {})
+
+        self.assertIsNotNone(info)
+        assert info is not None
+        self.assertEqual(info.kind, "pair")
+        self.assertEqual(info.lua_type, "{ first: number, second: number }")
+
+    def test_classify_gd_map_pair_value(self) -> None:
+        info = classify_arg("gd::unordered_map<int, std::pair<int, int>>", {})
+
+        self.assertIsNotNone(info)
+        assert info is not None
+        self.assertEqual(info.kind, "unordered_map")
+        self.assertEqual(
+            info.lua_type, "{ [number]: { first: number, second: number } }"
+        )
+
+    def test_classify_gd_map_pair_key_entry_list(self) -> None:
+        info = classify_arg("gd::map<std::pair<int, int>, std::pair<float, float>>", {})
+
+        self.assertIsNotNone(info)
+        assert info is not None
+        self.assertEqual(info.kind, "map")
+        self.assertIn("value:", info.lua_type)
+        self.assertNotIn("[", info.lua_type)
+
+    def test_classify_gd_vector_pair(self) -> None:
+        info = classify_arg("gd::vector<std::pair<int, int>>", {})
+
+        self.assertIsNotNone(info)
+        assert info is not None
+        self.assertEqual(info.kind, "primitive_vector")
+        self.assertEqual(info.lua_type, "{ { first: number, second: number } }")
+
+    def test_classify_gd_set_pair(self) -> None:
+        info = classify_arg("gd::set<std::pair<int, int>>", {})
+
+        self.assertIsNotNone(info)
+        assert info is not None
+        self.assertEqual(info.kind, "set")
+        self.assertEqual(info.lua_type, "{ { first: number, second: number } }")
+
 
 class GdEnumTypeMapTests(unittest.TestCase):
     _RESIDUAL_GD_ENUMS = (

@@ -8,6 +8,11 @@ from luau_codegen.parse.broma import Class, split_arg, split_top_level
 from luau_codegen.model.domain import short_name
 
 from luau_codegen.model.delegate_specs import lookup_delegate
+from luau_codegen.model.pair_design import (
+    PAIR_COMPONENT_KINDS,
+    pair_key_map_entry_lua_type,
+    pair_lua_type,
+)
 from luau_codegen.model.value_struct_gate import (
     GATED_VALUE_CHECK_CXX,
     GATED_VALUE_STRUCTS,
@@ -387,7 +392,7 @@ def _template_inner(n: str, prefix: str) -> Optional[str]:
 
 
 _PRIMITIVE_VECTOR_ELEMENT_KINDS = frozenset(
-    {"bool", "number", "wideint", "string", "enum", "value"}
+    {"bool", "number", "wideint", "string", "enum", "value", "pair"}
 )
 
 _MAP_KEY_KINDS = frozenset({"bool", "number", "wideint", "string", "enum"})
@@ -422,20 +427,90 @@ def _is_nested_container(info: TypeInfo) -> bool:
     return info.kind in _NESTED_CONTAINER_KINDS
 
 
+def _pair_component_lua_type(info: TypeInfo) -> str:
+    if info.kind == "object":
+        return f"{info.class_name}?"
+    if info.kind == "pair":
+        if info.key_type is None or info.value_type is None:
+            return info.lua_type
+        return pair_lua_type(
+            _pair_component_lua_type(info.key_type),
+            _pair_component_lua_type(info.value_type),
+        )
+    return info.lua_type
+
+
 def _map_value_lua_type(value: TypeInfo) -> str:
     if value.kind == "object":
         return f"{value.class_name}?"
+    if value.kind == "pair":
+        if value.key_type is None or value.value_type is None:
+            return value.lua_type
+        return pair_lua_type(
+            _pair_component_lua_type(value.key_type),
+            _pair_component_lua_type(value.value_type),
+        )
     return value.lua_type
 
 
 def _map_lua_type(key: TypeInfo, value: TypeInfo) -> str:
+    if key.kind == "pair":
+        if key.key_type is None or key.value_type is None:
+            return key.lua_type
+        entry = pair_key_map_entry_lua_type(
+            _pair_component_lua_type(key.key_type),
+            _pair_component_lua_type(key.value_type),
+            _map_value_lua_type(value),
+        )
+        return f"{{ {entry} }}"
     return f"{{ [{key.lua_type}]: {_map_value_lua_type(value)} }}"
 
 
 def _set_element_lua_type(element: TypeInfo) -> str:
     if element.kind == "object":
         return f"{element.class_name}?"
+    if element.kind == "pair":
+        if element.key_type is None or element.value_type is None:
+            return element.lua_type
+        return pair_lua_type(
+            _pair_component_lua_type(element.key_type),
+            _pair_component_lua_type(element.value_type),
+        )
     return element.lua_type
+
+
+def _parse_std_pair(
+    n: str,
+    object_classes: Dict[str, Class],
+    ctx: CodegenContext | None = None,
+) -> Optional[TypeInfo]:
+    inner = _template_inner(n, "std::pair")
+    if inner is None:
+        return None
+    parts = split_top_level(inner)
+    if len(parts) != 2:
+        return None
+    first = classify_arg(parts[0], object_classes, ctx=ctx)
+    second = classify_arg(parts[1], object_classes, ctx=ctx)
+    if first is None or second is None:
+        return None
+    if (
+        first.kind not in PAIR_COMPONENT_KINDS
+        or second.kind not in PAIR_COMPONENT_KINDS
+    ):
+        return None
+    if _is_nested_container(first) or _is_nested_container(second):
+        return None
+    return TypeInfo(
+        "pair",
+        f"std::pair<{first.cxx_type}, {second.cxx_type}>",
+        pair_lua_type(
+            _pair_component_lua_type(first),
+            _pair_component_lua_type(second),
+        ),
+        key_type=first,
+        value_type=second,
+    )
 
 
 def _parse_map_container(
@@ -455,10 +530,18 @@ def _parse_map_container(
     value = classify_arg(parts[1], object_classes, ctx=ctx)
     if key is None or value is None:
         return None
-    if key.kind not in _MAP_KEY_KINDS or _is_nested_container(key):
-        return None
-    if value.kind not in _MAP_VALUE_KINDS or _is_nested_container(value):
-        return None
+    if key.kind == "pair":
+        if key.key_type is None or key.value_type is None:
+            return None
+        if _is_nested_container(value):
+            return None
+        if value.kind not in _MAP_VALUE_KINDS:
+            return None
+    else:
+        if key.kind not in _MAP_KEY_KINDS or _is_nested_container(key):
+            return None
+        if value.kind not in _MAP_VALUE_KINDS or _is_nested_container(value):
+            return None
     return TypeInfo(
         kind,
         f"{prefix}<{key.cxx_type}, {value.cxx_type}>",
@@ -723,6 +806,18 @@ def _classify_core(
             container,
             is_ref=is_ref,
             is_out=is_out,
+        )
+    pair_type = _parse_std_pair(n, object_classes, ctx=ctx)
+    if pair_type is not None:
+        return TypeInfo(
+            pair_type.kind,
+            pair_type.cxx_type,
+            pair_type.lua_type,
+            pair_type.class_name,
+            is_ref=is_ref,
+            is_out=is_out,
+            key_type=pair_type.key_type,
+            value_type=pair_type.value_type,
         )
     if n == "bool":
         return TypeInfo("bool", n, "boolean", is_ref=is_ref, is_out=is_out)
