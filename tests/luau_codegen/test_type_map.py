@@ -9,6 +9,7 @@ from helpers import (
     Method,  # type: ignore[import-unresolved]
     Root,  # type: ignore[import-unresolved]
     _input_arg_count,  # type: ignore[import-unresolved]
+    STD_ARRAY_MAX_SIZE,  # type: ignore[import-unresolved]
     classify_arg,  # type: ignore[import-unresolved]
     classify_return,  # type: ignore[import-unresolved]
     codegen_object_map,  # type: ignore[import-unresolved]
@@ -329,6 +330,58 @@ class ContainerTypeMapTests(unittest.TestCase):
         assert info.element_type is not None
         self.assertEqual(info.element_type.kind, "enum")
         self.assertEqual(info.element_type.cxx_type, "FMOD_RESULT")
+
+    def test_classify_std_array_int(self) -> None:
+        info = classify_arg("std::array<int, 300>", {})
+
+        assert info is not None
+        self.assertEqual(info.kind, "std_array")
+        self.assertEqual(info.cxx_type, "std::array<int, 300>")
+        self.assertEqual(info.lua_type, "{ number }")
+        self.assertEqual(info.array_size, 300)
+        assert info.element_type is not None
+        self.assertEqual(info.element_type.kind, "number")
+
+    def test_classify_std_array_ccpoint(self) -> None:
+        info = classify_arg("std::array<cocos2d::CCPoint, 4>", {})
+
+        assert info is not None
+        self.assertEqual(info.kind, "std_array")
+        self.assertEqual(info.lua_type, "{ CCPoint }")
+        self.assertEqual(info.array_size, 4)
+        assert info.element_type is not None
+        self.assertEqual(info.element_type.kind, "value")
+        self.assertEqual(info.element_type.lua_type, "CCPoint")
+
+    def test_classify_std_array_short_pointer(self) -> None:
+        info = classify_arg("std::array<short, 10>*", {})
+
+        assert info is not None
+        self.assertEqual(info.kind, "std_array")
+        self.assertEqual(info.cxx_type, "std::array<short, 10>")
+        self.assertTrue(info.is_vector_ptr)
+        self.assertFalse(info.is_ref)
+        self.assertTrue(info.is_out)
+        self.assertEqual(info.array_size, 10)
+
+    def test_classify_std_array_ccpoint_pointer(self) -> None:
+        info = classify_arg("std::array<cocos2d::CCPoint, 400>*", {})
+
+        assert info is not None
+        self.assertEqual(info.kind, "std_array")
+        self.assertEqual(info.array_size, 400)
+        self.assertTrue(info.is_vector_ptr)
+
+    def test_classify_std_array_rejects_oversize(self) -> None:
+        self.assertIsNone(
+            classify_arg(f"std::array<int, {STD_ARRAY_MAX_SIZE + 1}>", {})
+        )
+
+    def test_classify_std_array_rejects_unmapped_value_element(self) -> None:
+        self.assertIsNone(classify_arg("std::array<ccVertex2F, 4>", {}))
+
+    def test_classify_std_array_rejects_nested_container_element(self) -> None:
+        self.assertIsNone(classify_arg("std::array<gd::vector<int>, 4>", {}))
 
     def test_classify_gd_vector_object_pointer_stays_vector_view(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")

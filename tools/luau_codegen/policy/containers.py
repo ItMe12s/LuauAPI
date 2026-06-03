@@ -7,6 +7,7 @@ _CONTAINER_KINDS = frozenset(
     {
         "vector_view",
         "primitive_vector",
+        "std_array",
         "map",
         "unordered_map",
         "set",

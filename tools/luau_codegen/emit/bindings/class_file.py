@@ -322,6 +322,27 @@ def _container_field_assign_fn(info: TypeInfo) -> str | None:
     return _CONTAINER_FIELD_ASSIGN_FNS.get(info.kind)
 
 
+def _emit_std_array_field_assign_lines(
+    field: Field, label: str, info: TypeInfo
+) -> list[str]:
+    if info.element_type is None or info.array_size <= 0:
+        raise ValueError("std array field requires element type and size")
+    elem = info.element_type.cxx_type
+    size = info.array_size
+    name = field.name
+    return [
+        "            if constexpr (std::is_pointer_v<std::remove_reference_t<decltype("
+        f"self->{name})>>) {{\n",
+        f"                if (self->{name} == nullptr) {{\n",
+        f'                    luaL_error(L, "{label} field pointer is null");\n',
+        "                }\n",
+        f"                luax::assignStdArray<{elem}, {size}>(*self->{name}, std::move(value));\n",
+        "            } else {\n",
+        f"                luax::assignStdArray<{elem}, {size}>(self->{name}, std::move(value));\n",
+        "            }\n",
+    ]
+
+
 def _emit_container_field_assign_lines(
     field: Field, label: str, info: TypeInfo
 ) -> list[str]:
@@ -425,7 +446,9 @@ def _emit_field_accessors(
         f"    int {setter_impl}(lua_State* L, T* self, {arg_info.cxx_type} value) {{\n"
     )
     out.append(f"        if constexpr (requires(T* obj) {{ obj->{field.name}; }}) {{\n")
-    if _container_field_assign_fn(arg_info) is not None:
+    if arg_info.kind == "std_array":
+        out.extend(_emit_std_array_field_assign_lines(field, label, arg_info))
+    elif _container_field_assign_fn(arg_info) is not None:
         out.extend(_emit_container_field_assign_lines(field, label, arg_info))
     elif arg_info.is_vector_ptr:
         out.append(f"            if (self->{field.name} == nullptr) {{\n")

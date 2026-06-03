@@ -20,6 +20,18 @@ def _primitive_vector_elem_cxx(info: TypeInfo) -> str:
     return info.element_type.cxx_type
 
 
+def _std_array_elem_cxx(info: TypeInfo) -> str:
+    if info.element_type is None:
+        raise ValueError("std array requires element type")
+    return info.element_type.cxx_type
+
+
+def _std_array_template_args(info: TypeInfo) -> str:
+    if info.array_size <= 0:
+        raise ValueError("std array requires fixed size")
+    return f"{_std_array_elem_cxx(info)}, {info.array_size}"
+
+
 def _map_key_value_cxx(info: TypeInfo) -> tuple[str, str]:
     if info.key_type is None or info.value_type is None:
         raise ValueError("map container requires key and value types")
@@ -228,6 +240,11 @@ def emit_stack_check(
         return [
             f'        {_prefix(declare, var)} = luax::checkPrimitiveVector<{elem}>(L, {idx}, "{label}");\n'
         ]
+    if info.kind == "std_array":
+        args = _std_array_template_args(info)
+        return [
+            f'        {_prefix(declare, var)} = luax::checkStdArray<{args}>(L, {idx}, "{label}");\n'
+        ]
     if info.kind in ("map", "unordered_map"):
         check_fn = _map_check_call(info)
         return [
@@ -299,6 +316,9 @@ def _push_impl(
     if info.kind == "primitive_vector":
         elem = _primitive_vector_elem_cxx(info)
         return [f"{indent}luax::pushPrimitiveVector<{elem}>(L, {expr});\n"]
+    if info.kind == "std_array":
+        args = _std_array_template_args(info)
+        return [f"{indent}luax::pushStdArray<{args}>(L, {expr});\n"]
     if info.kind in ("map", "unordered_map"):
         push_fn = _map_push_call(info)
         return [f"{indent}luax::{push_fn}(L, {expr});\n"]

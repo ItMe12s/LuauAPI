@@ -76,6 +76,7 @@ from luau_codegen.model.codegen_context import CodegenContext  # type: ignore[im
 from luau_codegen.convert.type_map import (  # type: ignore[import-unresolved]
     COCOS_ENUM_TYPES,
     GD_ENUM_TYPES,
+    STD_ARRAY_MAX_SIZE,
     TypeInfo,
     classify_arg,
     classify_return,
@@ -181,6 +182,7 @@ __all__ = [
     "CodegenContext",
     "COCOS_ENUM_TYPES",
     "GD_ENUM_TYPES",
+    "STD_ARRAY_MAX_SIZE",
     "TypeInfo",
     "classify_arg",
     "classify_return",

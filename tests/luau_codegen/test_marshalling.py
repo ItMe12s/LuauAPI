@@ -590,6 +590,46 @@ class EmitStackCheckTests(unittest.TestCase):
         self.assertIn("luax::checkPrimitiveVector<uint64_t>", check_text)
         self.assertIn("luax::pushPrimitiveVector<uint64_t>", push_text)
 
+    def test_std_array_check_uses_fixed_length_helper(self) -> None:
+        element = TypeInfo(kind="number", cxx_type="int", lua_type="number")
+        info = TypeInfo(
+            kind="std_array",
+            cxx_type="std::array<int, 300>",
+            lua_type="{ number }",
+            element_type=element,
+            array_size=300,
+        )
+
+        text = "".join(
+            check_arg(
+                Arg("std::array<int, 300>", "values"),
+                info,
+                2,
+                "arg0",
+                "Foo.take",
+            )
+        )
+
+        self.assertIn("luax::checkStdArray<int, 300>", text)
+
+    def test_std_array_push_uses_fixed_length_helper(self) -> None:
+        element = TypeInfo(
+            kind="value",
+            cxx_type="cocos2d::CCPoint",
+            lua_type="CCPoint",
+        )
+        info = TypeInfo(
+            kind="std_array",
+            cxx_type="std::array<cocos2d::CCPoint, 4>",
+            lua_type="{ CCPoint }",
+            element_type=element,
+            array_size=4,
+        )
+
+        text = "".join(push_value(info, "points"))
+
+        self.assertIn("luax::pushStdArray<cocos2d::CCPoint, 4>", text)
+
 
 class ContainerTableMarshallingTests(unittest.TestCase):
     def test_map_check_and_push_use_table_helpers(self) -> None:

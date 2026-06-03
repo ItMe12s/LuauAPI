@@ -200,6 +200,8 @@ def _refs_from_method(
                 refs.update(_value_type_object_refs(info.value_type))
         elif info and info.kind == "primitive_vector" and info.element_type:
             refs.update(_value_type_object_refs(info.element_type))
+        elif info and info.kind == "std_array" and info.element_type:
+            refs.update(_value_type_object_refs(info.element_type))
         elif info and info.kind in ("set", "unordered_set") and info.element_type:
             if info.element_type.kind == "object":
                 refs.add(_object_type_name(info.element_type))
@@ -216,6 +218,8 @@ def _refs_from_method(
         else:
             refs.update(_value_type_object_refs(ret.value_type))
     elif ret and ret.kind == "primitive_vector" and ret.element_type:
+        refs.update(_value_type_object_refs(ret.element_type))
+    elif ret and ret.kind == "std_array" and ret.element_type:
         refs.update(_value_type_object_refs(ret.element_type))
     elif ret and ret.kind in ("set", "unordered_set") and ret.element_type:
         if ret.element_type.kind == "object":
@@ -244,6 +248,8 @@ def _refs_from_fields(
             else:
                 refs.update(_value_type_object_refs(ret.value_type))
         elif ok and ret and ret.kind == "primitive_vector" and ret.element_type:
+            refs.update(_value_type_object_refs(ret.element_type))
+        elif ok and ret and ret.kind == "std_array" and ret.element_type:
             refs.update(_value_type_object_refs(ret.element_type))
         elif ok and ret and ret.kind in ("set", "unordered_set") and ret.element_type:
             if ret.element_type.kind == "object":

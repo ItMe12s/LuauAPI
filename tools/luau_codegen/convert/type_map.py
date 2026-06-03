@@ -264,6 +264,7 @@ class TypeInfo:
     element_type: Optional["TypeInfo"] = None
     key_type: Optional["TypeInfo"] = None
     value_type: Optional["TypeInfo"] = None
+    array_size: int = 0
 
 
 _CALLBACK_PREFIXES = (
@@ -394,6 +395,10 @@ def _template_inner(n: str, prefix: str) -> Optional[str]:
 _PRIMITIVE_VECTOR_ELEMENT_KINDS = frozenset(
     {"bool", "number", "wideint", "string", "enum", "value", "pair"}
 )
+
+_STD_ARRAY_ELEMENT_KINDS = _PRIMITIVE_VECTOR_ELEMENT_KINDS
+
+STD_ARRAY_MAX_SIZE = 400
 
 _MAP_KEY_KINDS = frozenset({"bool", "number", "wideint", "string", "enum"})
 
@@ -613,6 +618,38 @@ def _with_container_ref_flags(
         element_type=info.element_type,
         key_type=info.key_type,
         value_type=info.value_type,
+        array_size=info.array_size,
+    )
+
+
+def _parse_std_array(
+    n: str,
+    object_classes: Dict[str, Class],
+    ctx: CodegenContext | None = None,
+) -> Optional[TypeInfo]:
+    inner = _template_inner(n, "std::array")
+    if inner is None:
+        return None
+    parts = split_top_level(inner)
+    if len(parts) != 2:
+        return None
+    size_str = parts[1].strip()
+    if not size_str.isdigit():
+        return None
+    size = int(size_str)
+    if size <= 0 or size > STD_ARRAY_MAX_SIZE:
+        return None
+    element = classify_arg(parts[0].strip(), object_classes, ctx=ctx)
+    if element is None or element.kind not in _STD_ARRAY_ELEMENT_KINDS:
+        return None
+    if _is_nested_container(element):
+        return None
+    return TypeInfo(
+        "std_array",
+        f"std::array<{element.cxx_type}, {size}>",
+        f"{{ {element.lua_type} }}",
+        element_type=element,
+        array_size=size,
     )
 
 
@@ -763,6 +800,19 @@ def _classify_core(
                 is_vector_ptr=True,
                 element_type=ptr_primitive.element_type,
             )
+        ptr_std_array = _parse_std_array(base, object_classes, ctx=ctx)
+        if ptr_std_array is not None:
+            return TypeInfo(
+                ptr_std_array.kind,
+                ptr_std_array.cxx_type,
+                ptr_std_array.lua_type,
+                ptr_std_array.class_name,
+                is_ref=False,
+                is_out=True,
+                is_vector_ptr=True,
+                element_type=ptr_std_array.element_type,
+                array_size=ptr_std_array.array_size,
+            )
         ptr_vector = _parse_vector_view(base, object_classes, ctx=ctx)
         if ptr_vector is not None:
             return TypeInfo(
@@ -775,6 +825,19 @@ def _classify_core(
                 is_vector_ptr=True,
                 element_type=ptr_vector.element_type,
             )
+
+    std_array = _parse_std_array(n, object_classes, ctx=ctx)
+    if std_array is not None:
+        return TypeInfo(
+            std_array.kind,
+            std_array.cxx_type,
+            std_array.lua_type,
+            std_array.class_name,
+            is_ref,
+            is_out,
+            element_type=std_array.element_type,
+            array_size=std_array.array_size,
+        )
 
     primitive_vector = _parse_primitive_vector(n, object_classes, ctx=ctx)
     if primitive_vector is not None:

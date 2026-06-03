@@ -8,6 +8,7 @@
 #include <lua.h>
 #include <lualib.h>
 
+#include <array>
 #include <cstdint>
 #include <string>
 #include <type_traits>
@@ -184,6 +185,87 @@ namespace luax {
     template <class T>
     void pushPrimitiveVector(lua_State* L, gd::vector<T> const* vector) {
         pushPrimitiveVector(L, const_cast<gd::vector<T>*>(vector));
+    }
+
+    template <class T, std::size_t N>
+    std::array<T, N> checkStdArray(lua_State* L, int idx, char const* label) {
+        idx = lua_absindex(L, idx);
+        luaL_checktype(L, idx, LUA_TTABLE);
+        auto len = static_cast<lua_Integer>(lua_objlen(L, idx));
+        if (len != static_cast<lua_Integer>(N)) {
+            luaL_error(
+                L,
+                "%s: expected array length %zu, got %lld",
+                label,
+                N,
+                static_cast<long long>(len)
+            );
+        }
+        std::array<T, N> out{};
+        for (std::size_t i = 0; i < N; ++i) {
+            lua_rawgeti(L, idx, static_cast<int>(i + 1));
+            out[i] = detail::checkPrimitiveVectorElement<T>(L, -1, label);
+            lua_pop(L, 1);
+        }
+        return out;
+    }
+
+    template <class T, std::size_t N>
+    void pushStdArray(lua_State* L, std::array<T, N> const& array) {
+        lua_createtable(L, static_cast<int>(N), 0);
+        int tableIndex = lua_gettop(L);
+        int i = 1;
+        for (auto const& elem : array) {
+            detail::pushPrimitiveVectorElement(L, elem);
+            lua_rawseti(L, tableIndex, i++);
+        }
+    }
+
+    template <class T, std::size_t N>
+    void pushStdArray(lua_State* L, std::array<T, N>* array) {
+        if (array == nullptr) {
+            lua_pushnil(L);
+            return;
+        }
+        pushStdArray<T, N>(L, *array);
+    }
+
+    template <class T, std::size_t N>
+    void pushStdArray(lua_State* L, std::array<T, N> const* array) {
+        pushStdArray<T, N>(L, const_cast<std::array<T, N>*>(array));
+    }
+
+    template <class T, std::size_t N, class U>
+    void pushStdArray(lua_State* L, U const (&array)[N]) {
+        lua_createtable(L, static_cast<int>(N), 0);
+        int tableIndex = lua_gettop(L);
+        int slot = 1;
+        for (std::size_t i = 0; i < N; ++i) {
+            detail::pushPrimitiveVectorElement<T>(L, static_cast<T>(array[i]));
+            lua_rawseti(L, tableIndex, slot++);
+        }
+    }
+
+    template <class T, std::size_t N>
+    void assignStdArray(std::array<T, N>& dest, std::array<T, N> src) {
+        for (std::size_t i = 0; i < N; ++i) {
+            if constexpr (std::is_same_v<T, bool>) {
+                dest[i] = src[i];
+            } else {
+                dest[i] = std::move(src[i]);
+            }
+        }
+    }
+
+    template <class T, std::size_t N, class U>
+    void assignStdArray(U (&dest)[N], std::array<T, N> src) {
+        for (std::size_t i = 0; i < N; ++i) {
+            if constexpr (std::is_same_v<T, bool>) {
+                dest[i] = static_cast<U>(src[i]);
+            } else {
+                dest[i] = static_cast<U>(std::move(src[i]));
+            }
+        }
     }
 
     template <class K>
