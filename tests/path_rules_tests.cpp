@@ -25,6 +25,9 @@ TEST_CASE("flat resource paths reject absolute paths") {
 
 TEST_CASE("extension checks only allow luau or empty extension") {
     REQUIRE(luax::hasLuauExtensionValue("Bootstrap.luau"));
+    REQUIRE_FALSE(luax::hasLuauExtensionValue("Bootstrap"));
+    REQUIRE_FALSE(luax::hasLuauExtensionValue("Bootstrap.lua"));
+
     REQUIRE_FALSE(luax::hasUnsupportedExtensionValue("Bootstrap"));
     REQUIRE_FALSE(luax::hasUnsupportedExtensionValue("Bootstrap.luau"));
     REQUIRE(luax::hasUnsupportedExtensionValue("Bootstrap.lua"));

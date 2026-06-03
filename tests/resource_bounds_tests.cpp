@@ -11,6 +11,8 @@
 #include <chrono>
 #include <filesystem>
 #include <fstream>
+#include <iterator>
+#include <optional>
 #include <string>
 #include <thread>
 
@@ -71,6 +73,40 @@ namespace {
         lua_getfield(L, -1, "parse");
         lua_pushlstring(L, text.data(), text.size());
         return lua_pcall(L, 1, 2, 0);
+    }
+
+    int callFs(
+        lua_State* L,
+        char const* method,
+        std::string const& root,
+        std::string const& rel,
+        std::optional<std::string> data = std::nullopt
+    ) {
+        lua_settop(L, 0);
+        lua_getglobal(L, "geode");
+        lua_getfield(L, -1, "fs");
+        lua_getfield(L, -1, method);
+        lua_remove(L, 1);
+        lua_remove(L, 1);
+        lua_pushlstring(L, root.data(), root.size());
+        lua_pushlstring(L, rel.data(), rel.size());
+        int nargs = 2;
+        if (data) {
+            lua_pushlstring(L, data->data(), data->size());
+            nargs = 3;
+        }
+        return lua_pcall(L, nargs, LUA_MULTRET, 0);
+    }
+
+    std::string readFileContents(std::filesystem::path const& path) {
+        std::ifstream in(path, std::ios::binary);
+        return std::string(std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>());
+    }
+
+    void writeFileContents(std::filesystem::path const& path, std::string const& data) {
+        std::ofstream out(path, std::ios::binary);
+        REQUIRE(out.good());
+        out << data;
     }
 }
 
@@ -219,4 +255,168 @@ TEST_CASE("geode.json.parse rejects oversized input") {
     std::string err(lua_tostring(L, -1));
     REQUIRE(err.find("maximum size") != std::string::npos);
     lua_pop(L, 2);
+}
+
+TEST_CASE("geode.fs.write stores a file inside the writable save root") {
+    RuntimeGuard guard;
+    auto dir = makeTempDir();
+    auto* mod = geode::Mod::create(dir);
+
+    auto* runtime = luax::Runtime::getOrCreate();
+    runtime->setResourcesRoot(dir);
+    auto* L = runtime->state();
+    registerResourceBindings(L);
+
+    auto saveDir = dir / "save";
+    REQUIRE(std::filesystem::create_directories(saveDir));
+
+    REQUIRE(callFs(L, "write", "save", "note.txt", "hello") == 0);
+    REQUIRE(lua_gettop(L) == 1);
+    REQUIRE(lua_toboolean(L, 1));
+    REQUIRE(readFileContents(saveDir / "note.txt") == "hello");
+
+    std::filesystem::remove_all(dir);
+    geode::Mod::destroy(mod);
+}
+
+TEST_CASE("geode.fs.write rejects paths that escape the root") {
+    RuntimeGuard guard;
+    auto dir = makeTempDir();
+    auto* mod = geode::Mod::create(dir);
+
+    auto* runtime = luax::Runtime::getOrCreate();
+    runtime->setResourcesRoot(dir);
+    auto* L = runtime->state();
+    registerResourceBindings(L);
+
+    REQUIRE(std::filesystem::create_directories(dir / "save"));
+
+    REQUIRE(callFs(L, "write", "save", "../escape.txt", "nope") == 0);
+    REQUIRE(lua_gettop(L) == 2);
+    REQUIRE(lua_isnil(L, 1));
+    REQUIRE(lua_isstring(L, 2));
+    std::string err(lua_tostring(L, 2));
+    REQUIRE(err.find("escapes") != std::string::npos);
+    REQUIRE_FALSE(std::filesystem::exists(dir / "escape.txt"));
+
+    std::filesystem::remove_all(dir);
+    geode::Mod::destroy(mod);
+}
+
+TEST_CASE("geode.fs.write rejects the read-only resources root") {
+    RuntimeGuard guard;
+    auto dir = makeTempDir();
+    auto* mod = geode::Mod::create(dir);
+
+    auto* runtime = luax::Runtime::getOrCreate();
+    runtime->setResourcesRoot(dir);
+    auto* L = runtime->state();
+    registerResourceBindings(L);
+
+    REQUIRE(callFs(L, "write", "resources", "blocked.txt", "nope") == 0);
+    REQUIRE(lua_gettop(L) == 2);
+    REQUIRE(lua_isnil(L, 1));
+    REQUIRE(lua_isstring(L, 2));
+    std::string err(lua_tostring(L, 2));
+    REQUIRE(err.find("read-only") != std::string::npos);
+    REQUIRE_FALSE(std::filesystem::exists(dir / "blocked.txt"));
+
+    std::filesystem::remove_all(dir);
+    geode::Mod::destroy(mod);
+}
+
+TEST_CASE("geode.fs.exists reports whether a sandboxed path is present") {
+    RuntimeGuard guard;
+    auto dir = makeTempDir();
+    auto* mod = geode::Mod::create(dir);
+
+    auto* runtime = luax::Runtime::getOrCreate();
+    runtime->setResourcesRoot(dir);
+    auto* L = runtime->state();
+    registerResourceBindings(L);
+
+    auto saveDir = dir / "save";
+    REQUIRE(std::filesystem::create_directories(saveDir));
+    writeFileContents(saveDir / "present.txt", "x");
+
+    REQUIRE(callFs(L, "exists", "save", "present.txt") == 0);
+    REQUIRE(lua_gettop(L) == 1);
+    REQUIRE(lua_toboolean(L, 1));
+
+    REQUIRE(callFs(L, "exists", "save", "absent.txt") == 0);
+    REQUIRE(lua_gettop(L) == 1);
+    REQUIRE_FALSE(lua_toboolean(L, 1));
+
+    std::filesystem::remove_all(dir);
+    geode::Mod::destroy(mod);
+}
+
+TEST_CASE("geode.fs.mkdir creates a directory inside the writable root") {
+    RuntimeGuard guard;
+    auto dir = makeTempDir();
+    auto* mod = geode::Mod::create(dir);
+
+    auto* runtime = luax::Runtime::getOrCreate();
+    runtime->setResourcesRoot(dir);
+    auto* L = runtime->state();
+    registerResourceBindings(L);
+
+    REQUIRE(std::filesystem::create_directories(dir / "save"));
+
+    REQUIRE(callFs(L, "mkdir", "save", "made") == 0);
+    REQUIRE(lua_gettop(L) == 1);
+    REQUIRE(lua_toboolean(L, 1));
+    REQUIRE(std::filesystem::is_directory(dir / "save" / "made"));
+
+    std::filesystem::remove_all(dir);
+    geode::Mod::destroy(mod);
+}
+
+TEST_CASE("geode.fs.remove deletes an entry inside the writable root") {
+    RuntimeGuard guard;
+    auto dir = makeTempDir();
+    auto* mod = geode::Mod::create(dir);
+
+    auto* runtime = luax::Runtime::getOrCreate();
+    runtime->setResourcesRoot(dir);
+    auto* L = runtime->state();
+    registerResourceBindings(L);
+
+    auto saveDir = dir / "save";
+    REQUIRE(std::filesystem::create_directories(saveDir));
+    auto victim = saveDir / "gone.txt";
+    writeFileContents(victim, "x");
+    REQUIRE(std::filesystem::exists(victim));
+
+    REQUIRE(callFs(L, "remove", "save", "gone.txt") == 0);
+    REQUIRE(lua_gettop(L) == 1);
+    REQUIRE(lua_toboolean(L, 1));
+    REQUIRE_FALSE(std::filesystem::exists(victim));
+
+    std::filesystem::remove_all(dir);
+    geode::Mod::destroy(mod);
+}
+
+TEST_CASE("geode.json.dump serializes a value through matjson") {
+    RuntimeGuard guard;
+    auto* runtime = luax::Runtime::getOrCreate();
+    auto* L = runtime->state();
+    registerResourceBindings(L);
+
+    auto dumpValue = [&](auto pushArg) {
+        lua_settop(L, 0);
+        lua_getglobal(L, "geode");
+        lua_getfield(L, -1, "json");
+        lua_getfield(L, -1, "dump");
+        lua_remove(L, 1);
+        lua_remove(L, 1);
+        pushArg();
+        REQUIRE(lua_pcall(L, 1, 1, 0) == 0);
+        REQUIRE(lua_isstring(L, -1));
+        return std::string(lua_tostring(L, -1));
+    };
+
+    REQUIRE(dumpValue([&] { lua_pushboolean(L, 1); }) == "true");
+    REQUIRE(dumpValue([&] { lua_pushboolean(L, 0); }) == "false");
+    REQUIRE(dumpValue([&] { lua_newtable(L); }) == "{}");
 }

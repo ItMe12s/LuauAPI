@@ -7,7 +7,6 @@
 #include <filesystem>
 #include <fstream>
 #include <string>
-#include <thread>
 
 namespace {
     std::filesystem::path makeTempDir() {
@@ -57,15 +56,15 @@ TEST_CASE("bytecode cache key changes when contents change") {
     std::filesystem::remove_all(dir);
 }
 
-TEST_CASE("bytecode cache key changes when file metadata changes") {
+TEST_CASE("bytecode cache key changes when file mtime changes") {
     auto dir = makeTempDir();
     auto file = dir / "Module.luau";
     writeFile(file, "return 1");
 
     auto first = luax::bytecodeCacheKey(file, "return 1");
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(20));
-    writeFile(file, "return 10");
+    auto bumped = std::filesystem::last_write_time(file) + std::chrono::hours(1);
+    std::filesystem::last_write_time(file, bumped);
 
     auto second = luax::bytecodeCacheKey(file, "return 1");
 

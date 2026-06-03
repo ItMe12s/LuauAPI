@@ -28,7 +28,8 @@ class CodegenIoTests(unittest.TestCase):
             _write_if_changed(path, "same\n")
             self.assertEqual(os.stat(path).st_mtime_ns, first_mtime)
             _write_if_changed(path, "different\n")
-            self.assertEqual(open(path, encoding="utf-8").read(), "different\n")
+            with open(path, encoding="utf-8") as f:
+                self.assertEqual(f.read(), "different\n")
         finally:
             shutil.rmtree(tmpdir)
 
