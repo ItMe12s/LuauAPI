@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 import re
 import shutil
@@ -127,6 +128,26 @@ from luau_codegen.emit.plan import (  # type: ignore[import-unresolved]
 )
 
 
+def resolve_test_bindings_dir() -> str | None:
+    env = os.environ.get("LUAUAPI_BINDINGS_DIR")
+    if env and os.path.isfile(os.path.join(env, "GeometryDash.bro")):
+        return env
+
+    version = "2.2081"
+    mod_json = os.path.join(ROOT, "mod.json")
+    try:
+        with open(mod_json, encoding="utf-8") as f:
+            version = json.load(f).get("gd", {}).get("win", version)
+    except (OSError, ValueError):
+        pass
+
+    for dep in ("bindings-audit", "bindings-src"):
+        candidate = os.path.join(ROOT, "build", "_deps", dep, "bindings", version)
+        if os.path.isfile(os.path.join(candidate, "GeometryDash.bro")):
+            return candidate
+    return None
+
+
 def all_platforms(value: str = "0x1") -> dict[str, str]:
     return {
         "win": value,
@@ -238,6 +259,7 @@ __all__ = [
     "emit_gen_hpp",
     "emit_override",
     # helpers
+    "resolve_test_bindings_dir",
     "all_platforms",
     "types_text",
 ]

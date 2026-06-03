@@ -11,6 +11,10 @@ from luau_codegen.policy.containers import _CONTAINER_KINDS
 from luau_codegen.policy.filtering import call_label, returns_owned
 from luau_codegen.emit.cxx_templates import file_preamble
 from luau_codegen.emit.hooks import emit_hook_target, hook_id, hook_suffix
+from luau_codegen.emit.bindings.vector_push import (
+    emit_owned_vector_return_push,
+    emit_vector_out_push,
+)
 from luau_codegen.convert.marshalling import (
     check_arg,
     check_sel_handler,
@@ -47,13 +51,11 @@ def _emit_vector_return_push(ret: TypeInfo, m: Method, expr: str) -> List[str]:
         return push_return(ret, expr, returns_owned(m) or m.is_bound_ctor)
     if ret.is_ref and not m.is_static:
         return push_return(ret, expr, False, owner_expr="self")
-    return push_return(ret, expr, False, vector_owned=True)
+    return emit_owned_vector_return_push(ret, expr)
 
 
 def _emit_vector_out_push(info: TypeInfo, var: str) -> List[str]:
-    if info.kind == "vector_view":
-        return push_value(info, var, False, vector_owned=True)
-    return push_value(info, var, False)
+    return emit_vector_out_push(info, var)
 
 
 def _gen_ns(cls: Class) -> str:

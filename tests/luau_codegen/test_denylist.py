@@ -1,13 +1,11 @@
 from __future__ import annotations
 
-import json
-
 import os
 import unittest
 import warnings
 from helpers import (  # type: ignore[import-unresolved]
-    ROOT,  # type: ignore[import-unresolved]
     collect_bindings_root,  # type: ignore[import-unresolved]
+    resolve_test_bindings_dir,  # type: ignore[import-unresolved]
 )
 
 from luau_codegen.model.denylist import (  # type: ignore[import-unresolved]
@@ -19,29 +17,8 @@ from luau_codegen.model.denylist import (  # type: ignore[import-unresolved]
 from luau_codegen.convert.type_map import normalize_type  # type: ignore[import-unresolved]
 
 
-def _bindings_dir() -> str | None:
-    env = os.environ.get("LUAUAPI_BINDINGS_DIR")
-    if env and os.path.isfile(os.path.join(env, "GeometryDash.bro")):
-        return env
-
-    version = "2.2081"
-    mod_json = os.path.join(ROOT, "mod.json")
-    try:
-        with open(mod_json, encoding="utf-8") as f:
-            version = json.load(f).get("gd", {}).get("win", version)
-    except (OSError, ValueError):
-        pass
-
-    candidate = os.path.join(
-        ROOT, "build", "_deps", "bindings-src", "bindings", version
-    )
-    if os.path.isfile(os.path.join(candidate, "GeometryDash.bro")):
-        return candidate
-    return None
-
-
 def _load_root():
-    bindings = _bindings_dir()
+    bindings = resolve_test_bindings_dir()
     if bindings is None:
         return None
     sdk = os.environ.get("GEODE_SDK")

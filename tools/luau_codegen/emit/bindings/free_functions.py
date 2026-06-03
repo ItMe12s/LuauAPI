@@ -8,12 +8,15 @@ if TYPE_CHECKING:
 
 from luau_codegen.parse.broma import Class, Function
 from luau_codegen.util.identifiers import cxx_id
+from luau_codegen.emit.bindings.vector_push import (
+    emit_owned_vector_return_push,
+    emit_vector_out_push,
+)
 from luau_codegen.convert.marshalling import (
     check_arg,
     check_sel_handler,
     emit_stack_check,
     push_return,
-    push_value,
     sel_call_args,
     sel_selector_call_arg,
 )
@@ -36,13 +39,11 @@ def _free_fn_base(fn: Function) -> str:
 def _emit_vector_return_push(ret: TypeInfo, expr: str) -> list[str]:
     if ret.kind != "vector_view":
         return push_return(ret, expr, False)
-    return push_return(ret, expr, False, vector_owned=True)
+    return emit_owned_vector_return_push(ret, expr)
 
 
 def _emit_vector_out_push(info: TypeInfo, var: str) -> list[str]:
-    if info.kind == "vector_view":
-        return push_value(info, var, False, vector_owned=True)
-    return push_value(info, var, False)
+    return emit_vector_out_push(info, var)
 
 
 def _emit_free_invoke(

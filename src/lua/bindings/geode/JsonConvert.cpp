@@ -1,15 +1,13 @@
 #include "JsonConvert.hpp"
 
+#include "lua/bindings/framework/Stack.hpp"
+
 #include <string>
 #include <string_view>
 #include <vector>
 
 namespace luax {
     namespace {
-        void pushString(lua_State* L, std::string_view s) {
-            lua_pushlstring(L, s.data(), s.size());
-        }
-
         bool isLuaArray(lua_State* L, int idx, int& outLen) {
             outLen = lua_objlen(L, idx);
             return outLen > 0;
@@ -31,7 +29,7 @@ namespace luax {
             case matjson::Type::String: {
                 auto str = value.asString();
                 if (str.isOk()) {
-                    pushString(L, str.unwrap());
+                    luax::push(L, str.unwrap());
                 } else {
                     lua_pushnil(L);
                 }
@@ -53,7 +51,7 @@ namespace luax {
                 for (auto const& item : value) {
                     auto key = item.getKey();
                     if (!key) continue;
-                    pushString(L, *key);
+                    luax::push(L, *key);
                     pushJson(L, item, depth + 1);
                     lua_rawset(L, -3);
                 }

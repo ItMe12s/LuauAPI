@@ -1,4 +1,5 @@
 #include "lua/bindings/Binding.hpp"
+#include "lua/bindings/framework/Stack.hpp"
 #include "lua/bindings/framework/TableUtil.hpp"
 #include "lua/bindings/geode/CurrentMod.hpp"
 #include "lua/bindings/geode/JsonConvert.hpp"
@@ -15,10 +16,6 @@
 
 namespace {
     using namespace luax;
-
-    void pushString(lua_State* L, std::string const& s) {
-        lua_pushlstring(L, s.data(), s.size());
-    }
 
     std::string_view checkKey(lua_State* L, int idx) {
         std::size_t len = 0;
@@ -61,32 +58,32 @@ namespace {
     }
 
     int modGetID(lua_State* L) {
-        pushString(L, std::string(requireCurrentMod(L)->getID()));
+        push(L, std::string(requireCurrentMod(L)->getID()));
         return 1;
     }
 
     int modGetName(lua_State* L) {
-        pushString(L, std::string(requireCurrentMod(L)->getName()));
+        push(L, std::string(requireCurrentMod(L)->getName()));
         return 1;
     }
 
     int modGetVersion(lua_State* L) {
-        pushString(L, requireCurrentMod(L)->getVersion().toVString());
+        push(L, requireCurrentMod(L)->getVersion().toVString());
         return 1;
     }
 
     int modGetResourcesDir(lua_State* L) {
-        pushString(L, geode::utils::string::pathToString(requireCurrentMod(L)->getResourcesDir()));
+        push(L, geode::utils::string::pathToString(requireCurrentMod(L)->getResourcesDir()));
         return 1;
     }
 
     int modGetSaveDir(lua_State* L) {
-        pushString(L, geode::utils::string::pathToString(requireCurrentMod(L)->getSaveDir()));
+        push(L, geode::utils::string::pathToString(requireCurrentMod(L)->getSaveDir()));
         return 1;
     }
 
     int modGetConfigDir(lua_State* L) {
-        pushString(L, geode::utils::string::pathToString(requireCurrentMod(L)->getConfigDir()));
+        push(L, geode::utils::string::pathToString(requireCurrentMod(L)->getConfigDir()));
         return 1;
     }
 

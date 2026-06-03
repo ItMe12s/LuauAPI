@@ -1,10 +1,12 @@
 from __future__ import annotations
 
-import os
 import unittest
 import warnings
 
-from helpers import ROOT, collect_bindings_root  # type: ignore[import-unresolved]
+from helpers import (  # type: ignore[import-unresolved]
+    collect_bindings_root,  # type: ignore[import-unresolved]
+    resolve_test_bindings_dir,  # type: ignore[import-unresolved]
+)
 
 from luau_codegen.convert.type_map import (  # type: ignore[import-unresolved]
     OPAQUE_HANDLE_TYPES,
@@ -18,27 +20,10 @@ from luau_codegen.model.object_discovery import (  # type: ignore[import-unresol
 from luau_codegen.policy.fields import bindable_field  # type: ignore[import-unresolved]
 
 
-def _bindings_dir() -> str | None:
-    env = os.environ.get("LUAUAPI_BINDINGS_DIR")
-    if env and os.path.isfile(os.path.join(env, "GeometryDash.bro")):
-        return env
-    candidate = os.path.join(
-        ROOT, "build", "_deps", "bindings-audit", "bindings", "2.2081"
-    )
-    if os.path.isfile(os.path.join(candidate, "GeometryDash.bro")):
-        return candidate
-    candidate = os.path.join(
-        ROOT, "build", "_deps", "bindings-src", "bindings", "2.2081"
-    )
-    if os.path.isfile(os.path.join(candidate, "GeometryDash.bro")):
-        return candidate
-    return None
-
-
 class ObjectVectorAuditTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
-        bindings = _bindings_dir()
+        bindings = resolve_test_bindings_dir()
         if bindings is None:
             raise unittest.SkipTest(
                 "Broma bindings not found, set LUAUAPI_BINDINGS_DIR or build once"
