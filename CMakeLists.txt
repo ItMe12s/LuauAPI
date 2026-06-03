@@ -26,7 +26,7 @@ set(LUAU_EXTERN_C    OFF CACHE BOOL "" FORCE)
 FetchContent_Declare(
     luau
     GIT_REPOSITORY https://github.com/luau-lang/luau.git
-    GIT_TAG        0.722
+    GIT_TAG        0.723
 )
 FetchContent_MakeAvailable(luau)
 
@@ -293,22 +293,30 @@ function(luauapi_apply_compile_settings TARGET)
     endif()
 endfunction()
 
-add_library(LuauAPI_Runtime STATIC ${LUAUAPI_RUNTIME_SOURCES})
+add_library(LuauAPI_Runtime OBJECT ${LUAUAPI_RUNTIME_SOURCES})
 luauapi_apply_compile_settings(LuauAPI_Runtime)
-target_include_directories(LuauAPI_Runtime PUBLIC include src)
+set_target_properties(LuauAPI_Runtime PROPERTIES POSITION_INDEPENDENT_CODE ON)
+target_include_directories(LuauAPI_Runtime PUBLIC
+    include
+    src
+    $<TARGET_PROPERTY:imgui-cocos,INTERFACE_INCLUDE_DIRECTORIES>
+)
+target_compile_definitions(LuauAPI_Runtime PUBLIC
+    $<TARGET_PROPERTY:imgui-cocos,INTERFACE_COMPILE_DEFINITIONS>
+)
 target_link_libraries(LuauAPI_Runtime PUBLIC
     Luau.VM
     Luau.Compiler
     Luau.Ast
     Luau.Require
     Luau.CodeGen
-    imgui-cocos
-    geode-sdk
+    GeodeBindings
 )
 
-add_library(LuauAPI_GeneratedBindings STATIC ${LUAUAPI_GENERATED_BINDING_SOURCES})
+add_library(LuauAPI_GeneratedBindings OBJECT ${LUAUAPI_GENERATED_BINDING_SOURCES})
 add_dependencies(LuauAPI_GeneratedBindings luauapi_codegen)
 luauapi_apply_compile_settings(LuauAPI_GeneratedBindings)
+set_target_properties(LuauAPI_GeneratedBindings PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_include_directories(LuauAPI_GeneratedBindings PUBLIC ${LUAUAPI_GEN_DIR}/src)
 target_link_libraries(LuauAPI_GeneratedBindings PUBLIC LuauAPI_Runtime)
 
@@ -322,8 +330,21 @@ else()
     message(STATUS "LuauAPI: compiling generated bindings with warnings enabled")
 endif()
 
-add_library(${PROJECT_NAME} SHARED src/main.cpp)
-target_link_libraries(${PROJECT_NAME} LuauAPI_Runtime LuauAPI_GeneratedBindings)
+add_library(${PROJECT_NAME} SHARED
+    src/main.cpp
+    $<TARGET_OBJECTS:LuauAPI_Runtime>
+    $<TARGET_OBJECTS:LuauAPI_GeneratedBindings>
+)
+target_include_directories(${PROJECT_NAME} PRIVATE include src ${LUAUAPI_GEN_DIR}/src)
+target_link_libraries(${PROJECT_NAME}
+    Luau.VM
+    Luau.Compiler
+    Luau.Ast
+    Luau.Require
+    Luau.CodeGen
+    imgui-cocos
+    geode-sdk
+)
 luauapi_apply_compile_settings(${PROJECT_NAME})
 setup_geode_mod(${PROJECT_NAME})
 endif()

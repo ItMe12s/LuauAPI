@@ -36,7 +36,7 @@ You need the following tools to build the mod. The versions come from `CMakeList
 
 CMake downloads these for you during configuration, so you do not install them by hand.
 
-- Luau, pinned to tag `0.722`
+- Luau, pinned to tag `0.723`
 - Geode bindings, pinned to commit `00328ccd2fd3e4b005a54eaaa4d4d91e22ca7df4` (`LUAUAPI_BINDINGS_GIT_TAG` in `CMakeLists.txt`)
 - gd-imgui-cocos, pinned to commit `b93f08ccef778a53ebba09b20c347f6a63980119` (`LUAUAPI_IMGUI_COCOS_GIT_TAG` in `CMakeLists.txt`). It also pins Dear ImGui through its own CPM setup. Only the LuauAPI mod links it. Other mods use the `imgui` Lua API instead of adding their own dependency.
 - Catch2 `v3.15.0`, fetched only when tests are enabled
