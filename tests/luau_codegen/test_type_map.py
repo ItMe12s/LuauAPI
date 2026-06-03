@@ -509,6 +509,45 @@ class ContainerTypeMapTests(unittest.TestCase):
 
 
 class GdEnumTypeMapTests(unittest.TestCase):
+    _RESIDUAL_GD_ENUMS = (
+        "BoomListType",
+        "ChestSpriteState",
+        "CircleMode",
+        "CommentKeyType",
+        "CommentType",
+        "CurrencyRewardType",
+        "CurrencySpriteType",
+        "DialogAnimationType",
+        "FormatterType",
+        "GameObjectClassType",
+        "GhostType",
+        "InputValueType",
+        "LeaderboardType",
+        "MenuAnimationType",
+        "MoveTargetType",
+        "PlaybackMode",
+        "PlayerButton",
+        "ScaleButtonType",
+        "SelectSettingType",
+        "ShipStreak",
+        "SpecialRewardItem",
+        "TextStyleType",
+        "TouchTriggerControl",
+        "TouchTriggerType",
+        "UndoCommand",
+        "spriteMode",
+    )
+
+    _STATE_TYPES_NOT_ENUMS = (
+        "GJGameState",
+        "GJShaderState",
+        "FMODAudioState",
+        "GJTransformState",
+        "CCIndexPath",
+        "EffectManagerState",
+        "SequenceTriggerState",
+    )
+
     def test_classify_gd_enums(self) -> None:
         for name in (
             "GameOptionsSetting",
@@ -528,6 +567,7 @@ class GdEnumTypeMapTests(unittest.TestCase):
             "GauntletType",
             "GJSongType",
             "SelectArtType",
+            *self._RESIDUAL_GD_ENUMS,
         ):
             info = classify_arg(name, {})
             self.assertIsNotNone(info)
@@ -535,6 +575,11 @@ class GdEnumTypeMapTests(unittest.TestCase):
             self.assertEqual(info.kind, "enum")
             self.assertEqual(info.lua_type, "number")
             self.assertEqual(info.cxx_type, name)
+
+    def test_residual_state_types_stay_unsupported(self) -> None:
+        for name in self._STATE_TYPES_NOT_ENUMS:
+            info = classify_arg(name, {})
+            self.assertIsNone(info, name)
 
     def test_classify_gd_enum_const_ref(self) -> None:
         info = classify_arg("EasingType const&", {})
@@ -554,6 +599,21 @@ class GdEnumTypeMapTests(unittest.TestCase):
         assert info.element_type is not None
         self.assertEqual(info.element_type.kind, "enum")
         self.assertEqual(info.element_type.cxx_type, "GJLevelType")
+
+
+class CocosEnumTypeMapTests(unittest.TestCase):
+    def test_classify_cocos_enums(self) -> None:
+        for name, cxx in (
+            ("enumKeyCodes", "cocos2d::enumKeyCodes"),
+            ("TextureQuality", "cocos2d::TextureQuality"),
+        ):
+            for arg in (name, cxx):
+                info = classify_arg(arg, {})
+                self.assertIsNotNone(info, arg)
+                assert info is not None
+                self.assertEqual(info.kind, "enum", arg)
+                self.assertEqual(info.lua_type, "number", arg)
+                self.assertEqual(info.cxx_type, cxx, arg)
 
 
 class FmodTypeMapTests(unittest.TestCase):
