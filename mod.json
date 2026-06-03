@@ -18,6 +18,10 @@
 		"utility",
 		"developer"
 	],
+	"links": {
+		"community": "https://discord.gg/E8f6D6XqbW",
+		"source": "https://github.com/ItMe12s/LuauAPI"
+	},
 	"api": {
 		"include": [
 			"include/**/*.hpp"
