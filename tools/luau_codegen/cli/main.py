@@ -15,7 +15,6 @@ from luau_codegen.emit import plan as emit_plan
 from luau_codegen.emit.plan import EmitPlan, ambiguous_overloads
 from luau_codegen.emit.delegates import (
     collect as collect_delegate_specs,
-    default_specs_path,
     delegate_gen_rel_paths,
     emit_delegate_artifacts,
     install_delegate_specs_module,
@@ -41,11 +40,10 @@ def log_error(message: str) -> None:
 def _exit_on_ambiguous_overloads(
     plan: EmitPlan,
     *,
-    fail_on_ambiguous: bool,
     brief: bool = False,
 ) -> int | None:
     ambiguous = ambiguous_overloads(plan)
-    if not fail_on_ambiguous or not ambiguous:
+    if not ambiguous:
         return None
     if brief:
         log_error("ambiguous overloads found")
@@ -87,23 +85,13 @@ def main(argv: List[str]) -> int:
         help="Write skip audit report and exit",
     )
     parser.add_argument(
-        "--fail-on-ambiguous-overload",
-        action="store_true",
-        help="Fail codegen when same-arity overloads lack a preferred rule",
-    )
-    parser.add_argument(
         "--emit-delegates",
         action="store_true",
         help="Generate delegate_specs.py and LuaDelegates.gen.* only",
     )
     parser.add_argument(
         "--delegate-specs-out",
-        help="Output path for delegate_specs.py (default: tools/luau_codegen/model/delegate_specs.py)",
-    )
-    parser.add_argument(
-        "--skip-delegate-emit",
-        action="store_true",
-        help="Skip writing delegate artifacts, still refresh in-memory delegate specs from bindings",
+        help="Output path for delegate_specs.py (default: --out/delegate_specs.py)",
     )
     args = parser.parse_args(argv)
 
@@ -135,13 +123,16 @@ def main(argv: List[str]) -> int:
         if not args.out:
             log_error("--out is required with --emit-delegates")
             return 2
-        specs_out = args.delegate_specs_out or str(default_specs_path())
+        specs_out = args.delegate_specs_out or os.path.join(
+            args.out, "delegate_specs.py"
+        )
         try:
             specs = emit_delegate_artifacts(
                 args.bindings,
                 specs_out=specs_out,
                 gen_out=args.out,
                 install_module=True,
+                preserve_existing_on_empty=True,
             )
         except OSError as exc:
             log_error(f"I/O failed while writing delegate artifacts: {exc}")
@@ -161,6 +152,20 @@ def main(argv: List[str]) -> int:
         log_error(f"no Broma classes parsed from {args.bindings}")
         return 3
 
+    delegate_specs_out = args.delegate_specs_out or (
+        os.path.join(args.out, "delegate_specs.py") if args.out else None
+    )
+    try:
+        delegate_specs = collect_delegate_specs(args.bindings)
+        install_delegate_specs_module(
+            delegate_specs,
+            specs_path=delegate_specs_out,
+            preserve_existing_on_empty=True,
+        )
+    except OSError as exc:
+        log_error(f"I/O failed while loading delegate specs: {exc}")
+        return 4
+
     plan_platforms = tuple(
         dict.fromkeys(intersection_platforms(args.platform) + (args.platform,))
     )
@@ -176,11 +181,7 @@ def main(argv: List[str]) -> int:
 
     if args.parity_report_out:
         plan = collect_target_plan()
-        if (
-            code := _exit_on_ambiguous_overloads(
-                plan, fail_on_ambiguous=args.fail_on_ambiguous_overload, brief=True
-            )
-        ) is not None:
+        if (code := _exit_on_ambiguous_overloads(plan, brief=True)) is not None:
             return code
         try:
             parity_data = parity.collect_parity(
@@ -197,11 +198,7 @@ def main(argv: List[str]) -> int:
 
     if args.audit_report_out:
         plan = collect_target_plan()
-        if (
-            code := _exit_on_ambiguous_overloads(
-                plan, fail_on_ambiguous=args.fail_on_ambiguous_overload, brief=True
-            )
-        ) is not None:
+        if (code := _exit_on_ambiguous_overloads(plan, brief=True)) is not None:
             return code
         try:
             audit_data = emit_audit.collect_audit(plan, root)
@@ -216,11 +213,7 @@ def main(argv: List[str]) -> int:
 
     if args.list_outputs:
         plan = collect_target_plan()
-        if (
-            code := _exit_on_ambiguous_overloads(
-                plan, fail_on_ambiguous=args.fail_on_ambiguous_overload
-            )
-        ) is not None:
+        if (code := _exit_on_ambiguous_overloads(plan)) is not None:
             return code
         for rel in emit_plan.plan_outputs(root, args.platform, plan=plan):
             print(f"src/{rel}")
@@ -230,11 +223,7 @@ def main(argv: List[str]) -> int:
 
     if args.list_all_outputs:
         plan = collect_target_plan()
-        if (
-            code := _exit_on_ambiguous_overloads(
-                plan, fail_on_ambiguous=args.fail_on_ambiguous_overload
-            )
-        ) is not None:
+        if (code := _exit_on_ambiguous_overloads(plan)) is not None:
             return code
         for rel in emit_plan.plan_outputs(root, args.platform, plan=plan):
             print(f"binding:src/{rel}")
@@ -249,34 +238,22 @@ def main(argv: List[str]) -> int:
         log_error("--out and --types-out are required")
         return 2
 
-    specs_out = args.delegate_specs_out or str(default_specs_path())
-    if not args.skip_delegate_emit:
-        try:
-            specs = emit_delegate_artifacts(
-                args.bindings,
-                specs_out=specs_out,
-                gen_out=args.out,
-                install_module=True,
-            )
-        except OSError as exc:
-            log_error(f"I/O failed while writing delegate artifacts: {exc}")
-            return 4
-        log_info(f"delegates: {len(specs)} specs -> {specs_out}")
-    else:
-        try:
-            specs = collect_delegate_specs(args.bindings)
-            install_delegate_specs_module(specs, specs_path=specs_out)
-        except OSError as exc:
-            log_error(f"I/O failed while loading delegate specs: {exc}")
-            return 4
-        log_info(f"delegates: {len(specs)} specs (in memory, --skip-delegate-emit)")
+    specs_out = delegate_specs_out or os.path.join(args.out, "delegate_specs.py")
+    try:
+        specs = emit_delegate_artifacts(
+            args.bindings,
+            specs_out=specs_out,
+            gen_out=args.out,
+            install_module=True,
+            preserve_existing_on_empty=True,
+        )
+    except OSError as exc:
+        log_error(f"I/O failed while writing delegate artifacts: {exc}")
+        return 4
+    log_info(f"delegates: {len(specs)} specs -> {specs_out}")
 
     plan = collect_target_plan()
-    if (
-        code := _exit_on_ambiguous_overloads(
-            plan, fail_on_ambiguous=args.fail_on_ambiguous_overload
-        )
-    ) is not None:
+    if (code := _exit_on_ambiguous_overloads(plan)) is not None:
         return code
     written_paths: list[str] = []
     current_files: set[str] = set()

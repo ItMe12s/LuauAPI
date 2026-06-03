@@ -23,7 +23,7 @@ from luau_codegen.policy.fields import bindable_field  # type: ignore[import-unr
 class ObjectVectorAuditTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
-        bindings = resolve_test_bindings_dir()
+        bindings = resolve_test_bindings_dir(deps=("bindings-audit", "bindings-src"))
         if bindings is None:
             raise unittest.SkipTest(
                 "Broma bindings not found, set LUAUAPI_BINDINGS_DIR or build once"

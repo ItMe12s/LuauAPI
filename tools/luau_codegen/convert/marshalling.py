@@ -7,7 +7,7 @@ from luau_codegen.convert.type_map import (
     VALUE_CHECK_CXX_TYPES,
     WIDE_INTEGER_TYPES,
 )
-from luau_codegen.model.delegate_specs import lookup_delegate
+from luau_codegen.model import delegate_specs as _delegate_specs
 
 
 def _prefix(declare: bool, var: str) -> str:
@@ -605,7 +605,7 @@ def check_arg(arg: Arg, info: TypeInfo, idx: int, var: str, label: str) -> list[
     if info.kind == "sel":
         return check_sel_handler(idx, var, info, label)
     if info.kind == "delegate":
-        spec = lookup_delegate(info.cxx_type)
+        spec = _delegate_specs.lookup_delegate(info.cxx_type)
         if spec is None:
             raise ValueError(f"unknown delegate: {info.cxx_type}")
         return [

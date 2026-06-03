@@ -43,7 +43,7 @@ class F5OverloadPreferredOnlyTests(unittest.TestCase):
             all("ambiguous-overload-arity" in reason for _, reason in skipped)
         )
 
-    def test_fail_on_ambiguous_overload_flag_exits_nonzero(self) -> None:
+    def test_ambiguous_overload_cli_exits_nonzero(self) -> None:
         tmpdir = tempfile.mkdtemp()
         try:
             with open(
@@ -63,14 +63,13 @@ class F5OverloadPreferredOnlyTests(unittest.TestCase):
                     "--platform",
                     "win",
                     "--list-outputs",
-                    "--fail-on-ambiguous-overload",
                 ]
             )
             self.assertEqual(code, 6)
         finally:
             shutil.rmtree(tmpdir)
 
-    def test_ambiguous_overload_default_does_not_fail(self) -> None:
+    def test_ambiguous_overload_list_all_outputs_exits_nonzero(self) -> None:
         tmpdir = tempfile.mkdtemp()
         try:
             with open(
@@ -84,9 +83,9 @@ class F5OverloadPreferredOnlyTests(unittest.TestCase):
                     "};"
                 )
             code = codegen_main(
-                ["--bindings", tmpdir, "--platform", "win", "--list-outputs"]
+                ["--bindings", tmpdir, "--platform", "win", "--list-all-outputs"]
             )
-            self.assertEqual(code, 0)
+            self.assertEqual(code, 6)
         finally:
             shutil.rmtree(tmpdir)
 

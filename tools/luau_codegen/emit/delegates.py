@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 import sys
 import textwrap
-import types
+import importlib
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -23,10 +23,6 @@ def fallback_bindings_dir() -> Path:
     return repo_root() / "tests/luau_codegen/fixtures/delegate_bindings"
 
 
-def default_specs_path() -> Path:
-    return repo_root() / "tools/luau_codegen/model/delegate_specs.py"
-
-
 def delegate_gen_rel_paths() -> tuple[str, ...]:
     return DELEGATE_GEN_REL_PATHS
 
@@ -39,13 +35,19 @@ def install_delegate_specs_module(
     *,
     specs_path: Path | str | None = None,
     module_name: str = DELEGATE_SPECS_MODULE,
+    preserve_existing_on_empty: bool = False,
 ) -> None:
     mod = sys.modules.get(module_name)
     if mod is None:
-        mod = types.ModuleType(module_name)
-        sys.modules[module_name] = mod
+        mod = importlib.import_module(module_name)
     if specs_path is not None:
         mod.__file__ = str(specs_path)
+    if (
+        preserve_existing_on_empty
+        and not specs
+        and getattr(mod, "DELEGATE_SPECS", None)
+    ):
+        return
     exec(emit_specs_py(specs), mod.__dict__)
 
 
@@ -649,12 +651,17 @@ def emit_delegate_artifacts(
     specs_out: Path | str,
     gen_out: Path | str | None = None,
     install_module: bool = True,
+    preserve_existing_on_empty: bool = False,
 ) -> dict[str, DelegateSpec]:
     specs = collect(bindings_dir)
     _warn_unsupported_emitters(specs)
     _write_if_changed(str(specs_out), emit_specs_py(specs))
     if install_module:
-        install_delegate_specs_module(specs, specs_path=specs_out)
+        install_delegate_specs_module(
+            specs,
+            specs_path=specs_out,
+            preserve_existing_on_empty=preserve_existing_on_empty,
+        )
     if gen_out is not None:
         gen_root = Path(gen_out)
         gen_files = {

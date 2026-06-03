@@ -128,7 +128,9 @@ from luau_codegen.emit.plan import (  # type: ignore[import-unresolved]
 )
 
 
-def resolve_test_bindings_dir() -> str | None:
+def resolve_test_bindings_dir(
+    deps: tuple[str, ...] = ("bindings-src", "bindings-audit"),
+) -> str | None:
     env = os.environ.get("LUAUAPI_BINDINGS_DIR")
     if env and os.path.isfile(os.path.join(env, "GeometryDash.bro")):
         return env
@@ -141,7 +143,7 @@ def resolve_test_bindings_dir() -> str | None:
     except (OSError, ValueError):
         pass
 
-    for dep in ("bindings-audit", "bindings-src"):
+    for dep in deps:
         candidate = os.path.join(ROOT, "build", "_deps", dep, "bindings", version)
         if os.path.isfile(os.path.join(candidate, "GeometryDash.bro")):
             return candidate

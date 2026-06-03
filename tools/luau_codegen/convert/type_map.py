@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Dict, Optional, Set, Tuple
 from luau_codegen.parse.broma import Class, split_arg, split_top_level
 from luau_codegen.model.domain import short_name
 
-from luau_codegen.model.delegate_specs import lookup_delegate
+from luau_codegen.model import delegate_specs as _delegate_specs
 from luau_codegen.model.cc_c_array import (
     CC_C_ARRAY_POINTER_TYPES,
     proven_cc_c_array_element,
@@ -1018,9 +1018,7 @@ def _classify_core(
             is_ref=is_ref,
             is_out=is_out,
         )
-    if (
-        base in resolved.enum_types or n in resolved.enum_types
-    ) and resolve_object_class(base, object_classes) is None:
+    if base in resolved.enum_types or n in resolved.enum_types:
         cxx = resolved.enum_cxx_type(n, base)
         return TypeInfo("enum", cxx, "number", is_ref=is_ref, is_out=is_out)
     if n in OPAQUE_HANDLE_TYPES:
@@ -1052,7 +1050,7 @@ def _classify_core(
                 class_name=sel_variant(n),
             )
     if n.endswith("*"):
-        spec = lookup_delegate(n)
+        spec = _delegate_specs.lookup_delegate(n)
         if spec is not None:
             lua_table = _delegate_lua_type(spec)
             return TypeInfo(

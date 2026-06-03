@@ -165,7 +165,7 @@ set(LUAUAPI_BINDINGS_DIR
 set(LUAUAPI_GEN_DIR "${CMAKE_BINARY_DIR}/luauapi-gen")
 set(LUAUAPI_TYPES_DIR "${CMAKE_CURRENT_SOURCE_DIR}/types")
 set(LUAUAPI_DELEGATE_SPECS_OUT
-    "${CMAKE_CURRENT_SOURCE_DIR}/tools/luau_codegen/model/delegate_specs.py")
+    "${LUAUAPI_GEN_DIR}/delegate_specs.py")
 set(LUAUAPI_CODEGEN_STAMP "${LUAUAPI_GEN_DIR}/codegen.stamp")
 file(TO_CMAKE_PATH "$ENV{GEODE_SDK}" LUAUAPI_GEODE_SDK_PATH)
 
@@ -175,8 +175,6 @@ endif()
 
 file(GLOB_RECURSE LUAUAPI_CODEGEN_PY CONFIGURE_DEPENDS
     ${CMAKE_CURRENT_SOURCE_DIR}/tools/luau_codegen/**/*.py)
-list(REMOVE_ITEM LUAUAPI_CODEGEN_PY
-    "${CMAKE_CURRENT_SOURCE_DIR}/tools/luau_codegen/model/delegate_specs.py")
 file(GLOB LUAUAPI_BRO_FILES CONFIGURE_DEPENDS
     ${LUAUAPI_BINDINGS_DIR}/*.bro)
 file(GLOB LUAUAPI_EXTRA_DLUAU_FILES CONFIGURE_DEPENDS
@@ -200,7 +198,6 @@ execute_process(
             --list-all-outputs
             --platform ${LUAUAPI_CODEGEN_PLATFORM}
             --geode-sdk "${LUAUAPI_GEODE_SDK_PATH}"
-            --fail-on-ambiguous-overload
     RESULT_VARIABLE LUAUAPI_LIST_ALL_OUTPUTS_RESULT
     OUTPUT_VARIABLE LUAUAPI_LIST_ALL_OUTPUTS_STDOUT
     ERROR_VARIABLE LUAUAPI_LIST_ALL_OUTPUTS_STDERR
@@ -244,7 +241,6 @@ add_custom_command(
             --delegate-specs-out ${LUAUAPI_DELEGATE_SPECS_OUT}
             --platform ${LUAUAPI_CODEGEN_PLATFORM}
             --geode-sdk "${LUAUAPI_GEODE_SDK_PATH}"
-            --fail-on-ambiguous-overload
     COMMAND ${CMAKE_COMMAND} -E touch ${LUAUAPI_CODEGEN_STAMP}
     DEPENDS
         ${LUAUAPI_CODEGEN_PY}

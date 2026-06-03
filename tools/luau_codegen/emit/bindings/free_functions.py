@@ -97,13 +97,6 @@ def _emit_free_invoke(
             selector_handlers.append((f"{sel_var}_handler", info.class_name or "menu"))
             lua_idx += 1
             continue
-        if lua_arg.orphan:
-            sel_var = f"sel{arg_idx}"
-            out.extend(check_sel_handler(lua_idx, sel_var, info, label))
-            call_args.append(sel_selector_call_arg(info))
-            selector_handlers.append((f"{sel_var}_handler", info.class_name or "menu"))
-            lua_idx += 1
-            continue
         out.extend(check_arg(lua_arg.arg, info, lua_idx, var, label))
         call_args.append(f"std::move({var})" if info.kind == "callback" else var)
         lua_idx += 1
