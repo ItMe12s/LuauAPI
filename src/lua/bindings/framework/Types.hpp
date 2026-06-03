@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Stack.hpp"
+#include "Usertype.hpp"
 
 #include <cocos2d.h>
 #include <lua.h>
@@ -182,5 +183,46 @@ namespace luax {
         luax::push(L, config.m_oneButton); lua_setfield(L, -2, "oneButton");
         luax::push(L, config.m_player2); lua_setfield(L, -2, "player2");
         luax::push(L, config.m_split); lua_setfield(L, -2, "split");
+    }
+
+    template <>
+    inline SmartPrefabResult check<SmartPrefabResult>(lua_State* L, int idx, char const* method) {
+        SmartPrefabResult result{};
+        lua_getfield(L, idx, "smartPrefab");
+        if (lua_isnil(L, -1)) {
+            result.m_smartPrefab = nullptr;
+        } else {
+            result.m_smartPrefab = Usertype<GJSmartPrefab>::check(L, -1, method);
+        }
+        lua_pop(L, 1);
+        auto binaryKey = fieldString(L, idx, "binaryKey", method);
+        result.m_binaryKey = gd::string(binaryKey.c_str());
+        auto prefabKey = fieldString(L, idx, "prefabKey", method);
+        result.m_prefabKey = gd::string(prefabKey.c_str());
+        result.m_prefabCount = static_cast<int>(fieldNumber(L, idx, "prefabCount", method));
+        result.m_unrequired = fieldBool(L, idx, "unrequired", method);
+        result.m_rotation = static_cast<int>(fieldNumber(L, idx, "rotation", method));
+        result.m_flipX = fieldBool(L, idx, "flipX", method);
+        result.m_flipY = fieldBool(L, idx, "flipY", method);
+        result.m_ignoreCorners = fieldBool(L, idx, "ignoreCorners", method);
+        return result;
+    }
+
+    inline void push(lua_State* L, SmartPrefabResult const& result) {
+        lua_createtable(L, 0, 9);
+        if (result.m_smartPrefab == nullptr) {
+            lua_pushnil(L);
+        } else {
+            Usertype<GJSmartPrefab>::pushBorrowed(L, result.m_smartPrefab);
+        }
+        lua_setfield(L, -2, "smartPrefab");
+        push(L, std::string(result.m_binaryKey.c_str())); lua_setfield(L, -2, "binaryKey");
+        push(L, std::string(result.m_prefabKey.c_str())); lua_setfield(L, -2, "prefabKey");
+        lua_pushinteger(L, result.m_prefabCount); lua_setfield(L, -2, "prefabCount");
+        luax::push(L, result.m_unrequired); lua_setfield(L, -2, "unrequired");
+        lua_pushinteger(L, result.m_rotation); lua_setfield(L, -2, "rotation");
+        luax::push(L, result.m_flipX); lua_setfield(L, -2, "flipX");
+        luax::push(L, result.m_flipY); lua_setfield(L, -2, "flipY");
+        luax::push(L, result.m_ignoreCorners); lua_setfield(L, -2, "ignoreCorners");
     }
 }

@@ -8,6 +8,10 @@ from luau_codegen.parse.broma import Class, split_arg, split_top_level
 from luau_codegen.model.domain import short_name
 
 from luau_codegen.model.delegate_specs import lookup_delegate
+from luau_codegen.model.value_struct_gate import (
+    GATED_VALUE_CHECK_CXX,
+    GATED_VALUE_STRUCTS,
+)
 
 if TYPE_CHECKING:
     from luau_codegen.model.codegen_context import CodegenContext
@@ -93,6 +97,7 @@ VALUE_CHECK_CXX_TYPES: dict[str, str] = {
     "HSVValue": "cocos2d::ccHSVValue",
     "CCAffineTransform": "cocos2d::CCAffineTransform",
     "UIButtonConfig": "UIButtonConfig",
+    **GATED_VALUE_CHECK_CXX,
 }
 
 VALUE_TYPES = {
@@ -115,6 +120,7 @@ VALUE_TYPES = {
     "cocos2d::CCAffineTransform": "CCAffineTransform",
     "CCAffineTransform": "CCAffineTransform",
     "UIButtonConfig": "UIButtonConfig",
+    **GATED_VALUE_STRUCTS,
 }
 
 CALLBACK_ALIASES: dict[str, str] = {

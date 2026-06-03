@@ -50,6 +50,19 @@ _VALUE_STUB_BODY: Dict[str, str] = {
         "    split: boolean,\n"
         "}\n"
     ),
+    "SmartPrefabResult": (
+        "export type SmartPrefabResult = {\n"
+        "    smartPrefab: GJSmartPrefab?,\n"
+        "    binaryKey: string,\n"
+        "    prefabKey: string,\n"
+        "    prefabCount: number,\n"
+        "    unrequired: boolean,\n"
+        "    rotation: number,\n"
+        "    flipX: boolean,\n"
+        "    flipY: boolean,\n"
+        "    ignoreCorners: boolean,\n"
+        "}\n"
+    ),
 }
 
 _OPAQUE_STUB_BODY: Dict[str, str] = {
@@ -83,6 +96,7 @@ _VALUE_STUB_ORDER = (
     "CCAffineTransform",
     "CCRect",
     "UIButtonConfig",
+    "SmartPrefabResult",
 )
 _OPAQUE_STUB_ORDER = (
     "FMODChannel",
@@ -98,6 +112,7 @@ _TYPE_STUB_ORDER = _VALUE_STUB_ORDER + _OPAQUE_STUB_ORDER
 _VALUE_STUB_DEPS: Dict[str, Tuple[str, ...]] = {
     "CCRect": ("CCPoint", "CCSize"),
     "UIButtonConfig": ("CCPoint",),
+    "SmartPrefabResult": ("GJSmartPrefab",),
 }
 
 
@@ -106,6 +121,12 @@ def _expand_value_refs(names: set[str]) -> set[str]:
     for name in names:
         out.update(_VALUE_STUB_DEPS.get(name, ()))
     return {n for n in out if n in _VALUE_STUB_BODY}
+
+
+def _value_type_object_refs(info: TypeInfo) -> set[str]:
+    if info.kind != "value":
+        return set()
+    return set(_VALUE_STUB_DEPS.get(info.lua_type, ()))
 
 
 def _all_type_stub_bodies() -> Dict[str, str]:
@@ -175,9 +196,15 @@ def _refs_from_method(
         elif info and info.kind in ("map", "unordered_map") and info.value_type:
             if info.value_type.kind == "object":
                 refs.add(_object_type_name(info.value_type))
+            else:
+                refs.update(_value_type_object_refs(info.value_type))
+        elif info and info.kind == "primitive_vector" and info.element_type:
+            refs.update(_value_type_object_refs(info.element_type))
         elif info and info.kind in ("set", "unordered_set") and info.element_type:
             if info.element_type.kind == "object":
                 refs.add(_object_type_name(info.element_type))
+            else:
+                refs.update(_value_type_object_refs(info.element_type))
     ret = classify_return(method.ret, objects, ctx=ctx)
     if ret and ret.kind == "object":
         refs.add(_object_type_name(ret))
@@ -186,9 +213,15 @@ def _refs_from_method(
     elif ret and ret.kind in ("map", "unordered_map") and ret.value_type:
         if ret.value_type.kind == "object":
             refs.add(_object_type_name(ret.value_type))
+        else:
+            refs.update(_value_type_object_refs(ret.value_type))
+    elif ret and ret.kind == "primitive_vector" and ret.element_type:
+        refs.update(_value_type_object_refs(ret.element_type))
     elif ret and ret.kind in ("set", "unordered_set") and ret.element_type:
         if ret.element_type.kind == "object":
             refs.add(_object_type_name(ret.element_type))
+        else:
+            refs.update(_value_type_object_refs(ret.element_type))
     return refs
 
 
@@ -208,9 +241,15 @@ def _refs_from_fields(
         elif ok and ret and ret.kind in ("map", "unordered_map") and ret.value_type:
             if ret.value_type.kind == "object":
                 refs.add(_object_type_name(ret.value_type))
+            else:
+                refs.update(_value_type_object_refs(ret.value_type))
+        elif ok and ret and ret.kind == "primitive_vector" and ret.element_type:
+            refs.update(_value_type_object_refs(ret.element_type))
         elif ok and ret and ret.kind in ("set", "unordered_set") and ret.element_type:
             if ret.element_type.kind == "object":
                 refs.add(_object_type_name(ret.element_type))
+            else:
+                refs.update(_value_type_object_refs(ret.element_type))
     return refs
 
 

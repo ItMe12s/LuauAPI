@@ -143,4 +143,11 @@ namespace luax {
         lua_pop(L, 1);
         return v;
     }
+
+    inline std::string fieldString(lua_State* L, int tableIdx, char const* key, char const* method) {
+        lua_getfield(L, tableIdx, key);
+        auto value = check<std::string>(L, -1, method);
+        lua_pop(L, 1);
+        return value;
+    }
 }

@@ -347,6 +347,35 @@ class EmitStackCheckTests(unittest.TestCase):
         self.assertIn("luax::push(L, pt)", text)
         self.assertNotIn("pushPoint", text)
 
+    def test_smart_prefab_result_uses_check_specialization(self) -> None:
+        info = TypeInfo(
+            kind="value", cxx_type="SmartPrefabResult", lua_type="SmartPrefabResult"
+        )
+        text = "".join(emit_stack_check(info, 1, "result", "test"))
+        self.assertIn("luax::check<SmartPrefabResult>", text)
+
+    def test_smart_prefab_result_push_uses_push_overload(self) -> None:
+        info = TypeInfo(
+            kind="value", cxx_type="SmartPrefabResult", lua_type="SmartPrefabResult"
+        )
+        text = "".join(push_value(info, "result"))
+        self.assertIn("luax::push(L, result)", text)
+
+    def test_map_string_smart_prefab_result_marshalling(self) -> None:
+        value = TypeInfo(
+            kind="value", cxx_type="SmartPrefabResult", lua_type="SmartPrefabResult"
+        )
+        key = TypeInfo(kind="string", cxx_type="gd::string", lua_type="string")
+        info = TypeInfo(
+            kind="map",
+            cxx_type="gd::map<gd::string, SmartPrefabResult>",
+            lua_type="{ [string]: SmartPrefabResult }",
+            key_type=key,
+            value_type=value,
+        )
+        check_text = "".join(emit_stack_check(info, 1, "map", "test"))
+        self.assertIn("luax::checkMap<gd::string, SmartPrefabResult>", check_text)
+
     def test_ccblendfunc_uses_check_specialization(self) -> None:
         info = TypeInfo(
             kind="value", cxx_type="cocos2d::ccBlendFunc", lua_type="BlendFunc"

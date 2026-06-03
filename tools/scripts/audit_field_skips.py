@@ -5,6 +5,8 @@ import sys
 from collections import Counter, defaultdict
 from pathlib import Path
 
+from luau_codegen.model.value_struct_gate import DENIED_VALUE_STRUCTS
+
 
 def main() -> int:
     path = Path(__file__).resolve().parents[2] / "types" / "geode.d.luau"
@@ -57,6 +59,11 @@ def main() -> int:
                 buckets["object_vector"].append(entry)
         elif "std::pair" in reason:
             buckets["pair"].append(entry)
+        elif reason.startswith("unsupported-arg:") and any(
+            f"<{name}>" in reason or reason.endswith(f":{name}")
+            for name in DENIED_VALUE_STRUCTS
+        ):
+            buckets["value_struct_denied"].append(entry)
         elif reason.startswith("unsupported-arg:") and not any(
             token in reason
             for token in (
@@ -89,6 +96,7 @@ def main() -> int:
         "object_vector_nested",
         "object_vector_void",
         "pair",
+        "value_struct_denied",
         "residual_enum_or_type",
     ):
         samples = buckets.get(key, [])

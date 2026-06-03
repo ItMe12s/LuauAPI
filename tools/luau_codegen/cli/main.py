@@ -220,8 +220,12 @@ def main(argv: List[str]) -> int:
         plan = emit_plan.collect_plan(
             root, args.platform, plans_by_platform=plans_by_platform
         )
-        if args.fail_on_ambiguous_overload and ambiguous_overloads(plan):
-            log_error("ambiguous overloads found")
+        ambiguous = ambiguous_overloads(plan)
+        if args.fail_on_ambiguous_overload and ambiguous:
+            for cls, method, reason in ambiguous[:200]:
+                log_error(f"ambiguous overload: {cls}.{method}: {reason}")
+            if len(ambiguous) > 200:
+                log_error(f"... {len(ambiguous) - 200} more ambiguous overloads")
             return 6
         for rel in emit_plan.plan_outputs(root, args.platform, plan=plan):
             print(f"src/{rel}")
@@ -233,8 +237,12 @@ def main(argv: List[str]) -> int:
         plan = emit_plan.collect_plan(
             root, args.platform, plans_by_platform=plans_by_platform
         )
-        if args.fail_on_ambiguous_overload and ambiguous_overloads(plan):
-            log_error("ambiguous overloads found")
+        ambiguous = ambiguous_overloads(plan)
+        if args.fail_on_ambiguous_overload and ambiguous:
+            for cls, method, reason in ambiguous[:200]:
+                log_error(f"ambiguous overload: {cls}.{method}: {reason}")
+            if len(ambiguous) > 200:
+                log_error(f"... {len(ambiguous) - 200} more ambiguous overloads")
             return 6
         type_files = emit_types.emit(root, args.platform, plan=plan)
         for name in sorted(type_files):
@@ -245,8 +253,12 @@ def main(argv: List[str]) -> int:
         plan = emit_plan.collect_plan(
             root, args.platform, plans_by_platform=plans_by_platform
         )
-        if args.fail_on_ambiguous_overload and ambiguous_overloads(plan):
-            log_error("ambiguous overloads found")
+        ambiguous = ambiguous_overloads(plan)
+        if args.fail_on_ambiguous_overload and ambiguous:
+            for cls, method, reason in ambiguous[:200]:
+                log_error(f"ambiguous overload: {cls}.{method}: {reason}")
+            if len(ambiguous) > 200:
+                log_error(f"... {len(ambiguous) - 200} more ambiguous overloads")
             return 6
         for rel in emit_plan.plan_outputs(root, args.platform, plan=plan):
             print(f"binding:src/{rel}")

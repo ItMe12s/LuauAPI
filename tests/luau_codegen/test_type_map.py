@@ -620,3 +620,26 @@ class CocosOpaqueHandleTests(unittest.TestCase):
         assert info is not None
         self.assertEqual(info.kind, "opaque_handle")
         self.assertEqual(info.lua_type, "CCEvent?")
+
+
+class ValueStructGateTests(unittest.TestCase):
+    def test_classify_smart_prefab_result_value(self) -> None:
+        info = classify_arg("SmartPrefabResult const&", {})
+        self.assertIsNotNone(info)
+        assert info is not None
+        self.assertEqual(info.kind, "value")
+        self.assertEqual(info.lua_type, "SmartPrefabResult")
+
+    def test_classify_map_string_smart_prefab_result(self) -> None:
+        info = classify_arg("gd::map<gd::string, SmartPrefabResult>", {})
+        self.assertIsNotNone(info)
+        assert info is not None
+        self.assertEqual(info.kind, "map")
+        self.assertEqual(info.lua_type, "{ [string]: SmartPrefabResult }")
+        assert info.value_type is not None
+        self.assertEqual(info.value_type.kind, "value")
+        self.assertEqual(info.value_type.lua_type, "SmartPrefabResult")
+
+    def test_classify_chance_object_vector_stays_unsupported(self) -> None:
+        self.assertIsNone(classify_arg("gd::vector<ChanceObject>", {}))
+        self.assertIsNone(classify_arg("gd::vector<ChanceObject> const&", {}))
