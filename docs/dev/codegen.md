@@ -21,7 +21,7 @@ Because it is machine written, you do not edit it, and the build compiles it wit
 `CMakeLists.txt` runs `python -m luau_codegen` (the package in `tools/luau_codegen/`,
 with `tools/` on `PYTHONPATH`) as the `luauapi_codegen` target, and the main library depends on this target.
 Configure runs `--list-all-outputs` once so CMake knows binding and type byproducts.
-The stamp custom command emits delegates, then runs full codegen in-process (no subprocess).
+The stamp command runs codegen in one step: delegate specs and trampolines are loaded before emitting bindings and stubs.
 
 The platform is chosen from the build target. Windows maps to `win`, for example, and an Android 64-bit build maps to `android64`.
 The Geometry Dash version is read from the `"win"` entry in `mod.json`.

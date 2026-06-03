@@ -14,9 +14,11 @@ from luau_codegen.emit import parity
 from luau_codegen.emit import plan as emit_plan
 from luau_codegen.emit.plan import EmitPlan, ambiguous_overloads
 from luau_codegen.emit.delegates import (
+    collect as collect_delegate_specs,
     default_specs_path,
     delegate_gen_rel_paths,
     emit_delegate_artifacts,
+    install_delegate_specs_module,
 )
 from luau_codegen.parse.collect import collect_bindings_root
 from luau_codegen.cli.io import (
@@ -101,7 +103,7 @@ def main(argv: List[str]) -> int:
     parser.add_argument(
         "--skip-delegate-emit",
         action="store_true",
-        help="Skip delegate artifact generation (used when a prior build step already emitted them)",
+        help="Skip writing delegate artifacts, still refresh in-memory delegate specs from bindings",
     )
     args = parser.parse_args(argv)
 
@@ -139,6 +141,7 @@ def main(argv: List[str]) -> int:
                 args.bindings,
                 specs_out=specs_out,
                 gen_out=args.out,
+                install_module=True,
             )
         except OSError as exc:
             log_error(f"I/O failed while writing delegate artifacts: {exc}")
@@ -253,11 +256,20 @@ def main(argv: List[str]) -> int:
                 args.bindings,
                 specs_out=specs_out,
                 gen_out=args.out,
+                install_module=True,
             )
         except OSError as exc:
             log_error(f"I/O failed while writing delegate artifacts: {exc}")
             return 4
         log_info(f"delegates: {len(specs)} specs -> {specs_out}")
+    else:
+        try:
+            specs = collect_delegate_specs(args.bindings)
+            install_delegate_specs_module(specs, specs_path=specs_out)
+        except OSError as exc:
+            log_error(f"I/O failed while loading delegate specs: {exc}")
+            return 4
+        log_info(f"delegates: {len(specs)} specs (in memory, --skip-delegate-emit)")
 
     plan = collect_target_plan()
     if (

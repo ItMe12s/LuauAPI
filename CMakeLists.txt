@@ -236,19 +236,15 @@ add_custom_command(
             ${LUAUAPI_CODEGEN_BINDING_BYPRODUCTS}
             ${LUAUAPI_GENERATED_TYPE_FILES}
             ${LUAUAPI_GENERATED_METADATA_FILES}
-    COMMAND ${LUAUAPI_CODEGEN_CMD}
-            --emit-delegates
-            --bindings ${LUAUAPI_BINDINGS_DIR}
-            --out ${LUAUAPI_GEN_DIR}
-            --delegate-specs-out ${LUAUAPI_DELEGATE_SPECS_OUT}
+            ${LUAUAPI_DELEGATE_SPECS_OUT}
     COMMAND ${LUAUAPI_CODEGEN_CMD}
             --bindings ${LUAUAPI_BINDINGS_DIR}
             --out ${LUAUAPI_GEN_DIR}
             --types-out ${LUAUAPI_TYPES_DIR}
+            --delegate-specs-out ${LUAUAPI_DELEGATE_SPECS_OUT}
             --platform ${LUAUAPI_CODEGEN_PLATFORM}
             --geode-sdk "${LUAUAPI_GEODE_SDK_PATH}"
             --fail-on-ambiguous-overload
-            --skip-delegate-emit
     COMMAND ${CMAKE_COMMAND} -E touch ${LUAUAPI_CODEGEN_STAMP}
     DEPENDS
         ${LUAUAPI_CODEGEN_PY}

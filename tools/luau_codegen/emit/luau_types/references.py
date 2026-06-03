@@ -10,7 +10,7 @@ from luau_codegen.parse.broma import Class, Field, Method
 from luau_codegen.policy.fields import bindable_field
 from luau_codegen.model.domain import short_name
 from luau_codegen.convert.type_map import TypeInfo, classify_arg, classify_return
-from luau_codegen.model.delegate_specs import DELEGATE_SPECS
+from luau_codegen.model import delegate_specs as _delegate_specs
 
 _VALUE_STUB_BODY: Dict[str, str] = {
     "RGBColor": "export type RGBColor = { r: number, g: number, b: number }\n",
@@ -166,7 +166,7 @@ def _object_type_name(info: TypeInfo) -> str:
 def _emit_delegate_stub_block() -> str:
     lines = ["-- Delegate table types\n\n"]
     seen: set[str] = set()
-    for spec in DELEGATE_SPECS.values():
+    for spec in _delegate_specs.DELEGATE_SPECS.values():
         if spec.lua_name in seen:
             continue
         seen.add(spec.lua_name)

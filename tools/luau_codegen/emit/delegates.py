@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 import sys
 import textwrap
+import types
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -28,6 +29,24 @@ def default_specs_path() -> Path:
 
 def delegate_gen_rel_paths() -> tuple[str, ...]:
     return DELEGATE_GEN_REL_PATHS
+
+
+DELEGATE_SPECS_MODULE = "luau_codegen.model.delegate_specs"
+
+
+def install_delegate_specs_module(
+    specs: dict[str, DelegateSpec],
+    *,
+    specs_path: Path | str | None = None,
+    module_name: str = DELEGATE_SPECS_MODULE,
+) -> None:
+    mod = sys.modules.get(module_name)
+    if mod is None:
+        mod = types.ModuleType(module_name)
+        sys.modules[module_name] = mod
+    if specs_path is not None:
+        mod.__file__ = str(specs_path)
+    exec(emit_specs_py(specs), mod.__dict__)
 
 
 COCOS_DELEGATES: dict[str, list[tuple[str, str, list[tuple[str, str]]]]] = {
@@ -629,10 +648,13 @@ def emit_delegate_artifacts(
     *,
     specs_out: Path | str,
     gen_out: Path | str | None = None,
+    install_module: bool = True,
 ) -> dict[str, DelegateSpec]:
     specs = collect(bindings_dir)
     _warn_unsupported_emitters(specs)
     _write_if_changed(str(specs_out), emit_specs_py(specs))
+    if install_module:
+        install_delegate_specs_module(specs, specs_path=specs_out)
     if gen_out is not None:
         gen_root = Path(gen_out)
         gen_files = {

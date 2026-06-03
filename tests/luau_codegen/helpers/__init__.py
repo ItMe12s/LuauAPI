@@ -5,7 +5,6 @@ import re
 import shutil
 import sys
 import tempfile
-import types
 import unittest
 import warnings
 from unittest import mock
@@ -18,14 +17,15 @@ if TOOLS_DIR not in sys.path:
     sys.path.insert(0, TOOLS_DIR)
 
 from luau_codegen.emit.delegates import (  # type: ignore[import-unresolved]
+    DELEGATE_SPECS_MODULE,
     DelegateMethod,
     DelegateSpec,
     collect as collect_delegate_specs,
     cpp_emit_supported,
     emit_gen_hpp,
     emit_override,
-    emit_specs_py,
     fallback_bindings_dir,
+    install_delegate_specs_module,
 )
 
 
@@ -33,15 +33,15 @@ def _install_fixture_delegate_specs() -> None:
     fixture = fallback_bindings_dir()
     if not fixture.is_dir():
         return
-    name = "luau_codegen.model.delegate_specs"
-    module = types.ModuleType(name)
-    module.__file__ = str(fixture / "_fixture_delegate_specs.py")
-    sys.modules[name] = module
-    exec(emit_specs_py(collect_delegate_specs(fixture)), module.__dict__)
+    install_delegate_specs_module(
+        collect_delegate_specs(fixture),
+        specs_path=fixture / "_fixture_delegate_specs.py",
+        module_name=DELEGATE_SPECS_MODULE,
+    )
 
 
 _install_fixture_delegate_specs()
-DELEGATE_SPECS = sys.modules["luau_codegen.model.delegate_specs"].DELEGATE_SPECS
+DELEGATE_SPECS = sys.modules[DELEGATE_SPECS_MODULE].DELEGATE_SPECS
 
 from luau_codegen.parse.broma import (  # type: ignore[import-unresolved]
     Arg,
