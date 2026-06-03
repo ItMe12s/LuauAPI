@@ -43,9 +43,10 @@ namespace luax {
             auto* runtime = Runtime::getIfInitialized();
             if (!runtime || !runtime->ready()) return false;
             auto* L = runtime->state();
-            if (!L || !table->push()) return false;
+            if (!L) return false;
 
             int top = lua_gettop(L);
+            if (!table->push()) return false;
             lua_getfield(L, -1, field);
             if (!lua_isfunction(L, -1)) {
                 lua_settop(L, top);

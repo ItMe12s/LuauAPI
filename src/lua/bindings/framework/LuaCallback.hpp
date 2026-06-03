@@ -46,9 +46,10 @@ namespace luax {
             auto* host = BindingHost::getIfInitialized();
             if (!host || !host->ready()) return false;
             auto* L = host->state();
-            if (!L || !m_ref || !m_ref->push()) return false;
+            if (!L || !m_ref) return false;
 
             int top = lua_gettop(L);
+            if (!m_ref->push()) return false;
             if (pushArgs) {
                 pushArgs(L, pushCtx);
             }

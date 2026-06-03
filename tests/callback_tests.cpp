@@ -68,7 +68,9 @@ TEST_CASE("Generated-style void std::function callback returns cleanly when invo
     auto cb = makeCodegenVoidCallback(L, -1);
     lua_pop(L, 1);
 
+    int before = lua_gettop(L);
     REQUIRE_NOTHROW(cb());
+    REQUIRE(lua_gettop(L) == before);
 }
 
 TEST_CASE("Generated-style bool std::function callback returns false when invoke fails") {
@@ -80,7 +82,9 @@ TEST_CASE("Generated-style bool std::function callback returns false when invoke
     auto cb = makeCodegenBoolCallback(L, -1);
     lua_pop(L, 1);
 
+    int before = lua_gettop(L);
     REQUIRE_FALSE(cb());
+    REQUIRE(lua_gettop(L) == before);
 }
 
 TEST_CASE("Generated-style bool std::function callback returns Lua result on success") {
@@ -92,5 +96,7 @@ TEST_CASE("Generated-style bool std::function callback returns Lua result on suc
     auto cb = makeCodegenBoolCallback(L, -1);
     lua_pop(L, 1);
 
+    int before = lua_gettop(L);
     REQUIRE(cb());
+    REQUIRE(lua_gettop(L) == before);
 }
