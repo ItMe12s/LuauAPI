@@ -13,6 +13,11 @@
 	"early-load": true,
 	"load-priority": "first",
 	"description": "Shared Luau runtime API for Geode mods.",
+	"tags": [
+		"universal",
+		"utility",
+		"developer"
+	],
 	"api": {
 		"include": [
 			"include/**/*.hpp"
