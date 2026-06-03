@@ -47,6 +47,10 @@ For anyone writing `.luau` files that run inside the game.
   - [task](docs/lua/reference/task.md)
   - [time](docs/lua/reference/time.md)
   - [imgui](docs/lua/reference/imgui.md)
+  - [json](docs/lua/reference/json.md)
+  - [fs](docs/lua/reference/fs.md)
+  - [Callbacks](docs/lua/reference/callbacks.md)
+  - [Delegates](docs/lua/reference/delegates.md)
   - [Type stubs and editor setup](docs/lua/reference/type-stubs.md)
 
 ## C++ host integrators
@@ -69,3 +73,7 @@ For anyone working on the runtime itself.
 - [Codegen](docs/dev/codegen.md)
 - [Testing](docs/dev/testing.md)
 - [ImGui draw scheduler](docs/dev/imgui-draw-scheduler.md)
+- [Platform parity](docs/dev/platform-parity.md)
+- [ccCArray fields](docs/dev/cc-c-array.md)
+- [Nested containers](docs/dev/nested-containers.md)
+- [Pair containers](docs/dev/pair-containers.md)

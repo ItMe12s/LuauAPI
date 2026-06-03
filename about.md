@@ -23,7 +23,7 @@ It includes a higher-level SDK that helps you start simple, iterate faster, and 
 
 ## Learn more
 
-[>>> Checkout the LuauAPI Documentation <<<](https://github.com/ItMe12s/LuauAPI/blob/master/README.md)
+[>>> Check out the LuauAPI Documentation <<<](https://github.com/ItMe12s/LuauAPI/blob/master/README.md)
 
 ---
 

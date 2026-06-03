@@ -60,7 +60,7 @@ A change to any of these reruns codegen.
 
 Only `GEODE_DLL` declarations are processed. Functions must be marshallable (no out/non-const ref args), or they're dropped.
 Keep only the first free function per name and arity, log others as `free-function-ambiguous-arity:<n>`.
-Remove headers that yield nothing after filtering.
+<!-- TODO: verify whether header pruning after filtering is implemented -->
 
 Some headers are purposely ignored:
 
@@ -125,7 +125,7 @@ A field is skipped when:
 - Its type cannot be marshalled
 - It's an array or reference
 - It's a function pointer or string pointer
-- It's listed in `INACCESSIBLE_FIELDS`.
+- It's listed in `INACCESSIBLE_FIELDS` in `tools/luau_codegen/policy/fields.py`.
 
 Skipped fields still appear as `-- skipped <name>: <reason>` comments in the type stub.
 
@@ -134,7 +134,7 @@ and other similar types, are **not bound by policy**.
 These fields do not have a type that can be safely or correctly converted for Lua,
 so they are skipped by the generic `unsupported-arg` or `unsupported-return` rule.
 This is intentional. Encrypted or obfuscated fields are unsafe and useless in Lua.
-Keep them skipped unless a safe, **read-only** proxy is added, a plain field binding is never the answer.
+Keep them skipped unless a safe, **read-only** proxy is added. A plain field binding is never the answer.
 
 `gd::map` and `gd::set` field setters use `luax::assignMap` / `luax::assignSet` (clear plus per-entry insert) instead of whole-container `operator=`,
 because Geode gnustl on Android does not implement `_Rb_tree::_M_move_assign`.
@@ -162,16 +162,17 @@ When two overloads share a name and input arity, the generator keeps one only if
 Otherwise every colliding overload is skipped with `ambiguous-overload-arity:<arity>` and the method is not bound.
 These skips appear in `report.md` and `schema.json` under `ambiguousOverloads`.
 
-The build passes `--fail-on-ambiguous-overload`, so codegen exits 6 when any ambiguous group remains.
+Ambiguous overloads always cause codegen to exit with code 6 when building the emit plan.
 Add or fix a `PREFERRED_OVERLOADS` entry for that `(class, method)`.
 
 ## Denylist maintenance
 
-`model/denylist.py` is hand-maintained. It has three structures:
+`model/denylist.py` is hand-maintained. It has four structures:
 
 - `INACCESSIBLE_METHODS`: `(class, method)` pairs that must never bind (engine internals, editor-only delegates, unsafe helpers).
 - `INACCESSIBLE_CLASSES`: whole classes treated as opaque.
 - `PREFERRED_OVERLOADS`: for a `(class, method)` where overloads collide on input arity, the normalized arg signatures to keep. Others skip as `overload-superseded:<arity>`. Required when multiple same-arity overloads must bind.
+- `BINDABLE_CONSTRUCTORS`: narrow opt-in list of constructor signatures that get a synthetic `new(...)` factory. See Constructor binding below.
 
 Entries are conservative. Removing one can re-expose a method that breaks marshalling.
 Do not expand `PREFERRED_OVERLOADS` without a real overload clash.
@@ -196,6 +197,16 @@ Keep the list small. Vet each entry. Plain `new T(args)` must produce a valid ob
 Classes that need a constructor plus a separate `init()` do not qualify. Destructors stay blocked.
 
 For how one type stub stays safe on every platform, see [Platform parity](platform-parity.md).
+
+## CLI exit codes
+
+| Code | Meaning |
+| --- | --- |
+| 2 | Bad arguments, missing required directories, or Python version below 3.11 |
+| 3 | No Broma classes found after parsing |
+| 4 | I/O error reading inputs or writing outputs |
+| 5 | Unexpected exception during emit |
+| 6 | Ambiguous overloads remain after building the emit plan |
 
 ## Tests
 

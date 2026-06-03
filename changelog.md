@@ -1,6 +1,6 @@
 # Changelog
 
-Hihi, currently unreleased.
+Currently unreleased.
 
 [Check the GitHub commits for more details](https://github.com/ItMe12s/LuauAPI).
 

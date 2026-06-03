@@ -64,7 +64,7 @@ end, 1.0)
 ```
 
 When a method has `(CCObject* target, SEL_* selector)` the pair collapses to one Luau argument.
-Some schedule APIs accept a selector without an explicit target, pass the function alone and the handler object is used as the target.
+Some schedule APIs accept a selector without an explicit target. Pass the function alone. The handler object is used as the target.
 
 ## Lifetime
 

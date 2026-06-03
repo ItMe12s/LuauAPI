@@ -2,9 +2,12 @@
 
 ## Summary
 
-Some C++ APIs take a **delegate pointer**, which is just an object with virtual methods (like for touch, keyboard, scroll views, or alert protocols). In Luau, pass a **table** with method names as keys and Luau functions as values.
+Some C++ APIs take a **delegate pointer**, which is just an object with virtual methods
+(like for touch, keyboard, scroll views, or alert protocols).
+In Luau, pass a **table** with method names as keys and Luau functions as values.
 
-The runtime creates a C++ trampoline (`LuaX` subclass) that calls the matching table function for each virtual method. You can leave out unsupported methods, missing ones use safe defaults (like `false` for `bool`).
+The runtime creates a C++ trampoline (`LuaX` subclass) that calls the matching table function for each virtual method.
+You can leave out unsupported methods. Missing ones use safe defaults (like `false` for `bool`).
 
 ## Table shape
 
@@ -99,5 +102,6 @@ python -m luau_codegen --emit-delegates --bindings <bindings-dir> --out <gen-dir
 ## Source
 
 - `src/lua/bindings/framework/LuaDelegate.hpp`
-- `tools/luau_codegen/model/delegate_specs.py`
+- `build/luauapi-gen/delegate_specs.py` (generated at build time, path set by `LUAUAPI_DELEGATE_SPECS_OUT` in CMake)
+- `tools/luau_codegen/model/delegate_specs.py` (repo stub, not the runtime source)
 - `tools/scripts/generate_delegate_artifacts.py`

@@ -7,7 +7,7 @@ It lets a script draw a [Dear ImGui](https://github.com/ocornut/imgui) overlay o
 backed by [gd-imgui-cocos](https://github.com/matcool/gd-imgui-cocos).
 The types match `tools/luau_codegen/extra_bindings/imgui.dluau`, merged into `types/geode.d.luau` at build time.
 
-ImGui here is debug and tooling UI. It is not meant for player facing in game UI.
+ImGui here is debug and tooling UI. It is not meant for player-facing, in-game UI.
 
 ## Model
 

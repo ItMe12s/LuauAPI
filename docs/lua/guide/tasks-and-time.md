@@ -84,7 +84,7 @@ print(time.now(), time.unix())
 
 ## How tasks run
 
-Tasks are driven by the game scheduler. They advance each frame by the frame delta, follow the game tick, and freeze when the game pauses.
+Tasks are driven by the game scheduler. They advance each frame by the frame delta.
 Each callback runs on the main thread with a `50 ms` budget.
 
 ## Limits and notes

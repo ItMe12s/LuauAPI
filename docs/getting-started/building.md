@@ -30,9 +30,9 @@ Platform mapping and Geometry Dash version selection are described in [Codegen](
 The generated C++ sources are compiled with warnings disabled, because they are machine written.
 
 The generator entry point is `python -m luau_codegen` (the package in `tools/luau_codegen/`, run with `tools/` on `PYTHONPATH`).
-The build calls it three times.
-Two of those calls list the expected outputs so that CMake knows the byproducts.
-The third call performs the real generation and writes a stamp file.
+The build calls it twice.
+The first call lists the expected outputs so that CMake knows the byproducts.
+The second call performs the real generation and writes a stamp file.
 
 Generated files are not meant to be edited by hand. To change the generated output, change the generator or its binding inputs and rebuild.
 See [Codegen](../dev/codegen.md).

@@ -21,11 +21,16 @@ ctest --test-dir build
 The C++ tests use Catch2 `v3.15.0` and build into the `luauapi_tests` executable. The files are:
 
 - `tests/allocator_accounting_tests.cpp` covers the bounded allocator math and limits.
+- `tests/api_tests.cpp` covers the public C++ API surface.
+- `tests/binding_tests.cpp` covers binding registration and dispatch.
 - `tests/bytecode_cache_key_tests.cpp` covers the cache key, including changes to size, modify time, and content.
+- `tests/callback_tests.cpp` covers callback registration and invocation.
+- `tests/loadstring_tests.cpp` covers `loadstring` compile and runtime behavior.
 - `tests/path_rules_tests.cpp` covers flat path rules and extension checks.
 - `tests/path_sandbox_tests.cpp` covers file containment and escape rejection.
 - `tests/require_path_tests.cpp` covers require child name rules and the `.luau` extension fill in.
-- `tests/loadstring_tests.cpp` covers `loadstring` compile and runtime behavior.
+- `tests/runtime_tests.cpp` covers runtime lifecycle and script execution.
+- `tests/usertype_tests.cpp` covers usertype registration and method dispatch.
 
 CTest discovers the Catch2 cases at build time.
 
@@ -51,27 +56,45 @@ PYTHONPATH=tools python -m unittest discover -s tests/luau_codegen -p "test_*.py
 
 | Test file | Coverage |
 | --------- | -------- |
+| `test_audit.py` | TODO |
+| `test_bindings_fmod.py` | TODO |
+| `test_bindings_handlers.py` | TODO |
+| `test_bindings_overloads.py` | TODO |
+| `test_bindings_safety.py` | TODO |
 | `test_broma.py` | Broma parser, class/method attributes |
-| `test_bindings.py` | C++ binding emission, dispatchers, fields |
+| `test_cc_c_array.py` | TODO |
 | `test_codegen_cli.py` | CLI I/O, exit codes, binding root collection |
+| `test_constructors.py` | TODO |
+| `test_delegate_generator.py` | TODO |
+| `test_denylist.py` | Denylist and preferred-overload entry validity |
 | `test_filtering.py` | Method eligibility, link classes, denylist |
 | `test_free_functions.py` | Free-function platform overrides and emission |
+| `test_geode_ccnode.py` | TODO |
 | `test_geode_scanner.py` | Geode SDK header scan warnings |
 | `test_hooks.py` | Hook offsets, symbols, hook target emission |
 | `test_luau_types.py` | Luau stub layout, factories, overload widening |
 | `test_marshalling.py` | Lua stack check/push codegen |
 | `test_model.py` | Class lookup, object maps, base resolution |
+| `test_nested_containers.py` | TODO |
+| `test_object_vector_audit.py` | TODO |
+| `test_pair_design.py` | TODO |
 | `test_parity.py` | Cross-platform parity report |
 | `test_plan.py` | Emit plan, intersection, class merge |
 | `test_type_map.py` | C++ to Lua type classification |
+| `test_value_struct_gate.py` | TODO |
 
 ## Source
 
 - `CMakeLists.txt`
 - `tests/allocator_accounting_tests.cpp`
+- `tests/api_tests.cpp`
+- `tests/binding_tests.cpp`
 - `tests/bytecode_cache_key_tests.cpp`
+- `tests/callback_tests.cpp`
+- `tests/loadstring_tests.cpp`
 - `tests/path_rules_tests.cpp`
 - `tests/path_sandbox_tests.cpp`
 - `tests/require_path_tests.cpp`
-- `tests/loadstring_tests.cpp`
+- `tests/runtime_tests.cpp`
+- `tests/usertype_tests.cpp`
 - `tests/luau_codegen/`
