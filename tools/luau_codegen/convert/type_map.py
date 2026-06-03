@@ -359,7 +359,7 @@ _MAP_KEY_KINDS = frozenset({"bool", "number", "wideint", "string", "enum"})
 
 _MAP_VALUE_KINDS = _PRIMITIVE_VECTOR_ELEMENT_KINDS | {"object"}
 
-_SET_ELEMENT_KINDS = _PRIMITIVE_VECTOR_ELEMENT_KINDS
+_SET_ELEMENT_KINDS = _PRIMITIVE_VECTOR_ELEMENT_KINDS | {"object"}
 
 _NESTED_CONTAINER_KINDS = frozenset(
     {
@@ -395,6 +395,12 @@ def _map_value_lua_type(value: TypeInfo) -> str:
 
 def _map_lua_type(key: TypeInfo, value: TypeInfo) -> str:
     return f"{{ [{key.lua_type}]: {_map_value_lua_type(value)} }}"
+
+
+def _set_element_lua_type(element: TypeInfo) -> str:
+    if element.kind == "object":
+        return f"{element.class_name}?"
+    return element.lua_type
 
 
 def _parse_map_container(
@@ -448,7 +454,7 @@ def _parse_set_container(
     return TypeInfo(
         kind,
         f"{prefix}<{element.cxx_type}>",
-        f"{{ {element.lua_type} }}",
+        f"{{ {_set_element_lua_type(element)} }}",
         element_type=element,
     )
 

@@ -612,7 +612,7 @@ class GeneratedSafetyTests(unittest.TestCase):
         self.assertIn(
             "luax::assignPrimitiveVector(self->m_flags, std::move(value))", text
         )
-        self.assertNotIn("self->m_flags =", text)
+        self.assertNotIn("self->m_flags = std::move", text)
 
     def test_primitive_vector_int_pointer_field_setter_uses_assign_primitive_vector(
         self,
@@ -664,7 +664,7 @@ class GeneratedSafetyTests(unittest.TestCase):
 
         self.assertIn("checkMap<int, bool>", text)
         self.assertIn("luax::assignMap(self->m_values, std::move(value))", text)
-        self.assertNotIn("self->m_values =", text)
+        self.assertNotIn("self->m_values = std::move", text)
 
     def test_set_field_setter_uses_assign_set(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")
@@ -688,7 +688,64 @@ class GeneratedSafetyTests(unittest.TestCase):
 
         self.assertIn("checkSet<int>", text)
         self.assertIn("luax::assignSet(self->m_ids, std::move(value))", text)
-        self.assertNotIn("self->m_ids =", text)
+        self.assertNotIn("self->m_ids = std::move", text)
+
+    def test_object_set_field_setter_uses_assign_set(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        foo = Class(
+            name="Foo",
+            namespace="cocos2d",
+            bases=["CCObject"],
+            fields=[Field("m_objects", "gd::set<cocos2d::CCObject*>")],
+        )
+        grouped, _ = group_supported(
+            foo,
+            {"CCObject": ccobject, "cocos2d::CCObject": ccobject},
+            "win",
+        )
+        text = _emit_class_file(
+            foo,
+            grouped,
+            [],
+            [(foo, foo.fields[0])],
+            {"CCObject": ccobject, "cocos2d::CCObject": ccobject},
+            set(),
+            1,
+            "win",
+        )
+
+        self.assertIn("checkSet<cocos2d::CCObject*>", text)
+        self.assertIn("luax::assignSet(self->m_objects, std::move(value))", text)
+        self.assertNotIn("self->m_objects = std::move", text)
+
+    def test_object_set_pointer_field_setter_dereferences(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        ccset = Class(
+            name="CCSet",
+            namespace="cocos2d",
+            bases=["CCObject"],
+            fields=[Field("m_pSet", "gd::set<cocos2d::CCObject*>*")],
+        )
+        grouped, _ = group_supported(
+            ccset,
+            {"CCObject": ccobject, "cocos2d::CCObject": ccobject},
+            "win",
+        )
+        text = _emit_class_file(
+            ccset,
+            grouped,
+            [],
+            [(ccset, ccset.fields[0])],
+            {"CCObject": ccobject, "cocos2d::CCObject": ccobject},
+            set(),
+            1,
+            "win",
+        )
+
+        self.assertIn("checkSet<cocos2d::CCObject*>", text)
+        self.assertIn("luax::assignSet(*self->m_pSet, std::move(value))", text)
+        self.assertIn("is_pointer_v", text)
+        self.assertIn("field pointer is null", text)
 
     def test_generated_bindings_include_container_tables_header(self) -> None:
         from luau_codegen.emit.cxx_templates import file_preamble  # type: ignore[import-unresolved]

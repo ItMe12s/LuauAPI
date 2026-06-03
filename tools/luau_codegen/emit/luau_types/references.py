@@ -165,6 +165,9 @@ def _refs_from_method(
         elif info and info.kind in ("map", "unordered_map") and info.value_type:
             if info.value_type.kind == "object":
                 refs.add(_object_type_name(info.value_type))
+        elif info and info.kind in ("set", "unordered_set") and info.element_type:
+            if info.element_type.kind == "object":
+                refs.add(_object_type_name(info.element_type))
     ret = classify_return(method.ret, objects, ctx=ctx)
     if ret and ret.kind == "object":
         refs.add(_object_type_name(ret))
@@ -173,6 +176,9 @@ def _refs_from_method(
     elif ret and ret.kind in ("map", "unordered_map") and ret.value_type:
         if ret.value_type.kind == "object":
             refs.add(_object_type_name(ret.value_type))
+    elif ret and ret.kind in ("set", "unordered_set") and ret.element_type:
+        if ret.element_type.kind == "object":
+            refs.add(_object_type_name(ret.element_type))
     return refs
 
 
@@ -192,6 +198,9 @@ def _refs_from_fields(
         elif ok and ret and ret.kind in ("map", "unordered_map") and ret.value_type:
             if ret.value_type.kind == "object":
                 refs.add(_object_type_name(ret.value_type))
+        elif ok and ret and ret.kind in ("set", "unordered_set") and ret.element_type:
+            if ret.element_type.kind == "object":
+                refs.add(_object_type_name(ret.element_type))
     return refs
 
 

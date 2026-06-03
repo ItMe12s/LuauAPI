@@ -602,6 +602,58 @@ class ContainerTableMarshallingTests(unittest.TestCase):
         self.assertIn("luax::checkUnorderedSet<int>", check_text)
         self.assertIn("luax::pushUnorderedSet<int>", push_text)
 
+    def test_object_set_check_and_push_use_table_helpers(self) -> None:
+        element = TypeInfo(
+            kind="object",
+            cxx_type="cocos2d::CCObject*",
+            lua_type="CCObject",
+            class_name="CCObject",
+        )
+        info = TypeInfo(
+            kind="set",
+            cxx_type="gd::set<cocos2d::CCObject*>",
+            lua_type="{ CCObject? }",
+            element_type=element,
+        )
+
+        check_text = "".join(
+            check_arg(
+                Arg("gd::set<cocos2d::CCObject*>", "values"), info, 1, "arg0", "test"
+            )
+        )
+        push_text = "".join(push_value(info, "values"))
+
+        self.assertIn("luax::checkSet<cocos2d::CCObject*>", check_text)
+        self.assertIn("luax::pushSet<cocos2d::CCObject*>", push_text)
+
+    def test_object_unordered_set_check_and_push_use_table_helpers(self) -> None:
+        element = TypeInfo(
+            kind="object",
+            cxx_type="cocos2d::CCObject*",
+            lua_type="CCObject",
+            class_name="CCObject",
+        )
+        info = TypeInfo(
+            kind="unordered_set",
+            cxx_type="gd::unordered_set<cocos2d::CCObject*>",
+            lua_type="{ CCObject? }",
+            element_type=element,
+        )
+
+        check_text = "".join(
+            check_arg(
+                Arg("gd::unordered_set<cocos2d::CCObject*>", "values"),
+                info,
+                1,
+                "arg0",
+                "test",
+            )
+        )
+        push_text = "".join(push_value(info, "values"))
+
+        self.assertIn("luax::checkUnorderedSet<cocos2d::CCObject*>", check_text)
+        self.assertIn("luax::pushUnorderedSet<cocos2d::CCObject*>", push_text)
+
 
 class FmodMarshallingTests(unittest.TestCase):
     def test_fmod_enum_arg_uses_numeric_check(self) -> None:

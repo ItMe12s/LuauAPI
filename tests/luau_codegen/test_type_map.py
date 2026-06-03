@@ -459,6 +459,36 @@ class ContainerTypeMapTests(unittest.TestCase):
     def test_classify_gd_set_rejects_nested_containers(self) -> None:
         self.assertIsNone(classify_arg("gd::set<gd::vector<int>>", {}))
 
+    def test_classify_gd_set_ccobject_pointer(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        objects = {"CCObject": ccobject, "cocos2d::CCObject": ccobject}
+
+        info = classify_arg("gd::set<cocos2d::CCObject*>", objects)
+
+        self.assertIsNotNone(info)
+        assert info is not None
+        self.assertEqual(info.kind, "set")
+        self.assertEqual(info.cxx_type, "gd::set<cocos2d::CCObject*>")
+        self.assertEqual(info.lua_type, "{ CCObject? }")
+        assert info.element_type is not None
+        self.assertEqual(info.element_type.kind, "object")
+        self.assertEqual(info.element_type.class_name, "CCObject")
+
+    def test_classify_gd_unordered_set_ccobject_pointer(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        objects = {"CCObject": ccobject, "cocos2d::CCObject": ccobject}
+
+        info = classify_arg("gd::unordered_set<cocos2d::CCObject*>", objects)
+
+        self.assertIsNotNone(info)
+        assert info is not None
+        self.assertEqual(info.kind, "unordered_set")
+        self.assertEqual(info.cxx_type, "gd::unordered_set<cocos2d::CCObject*>")
+        self.assertEqual(info.lua_type, "{ CCObject? }")
+        assert info.element_type is not None
+        self.assertEqual(info.element_type.kind, "object")
+        self.assertEqual(info.element_type.class_name, "CCObject")
+
 
 class GdEnumTypeMapTests(unittest.TestCase):
     def test_classify_gd_enums(self) -> None:

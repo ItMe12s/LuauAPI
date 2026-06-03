@@ -196,7 +196,7 @@ namespace luax {
             Set out;
             for (lua_Integer i = 1; i <= len; ++i) {
                 lua_rawgeti(L, idx, i);
-                out.insert(checkPrimitiveVectorElement<T>(L, -1, label));
+                out.insert(checkMapValue<T>(L, -1, label));
                 lua_pop(L, 1);
             }
             return out;
@@ -208,7 +208,7 @@ namespace luax {
             int tableIndex = lua_gettop(L);
             int i = 1;
             for (auto const& elem : set) {
-                pushPrimitiveVectorElement(L, elem);
+                pushMapValue(L, elem);
                 lua_rawseti(L, tableIndex, i++);
             }
         }

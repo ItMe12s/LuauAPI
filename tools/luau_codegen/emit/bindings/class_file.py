@@ -302,6 +302,33 @@ def _emit_invoke(
     return "".join(out)
 
 
+_CONTAINER_FIELD_ASSIGN_FNS = {
+    "primitive_vector": "assignPrimitiveVector",
+    "map": "assignMap",
+    "unordered_map": "assignUnorderedMap",
+    "set": "assignSet",
+    "unordered_set": "assignUnorderedSet",
+}
+
+
+def _emit_container_field_assign_lines(
+    field: Field, label: str, kind: str
+) -> list[str]:
+    fn = _CONTAINER_FIELD_ASSIGN_FNS[kind]
+    name = field.name
+    return [
+        "            if constexpr (std::is_pointer_v<std::remove_reference_t<decltype("
+        f"self->{name})>>) {{\n",
+        f"                if (self->{name} == nullptr) {{\n",
+        f'                    luaL_error(L, "{label} field pointer is null");\n',
+        "                }\n",
+        f"                luax::{fn}(*self->{name}, std::move(value));\n",
+        "            } else {\n",
+        f"                luax::{fn}(self->{name}, std::move(value));\n",
+        "            }\n",
+    ]
+
+
 def _emit_field_accessors(
     cls: Class,
     field: Field,
@@ -385,36 +412,13 @@ def _emit_field_accessors(
         f"    int {setter_impl}(lua_State* L, T* self, {arg_info.cxx_type} value) {{\n"
     )
     out.append(f"        if constexpr (requires(T* obj) {{ obj->{field.name}; }}) {{\n")
-    if arg_info.is_vector_ptr:
+    if arg_info.kind in _CONTAINER_FIELD_ASSIGN_FNS:
+        out.extend(_emit_container_field_assign_lines(field, label, arg_info.kind))
+    elif arg_info.is_vector_ptr:
         out.append(f"            if (self->{field.name} == nullptr) {{\n")
         out.append(f'                luaL_error(L, "{label} field pointer is null");\n')
         out.append("            }\n")
-        if arg_info.kind == "primitive_vector":
-            out.append(
-                f"            luax::assignPrimitiveVector(*self->{field.name}, std::move(value));\n"
-            )
-        else:
-            out.append(f"            *self->{field.name} = std::move(value);\n")
-    elif arg_info.kind == "primitive_vector":
-        out.append(
-            f"            luax::assignPrimitiveVector(self->{field.name}, std::move(value));\n"
-        )
-    elif arg_info.kind == "map":
-        out.append(
-            f"            luax::assignMap(self->{field.name}, std::move(value));\n"
-        )
-    elif arg_info.kind == "unordered_map":
-        out.append(
-            f"            luax::assignUnorderedMap(self->{field.name}, std::move(value));\n"
-        )
-    elif arg_info.kind == "set":
-        out.append(
-            f"            luax::assignSet(self->{field.name}, std::move(value));\n"
-        )
-    elif arg_info.kind == "unordered_set":
-        out.append(
-            f"            luax::assignUnorderedSet(self->{field.name}, std::move(value));\n"
-        )
+        out.append(f"            *self->{field.name} = std::move(value);\n")
     else:
         out.append(
             f"            self->{field.name} = static_cast<decltype(self->{field.name})>(value);\n"
