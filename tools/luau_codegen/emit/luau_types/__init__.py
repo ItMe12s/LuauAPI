@@ -88,13 +88,24 @@ def emit(
     for cls in classes:
         field_targets = plan.field_targets_by_class.get(cls.name, [])
         if not _should_emit_type_class(
-            cls, objects, field_targets, skipped_classes, ctx=plan.ctx
+            cls,
+            objects,
+            field_targets,
+            skipped_classes,
+            target_platform=target_platform,
+            ctx=plan.ctx,
         ):
             continue
         grouped = grouped_by_class[cls.name]
         chunk = "".join(
             _emit_class(
-                cls, grouped, field_targets, objects, skipped_classes, ctx=plan.ctx
+                cls,
+                grouped,
+                field_targets,
+                objects,
+                skipped_classes,
+                target_platform=target_platform,
+                ctx=plan.ctx,
             )
         )
         if lua_namespace(cls) == cocos_namespace:

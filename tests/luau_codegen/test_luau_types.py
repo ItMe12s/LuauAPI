@@ -13,9 +13,11 @@ from helpers import (
     _input_arg_count,  # type: ignore[import-unresolved]
     all_platforms,  # type: ignore[import-unresolved]
     classify_arg,  # type: ignore[import-unresolved]
+    collect_platform_plan,  # type: ignore[import-unresolved]
     emit_luau_types,  # type: ignore[import-unresolved]
     is_const_reference,  # type: ignore[import-unresolved]
     is_out_reference,  # type: ignore[import-unresolved]
+    parse_file,  # type: ignore[import-unresolved]
     types_text,  # type: ignore[import-unresolved]
 )
 
@@ -882,3 +884,35 @@ class F9SingleFileTests(unittest.TestCase):
         text = types_text(files)
         for name in ("CCObject", "CCNode", "PlayerObject"):
             self.assertIn(f"declare class {name}", text)
+
+
+class PlatformFieldStubTests(unittest.TestCase):
+    def test_win_stub_omits_mobile_only_platform_block_fields(self) -> None:
+        import os
+        import tempfile
+
+        bro = """
+[[link(win, android)]]
+class Foo : CCObject {
+    void touch() = win 0x1, ios 0x2, m1 0x3, android32 0x4, android64 0x5;
+    float m_offset;
+    android, ios {
+        int m_spawnCount;
+    }
+};
+"""
+        with tempfile.NamedTemporaryFile("w", suffix=".bro", delete=False) as f:
+            f.write(bro)
+            path = f.name
+        try:
+            root = parse_file(path)
+            ccobject = Class(name="CCObject", namespace="cocos2d")
+            root.classes.insert(0, ccobject)
+            plan = collect_platform_plan(root, "win")
+            text = types_text(emit_luau_types(root, "win", plan=plan))
+            self.assertIn("m_offset: number", text)
+            self.assertNotIn("m_spawnCount", text)
+            self.assertNotIn("unsupported-arg:android", text)
+            self.assertNotIn("-- skipped ios:", text)
+        finally:
+            os.unlink(path)

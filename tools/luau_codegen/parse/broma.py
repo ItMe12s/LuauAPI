@@ -5,6 +5,7 @@ import re
 from typing import TYPE_CHECKING, Dict, List, Optional
 
 from luau_codegen.parse.text import strip_comments
+from luau_codegen.util.platforms import INTERSECTION_PLATFORMS
 
 if TYPE_CHECKING:
     from luau_codegen.model.codegen_context import CodegenContext
@@ -40,6 +41,7 @@ class Field:
     type: str
     count: int = 1
     line: int = 0
+    platforms: frozenset[str] | None = None
 
 
 @dataclasses.dataclass
@@ -80,6 +82,16 @@ class Root:
 
 
 _PLATFORMS = ("win", "imac", "m1", "ios", "android", "android32", "android64", "mac")
+_PLATFORM_BLOCK_TOKENS = frozenset(_PLATFORMS) | {"mac"}
+_PLATFORM_SCOPE_CANDIDATES = frozenset(INTERSECTION_PLATFORMS) | {"imac"}
+_PLATFORM_ALIAS_TOKENS: dict[str, frozenset[str]] = {
+    "mac": frozenset({"mac", "imac", "m1"}),
+    "imac": frozenset({"mac", "imac"}),
+    "m1": frozenset({"mac", "m1"}),
+    "android": frozenset({"android", "android32", "android64"}),
+    "android32": frozenset({"android", "android32"}),
+    "android64": frozenset({"android", "android64"}),
+}
 _QUALIFIERS = {"unsigned", "signed", "const", "volatile", "long", "short"}
 _PRIMITIVES = {
     "int",
@@ -253,7 +265,12 @@ def _parse_bases(value: str) -> List[str]:
     return bases
 
 
-def parse_class_body(cur: Cursor, cls: Class) -> None:
+def parse_class_body(
+    cur: Cursor,
+    cls: Class,
+    *,
+    field_platforms: frozenset[str] | None = None,
+) -> None:
     pending_method_attrs: List[str] = []
     current_access = "public"
     while not cur.at_end():
@@ -298,9 +315,26 @@ def parse_class_body(cur: Cursor, cls: Class) -> None:
             elif ch == "{" and depth == 0:
                 head = cur.text[start:i].strip()
                 end = _skip_balanced_brace(cur.text, i)
-                cur.line += cur.text[start:end].count("\n")
-                cur.pos = end
-                _parse_member(cls, head, line, pending_method_attrs, current_access)
+                block_platforms = _parse_platform_block_header(head)
+                if block_platforms is not None:
+                    inner_start = i + 1
+                    inner_end = end - 1
+                    inner_cur = Cursor(cur.text[inner_start:inner_end])
+                    inner_cur.line = line + cur.text[start:inner_start].count("\n")
+                    parse_class_body(inner_cur, cls, field_platforms=block_platforms)
+                    cur.line += cur.text[start:end].count("\n")
+                    cur.pos = end
+                else:
+                    cur.line += cur.text[start:end].count("\n")
+                    cur.pos = end
+                    _parse_member(
+                        cls,
+                        head,
+                        line,
+                        pending_method_attrs,
+                        current_access,
+                        field_platforms=field_platforms,
+                    )
                 pending_method_attrs.clear()
                 break
             elif ch == ";" and depth == 0:
@@ -308,7 +342,12 @@ def parse_class_body(cur: Cursor, cls: Class) -> None:
                 cur.line += cur.text[start : i + 1].count("\n")
                 cur.pos = i + 1
                 new_access = _parse_member(
-                    cls, text, line, pending_method_attrs, current_access
+                    cls,
+                    text,
+                    line,
+                    pending_method_attrs,
+                    current_access,
+                    field_platforms=field_platforms,
                 )
                 if new_access:
                     current_access = new_access
@@ -337,12 +376,33 @@ def _skip_balanced_brace(text: str, start: int) -> int:
     return len(text)
 
 
+def _expand_platform_scope(tokens: List[str]) -> frozenset[str]:
+    out: set[str] = set()
+    for token in tokens:
+        for platform in _PLATFORM_SCOPE_CANDIDATES:
+            aliases = _PLATFORM_ALIAS_TOKENS.get(platform, frozenset({platform}))
+            if token == platform or token in aliases:
+                out.add(platform)
+    return frozenset(out)
+
+
+def _parse_platform_block_header(head: str) -> frozenset[str] | None:
+    if "(" in head:
+        return None
+    tokens = [part.strip() for part in head.split(",")]
+    if not tokens or not all(token in _PLATFORM_BLOCK_TOKENS for token in tokens):
+        return None
+    return _expand_platform_scope(tokens)
+
+
 def _parse_member(
     cls: Class,
     decl: str,
     line: int,
     pending_method_attrs: List[str],
     current_access: str,
+    *,
+    field_platforms: frozenset[str] | None = None,
 ) -> Optional[str]:
     if not decl:
         return None
@@ -360,6 +420,7 @@ def _parse_member(
         return None
     field = _parse_field(head, line)
     if field:
+        field.platforms = field_platforms
         cls.fields.append(field)
     return None
 

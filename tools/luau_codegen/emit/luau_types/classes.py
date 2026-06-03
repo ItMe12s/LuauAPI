@@ -7,7 +7,7 @@ from luau_codegen.parse.broma import Class, Field, Method
 if TYPE_CHECKING:
     from luau_codegen.model.codegen_context import CodegenContext
 
-from luau_codegen.policy.fields import bindable_field
+from luau_codegen.policy.fields import bindable_field, field_applies_on_platform
 from luau_codegen.model.domain import short_name
 
 from luau_codegen.emit.luau_types.method_types import (
@@ -23,12 +23,15 @@ def _should_emit_type_class(
     objects: Dict[str, Class],
     field_targets: list[tuple[Class, Field]],
     skipped_classes: set,
+    target_platform: str = "win",
     ctx: CodegenContext | None = None,
 ) -> bool:
     if cls.name not in skipped_classes:
         return True
     bound = {field.name for _, field in field_targets}
     for field in cls.fields:
+        if not field_applies_on_platform(field, target_platform):
+            continue
         ok, reason, _, ret = bindable_field(field, objects, cls, ctx=ctx)
         if ok and field.name in bound and ret:
             return True
@@ -53,6 +56,7 @@ def _emit_class(
     field_targets: list[tuple[Class, Field]],
     objects: Dict[str, Class],
     skipped_classes: set,
+    target_platform: str = "win",
     ctx: CodegenContext | None = None,
 ) -> List[str]:
     lines: List[str] = []
@@ -68,6 +72,8 @@ def _emit_class(
     if _is_ccnode_descendant(cls, objects, skipped_classes):
         field_lines.append("    m_fields: { [string]: any }\n")
     for field in cls.fields:
+        if not field_applies_on_platform(field, target_platform):
+            continue
         ok, reason, _, ret = bindable_field(field, objects, cls, ctx=ctx)
         if ok and field.name in bound_field_names and ret:
             field_lines.append(f"    {field.name}: {ret.lua_type}\n")

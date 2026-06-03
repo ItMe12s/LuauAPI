@@ -29,6 +29,12 @@ def field_key(cls: Class, field: Field) -> str:
     return f"{cls.qualified_name}.{field.name}:{field.type}"
 
 
+def field_applies_on_platform(field: Field, platform: str) -> bool:
+    if field.platforms is None:
+        return True
+    return platform in field.platforms
+
+
 def _is_function_pointer(t: str) -> bool:
     return bool(re.search(r"\(\s*\*", normalize_type(t)))
 

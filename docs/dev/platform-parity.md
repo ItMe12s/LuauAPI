@@ -56,6 +56,13 @@ The `intersection` block has final common counts and how many methods, hooks, fi
 - `hookAddressGaps`: bindable methods missing a hook address on at least one supported platform.
 - `macGapReasons`: why `m1`/`imac` lags `android64`.
 
+## Platform-scoped fields
+
+Broma bindings may wrap members in platform blocks such as `android, ios { int m_spawnCount; }`.
+The Broma parser attaches a `platforms` set (e.g. `android32`, `android64`, `ios`) to such fields, avoiding header misparsing.
+Per-platform plans only consider fields that apply on that platform,
+the intersected `geode.d.luau` omits platform-only members entirely so they never appear in the common Lua surface.
+
 ## Policy
 
 - No per-symbol platform stubs. A symbol missing on some platforms is dropped, not emitted with a runtime shim. The type checker is the contract.

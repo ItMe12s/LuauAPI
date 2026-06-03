@@ -196,6 +196,46 @@ class BareInlineTests(unittest.TestCase):
         self.assertIn("setColors", plan.supported_by_class["SimplePlayer"])
 
 
+class PlatformFieldBlockTests(unittest.TestCase):
+    def test_android_ios_block_parses_inner_fields(self) -> None:
+        import tempfile
+
+        bro = """
+class Foo {
+    float m_offset;
+    android, ios {
+        int m_spawnCount;
+    }
+};
+"""
+        with tempfile.NamedTemporaryFile("w", suffix=".bro", delete=False) as f:
+            f.write(bro)
+            path = f.name
+        try:
+            root = parse_file(path)
+            fields = root.classes[0].fields
+            self.assertEqual(
+                [field.name for field in fields], ["m_offset", "m_spawnCount"]
+            )
+            self.assertIsNone(fields[0].platforms)
+            self.assertEqual(
+                fields[1].platforms,
+                frozenset({"android32", "android64", "ios"}),
+            )
+            self.assertFalse(any(field.name == "ios" for field in fields))
+        finally:
+            os.unlink(path)
+
+    def test_platform_block_header_not_a_field(self) -> None:
+        from luau_codegen.parse.broma import _parse_platform_block_header  # type: ignore[import-unresolved]
+
+        self.assertIsNone(_parse_platform_block_header("void foo()"))
+        self.assertEqual(
+            _parse_platform_block_header("android, ios"),
+            frozenset({"android32", "android64", "ios"}),
+        )
+
+
 class F3MethodAttrSplitTests(unittest.TestCase):
     def test_compound_method_attrs_split(self) -> None:
         from luau_codegen.parse.broma import Cursor as _Cursor, parse_class_body as _parse_class_body  # type: ignore[import-unresolved]

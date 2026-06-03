@@ -12,13 +12,48 @@ from helpers import (
     collect_bindings_root,  # type: ignore[import-unresolved]
     collect_parity,  # type: ignore[import-unresolved]
     collect_plan,  # type: ignore[import-unresolved]
+    collect_platform_plan,  # type: ignore[import-unresolved]
     emit_luau_bindings,  # type: ignore[import-unresolved]
     emit_luau_types,  # type: ignore[import-unresolved]
     hookable,  # type: ignore[import-unresolved]
     intersection_platforms,  # type: ignore[import-unresolved]
+    parse_file,  # type: ignore[import-unresolved]
     plan_outputs,  # type: ignore[import-unresolved]
     types_text,  # type: ignore[import-unresolved]
 )
+
+
+class PlatformFieldPlanTests(unittest.TestCase):
+    def test_platform_scoped_field_targets_follow_platform_plan(self) -> None:
+        bro = """
+[[link(win, android)]]
+class Foo : CCObject {
+    void touch() = win 0x1, ios 0x2, m1 0x3, android32 0x4, android64 0x5;
+    float m_offset;
+    android, ios {
+        int m_spawnCount;
+    }
+};
+"""
+        with tempfile.NamedTemporaryFile("w", suffix=".bro", delete=False) as f:
+            f.write(bro)
+            path = f.name
+        try:
+            root = parse_file(path)
+            ccobject = Class(name="CCObject", namespace="cocos2d")
+            root.classes.insert(0, ccobject)
+            win_plan = collect_platform_plan(root, "win")
+            ios_plan = collect_platform_plan(root, "ios")
+            win_names = [
+                field.name for _, field in win_plan.field_targets_by_class["Foo"]
+            ]
+            ios_names = [
+                field.name for _, field in ios_plan.field_targets_by_class["Foo"]
+            ]
+            self.assertEqual(win_names, ["m_offset"])
+            self.assertEqual(ios_names, ["m_offset", "m_spawnCount"])
+        finally:
+            os.unlink(path)
 
 
 class PlanRegressionTests(unittest.TestCase):

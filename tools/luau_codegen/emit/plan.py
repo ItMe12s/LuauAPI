@@ -6,7 +6,11 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Set
 
 from luau_codegen.parse.broma import Class, Field, Function, Method, Root
-from luau_codegen.policy.fields import bindable_field, field_key
+from luau_codegen.policy.fields import (
+    bindable_field,
+    field_applies_on_platform,
+    field_key,
+)
 from luau_codegen.policy.filtering import (
     group_supported,
     linkless_class_names,
@@ -156,6 +160,8 @@ def collect_platform_plan(root: Root, target_platform: str = "win") -> EmitPlan:
                 if hookable(cls, method, objects, target_platform, ctx=ctx):
                     hook_targets_by_class[cls.name].append((cls, method))
         for field in cls.fields:
+            if not field_applies_on_platform(field, target_platform):
+                continue
             ok, _, _, _ = bindable_field(field, objects, cls, ctx=ctx)
             if ok:
                 field_targets_by_class[cls.name].append((cls, field))
