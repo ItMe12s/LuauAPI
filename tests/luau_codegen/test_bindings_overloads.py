@@ -169,6 +169,37 @@ class F5OverloadFirstDeclaredWinsTests(unittest.TestCase):
             f"resolved overload should not be flagged ambiguous: {reasons}",
         )
 
+    def test_gj_item_icon_darken_store_item_prefers_shop_type(self) -> None:
+        cls = Class(
+            name="GJItemIcon",
+            namespace="gd",
+            bases=["CCSprite"],
+            attributes=["link(win)"],
+        )
+        shop_type = Method(
+            name="darkenStoreItem",
+            ret="void",
+            args=[Arg(type="ShopType", name="type")],
+            platforms={"win": "0x1"},
+        )
+        color = Method(
+            name="darkenStoreItem",
+            ret="void",
+            args=[Arg(type="cocos2d::ccColor3B", name="color")],
+            platforms={"win": "0x2"},
+        )
+        cls.methods = [shop_type, color]
+        objects = {"GJItemIcon": cls, "gd::GJItemIcon": cls, "CCSprite": cls}
+        grouped, skipped = group_supported(cls, objects, "win")
+        self.assertEqual(len(grouped["darkenStoreItem"]), 1)
+        self.assertIs(grouped["darkenStoreItem"][0], shop_type)
+        reasons = [reason for _, reason in skipped]
+        self.assertIn("overload-superseded:1", reasons)
+        self.assertFalse(
+            any(r.startswith("ambiguous-overload-arity") for r in reasons),
+            f"resolved overload should not be flagged ambiguous: {reasons}",
+        )
+
     def test_unmatched_preference_falls_back_to_ambiguous(self) -> None:
         cls = Class(
             name="CCScale9Sprite",

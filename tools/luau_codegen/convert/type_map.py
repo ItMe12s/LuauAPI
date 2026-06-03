@@ -116,17 +116,29 @@ CLASS_CALLBACK_ALIASES: dict[str, dict[str, str]] = {
 }
 
 GD_ENUM_TYPES = {
-    "IconType",
-    "UnlockType",
-    "SearchType",
-    "GJHttpType",
-    "LikeItemType",
-    "UserListType",
-    "GJRewardType",
-    "GJTimedLevelType",
-    "GJMusicAction",
+    "AudioSortType",
+    "EasingType",
+    "GameObjectType",
+    "GameOptionsSetting",
     "GJActionCommand",
+    "GJChallengeType",
+    "GJDifficulty",
+    "GJFeatureState",
+    "GJHttpType",
+    "GJLevelType",
+    "GJMusicAction",
+    "GJRewardType",
     "GJSongError",
+    "GJTimedLevelType",
+    "IconType",
+    "LeaderboardStat",
+    "LikeItemType",
+    "SearchType",
+    "ShopType",
+    "Speed",
+    "UnlockType",
+    "UserListType",
+    "ZLayer",
 }
 
 COCOS_ENUM_TYPES = {

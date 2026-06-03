@@ -432,6 +432,49 @@ class ContainerTypeMapTests(unittest.TestCase):
         self.assertIsNone(classify_arg("gd::set<gd::vector<int>>", {}))
 
 
+class GdEnumTypeMapTests(unittest.TestCase):
+    def test_classify_gd_enums(self) -> None:
+        for name in (
+            "GameOptionsSetting",
+            "EasingType",
+            "GJLevelType",
+            "LeaderboardStat",
+            "ShopType",
+            "Speed",
+            "GJDifficulty",
+            "ZLayer",
+            "AudioSortType",
+            "GameObjectType",
+            "GJFeatureState",
+            "GJChallengeType",
+        ):
+            info = classify_arg(name, {})
+            self.assertIsNotNone(info)
+            assert info is not None
+            self.assertEqual(info.kind, "enum")
+            self.assertEqual(info.lua_type, "number")
+            self.assertEqual(info.cxx_type, name)
+
+    def test_classify_gd_enum_const_ref(self) -> None:
+        info = classify_arg("EasingType const&", {})
+        self.assertIsNotNone(info)
+        assert info is not None
+        self.assertEqual(info.kind, "enum")
+        self.assertEqual(info.cxx_type, "EasingType")
+        self.assertTrue(info.is_ref)
+        self.assertFalse(info.is_out)
+
+    def test_classify_gd_vector_enum(self) -> None:
+        info = classify_arg("gd::vector<GJLevelType>", {})
+        self.assertIsNotNone(info)
+        assert info is not None
+        self.assertEqual(info.kind, "primitive_vector")
+        self.assertEqual(info.lua_type, "{ number }")
+        assert info.element_type is not None
+        self.assertEqual(info.element_type.kind, "enum")
+        self.assertEqual(info.element_type.cxx_type, "GJLevelType")
+
+
 class FmodTypeMapTests(unittest.TestCase):
     def test_classify_fmod_enums(self) -> None:
         for name in ("FMOD_RESULT", "FMOD_OPENSTATE", "FMOD_SPEAKERMODE"):
