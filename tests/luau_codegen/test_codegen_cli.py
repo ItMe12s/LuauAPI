@@ -109,7 +109,11 @@ class CodegenExitCodeTests(unittest.TestCase):
             ):
                 open(os.path.join(bindings, name), "w", encoding="utf-8").close()
             with mock.patch.object(cg, "collect_bindings_root", return_value=root):
-                with mock.patch.object(cg, "_run_delegate_codegen", return_value=0):
+                with mock.patch.object(
+                    cg,
+                    "emit_delegate_artifacts",
+                    return_value=[],
+                ):
                     with mock.patch.object(
                         cg.emit_bindings,
                         "emit",

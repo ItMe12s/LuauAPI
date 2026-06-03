@@ -3,7 +3,6 @@ from __future__ import annotations
 import argparse
 import os
 from pathlib import Path
-import subprocess
 import sys
 from typing import List
 
@@ -13,7 +12,7 @@ from luau_codegen.emit import bindings as emit_bindings
 from luau_codegen.emit import luau_types as emit_types
 from luau_codegen.emit import parity
 from luau_codegen.emit import plan as emit_plan
-from luau_codegen.emit.plan import ambiguous_overloads
+from luau_codegen.emit.plan import EmitPlan, ambiguous_overloads
 from luau_codegen.emit.delegates import (
     default_specs_path,
     delegate_gen_rel_paths,
@@ -37,29 +36,23 @@ def log_error(message: str) -> None:
     print(f"[luauapi] {message}", file=sys.stderr)
 
 
-def _repo_root() -> Path:
-    return Path(__file__).resolve().parents[3]
-
-
-def _run_delegate_codegen(bindings: str, out: str, specs_out: str) -> int:
-    cmd = [
-        sys.executable,
-        "-m",
-        "luau_codegen",
-        "--emit-delegates",
-        "--bindings",
-        bindings,
-        "--out",
-        out,
-        "--delegate-specs-out",
-        specs_out,
-    ]
-    env = os.environ.copy()
-    tools_dir = str(_repo_root() / "tools")
-    existing = env.get("PYTHONPATH", "")
-    env["PYTHONPATH"] = f"{tools_dir}{os.pathsep}{existing}" if existing else tools_dir
-    result = subprocess.run(cmd, env=env)
-    return result.returncode
+def _exit_on_ambiguous_overloads(
+    plan: EmitPlan,
+    *,
+    fail_on_ambiguous: bool,
+    brief: bool = False,
+) -> int | None:
+    ambiguous = ambiguous_overloads(plan)
+    if not fail_on_ambiguous or not ambiguous:
+        return None
+    if brief:
+        log_error("ambiguous overloads found")
+        return 6
+    for cls, method, reason in ambiguous[:200]:
+        log_error(f"ambiguous overload: {cls}.{method}: {reason}")
+    if len(ambiguous) > 200:
+        log_error(f"... {len(ambiguous) - 200} more ambiguous overloads")
+    return 6
 
 
 def main(argv: List[str]) -> int:
@@ -79,11 +72,6 @@ def main(argv: List[str]) -> int:
         help="Print generated binding paths relative to --out/src, one per line",
     )
     parser.add_argument(
-        "--list-type-outputs",
-        action="store_true",
-        help="Print generated type file names, one per line",
-    )
-    parser.add_argument(
         "--list-all-outputs",
         action="store_true",
         help="Print binding and type outputs (binding: and type: prefixes)",
@@ -99,7 +87,7 @@ def main(argv: List[str]) -> int:
     parser.add_argument(
         "--fail-on-ambiguous-overload",
         action="store_true",
-        help="Fail codegen when same-arity overloads require first-declared selection",
+        help="Fail codegen when same-arity overloads lack a preferred rule",
     )
     parser.add_argument(
         "--emit-delegates",
@@ -178,13 +166,19 @@ def main(argv: List[str]) -> int:
         for platform in plan_platforms
     }
 
-    if args.parity_report_out:
-        plan = emit_plan.collect_plan(
+    def collect_target_plan() -> EmitPlan:
+        return emit_plan.collect_plan(
             root, args.platform, plans_by_platform=plans_by_platform
         )
-        if args.fail_on_ambiguous_overload and ambiguous_overloads(plan):
-            log_error("ambiguous overloads found")
-            return 6
+
+    if args.parity_report_out:
+        plan = collect_target_plan()
+        if (
+            code := _exit_on_ambiguous_overloads(
+                plan, fail_on_ambiguous=args.fail_on_ambiguous_overload, brief=True
+            )
+        ) is not None:
+            return code
         try:
             parity_data = parity.collect_parity(
                 root,
@@ -199,12 +193,13 @@ def main(argv: List[str]) -> int:
         return 0
 
     if args.audit_report_out:
-        plan = emit_plan.collect_plan(
-            root, args.platform, plans_by_platform=plans_by_platform
-        )
-        if args.fail_on_ambiguous_overload and ambiguous_overloads(plan):
-            log_error("ambiguous overloads found")
-            return 6
+        plan = collect_target_plan()
+        if (
+            code := _exit_on_ambiguous_overloads(
+                plan, fail_on_ambiguous=args.fail_on_ambiguous_overload, brief=True
+            )
+        ) is not None:
+            return code
         try:
             audit_data = emit_audit.collect_audit(plan, root)
             _write_if_changed(
@@ -217,49 +212,27 @@ def main(argv: List[str]) -> int:
         return 0
 
     if args.list_outputs:
-        plan = emit_plan.collect_plan(
-            root, args.platform, plans_by_platform=plans_by_platform
-        )
-        ambiguous = ambiguous_overloads(plan)
-        if args.fail_on_ambiguous_overload and ambiguous:
-            for cls, method, reason in ambiguous[:200]:
-                log_error(f"ambiguous overload: {cls}.{method}: {reason}")
-            if len(ambiguous) > 200:
-                log_error(f"... {len(ambiguous) - 200} more ambiguous overloads")
-            return 6
+        plan = collect_target_plan()
+        if (
+            code := _exit_on_ambiguous_overloads(
+                plan, fail_on_ambiguous=args.fail_on_ambiguous_overload
+            )
+        ) is not None:
+            return code
         for rel in emit_plan.plan_outputs(root, args.platform, plan=plan):
             print(f"src/{rel}")
         for rel in delegate_gen_rel_paths():
             print(rel)
         return 0
 
-    if args.list_type_outputs:
-        plan = emit_plan.collect_plan(
-            root, args.platform, plans_by_platform=plans_by_platform
-        )
-        ambiguous = ambiguous_overloads(plan)
-        if args.fail_on_ambiguous_overload and ambiguous:
-            for cls, method, reason in ambiguous[:200]:
-                log_error(f"ambiguous overload: {cls}.{method}: {reason}")
-            if len(ambiguous) > 200:
-                log_error(f"... {len(ambiguous) - 200} more ambiguous overloads")
-            return 6
-        type_files = emit_types.emit(root, args.platform, plan=plan)
-        for name in sorted(type_files):
-            print(name)
-        return 0
-
     if args.list_all_outputs:
-        plan = emit_plan.collect_plan(
-            root, args.platform, plans_by_platform=plans_by_platform
-        )
-        ambiguous = ambiguous_overloads(plan)
-        if args.fail_on_ambiguous_overload and ambiguous:
-            for cls, method, reason in ambiguous[:200]:
-                log_error(f"ambiguous overload: {cls}.{method}: {reason}")
-            if len(ambiguous) > 200:
-                log_error(f"... {len(ambiguous) - 200} more ambiguous overloads")
-            return 6
+        plan = collect_target_plan()
+        if (
+            code := _exit_on_ambiguous_overloads(
+                plan, fail_on_ambiguous=args.fail_on_ambiguous_overload
+            )
+        ) is not None:
+            return code
         for rel in emit_plan.plan_outputs(root, args.platform, plan=plan):
             print(f"binding:src/{rel}")
         for rel in delegate_gen_rel_paths():
@@ -275,20 +248,24 @@ def main(argv: List[str]) -> int:
 
     specs_out = args.delegate_specs_out or str(default_specs_path())
     if not args.skip_delegate_emit:
-        delegate_status = _run_delegate_codegen(args.bindings, args.out, specs_out)
-        if delegate_status != 0:
-            return delegate_status
+        try:
+            specs = emit_delegate_artifacts(
+                args.bindings,
+                specs_out=specs_out,
+                gen_out=args.out,
+            )
+        except OSError as exc:
+            log_error(f"I/O failed while writing delegate artifacts: {exc}")
+            return 4
+        log_info(f"delegates: {len(specs)} specs -> {specs_out}")
 
-    plan = emit_plan.collect_plan(
-        root, args.platform, plans_by_platform=plans_by_platform
-    )
-    ambiguous = ambiguous_overloads(plan)
-    if args.fail_on_ambiguous_overload and ambiguous:
-        for cls, method, reason in ambiguous[:200]:
-            log_error(f"ambiguous overload: {cls}.{method}: {reason}")
-        if len(ambiguous) > 200:
-            log_error(f"... {len(ambiguous) - 200} more ambiguous overloads")
-        return 6
+    plan = collect_target_plan()
+    if (
+        code := _exit_on_ambiguous_overloads(
+            plan, fail_on_ambiguous=args.fail_on_ambiguous_overload
+        )
+    ) is not None:
+        return code
     written_paths: list[str] = []
     current_files: set[str] = set()
 

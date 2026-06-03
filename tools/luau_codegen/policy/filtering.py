@@ -226,8 +226,7 @@ def group_supported(
                     if m is not chosen:
                         skipped.append((m, f"overload-superseded:{arity}"))
             else:
-                kept.append(overloads[0])
-                for m in overloads[1:]:
+                for m in overloads:
                     skipped.append((m, f"ambiguous-overload-arity:{arity}"))
         if kept:
             by_name[name] = kept

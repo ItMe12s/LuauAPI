@@ -20,8 +20,8 @@ Because it is machine written, you do not edit it, and the build compiles it wit
 
 `CMakeLists.txt` runs `python -m luau_codegen` (the package in `tools/luau_codegen/`,
 with `tools/` on `PYTHONPATH`) as the `luauapi_codegen` target, and the main library depends on this target.
-The build calls it three times. Two calls list expected outputs (`--list-outputs` and `--list-type-outputs`) so CMake knows the byproducts.
-The third call performs generation and writes a stamp file.
+Configure runs `--list-all-outputs` once so CMake knows binding and type byproducts.
+The stamp custom command emits delegates, then runs full codegen in-process (no subprocess).
 
 The platform is chosen from the build target. Windows maps to `win`, for example, and an Android 64-bit build maps to `android64`.
 The Geometry Dash version is read from the `"win"` entry in `mod.json`.
@@ -158,14 +158,12 @@ Broma can declare several methods with the same name.
 The generator groups them by name and by input arity (`group_supported()` in `policy/filtering.py`).
 When two overloads share a name **and** the same input arity, only one can be bound, because Lua dispatches on arity, not on argument types.
 
-The rule is **first-declared wins**.
-Any later overload with the same name and number of arguments is skipped with the reason `ambiguous-overload-arity:<arity>`.
-These skipped overloads are listed in `report.md` and also in `schema.json` under `ambiguousOverloads`.
+When two overloads share a name and input arity, the generator keeps one only if `PREFERRED_OVERLOADS` lists its normalized arg signature.
+Otherwise every colliding overload is skipped with `ambiguous-overload-arity:<arity>` and the method is not bound.
+These skips appear in `report.md` and `schema.json` under `ambiguousOverloads`.
 
-By default, the build fails with exit code 6 if ambiguous overloads are found.
-This is controlled by the `--fail-on-ambiguous-overload` CLI flag.
-This ensures you resolve overload ambiguities instead of relying on declaration order.
-Resolve ambiguities by moving the preferred overload to the top or excluding others.
+The build passes `--fail-on-ambiguous-overload`, so codegen exits 6 when any ambiguous group remains.
+Add or fix a `PREFERRED_OVERLOADS` entry for that `(class, method)`.
 
 ## Denylist maintenance
 
@@ -173,7 +171,7 @@ Resolve ambiguities by moving the preferred overload to the top or excluding oth
 
 - `INACCESSIBLE_METHODS`: `(class, method)` pairs that must never bind (engine internals, editor-only delegates, unsafe helpers).
 - `INACCESSIBLE_CLASSES`: whole classes treated as opaque.
-- `PREFERRED_OVERLOADS`: for a `(class, method)` where overloads collide on input arity, the normalized arg signatures to keep. Others skip as `overload-superseded:<arity>`. Use this instead of **first-declared wins** when you need the `create` or script-friendly overload.
+- `PREFERRED_OVERLOADS`: for a `(class, method)` where overloads collide on input arity, the normalized arg signatures to keep. Others skip as `overload-superseded:<arity>`. Required when multiple same-arity overloads must bind.
 
 Entries are conservative. Removing one can re-expose a method that breaks marshalling.
 Do not expand `PREFERRED_OVERLOADS` without a real overload clash.

@@ -14,8 +14,8 @@ from helpers import (
 )
 
 
-class F5OverloadFirstDeclaredWinsTests(unittest.TestCase):
-    def test_first_overload_kept_on_arity_collision(self) -> None:
+class F5OverloadPreferredOnlyTests(unittest.TestCase):
+    def test_ambiguous_overloads_dropped_without_preference(self) -> None:
         cls = Class(
             name="TestObj",
             namespace="cocos2d",
@@ -37,11 +37,11 @@ class F5OverloadFirstDeclaredWinsTests(unittest.TestCase):
         cls.methods = [m1, m2]
         objects = {"TestObj": cls, "cocos2d::TestObj": cls}
         grouped, skipped = group_supported(cls, objects, "win")
-        self.assertIn("foo", grouped)
-        self.assertEqual(len(grouped["foo"]), 1)
-        self.assertIs(grouped["foo"][0], m1)
-        self.assertEqual(len(skipped), 1)
-        self.assertIn("ambiguous-overload-arity", skipped[0][1])
+        self.assertNotIn("foo", grouped)
+        self.assertEqual(len(skipped), 2)
+        self.assertTrue(
+            all("ambiguous-overload-arity" in reason for _, reason in skipped)
+        )
 
     def test_fail_on_ambiguous_overload_flag_exits_nonzero(self) -> None:
         tmpdir = tempfile.mkdtemp()
@@ -200,7 +200,7 @@ class F5OverloadFirstDeclaredWinsTests(unittest.TestCase):
             f"resolved overload should not be flagged ambiguous: {reasons}",
         )
 
-    def test_unmatched_preference_falls_back_to_ambiguous(self) -> None:
+    def test_unmatched_preference_marks_all_ambiguous(self) -> None:
         cls = Class(
             name="CCScale9Sprite",
             namespace="cocos2d",
@@ -224,10 +224,16 @@ class F5OverloadFirstDeclaredWinsTests(unittest.TestCase):
         cls.methods = [first, second]
         objects = {"CCScale9Sprite": cls, "cocos2d::CCScale9Sprite": cls}
         grouped, skipped = group_supported(cls, objects, "win")
-        self.assertEqual(len(grouped["create"]), 1)
-        self.assertIs(grouped["create"][0], first)
+        self.assertNotIn("create", grouped)
         reasons = [reason for _, reason in skipped]
-        self.assertIn("ambiguous-overload-arity:2", reasons)
+        self.assertEqual(
+            [
+                reason
+                for reason in reasons
+                if reason.startswith("ambiguous-overload-arity")
+            ],
+            ["ambiguous-overload-arity:2", "ambiguous-overload-arity:2"],
+        )
 
 
 class F8ConstMethodManglingTests(unittest.TestCase):
