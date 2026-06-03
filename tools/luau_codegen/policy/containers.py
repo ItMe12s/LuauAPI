@@ -36,11 +36,3 @@ def container_supported_as_return(info: TypeInfo) -> bool:
     if info.kind not in _CONTAINER_KINDS:
         return True
     return not info.is_out and not info.is_vector_ptr
-
-
-def vector_view_supported_as_return(info: TypeInfo) -> bool:
-    return container_supported_as_return(info)
-
-
-def vector_view_supported_as_arg(info: TypeInfo, ret_kind: str) -> bool:
-    return container_supported_as_arg(info, ret_kind)

@@ -7,7 +7,3 @@ DENIED_VALUE_STRUCTS: dict[str, str] = {
 GATED_VALUE_STRUCTS: dict[str, str] = {
     "SmartPrefabResult": "SmartPrefabResult",
 }
-
-GATED_VALUE_CHECK_CXX: dict[str, str] = {
-    lua: cxx for lua, cxx in GATED_VALUE_STRUCTS.items()
-}

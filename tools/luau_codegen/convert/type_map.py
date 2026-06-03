@@ -21,10 +21,7 @@ from luau_codegen.model.pair_design import (
     pair_key_map_entry_lua_type,
     pair_lua_type,
 )
-from luau_codegen.model.value_struct_gate import (
-    GATED_VALUE_CHECK_CXX,
-    GATED_VALUE_STRUCTS,
-)
+from luau_codegen.model.value_struct_gate import GATED_VALUE_STRUCTS
 
 if TYPE_CHECKING:
     from luau_codegen.model.codegen_context import CodegenContext
@@ -110,7 +107,7 @@ VALUE_CHECK_CXX_TYPES: dict[str, str] = {
     "HSVValue": "cocos2d::ccHSVValue",
     "CCAffineTransform": "cocos2d::CCAffineTransform",
     "UIButtonConfig": "UIButtonConfig",
-    **GATED_VALUE_CHECK_CXX,
+    **GATED_VALUE_STRUCTS,
 }
 
 VALUE_TYPES = {
@@ -243,9 +240,6 @@ STATIC_ENUM_CXX_NAMES: dict[str, str] = {
     **{f"cocos2d::{name}": f"cocos2d::{name}" for name in COCOS_ENUM_TYPES},
     **{name: name for name in FMOD_ENUM_TYPES},
 }
-
-# Back-compat alias for tests and callers that referenced the static table name.
-ENUM_CXX_NAMES = STATIC_ENUM_CXX_NAMES
 
 
 def _resolve_ctx(ctx: CodegenContext | None) -> CodegenContext:

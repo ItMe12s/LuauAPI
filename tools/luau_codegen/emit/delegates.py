@@ -274,9 +274,6 @@ def resolve_bindings_dir(bindings_dir: Path | str | None = None) -> Path:
     )
 
 
-resolve_bro_dir = resolve_bindings_dir
-
-
 def parse_broma(
     bindings_dir: Path | str | None = None,
 ) -> dict[str, list[DelegateMethod]]:
