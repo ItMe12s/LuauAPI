@@ -15,7 +15,9 @@
   extend, or contribute to the project.
 </p>
 
-**Heads up: LuauAPI is still early, so expect things to break.**
+**Heads up: LuauAPI is still early, so expect things to change.**
+
+**You are assumed to have basic modding knowledge. [Learn Geode SDK here](https://docs.geode-sdk.org).
 
 ## Getting started
 
