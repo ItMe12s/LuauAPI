@@ -467,6 +467,8 @@ class GdEnumTypeMapTests(unittest.TestCase):
             "EasingType",
             "GJLevelType",
             "LeaderboardStat",
+            "LevelLeaderboardMode",
+            "LevelLeaderboardType",
             "ShopType",
             "Speed",
             "GJDifficulty",
@@ -475,6 +477,9 @@ class GdEnumTypeMapTests(unittest.TestCase):
             "GameObjectType",
             "GJFeatureState",
             "GJChallengeType",
+            "GauntletType",
+            "GJSongType",
+            "SelectArtType",
         ):
             info = classify_arg(name, {})
             self.assertIsNotNone(info)
