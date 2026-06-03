@@ -42,6 +42,16 @@ These classes are generated from the game bindings, and there are many of them.
 Rather than learning them from a list here, you rely on editor autocomplete backed by the generated type stubs.
 See [Type stubs and editor setup](reference/type-stubs.md).
 
+## Reference page layouts
+
+Lua reference pages use one of three layouts. Pick the page that matches what you need.
+
+- **Per-symbol headings** (`## print`, `## geode.json.parse`): small APIs with a few exports. Used by [globals](reference/globals.md), [mod](reference/mod.md), [fs](reference/fs.md), [json](reference/json.md), and [hooks](reference/hooks.md).
+- **Types and Functions** (`## Types`, `## Functions`, `### name`): larger APIs with shared types. Used by [task](reference/task.md), [time](reference/time.md), and [imgui](reference/imgui.md).
+- **Topic sections** (behavior grouped by concept): pattern APIs without a flat symbol list. Used by [callbacks](reference/callbacks.md) and [delegates](reference/delegates.md).
+
+Guides teach usage. Reference pages list signatures, types, and limits.
+
 ## Rules to remember
 
 - Your script runs on the main thread.

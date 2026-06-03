@@ -31,6 +31,11 @@ time.unix() -> number
 
 Returns the seconds since the unix epoch. It uses the system clock, which makes it suitable for wall clock time.
 
+## Related
+
+- [Tasks and time](../guide/tasks-and-time.md)
+- [Reference: task](task.md)
+
 ## Source
 
 - `tools/luau_codegen/extra_bindings/task.dluau`

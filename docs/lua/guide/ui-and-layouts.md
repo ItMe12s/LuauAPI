@@ -24,7 +24,7 @@ Commonly used factories include:
 - and overlay / other useful stuff (`Notification`, `LoadingSpinner`, `ProgressBar`, `ColorPickPopup`).
 
 Every node you create must get a mod-prefixed string ID.
-See [Using game objects](using-game-objects.md#node-ids-mod-compatibility).
+See [Using game objects](using-game-objects.md).
 
 ## Layouts
 

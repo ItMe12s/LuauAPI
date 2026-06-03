@@ -21,18 +21,19 @@ Methods and factories with several overloads are emitted as one widened signatur
 Leading arguments are typed where every overload agrees, then the rest fall back to `...any`.
 The runtime still selects an overload by argument count, so a matching call type checks and dispatches correctly.
 
-## Editor setup
-
-The LuauAPI repo ships `.luaurc` only. Mod authors create `.vscode/settings.json` locally.
-Editor config walkthrough: see [Editor setup](../../getting-started/editor-setup.md).
-The bindings stub is large. The fflags override in that walkthrough prevents type complexity errors. Keep those values in place.
-
 ## Regenerating the stubs
 
 The stub file is written during the build by the `luauapi_codegen` target. To refresh it, build the project.
 See [Building](../../getting-started/building.md) and [Codegen](../../dev/codegen.md).
 
 The `definitionFiles` entry is a fixed single path, so after a rebuild you only reload the editor. There is nothing to re-paste.
+
+## Related
+
+- [Editor setup](../../getting-started/editor-setup.md)
+- [Building](../../getting-started/building.md)
+- [Codegen](../../dev/codegen.md)
+- [Globals](globals.md)
 
 ## Source
 

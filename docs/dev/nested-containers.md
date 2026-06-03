@@ -66,13 +66,13 @@ These shapes were skipped before nested support. After regen they should bind:
 | `m_nonEffectObjectsSizes` | `gd::vector<gd::vector<int>*>` | Read-only getter |
 | `m_collisionBlockSectionSizes` | `gd::vector<gd::vector<int>*>` | Read-only getter |
 
-`audit_field_skips.py` should drop these from skip output. Policy skips stay.
+The codegen audit report (`audit.md`, via `--audit-report-out`) should drop these from skip output. Policy skips stay.
 
 ## Verification
 
 1. `PYTHONPATH=tools python -m unittest discover -s tests/luau_codegen -p "test_*.py"`
 2. Regenerate `types/geode.d.luau` through the build
-3. `PYTHONPATH=tools python tools/scripts/audit_field_skips.py`
+3. `PYTHONPATH=tools python -m luau_codegen --bindings <bindings-dir> --audit-report-out audit.md --platform win`
 4. Confirm nested map and size fields bind, deep nested vectors still skipped
 
 ## Source
@@ -81,6 +81,6 @@ These shapes were skipped before nested support. After regen they should bind:
 - `tools/luau_codegen/convert/marshalling.py`
 - `tools/luau_codegen/model/nested_containers.py`
 - `src/lua/bindings/framework/ContainerTables.hpp`
-- `tools/scripts/audit_field_skips.py`
+- `tools/luau_codegen/emit/audit.py`
 - [Codegen](codegen.md)
 - [Pair containers](pair-containers.md)

@@ -2,13 +2,10 @@
 
 ## Summary
 
-A hook lets your script run code before or after a game function.
-You can read the arguments, change the arguments, skip the original, or change the return value.
-Hooks are the main way scripts change the game.
+A hook runs your code before or after a game function.
+You can read arguments, change arguments, skip the original, or change the return value.
 
 ## The basic shape
-
-Use `geode.hook` to install a hook.
 
 ```lua
 local handle = geode.hook("geode.gd.MenuLayer:init/0", {
@@ -19,11 +16,11 @@ local handle = geode.hook("geode.gd.MenuLayer:init/0", {
 })
 ```
 
-The first argument is the target id, and the second argument is a callback table.
+Pass a target id string and a callback table. Signatures and limits: [Hooks reference](../reference/hooks.md).
 
 ## The target id
 
-The target id names the function you want to hook. Its format is:
+Format:
 
 ```text
 namespace.Class:method/argCount
@@ -31,28 +28,27 @@ namespace.Class:method/argCount
 
 - `namespace.Class` is the bound class, for example `geode.gd.GameManager`.
 - `method` is the method name.
-- `argCount` is the number of arguments the method takes, not counting `self`.
+- `argCount` is the argument count, not counting `self`.
 
-Examples taken from real scripts:
+Examples:
 
 - `geode.gd.MenuLayer:init/0`
 - `geode.gd.GameManager:setIntGameVariable/2`
 - `geode.gd.GameManager:getGameVariable/1`
 
-A target that does not exist causes the call to raise an error.
+An unknown target raises an error.
 
 ## The callback table
 
-The table can hold three fields.
-All of them are optional, but you must provide at least one of `before` or `after`.
+Provide at least one of `before` or `after`. Optional fields:
 
 - `before` runs before the original.
 - `after` runs after the original.
-- `priority` is a number that orders callbacks. The default is `0`.
+- `priority` orders hooks on the same target. Default `0`.
 
 ## The before callback
 
-`before` runs first, and it receives `self` followed by the method arguments.
+`before` receives `self` and the method arguments.
 
 ```lua
 geode.hook("geode.gd.GameManager:setIntGameVariable/2", {
@@ -62,20 +58,14 @@ geode.hook("geode.gd.GameManager:setIntGameVariable/2", {
 })
 ```
 
-A `before` callback controls what happens next through its return value:
+Return value:
 
-- Return `nil` or nothing to run the original as normal.
-- Return a table with an `args` field to replace the method arguments.
-- Return `geode.skip(value)` to skip the original and use `value` as the return. For void, use `geode.skip()`.
-- Any other non-nil return is ignored. The runtime logs an error and runs the original.
+- `nil` or nothing: run the original.
+- `{ args = {...} }`: replace arguments (positional or named keys). Wrong types are logged and the original args are kept.
+- `geode.skip(value)`: skip the original and use `value` as the return. For void methods, use `geode.skip()`. Wrong skip types are logged and the original still runs.
+- Any other non-nil value: logged and ignored, original still runs.
 
-Invalid override values are rejected strictly:
-
-- `{ args = { wrongType, ... } }` logs an error and the original arguments are kept.
-- `geode.skip(wrongType)` logs an error, the skip is rejected, and the original still runs.
-- An `after` return of the wrong type logs an error and the original return is kept.
-
-Change the arguments:
+Replace arguments:
 
 ```lua
 before = function(self, key, value)
@@ -84,9 +74,6 @@ before = function(self, key, value)
     end
 end
 ```
-
-The `args` list can be positional, as shown above. It can also use the argument names as keys.
-A positional list must hold one value per method argument.
 
 Skip the original:
 
@@ -100,7 +87,7 @@ end
 
 ## The after callback
 
-`after` runs after the original. It receives `self`, then the method arguments, then the return value as the final argument.
+`after` receives `self`, the method arguments, then the return value last.
 
 ```lua
 geode.hook("geode.gd.GameManager:getIntGameVariable/1", {
@@ -113,42 +100,62 @@ geode.hook("geode.gd.GameManager:getIntGameVariable/1", {
 })
 ```
 
-To change the return value, return a new value.
-To keep it, return the value you received. Return `nil` to leave the original return in place.
-A return value of the wrong type is rejected and the original return is kept.
+- Return a new value to replace the return.
+- Return the value you received to keep it.
+- Return `nil` to keep the original return.
+- Wrong types are logged and the original return is kept.
 
 ## Priority and order
 
-`priority` orders callbacks when more than one hook targets the same function.
+`priority` only matters when several hooks share the same target id.
 
-- For `before` callbacks, a lower priority runs first.
-- For `after` callbacks, a higher priority runs first.
+| Callback | Runs first when |
+| --- | --- |
+| `before` | Priority is lower |
+| `after` | Priority is higher |
 
-When two callbacks share a priority, install order breaks the tie. This behavior is defined in the generated hook runtime.
+Same `priority`: earlier registration wins for `before`, later registration wins for `after`.
+
+```lua
+geode.hook("geode.gd.GameManager:setIntGameVariable/2", {
+    priority = -10,
+    before = function(self, key, value) end,
+})
+
+geode.hook("geode.gd.GameManager:setIntGameVariable/2", {
+    before = function(self, key, value) end,
+})
+
+geode.hook("geode.gd.GameManager:setIntGameVariable/2", {
+    priority = 10,
+    after = function(self, key, value, result)
+        return result
+    end,
+})
+```
+
+The first hook runs its `before` first (`-10` before `0`). The third hook runs its `after` before any `after` at default priority `0`.
 
 ## The handle
 
-`geode.hook` returns a handle that you use to control the hook later.
+`geode.hook` returns a handle. The hook is enabled when you register it.
 
 ```lua
 local handle = geode.hook("geode.gd.MenuLayer:init/0", {
     after = function(self, result) return result end,
 })
 
-print(handle:isEnabled())
 handle:disable()
 handle:enable()
 handle:remove()
+print(handle:isEnabled())
 ```
 
-See [Hooks reference](../reference/hooks.md) for handle method details.
-
-A hook is installed and enabled the first time you register it.
+Method details: [Hooks reference](../reference/hooks.md).
 
 ## Per object fields
 
-Inside a hook you often want to store data on the object. Use `self.m_fields` or `geode.fields(self)`.
-Both give you a plain table tied to that object.
+Store data on the object with `self.m_fields` or `geode.fields(self)`.
 
 ```lua
 geode.hook("geode.gd.MenuLayer:init/0", {
@@ -160,16 +167,13 @@ geode.hook("geode.gd.MenuLayer:init/0", {
 })
 ```
 
-See [Using game objects](using-game-objects.md) for more.
+See [Using game objects](using-game-objects.md).
 
 ## Limits and notes
 
-- Total hook callbacks across all targets: `4096`.
-- Hook callbacks per target: `64`.
-- Each callback runs with a `50 ms` budget.
-- Callbacks run on the main thread.
-
-See [Limits and errors](../../cpp/limits-and-errors.md) for the full limits table.
+Counts and the `50 ms` callback budget: [Hooks reference](../reference/hooks.md).
+Hooks run on the main thread.
+Shared runtime caps: [Limits and errors](../../cpp/limits-and-errors.md).
 
 ## Related
 

@@ -175,6 +175,12 @@ Use it to size widgets to the window. Negative sizes also fill the space, typica
 - Widget and window functions only work on the main thread, inside an `imgui.onDraw` callback. Calling them elsewhere (for example from a `task.every` callback) raises an error.
 - A draw callback that errors is removed so it does not spam the log every frame.
 
+## Related
+
+- [UI and layouts](../guide/ui-and-layouts.md)
+- [ImGui draw scheduler](../../dev/imgui-draw-scheduler.md)
+- [Limits and errors](../../cpp/limits-and-errors.md)
+
 ## Source
 
 - `tools/luau_codegen/extra_bindings/imgui.dluau`

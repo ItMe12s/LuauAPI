@@ -75,7 +75,6 @@ Each selector handler trampoline is retained and associated with an anchor `CCOb
 - The orphan registry for static calls and void-return methods (cleared on runtime shutdown).
 
 When the anchor's retain count drops to one before `release`, all its handlers are cleaned up, like `geode.fields` tables.
-The orphan registry has a soft cap of `4096`. If exceeded, a warning is logged, but all handlers are still kept.
 
 `std::function` wrappers are held for the duration of the C++ call that received them (same `LuaCallback` lifetime as before).
 

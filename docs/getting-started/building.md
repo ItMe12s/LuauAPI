@@ -18,39 +18,15 @@ For platform builds, use the Geode CLI or the CI workflow in `.github/workflows/
 
 ## Code generation
 
-The build runs a Python code generator before it compiles.
-This step is the `luauapi_codegen` target, and the main library depends on it.
-
-The generator reads Broma binding files from the pinned Geode bindings checkout and produces two kinds of output:
-
-- C++ binding sources in `build/luauapi-gen/src`
-- A Luau type stub, `types/geode.d.luau`
-
-Platform mapping and Geometry Dash version selection are described in [Codegen](../dev/codegen.md).
-The generated C++ sources are compiled with warnings disabled, because they are machine written.
-
-The generator entry point is `python -m luau_codegen` (the package in `tools/luau_codegen/`, run with `tools/` on `PYTHONPATH`).
-The build calls it twice.
-The first call lists the expected outputs so that CMake knows the byproducts.
-The second call performs the real generation and writes a stamp file.
-
-Generated files are not meant to be edited by hand. To change the generated output, change the generator or its binding inputs and rebuild.
-See [Codegen](../dev/codegen.md).
+The build runs the `luauapi_codegen` target before compiling the main library.
+It reads Broma binding files and writes generated C++ plus `types/geode.d.luau`.
+Do not edit generated files by hand. Change the generator or its inputs and rebuild.
+See [Codegen](../dev/codegen.md) for outputs, the configure and stamp commands, and platform mapping.
 
 ## Building and running tests
 
-Tests are disabled by default. Enable them with the `LUAUAPI_BUILD_TESTS` option.
-
-```bash
-cmake -B build -DLUAUAPI_BUILD_TESTS=ON
-cmake --build build
-ctest --test-dir build
-```
-
-This builds the `luauapi_tests` executable and registers a Python test. The C++ tests use Catch2.
-The host tests never link the game libraries.
-CMake fails deliberately if a test target tries to link Cocos2d, the Geode bindings, or similar game only libraries.
-See [Testing](../dev/testing.md).
+Tests are disabled by default. Enable them with `-DLUAUAPI_BUILD_TESTS=ON`, build, then run CTest.
+See [Testing](../dev/testing.md) for the C++ and Python suites and how to run codegen tests without CMake.
 
 ## Source
 

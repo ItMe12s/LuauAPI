@@ -23,7 +23,7 @@ Anything supported on some but not all is dropped with reason `intersection-miss
 Hooks, fields, and namespace free functions use the same rule.
 Classes with no members left are skipped, or become type-only stubs (see `emit/luau_types/references.py`).
 
-The result is one common surface in generated bindings and `geode.d.luau`.
+The result is one common surface in generated bindings and `types/geode.d.luau`.
 If the stub type-checks a call, that call is valid on all supported platforms.
 Platform-only APIs never reach Lua authors.
 
@@ -61,12 +61,12 @@ The `intersection` block has final common counts and how many methods, hooks, fi
 Broma bindings may wrap members in platform blocks such as `android, ios { int m_spawnCount; }`.
 The Broma parser attaches a `platforms` set (e.g. `android32`, `android64`, `ios`) to such fields, avoiding header misparsing.
 Per-platform plans only consider fields that apply on that platform,
-the intersected `geode.d.luau` omits platform-only members entirely so they never appear in the common Lua surface.
+the intersected `types/geode.d.luau` omits platform-only members entirely so they never appear in the common Luau surface.
 
 ## Policy
 
 - No per-symbol platform stubs. A symbol missing on some platforms is dropped, not emitted with a runtime shim. The type checker is the contract.
-- No platform-specific stubs. Only the intersected `geode.d.luau` is emitted to keep mods cross-platform.
+- No platform-specific stubs. Only the intersected `types/geode.d.luau` is emitted to keep mods cross-platform.
 - To close a gap, add a verified address or `link` metadata (not by relaxing filters). The symbol will reappear automatically.
 
 ## Source

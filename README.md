@@ -5,9 +5,8 @@
 </p>
 
 <p align="center">
-  LuauAPI is a shared Luau runtime for Geode mods.<br>
-  It lets Luau scripts safely access Geometry Dash through generated bindings,<br>
-  so you can write full mods using only Luau.
+  A shared Luau runtime for Geode mods.<br>
+  LuauAPI lets mods run Luau scripts and call into Geometry Dash through generated bindings.<br>
 </p>
 
 <p align="center">
@@ -16,7 +15,7 @@
   extend, or contribute to the project.
 </p>
 
-**Early and in active development, APIs may change.**
+**Heads up: LuauAPI is still early, so expect things to break.**
 
 ## Getting started
 
@@ -38,6 +37,7 @@ For anyone writing `.luau` files that run inside the game.
   - [Hooks](docs/lua/guide/hooks.md)
   - [Tasks and time](docs/lua/guide/tasks-and-time.md)
   - [Using game objects](docs/lua/guide/using-game-objects.md)
+  - [UI and layouts](docs/lua/guide/ui-and-layouts.md)
   - [Modules and require](docs/lua/guide/modules-and-require.md)
   - [Sharing APIs between mods](docs/lua/guide/sharing-apis-between-mods.md)
 - Reference

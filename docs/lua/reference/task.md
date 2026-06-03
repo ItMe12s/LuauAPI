@@ -30,7 +30,8 @@ task.spawn(fn: (...any) -> ...any, ...any) -> ()
 ```
 
 Runs `fn` immediately under the callback budget. Extra arguments are passed to `fn`.
-Errors are logged rather than thrown, and the call returns nothing.
+Raises an error if the runtime is not ready.
+Errors inside `fn` are logged rather than thrown, and the call returns nothing.
 
 ### task.delay
 
@@ -68,6 +69,12 @@ Cancels a scheduled task. You can also call `handle:cancel()`.
 
 - The most scheduled tasks at once is `4096`. Going over raises an error.
 - Each callback runs with a `50 ms` budget.
+
+## Related
+
+- [Tasks and time](../guide/tasks-and-time.md)
+- [Reference: time](time.md)
+- [Limits and errors](../../cpp/limits-and-errors.md)
 
 ## Source
 

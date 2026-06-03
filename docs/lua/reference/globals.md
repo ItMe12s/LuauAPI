@@ -79,6 +79,13 @@ The `task`, `time`, and `geode` globals are documented on their own pages.
 - [fs](fs.md)
 - [Hooks](hooks.md)
 
+## Related
+
+- [Modules and require](../guide/modules-and-require.md)
+- [Sharing APIs between mods](../guide/sharing-apis-between-mods.md)
+- [Tasks and time](../guide/tasks-and-time.md)
+- [Limits and errors](../../cpp/limits-and-errors.md)
+
 ## Source
 
 - `src/lua/runtime/Runtime.cpp`

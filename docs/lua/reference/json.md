@@ -2,7 +2,7 @@
 
 ## Summary
 
-This page lists `geode.json`. It converts between JSON text and Lua values,
+This page lists `geode.json`. It converts between JSON text and Luau values,
 using the same JSON model as `geode.Mod.getSavedValue`/`setSavedValue`.
 
 JSON types map to Lua as: boolean, number, string, `nil` (null), array table, and object table.
@@ -14,8 +14,9 @@ Conversion is bounded to 32 levels of nesting, anything deeper is treated as nul
 geode.json.parse(text: string) -> (any?, string?)
 ```
 
-Parses a JSON string into a Lua value.
+Parses a JSON string into a Luau value.
 On success returns the value. On failure returns `nil` and an error message.
+Input strings over 8 MiB are rejected with `nil, "json exceeds maximum size"`.
 
 ```lua
 local value, err = geode.json.parse('{"a":[1,2,3]}')
@@ -32,7 +33,7 @@ end
 geode.json.dump(value: any, indent: number?) -> string
 ```
 
-Serializes a Lua value to a JSON string.
+Serializes a Luau value to a JSON string.
 
 - An array-like table (sequential integer keys from 1) becomes a JSON array.
 - Any other table becomes a JSON object, only string keys are kept.

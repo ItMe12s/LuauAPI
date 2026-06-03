@@ -14,7 +14,7 @@ geode.hook(target: string, callback: HookCallbackTable) -> HookHandle
 `geode.hook` registers a callback on a target function and returns a handle.
 The target must exist, otherwise the call raises an error. You must pass exactly two arguments.
 
-The target id format is `namespace.Class:method/argCount`, for example `geode.gd.GameManager:setIntGameVariable/2`.
+Target id format and examples: [Hooks guide](../guide/hooks.md).
 
 ## HookCallbackTable
 
@@ -32,19 +32,12 @@ type HookCallbackTable = {
 
 You must provide at least one of `before` or `after`.
 
-## before return values
+## Callback returns
 
-- Return nothing or `nil` to run the original.
-- Return `{ args = {...} }` to replace the arguments (by position or name). Types must match.
-- Return `geode.skip(value)` to skip the original and use `value` as the return. The skip value must match the method return type.
-- Any other value is ignored, with a logged error.
+`before` may return nothing, `{ args = {...} }`, or `geode.skip(value)`. `after` may return nothing or a replacement return value.
+Wrong types and invalid overrides are logged and ignored.
 
-Invalid `args`, skip values, or return overrides are rejected. The runtime logs an error and keeps the original arguments or return.
-
-## after return values
-
-- Return `nil` to keep the original return.
-- Return a value to replace the return. The value must match the method return type.
+Worked examples: [Hooks guide](../guide/hooks.md).
 
 ## geode.skip
 
@@ -82,6 +75,12 @@ type HookHandle = {
 - Total callbacks across all targets: `4096`.
 - Callbacks per target: `64`.
 - Callback budget: `50 ms`.
+
+## Related
+
+- [Hooks](../guide/hooks.md)
+- [Callbacks](callbacks.md)
+- [Limits and errors](../../cpp/limits-and-errors.md)
 
 ## Source
 

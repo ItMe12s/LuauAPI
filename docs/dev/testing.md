@@ -8,7 +8,8 @@ This page lists them and shows how to run them.
 
 ## Turning tests on
 
-Tests are disabled by default. Enable them with the `LUAUAPI_BUILD_TESTS` option, then build and run with CTest.
+Tests are disabled by default. Enable them with the `LUAUAPI_BUILD_TESTS` option after a normal configure.
+See [Building](../getting-started/building.md) for the base CMake workflow.
 
 ```bash
 cmake -B build -DLUAUAPI_BUILD_TESTS=ON
@@ -56,32 +57,32 @@ PYTHONPATH=tools python -m unittest discover -s tests/luau_codegen -p "test_*.py
 
 | Test file | Coverage |
 | --------- | -------- |
-| `test_audit.py` | TODO |
-| `test_bindings_fmod.py` | TODO |
-| `test_bindings_handlers.py` | TODO |
-| `test_bindings_overloads.py` | TODO |
-| `test_bindings_safety.py` | TODO |
+| `test_audit.py` | Skip audit buckets, markdown sections, totals vs plan |
+| `test_bindings_fmod.py` | FMOD opaque handle bindings emit lightuserdata |
+| `test_bindings_handlers.py` | SEL/menu handler collapse, schedule, lazy sprite callbacks |
+| `test_bindings_overloads.py` | Ambiguous overload policy, preferred overloads, const mangling |
+| `test_bindings_safety.py` | Generated hooks, fields, containers, hook API safety |
 | `test_broma.py` | Broma parser, class/method attributes |
-| `test_cc_c_array.py` | TODO |
+| `test_cc_c_array.py` | ccCArray allowlist, type map, marshalling, readonly fields |
 | `test_codegen_cli.py` | CLI I/O, exit codes, binding root collection |
-| `test_constructors.py` | TODO |
-| `test_delegate_generator.py` | TODO |
+| `test_constructors.py` | `BINDABLE_CONSTRUCTORS` opt-in, `new` factory emission |
+| `test_delegate_generator.py` | Delegate spec collection, C++ trampoline emission |
 | `test_denylist.py` | Denylist and preferred-overload entry validity |
 | `test_filtering.py` | Method eligibility, link classes, denylist |
 | `test_free_functions.py` | Free-function platform overrides and emission |
-| `test_geode_ccnode.py` | TODO |
+| `test_geode_ccnode.py` | Geode `CCNode` SDK scan merge, bindings, anchor enums |
 | `test_geode_scanner.py` | Geode SDK header scan warnings |
 | `test_hooks.py` | Hook offsets, symbols, hook target emission |
 | `test_luau_types.py` | Luau stub layout, factories, overload widening |
 | `test_marshalling.py` | Lua stack check/push codegen |
 | `test_model.py` | Class lookup, object maps, base resolution |
-| `test_nested_containers.py` | TODO |
-| `test_object_vector_audit.py` | TODO |
-| `test_pair_design.py` | TODO |
+| `test_nested_containers.py` | Nested container policy, type map, marshalling, fields |
+| `test_object_vector_audit.py` | Object vector audit classification and opaque handles |
+| `test_pair_design.py` | Pair record shapes, pair-key maps, baseline field policy |
 | `test_parity.py` | Cross-platform parity report |
 | `test_plan.py` | Emit plan, intersection, class merge |
 | `test_type_map.py` | C++ to Lua type classification |
-| `test_value_struct_gate.py` | TODO |
+| `test_value_struct_gate.py` | Gated value struct denylist and stub emission |
 
 ## Source
 

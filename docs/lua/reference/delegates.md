@@ -69,22 +69,8 @@ Codegen covers:
   - download callbacks
   - and similar interfaces
 
-Regenerate specs and C++ trampolines after Broma changes:
-
-```powershell
-python tools/scripts/generate_delegate_artifacts.py
-```
-
-Generated delegate trampolines live under the codegen output tree:
-
-- `${LUAUAPI_GEN_DIR}/src/lua/bindings/framework/LuaDelegates.gen.hpp`
-- `${LUAUAPI_GEN_DIR}/src/lua/bindings/framework/LuaDelegates.gen.cpp`
-
-Regenerate with the main Broma codegen stamp (`luauapi_codegen`) or directly:
-
-```bash
-python -m luau_codegen --emit-delegates --bindings <bindings-dir> --out <gen-dir>
-```
+Generated delegate trampolines live under `build/luauapi-gen/src/lua/bindings/framework/` as `LuaDelegates.gen.hpp` and `LuaDelegates.gen.cpp`.
+Regenerate with the normal build (`luauapi_codegen`) or see [Codegen](../../dev/codegen.md).
 
 ## Limits
 
@@ -96,6 +82,7 @@ python -m luau_codegen --emit-delegates --bindings <bindings-dir> --out <gen-dir
 ## Related
 
 - [Callbacks](callbacks.md)
+- [Codegen](../../dev/codegen.md)
 - [Using game objects](../guide/using-game-objects.md)
 - [Type stubs](type-stubs.md)
 
@@ -104,4 +91,4 @@ python -m luau_codegen --emit-delegates --bindings <bindings-dir> --out <gen-dir
 - `src/lua/bindings/framework/LuaDelegate.hpp`
 - `build/luauapi-gen/delegate_specs.py` (generated at build time, path set by `LUAUAPI_DELEGATE_SPECS_OUT` in CMake)
 - `tools/luau_codegen/model/delegate_specs.py` (repo stub, not the runtime source)
-- `tools/scripts/generate_delegate_artifacts.py`
+- `tools/luau_codegen/cli/main.py`

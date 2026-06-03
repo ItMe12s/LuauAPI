@@ -26,6 +26,11 @@ The stamp command runs codegen in one step: delegate specs and trampolines are l
 The platform is chosen from the build target. Windows maps to `win`, for example, and an Android 64-bit build maps to `android64`.
 The Geometry Dash version is read from the `"win"` entry in `mod.json`.
 
+CMake options:
+
+- `LUAUAPI_HOST_ONLY=ON` skips Geode SDK and configure-time codegen listing. Use for host-only tooling without `GEODE_SDK`.
+- `LUAUAPI_STRICT_GENERATED_WARNINGS=ON` compiles generated bindings with warnings enabled for audits.
+
 ## The hook generator
 
 The most involved part is the hook generator. `emit/hooks.py` emits one C++ function per hookable game method. That function:
@@ -60,7 +65,7 @@ A change to any of these reruns codegen.
 
 Only `GEODE_DLL` declarations are processed. Functions must be marshallable (no out/non-const ref args), or they're dropped.
 Keep only the first free function per name and arity, log others as `free-function-ambiguous-arity:<n>`.
-<!-- TODO: verify whether header pruning after filtering is implemented -->
+Only headers included by `Geode/ui/UI.hpp` are scanned for UI classes. There is no extra step that removes headers after filtering.
 
 Some headers are purposely ignored:
 
@@ -110,7 +115,7 @@ For `restart`, all mobile and Apple targets allow one argument.
 - Android family: `android`, `android32`, `android64`
 - Apple family: `ios`, `mac`, `imac`, `m1`
 
-Only add a new platform key after confirming its SDK matches. Don’t copy from other families without checking.
+Only add a new platform key after confirming its SDK matches. Do not copy from other families without checking.
 
 `group_supported_free_functions()` filters and deduplicates free functions per platform,
 intersection removes any not present on all main platforms, using `intersection-missing-platform:<platforms>`.
@@ -207,6 +212,18 @@ For how one type stub stays safe on every platform, see [Platform parity](platfo
 | 4 | I/O error reading inputs or writing outputs |
 | 5 | Unexpected exception during emit |
 | 6 | Ambiguous overloads remain after building the emit plan |
+
+## Regenerating delegates
+
+The main codegen stamp (`luauapi_codegen`) collects delegate specs and emits trampolines before bindings.
+To run only the delegate step:
+
+```bash
+PYTHONPATH=tools python -m luau_codegen --emit-delegates --bindings <bindings-dir> --out <gen-dir>
+```
+
+Outputs include `build/luauapi-gen/delegate_specs.py` and `build/luauapi-gen/src/lua/bindings/framework/LuaDelegates.gen.hpp` / `.cpp`.
+See [Reference: delegates](../lua/reference/delegates.md) for how scripts use delegate tables.
 
 ## Tests
 

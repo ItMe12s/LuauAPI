@@ -12,9 +12,9 @@ Tests live in `tests/luau_codegen/test_pair_design.py`.
 
 **Pair body** (standalone, vector element, set element, or map value):
 
-- `std::pair<int, int>` → `{ first: number, second: number }`
-- `std::pair<int, UnlockType>` → `{ first: number, second: number }`
-- `std::pair<int, cocos2d::CCObject*>` → `{ first: number, second: CCObject? }`
+- `std::pair<int, int>` -> `{ first: number, second: number }`
+- `std::pair<int, UnlockType>` -> `{ first: number, second: number }`
+- `std::pair<int, cocos2d::CCObject*>` -> `{ first: number, second: CCObject? }`
 
 **Map with scalar key and pair value** (normal dictionary):
 
@@ -22,7 +22,7 @@ Tests live in `tests/luau_codegen/test_pair_design.py`.
 
 **Map with pair key** (entry list, because Lua cannot use tables as keys):
 
-```luau
+```lua
 -- gd::map<std::pair<int, int>, float>
 {
     { first = 1, second = 2, value = 0.5 },
@@ -34,8 +34,8 @@ Stub type pattern: `{ { first: K1, second: K2, value: V } }`.
 
 **Vector or set of pairs** (array of pair records, same as other sets):
 
-- `gd::vector<std::pair<int, int>>` → `{ { first: number, second: number } }`
-- `gd::set<std::pair<int, int>>` → `{ { first: number, second: number } }`
+- `gd::vector<std::pair<int, int>>` -> `{ { first: number, second: number } }`
+- `gd::set<std::pair<int, int>>` -> `{ { first: number, second: number } }`
 
 Do not use positional `{ T1, T2 }`, string keys, or `{ [pairTable]: V }`.
 
@@ -84,7 +84,7 @@ These baseline pair-related fields were skipped before pair support. After regen
 | `m_accountIDForIcon` | `gd::map<std::pair<int, UnlockType>, int>` | Binds |
 | `m_unkMap770` | `gd::map<std::pair<int, int>, gd::vector<GroupCommandObject2*>>` | Binds via [nested containers](nested-containers.md) |
 
-`audit_field_skips.py` groups remaining pair skips in the `pair` bucket.
+The codegen audit report (`audit.md`, via `--audit-report-out`) groups remaining pair skips in the `pair` bucket.
 
 ## SEL pairs
 
@@ -95,7 +95,7 @@ It stays in `convert/sel_args.py`.
 
 1. `PYTHONPATH=tools python -m unittest discover -s tests/luau_codegen -p "test_*.py"`
 2. Regenerate `types/geode.d.luau` through the build
-3. `PYTHONPATH=tools python tools/scripts/audit_field_skips.py`
+3. `PYTHONPATH=tools python -m luau_codegen --bindings <bindings-dir> --audit-report-out audit.md --platform win`
 4. Confirm pair fields bind, pair-key stubs use the entry list, policy skips unchanged
 
 ## Source
@@ -104,5 +104,5 @@ It stays in `convert/sel_args.py`.
 - `tools/luau_codegen/convert/marshalling.py`
 - `tools/luau_codegen/model/pair_design.py`
 - `src/lua/bindings/framework/ContainerTables.hpp`
-- `tools/scripts/audit_field_skips.py`
+- `tools/luau_codegen/emit/audit.py`
 - [Codegen](codegen.md)
