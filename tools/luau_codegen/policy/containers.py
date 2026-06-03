@@ -7,6 +7,7 @@ _CONTAINER_KINDS = frozenset(
     {
         "vector_view",
         "nested_primitive_vector_view",
+        "cc_c_array_view",
         "primitive_vector",
         "std_array",
         "map",
@@ -17,12 +18,12 @@ _CONTAINER_KINDS = frozenset(
 )
 
 
-def _nested_vector_view_readonly(info: TypeInfo) -> bool:
-    return info.kind == "nested_primitive_vector_view"
+def _readonly_container_arg(info: TypeInfo) -> bool:
+    return info.kind in ("nested_primitive_vector_view", "cc_c_array_view")
 
 
 def container_supported_as_arg(info: TypeInfo, ret_kind: str) -> bool:
-    if _nested_vector_view_readonly(info):
+    if _readonly_container_arg(info):
         return False
     if info.kind not in _CONTAINER_KINDS:
         return True

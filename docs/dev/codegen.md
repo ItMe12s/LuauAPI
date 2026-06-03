@@ -148,6 +148,10 @@ Maps with a pair key use an entry list with `first`, `second`, and `value`.
 Maps with a nested `gd::vector<T*>` value bind only for audited shapes (scalar or pair keys, object or opaque elements).
 See [Nested containers](nested-containers.md) and [Pair containers](pair-containers.md).
 
+`cocos2d::ccCArray*` fields bind only when listed in `model/cc_c_array.py` (dispatcher handler add/remove queues).
+They are read-only `{ Handler? }` views backed by `ReadOnlyCCArrayView.hpp`. Raw `cocos2d::ccArray*` internals stay skipped.
+See [ccCArray fields](cc-c-array.md).
+
 ## Overload resolution
 
 Broma can declare several methods with the same name.

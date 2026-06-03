@@ -8,6 +8,10 @@ from luau_codegen.parse.broma import Class, split_arg, split_top_level
 from luau_codegen.model.domain import short_name
 
 from luau_codegen.model.delegate_specs import lookup_delegate
+from luau_codegen.model.cc_c_array import (
+    CC_C_ARRAY_POINTER_TYPES,
+    proven_cc_c_array_element,
+)
 from luau_codegen.model.nested_containers import (
     allow_nested_map_value,
     allow_nested_primitive_vector_outer,
@@ -695,6 +699,30 @@ def _parse_primitive_vector(
     )
 
 
+def _parse_cc_c_array_view(
+    n: str,
+    owner_class: str,
+    field_name: str,
+    object_classes: Dict[str, Class],
+    ctx: CodegenContext | None = None,
+) -> Optional[TypeInfo]:
+    if normalize_type(n) not in CC_C_ARRAY_POINTER_TYPES:
+        return None
+    element_short = proven_cc_c_array_element(owner_class, field_name)
+    if element_short is None:
+        return None
+    element = classify_arg(f"{element_short}*", object_classes, ctx=ctx)
+    if element is None or element.kind != "object":
+        return None
+    return TypeInfo(
+        "cc_c_array_view",
+        "cocos2d::ccCArray*",
+        f"{{ {element.class_name}? }}",
+        element.class_name,
+        element_type=element,
+    )
+
+
 def _parse_vector_view(
     n: str,
     object_classes: Dict[str, Class],
@@ -819,6 +847,8 @@ def _classify_core(
     *,
     for_return: bool,
     ctx: CodegenContext | None = None,
+    owner_class: str = "",
+    field_name: str = "",
 ) -> Optional[TypeInfo]:
     resolved = _resolve_ctx(ctx)
     is_ref = is_reference_type(t)
@@ -938,6 +968,20 @@ def _classify_core(
             element_type=vector_view.element_type,
         )
 
+    cc_c_array_view = _parse_cc_c_array_view(
+        n, owner_class, field_name, object_classes, ctx=ctx
+    )
+    if cc_c_array_view is not None:
+        return TypeInfo(
+            cc_c_array_view.kind,
+            cc_c_array_view.cxx_type,
+            cc_c_array_view.lua_type,
+            cc_c_array_view.class_name,
+            is_ref,
+            is_out,
+            element_type=cc_c_array_view.element_type,
+        )
+
     container = _parse_container(n, object_classes, ctx=ctx)
     if container is not None:
         return _with_container_ref_flags(
@@ -1036,6 +1080,7 @@ def classify_arg(
     object_classes: Dict[str, Class],
     *,
     owner_class: str = "",
+    field_name: str = "",
     ctx: CodegenContext | None = None,
 ) -> Optional[TypeInfo]:
     n = normalize_type(t)
@@ -1043,11 +1088,30 @@ def classify_arg(
         class_aliases = CLASS_CALLBACK_ALIASES.get(owner_class, {})
         alias = class_aliases.get(n) or class_aliases.get(short_name(n))
         if alias:
-            return classify_arg(alias, object_classes, owner_class=owner_class, ctx=ctx)
+            return classify_arg(
+                alias,
+                object_classes,
+                owner_class=owner_class,
+                field_name=field_name,
+                ctx=ctx,
+            )
     alias = CALLBACK_ALIASES.get(n) or CALLBACK_ALIASES.get(short_name(n))
     if alias:
-        return classify_arg(alias, object_classes, owner_class=owner_class, ctx=ctx)
-    return _classify_core(t, object_classes, for_return=False, ctx=ctx)
+        return classify_arg(
+            alias,
+            object_classes,
+            owner_class=owner_class,
+            field_name=field_name,
+            ctx=ctx,
+        )
+    return _classify_core(
+        t,
+        object_classes,
+        for_return=False,
+        ctx=ctx,
+        owner_class=owner_class,
+        field_name=field_name,
+    )
 
 
 def _delegate_lua_type(spec) -> str:
@@ -1061,12 +1125,24 @@ def _delegate_lua_type(spec) -> str:
 
 
 def classify_return(
-    t: str, object_classes: Dict[str, Class], *, ctx: CodegenContext | None = None
+    t: str,
+    object_classes: Dict[str, Class],
+    *,
+    owner_class: str = "",
+    field_name: str = "",
+    ctx: CodegenContext | None = None,
 ) -> Optional[TypeInfo]:
     n = strip_ref(t)
     if n in ("", "void"):
         return TypeInfo("void", "void", "()")
-    info = _classify_core(t, object_classes, for_return=True, ctx=ctx)
+    info = _classify_core(
+        t,
+        object_classes,
+        for_return=True,
+        ctx=ctx,
+        owner_class=owner_class,
+        field_name=field_name,
+    )
     if info and info.kind != "void":
         if info.kind == "object" and not info.lua_type.endswith("?"):
             info = TypeInfo(

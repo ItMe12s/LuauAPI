@@ -378,7 +378,11 @@ def _emit_field_accessors(
     register = f"luaapi_{cxx_id(cls.name)}_field_register_{cxx_id(field.name)}"
     getter_impl = f"{getter}_impl"
     setter_impl = f"{setter}_impl"
-    if ret_info.kind in ("vector_view", "nested_primitive_vector_view"):
+    if ret_info.kind in (
+        "vector_view",
+        "nested_primitive_vector_view",
+        "cc_c_array_view",
+    ):
         out = [f"    template <class T>\n"]
         out.append(f"    int {getter_impl}(lua_State* L, T* self) {{\n")
         out.append(

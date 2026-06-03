@@ -122,6 +122,17 @@ def _nested_primitive_vector_push_fn(info: TypeInfo) -> str:
     return f"pushNestedPrimitiveVectorPointers<{inner.cxx_type}>"
 
 
+def _cc_c_array_view_pointee_cxx(info: TypeInfo) -> str:
+    if info.element_type is None:
+        raise ValueError("ccCArray view requires element type")
+    return info.element_type.cxx_type[:-1]
+
+
+def _cc_c_array_view_push_fn(info: TypeInfo) -> str:
+    pointee = _cc_c_array_view_pointee_cxx(info)
+    return f"pushReadOnlyCCArrayView<{pointee}>"
+
+
 def _vector_view_push_fn(info: TypeInfo, *, owned: bool, has_owner: bool) -> str:
     pointee = _vector_view_pointee_cxx(info)
     if info.element_type and info.element_type.kind == "opaque_handle":
@@ -313,6 +324,13 @@ def _push_impl(
     if info.kind == "nested_primitive_vector_view":
         push_fn = _nested_primitive_vector_push_fn(info)
         return [f"{indent}luax::{push_fn}(L, {expr});\n"]
+    if info.kind == "cc_c_array_view":
+        if info.element_type is None or info.element_type.kind != "object":
+            raise ValueError("ccCArray view requires object element type")
+        push_fn = _cc_c_array_view_push_fn(info)
+        if not owner_expr:
+            raise ValueError("ccCArray view push requires owner expression")
+        return [f"{indent}luax::{push_fn}(L, {expr}, {owner_expr});\n"]
     if info.kind == "vector_view":
         if info.element_type is None or info.element_type.kind not in (
             "object",

@@ -252,7 +252,12 @@ def _refs_from_fields(
         ok, _, _, ret = bindable_field(field, objects, cls, ctx=ctx)
         if ok and ret and ret.kind == "object":
             refs.add(_object_type_name(ret))
-        elif ok and ret and ret.kind == "vector_view" and ret.element_type:
+        elif (
+            ok
+            and ret
+            and ret.kind in ("vector_view", "cc_c_array_view")
+            and ret.element_type
+        ):
             refs.add(_object_type_name(ret.element_type))
         elif ok and ret and ret.kind in ("map", "unordered_map") and ret.value_type:
             if ret.value_type.kind == "object":
