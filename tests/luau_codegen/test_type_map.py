@@ -736,10 +736,21 @@ class GdEnumTypeMapTests(unittest.TestCase):
 
 
 class CocosEnumTypeMapTests(unittest.TestCase):
+    _MOD_FACING_COCOS_ENUMS = (
+        "CCObjectType",
+        "CCVerticalTextAlignment",
+        "ccGLServerState",
+        "ccScriptType",
+        "ccTouchesMode",
+        "tCCMenuState",
+        "tCCPositionType",
+    )
+
     def test_classify_cocos_enums(self) -> None:
         for name, cxx in (
             ("enumKeyCodes", "cocos2d::enumKeyCodes"),
             ("TextureQuality", "cocos2d::TextureQuality"),
+            *((n, f"cocos2d::{n}") for n in self._MOD_FACING_COCOS_ENUMS),
         ):
             for arg in (name, cxx):
                 info = classify_arg(arg, {})
@@ -748,6 +759,19 @@ class CocosEnumTypeMapTests(unittest.TestCase):
                 self.assertEqual(info.kind, "enum", arg)
                 self.assertEqual(info.lua_type, "number", arg)
                 self.assertEqual(info.cxx_type, cxx, arg)
+
+    def test_classify_cocos_enum_const_ref(self) -> None:
+        info = classify_arg("cocos2d::ccTouchesMode const&", {})
+        self.assertIsNotNone(info)
+        assert info is not None
+        self.assertEqual(info.kind, "enum")
+        self.assertEqual(info.cxx_type, "cocos2d::ccTouchesMode")
+        self.assertTrue(info.is_ref)
+        self.assertFalse(info.is_out)
+
+    def test_cc_timeval_not_enum(self) -> None:
+        info = classify_arg("cocos2d::cc_timeval", {})
+        self.assertIsNone(info)
 
 
 class FmodTypeMapTests(unittest.TestCase):

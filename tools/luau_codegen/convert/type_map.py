@@ -210,6 +210,13 @@ COCOS_ENUM_TYPES = {
     "CCTexture2DPixelFormat",
     "CCImageFormat",
     "CCLabelBMFontAlignment",
+    "CCObjectType",
+    "CCVerticalTextAlignment",
+    "ccGLServerState",
+    "ccScriptType",
+    "ccTouchesMode",
+    "tCCMenuState",
+    "tCCPositionType",
     "TextureQuality",
 }
 
