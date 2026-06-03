@@ -340,7 +340,7 @@ DELEGATE_SPECS: Dict[str, DelegateSpec] = {
         cxx_type="HSVWidgetDelegate", lua_name="HSVWidgetDelegate",
         cpp_class="LuaHSVWidgetDelegate", create_fn="LuaHSVWidgetDelegate::create",
         methods=(
-            DelegateMethodSpec("hsvPopupClosed", "()", ('HSVWidgetPopup', 'number')),
+            DelegateMethodSpec("hsvPopupClosed", "()", ('HSVWidgetPopup', 'HSVValue')),
             DelegateMethodSpec("hsvChanged", "()", ('ConfigureHSVWidget',)),
         ),
     ),

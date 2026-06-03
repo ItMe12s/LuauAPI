@@ -347,6 +347,36 @@ class EmitStackCheckTests(unittest.TestCase):
         self.assertIn("luax::push(L, pt)", text)
         self.assertNotIn("pushPoint", text)
 
+    def test_ccblendfunc_uses_check_specialization(self) -> None:
+        info = TypeInfo(
+            kind="value", cxx_type="cocos2d::ccBlendFunc", lua_type="BlendFunc"
+        )
+        text = "".join(emit_stack_check(info, 1, "blend", "test"))
+        self.assertIn("luax::check<cocos2d::ccBlendFunc>", text)
+
+    def test_cchsvvalue_uses_check_specialization(self) -> None:
+        info = TypeInfo(
+            kind="value", cxx_type="cocos2d::ccHSVValue", lua_type="HSVValue"
+        )
+        text = "".join(emit_stack_check(info, 1, "hsv", "test"))
+        self.assertIn("luax::check<cocos2d::ccHSVValue>", text)
+
+    def test_cccolor4f_push_uses_push_overload(self) -> None:
+        info = TypeInfo(
+            kind="value", cxx_type="cocos2d::ccColor4F", lua_type="RGBAFloatColor"
+        )
+        text = "".join(push_value(info, "color"))
+        self.assertIn("luax::push(L, color)", text)
+
+    def test_ccaffinetransform_uses_check_specialization(self) -> None:
+        info = TypeInfo(
+            kind="value",
+            cxx_type="cocos2d::CCAffineTransform",
+            lua_type="CCAffineTransform",
+        )
+        text = "".join(emit_stack_check(info, 1, "t", "test"))
+        self.assertIn("luax::check<cocos2d::CCAffineTransform>", text)
+
     def test_vector_view_push_uses_readonly_helper(self) -> None:
         element = TypeInfo(
             kind="object",

@@ -788,6 +788,44 @@ class GeneratedSafetyTests(unittest.TestCase):
         self.assertIn("declare class CCNode", cocos)
         self.assertNotIn("declare class CCPoint end", cocos)
 
+    def test_field_plan_emits_cocos_value_type_stubs(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        ccnode = Class(name="CCNode", namespace="cocos2d", bases=["CCObject"])
+        sprite = Class(
+            name="CCSprite",
+            namespace="cocos2d",
+            bases=["CCNode"],
+            fields=[
+                Field("m_sBlendFunc", "ccBlendFunc"),
+                Field("m_transformToBatch", "CCAffineTransform"),
+            ],
+        )
+        particle = Class(
+            name="CCParticleSystem",
+            namespace="cocos2d",
+            bases=["CCNode"],
+            fields=[Field("m_tStartColor", "cocos2d::ccColor4F")],
+        )
+        root = Root(classes=[ccobject, ccnode, sprite, particle])
+
+        plan = collect_plan(root, "win")
+        files = emit_luau_types(root, "win", plan=plan)
+
+        cocos = types_text(files)
+        self.assertIn("export type BlendFunc = { src: number, dst: number }", cocos)
+        self.assertIn(
+            "export type RGBAFloatColor = { r: number, g: number, b: number, a: number }",
+            cocos,
+        )
+        self.assertIn(
+            "export type CCAffineTransform = { a: number, b: number, c: number, d: number, tx: number, ty: number }",
+            cocos,
+        )
+        self.assertIn("m_sBlendFunc: BlendFunc", cocos)
+        self.assertIn("m_transformToBatch: CCAffineTransform", cocos)
+        self.assertIn("m_tStartColor: RGBAFloatColor", cocos)
+        self.assertNotIn("declare class BlendFunc end", cocos)
+
     def test_inaccessible_broma_field_is_not_bound(self) -> None:
         ccobject = Class(
             name="CCObject",

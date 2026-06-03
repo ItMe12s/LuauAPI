@@ -88,6 +88,10 @@ VALUE_CHECK_CXX_TYPES: dict[str, str] = {
     "CCRect": "cocos2d::CCRect",
     "RGBColor": "cocos2d::ccColor3B",
     "RGBAColor": "cocos2d::ccColor4B",
+    "RGBAFloatColor": "cocos2d::ccColor4F",
+    "BlendFunc": "cocos2d::ccBlendFunc",
+    "HSVValue": "cocos2d::ccHSVValue",
+    "CCAffineTransform": "cocos2d::CCAffineTransform",
     "UIButtonConfig": "UIButtonConfig",
 }
 
@@ -102,6 +106,14 @@ VALUE_TYPES = {
     "ccColor3B": "RGBColor",
     "cocos2d::ccColor4B": "RGBAColor",
     "ccColor4B": "RGBAColor",
+    "cocos2d::ccColor4F": "RGBAFloatColor",
+    "ccColor4F": "RGBAFloatColor",
+    "cocos2d::ccBlendFunc": "BlendFunc",
+    "ccBlendFunc": "BlendFunc",
+    "cocos2d::ccHSVValue": "HSVValue",
+    "ccHSVValue": "HSVValue",
+    "cocos2d::CCAffineTransform": "CCAffineTransform",
+    "CCAffineTransform": "CCAffineTransform",
     "UIButtonConfig": "UIButtonConfig",
 }
 

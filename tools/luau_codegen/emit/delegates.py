@@ -216,7 +216,7 @@ LUA_TYPES: dict[str, str] = {
     "ColorSelectType": "number",
     "BoomListType": "number",
     "AudioGuidelinesType": "number",
-    "cocos2d::ccHSVValue": "number",
+    "cocos2d::ccHSVValue": "HSVValue",
     "CCIndexPath": "CCIndexPath",
     "TableView": "TableView",
     "TableViewCell": "TableViewCell",
@@ -420,7 +420,7 @@ def push_stmt(t: str, expr: str) -> str:
             f'            lua_pushnumber(L, {expr}.m_row); lua_setfield(L, -2, "row");'
         )
     if "ccHSVValue" in n:
-        return f"lua_pushnumber(L, static_cast<double>({expr}.h))"
+        return f"luax::push(L, {expr})"
     if n.endswith("*"):
         obj = n[:-1].strip()
         return f"luax::Usertype<{obj}>::pushBorrowed(L, {expr})"

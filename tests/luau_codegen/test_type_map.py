@@ -141,6 +141,34 @@ class GeodeEnumRegistrationTests(unittest.TestCase):
         self.assertEqual(info.kind, "value")
         self.assertEqual(info.lua_type, "RGBAColor")
 
+    def test_classify_cccolor4f_value(self) -> None:
+        info = classify_arg("cocos2d::ccColor4F const&", {})
+        self.assertIsNotNone(info)
+        assert info is not None
+        self.assertEqual(info.kind, "value")
+        self.assertEqual(info.lua_type, "RGBAFloatColor")
+
+    def test_classify_ccblendfunc_value(self) -> None:
+        info = classify_arg("cocos2d::ccBlendFunc", {})
+        self.assertIsNotNone(info)
+        assert info is not None
+        self.assertEqual(info.kind, "value")
+        self.assertEqual(info.lua_type, "BlendFunc")
+
+    def test_classify_cchsvvalue_value(self) -> None:
+        info = classify_arg("cocos2d::ccHSVValue", {})
+        self.assertIsNotNone(info)
+        assert info is not None
+        self.assertEqual(info.kind, "value")
+        self.assertEqual(info.lua_type, "HSVValue")
+
+    def test_classify_ccaffinetransform_value(self) -> None:
+        info = classify_arg("cocos2d::CCAffineTransform const&", {})
+        self.assertIsNotNone(info)
+        assert info is not None
+        self.assertEqual(info.kind, "value")
+        self.assertEqual(info.lua_type, "CCAffineTransform")
+
     def test_method_input_arg_count_collapses_sel_pair(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")
         ccnode = Class(name="CCNode", namespace="cocos2d", bases=["CCObject"])

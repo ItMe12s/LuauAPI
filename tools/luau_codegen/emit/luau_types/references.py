@@ -15,6 +15,22 @@ from luau_codegen.model.delegate_specs import DELEGATE_SPECS
 _VALUE_STUB_BODY: Dict[str, str] = {
     "RGBColor": "export type RGBColor = { r: number, g: number, b: number }\n",
     "RGBAColor": "export type RGBAColor = { r: number, g: number, b: number, a: number }\n",
+    "RGBAFloatColor": (
+        "export type RGBAFloatColor = { r: number, g: number, b: number, a: number }\n"
+    ),
+    "BlendFunc": "export type BlendFunc = { src: number, dst: number }\n",
+    "HSVValue": (
+        "export type HSVValue = {\n"
+        "    h: number,\n"
+        "    s: number,\n"
+        "    v: number,\n"
+        "    absoluteSaturation: boolean,\n"
+        "    absoluteBrightness: boolean,\n"
+        "}\n"
+    ),
+    "CCAffineTransform": (
+        "export type CCAffineTransform = { a: number, b: number, c: number, d: number, tx: number, ty: number }\n"
+    ),
     "CCSize": "export type CCSize = { width: number, height: number }\n",
     "CCPoint": "export type CCPoint = { x: number, y: number }\n",
     "CCRect": "export type CCRect = { origin: CCPoint, size: CCSize }\n",
@@ -53,6 +69,10 @@ _VALUE_STUB_ORDER = (
     "CCSize",
     "RGBColor",
     "RGBAColor",
+    "RGBAFloatColor",
+    "BlendFunc",
+    "HSVValue",
+    "CCAffineTransform",
     "CCRect",
     "UIButtonConfig",
 )
