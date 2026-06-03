@@ -446,6 +446,51 @@ class EmitStackCheckTests(unittest.TestCase):
         self.assertIn("luax::checkObjectVectorView<cocos2d::CCObject>", text)
         self.assertIn("arg0", text)
 
+    def test_vector_view_opaque_push_uses_opaque_readonly_helper(self) -> None:
+        element = TypeInfo(
+            kind="opaque_handle",
+            cxx_type="GroupCommandObject2*",
+            lua_type="GroupCommandObject2",
+        )
+        info = TypeInfo(
+            kind="vector_view",
+            cxx_type="gd::vector<GroupCommandObject2*>",
+            lua_type="{ GroupCommandObject2? }",
+            class_name="GroupCommandObject2",
+            element_type=element,
+        )
+
+        text = "".join(push_value(info, "self->m_groupObjects", owner_expr="self"))
+
+        self.assertIn("luax::pushReadOnlyOpaqueVectorView<GroupCommandObject2>", text)
+        self.assertIn("self->m_groupObjects", text)
+
+    def test_vector_view_opaque_check_uses_opaque_vector_helper(self) -> None:
+        element = TypeInfo(
+            kind="opaque_handle",
+            cxx_type="FMOD::Sound*",
+            lua_type="FMODSound",
+        )
+        info = TypeInfo(
+            kind="vector_view",
+            cxx_type="gd::vector<FMOD::Sound*>",
+            lua_type="{ FMODSound? }",
+            class_name="FMODSound",
+            element_type=element,
+        )
+
+        text = "".join(
+            check_arg(
+                Arg("gd::vector<FMOD::Sound*>", "sounds"),
+                info,
+                2,
+                "arg0",
+                "FMODAudioEngine.setSounds",
+            )
+        )
+
+        self.assertIn("luax::checkOpaqueVectorView<FMOD::Sound>", text)
+
     def test_primitive_vector_check_uses_table_helper(self) -> None:
         element = TypeInfo(kind="number", cxx_type="int", lua_type="number")
         info = TypeInfo(

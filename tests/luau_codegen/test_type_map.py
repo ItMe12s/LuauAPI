@@ -340,6 +340,24 @@ class ContainerTypeMapTests(unittest.TestCase):
         self.assertEqual(info.kind, "vector_view")
         self.assertEqual(info.lua_type, "{ CCObject? }")
 
+    def test_classify_gd_vector_opaque_handle_pointer_as_vector_view(self) -> None:
+        info = classify_arg("gd::vector<FMOD::Sound*>", {})
+
+        assert info is not None
+        self.assertEqual(info.kind, "vector_view")
+        self.assertEqual(info.lua_type, "{ FMODSound? }")
+        assert info.element_type is not None
+        self.assertEqual(info.element_type.kind, "opaque_handle")
+
+    def test_classify_gd_vector_group_command_object2_pointer_as_vector_view(
+        self,
+    ) -> None:
+        info = classify_arg("gd::vector<GroupCommandObject2*>", {})
+
+        assert info is not None
+        self.assertEqual(info.kind, "vector_view")
+        self.assertEqual(info.lua_type, "{ GroupCommandObject2? }")
+
     def test_classify_gd_vector_rejects_nested_containers(self) -> None:
         self.assertIsNone(classify_arg("gd::vector<gd::vector<int>>", {}))
 

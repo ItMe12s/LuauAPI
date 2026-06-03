@@ -56,6 +56,30 @@ def _set_push_fn(kind: str) -> str:
     return "pushSet"
 
 
+def _vector_view_pointee_cxx(info: TypeInfo) -> str:
+    if info.element_type is None:
+        raise ValueError("vector view requires element type")
+    return info.element_type.cxx_type[:-1]
+
+
+def _vector_view_check_fn(info: TypeInfo) -> str:
+    pointee = _vector_view_pointee_cxx(info)
+    if info.element_type and info.element_type.kind == "opaque_handle":
+        return f"checkOpaqueVectorView<{pointee}>"
+    return f"checkObjectVectorView<{pointee}>"
+
+
+def _vector_view_push_fn(info: TypeInfo, *, owned: bool, has_owner: bool) -> str:
+    pointee = _vector_view_pointee_cxx(info)
+    if info.element_type and info.element_type.kind == "opaque_handle":
+        if owned or not has_owner:
+            return f"pushOwnedReadOnlyOpaqueVectorView<{pointee}>"
+        return f"pushReadOnlyOpaqueVectorView<{pointee}>"
+    if owned or not has_owner:
+        return f"pushOwnedReadOnlyVectorView<{pointee}>"
+    return f"pushReadOnlyVectorView<{pointee}>"
+
+
 def emit_stack_check(
     info: TypeInfo,
     idx: str | int,
@@ -158,11 +182,14 @@ def emit_stack_check(
             f'        {_prefix(declare, var)} = luax::Usertype<{obj_type}>::check(L, {idx}, "{label}");\n'
         ]
     if info.kind == "vector_view":
-        if info.element_type is None or info.element_type.kind != "object":
-            raise ValueError("vector view requires object element type")
-        elem = info.element_type.cxx_type[:-1]
+        if info.element_type is None or info.element_type.kind not in (
+            "object",
+            "opaque_handle",
+        ):
+            raise ValueError("vector view requires object or opaque element type")
+        check_fn = _vector_view_check_fn(info)
         return [
-            f'        {_prefix(declare, var)} = luax::checkObjectVectorView<{elem}>(L, {idx}, "{label}");\n'
+            f'        {_prefix(declare, var)} = luax::{check_fn}(L, {idx}, "{label}");\n'
         ]
     if info.kind == "primitive_vector":
         elem = _primitive_vector_elem_cxx(info)
@@ -222,14 +249,17 @@ def _push_impl(
         push = "pushOwned" if owned else "pushBorrowed"
         return [f"{indent}luax::Usertype<{info.cxx_type[:-1]}>::{push}(L, {expr});\n"]
     if info.kind == "vector_view":
-        if info.element_type is None or info.element_type.kind != "object":
-            raise ValueError("vector view requires object element type")
-        elem = info.element_type.cxx_type[:-1]
+        if info.element_type is None or info.element_type.kind not in (
+            "object",
+            "opaque_handle",
+        ):
+            raise ValueError("vector view requires object or opaque element type")
+        push_fn = _vector_view_push_fn(
+            info, owned=vector_owned, has_owner=bool(owner_expr)
+        )
         if vector_owned or not owner_expr:
-            return [f"{indent}luax::pushOwnedReadOnlyVectorView<{elem}>(L, {expr});\n"]
-        return [
-            f"{indent}luax::pushReadOnlyVectorView<{elem}>(L, {expr}, {owner_expr});\n"
-        ]
+            return [f"{indent}luax::{push_fn}(L, {expr});\n"]
+        return [f"{indent}luax::{push_fn}(L, {expr}, {owner_expr});\n"]
     if info.kind == "primitive_vector":
         elem = _primitive_vector_elem_cxx(info)
         return [f"{indent}luax::pushPrimitiveVector<{elem}>(L, {expr});\n"]

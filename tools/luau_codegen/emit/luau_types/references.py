@@ -62,6 +62,14 @@ _OPAQUE_STUB_BODY: Dict[str, str] = {
     "CCEditBox": (
         "--- @type-only: opaque cocos2d handle\n" "declare class CCEditBox end\n\n"
     ),
+    "GroupCommandObject2": (
+        "--- @type-only: non-CCObject GD type\n"
+        "declare class GroupCommandObject2 end\n\n"
+    ),
+    "DelayedSpawnNode": (
+        "--- @type-only: non-CCObject GD type\n"
+        "declare class DelayedSpawnNode end\n\n"
+    ),
 }
 
 _VALUE_STUB_ORDER = (
@@ -82,6 +90,8 @@ _OPAQUE_STUB_ORDER = (
     "FMODChannelGroup",
     "CCEvent",
     "CCEditBox",
+    "GroupCommandObject2",
+    "DelayedSpawnNode",
 )
 _TYPE_STUB_ORDER = _VALUE_STUB_ORDER + _OPAQUE_STUB_ORDER
 

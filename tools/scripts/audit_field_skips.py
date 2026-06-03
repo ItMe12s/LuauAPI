@@ -49,7 +49,12 @@ def main() -> int:
             )
             and "*" in reason
         ):
-            buckets["object_vector"].append(entry)
+            if "void*" in reason:
+                buckets["object_vector_void"].append(entry)
+            elif "gd::vector<gd::vector<" in reason:
+                buckets["object_vector_nested"].append(entry)
+            else:
+                buckets["object_vector"].append(entry)
         elif "std::pair" in reason:
             buckets["pair"].append(entry)
         elif reason.startswith("unsupported-arg:") and not any(
@@ -78,7 +83,14 @@ def main() -> int:
     for key in sorted(buckets):
         print(f"  {key}: {len(buckets[key])}")
 
-    for key in ("object_set", "object_vector", "pair", "residual_enum_or_type"):
+    for key in (
+        "object_set",
+        "object_vector",
+        "object_vector_nested",
+        "object_vector_void",
+        "pair",
+        "residual_enum_or_type",
+    ):
         samples = buckets.get(key, [])
         if not samples:
             continue

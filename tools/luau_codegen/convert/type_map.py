@@ -180,6 +180,8 @@ OPAQUE_HANDLE_TYPES: dict[str, str] = {
     "FMODSound*": "FMODSound",
     "cocos2d::CCEvent*": "CCEvent",
     "cocos2d::extension::CCEditBox*": "CCEditBox",
+    "GroupCommandObject2*": "GroupCommandObject2",
+    "DelayedSpawnNode*": "DelayedSpawnNode",
 }
 
 STATIC_ENUM_CXX_NAMES: dict[str, str] = {
@@ -532,13 +534,19 @@ def _parse_vector_view(
     if len(parts) != 1:
         return None
     element = classify_arg(parts[0], object_classes, ctx=ctx)
-    if element is None or element.kind != "object":
+    if element is None or element.kind not in ("object", "opaque_handle"):
         return None
+    if element.kind == "object":
+        lua_type = f"{{ {element.class_name}? }}"
+        class_name = element.class_name
+    else:
+        lua_type = f"{{ {element.lua_type}? }}"
+        class_name = element.lua_type
     return TypeInfo(
         "vector_view",
         f"gd::vector<{element.cxx_type}>",
-        f"{{ {element.class_name}? }}",
-        element.class_name,
+        lua_type,
+        class_name,
         element_type=element,
     )
 
