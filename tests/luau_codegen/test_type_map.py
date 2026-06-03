@@ -710,6 +710,11 @@ class GdEnumTypeMapTests(unittest.TestCase):
             info = classify_arg(name, {})
             self.assertIsNone(info, name)
 
+    def test_bound_runtime_state_class_not_enum(self) -> None:
+        objects = codegen_object_map(Root(classes=[Class(name="GJGameState")]))
+        info = classify_arg("GJGameState", objects)
+        self.assertIsNone(info)
+
     def test_classify_gd_enum_const_ref(self) -> None:
         info = classify_arg("EasingType const&", {})
         self.assertIsNotNone(info)

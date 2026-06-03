@@ -1017,7 +1017,9 @@ def _classify_core(
             is_ref=is_ref,
             is_out=is_out,
         )
-    if base in resolved.enum_types or n in resolved.enum_types:
+    if (
+        base in resolved.enum_types or n in resolved.enum_types
+    ) and resolve_object_class(base, object_classes) is None:
         cxx = resolved.enum_cxx_type(n, base)
         return TypeInfo("enum", cxx, "number", is_ref=is_ref, is_out=is_out)
     if n in OPAQUE_HANDLE_TYPES:
