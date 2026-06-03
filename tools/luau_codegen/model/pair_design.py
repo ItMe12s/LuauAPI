@@ -10,7 +10,6 @@ BASELINE_PAIR_SKIP_FIELDS: dict[str, str] = {
     "m_targetGroups": "gd::unordered_map<int, std::pair<int, int>>",
     "m_destroyObjectValues": "gd::map<std::pair<int, int>, std::pair<float, float>>",
     "m_unkMap578": "gd::unordered_map<int, std::pair<double, double>>",
-    "m_unkMap770": "gd::map<std::pair<int, int>, gd::vector<GroupCommandObject2*>>",
     "m_accountIDForIcon": "gd::map<std::pair<int, UnlockType>, int>",
 }
 

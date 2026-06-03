@@ -527,6 +527,39 @@ class ContainerTypeMapTests(unittest.TestCase):
     def test_classify_gd_map_rejects_nested_containers(self) -> None:
         self.assertIsNone(classify_arg("gd::map<int, gd::vector<int>>", {}))
 
+    def test_classify_gd_unordered_map_nested_object_vector_value(self) -> None:
+        label = Class(name="LabelGameObject", namespace="")
+        objects = {"LabelGameObject": label}
+
+        info = classify_arg(
+            "gd::unordered_map<int, gd::vector<LabelGameObject*>>", objects
+        )
+
+        self.assertIsNotNone(info)
+        assert info is not None
+        assert info.value_type is not None
+        self.assertEqual(info.value_type.kind, "vector_view")
+        self.assertEqual(info.lua_type, "{ [number]: { LabelGameObject? } }")
+
+    def test_classify_gd_map_pair_key_nested_opaque_vector_value(self) -> None:
+        info = classify_arg(
+            "gd::map<std::pair<int, int>, gd::vector<GroupCommandObject2*>>", {}
+        )
+
+        self.assertIsNotNone(info)
+        assert info is not None
+        assert info.value_type is not None
+        self.assertEqual(info.value_type.kind, "vector_view")
+        self.assertIn("value:", info.lua_type)
+
+    def test_classify_nested_primitive_vector_int_pointers(self) -> None:
+        info = classify_arg("gd::vector<gd::vector<int>*>", {})
+
+        self.assertIsNotNone(info)
+        assert info is not None
+        self.assertEqual(info.kind, "nested_primitive_vector_view")
+        self.assertEqual(info.lua_type, "{ { number } }")
+
     def test_classify_gd_set_rejects_nested_containers(self) -> None:
         self.assertIsNone(classify_arg("gd::set<gd::vector<int>>", {}))
 

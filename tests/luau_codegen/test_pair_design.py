@@ -39,7 +39,7 @@ class PairDesignPolicyTests(unittest.TestCase):
         self.assertNotIn("[", shape)
 
     def test_baseline_skip_fields_documented(self) -> None:
-        self.assertEqual(len(BASELINE_PAIR_SKIP_FIELDS), 5)
+        self.assertEqual(len(BASELINE_PAIR_SKIP_FIELDS), 4)
         self.assertIn("m_targetGroups", BASELINE_PAIR_SKIP_FIELDS)
         self.assertIn("std::pair", BASELINE_PAIR_SKIP_FIELDS["m_destroyObjectValues"])
 

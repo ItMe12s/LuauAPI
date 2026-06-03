@@ -145,8 +145,8 @@ This is required for `vector<bool>` on Android, where gnustl's `vector<bool>::sw
 
 `std::pair` inside containers is bound. Pair bodies use `{ first, second }`.
 Maps with a pair key use an entry list with `first`, `second`, and `value`.
-Maps with a nested container value (for example `gd::vector<T*>` as the value type) stay unsupported.
-See [Pair containers](pair-containers.md).
+Maps with a nested `gd::vector<T*>` value bind only for audited shapes (scalar or pair keys, object or opaque elements).
+See [Nested containers](nested-containers.md) and [Pair containers](pair-containers.md).
 
 ## Overload resolution
 

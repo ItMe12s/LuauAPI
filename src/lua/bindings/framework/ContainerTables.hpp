@@ -1,5 +1,6 @@
 #pragma once
 
+#include "ReadOnlyVectorView.hpp"
 #include "Stack.hpp"
 #include "Types.hpp"
 #include "Usertype.hpp"
@@ -31,6 +32,26 @@ namespace luax::detail {
 
     template <class T>
     inline constexpr bool is_std_pair_v = is_std_pair<T>::value;
+
+    template <class T>
+    struct is_gd_vector : std::false_type {};
+
+    template <class T>
+    struct is_gd_vector<gd::vector<T>> : std::true_type {};
+
+    template <class T>
+    inline constexpr bool is_gd_vector_v = is_gd_vector<T>::value;
+
+    template <class V>
+    struct gd_vector_element;
+
+    template <class T>
+    struct gd_vector_element<gd::vector<T>> {
+        using type = T;
+    };
+
+    template <class V>
+    using gd_vector_element_t = typename gd_vector_element<V>::type;
 
     inline void requireTableField(lua_State* L, int idx, char const* name, char const* label) {
         lua_getfield(L, idx, name);
@@ -280,14 +301,25 @@ namespace luax {
 
     template <class V>
     inline V checkMapValue(lua_State* L, int idx, char const* label) {
-        if constexpr (std::is_pointer_v<V>) {
+        if constexpr (detail::is_gd_vector_v<V>) {
+            using Elem = detail::gd_vector_element_t<V>;
+            if constexpr (std::is_pointer_v<Elem>) {
+                using Pointee = std::remove_pointer_t<Elem>;
+                if constexpr (std::is_base_of_v<cocos2d::CCObject, Pointee>) {
+                    return checkObjectVectorView<Pointee>(L, idx, label);
+                }
+                return checkOpaqueVectorView<Pointee>(L, idx, label);
+            }
+            return checkPrimitiveVector<Elem>(L, idx, label);
+        } else if constexpr (std::is_pointer_v<V>) {
             using Pointee = std::remove_pointer_t<V>;
             if (lua_isnil(L, idx)) {
                 return nullptr;
             }
             return Usertype<Pointee>::check(L, idx, label);
+        } else {
+            return detail::checkPrimitiveVectorElement<V>(L, idx, label);
         }
-        return detail::checkPrimitiveVectorElement<V>(L, idx, label);
     }
 
     template <class K>
@@ -302,7 +334,31 @@ namespace luax {
 
     template <class V>
     inline void pushMapValue(lua_State* L, V const& value) {
-        if constexpr (std::is_pointer_v<V>) {
+        if constexpr (detail::is_gd_vector_v<V>) {
+            using Elem = detail::gd_vector_element_t<V>;
+            if constexpr (std::is_pointer_v<Elem>) {
+                using Pointee = std::remove_pointer_t<Elem>;
+                lua_createtable(L, static_cast<int>(value.size()), 0);
+                int tableIndex = lua_gettop(L);
+                int i = 1;
+                for (auto* elem : value) {
+                    if constexpr (std::is_base_of_v<cocos2d::CCObject, Pointee>) {
+                        if (elem == nullptr) {
+                            lua_pushnil(L);
+                        } else {
+                            Usertype<Pointee>::pushBorrowed(L, elem);
+                        }
+                    } else if (elem == nullptr) {
+                        lua_pushnil(L);
+                    } else {
+                        lua_pushlightuserdata(L, elem);
+                    }
+                    lua_rawseti(L, tableIndex, i++);
+                }
+            } else {
+                pushPrimitiveVector<Elem>(L, value);
+            }
+        } else if constexpr (std::is_pointer_v<V>) {
             using Pointee = std::remove_pointer_t<V>;
             if (value == nullptr) {
                 lua_pushnil(L);
@@ -312,6 +368,39 @@ namespace luax {
         } else {
             detail::pushPrimitiveVectorElement(L, value);
         }
+    }
+
+    template <class T>
+    void pushNestedPrimitiveVectorPointers(
+        lua_State* L, gd::vector<gd::vector<T>*> const& outer
+    ) {
+        lua_createtable(L, static_cast<int>(outer.size()), 0);
+        int tableIndex = lua_gettop(L);
+        int i = 1;
+        for (auto* inner : outer) {
+            if (inner == nullptr) {
+                lua_createtable(L, 0, 0);
+            } else {
+                pushPrimitiveVector<T>(L, *inner);
+            }
+            lua_rawseti(L, tableIndex, i++);
+        }
+    }
+
+    template <class T>
+    void pushNestedPrimitiveVectorPointers(lua_State* L, gd::vector<gd::vector<T>*>* outer) {
+        if (outer == nullptr) {
+            lua_pushnil(L);
+            return;
+        }
+        pushNestedPrimitiveVectorPointers<T>(L, *outer);
+    }
+
+    template <class T>
+    void pushNestedPrimitiveVectorPointers(
+        lua_State* L, gd::vector<gd::vector<T>*> const* outer
+    ) {
+        pushNestedPrimitiveVectorPointers<T>(L, const_cast<gd::vector<gd::vector<T>*>*>(outer));
     }
 
     namespace detail {

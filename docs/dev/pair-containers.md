@@ -82,7 +82,7 @@ These baseline pair-related fields were skipped before pair support. After regen
 | `m_unkMap578` | `gd::unordered_map<int, std::pair<double, double>>` | Binds |
 | `m_destroyObjectValues` | `gd::map<std::pair<int, int>, std::pair<float, float>>` | Binds |
 | `m_accountIDForIcon` | `gd::map<std::pair<int, UnlockType>, int>` | Binds |
-| `m_unkMap770` | `gd::map<std::pair<int, int>, gd::vector<GroupCommandObject2*>>` | Still skipped. Map **value** is a nested container |
+| `m_unkMap770` | `gd::map<std::pair<int, int>, gd::vector<GroupCommandObject2*>>` | Binds via [nested containers](nested-containers.md) |
 
 `audit_field_skips.py` groups remaining pair skips in the `pair` bucket.
 

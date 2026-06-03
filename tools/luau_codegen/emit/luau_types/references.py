@@ -196,6 +196,12 @@ def _refs_from_method(
         elif info and info.kind in ("map", "unordered_map") and info.value_type:
             if info.value_type.kind == "object":
                 refs.add(_object_type_name(info.value_type))
+            elif (
+                info.value_type.kind == "vector_view"
+                and info.value_type.element_type
+                and info.value_type.element_type.kind == "object"
+            ):
+                refs.add(_object_type_name(info.value_type.element_type))
             else:
                 refs.update(_value_type_object_refs(info.value_type))
         elif info and info.kind == "primitive_vector" and info.element_type:
@@ -215,6 +221,12 @@ def _refs_from_method(
     elif ret and ret.kind in ("map", "unordered_map") and ret.value_type:
         if ret.value_type.kind == "object":
             refs.add(_object_type_name(ret.value_type))
+        elif (
+            ret.value_type.kind == "vector_view"
+            and ret.value_type.element_type
+            and ret.value_type.element_type.kind == "object"
+        ):
+            refs.add(_object_type_name(ret.value_type.element_type))
         else:
             refs.update(_value_type_object_refs(ret.value_type))
     elif ret and ret.kind == "primitive_vector" and ret.element_type:
@@ -245,6 +257,12 @@ def _refs_from_fields(
         elif ok and ret and ret.kind in ("map", "unordered_map") and ret.value_type:
             if ret.value_type.kind == "object":
                 refs.add(_object_type_name(ret.value_type))
+            elif (
+                ret.value_type.kind == "vector_view"
+                and ret.value_type.element_type
+                and ret.value_type.element_type.kind == "object"
+            ):
+                refs.add(_object_type_name(ret.value_type.element_type))
             else:
                 refs.update(_value_type_object_refs(ret.value_type))
         elif ok and ret and ret.kind == "primitive_vector" and ret.element_type:
