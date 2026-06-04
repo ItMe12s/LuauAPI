@@ -84,12 +84,8 @@ class HookRuntimeOrderTests(unittest.TestCase):
         self.assertIn("return a->priority > b->priority", text)
         self.assertIn("return a->installOrder < b->installOrder", text)
         self.assertIn("return a->installOrder > b->installOrder", text)
-        self.assertIn(
-            "auto const& callbacks = it->second.preSorted", emit_internal_hpp()
-        )
-        self.assertIn(
-            "auto const& callbacks = it->second.postSorted", emit_internal_hpp()
-        )
+        self.assertIn("auto const& callbacks = it->second.preSorted", emit_internal_hpp())
+        self.assertIn("auto const& callbacks = it->second.postSorted", emit_internal_hpp())
 
 
 class HookOffsetTests(unittest.TestCase):
@@ -340,9 +336,7 @@ class HookApplyFnTests(unittest.TestCase):
         self.assertIn("void* const address =", text)
         self.assertIn("if (!address)", text)
         self.assertIn("hook address unresolved for geode.cocos2d.CCNode:init/0", text)
-        self.assertIn(
-            "geode::Mod::get()->hook(address, &luaapi_hook_CCNode_init_0", text
-        )
+        self.assertIn("geode::Mod::get()->hook(address, &luaapi_hook_CCNode_init_0", text)
 
     def test_apply_hook_override_uses_protected_call_with_traceback(self) -> None:
         text = emit_internal_hpp()
@@ -351,9 +345,7 @@ class HookApplyFnTests(unittest.TestCase):
         self.assertNotIn("lua_pcall(L, 1, 0, 0)", text)
 
     def test_android_linked_create_hook_rejects_null_address(self) -> None:
-        ccobject = Class(
-            name="CCObject", namespace="cocos2d", attributes=["link(android)"]
-        )
+        ccobject = Class(name="CCObject", namespace="cocos2d", attributes=["link(android)"])
         cls = Class(
             name="CCNode",
             namespace="cocos2d",

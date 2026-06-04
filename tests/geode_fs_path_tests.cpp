@@ -1,19 +1,19 @@
 #include "lua/module/PathSandbox.hpp"
 
 #include <catch2/catch_test_macros.hpp>
-
 #include <chrono>
 #include <filesystem>
 #include <string>
 
 namespace {
     std::filesystem::path makeTempDir() {
-        auto dir = std::filesystem::temp_directory_path()
-            / ("luauapi_fs_path_" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
+        auto dir = std::filesystem::temp_directory_path() /
+            ("luauapi_fs_path_" +
+             std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
         REQUIRE(std::filesystem::create_directories(dir));
         return dir;
     }
-}
+} // namespace
 
 TEST_CASE("fs path resolution accepts paths inside the root") {
     auto dir = makeTempDir();
@@ -41,7 +41,8 @@ TEST_CASE("fs path resolution rejects traversal and absolute paths") {
     REQUIRE(luax::resolveInsideRoot(dir, "sub/../../escape").isErr());
     REQUIRE(luax::resolveInsideRoot(dir, "").isErr());
 
-    auto absolute = luax::normalizedPathString(std::filesystem::temp_directory_path() / "outside.json");
+    auto absolute =
+        luax::normalizedPathString(std::filesystem::temp_directory_path() / "outside.json");
     REQUIRE(luax::resolveInsideRoot(dir, absolute).isErr());
 
     std::filesystem::remove_all(dir);

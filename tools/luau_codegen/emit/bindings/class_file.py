@@ -41,8 +41,7 @@ def _classify_method_args(
     ctx: CodegenContext | None = None,
 ) -> List[TypeInfo]:
     return [
-        require_classify_arg(arg.type, objects, owner_class=cls.name, ctx=ctx)
-        for arg in m.args
+        require_classify_arg(arg.type, objects, owner_class=cls.name, ctx=ctx) for arg in m.args
     ]
 
 
@@ -126,9 +125,7 @@ def _emit_out_arg(info: TypeInfo, var: str) -> tuple[List[str], str]:
     if info.kind == "enum":
         return [f"        {info.cxx_type} {var}{{}};\n"], var
     if info.kind in _CONTAINER_KINDS:
-        return [f"        {info.cxx_type} {var}{{}};\n"], (
-            f"&{var}" if info.is_vector_ptr else var
-        )
+        return [f"        {info.cxx_type} {var}{{}};\n"], (f"&{var}" if info.is_vector_ptr else var)
     return [f"        {info.cxx_type} {var}{{}};\n"], var
 
 
@@ -162,9 +159,7 @@ def _emit_lua_method_arg(
     if lua_arg.sel_pair and not lua_arg.implicit_self_target:
         sel_var = f"sel{arg_idx}"
         out.extend(check_sel_handler(lua_idx, sel_var, info, label))
-        call_args.extend(
-            sel_call_args(sel_var, info, handler_first=lua_arg.handler_first)
-        )
+        call_args.extend(sel_call_args(sel_var, info, handler_first=lua_arg.handler_first))
         selector_handlers.append((f"{sel_var}_handler", info.class_name or "menu"))
         return out, lua_idx + 1
 
@@ -247,16 +242,10 @@ def _emit_invoke(
                     continue
                 if tail.sel_pair or tail.orphan:
                     break
-                out.extend(
-                    check_arg(
-                        tail.arg, tail.info, temp_lua, f"arg{tail.arg_index}", label
-                    )
-                )
+                out.extend(check_arg(tail.arg, tail.info, temp_lua, f"arg{tail.arg_index}", label))
                 remaining.append(f"arg{tail.arg_index}")
                 temp_lua += 1
-            out.extend(
-                _emit_ccnode_schedule(cls, m, label, lua_idx, lua_arg.info, remaining)
-            )
+            out.extend(_emit_ccnode_schedule(cls, m, label, lua_idx, lua_arg.info, remaining))
             out.append("    }\n\n")
             return "".join(out)
         lines, lua_idx = _emit_lua_method_arg(
@@ -277,15 +266,11 @@ def _emit_invoke(
     else:
         target = f"self->{m.name}({args})"
     out_refs = [
-        (i, arg_infos[i])
-        for i in range(len(m.args))
-        if ret.kind == "void" and arg_infos[i].is_out
+        (i, arg_infos[i]) for i in range(len(m.args)) if ret.kind == "void" and arg_infos[i].is_out
     ]
     if ret.kind == "void":
         out.append(f"        {target};\n")
-        out.extend(
-            _emit_trampoline_anchors(selector_handlers, delegate_trampolines, ret, m)
-        )
+        out.extend(_emit_trampoline_anchors(selector_handlers, delegate_trampolines, ret, m))
         if out_refs:
             for i, oinfo in out_refs:
                 out.extend(_emit_vector_out_push(oinfo, f"arg{i}"))
@@ -296,9 +281,7 @@ def _emit_invoke(
         out.append(f"        auto result = {target};\n")
         if m.is_bound_ctor:
             out.append("        result->autorelease();\n")
-        out.extend(
-            _emit_trampoline_anchors(selector_handlers, delegate_trampolines, ret, m)
-        )
+        out.extend(_emit_trampoline_anchors(selector_handlers, delegate_trampolines, ret, m))
         out.extend(_emit_vector_return_push(ret, m, "result"))
     out.append("    }\n\n")
     return "".join(out)
@@ -316,17 +299,11 @@ _CONTAINER_FIELD_ASSIGN_FNS = {
 def _container_field_assign_fn(info: TypeInfo) -> str | None:
     if info.kind in ("map", "unordered_map") and info.key_type is not None:
         if info.key_type.kind == "pair":
-            return (
-                "assignPairKeyMap"
-                if info.kind == "map"
-                else "assignUnorderedPairKeyMap"
-            )
+            return "assignPairKeyMap" if info.kind == "map" else "assignUnorderedPairKeyMap"
     return _CONTAINER_FIELD_ASSIGN_FNS.get(info.kind)
 
 
-def _emit_std_array_field_assign_lines(
-    field: Field, label: str, info: TypeInfo
-) -> list[str]:
+def _emit_std_array_field_assign_lines(field: Field, label: str, info: TypeInfo) -> list[str]:
     if info.element_type is None or info.array_size <= 0:
         raise ValueError("std array field requires element type and size")
     elem = info.element_type.cxx_type
@@ -345,9 +322,7 @@ def _emit_std_array_field_assign_lines(
     ]
 
 
-def _emit_container_field_assign_lines(
-    field: Field, label: str, info: TypeInfo
-) -> list[str]:
+def _emit_container_field_assign_lines(field: Field, label: str, info: TypeInfo) -> list[str]:
     fn = _container_field_assign_fn(info)
     if fn is None:
         raise ValueError(f"unsupported container field assign: {info.kind}")
@@ -385,16 +360,12 @@ def _emit_field_accessors(
         "nested_primitive_vector_view",
         "cc_c_array_view",
     ):
-        out = [f"    template <class T>\n"]
+        out = ["    template <class T>\n"]
         out.append(f"    int {getter_impl}(lua_State* L, T* self) {{\n")
-        out.append(
-            f"        if constexpr (requires(T* obj) {{ obj->{field.name}; }}) {{\n"
-        )
+        out.append(f"        if constexpr (requires(T* obj) {{ obj->{field.name}; }}) {{\n")
         out.extend(
             f"    {line}"
-            for line in push_value(
-                ret_info, f"self->{field.name}", False, owner_expr="self"
-            )
+            for line in push_value(ret_info, f"self->{field.name}", False, owner_expr="self")
         )
         out.append("            return 1;\n")
         out.append("        } else {\n")
@@ -413,23 +384,17 @@ def _emit_field_accessors(
         )
         out.append(f"        return {getter_impl}(L, self);\n")
         out.append("    }\n\n")
-        out.append(f"    template <class T>\n")
+        out.append("    template <class T>\n")
         out.append(f"    void {register}(lua_State* L) {{\n")
-        out.append(
-            f"        if constexpr (requires(T* obj) {{ obj->{field.name}; }}) {{\n"
-        )
-        out.append(
-            f'            luax::Usertype<T>::readonlyField(L, "{field.name}", &{getter});\n'
-        )
+        out.append(f"        if constexpr (requires(T* obj) {{ obj->{field.name}; }}) {{\n")
+        out.append(f'            luax::Usertype<T>::readonlyField(L, "{field.name}", &{getter});\n')
         out.append("        }\n")
         out.append("    }\n\n")
         return "".join(out)
-    out = [f"    template <class T>\n"]
+    out = ["    template <class T>\n"]
     out.append(f"    int {getter_impl}(lua_State* L, T* self) {{\n")
     out.append(f"        if constexpr (requires(T* obj) {{ obj->{field.name}; }}) {{\n")
-    out.extend(
-        f"    {line}" for line in push_value(ret_info, f"self->{field.name}", False)
-    )
+    out.extend(f"    {line}" for line in push_value(ret_info, f"self->{field.name}", False))
     out.append("            return 1;\n")
     out.append("        } else {\n")
     out.append(
@@ -439,18 +404,12 @@ def _emit_field_accessors(
     out.append("        }\n")
     out.append("    }\n\n")
     out.append(f"    int {getter}(lua_State* L) {{\n")
-    out.append(
-        f'        if (lua_gettop(L) != 1) luaL_error(L, "{label} getter expected 1 arg");\n'
-    )
-    out.append(
-        f'        auto self = luax::Usertype<{cxx_name(cls)}>::check(L, 1, "{label}");\n'
-    )
+    out.append(f'        if (lua_gettop(L) != 1) luaL_error(L, "{label} getter expected 1 arg");\n')
+    out.append(f'        auto self = luax::Usertype<{cxx_name(cls)}>::check(L, 1, "{label}");\n')
     out.append(f"        return {getter_impl}(L, self);\n")
     out.append("    }\n\n")
-    out.append(f"    template <class T>\n")
-    out.append(
-        f"    int {setter_impl}(lua_State* L, T* self, {arg_info.cxx_type} value) {{\n"
-    )
+    out.append("    template <class T>\n")
+    out.append(f"    int {setter_impl}(lua_State* L, T* self, {arg_info.cxx_type} value) {{\n")
     out.append(f"        if constexpr (requires(T* obj) {{ obj->{field.name}; }}) {{\n")
     if arg_info.kind == "std_array":
         out.extend(_emit_std_array_field_assign_lines(field, label, arg_info))
@@ -477,18 +436,14 @@ def _emit_field_accessors(
     out.append(
         f'        if (lua_gettop(L) != 2) luaL_error(L, "{label} setter expected 2 args");\n'
     )
-    out.append(
-        f'        auto self = luax::Usertype<{cxx_name(cls)}>::check(L, 1, "{label}");\n'
-    )
+    out.append(f'        auto self = luax::Usertype<{cxx_name(cls)}>::check(L, 1, "{label}");\n')
     out.extend(check_arg(Arg(field.type, field.name), arg_info, 2, "value", label))
     out.append(f"        return {setter_impl}(L, self, value);\n")
     out.append("    }\n\n")
     out.append("    template <class T>\n")
     out.append(f"    void {register}(lua_State* L) {{\n")
     out.append(f"        if constexpr (requires(T* obj) {{ obj->{field.name}; }}) {{\n")
-    out.append(
-        f'            luax::Usertype<T>::field(L, "{field.name}", &{getter}, &{setter});\n'
-    )
+    out.append(f'            luax::Usertype<T>::field(L, "{field.name}", &{getter}, &{setter});\n')
     out.append("        }\n")
     out.append("    }\n\n")
     return "".join(out)
@@ -514,9 +469,7 @@ def _emit_dispatcher(
         )
     out.append("            default: break;\n")
     out.append("        }\n")
-    out.append(
-        f'        luaL_error(L, "{call_label(cls, first)} unsupported overload arity");\n'
-    )
+    out.append(f'        luaL_error(L, "{call_label(cls, first)} unsupported overload arity");\n')
     out.append("    }\n\n")
     return "".join(out)
 
@@ -586,25 +539,19 @@ def _emit_class_file(
     out.append(
         f'    auto registerResult = luax::Usertype<{cxx_name(cls)}>::registerType(L, "{cls.name}", {base_expr});\n'
     )
-    out.append(
-        "    if (registerResult.isErr()) return geode::Err(registerResult.unwrapErr());\n"
-    )
+    out.append("    if (registerResult.isErr()) return geode::Err(registerResult.unwrapErr());\n")
 
     for name, methods in grouped.items():
         if methods[0].is_static:
             continue
         fn = f"luaapi_{cxx_id(cls.name)}_{cxx_id(name)}"
-        out.append(
-            f'    luax::Usertype<{cxx_name(cls)}>::method(L, "{name}", &{fn});\n'
-        )
+        out.append(f'    luax::Usertype<{cxx_name(cls)}>::method(L, "{name}", &{fn});\n')
 
     for _, field in field_targets:
         register = f"luaapi_{cxx_id(cls.name)}_field_register_{cxx_id(field.name)}"
         out.append(f"    {register}<{cxx_name(cls)}>(L);\n")
 
-    static_methods = [
-        (name, methods) for name, methods in grouped.items() if methods[0].is_static
-    ]
+    static_methods = [(name, methods) for name, methods in grouped.items() if methods[0].is_static]
     if static_methods:
         ns = lua_namespace(cls)
         out.append(f'\n    luax::getOrCreateTable(L, "{ns}");\n')

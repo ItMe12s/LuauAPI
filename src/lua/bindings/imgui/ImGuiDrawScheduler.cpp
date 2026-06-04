@@ -110,4 +110,4 @@ namespace luax {
         }
         return n;
     }
-}
+} // namespace luax

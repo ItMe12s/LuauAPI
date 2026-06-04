@@ -3,9 +3,8 @@
 #include "lua/Config.hpp"
 #include "lua/runtime/Runtime.hpp"
 
-#include <algorithm>
-
 #include <Geode/Geode.hpp>
+#include <algorithm>
 
 namespace luax {
     TaskScheduler& TaskScheduler::get() {
@@ -56,8 +55,7 @@ namespace luax {
             return nullptr;
         }
         Task& task = tasks[loc.index];
-        if (task.id != id || task.cancelled)
-            return nullptr;
+        if (task.id != id || task.cancelled) return nullptr;
         return &task;
     }
 
@@ -103,11 +101,11 @@ namespace luax {
             bool ok = fire(task);
             Task& current = m_timed[i];
             if (!current.cancelled) {
-                if (!ok)
-                    current.cancelled = true;
+                if (!ok) current.cancelled = true;
                 else if (current.interval > 0.0) {
                     current.remaining = current.interval;
-                } else {
+                }
+                else {
                     current.cancelled = true;
                 }
             }
@@ -221,7 +219,7 @@ namespace luax {
         };
 
         TaskTickNode* s_tickNode = nullptr;
-    }
+    } // namespace
 
     void armTaskTick() {
         if (s_tickNode) return;
@@ -249,4 +247,4 @@ namespace luax {
 
     void disarmTaskTick() {}
 #endif
-}
+} // namespace luax

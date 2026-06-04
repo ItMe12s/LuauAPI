@@ -1,0 +1,81 @@
+name: CI Safety Net
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - "**"
+  pull_request:
+
+jobs:
+  python-lint:
+    name: Python lint and types
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dev dependencies
+        run: pip install -e ".[dev]"
+
+      - name: Ruff
+        run: ruff check tools/
+
+      - name: Mypy
+        run: mypy tools/luau_codegen
+
+  clang-format:
+    name: clang-format
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install clang-format
+        run: sudo apt-get update && sudo apt-get install -y clang-format
+
+      - name: Check formatting
+        shell: pwsh
+        run: ./scripts/ci/check_clang_format.ps1
+
+  generated-cpp-syntax:
+    name: Generated C++ syntax
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compile generated bindings
+        uses: geode-sdk/build-geode-mod@main
+        with:
+          build-args: --target LuauAPI_GeneratedBindings
+
+  host-tests-sanitizers:
+    name: Host tests (ASan/UBSan)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build tools
+        run: sudo apt-get update && sudo apt-get install -y cmake ninja-build clang
+
+      - name: Configure
+        run: >
+          cmake -B build -G Ninja
+          -DCMAKE_CXX_COMPILER=clang++
+          -DLUAUAPI_BUILD_TESTS=ON
+          -DLUAUAPI_HOST_ONLY=ON
+          -DLUAUAPI_ENABLE_SANITIZERS=ON
+
+      - name: Build tests
+        run: cmake --build build --target luauapi_tests
+
+      - name: Run tests
+        run: ctest --test-dir build --output-on-failure
+        env:
+          ASAN_OPTIONS: detect_leaks=0

@@ -19,12 +19,7 @@ PHASE_PAIR_MAP_KEY = 3
 
 
 def pair_lua_type(first_lua: str, second_lua: str) -> str:
-    return (
-        "{ "
-        f"{PAIR_RECORD_FIELDS[0]}: {first_lua}, "
-        f"{PAIR_RECORD_FIELDS[1]}: {second_lua} "
-        "}"
-    )
+    return f"{{ {PAIR_RECORD_FIELDS[0]}: {first_lua}, {PAIR_RECORD_FIELDS[1]}: {second_lua} }}"
 
 
 def pair_map_value_lua_type(key_lua: str, value_lua: str) -> str:

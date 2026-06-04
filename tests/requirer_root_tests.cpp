@@ -2,7 +2,6 @@
 #include "lua/runtime/Runtime.hpp"
 
 #include <catch2/catch_test_macros.hpp>
-
 #include <chrono>
 #include <filesystem>
 #include <fstream>
@@ -20,8 +19,9 @@ namespace {
     };
 
     std::filesystem::path makeTempDir() {
-        auto dir = std::filesystem::temp_directory_path()
-            / ("luauapi_requirer_root_" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
+        auto dir = std::filesystem::temp_directory_path() /
+            ("luauapi_requirer_root_" +
+             std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
         REQUIRE(std::filesystem::create_directories(dir));
         return dir;
     }
@@ -32,7 +32,7 @@ namespace {
         out << contents;
         REQUIRE(out.good());
     }
-}
+} // namespace
 
 TEST_CASE("Requirer rejects empty and unresolvable resources roots") {
     RuntimeGuard guard;

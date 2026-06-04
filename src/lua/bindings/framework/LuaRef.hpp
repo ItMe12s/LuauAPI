@@ -2,11 +2,10 @@
 
 #include "lua/runtime/Runtime.hpp"
 
-#include <lua.h>
-#include <lualib.h>
-
 #include <cstdint>
 #include <filesystem>
+#include <lua.h>
+#include <lualib.h>
 
 namespace luax {
     class LuaRef {
@@ -99,4 +98,4 @@ namespace luax {
         std::uint32_t m_generation = 0;
         std::filesystem::path m_resourcesRoot;
     };
-}
+} // namespace luax

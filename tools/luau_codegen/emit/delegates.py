@@ -42,11 +42,7 @@ def install_delegate_specs_module(
         mod = importlib.import_module(module_name)
     if specs_path is not None:
         mod.__file__ = str(specs_path)
-    if (
-        preserve_existing_on_empty
-        and not specs
-        and getattr(mod, "DELEGATE_SPECS", None)
-    ):
+    if preserve_existing_on_empty and not specs and getattr(mod, "DELEGATE_SPECS", None):
         return
     exec(emit_specs_py(specs), mod.__dict__)
 
@@ -306,9 +302,7 @@ def parse_broma(
             if not (name.endswith("Delegate") or name.endswith("Protocol")):
                 continue
             methods = []
-            for vm in re.finditer(
-                r"virtual\s+([\w:<>,\s*&]+?)\s+(\w+)\s*\(([^)]*)\)", m.group(2)
-            ):
+            for vm in re.finditer(r"virtual\s+([\w:<>,\s*&]+?)\s+(\w+)\s*\(([^)]*)\)", m.group(2)):
                 ret, mn, raw = norm(vm.group(1)), vm.group(2), vm.group(3).strip()
                 args = []
                 if raw:
@@ -442,9 +436,7 @@ def push_stmt(t: str, expr: str) -> str:
     if n.endswith("*"):
         obj = n[:-1].strip()
         return f"luax::Usertype<{obj}>::pushBorrowed(L, {expr})"
-    if n in ("enumKeyCodes", "cocos2d::enumKeyCodes") or any(
-        n.endswith(s) for s in ENUM_SUFFIXES
-    ):
+    if n in ("enumKeyCodes", "cocos2d::enumKeyCodes") or any(n.endswith(s) for s in ENUM_SUFFIXES):
         return f"lua_pushnumber(L, static_cast<double>(static_cast<int>({expr})))"
     return f"luax::push(L, {expr})"
 
@@ -493,9 +485,7 @@ def emit_specs_py(specs: dict[str, DelegateSpec]) -> str:
             rl, al = lua_for(m.ret), [lua_for(a[0]) for a in method_args(spec, m)]
             if rl is None or any(x is None for x in al):
                 continue
-            entries.append(
-                f'            DelegateMethodSpec("{m.name}", "{rl}", {tuple(al)!r}),'
-            )
+            entries.append(f'            DelegateMethodSpec("{m.name}", "{rl}", {tuple(al)!r}),')
         if not entries:
             continue
         count += 1
@@ -540,8 +530,8 @@ def emit_gen_hpp(specs: dict[str, DelegateSpec]) -> str:
             f"        ~{spec.cpp_class}() override {{\n"
             f"            LuaDelegateBase::unregisterInterface(static_cast<{base}*>(this));\n"
             f"        }}\n" + "\n".join(methods) + "\n    private:\n"
-            f"        std::shared_ptr<LuaRef> m_table;\n"
-            f"    }};"
+            "        std::shared_ptr<LuaRef> m_table;\n"
+            "    };"
         )
     return (
         "#pragma once\n\n"
@@ -615,14 +605,10 @@ def emit_gen_cpp(specs: dict[str, DelegateSpec]) -> str:
     for spec in specs.values():
         if not any(cpp_emit_supported(spec, m) for m in spec.methods):
             continue
-        parts.append(
-            f"{spec.cpp_class}* {spec.cpp_class}::create(lua_State* L, int tableIndex) {{"
-        )
+        parts.append(f"{spec.cpp_class}* {spec.cpp_class}::create(lua_State* L, int tableIndex) {{")
         parts.append("    LuaDelegateBase::checkDelegateTable(L, tableIndex);")
         parts.append(f"    auto* self = new {spec.cpp_class}();")
-        parts.append(
-            "    self->m_table = LuaDelegateBase::captureTable(L, tableIndex);"
-        )
+        parts.append("    self->m_table = LuaDelegateBase::captureTable(L, tableIndex);")
         parts.append(
             f"    LuaDelegateBase::registerInterface(static_cast<{spec.cxx_type}*>(self), self->m_table);"
         )

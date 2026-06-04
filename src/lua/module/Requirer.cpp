@@ -7,16 +7,17 @@
 
 #include <Luau/CodeGen.h>
 #include <Luau/Compiler.h>
-#include <lualib.h>
-
 #include <cstring>
 #include <functional>
+#include <lualib.h>
 #include <string>
 #include <string_view>
 
 namespace luax {
     namespace {
-        luarequire_WriteResult writeString(std::string const& contents, char* buffer, size_t bufferSize, size_t* sizeOut) {
+        luarequire_WriteResult writeString(
+            std::string const& contents, char* buffer, size_t bufferSize, size_t* sizeOut
+        ) {
             size_t needed = contents.size() + 1;
             if (bufferSize < needed) {
                 *sizeOut = needed;
@@ -27,7 +28,9 @@ namespace luax {
             return WRITE_SUCCESS;
         }
 
-        Requirer* self(void* ctx) { return static_cast<Requirer*>(ctx); }
+        Requirer* self(void* ctx) {
+            return static_cast<Requirer*>(ctx);
+        }
 
         bool is_require_allowed(lua_State*, void*, char const* requirer_chunkname) {
             return requirer_chunkname && canRequireFromChunk(requirer_chunkname);
@@ -54,7 +57,9 @@ namespace luax {
             return self(ctx)->isModulePresent();
         }
 
-        luarequire_WriteResult get_chunkname(lua_State*, void* ctx, char* buffer, size_t buffer_size, size_t* size_out) {
+        luarequire_WriteResult get_chunkname(
+            lua_State*, void* ctx, char* buffer, size_t buffer_size, size_t* size_out
+        ) {
             auto const& name = self(ctx)->chunkname();
             if (name.empty()) {
                 return WRITE_FAILURE;
@@ -62,13 +67,17 @@ namespace luax {
             return writeString(name, buffer, buffer_size, size_out);
         }
 
-        luarequire_WriteResult get_loadname(lua_State*, void* ctx, char* buffer, size_t buffer_size, size_t* size_out) {
+        luarequire_WriteResult get_loadname(
+            lua_State*, void* ctx, char* buffer, size_t buffer_size, size_t* size_out
+        ) {
             auto path = self(ctx)->resolvedModulePath();
             if (path.isErr()) return WRITE_FAILURE;
             return writeString(filesystemPathString(path.unwrap()), buffer, buffer_size, size_out);
         }
 
-        luarequire_WriteResult get_cache_key(lua_State*, void* ctx, char* buffer, size_t buffer_size, size_t* size_out) {
+        luarequire_WriteResult get_cache_key(
+            lua_State*, void* ctx, char* buffer, size_t buffer_size, size_t* size_out
+        ) {
             auto path = self(ctx)->resolvedModulePath();
             if (path.isErr()) return WRITE_FAILURE;
             return writeString(filesystemPathString(path.unwrap()), buffer, buffer_size, size_out);
@@ -82,32 +91,43 @@ namespace luax {
             return WRITE_FAILURE;
         }
 
-        int load(lua_State* L, void* ctx, char const* /*path*/, char const* chunkname, char const* loadname) {
+        int load(
+            lua_State* L, void* ctx, char const* /*path*/, char const* chunkname, char const* loadname
+        ) {
             Requirer* req = self(ctx);
 
             auto pathResult = req->resolvedModulePath();
             if (pathResult.isErr()) {
-                luaL_error(L, "module '%s' cannot be resolved: %s", loadname, pathResult.unwrapErr().c_str());
+                luaL_error(
+                    L, "module '%s' cannot be resolved: %s", loadname, pathResult.unwrapErr().c_str()
+                );
             }
             auto filePath = pathResult.unwrap();
 
             std::error_code ec;
             auto fileSize = std::filesystem::file_size(filePath, ec);
             if (ec || fileSize > kMaxScriptBytes) {
-                luaL_error(L, "module '%s' exceeds maximum size or cannot be read", filesystemPathString(filePath).c_str());
+                luaL_error(
+                    L,
+                    "module '%s' exceeds maximum size or cannot be read",
+                    filesystemPathString(filePath).c_str()
+                );
             }
 
             auto contentsResult = readScriptFile(filePath);
             if (contentsResult.isErr()) {
-                luaL_error(L, "could not read module '%s': %s", filesystemPathString(filePath).c_str(), contentsResult.unwrapErr().c_str());
+                luaL_error(
+                    L,
+                    "could not read module '%s': %s",
+                    filesystemPathString(filePath).c_str(),
+                    contentsResult.unwrapErr().c_str()
+                );
             }
             auto const& contents = contentsResult.unwrap();
 
             bool compileOk = false;
             std::string const& bytecode = req->runtime().getOrCompileBytecode(
-                bytecodeCacheKey(filePath, contents),
-                contents,
-                compileOk
+                bytecodeCacheKey(filePath, contents), contents, compileOk
             );
             if (!compileOk) {
                 auto const& err = req->runtime().lastError();
@@ -147,10 +167,12 @@ namespace luax {
                     lua_pop(L, 1);
                     luaL_error(L, "module '%s' must return a single value", chunkname);
                 }
-            } else if (resumeStatus == LUA_YIELD) {
+            }
+            else if (resumeStatus == LUA_YIELD) {
                 lua_pop(L, 1);
                 luaL_error(L, "module '%s' yielded", chunkname);
-            } else {
+            }
+            else {
                 char const* err = lua_tostring(ML, -1);
                 std::string msg = err ? err : "(unknown runtime error)";
                 lua_pop(L, 1);
@@ -161,7 +183,7 @@ namespace luax {
             lua_remove(L, -2);
             return 1;
         }
-    }
+    } // namespace
 
     Requirer::Requirer(Runtime& runtime) : m_runtime(runtime) {}
 
@@ -179,17 +201,17 @@ namespace luax {
     void Requirer::initConfig(luarequire_Configuration* config) {
         if (!config) return;
         config->is_require_allowed = is_require_allowed;
-        config->reset              = reset;
-        config->jump_to_alias      = jump_to_alias;
-        config->to_parent          = to_parent;
-        config->to_child           = to_child;
-        config->is_module_present  = is_module_present;
-        config->get_chunkname      = get_chunkname;
-        config->get_loadname       = get_loadname;
-        config->get_cache_key      = get_cache_key;
-        config->get_config_status  = get_config_status;
-        config->get_config         = get_config;
-        config->load               = load;
+        config->reset = reset;
+        config->jump_to_alias = jump_to_alias;
+        config->to_parent = to_parent;
+        config->to_child = to_child;
+        config->is_module_present = is_module_present;
+        config->get_chunkname = get_chunkname;
+        config->get_loadname = get_loadname;
+        config->get_cache_key = get_cache_key;
+        config->get_config_status = get_config_status;
+        config->get_config = get_config;
+        config->load = load;
     }
 
     luarequire_NavigateResult Requirer::resetTo(char const* requirer_chunkname) {
@@ -277,4 +299,4 @@ namespace luax {
         }
         return "@" + name;
     }
-}
+} // namespace luax

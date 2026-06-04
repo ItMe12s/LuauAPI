@@ -4,14 +4,13 @@
 
 #include <Geode/Result.hpp>
 #include <Geode/utils/cocos.hpp>
+#include <algorithm>
 #include <cocos2d.h>
+#include <cstdint>
 #include <fmt/format.h>
+#include <initializer_list>
 #include <lua.h>
 #include <lualib.h>
-
-#include <algorithm>
-#include <cstdint>
-#include <initializer_list>
 #include <string>
 #include <type_traits>
 #include <typeindex>
@@ -69,35 +68,46 @@ namespace luax {
         geode::Result<void> ensureUserdataMetatable(lua_State* L, TypeInfo const& info);
         void chainMethodTable(lua_State* L, TypeInfo const& info, std::uint32_t baseTag);
         void appendMethod(lua_State* L, TypeInfo const& info, char const* name, lua_CFunction fn);
-        void appendField(lua_State* L, TypeInfo const& info, char const* name, lua_CFunction getter, lua_CFunction setter);
-        void appendReadOnlyField(lua_State* L, TypeInfo const& info, char const* name, lua_CFunction getter);
-        UserdataCandidate checkCandidate(lua_State* L, int idx, char const* targetName, char const* method);
+        void appendField(
+            lua_State* L, TypeInfo const& info, char const* name, lua_CFunction getter,
+            lua_CFunction setter
+        );
+        void appendReadOnlyField(
+            lua_State* L, TypeInfo const& info, char const* name, lua_CFunction getter
+        );
+        UserdataCandidate checkCandidate(
+            lua_State* L, int idx, char const* targetName, char const* method
+        );
         UserdataCandidate tryCandidate(lua_State* L, int idx);
         cocos2d::CCNode* tryNodeCandidate(lua_State* L, int idx);
         bool hasBase(TypeInfo const& info, std::uint32_t targetTag);
         void pushUserdataOwned(lua_State* L, cocos2d::CCObject* obj, TypeInfo const& info);
         void pushUserdataBorrowed(lua_State* L, cocos2d::CCObject* obj, TypeInfo const& info);
-    }
+    } // namespace detail
 
     template <class T>
     struct Usertype {
         static_assert(std::is_base_of_v<cocos2d::CCObject, T>, "Usertype<T> requires T : CCObject");
 
         static std::uint32_t tag() {
-            if (auto const* info = detail::UsertypeRegistry::get().findInfo(std::type_index(typeid(T)))) {
+            if (auto const* info =
+                    detail::UsertypeRegistry::get().findInfo(std::type_index(typeid(T)))) {
                 return detail::isValidUserdataTag(info->tag) ? info->tag : 0;
             }
             return 0;
         }
 
         static char const* name() {
-            if (auto const* info = detail::UsertypeRegistry::get().findInfo(std::type_index(typeid(T)))) {
+            if (auto const* info =
+                    detail::UsertypeRegistry::get().findInfo(std::type_index(typeid(T)))) {
                 return info->name.c_str();
             }
             return "";
         }
 
-        static geode::Result<void> registerType(lua_State* L, char const* nm, std::initializer_list<std::uint32_t> baseTags = {}) {
+        static geode::Result<void> registerType(
+            lua_State* L, char const* nm, std::initializer_list<std::uint32_t> baseTags = {}
+        ) {
             auto& reg = detail::UsertypeRegistry::get();
             auto infoResult = reg.ensureInfo(std::type_index(typeid(T)));
             if (infoResult.isErr()) {
@@ -119,11 +129,13 @@ namespace luax {
                 }
                 if (auto const* base = reg.findByTag(b)) {
                     for (std::uint32_t x : base->baseClosure) {
-                        if (std::find(info.baseClosure.begin(), info.baseClosure.end(), x) == info.baseClosure.end()) {
+                        if (std::find(info.baseClosure.begin(), info.baseClosure.end(), x) ==
+                            info.baseClosure.end()) {
                             info.baseClosure.push_back(x);
                         }
                     }
-                } else {
+                }
+                else {
                     return geode::Err(fmt::format("{} unknown base userdata tag {}", nm, b));
                 }
             }
@@ -208,4 +220,4 @@ namespace luax {
             detail::pushUserdataBorrowed(L, static_cast<cocos2d::CCObject*>(obj), *info);
         }
     };
-}
+} // namespace luax

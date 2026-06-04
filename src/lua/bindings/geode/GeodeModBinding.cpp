@@ -6,11 +6,9 @@
 
 #include <Geode/loader/Mod.hpp>
 #include <Geode/utils/string.hpp>
-#include <matjson.hpp>
-
 #include <lua.h>
 #include <lualib.h>
-
+#include <matjson.hpp>
 #include <string>
 #include <string_view>
 
@@ -104,6 +102,6 @@ namespace {
         lua_pop(L, 1);
         return geode::Ok();
     }
-}
+} // namespace
 
 LUAX_BINDING(geode_mod_lib, registerGeodeMod)

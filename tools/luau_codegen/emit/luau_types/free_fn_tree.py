@@ -35,13 +35,9 @@ def _emit_function_tree(
             Method(name=fn.name, ret=fn.ret, args=fn.args, is_static=True)
             for fn in node["functions"][name]
         ]
-        lines.append(
-            f"{pad}{name}: {_method_type(_DUMMY_CLS, methods, objects, ctx=ctx)},\n"
-        )
+        lines.append(f"{pad}{name}: {_method_type(_DUMMY_CLS, methods, objects, ctx=ctx)},\n")
     for seg in sorted(node["children"]):
         lines.append(f"{pad}{seg}: {{\n")
-        lines.extend(
-            _emit_function_tree(node["children"][seg], objects, indent + 1, ctx=ctx)
-        )
+        lines.extend(_emit_function_tree(node["children"][seg], objects, indent + 1, ctx=ctx))
         lines.append(f"{pad}}},\n")
     return lines

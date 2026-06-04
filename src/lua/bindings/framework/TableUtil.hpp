@@ -3,7 +3,6 @@
 #include <Geode/utils/string.hpp>
 #include <lua.h>
 #include <lualib.h>
-
 #include <string>
 #include <string_view>
 #include <vector>
@@ -30,4 +29,4 @@ namespace luax {
         lua_pushcfunction(L, fn, name);
         lua_setfield(L, tableIdx < 0 ? tableIdx - 1 : tableIdx, name);
     }
-}
+} // namespace luax

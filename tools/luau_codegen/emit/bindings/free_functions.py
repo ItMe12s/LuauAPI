@@ -15,7 +15,6 @@ from luau_codegen.emit.bindings.vector_push import (
 from luau_codegen.convert.marshalling import (
     check_arg,
     check_sel_handler,
-    emit_stack_check,
     push_return,
     sel_call_args,
     sel_selector_call_arg,
@@ -91,9 +90,7 @@ def _emit_free_invoke(
         if lua_arg.sel_pair and not lua_arg.implicit_self_target:
             sel_var = f"sel{arg_idx}"
             out.extend(check_sel_handler(lua_idx, sel_var, info, label))
-            call_args.extend(
-                sel_call_args(sel_var, info, handler_first=lua_arg.handler_first)
-            )
+            call_args.extend(sel_call_args(sel_var, info, handler_first=lua_arg.handler_first))
             selector_handlers.append((f"{sel_var}_handler", info.class_name or "menu"))
             lua_idx += 1
             continue
@@ -145,9 +142,7 @@ def _emit_free_dispatcher(
     label = f"{fns[0].lua_path}.{fns[0].name}"
     out = [f"    int {base}(lua_State* L) {{\n", "        switch (lua_gettop(L)) {\n"]
     for idx, fn in enumerate(fns):
-        arg_infos = [
-            require_classify_arg(arg.type, objects, ctx=ctx) for arg in fn.args
-        ]
+        arg_infos = [require_classify_arg(arg.type, objects, ctx=ctx) for arg in fn.args]
         ret = require_classify_return(fn.ret, objects, ctx=ctx)
         input_count = sum(
             1

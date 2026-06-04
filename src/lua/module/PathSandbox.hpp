@@ -1,16 +1,16 @@
 #pragma once
 
-#include "lua/Config.hpp"
 #include "PathRules.hpp"
+#include "lua/Config.hpp"
 
 #if defined(LUAUAPI_HOST_TESTS)
-#include <optional>
-#include <fstream>
-#include <vector>
+    #include <fstream>
+    #include <optional>
+    #include <vector>
 #else
-#include <Geode/Result.hpp>
-#include <Geode/utils/string.hpp>
-#include <Geode/utils/file.hpp>
+    #include <Geode/Result.hpp>
+    #include <Geode/utils/file.hpp>
+    #include <Geode/utils/string.hpp>
 #endif
 
 #include <filesystem>
@@ -35,11 +35,25 @@ namespace luax {
             return result;
         }
 
-        bool isOk() const { return m_value.has_value(); }
-        bool isErr() const { return !isOk(); }
-        T& unwrap() { return *m_value; }
-        T const& unwrap() const { return *m_value; }
-        std::string const& unwrapErr() const { return m_error; }
+        bool isOk() const {
+            return m_value.has_value();
+        }
+
+        bool isErr() const {
+            return !isOk();
+        }
+
+        T& unwrap() {
+            return *m_value;
+        }
+
+        T const& unwrap() const {
+            return *m_value;
+        }
+
+        std::string const& unwrapErr() const {
+            return m_error;
+        }
 
     private:
         std::optional<T> m_value;
@@ -135,8 +149,7 @@ namespace luax {
     }
 
     inline ScriptResult<std::filesystem::path> resolveScriptFileInsideRoot(
-        std::filesystem::path const& root,
-        std::filesystem::path const& candidate
+        std::filesystem::path const& root, std::filesystem::path const& candidate
     ) {
         if (root.empty()) {
             return scriptErr<std::filesystem::path>("resources root is not configured");
@@ -153,7 +166,9 @@ namespace luax {
         }
 
         if (!std::filesystem::is_regular_file(path, ec)) {
-            return scriptErr<std::filesystem::path>("script file not found: " + filesystemPathString(path));
+            return scriptErr<std::filesystem::path>(
+                "script file not found: " + filesystemPathString(path)
+            );
         }
 
         return scriptOk(path);
@@ -227,19 +242,22 @@ namespace luax {
         std::error_code ec;
         auto root = std::filesystem::weakly_canonical(resourcesRoot, ec);
         if (ec) {
-            return scriptErr<std::filesystem::path>("resources root cannot be resolved: " + ec.message());
+            return scriptErr<std::filesystem::path>(
+                "resources root cannot be resolved: " + ec.message()
+            );
         }
 
         if (!std::filesystem::is_directory(root, ec)) {
-            return scriptErr<std::filesystem::path>("resources root is not a directory: " + filesystemPathString(root));
+            return scriptErr<std::filesystem::path>(
+                "resources root is not a directory: " + filesystemPathString(root)
+            );
         }
 
         return scriptOk(root);
     }
 
     inline ScriptResult<std::filesystem::path> resolveInsideRoot(
-        std::filesystem::path const& root,
-        std::string_view relative
+        std::filesystem::path const& root, std::string_view relative
     ) {
         if (relative.empty()) {
             return scriptErr<std::filesystem::path>("path is empty");
@@ -267,4 +285,4 @@ namespace luax {
 
         return scriptOk(resolved);
     }
-}
+} // namespace luax

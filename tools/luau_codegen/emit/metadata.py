@@ -115,10 +115,7 @@ def emit_report(
         f"- Methods emitted: **{emitted_methods}**\n",
         f"- Methods skipped: **{len(skipped)}**\n",
         f"- Free functions parsed: **{len(root.functions)}**\n",
-        (
-            "- Free functions emitted: "
-            f"**{len(plan.supported_free_functions) if plan else 0}**\n"
-        ),
+        (f"- Free functions emitted: **{len(plan.supported_free_functions) if plan else 0}**\n"),
         f"- Free functions skipped: **{len(free_skips)}**\n",
         f"- Hook targets emitted: **{hook_target_count}**\n",
         f"- Fields bound: **{field_target_count}**\n",

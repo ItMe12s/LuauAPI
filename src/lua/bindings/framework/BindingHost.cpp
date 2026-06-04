@@ -12,8 +12,9 @@ namespace luax {
         return static_cast<BindingHost*>(lua_callbacks(L)->userdata);
     }
 
-    BindingHost::ResourcesRootScope::ResourcesRootScope(BindingHost& host, std::filesystem::path const& root)
-        : m_host(host) {
+    BindingHost::ResourcesRootScope::ResourcesRootScope(
+        BindingHost& host, std::filesystem::path const& root
+    ) : m_host(host) {
         if (host.resourcesRoot() == root) {
             return;
         }
@@ -29,4 +30,4 @@ namespace luax {
         std::filesystem::path restore = std::move(*m_saved);
         m_host.swapResourcesRoot(restore);
     }
-}
+} // namespace luax

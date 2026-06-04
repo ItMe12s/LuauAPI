@@ -9,9 +9,7 @@ from luau_codegen.emit.plan import EmitPlan
 from luau_codegen.emit.bindings.class_file import _gen_ns
 
 
-def _emit_common_file(
-    emitted_classes: List[Class], plan: EmitPlan, target_platform: str
-) -> str:
+def _emit_common_file(emitted_classes: List[Class], plan: EmitPlan, target_platform: str) -> str:
     out = [file_preamble(), '#include "bindings_internal.hpp"\n\n']
     for cls in emitted_classes:
         gen_ns = _gen_ns(cls)
@@ -28,13 +26,9 @@ def _emit_common_file(
     ccobject = plan.objects.get("CCObject")
     release = None
     if ccobject:
-        release = next(
-            (m for m in ccobject.methods if m.name == "release" and not m.args), None
-        )
+        release = next((m for m in ccobject.methods if m.name == "release" and not m.args), None)
     release_address = (
-        hook_address_expr(ccobject, release, target_platform)
-        if ccobject and release
-        else ""
+        hook_address_expr(ccobject, release, target_platform) if ccobject and release else ""
     )
     if release_address:
         out.append("void luaapi_fields_release_hook(cocos2d::CCObject* self) {\n")
@@ -86,9 +80,7 @@ def _emit_common_file(
         out.append("    return *installResult;\n")
         out.append("}\n\n")
     else:
-        out.append(
-            "geode::Result<void> installFieldsReleaseHook() { return geode::Ok(); }\n\n"
-        )
+        out.append("geode::Result<void> installFieldsReleaseHook() { return geode::Ok(); }\n\n")
 
     if emitted_classes:
         out.append("struct HookRange {\n")
@@ -128,9 +120,7 @@ def _emit_common_file(
     out.append('    lua_pushcfunction(L, &luaapi_geode_fields, "geode.fields");\n')
     out.append('    lua_setfield(L, -2, "fields");\n')
     out.append("    lua_pop(L, 1);\n")
-    out.append(
-        "    if (auto hookResult = installFieldsReleaseHook(); hookResult.isErr()) {\n"
-    )
+    out.append("    if (auto hookResult = installFieldsReleaseHook(); hookResult.isErr()) {\n")
     out.append("        geode::log::warn(\n")
     out.append('            "CCObject::release hook setup skipped: {}",\n')
     out.append("            hookResult.unwrapErr()\n")
@@ -144,8 +134,6 @@ def _emit_common_file(
     out.append("}\n\n")
     out.append("} // namespace luauapi_gen\n\n")
     out.append("namespace {\n")
-    out.append(
-        "    LUAX_BINDING_PRIORITY(GeneratedBromaCommon, luauapi_gen::bindCommon, -1)\n"
-    )
+    out.append("    LUAX_BINDING_PRIORITY(GeneratedBromaCommon, luauapi_gen::bindCommon, -1)\n")
     out.append("}\n")
     return "".join(out)

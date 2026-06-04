@@ -1,11 +1,10 @@
 #pragma once
 
-#include <lua.h>
-#include <lualib.h>
-
 #include <array>
 #include <charconv>
 #include <cstdint>
+#include <lua.h>
+#include <lualib.h>
 #include <string>
 #include <string_view>
 #include <system_error>
@@ -14,12 +13,30 @@
 #include <utility>
 
 namespace luax {
-    inline void push(lua_State* L, bool v) { lua_pushboolean(L, v); }
-    inline void push(lua_State* L, int v) { lua_pushinteger(L, v); }
-    inline void push(lua_State* L, unsigned v) { lua_pushnumber(L, static_cast<double>(v)); }
-    inline void push(lua_State* L, long long v) { lua_pushnumber(L, static_cast<double>(v)); }
-    inline void push(lua_State* L, float v) { lua_pushnumber(L, v); }
-    inline void push(lua_State* L, double v) { lua_pushnumber(L, v); }
+    inline void push(lua_State* L, bool v) {
+        lua_pushboolean(L, v);
+    }
+
+    inline void push(lua_State* L, int v) {
+        lua_pushinteger(L, v);
+    }
+
+    inline void push(lua_State* L, unsigned v) {
+        lua_pushnumber(L, static_cast<double>(v));
+    }
+
+    inline void push(lua_State* L, long long v) {
+        lua_pushnumber(L, static_cast<double>(v));
+    }
+
+    inline void push(lua_State* L, float v) {
+        lua_pushnumber(L, v);
+    }
+
+    inline void push(lua_State* L, double v) {
+        lua_pushnumber(L, v);
+    }
+
     inline void push(lua_State* L, char const* v) {
         if (!v) {
             lua_pushnil(L);
@@ -27,9 +44,18 @@ namespace luax {
         }
         lua_pushstring(L, v);
     }
-    inline void push(lua_State* L, std::string const& v) { lua_pushlstring(L, v.data(), v.size()); }
-    inline void push(lua_State* L, std::string_view v) { lua_pushlstring(L, v.data(), v.size()); }
-    inline void push(lua_State* L, std::nullptr_t) { lua_pushnil(L); }
+
+    inline void push(lua_State* L, std::string const& v) {
+        lua_pushlstring(L, v.data(), v.size());
+    }
+
+    inline void push(lua_State* L, std::string_view v) {
+        lua_pushlstring(L, v.data(), v.size());
+    }
+
+    inline void push(lua_State* L, std::nullptr_t) {
+        lua_pushnil(L);
+    }
 
     template <class T>
     inline void pushIntegerString(lua_State* L, T v) {
@@ -153,4 +179,4 @@ namespace luax {
         lua_pop(L, 1);
         return value;
     }
-}
+} // namespace luax

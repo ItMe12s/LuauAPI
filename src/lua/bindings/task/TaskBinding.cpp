@@ -1,14 +1,12 @@
 #include "TaskScheduler.hpp"
-
 #include "lua/bindings/Binding.hpp"
 #include "lua/bindings/framework/LuaRef.hpp"
 #include "lua/bindings/framework/TableUtil.hpp"
 #include "lua/runtime/Runtime.hpp"
 
+#include <chrono>
 #include <lua.h>
 #include <lualib.h>
-
-#include <chrono>
 
 namespace {
     using namespace luax;
@@ -33,7 +31,9 @@ namespace {
 
     void ensureCapacity(lua_State* L) {
         if (TaskScheduler::get().full()) {
-            luaL_error(L, "task: too many scheduled tasks (limit %d)", static_cast<int>(kMaxScheduledTasks));
+            luaL_error(
+                L, "task: too many scheduled tasks (limit %d)", static_cast<int>(kMaxScheduledTasks)
+            );
         }
     }
 
@@ -117,7 +117,7 @@ namespace {
         }
         lua_pop(L, 1);
     }
-}
+} // namespace
 
 namespace luax {
     geode::Result<void> registerTask(lua_State* L) {
@@ -148,6 +148,6 @@ namespace luax {
 
         return geode::Ok();
     }
-}
+} // namespace luax
 
 LUAX_BINDING(task_lib, registerTask)

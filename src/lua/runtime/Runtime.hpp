@@ -5,15 +5,14 @@
 
 #include <Geode/Geode.hpp>
 #include <RuntimeTypes.hpp>
-#include <lua.h>
-#include <lualib.h>
-
 #include <atomic>
 #include <chrono>
 #include <cstddef>
 #include <filesystem>
 #include <functional>
 #include <list>
+#include <lua.h>
+#include <lualib.h>
 #include <memory>
 #include <optional>
 #include <string>
@@ -50,18 +49,13 @@ namespace luax {
         imes::luauapi::RuntimeStatus status() const;
         bool assertMainThread() const;
 
-        bool runScript(std::string_view src, std::string_view chunkName, int deadlineMs = kDefaultScriptDeadlineMs);
+        bool runScript(
+            std::string_view src, std::string_view chunkName, int deadlineMs = kDefaultScriptDeadlineMs
+        );
         bool protectedCall(
-            int nargs,
-            int nresults,
-            std::string_view context,
-            int deadlineMs = kDefaultScriptDeadlineMs
+            int nargs, int nresults, std::string_view context, int deadlineMs = kDefaultScriptDeadlineMs
         ) override;
-        bool protectedCallWithTraceback(
-            int nargs,
-            int nresults,
-            std::string_view context
-        ) override;
+        bool protectedCallWithTraceback(int nargs, int nresults, std::string_view context) override;
         static std::string compileSource(std::string_view source);
 
         class ScriptBudgetGuard final {
@@ -83,21 +77,44 @@ namespace luax {
 
         void setResourcesRoot(std::filesystem::path const& root) override;
         void swapResourcesRoot(std::filesystem::path& root) override;
-        std::filesystem::path const& resourcesRoot() const override { return m_resourcesRoot; }
 
-        void clearLastError() { m_lastError.clear(); }
-        std::string const& lastError() const { return m_lastError; }
+        std::filesystem::path const& resourcesRoot() const override {
+            return m_resourcesRoot;
+        }
+
+        void clearLastError() {
+            m_lastError.clear();
+        }
+
+        std::string const& lastError() const {
+            return m_lastError;
+        }
 
         void registerShutdownHook(std::function<void()> fn) override;
 
-        std::string const& getOrCompileBytecode(std::string const& key, std::string_view source, bool& ok);
+        std::string const& getOrCompileBytecode(
+            std::string const& key, std::string_view source, bool& ok
+        );
 
-        std::size_t bytecodeCacheBytes() const { return m_bytecodeCacheBytes; }
-        std::size_t memoryUsage() const { return m_memoryUsage; }
-        std::size_t memoryLimit() const { return m_memoryLimit; }
+        std::size_t bytecodeCacheBytes() const {
+            return m_bytecodeCacheBytes;
+        }
 
-        bool codegenEnabled() const { return m_codegenEnabled; }
-        std::uint32_t generation() const { return m_generation; }
+        std::size_t memoryUsage() const {
+            return m_memoryUsage;
+        }
+
+        std::size_t memoryLimit() const {
+            return m_memoryLimit;
+        }
+
+        bool codegenEnabled() const {
+            return m_codegenEnabled;
+        }
+
+        std::uint32_t generation() const {
+            return m_generation;
+        }
 
     private:
         static void* boundedAlloc(void* ud, void* ptr, size_t osize, size_t nsize);
@@ -156,4 +173,4 @@ namespace luax {
 
         std::vector<std::function<void()>> m_shutdownHooks;
     };
-}
+} // namespace luax

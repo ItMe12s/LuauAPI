@@ -62,9 +62,7 @@ class EmitPlan:
     ctx: CodegenContext = field(default_factory=CodegenContext.static)
 
 
-def _inheritance_depth(
-    cls: Class, lookup: Dict[str, Class], skipped_classes: Set[str]
-) -> int:
+def _inheritance_depth(cls: Class, lookup: Dict[str, Class], skipped_classes: Set[str]) -> int:
     if cls.name == "CCObject":
         return 0
     values: List[int] = []
@@ -100,9 +98,7 @@ def _filter_free_function_object_refs(
     kept: list[Function] = []
     skipped: list[FreeFunctionSkip] = []
     for fn in functions:
-        skipped_ref = free_function_skipped_object_ref(
-            fn, objects, skipped_classes, ctx=ctx
-        )
+        skipped_ref = free_function_skipped_object_ref(fn, objects, skipped_classes, ctx=ctx)
         if skipped_ref:
             reason = f"not-callable-type:{target_platform}:{skipped_ref}"
             skipped.append((free_function_key(fn), fn.lua_path, fn.name, reason))
@@ -145,9 +141,7 @@ def collect_platform_plan(root: Root, target_platform: str = "win") -> EmitPlan:
             ctx=ctx,
         )
     )
-    depths = {
-        cls.name: _inheritance_depth(cls, lookup, skipped_classes) for cls in classes
-    }
+    depths = {cls.name: _inheritance_depth(cls, lookup, skipped_classes) for cls in classes}
 
     hook_targets_by_class: dict[str, List[tuple[Class, Method]]] = defaultdict(list)
     field_targets_by_class: dict[str, List[tuple[Class, Field]]] = defaultdict(list)
@@ -159,12 +153,12 @@ def collect_platform_plan(root: Root, target_platform: str = "win") -> EmitPlan:
             for method in methods:
                 if hookable(cls, method, objects, target_platform, ctx=ctx):
                     hook_targets_by_class[cls.name].append((cls, method))
-        for field in cls.fields:
-            if not field_applies_on_platform(field, target_platform):
+        for cls_field in cls.fields:
+            if not field_applies_on_platform(cls_field, target_platform):
                 continue
-            ok, _, _, _ = bindable_field(field, objects, cls, ctx=ctx)
+            ok, _, _, _ = bindable_field(cls_field, objects, cls, ctx=ctx)
             if ok:
-                field_targets_by_class[cls.name].append((cls, field))
+                field_targets_by_class[cls.name].append((cls, cls_field))
 
     supported_free_functions, skipped_free_functions = group_supported_free_functions(
         root.functions, objects, target_platform, ctx=ctx
@@ -207,9 +201,7 @@ def _append_free_function_skip(
     fn: Function,
     reason: str,
 ) -> None:
-    plan.skipped_free_functions.append(
-        (free_function_key(fn), fn.lua_path, fn.name, reason)
-    )
+    plan.skipped_free_functions.append((free_function_key(fn), fn.lua_path, fn.name, reason))
     stats.removed_free_functions.append((fn.lua_path, fn.name, reason))
 
 
@@ -281,9 +273,7 @@ def _apply_intersection(
                 missing = result.missing_supported_platforms_by_key.get(key, ())
                 if not missing:
                     missing = tuple(
-                        platform
-                        for platform in result.platforms
-                        if platform != target_platform
+                        platform for platform in result.platforms if platform != target_platform
                     )
                 reason = _intersection_reason(missing)
                 _append_skip(plan, cls, method, reason)
@@ -305,14 +295,14 @@ def _apply_intersection(
         plan.hook_targets_by_class[cls.name] = kept_hooks
 
         kept_fields: List[tuple[Class, Field]] = []
-        for field_cls, field in plan.field_targets_by_class.get(cls.name, []):
-            key = field_key(field_cls, field)
+        for field_cls, bound_field in plan.field_targets_by_class.get(cls.name, []):
+            key = field_key(field_cls, bound_field)
             if key in result.common_field_keys:
-                kept_fields.append((field_cls, field))
+                kept_fields.append((field_cls, bound_field))
                 continue
             missing = result.missing_field_platforms_by_key.get(key, ())
             reason = _intersection_reason(missing)
-            stats.removed_fields.append((field_cls.name, field.name, reason))
+            stats.removed_fields.append((field_cls.name, bound_field.name, reason))
         plan.field_targets_by_class[cls.name] = kept_fields
 
     changed = True
@@ -343,23 +333,16 @@ def _apply_intersection(
             changed = True
 
         for cls_name in list(plan.hook_targets_by_class):
-            if (
-                cls_name in plan.skipped_classes
-                and plan.hook_targets_by_class[cls_name]
-            ):
+            if cls_name in plan.skipped_classes and plan.hook_targets_by_class[cls_name]:
                 plan.hook_targets_by_class[cls_name] = []
                 changed = True
-            if (
-                cls_name in plan.skipped_classes
-                and plan.field_targets_by_class[cls_name]
-            ):
+            if cls_name in plan.skipped_classes and plan.field_targets_by_class[cls_name]:
                 plan.field_targets_by_class[cls_name] = []
                 changed = True
 
     lookup = build_class_lookup(plan.classes)
     plan.depths = {
-        cls.name: _inheritance_depth(cls, lookup, plan.skipped_classes)
-        for cls in plan.classes
+        cls.name: _inheritance_depth(cls, lookup, plan.skipped_classes) for cls in plan.classes
     }
     _prune_free_function_refs(plan, target_platform, stats)
     plan.emitted_classes = _emitted_classes(plan)

@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from luau_codegen.model.codegen_context import CodegenContext
 
-from luau_codegen.convert.sel_args import is_ccobject_ptr
 from luau_codegen.policy.containers import (
     _CONTAINER_KINDS,
     container_supported_as_arg,
@@ -49,9 +48,7 @@ _OVERRIDES: tuple[FreeFnOverride, ...] = (
     ),
 )
 
-_BY_KEY: dict[tuple[str, str], FreeFnOverride] = {
-    (o.namespace, o.name): o for o in _OVERRIDES
-}
+_BY_KEY: dict[tuple[str, str], FreeFnOverride] = {(o.namespace, o.name): o for o in _OVERRIDES}
 
 
 def free_function_skip_reason(fn: Function, target_platform: str) -> str | None:
@@ -89,9 +86,7 @@ def free_function_unsupported_reason(
         info = classify_arg(arg.type, objects, ctx=ctx)
         if info is None:
             return f"free-function-unsupported-arg:{arg.type}"
-        if info.kind in _CONTAINER_KINDS and not container_supported_as_arg(
-            info, ret_kind
-        ):
+        if info.kind in _CONTAINER_KINDS and not container_supported_as_arg(info, ret_kind):
             return f"free-function-unsupported-arg:{arg.type}"
         if info.is_out and info.kind not in _CONTAINER_KINDS:
             return f"free-function-out-arg:{arg.type}"
@@ -153,9 +148,7 @@ def group_supported_free_functions(
         for fn in fns:
             arity = len(fn.args)
             if arity in seen_arity:
-                skipped.append(
-                    _skip_entry(fn, f"free-function-ambiguous-arity:{arity}")
-                )
+                skipped.append(_skip_entry(fn, f"free-function-ambiguous-arity:{arity}"))
                 continue
             seen_arity.add(arity)
             kept_all.append(fn)

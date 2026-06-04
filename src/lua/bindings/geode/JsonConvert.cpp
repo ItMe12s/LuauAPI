@@ -12,7 +12,7 @@ namespace luax {
             outLen = lua_objlen(L, idx);
             return outLen > 0;
         }
-    }
+    } // namespace
 
     void pushJson(lua_State* L, matjson::Value const& value, int depth) {
         if (depth > kMaxJsonDepth) {
@@ -20,17 +20,14 @@ namespace luax {
             return;
         }
         switch (value.type()) {
-            case matjson::Type::Bool:
-                lua_pushboolean(L, value.asBool().unwrapOr(false));
-                break;
-            case matjson::Type::Number:
-                lua_pushnumber(L, value.asDouble().unwrapOr(0.0));
-                break;
+            case matjson::Type::Bool: lua_pushboolean(L, value.asBool().unwrapOr(false)); break;
+            case matjson::Type::Number: lua_pushnumber(L, value.asDouble().unwrapOr(0.0)); break;
             case matjson::Type::String: {
                 auto str = value.asString();
                 if (str.isOk()) {
                     luax::push(L, str.unwrap());
-                } else {
+                }
+                else {
                     lua_pushnil(L);
                 }
                 break;
@@ -58,19 +55,15 @@ namespace luax {
                 break;
             }
             case matjson::Type::Null:
-            default:
-                lua_pushnil(L);
-                break;
+            default: lua_pushnil(L); break;
         }
     }
 
     matjson::Value toJson(lua_State* L, int idx, int depth) {
         idx = lua_absindex(L, idx);
         switch (lua_type(L, idx)) {
-            case LUA_TBOOLEAN:
-                return matjson::Value(lua_toboolean(L, idx) != 0);
-            case LUA_TNUMBER:
-                return matjson::Value(static_cast<double>(lua_tonumber(L, idx)));
+            case LUA_TBOOLEAN: return matjson::Value(lua_toboolean(L, idx) != 0);
+            case LUA_TNUMBER: return matjson::Value(static_cast<double>(lua_tonumber(L, idx)));
             case LUA_TSTRING: {
                 std::size_t len = 0;
                 char const* s = lua_tolstring(L, idx, &len);
@@ -101,8 +94,7 @@ namespace luax {
                 }
                 return obj;
             }
-            default:
-                return matjson::Value(nullptr);
+            default: return matjson::Value(nullptr);
         }
     }
-}
+} // namespace luax

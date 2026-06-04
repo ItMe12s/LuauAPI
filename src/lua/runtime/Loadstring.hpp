@@ -1,7 +1,6 @@
 #pragma once
 
 #include <lua.h>
-
 #include <string>
 #include <string_view>
 
@@ -11,5 +10,7 @@ namespace luax {
         Failure,
     };
 
-    LoadstringStatus loadstringPushResult(lua_State* L, std::string_view chunkName, std::string const& bytecode);
-}
+    LoadstringStatus loadstringPushResult(
+        lua_State* L, std::string_view chunkName, std::string const& bytecode
+    );
+} // namespace luax

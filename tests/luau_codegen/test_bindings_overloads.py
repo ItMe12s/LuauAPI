@@ -39,16 +39,12 @@ class F5OverloadPreferredOnlyTests(unittest.TestCase):
         grouped, skipped = group_supported(cls, objects, "win")
         self.assertNotIn("foo", grouped)
         self.assertEqual(len(skipped), 2)
-        self.assertTrue(
-            all("ambiguous-overload-arity" in reason for _, reason in skipped)
-        )
+        self.assertTrue(all("ambiguous-overload-arity" in reason for _, reason in skipped))
 
     def test_ambiguous_overload_cli_exits_nonzero(self) -> None:
         tmpdir = tempfile.mkdtemp()
         try:
-            with open(
-                os.path.join(tmpdir, "GeometryDash.bro"), "w", encoding="utf-8"
-            ) as f:
+            with open(os.path.join(tmpdir, "GeometryDash.bro"), "w", encoding="utf-8") as f:
                 f.write(
                     "class cocos2d::CCObject {};"
                     "class gd::TestObj : cocos2d::CCObject {"
@@ -72,9 +68,7 @@ class F5OverloadPreferredOnlyTests(unittest.TestCase):
     def test_ambiguous_overload_list_all_outputs_exits_nonzero(self) -> None:
         tmpdir = tempfile.mkdtemp()
         try:
-            with open(
-                os.path.join(tmpdir, "GeometryDash.bro"), "w", encoding="utf-8"
-            ) as f:
+            with open(os.path.join(tmpdir, "GeometryDash.bro"), "w", encoding="utf-8") as f:
                 f.write(
                     "class cocos2d::CCObject {};"
                     "class gd::TestObj : cocos2d::CCObject {"
@@ -82,9 +76,7 @@ class F5OverloadPreferredOnlyTests(unittest.TestCase):
                     "void foo(float b) = win 0x2;"
                     "};"
                 )
-            code = codegen_main(
-                ["--bindings", tmpdir, "--platform", "win", "--list-all-outputs"]
-            )
+            code = codegen_main(["--bindings", tmpdir, "--platform", "win", "--list-all-outputs"])
             self.assertEqual(code, 6)
         finally:
             shutil.rmtree(tmpdir)
@@ -226,11 +218,7 @@ class F5OverloadPreferredOnlyTests(unittest.TestCase):
         self.assertNotIn("create", grouped)
         reasons = [reason for _, reason in skipped]
         self.assertEqual(
-            [
-                reason
-                for reason in reasons
-                if reason.startswith("ambiguous-overload-arity")
-            ],
+            [reason for reason in reasons if reason.startswith("ambiguous-overload-arity")],
             ["ambiguous-overload-arity:2", "ambiguous-overload-arity:2"],
         )
 
@@ -300,6 +288,4 @@ class F8ConstMethodManglingTests(unittest.TestCase):
             ret="void",
             args=[Arg("gd::vector<int>", "values")],
         )
-        self.assertEqual(
-            android_symbol(cls, method), "_ZN3Foo4takeEN2gd6vectorIiSaIiEEE"
-        )
+        self.assertEqual(android_symbol(cls, method), "_ZN3Foo4takeEN2gd6vectorIiSaIiEEE")

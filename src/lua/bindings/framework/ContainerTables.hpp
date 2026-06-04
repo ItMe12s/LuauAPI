@@ -6,11 +6,10 @@
 #include "Usertype.hpp"
 
 #include <Geode/Geode.hpp>
-#include <lua.h>
-#include <lualib.h>
-
 #include <array>
 #include <cstdint>
+#include <lua.h>
+#include <lualib.h>
 #include <string>
 #include <type_traits>
 #include <utility>
@@ -21,7 +20,7 @@ namespace luax {
 
     template <class F, class S>
     void pushPair(lua_State* L, std::pair<F, S> const& pair);
-}
+} // namespace luax
 
 namespace luax::detail {
     template <class T>
@@ -64,22 +63,30 @@ namespace luax::detail {
     inline T checkPrimitiveVectorElement(lua_State* L, int idx, char const* label) {
         if constexpr (std::is_same_v<T, bool>) {
             return check<bool>(L, idx, label);
-        } else if constexpr (std::is_same_v<T, float>) {
+        }
+        else if constexpr (std::is_same_v<T, float>) {
             return check<float>(L, idx, label);
-        } else if constexpr (std::is_same_v<T, double>) {
+        }
+        else if constexpr (std::is_same_v<T, double>) {
             return check<double>(L, idx, label);
-        } else if constexpr (std::is_same_v<T, int>) {
+        }
+        else if constexpr (std::is_same_v<T, int>) {
             return check<int>(L, idx, label);
-        } else if constexpr (std::is_same_v<T, unsigned>) {
+        }
+        else if constexpr (std::is_same_v<T, unsigned>) {
             return check<unsigned>(L, idx, label);
-        } else if constexpr (std::is_same_v<T, std::string>) {
+        }
+        else if constexpr (std::is_same_v<T, std::string>) {
             return check<std::string>(L, idx, label);
-        } else if constexpr (std::is_same_v<T, gd::string>) {
+        }
+        else if constexpr (std::is_same_v<T, gd::string>) {
             auto storage = check<std::string>(L, idx, label);
             return gd::string(storage.c_str());
-        } else if constexpr (std::is_enum_v<T>) {
+        }
+        else if constexpr (std::is_enum_v<T>) {
             return static_cast<T>(static_cast<int>(check<int>(L, idx, label)));
-        } else if constexpr (std::is_integral_v<T>) {
+        }
+        else if constexpr (std::is_integral_v<T>) {
             if constexpr (sizeof(T) > sizeof(int) || !std::is_signed_v<T>) {
                 T value{};
                 if (!tryIntegerString<T>(L, idx, &value)) {
@@ -91,9 +98,11 @@ namespace luax::detail {
                 return value;
             }
             return static_cast<T>(check<int>(L, idx, label));
-        } else if constexpr (is_std_pair_v<T>) {
+        }
+        else if constexpr (is_std_pair_v<T>) {
             return luax::checkPair<typename T::first_type, typename T::second_type>(L, idx, label);
-        } else {
+        }
+        else {
             return check<T>(L, idx, label);
         }
     }
@@ -102,31 +111,41 @@ namespace luax::detail {
     inline void pushPrimitiveVectorElement(lua_State* L, T const& value) {
         if constexpr (std::is_same_v<T, bool>) {
             push(L, value);
-        } else if constexpr (std::is_same_v<T, float> || std::is_same_v<T, double>) {
+        }
+        else if constexpr (std::is_same_v<T, float> || std::is_same_v<T, double>) {
             push(L, value);
-        } else if constexpr (std::is_same_v<T, int>) {
+        }
+        else if constexpr (std::is_same_v<T, int>) {
             lua_pushnumber(L, static_cast<double>(value));
-        } else if constexpr (std::is_same_v<T, unsigned>) {
+        }
+        else if constexpr (std::is_same_v<T, unsigned>) {
             push(L, value);
-        } else if constexpr (std::is_same_v<T, std::string>) {
+        }
+        else if constexpr (std::is_same_v<T, std::string>) {
             push(L, value);
-        } else if constexpr (std::is_same_v<T, gd::string>) {
+        }
+        else if constexpr (std::is_same_v<T, gd::string>) {
             push(L, std::string(value.c_str()));
-        } else if constexpr (std::is_enum_v<T>) {
+        }
+        else if constexpr (std::is_enum_v<T>) {
             lua_pushnumber(L, static_cast<double>(static_cast<int>(value)));
-        } else if constexpr (std::is_integral_v<T>) {
+        }
+        else if constexpr (std::is_integral_v<T>) {
             if constexpr (sizeof(T) > sizeof(int) || !std::is_signed_v<T>) {
                 pushIntegerString(L, value);
-            } else {
+            }
+            else {
                 lua_pushnumber(L, static_cast<double>(value));
             }
-        } else if constexpr (is_std_pair_v<T>) {
+        }
+        else if constexpr (is_std_pair_v<T>) {
             luax::pushPair<typename T::first_type, typename T::second_type>(L, value);
-        } else {
+        }
+        else {
             push(L, value);
         }
     }
-}
+} // namespace luax::detail
 
 namespace luax {
     template <class F, class S>
@@ -165,6 +184,7 @@ namespace luax {
     void pushPair(lua_State* L, std::pair<F, S> const* pair) {
         pushPair(L, const_cast<std::pair<F, S>*>(pair));
     }
+
     template <class T>
     gd::vector<T> checkPrimitiveVector(lua_State* L, int idx, char const* label) {
         idx = lua_absindex(L, idx);
@@ -215,11 +235,7 @@ namespace luax {
         auto len = static_cast<lua_Integer>(lua_objlen(L, idx));
         if (len != static_cast<lua_Integer>(N)) {
             luaL_error(
-                L,
-                "%s: expected array length %zu, got %lld",
-                label,
-                N,
-                static_cast<long long>(len)
+                L, "%s: expected array length %zu, got %lld", label, N, static_cast<long long>(len)
             );
         }
         std::array<T, N> out{};
@@ -272,7 +288,8 @@ namespace luax {
         for (std::size_t i = 0; i < N; ++i) {
             if constexpr (std::is_same_v<T, bool>) {
                 dest[i] = src[i];
-            } else {
+            }
+            else {
                 dest[i] = std::move(src[i]);
             }
         }
@@ -283,7 +300,8 @@ namespace luax {
         for (std::size_t i = 0; i < N; ++i) {
             if constexpr (std::is_same_v<T, bool>) {
                 dest[i] = static_cast<U>(src[i]);
-            } else {
+            }
+            else {
                 dest[i] = static_cast<U>(std::move(src[i]));
             }
         }
@@ -311,13 +329,15 @@ namespace luax {
                 return checkOpaqueVectorView<Pointee>(L, idx, label);
             }
             return checkPrimitiveVector<Elem>(L, idx, label);
-        } else if constexpr (std::is_pointer_v<V>) {
+        }
+        else if constexpr (std::is_pointer_v<V>) {
             using Pointee = std::remove_pointer_t<V>;
             if (lua_isnil(L, idx)) {
                 return nullptr;
             }
             return Usertype<Pointee>::check(L, idx, label);
-        } else {
+        }
+        else {
             return detail::checkPrimitiveVectorElement<V>(L, idx, label);
         }
     }
@@ -345,42 +365,48 @@ namespace luax {
                     if constexpr (std::is_base_of_v<cocos2d::CCObject, Pointee>) {
                         if (elem == nullptr) {
                             lua_pushnil(L);
-                        } else {
+                        }
+                        else {
                             Usertype<Pointee>::pushBorrowed(L, elem);
                         }
-                    } else if (elem == nullptr) {
+                    }
+                    else if (elem == nullptr) {
                         lua_pushnil(L);
-                    } else {
+                    }
+                    else {
                         lua_pushlightuserdata(L, elem);
                     }
                     lua_rawseti(L, tableIndex, i++);
                 }
-            } else {
+            }
+            else {
                 pushPrimitiveVector<Elem>(L, value);
             }
-        } else if constexpr (std::is_pointer_v<V>) {
+        }
+        else if constexpr (std::is_pointer_v<V>) {
             using Pointee = std::remove_pointer_t<V>;
             if (value == nullptr) {
                 lua_pushnil(L);
-            } else {
+            }
+            else {
                 Usertype<Pointee>::pushBorrowed(L, value);
             }
-        } else {
+        }
+        else {
             detail::pushPrimitiveVectorElement(L, value);
         }
     }
 
     template <class T>
-    void pushNestedPrimitiveVectorPointers(
-        lua_State* L, gd::vector<gd::vector<T>*> const& outer
-    ) {
+    void pushNestedPrimitiveVectorPointers(lua_State* L, gd::vector<gd::vector<T>*> const& outer) {
         lua_createtable(L, static_cast<int>(outer.size()), 0);
         int tableIndex = lua_gettop(L);
         int i = 1;
         for (auto* inner : outer) {
             if (inner == nullptr) {
                 lua_createtable(L, 0, 0);
-            } else {
+            }
+            else {
                 pushPrimitiveVector<T>(L, *inner);
             }
             lua_rawseti(L, tableIndex, i++);
@@ -397,9 +423,7 @@ namespace luax {
     }
 
     template <class T>
-    void pushNestedPrimitiveVectorPointers(
-        lua_State* L, gd::vector<gd::vector<T>*> const* outer
-    ) {
+    void pushNestedPrimitiveVectorPointers(lua_State* L, gd::vector<gd::vector<T>*> const* outer) {
         pushNestedPrimitiveVectorPointers<T>(L, const_cast<gd::vector<gd::vector<T>*>*>(outer));
     }
 
@@ -424,7 +448,9 @@ namespace luax {
                 requireTableField(L, -1, "value", label);
                 V value = checkMapValue<V>(L, -1, label);
                 lua_pop(L, 2);
-                out.emplace(std::make_pair(std::move(keyFirst), std::move(keySecond)), std::move(value));
+                out.emplace(
+                    std::make_pair(std::move(keyFirst), std::move(keySecond)), std::move(value)
+                );
             }
             return out;
         }
@@ -454,6 +480,7 @@ namespace luax {
                 dest.emplace(std::move(entry.first), std::move(entry.second));
             }
         }
+
         template <class K, class V, class Map>
         Map checkAssociativeMap(lua_State* L, int idx, char const* label) {
             idx = lua_absindex(L, idx);
@@ -507,7 +534,7 @@ namespace luax {
                 lua_rawseti(L, tableIndex, i++);
             }
         }
-    }
+    } // namespace detail
 
     template <class K1, class K2, class V>
     gd::map<std::pair<K1, K2>, V> checkPairKeyMap(lua_State* L, int idx, char const* label) {
@@ -520,8 +547,9 @@ namespace luax {
     gd::unordered_map<std::pair<K1, K2>, V> checkUnorderedPairKeyMap(
         lua_State* L, int idx, char const* label
     ) {
-        return detail::checkPairKeyAssociativeMap<
-            K1, K2, V, gd::unordered_map<std::pair<K1, K2>, V>>(L, idx, label);
+        return detail::checkPairKeyAssociativeMap<K1, K2, V, gd::unordered_map<std::pair<K1, K2>, V>>(
+            L, idx, label
+        );
     }
 
     template <class K, class V>
@@ -540,11 +568,8 @@ namespace luax {
     }
 
     template <class K1, class K2, class V>
-    void pushUnorderedPairKeyMap(
-        lua_State* L, gd::unordered_map<std::pair<K1, K2>, V> const& map
-    ) {
-        detail::pushPairKeyAssociativeMap<
-            K1, K2, V, gd::unordered_map<std::pair<K1, K2>, V>>(L, map);
+    void pushUnorderedPairKeyMap(lua_State* L, gd::unordered_map<std::pair<K1, K2>, V> const& map) {
+        detail::pushPairKeyAssociativeMap<K1, K2, V, gd::unordered_map<std::pair<K1, K2>, V>>(L, map);
     }
 
     template <class K, class V>
@@ -649,7 +674,7 @@ namespace luax {
                 dest.insert(std::move(elem));
             }
         }
-    }
+    } // namespace detail
 
     template <class K1, class K2, class V>
     void assignPairKeyMap(gd::map<std::pair<K1, K2>, V>& dest, gd::map<std::pair<K1, K2>, V> src) {
@@ -658,8 +683,7 @@ namespace luax {
 
     template <class K1, class K2, class V>
     void assignUnorderedPairKeyMap(
-        gd::unordered_map<std::pair<K1, K2>, V>& dest,
-        gd::unordered_map<std::pair<K1, K2>, V> src
+        gd::unordered_map<std::pair<K1, K2>, V>& dest, gd::unordered_map<std::pair<K1, K2>, V> src
     ) {
         detail::assignPairKeyAssociativeMap(dest, std::move(src));
     }
@@ -692,10 +716,11 @@ namespace luax {
             for (std::size_t i = 0; i < src.size(); ++i) {
                 dest.push_back(src[i]);
             }
-        } else {
+        }
+        else {
             for (auto& elem : src) {
                 dest.push_back(std::move(elem));
             }
         }
     }
-}
+} // namespace luax

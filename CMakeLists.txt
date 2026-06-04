@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.21)
 
-set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD 26)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 if ("${CMAKE_SYSTEM_NAME}" STREQUAL "iOS" OR IOS)
     set(CMAKE_OSX_ARCHITECTURES "arm64")
@@ -17,6 +17,7 @@ include(CTest)
 option(LUAUAPI_BUILD_TESTS "Build LuauAPI host unit tests" OFF)
 option(LUAUAPI_HOST_ONLY "Host-only configure without Geode SDK or configure-time codegen listing" OFF)
 option(LUAUAPI_STRICT_GENERATED_WARNINGS "Compile generated bindings with warnings enabled (use this for auditing stuff)" OFF)
+option(LUAUAPI_ENABLE_SANITIZERS "Enable ASan/UBSan on luauapi_tests (Clang/GNU host builds only)" OFF)
 
 set(LUAU_BUILD_CLI   OFF CACHE BOOL "" FORCE)
 set(LUAU_BUILD_TESTS OFF CACHE BOOL "" FORCE)
@@ -424,6 +425,15 @@ if(LUAUAPI_BUILD_TESTS)
         Luau.CodeGen
         Luau.Require
     )
+
+    if(LUAUAPI_ENABLE_SANITIZERS)
+        if(NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+            message(FATAL_ERROR "LUAUAPI_ENABLE_SANITIZERS requires Clang or GCC")
+        endif()
+        set(LUAUAPI_SANITIZER_FLAGS -fsanitize=address,undefined -fno-omit-frame-pointer)
+        target_compile_options(luauapi_tests PRIVATE ${LUAUAPI_SANITIZER_FLAGS})
+        target_link_options(luauapi_tests PRIVATE ${LUAUAPI_SANITIZER_FLAGS})
+    endif()
     get_target_property(LUAUAPI_TEST_LINK_LIBS luauapi_tests LINK_LIBRARIES)
     if(LUAUAPI_TEST_LINK_LIBS)
         foreach(LUAUAPI_TEST_LINK_LIB IN LISTS LUAUAPI_TEST_LINK_LIBS)

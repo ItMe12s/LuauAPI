@@ -1,7 +1,6 @@
 #include "Usertype.hpp"
 
 #include <Geode/Geode.hpp>
-
 #include <fmt/format.h>
 #include <new>
 
@@ -28,10 +27,9 @@ namespace luax::detail {
             return geode::Ok(&it->second);
         }
         if (m_next >= LUA_UTAG_LIMIT) {
-            return geode::Err(fmt::format(
-                "UsertypeRegistry: userdata tag limit exceeded ({})",
-                LUA_UTAG_LIMIT
-            ));
+            return geode::Err(
+                fmt::format("UsertypeRegistry: userdata tag limit exceeded ({})", LUA_UTAG_LIMIT)
+            );
         }
         TypeInfo info;
         info.tag = m_next++;
@@ -63,4 +61,4 @@ namespace luax::detail {
         m_next = 1;
     }
 #endif
-}
+} // namespace luax::detail

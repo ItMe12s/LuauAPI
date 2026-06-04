@@ -23,9 +23,7 @@ from helpers import (
 class FreeFunctionOverrideTests(unittest.TestCase):
     def _restart(self, arity: int) -> Function:
         args = [Arg("bool", f"a{i}") for i in range(arity)]
-        return Function(
-            name="restart", namespace="geode::utils::game", ret="void", args=args
-        )
+        return Function(name="restart", namespace="geode::utils::game", ret="void", args=args)
 
     def test_free_fn_allowed_drops_arity2_on_mobile(self) -> None:
         two = self._restart(2)
@@ -227,9 +225,7 @@ class GetEnvironmentVariableExclusionTests(unittest.TestCase):
 class FreeFunctionIntersectionTests(unittest.TestCase):
     def _restart(self, arity: int) -> Function:
         args = [Arg("bool", f"a{i}") for i in range(arity)]
-        return Function(
-            name="restart", namespace="geode::utils::game", ret="void", args=args
-        )
+        return Function(name="restart", namespace="geode::utils::game", ret="void", args=args)
 
     def _get_env(self) -> Function:
         return Function(
@@ -241,9 +237,7 @@ class FreeFunctionIntersectionTests(unittest.TestCase):
 
     def test_collect_plan_drops_free_function_missing_one_platform(self) -> None:
         fn = self._get_env()
-        root = Root(
-            classes=[Class(name="CCObject", namespace="cocos2d")], functions=[fn]
-        )
+        root = Root(classes=[Class(name="CCObject", namespace="cocos2d")], functions=[fn])
 
         plan = collect_plan(root, "win")
 

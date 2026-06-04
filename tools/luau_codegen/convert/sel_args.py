@@ -45,11 +45,7 @@ def iter_lua_method_args(
             yield LuaMethodArg(arg=arg, info=info, arg_index=i, out_only=True)
             i += 1
             continue
-        if (
-            i + 1 < len(m.args)
-            and is_ccobject_ptr(info)
-            and arg_infos[i + 1].kind == "sel"
-        ):
+        if i + 1 < len(m.args) and is_ccobject_ptr(info) and arg_infos[i + 1].kind == "sel":
             yield LuaMethodArg(
                 arg=m.args[i + 1],
                 info=arg_infos[i + 1],
@@ -61,11 +57,7 @@ def iter_lua_method_args(
             )
             i += 2
             continue
-        if (
-            i + 1 < len(m.args)
-            and info.kind == "sel"
-            and is_ccobject_ptr(arg_infos[i + 1])
-        ):
+        if i + 1 < len(m.args) and info.kind == "sel" and is_ccobject_ptr(arg_infos[i + 1]):
             yield LuaMethodArg(
                 arg=arg,
                 info=info,

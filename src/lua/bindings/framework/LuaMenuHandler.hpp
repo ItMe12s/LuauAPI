@@ -3,7 +3,6 @@
 #include "lua/bindings/framework/LuaCallback.hpp"
 
 #include <cocos2d.h>
-
 #include <memory>
 
 namespace luax {
@@ -22,4 +21,4 @@ namespace luax {
     void evictMenuHandlersIfFinalRelease(cocos2d::CCObject* anchor);
     void clearOrphanMenuHandlers();
     void ensureMenuHandlerShutdownHook();
-}
+} // namespace luax

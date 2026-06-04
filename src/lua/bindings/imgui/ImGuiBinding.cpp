@@ -1,7 +1,6 @@
 #include "ImGuiDrawScheduler.hpp"
 #include "ImGuiHost.hpp"
 #include "ImVecConv.hpp"
-
 #include "lua/Config.hpp"
 #include "lua/bindings/Binding.hpp"
 #include "lua/bindings/framework/LuaRef.hpp"
@@ -9,12 +8,11 @@
 #include "lua/bindings/framework/TableUtil.hpp"
 #include "lua/runtime/Runtime.hpp"
 
+#include <algorithm>
+#include <cstdint>
 #include <imgui.h>
 #include <lua.h>
 #include <lualib.h>
-
-#include <algorithm>
-#include <cstdint>
 #include <string>
 #include <vector>
 
@@ -24,15 +22,14 @@ namespace {
     thread_local std::vector<char> s_inputTextBuffer;
 
     std::vector<char>& inputTextBuffer(std::size_t cap) {
-        if (s_inputTextBuffer.size() < cap + 1)
-            s_inputTextBuffer.resize(cap + 1);
+        if (s_inputTextBuffer.size() < cap + 1) s_inputTextBuffer.resize(cap + 1);
         std::fill(s_inputTextBuffer.begin(), s_inputTextBuffer.end(), '\0');
         return s_inputTextBuffer;
     }
 
-    constexpr char const* kHandleMeta          = "luax.ImGuiDrawHandle";
+    constexpr char const* kHandleMeta = "luax.ImGuiDrawHandle";
     constexpr std::size_t kInputTextDefaultCap = 16384;
-    constexpr std::size_t kInputTextMaxCap     = 65536;
+    constexpr std::size_t kInputTextMaxCap = 65536;
 
     struct ImGuiDrawHandle {
         std::uint64_t id;
@@ -86,8 +83,11 @@ namespace {
     int imguiOnDraw(lua_State* L) {
         luaL_checktype(L, 1, LUA_TFUNCTION);
         if (ImGuiDrawScheduler::get().full()) {
-            luaL_error(L, "imgui.onDraw: too many draw callbacks (limit %d)",
-                       static_cast<int>(kMaxImGuiDrawCallbacks));
+            luaL_error(
+                L,
+                "imgui.onDraw: too many draw callbacks (limit %d)",
+                static_cast<int>(kMaxImGuiDrawCallbacks)
+            );
         }
         LuaRef ref;
         ref.reset(L, 1);
@@ -139,8 +139,7 @@ namespace {
 
         bool open = true;
         bool visible = ImGui::Begin(title.c_str(), closable ? &open : nullptr, flags);
-        if (visible)
-            callDrawClosure(L, 2, "imgui.window");
+        if (visible) callDrawClosure(L, 2, "imgui.window");
         ImGui::End();
 
         lua_pushboolean(L, open);
@@ -158,8 +157,7 @@ namespace {
         }
 
         bool visible = ImGui::BeginChild(id.c_str(), size);
-        if (visible)
-            callDrawClosure(L, 2, "imgui.child");
+        if (visible) callDrawClosure(L, 2, "imgui.child");
         ImGui::EndChild();
         return 0;
     }
@@ -333,6 +331,6 @@ namespace {
 
         return geode::Ok();
     }
-}
+} // namespace
 
 LUAX_BINDING(imgui_lib, registerImGui)

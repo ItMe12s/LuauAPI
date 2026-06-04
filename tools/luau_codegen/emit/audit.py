@@ -49,8 +49,7 @@ def _classify_method_skip(reason: str) -> str:
     if type_part == "Callback" or check.endswith(":Callback"):
         return "callback_alias"
     if "Delegate" in check and (
-        reason.startswith("unsupported-arg:")
-        or reason.startswith("unsupported-return:")
+        reason.startswith("unsupported-arg:") or reason.startswith("unsupported-return:")
     ):
         return "delegate_arg"
     if any(
@@ -114,9 +113,7 @@ def collect_audit(plan: EmitPlan, root: Root) -> dict[str, Any]:
     reason_counters: dict[str, Counter[str]] = {
         bucket_id: Counter() for bucket_id, _ in _BUCKET_DEFS
     }
-    sample_lists: dict[str, list[str]] = {
-        bucket_id: [] for bucket_id, _ in _BUCKET_DEFS
-    }
+    sample_lists: dict[str, list[str]] = {bucket_id: [] for bucket_id, _ in _BUCKET_DEFS}
 
     for cls_name, method_name, reason in plan.skipped:
         bucket_id = _classify_method_skip(reason)
@@ -134,9 +131,7 @@ def collect_audit(plan: EmitPlan, root: Root) -> dict[str, Any]:
 
     for bucket_id, _ in _BUCKET_DEFS:
         buckets[bucket_id]["count"] = sum(reason_counters[bucket_id].values())
-        buckets[bucket_id]["reasonHistogram"] = dict(
-            reason_counters[bucket_id].most_common()
-        )
+        buckets[bucket_id]["reasonHistogram"] = dict(reason_counters[bucket_id].most_common())
         buckets[bucket_id]["samples"] = sorted(sample_lists[bucket_id])
 
     return {
@@ -162,12 +157,8 @@ def emit_markdown(data: dict[str, Any]) -> str:
             continue
         lines.append(f"| {bucket_id} | {bucket['count']} | {label} |\n")
 
-    lines.append(
-        f"\n- Methods skipped (intersected plan): **{data['totalSkippedMethods']}**\n"
-    )
-    lines.append(
-        f"- Free functions skipped: **{data['totalSkippedFreeFunctions']}**\n\n"
-    )
+    lines.append(f"\n- Methods skipped (intersected plan): **{data['totalSkippedMethods']}**\n")
+    lines.append(f"- Free functions skipped: **{data['totalSkippedFreeFunctions']}**\n\n")
 
     lines.append("## Samples by bucket\n\n")
     for bucket_id, _ in _BUCKET_DEFS:

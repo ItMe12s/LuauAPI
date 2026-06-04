@@ -13,11 +13,9 @@ namespace luax {
         if (s_initialized) return;
         s_initialized = true;
 
-        ImGuiCocos::get()
-            .setup([] {})
-            .draw([] {
-                ImGuiDrawScheduler::get().drawAll();
-            });
+        ImGuiCocos::get().setup([] {}).draw([] {
+            ImGuiDrawScheduler::get().drawAll();
+        });
     }
 
     void shutdownImGuiHost() {
@@ -39,4 +37,4 @@ namespace luax {
     bool imguiHostIsVisible() {
         return ImGuiCocos::get().isVisible();
     }
-}
+} // namespace luax

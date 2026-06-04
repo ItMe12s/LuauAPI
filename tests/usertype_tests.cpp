@@ -3,16 +3,15 @@
 #include "lua/runtime/Runtime.hpp"
 
 #include <RuntimeTypes.hpp>
-
 #include <catch2/catch_test_macros.hpp>
 #include <lua.h>
 #include <lualib.h>
-
 #include <string>
 #include <typeindex>
 
 namespace {
     struct TestNode : cocos2d::CCNode {};
+
     struct OverflowNode : cocos2d::CCNode {};
 
     struct RuntimeGuard {
@@ -50,7 +49,7 @@ namespace {
         lua_pushliteral(L, "called");
         return 1;
     }
-}
+} // namespace
 
 TEST_CASE("UsertypeRegistry tagFor returns zero when tag limit is exceeded") {
     RuntimeGuard guard;

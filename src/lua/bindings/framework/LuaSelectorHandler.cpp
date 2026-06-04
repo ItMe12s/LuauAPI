@@ -15,10 +15,17 @@ namespace luax {
 
     void LuaScheduleHandler::onSchedule(float dt) {
         if (!m_callback || !m_callback->valid()) return;
-        struct Ctx { float dt; };
+
+        struct Ctx {
+            float dt;
+        };
+
         Ctx ctx{dt};
         m_callback->invoke(
-            1, 0, "schedule callback", kHookScriptDeadlineMs,
+            1,
+            0,
+            "schedule callback",
+            kHookScriptDeadlineMs,
             +[](lua_State* L, void* raw) {
                 auto* c = static_cast<Ctx*>(raw);
                 lua_pushnumber(L, static_cast<double>(c->dt));
@@ -50,10 +57,17 @@ namespace luax {
 
     void LuaCallFuncNHandler::onCallFuncN(cocos2d::CCNode* node) {
         if (!m_callback || !m_callback->valid()) return;
-        struct Ctx { cocos2d::CCNode* node; };
+
+        struct Ctx {
+            cocos2d::CCNode* node;
+        };
+
         Ctx ctx{node};
         m_callback->invoke(
-            1, 0, "callfuncn callback", kHookScriptDeadlineMs,
+            1,
+            0,
+            "callfuncn callback",
+            kHookScriptDeadlineMs,
             +[](lua_State* L, void* raw) {
                 auto* c = static_cast<Ctx*>(raw);
                 Usertype<cocos2d::CCNode>::pushBorrowed(L, c->node);
@@ -72,10 +86,18 @@ namespace luax {
 
     void LuaCallFuncNDHandler::onCallFuncND(cocos2d::CCNode* node, void* data) {
         if (!m_callback || !m_callback->valid()) return;
-        struct Ctx { cocos2d::CCNode* node; void* data; };
+
+        struct Ctx {
+            cocos2d::CCNode* node;
+            void* data;
+        };
+
         Ctx ctx{node, data};
         m_callback->invoke(
-            2, 0, "callfuncnd callback", kHookScriptDeadlineMs,
+            2,
+            0,
+            "callfuncnd callback",
+            kHookScriptDeadlineMs,
             +[](lua_State* L, void* raw) {
                 auto* c = static_cast<Ctx*>(raw);
                 Usertype<cocos2d::CCNode>::pushBorrowed(L, c->node);
@@ -96,10 +118,17 @@ namespace luax {
 
     void LuaCallFuncOHandler::onCallFuncO(cocos2d::CCObject* obj) {
         if (!m_callback || !m_callback->valid()) return;
-        struct Ctx { cocos2d::CCObject* obj; };
+
+        struct Ctx {
+            cocos2d::CCObject* obj;
+        };
+
         Ctx ctx{obj};
         m_callback->invoke(
-            1, 0, "callfunco callback", kHookScriptDeadlineMs,
+            1,
+            0,
+            "callfunco callback",
+            kHookScriptDeadlineMs,
             +[](lua_State* L, void* raw) {
                 auto* c = static_cast<Ctx*>(raw);
                 Usertype<cocos2d::CCObject>::pushBorrowed(L, c->obj);
@@ -107,4 +136,4 @@ namespace luax {
             &ctx
         );
     }
-}
+} // namespace luax

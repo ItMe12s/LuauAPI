@@ -2,10 +2,9 @@
 
 #include "lua/Config.hpp"
 
-#include <lua.h>
-
 #include <filesystem>
 #include <functional>
+#include <lua.h>
 #include <optional>
 #include <string_view>
 
@@ -20,16 +19,9 @@ namespace luax {
         virtual lua_State* state() = 0;
         virtual bool ready() const = 0;
         virtual bool protectedCall(
-            int nargs,
-            int nresults,
-            std::string_view context,
-            int deadlineMs = kDefaultScriptDeadlineMs
+            int nargs, int nresults, std::string_view context, int deadlineMs = kDefaultScriptDeadlineMs
         ) = 0;
-        virtual bool protectedCallWithTraceback(
-            int nargs,
-            int nresults,
-            std::string_view context
-        ) = 0;
+        virtual bool protectedCallWithTraceback(int nargs, int nresults, std::string_view context) = 0;
         virtual void registerShutdownHook(std::function<void()> fn) = 0;
         virtual void setResourcesRoot(std::filesystem::path const& root) = 0;
         virtual void swapResourcesRoot(std::filesystem::path& root) = 0;
@@ -48,4 +40,4 @@ namespace luax {
             std::optional<std::filesystem::path> m_saved;
         };
     };
-}
+} // namespace luax

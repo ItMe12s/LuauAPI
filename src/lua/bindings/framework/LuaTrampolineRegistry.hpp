@@ -8,4 +8,4 @@ namespace luax {
     void evictTrampolinesIfFinalRelease(cocos2d::CCObject* anchor);
     void clearOrphanTrampolines();
     void ensureTrampolineShutdownHook();
-}
+} // namespace luax

@@ -125,9 +125,7 @@ class CallbackMarshallingTests(unittest.TestCase):
             cxx_type="SEL_MenuHandler",
             lua_type="(sender: CCObject) -> ()",
         )
-        text = "".join(
-            check_arg(Arg("SEL_MenuHandler", "sel"), info, 3, "sel", "CCMenuItem.init")
-        )
+        text = "".join(check_arg(Arg("SEL_MenuHandler", "sel"), info, 3, "sel", "CCMenuItem.init"))
         self.assertIn("LuaMenuHandler::create", text)
         self.assertIn("sel_handler", text)
 
@@ -145,9 +143,7 @@ class CallbackMarshallingTests(unittest.TestCase):
             lua_type="(dt: number) -> ()",
             class_name="schedule",
         )
-        text = "".join(
-            check_arg(Arg("SEL_SCHEDULE", "sel"), info, 2, "sel", "CCNode.schedule")
-        )
+        text = "".join(check_arg(Arg("SEL_SCHEDULE", "sel"), info, 2, "sel", "CCNode.schedule"))
         self.assertIn("LuaScheduleHandler::create", text)
         self.assertIn("sel_handler", text)
 
@@ -203,9 +199,7 @@ class CallbackMarshallingTests(unittest.TestCase):
             ),
         )
         text = "".join(
-            check_arg(
-                Arg("Callback", "cb"), info, 2, "arg0", "LazySprite.setLoadCallback"
-            )
+            check_arg(Arg("Callback", "cb"), info, 2, "arg0", "LazySprite.setLoadCallback")
         )
         self.assertIn("geode::Result<> arg0_p0", text)
         self.assertIn(".isOk()", text)
@@ -348,23 +342,17 @@ class EmitStackCheckTests(unittest.TestCase):
         self.assertNotIn("pushPoint", text)
 
     def test_smart_prefab_result_uses_check_specialization(self) -> None:
-        info = TypeInfo(
-            kind="value", cxx_type="SmartPrefabResult", lua_type="SmartPrefabResult"
-        )
+        info = TypeInfo(kind="value", cxx_type="SmartPrefabResult", lua_type="SmartPrefabResult")
         text = "".join(emit_stack_check(info, 1, "result", "test"))
         self.assertIn("luax::check<SmartPrefabResult>", text)
 
     def test_smart_prefab_result_push_uses_push_overload(self) -> None:
-        info = TypeInfo(
-            kind="value", cxx_type="SmartPrefabResult", lua_type="SmartPrefabResult"
-        )
+        info = TypeInfo(kind="value", cxx_type="SmartPrefabResult", lua_type="SmartPrefabResult")
         text = "".join(push_value(info, "result"))
         self.assertIn("luax::push(L, result)", text)
 
     def test_map_string_smart_prefab_result_marshalling(self) -> None:
-        value = TypeInfo(
-            kind="value", cxx_type="SmartPrefabResult", lua_type="SmartPrefabResult"
-        )
+        value = TypeInfo(kind="value", cxx_type="SmartPrefabResult", lua_type="SmartPrefabResult")
         key = TypeInfo(kind="string", cxx_type="gd::string", lua_type="string")
         info = TypeInfo(
             kind="map",
@@ -377,23 +365,17 @@ class EmitStackCheckTests(unittest.TestCase):
         self.assertIn("luax::checkMap<gd::string, SmartPrefabResult>", check_text)
 
     def test_ccblendfunc_uses_check_specialization(self) -> None:
-        info = TypeInfo(
-            kind="value", cxx_type="cocos2d::ccBlendFunc", lua_type="BlendFunc"
-        )
+        info = TypeInfo(kind="value", cxx_type="cocos2d::ccBlendFunc", lua_type="BlendFunc")
         text = "".join(emit_stack_check(info, 1, "blend", "test"))
         self.assertIn("luax::check<cocos2d::ccBlendFunc>", text)
 
     def test_cchsvvalue_uses_check_specialization(self) -> None:
-        info = TypeInfo(
-            kind="value", cxx_type="cocos2d::ccHSVValue", lua_type="HSVValue"
-        )
+        info = TypeInfo(kind="value", cxx_type="cocos2d::ccHSVValue", lua_type="HSVValue")
         text = "".join(emit_stack_check(info, 1, "hsv", "test"))
         self.assertIn("luax::check<cocos2d::ccHSVValue>", text)
 
     def test_cccolor4f_push_uses_push_overload(self) -> None:
-        info = TypeInfo(
-            kind="value", cxx_type="cocos2d::ccColor4F", lua_type="RGBAFloatColor"
-        )
+        info = TypeInfo(kind="value", cxx_type="cocos2d::ccColor4F", lua_type="RGBAFloatColor")
         text = "".join(push_value(info, "color"))
         self.assertIn("luax::push(L, color)", text)
 
@@ -565,9 +547,7 @@ class EmitStackCheckTests(unittest.TestCase):
             element_type=element,
         )
 
-        check_text = "".join(
-            check_arg(Arg("gd::vector<bool>", "flags"), info, 1, "arg0", "test")
-        )
+        check_text = "".join(check_arg(Arg("gd::vector<bool>", "flags"), info, 1, "arg0", "test"))
         push_text = "".join(push_value(info, "flags"))
 
         self.assertIn("luax::checkPrimitiveVector<bool>", check_text)
@@ -582,9 +562,7 @@ class EmitStackCheckTests(unittest.TestCase):
             element_type=element,
         )
 
-        check_text = "".join(
-            check_arg(Arg("gd::vector<uint64_t>", "ids"), info, 1, "arg0", "test")
-        )
+        check_text = "".join(check_arg(Arg("gd::vector<uint64_t>", "ids"), info, 1, "arg0", "test"))
         push_text = "".join(push_value(info, "ids"))
 
         self.assertIn("luax::checkPrimitiveVector<uint64_t>", check_text)
@@ -685,9 +663,7 @@ class ContainerTableMarshallingTests(unittest.TestCase):
             element_type=element,
         )
 
-        check_text = "".join(
-            check_arg(Arg("gd::set<int>", "values"), info, 1, "arg0", "test")
-        )
+        check_text = "".join(check_arg(Arg("gd::set<int>", "values"), info, 1, "arg0", "test"))
         push_text = "".join(push_value(info, "values"))
 
         self.assertIn("luax::checkSet<int>", check_text)
@@ -731,9 +707,7 @@ class ContainerTableMarshallingTests(unittest.TestCase):
         )
 
         check_text = "".join(
-            check_arg(
-                Arg("gd::set<cocos2d::CCObject*>", "values"), info, 1, "arg0", "test"
-            )
+            check_arg(Arg("gd::set<cocos2d::CCObject*>", "values"), info, 1, "arg0", "test")
         )
         push_text = "".join(push_value(info, "values"))
 
@@ -872,9 +846,7 @@ class FmodMarshallingTests(unittest.TestCase):
             cxx_type="FMOD::Channel*",
             lua_type="FMODChannel",
         )
-        text = "".join(
-            check_arg(Arg("FMOD::Channel*", "channel"), info, 2, "arg0", "test")
-        )
+        text = "".join(check_arg(Arg("FMOD::Channel*", "channel"), info, 2, "arg0", "test"))
         self.assertIn("lua_islightuserdata", text)
         self.assertIn("static_cast<FMOD::Channel*>", text)
         self.assertNotIn("Usertype<FMOD::Channel>", text)
@@ -903,9 +875,7 @@ class FmodMarshallingTests(unittest.TestCase):
 
     def test_fmod_speaker_mode_enum_arg_uses_numeric_check(self) -> None:
         info = TypeInfo(kind="enum", cxx_type="FMOD_SPEAKERMODE", lua_type="number")
-        text = "".join(
-            check_arg(Arg("FMOD_SPEAKERMODE", "mode"), info, 2, "arg0", "test")
-        )
+        text = "".join(check_arg(Arg("FMOD_SPEAKERMODE", "mode"), info, 2, "arg0", "test"))
         self.assertIn("static_cast<FMOD_SPEAKERMODE>", text)
         self.assertIn("check<int>", text)
 

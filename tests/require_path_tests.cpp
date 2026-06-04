@@ -20,6 +20,12 @@ TEST_CASE("require child names stay flat") {
 }
 
 TEST_CASE("require module path appends luau suffix") {
-    REQUIRE(luax::requireModulePath(std::filesystem::path("Module")) == std::filesystem::path("Module.luau"));
-    REQUIRE(luax::requireModulePath(std::filesystem::path("Module.luau")) == std::filesystem::path("Module.luau"));
+    REQUIRE(
+        luax::requireModulePath(std::filesystem::path("Module")) ==
+        std::filesystem::path("Module.luau")
+    );
+    REQUIRE(
+        luax::requireModulePath(std::filesystem::path("Module.luau")) ==
+        std::filesystem::path("Module.luau")
+    );
 }

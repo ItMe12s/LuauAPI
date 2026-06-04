@@ -2,9 +2,8 @@
 #include "lua/runtime/Runtime.hpp"
 
 #include <catch2/catch_test_macros.hpp>
-#include <lua.h>
-
 #include <cstdint>
+#include <lua.h>
 #include <optional>
 #include <string>
 #include <thread>
@@ -50,7 +49,7 @@ namespace {
         }
         return nullptr;
     }
-}
+} // namespace
 
 TEST_CASE("Fields tryPush returns false without materializing a table") {
     RuntimeGuard guard;

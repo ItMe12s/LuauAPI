@@ -1,15 +1,13 @@
+#include "lua/Config.hpp"
 #include "lua/bindings/framework/LuaCallback.hpp"
 #include "lua/bindings/framework/Stack.hpp"
-#include "lua/Config.hpp"
 #include "lua/runtime/Runtime.hpp"
 #include "lua_test_helpers.hpp"
 
 #include <Geode/log.hpp>
-
 #include <catch2/catch_test_macros.hpp>
-#include <lua.h>
-
 #include <functional>
+#include <lua.h>
 #include <memory>
 #include <thread>
 
@@ -46,8 +44,7 @@ namespace {
                     nullptr,
                     nullptr,
                     +[](lua_State* L, void* raw) {
-                        *static_cast<bool*>(raw) =
-                            luax::check<bool>(L, -1, "cb callback return");
+                        *static_cast<bool*>(raw) = luax::check<bool>(L, -1, "cb callback return");
                     },
                     &cb_ret
                 )) {
@@ -57,7 +54,7 @@ namespace {
             return cb_ret;
         };
     }
-}
+} // namespace
 
 TEST_CASE("Generated-style void std::function callback returns cleanly when invoke fails") {
     RuntimeGuard guard;

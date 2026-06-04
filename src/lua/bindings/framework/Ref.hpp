@@ -56,4 +56,4 @@ namespace luax {
         return true;
     }
 
-}
+} // namespace luax

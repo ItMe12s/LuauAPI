@@ -214,9 +214,7 @@ class Foo {
         try:
             root = parse_file(path)
             fields = root.classes[0].fields
-            self.assertEqual(
-                [field.name for field in fields], ["m_offset", "m_spawnCount"]
-            )
+            self.assertEqual([field.name for field in fields], ["m_offset", "m_spawnCount"])
             self.assertIsNone(fields[0].platforms)
             self.assertEqual(
                 fields[1].platforms,
@@ -238,7 +236,10 @@ class Foo {
 
 class F3MethodAttrSplitTests(unittest.TestCase):
     def test_compound_method_attrs_split(self) -> None:
-        from luau_codegen.parse.broma import Cursor as _Cursor, parse_class_body as _parse_class_body  # type: ignore[import-unresolved]
+        from luau_codegen.parse.broma import (
+            Cursor as _Cursor,
+            parse_class_body as _parse_class_body,
+        )  # type: ignore[import-unresolved]
 
         cls = Class(name="Foo", namespace="test")
         bro = "[[link(win), missing(android)]] void bar() = win 0x1234; }"

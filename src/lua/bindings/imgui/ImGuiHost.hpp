@@ -8,4 +8,4 @@ namespace luax {
     void imguiHostSetVisible(bool visible);
     void imguiHostToggle();
     bool imguiHostIsVisible();
-}
+} // namespace luax

@@ -4,10 +4,9 @@
 
 #include <Geode/Geode.hpp>
 #include <cocos2d.h>
+#include <cstddef>
 #include <lua.h>
 #include <lualib.h>
-
-#include <cstddef>
 #include <new>
 #include <string>
 #include <type_traits>
@@ -46,14 +45,16 @@ namespace luax {
         int readOnlyCCArrayViewIndex(lua_State* L) {
             auto* block = checkReadOnlyCCArrayView<T>(L, 1);
             auto index = luaL_checkinteger(L, 2);
-            if (index < 1 || static_cast<std::size_t>(index) > static_cast<std::size_t>(block->array->num)) {
+            if (index < 1 ||
+                static_cast<std::size_t>(index) > static_cast<std::size_t>(block->array->num)) {
                 lua_pushnil(L);
                 return 1;
             }
             auto* value = static_cast<T*>(block->array->arr[static_cast<std::size_t>(index - 1)]);
             if (value == nullptr) {
                 lua_pushnil(L);
-            } else {
+            }
+            else {
                 Usertype<T>::pushBorrowed(L, value);
             }
             return 1;
@@ -99,13 +100,13 @@ namespace luax {
             }
             lua_pop(L, 1);
         }
-    }
+    } // namespace detail
 
     template <class T>
-    void pushReadOnlyCCArrayView(
-        lua_State* L, cocos2d::ccCArray* array, cocos2d::CCObject* owner
-    ) {
-        static_assert(std::is_base_of_v<cocos2d::CCObject, T>, "ccCArray view elements must be CCObject");
+    void pushReadOnlyCCArrayView(lua_State* L, cocos2d::ccCArray* array, cocos2d::CCObject* owner) {
+        static_assert(
+            std::is_base_of_v<cocos2d::CCObject, T>, "ccCArray view elements must be CCObject"
+        );
         if (!array || !owner) {
             lua_pushnil(L);
             return;
@@ -118,4 +119,4 @@ namespace luax {
         luaL_getmetatable(L, detail::readOnlyCCArrayViewMetatable<T>());
         lua_setmetatable(L, -2);
     }
-}
+} // namespace luax

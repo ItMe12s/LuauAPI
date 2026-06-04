@@ -1,13 +1,12 @@
 #pragma once
 
+#include "Usertype.hpp"
+#include "lua/Config.hpp"
 #include "lua/bindings/framework/LuaCallback.hpp"
 #include "lua/bindings/framework/LuaRef.hpp"
-#include "lua/Config.hpp"
-#include "Usertype.hpp"
 
 #include <cocos2d.h>
 #include <lua.h>
-
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -19,52 +18,32 @@ namespace luax {
         static std::shared_ptr<LuaRef> captureTable(lua_State* L, int idx);
 
         static void invokeTableVoid(
-            std::shared_ptr<LuaRef> const& table,
-            char const* field,
-            char const* context,
-            int nargs,
-            LuaCallback::PushArgsFn push = nullptr,
-            void* pushCtx = nullptr
+            std::shared_ptr<LuaRef> const& table, char const* field, char const* context, int nargs,
+            LuaCallback::PushArgsFn push = nullptr, void* pushCtx = nullptr
         );
 
         static bool invokeTableBool(
-            std::shared_ptr<LuaRef> const& table,
-            char const* field,
-            bool defaultValue,
-            char const* context,
-            int nargs,
-            LuaCallback::PushArgsFn push = nullptr,
+            std::shared_ptr<LuaRef> const& table, char const* field, bool defaultValue,
+            char const* context, int nargs, LuaCallback::PushArgsFn push = nullptr,
             void* pushCtx = nullptr
         );
 
         static int invokeTableInt(
-            std::shared_ptr<LuaRef> const& table,
-            char const* field,
-            int defaultValue,
-            char const* context,
-            int nargs,
-            LuaCallback::PushArgsFn push = nullptr,
+            std::shared_ptr<LuaRef> const& table, char const* field, int defaultValue,
+            char const* context, int nargs, LuaCallback::PushArgsFn push = nullptr,
             void* pushCtx = nullptr
         );
 
         static std::string invokeTableString(
-            std::shared_ptr<LuaRef> const& table,
-            char const* field,
-            std::string defaultValue,
-            char const* context,
-            int nargs,
-            LuaCallback::PushArgsFn push = nullptr,
+            std::shared_ptr<LuaRef> const& table, char const* field, std::string defaultValue,
+            char const* context, int nargs, LuaCallback::PushArgsFn push = nullptr,
             void* pushCtx = nullptr
         );
 
         template <class T>
         static T* invokeTableObject(
-            std::shared_ptr<LuaRef> const& table,
-            char const* field,
-            T* defaultValue,
-            char const* context,
-            int nargs,
-            LuaCallback::PushArgsFn push = nullptr,
+            std::shared_ptr<LuaRef> const& table, char const* field, T* defaultValue,
+            char const* context, int nargs, LuaCallback::PushArgsFn push = nullptr,
             void* pushCtx = nullptr
         ) {
             T* result = defaultValue;
@@ -92,18 +71,12 @@ namespace luax {
 
     private:
         static bool invokeTableField(
-            std::shared_ptr<LuaRef> const& table,
-            char const* field,
-            char const* context,
-            int nargs,
-            int nresults,
-            LuaCallback::PushArgsFn push,
-            void* pushCtx,
-            LuaCallback::PopResultsFn pop,
-            void* popCtx
+            std::shared_ptr<LuaRef> const& table, char const* field, char const* context, int nargs,
+            int nresults, LuaCallback::PushArgsFn push, void* pushCtx,
+            LuaCallback::PopResultsFn pop, void* popCtx
         );
     };
 
     bool tryPushBoundDelegateTable(lua_State* L, void* delegatePtr);
     void anchorDelegate(cocos2d::CCObject* anchor, cocos2d::CCObject* trampoline);
-}
+} // namespace luax

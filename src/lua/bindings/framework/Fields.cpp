@@ -1,7 +1,6 @@
 #include "Fields.hpp"
 
 #include <Geode/Geode.hpp>
-
 #include <unordered_map>
 
 namespace luax {
@@ -33,7 +32,7 @@ namespace luax {
                 ++it;
             }
         }
-    }
+    } // namespace
 
     bool Fields::tryPush(lua_State* L, cocos2d::CCNode* node) {
         if (!L || !node) {
@@ -109,4 +108,4 @@ namespace luax {
         }
         tables.clear();
     }
-}
+} // namespace luax

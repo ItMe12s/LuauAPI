@@ -19,7 +19,10 @@ namespace luax {
 
         std::size_t activeCount() const;
         bool full() const;
-        bool inFrame() const { return m_inFrame; }
+
+        bool inFrame() const {
+            return m_inFrame;
+        }
 
     private:
         struct DrawCb {
@@ -37,4 +40,4 @@ namespace luax {
         std::uint64_t m_nextId = 1;
         bool m_inFrame = false;
     };
-}
+} // namespace luax

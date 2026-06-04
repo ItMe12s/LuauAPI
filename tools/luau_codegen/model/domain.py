@@ -71,9 +71,7 @@ def object_classes(root: Root) -> List[Class]:
         memo[key] = False
         return False
 
-    classes = [
-        cls for cls in root.classes if not is_namespace_class(cls) and is_object(cls)
-    ]
+    classes = [cls for cls in root.classes if not is_namespace_class(cls) and is_object(cls)]
 
     def depth(cls: Class) -> int:
         if cls.name == "CCObject":

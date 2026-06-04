@@ -201,9 +201,7 @@ class GeneratedSafetyTests(unittest.TestCase):
         self.assertNotIn('returned invalid skip value", targetId', text)
 
     def test_ui_button_config_decode_uses_check_specialization(self) -> None:
-        info = TypeInfo(
-            kind="value", cxx_type="UIButtonConfig", lua_type="UIButtonConfig"
-        )
+        info = TypeInfo(kind="value", cxx_type="UIButtonConfig", lua_type="UIButtonConfig")
         text = "".join(emit_stack_check(info, "-1", "config", "hook args"))
 
         self.assertIn("luax::check<UIButtonConfig>", text)
@@ -612,9 +610,7 @@ class GeneratedSafetyTests(unittest.TestCase):
         )
 
         self.assertIn("pushPrimitiveVector<float>(L, self->m_pSplitTimes)", text)
-        self.assertIn(
-            "luax::assignPrimitiveVector(*self->m_pSplitTimes, std::move(value))", text
-        )
+        self.assertIn("luax::assignPrimitiveVector(*self->m_pSplitTimes, std::move(value))", text)
         self.assertNotIn("*self->m_pSplitTimes = std::move(value)", text)
         self.assertIn("field pointer is null", text)
 
@@ -641,9 +637,7 @@ class GeneratedSafetyTests(unittest.TestCase):
         )
 
         self.assertIn("checkPrimitiveVector<bool>", text)
-        self.assertIn(
-            "luax::assignPrimitiveVector(self->m_flags, std::move(value))", text
-        )
+        self.assertIn("luax::assignPrimitiveVector(self->m_flags, std::move(value))", text)
         self.assertNotIn("self->m_flags = std::move", text)
 
     def test_std_array_int_field_setter_uses_assign_std_array(self) -> None:
@@ -667,9 +661,7 @@ class GeneratedSafetyTests(unittest.TestCase):
         )
 
         self.assertIn("checkStdArray<int, 300>", text)
-        self.assertIn(
-            "luax::assignStdArray<int, 300>(self->m_values, std::move(value))", text
-        )
+        self.assertIn("luax::assignStdArray<int, 300>(self->m_values, std::move(value))", text)
         self.assertNotIn("self->m_values = std::move", text)
 
     def test_std_array_short_pointer_field_get_and_set_use_std_array_helpers(
@@ -695,9 +687,7 @@ class GeneratedSafetyTests(unittest.TestCase):
         )
 
         self.assertIn("pushStdArray<short, 10>(L, self->m_shorts)", text)
-        self.assertIn(
-            "luax::assignStdArray<short, 10>(*self->m_shorts, std::move(value))", text
-        )
+        self.assertIn("luax::assignStdArray<short, 10>(*self->m_shorts, std::move(value))", text)
         self.assertIn("field pointer is null", text)
         self.assertNotIn("*self->m_shorts = std::move(value)", text)
 
@@ -724,9 +714,7 @@ class GeneratedSafetyTests(unittest.TestCase):
         )
 
         self.assertIn("checkPrimitiveVector<int>", text)
-        self.assertIn(
-            "luax::assignPrimitiveVector(*self->m_pInts, std::move(value))", text
-        )
+        self.assertIn("luax::assignPrimitiveVector(*self->m_pInts, std::move(value))", text)
         self.assertNotIn("*self->m_pInts = std::move(value)", text)
 
     def test_map_field_setter_uses_assign_map(self) -> None:

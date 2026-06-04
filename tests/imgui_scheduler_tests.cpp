@@ -3,11 +3,9 @@
 #include "lua_test_helpers.hpp"
 
 #include <RuntimeTypes.hpp>
-
 #include <catch2/catch_test_macros.hpp>
 #include <lua.h>
 #include <lualib.h>
-
 #include <thread>
 
 namespace {
@@ -21,7 +19,7 @@ namespace {
             luax::Runtime::resetForTests();
         }
     };
-}
+} // namespace
 
 TEST_CASE("ImGuiDrawScheduler fires registered draw callbacks") {
     RuntimeGuard guard;

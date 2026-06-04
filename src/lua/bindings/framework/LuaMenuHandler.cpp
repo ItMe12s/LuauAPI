@@ -16,9 +16,11 @@ namespace luax {
 
     void LuaMenuHandler::onCallback(cocos2d::CCObject* sender) {
         if (!m_callback || !m_callback->valid()) return;
+
         struct Ctx {
             cocos2d::CCObject* sender;
         };
+
         Ctx ctx{sender};
         m_callback->invoke(
             1,
@@ -52,4 +54,4 @@ namespace luax {
     void ensureMenuHandlerShutdownHook() {
         ensureTrampolineShutdownHook();
     }
-}
+} // namespace luax

@@ -241,19 +241,13 @@ class F12ParityReportTests(unittest.TestCase):
             name="Foo",
             namespace="gd",
             bases=["CCObject"],
-            methods=[
-                Method(name="shared", ret="void", args=[], platforms=all_platforms())
-            ],
+            methods=[Method(name="shared", ret="void", args=[], platforms=all_platforms())],
         )
         root = Root(classes=[ccobject, foo])
         platforms = ("win", "m1", "ios", "android32", "android64")
-        plans = {
-            platform: collect_platform_plan(root, platform) for platform in platforms
-        }
+        plans = {platform: collect_platform_plan(root, platform) for platform in platforms}
 
-        with mock.patch(
-            "luau_codegen.emit.parity.collect_platform_plan"
-        ) as mocked_collect:
+        with mock.patch("luau_codegen.emit.parity.collect_platform_plan") as mocked_collect:
             data = collect_parity(root, platforms=platforms, plans_by_platform=plans)
 
         mocked_collect.assert_not_called()

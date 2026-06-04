@@ -4,7 +4,6 @@
 #include <catch2/catch_test_macros.hpp>
 #include <lua.h>
 #include <lualib.h>
-
 #include <string>
 
 namespace {
@@ -30,7 +29,7 @@ namespace {
         (void)L;
         return geode::Err("binding failed");
     }
-}
+} // namespace
 
 TEST_CASE("applyAllBindings sorts registrars by priority") {
     RuntimeGuard guard;

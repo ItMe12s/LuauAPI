@@ -1,18 +1,16 @@
+#include "lua/Config.hpp"
 #include "lua/bindings/Binding.hpp"
 #include "lua/bindings/framework/LuaDelegate.hpp"
 #include "lua/bindings/framework/LuaRef.hpp"
 #include "lua/bindings/framework/LuaTrampolineRegistry.hpp"
 #include "lua/bindings/framework/Usertype.hpp"
 #include "lua/bindings/task/TaskScheduler.hpp"
-#include "lua/Config.hpp"
 #include "lua/runtime/Runtime.hpp"
 #include "lua_test_helpers.hpp"
 
 #include <RuntimeTypes.hpp>
-
 #include <catch2/catch_test_macros.hpp>
 #include <lua.h>
-
 #include <thread>
 
 namespace luax {
@@ -35,7 +33,7 @@ namespace {
             luax::resetBindingsForTests();
         }
     };
-}
+} // namespace
 
 TEST_CASE("Orphan trampoline registry rejects registrations past cap") {
     RuntimeGuard guard;

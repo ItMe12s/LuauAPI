@@ -520,10 +520,7 @@ def _parse_std_pair(
     second = classify_arg(parts[1], object_classes, ctx=ctx)
     if first is None or second is None:
         return None
-    if (
-        first.kind not in PAIR_COMPONENT_KINDS
-        or second.kind not in PAIR_COMPONENT_KINDS
-    ):
+    if first.kind not in PAIR_COMPONENT_KINDS or second.kind not in PAIR_COMPONENT_KINDS:
         return None
     if _is_nested_container(first) or _is_nested_container(second):
         return None
@@ -826,9 +823,7 @@ def _parse_callback(
         if info is None or info.kind == "callback":
             return None
         arg_infos.append(info)
-    lua_params = ", ".join(
-        f"arg{i}: {ai.lua_type}" for i, ai in enumerate(arg_infos, start=1)
-    )
+    lua_params = ", ".join(f"arg{i}: {ai.lua_type}" for i, ai in enumerate(arg_infos, start=1))
     if ret_info.kind == "void":
         lua_ret = "()"
     else:
@@ -931,9 +926,7 @@ def _classify_core(
             array_size=std_array.array_size,
         )
 
-    nested_primitive_vector_view = _parse_nested_primitive_vector_view(
-        n, object_classes, ctx=ctx
-    )
+    nested_primitive_vector_view = _parse_nested_primitive_vector_view(n, object_classes, ctx=ctx)
     if nested_primitive_vector_view is not None:
         return TypeInfo(
             nested_primitive_vector_view.kind,
@@ -969,9 +962,7 @@ def _classify_core(
             element_type=vector_view.element_type,
         )
 
-    cc_c_array_view = _parse_cc_c_array_view(
-        n, owner_class, field_name, object_classes, ctx=ctx
-    )
+    cc_c_array_view = _parse_cc_c_array_view(n, owner_class, field_name, object_classes, ctx=ctx)
     if cc_c_array_view is not None:
         return TypeInfo(
             cc_c_array_view.kind,
@@ -1211,6 +1202,4 @@ def method_input_arg_count(
     ret = classify_return(method.ret, object_classes, ctx=ctx)
     if ret is None:
         return len(method.args)
-    return count_lua_method_args(
-        method, object_classes, ret.kind, owner_class=owner_class, ctx=ctx
-    )
+    return count_lua_method_args(method, object_classes, ret.kind, owner_class=owner_class, ctx=ctx)

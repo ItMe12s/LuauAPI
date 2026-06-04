@@ -4,7 +4,6 @@
 #include <catch2/catch_test_macros.hpp>
 #include <lua.h>
 #include <lualib.h>
-
 #include <optional>
 #include <string>
 #include <thread>
@@ -23,7 +22,7 @@ namespace {
     void pushReturnValue(lua_State* L, int value) {
         luauapi_test::loadFunction(L, std::string("return ") + std::to_string(value));
     }
-}
+} // namespace
 
 TEST_CASE("Runtime initializes and shuts down cleanly") {
     RuntimeGuard guard;

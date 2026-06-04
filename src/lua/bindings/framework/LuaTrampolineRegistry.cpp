@@ -4,7 +4,6 @@
 #include "lua/runtime/Runtime.hpp"
 
 #include <Geode/Geode.hpp>
-
 #include <unordered_map>
 #include <vector>
 
@@ -25,7 +24,7 @@ namespace luax {
 
         bool s_shutdownHookRegistered = false;
         bool s_orphanCapWarned = false;
-    }
+    } // namespace
 
     void anchorTrampoline(cocos2d::CCObject* anchor, cocos2d::CCObject* trampoline) {
         if (!trampoline) return;
@@ -86,4 +85,4 @@ namespace luax {
         runtime->registerShutdownHook(&clearOrphanTrampolines);
         s_shutdownHookRegistered = true;
     }
-}
+} // namespace luax

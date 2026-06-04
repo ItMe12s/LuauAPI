@@ -8,11 +8,9 @@
 #include <Geode/loader/Mod.hpp>
 #include <Geode/utils/file.hpp>
 #include <Geode/utils/string.hpp>
-
+#include <filesystem>
 #include <lua.h>
 #include <lualib.h>
-
-#include <filesystem>
 #include <optional>
 #include <string>
 #include <vector>
@@ -210,7 +208,7 @@ namespace {
         return 1;
     }
 
-}
+} // namespace
 
 namespace luax {
     geode::Result<void> registerGeodeFs(lua_State* L) {
@@ -226,7 +224,7 @@ namespace luax {
         lua_pop(L, 1);
         return geode::Ok();
     }
-}
+} // namespace luax
 
 #if !defined(LUAUAPI_HOST_TESTS)
 LUAX_BINDING(geode_fs_lib, registerGeodeFs)

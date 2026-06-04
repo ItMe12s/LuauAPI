@@ -157,14 +157,10 @@ def emit_stack_check(
     if info.kind == "void":
         return []
     if info.kind == "bool":
-        return [
-            f'        {_prefix(declare, var)} = luax::check<bool>(L, {idx}, "{label}");\n'
-        ]
+        return [f'        {_prefix(declare, var)} = luax::check<bool>(L, {idx}, "{label}");\n']
     if info.kind in ("number", "enum"):
         if cxx in ("float", "double"):
-            return [
-                f'        {_prefix(declare, var)} = luax::check<{cxx}>(L, {idx}, "{label}");\n'
-            ]
+            return [f'        {_prefix(declare, var)} = luax::check<{cxx}>(L, {idx}, "{label}");\n']
         if cxx in WIDE_INTEGER_TYPES:
             check_type = "double"
         elif cxx in UNSIGNED_NUMERIC_TYPES:
@@ -203,11 +199,11 @@ def emit_stack_check(
             f'        {_prefix(declare, var)} = luax::check<std::string>(L, {idx}, "{label}");\n'
         ]
     if info.kind == "value":
-        check_type = VALUE_CHECK_CXX_TYPES.get(info.lua_type)
-        if check_type is None:
+        value_check = VALUE_CHECK_CXX_TYPES.get(info.lua_type)
+        if value_check is None:
             raise ValueError(f"unsupported value type: {info.lua_type}")
         return [
-            f'        {_prefix(declare, var)} = luax::check<{check_type}>(L, {idx}, "{label}");\n'
+            f'        {_prefix(declare, var)} = luax::check<{value_check}>(L, {idx}, "{label}");\n'
         ]
     if info.kind == "opaque_handle":
         cxx = info.cxx_type
@@ -252,9 +248,7 @@ def emit_stack_check(
         ):
             raise ValueError("vector view requires object or opaque element type")
         check_fn = _vector_view_check_fn(info)
-        return [
-            f'        {_prefix(declare, var)} = luax::{check_fn}(L, {idx}, "{label}");\n'
-        ]
+        return [f'        {_prefix(declare, var)} = luax::{check_fn}(L, {idx}, "{label}");\n']
     if info.kind == "primitive_vector":
         elem = _primitive_vector_elem_cxx(info)
         return [
@@ -267,9 +261,7 @@ def emit_stack_check(
         ]
     if info.kind in ("map", "unordered_map"):
         check_fn = _map_check_call(info)
-        return [
-            f'        {_prefix(declare, var)} = luax::{check_fn}(L, {idx}, "{label}");\n'
-        ]
+        return [f'        {_prefix(declare, var)} = luax::{check_fn}(L, {idx}, "{label}");\n']
     if info.kind in ("set", "unordered_set"):
         elem = _set_elem_cxx(info)
         check_fn = _set_check_fn(info.kind)
@@ -300,9 +292,7 @@ def _push_impl(
     if info.kind == "wideint":
         return [f"{indent}luax::pushIntegerString(L, {expr});\n"]
     if info.kind == "enum":
-        return [
-            f"{indent}lua_pushnumber(L, static_cast<double>(static_cast<int>({expr})));\n"
-        ]
+        return [f"{indent}lua_pushnumber(L, static_cast<double>(static_cast<int>({expr})));\n"]
     if info.kind == "string":
         if info.cxx_type.endswith("*"):
             return [f"{indent}luax::push(L, {expr});\n"]
@@ -337,9 +327,7 @@ def _push_impl(
             "opaque_handle",
         ):
             raise ValueError("vector view requires object or opaque element type")
-        push_fn = _vector_view_push_fn(
-            info, owned=vector_owned, has_owner=bool(owner_expr)
-        )
+        push_fn = _vector_view_push_fn(info, owned=vector_owned, has_owner=bool(owner_expr))
         if vector_owned or not owner_expr:
             return [f"{indent}luax::{push_fn}(L, {expr});\n"]
         return [f"{indent}luax::{push_fn}(L, {expr}, {owner_expr});\n"]
@@ -384,7 +372,7 @@ def _emit_callback_pop(var: str, ret: TypeInfo) -> list[str]:
         return []
     if ret.kind == "bool":
         return [
-            f"                +[](lua_State* L, void* raw) {{\n",
+            "                +[](lua_State* L, void* raw) {\n",
             f'                    *static_cast<bool*>(raw) = luax::check<bool>(L, -1, "{var} callback return");\n',
             "                },\n",
         ]
@@ -397,20 +385,20 @@ def _emit_callback_pop(var: str, ret: TypeInfo) -> list[str]:
         else:
             check = "int"
         return [
-            f"                +[](lua_State* L, void* raw) {{\n",
+            "                +[](lua_State* L, void* raw) {\n",
             f'                    *static_cast<{cxx}*>(raw) = static_cast<{cxx}>(luax::check<{check}>(L, -1, "{var} callback return"));\n',
             "                },\n",
         ]
     if ret.kind == "enum":
         return [
-            f"                +[](lua_State* L, void* raw) {{\n",
+            "                +[](lua_State* L, void* raw) {\n",
             f'                    *static_cast<{ret.cxx_type}*>(raw) = static_cast<{ret.cxx_type}>(static_cast<int>(luax::check<int>(L, -1, "{var} callback return")));\n',
             "                },\n",
         ]
     if ret.kind == "object":
         obj = ret.cxx_type[:-1]
         return [
-            f"                +[](lua_State* L, void* raw) {{\n",
+            "                +[](lua_State* L, void* raw) {\n",
             f'                    *static_cast<{ret.cxx_type}*>(raw) = luax::Usertype<{obj}>::check(L, -1, "{var} callback return");\n',
             "                },\n",
         ]
@@ -419,7 +407,7 @@ def _emit_callback_pop(var: str, ret: TypeInfo) -> list[str]:
         if check_type is None:
             raise ValueError(f"unsupported callback return value: {ret.lua_type}")
         return [
-            f"                +[](lua_State* L, void* raw) {{\n",
+            "                +[](lua_State* L, void* raw) {\n",
             f'                    *static_cast<{ret.cxx_type}*>(raw) = luax::check<{check_type}>(L, -1, "{var} callback return");\n',
             "                },\n",
         ]
@@ -458,9 +446,7 @@ def _emit_invoke_failure_handler(label: str, ret: TypeInfo) -> list[str]:
 def _emit_callback_lambda(idx: int, var: str, info: TypeInfo, label: str) -> list[str]:
     ret = info.callback_ret or TypeInfo("void", "void", "()")
     ret_type = _callback_return_type(info)
-    params = ", ".join(
-        f"{cb.cxx_type} {var}_p{i}" for i, cb in enumerate(info.callback_args)
-    )
+    params = ", ".join(f"{cb.cxx_type} {var}_p{i}" for i, cb in enumerate(info.callback_args))
     lines = [
         f"        luaL_checktype(L, {idx}, LUA_TFUNCTION);\n",
         f"        auto {var}_cb = std::make_shared<luax::LuaCallback>(L, {idx});\n",
@@ -471,9 +457,7 @@ def _emit_callback_lambda(idx: int, var: str, info: TypeInfo, label: str) -> lis
         lines.append(f"        auto {var} = [{var}_cb]({params}) -> {ret_type} {{\n")
         lines.append(f"            {ret_type} {var}_ret{{}};\n")
     if info.callback_args:
-        ctx_fields = "; ".join(
-            f"{cb.cxx_type} p{i}" for i, cb in enumerate(info.callback_args)
-        )
+        ctx_fields = "; ".join(f"{cb.cxx_type} p{i}" for i, cb in enumerate(info.callback_args))
         ctx_init = ", ".join(f"{var}_p{i}" for i in range(len(info.callback_args)))
         lines.append(f"            struct {var}_Ctx {{ {ctx_fields}; }};\n")
         lines.append(f"            {var}_Ctx ctx{{ {ctx_init} }};\n")
@@ -482,15 +466,13 @@ def _emit_callback_lambda(idx: int, var: str, info: TypeInfo, label: str) -> lis
             f"            if (!{var}_cb->invoke({len(info.callback_args)}, {nresults}, "
             f'"{label} callback", luax::kHookScriptDeadlineMs,\n'
         )
-        lines.append(f"                +[](lua_State* L, void* raw) {{\n")
+        lines.append("                +[](lua_State* L, void* raw) {\n")
         lines.append(f"                    auto* c = static_cast<{var}_Ctx*>(raw);\n")
         for i, cb in enumerate(info.callback_args):
-            lines.extend(
-                _push_impl(cb, f"c->p{i}", False, indent="                    ")
-            )
+            lines.extend(_push_impl(cb, f"c->p{i}", False, indent="                    "))
         lines.append("                }, &ctx")
         if ret.kind != "void":
-            lines.append(f",\n")
+            lines.append(",\n")
             lines.extend(_emit_callback_pop(var, ret))
             lines.append(f"                &{var}_ret")
         lines.append(")) {\n")
@@ -585,17 +567,13 @@ def check_sel_menu_handler(idx: int, var: str, label: str) -> list[str]:
     return check_sel_handler(
         idx,
         var,
-        TypeInfo(
-            "sel", "SEL_MenuHandler", "(sender: CCObject) -> ()", class_name="menu"
-        ),
+        TypeInfo("sel", "SEL_MenuHandler", "(sender: CCObject) -> ()", class_name="menu"),
         label,
     )
 
 
 def sel_menu_call_args(var: str) -> list[str]:
-    menu = TypeInfo(
-        "sel", "SEL_MenuHandler", "(sender: CCObject) -> ()", class_name="menu"
-    )
+    menu = TypeInfo("sel", "SEL_MenuHandler", "(sender: CCObject) -> ()", class_name="menu")
     return sel_call_args(var, menu, handler_first=True)
 
 
@@ -627,9 +605,7 @@ def push_return(
 ) -> list[str]:
     if info.kind == "void":
         return ["        return 0;\n"]
-    lines = _push_impl(
-        info, expr, owned, owner_expr=owner_expr, vector_owned=vector_owned
-    )
+    lines = _push_impl(info, expr, owned, owner_expr=owner_expr, vector_owned=vector_owned)
     return lines + ["        return 1;\n"]
 
 
@@ -643,6 +619,4 @@ def push_value(
 ) -> list[str]:
     if info.kind == "void":
         return ["        lua_pushnil(L);\n"]
-    return _push_impl(
-        info, expr, owned, owner_expr=owner_expr, vector_owned=vector_owned
-    )
+    return _push_impl(info, expr, owned, owner_expr=owner_expr, vector_owned=vector_owned)

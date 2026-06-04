@@ -5,7 +5,6 @@
 #include <catch2/catch_test_macros.hpp>
 #include <lua.h>
 #include <lualib.h>
-
 #include <memory>
 #include <string>
 
@@ -33,7 +32,7 @@ namespace {
         opts.typeInfoLevel = 1;
         return Luau::compile(source, opts);
     }
-}
+} // namespace
 
 TEST_CASE("loadstring result returns compiled function without running it") {
     auto L = makeLuaState();

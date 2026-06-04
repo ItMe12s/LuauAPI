@@ -2,11 +2,10 @@
 
 #include <LuauAPI.hpp>
 #include <catch2/catch_test_macros.hpp>
-#include <lua.h>
-#include <lualib.h>
-
 #include <filesystem>
 #include <fstream>
+#include <lua.h>
+#include <lualib.h>
 #include <optional>
 #include <thread>
 
@@ -32,7 +31,7 @@ namespace {
         REQUIRE(out.good());
         out.write(source.data(), static_cast<std::streamsize>(source.size()));
     }
-}
+} // namespace
 
 TEST_CASE("runScript executes source from resources root") {
     RuntimeGuard guard;

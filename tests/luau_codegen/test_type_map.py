@@ -46,9 +46,7 @@ class GeodeEnumRegistrationTests(unittest.TestCase):
         root = Root(classes=[ccobject, colliding])
         objects = codegen_object_map(root)
         skip = GD_ENUM_TYPES | COCOS_ENUM_TYPES | {c.name for c in object_classes(root)}
-        ctx = register_geode_enums(
-            {"CollidingClass": "geode::CollidingClass"}, skip=skip
-        )
+        ctx = register_geode_enums({"CollidingClass": "geode::CollidingClass"}, skip=skip)
         info = classify_arg("CollidingClass*", objects, ctx=ctx)
         self.assertIsNotNone(info)
         assert info is not None
@@ -373,9 +371,7 @@ class ContainerTypeMapTests(unittest.TestCase):
         self.assertTrue(info.is_vector_ptr)
 
     def test_classify_std_array_rejects_oversize(self) -> None:
-        self.assertIsNone(
-            classify_arg(f"std::array<int, {STD_ARRAY_MAX_SIZE + 1}>", {})
-        )
+        self.assertIsNone(classify_arg(f"std::array<int, {STD_ARRAY_MAX_SIZE + 1}>", {}))
 
     def test_classify_std_array_rejects_unmapped_value_element(self) -> None:
         self.assertIsNone(classify_arg("std::array<ccVertex2F, 4>", {}))
@@ -531,9 +527,7 @@ class ContainerTypeMapTests(unittest.TestCase):
         label = Class(name="LabelGameObject", namespace="")
         objects = {"LabelGameObject": label}
 
-        info = classify_arg(
-            "gd::unordered_map<int, gd::vector<LabelGameObject*>>", objects
-        )
+        info = classify_arg("gd::unordered_map<int, gd::vector<LabelGameObject*>>", objects)
 
         self.assertIsNotNone(info)
         assert info is not None
@@ -542,9 +536,7 @@ class ContainerTypeMapTests(unittest.TestCase):
         self.assertEqual(info.lua_type, "{ [number]: { LabelGameObject? } }")
 
     def test_classify_gd_map_pair_key_nested_opaque_vector_value(self) -> None:
-        info = classify_arg(
-            "gd::map<std::pair<int, int>, gd::vector<GroupCommandObject2*>>", {}
-        )
+        info = classify_arg("gd::map<std::pair<int, int>, gd::vector<GroupCommandObject2*>>", {})
 
         self.assertIsNotNone(info)
         assert info is not None
@@ -607,9 +599,7 @@ class ContainerTypeMapTests(unittest.TestCase):
         self.assertIsNotNone(info)
         assert info is not None
         self.assertEqual(info.kind, "unordered_map")
-        self.assertEqual(
-            info.lua_type, "{ [number]: { first: number, second: number } }"
-        )
+        self.assertEqual(info.lua_type, "{ [number]: { first: number, second: number } }")
 
     def test_classify_gd_map_pair_key_entry_list(self) -> None:
         info = classify_arg("gd::map<std::pair<int, int>, std::pair<float, float>>", {})

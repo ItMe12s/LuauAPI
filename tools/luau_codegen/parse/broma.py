@@ -158,9 +158,7 @@ def split_arg(arg: str) -> Arg:
         return Arg(head, matched)
 
     head_tokens = head.split()
-    if all(t in _QUALIFIERS for t in head_tokens) and matched in (
-        _QUALIFIERS | _PRIMITIVES
-    ):
+    if all(t in _QUALIFIERS for t in head_tokens) and matched in (_QUALIFIERS | _PRIMITIVES):
         return Arg(arg, "")
     return Arg(head, matched)
 

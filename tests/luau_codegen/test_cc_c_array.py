@@ -15,12 +15,8 @@ from luau_codegen.policy.fields import bindable_field  # type: ignore[import-unr
 
 class CcCArrayPolicyTests(unittest.TestCase):
     def test_allowlist_covers_dispatcher_handler_queues(self) -> None:
-        self.assertIn(
-            ("CCKeyboardDispatcher", "m_pHandlersToAdd"), CC_C_ARRAY_FIELD_ELEMENTS
-        )
-        self.assertIn(
-            ("CCTouchDispatcher", "m_pHandlersToRemove"), CC_C_ARRAY_FIELD_ELEMENTS
-        )
+        self.assertIn(("CCKeyboardDispatcher", "m_pHandlersToAdd"), CC_C_ARRAY_FIELD_ELEMENTS)
+        self.assertIn(("CCTouchDispatcher", "m_pHandlersToRemove"), CC_C_ARRAY_FIELD_ELEMENTS)
 
     def test_proven_element_lookup(self) -> None:
         self.assertEqual(
@@ -33,9 +29,7 @@ class CcCArrayPolicyTests(unittest.TestCase):
 class CcCArrayTypeMapTests(unittest.TestCase):
     def _keyboard_handler_objects(self) -> dict[str, Class]:
         ccobject = Class(name="CCObject", namespace="cocos2d")
-        handler = Class(
-            name="CCKeyboardHandler", namespace="cocos2d", bases=["CCObject"]
-        )
+        handler = Class(name="CCKeyboardHandler", namespace="cocos2d", bases=["CCObject"])
         dispatcher = Class(
             name="CCKeyboardDispatcher",
             namespace="cocos2d",
@@ -117,9 +111,7 @@ class CcCArrayMarshallingTests(unittest.TestCase):
             element_type=element,
         )
 
-        text = "".join(
-            push_value(info, "self->m_pHandlersToAdd", False, owner_expr="self")
-        )
+        text = "".join(push_value(info, "self->m_pHandlersToAdd", False, owner_expr="self"))
 
         self.assertIn(
             "luax::pushReadOnlyCCArrayView<cocos2d::CCKeyboardHandler>",
@@ -132,9 +124,7 @@ class CcCArrayMarshallingTests(unittest.TestCase):
 class CcCArrayFieldBindingTests(unittest.TestCase):
     def test_generated_field_is_readonly_cc_c_array_view(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")
-        handler = Class(
-            name="CCKeyboardHandler", namespace="cocos2d", bases=["CCObject"]
-        )
+        handler = Class(name="CCKeyboardHandler", namespace="cocos2d", bases=["CCObject"])
         cls = Class(
             name="CCKeyboardDispatcher",
             namespace="cocos2d",

@@ -2,12 +2,11 @@
 
 #include <Geode/Geode.hpp>
 #include <lua.h>
-
 #include <optional>
 #include <string>
 
 namespace luax {
-    using Registrar = geode::Result<void>(*)(lua_State*);
+    using Registrar = geode::Result<void> (*)(lua_State*);
 
     struct Binding {
         char const* name;
@@ -21,7 +20,7 @@ namespace luax {
 #if defined(LUAUAPI_HOST_TESTS)
     void resetBindingsForTests();
 #endif
-}
+} // namespace luax
 
 #define LUAX_BINDING_PRIORITY(NAME, FN, PRIO)                \
     namespace {                                              \

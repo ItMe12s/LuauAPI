@@ -3,9 +3,8 @@
 #include "lua/bindings/framework/BindingHost.hpp"
 #include "lua/bindings/framework/LuaRef.hpp"
 
-#include <lua.h>
-
 #include <functional>
+#include <lua.h>
 #include <memory>
 #include <string_view>
 
@@ -34,14 +33,9 @@ namespace luax {
         }
 
         bool invoke(
-            int nargs,
-            int nresults,
-            std::string_view context,
-            int deadlineMs,
-            PushArgsFn pushArgs = nullptr,
-            void* pushCtx = nullptr,
-            PopResultsFn popResults = nullptr,
-            void* popCtx = nullptr
+            int nargs, int nresults, std::string_view context, int deadlineMs,
+            PushArgsFn pushArgs = nullptr, void* pushCtx = nullptr,
+            PopResultsFn popResults = nullptr, void* popCtx = nullptr
         ) const {
             auto* host = BindingHost::getIfInitialized();
             if (!host || !host->ready()) return false;
@@ -69,4 +63,4 @@ namespace luax {
     private:
         std::shared_ptr<LuaRef> m_ref;
     };
-}
+} // namespace luax

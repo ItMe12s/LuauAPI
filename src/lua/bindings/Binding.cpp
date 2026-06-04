@@ -1,9 +1,8 @@
 #include "Binding.hpp"
 
 #include <Geode/Geode.hpp>
-#include <fmt/format.h>
-
 #include <algorithm>
+#include <fmt/format.h>
 #include <vector>
 
 namespace luax {
@@ -12,7 +11,7 @@ namespace luax {
             static auto* value = new std::vector<Binding>;
             return *value;
         }
-    }
+    } // namespace
 
     void registerBinding(Binding const& binding) {
         bindings().push_back(binding);
@@ -40,4 +39,4 @@ namespace luax {
         bindings().clear();
     }
 #endif
-}
+} // namespace luax

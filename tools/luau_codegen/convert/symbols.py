@@ -165,9 +165,7 @@ class ItaniumMangler:
                 )
             else:
                 encoded = (
-                    "N"
-                    + "".join(_source_name(part) for part in base_parts)
-                    + f"I{encoded_args}EE"
+                    "N" + "".join(_source_name(part) for part in base_parts) + f"I{encoded_args}EE"
                 )
         return self._remember(key, encoded)
 
@@ -177,9 +175,7 @@ class ItaniumMangler:
         if base == "gd::vector":
             return self.type(f"std::allocator<{parts[0]}>")
         if base == "gd::set":
-            return self.type(f"std::less<{parts[0]}>") + self.type(
-                f"std::allocator<{parts[0]}>"
-            )
+            return self.type(f"std::less<{parts[0]}>") + self.type(f"std::allocator<{parts[0]}>")
         if base == "gd::map" and len(parts) >= 2:
             return self.type(f"std::less<{parts[0]}>") + self.type(
                 f"std::allocator<std::pair<const {parts[0]}, {parts[1]}>>"

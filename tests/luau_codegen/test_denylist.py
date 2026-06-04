@@ -38,9 +38,7 @@ class DenylistStaleEntryTests(unittest.TestCase):
             )
         cls.methods_by_class: dict[str, set[str]] = {}
         for c in cls.root.classes:
-            cls.methods_by_class.setdefault(c.name, set()).update(
-                m.name for m in c.methods
-            )
+            cls.methods_by_class.setdefault(c.name, set()).update(m.name for m in c.methods)
         cls.overloads: dict[tuple[str, str], list[tuple[str, ...]]] = {}
         for c in cls.root.classes:
             for m in c.methods:
@@ -48,9 +46,7 @@ class DenylistStaleEntryTests(unittest.TestCase):
                 cls.overloads.setdefault((c.name, m.name), []).append(sig)
 
     def test_inaccessible_classes_exist(self) -> None:
-        stale = sorted(
-            name for name in INACCESSIBLE_CLASSES if name not in self.methods_by_class
-        )
+        stale = sorted(name for name in INACCESSIBLE_CLASSES if name not in self.methods_by_class)
         self.assertEqual(stale, [], f"stale INACCESSIBLE_CLASSES: {stale}")
 
     def test_inaccessible_methods_exist(self) -> None:
@@ -82,9 +78,7 @@ class DenylistStaleEntryTests(unittest.TestCase):
         )
 
     def test_bindable_constructor_keys_exist(self) -> None:
-        stale = sorted(
-            name for name in BINDABLE_CONSTRUCTORS if name not in self.methods_by_class
-        )
+        stale = sorted(name for name in BINDABLE_CONSTRUCTORS if name not in self.methods_by_class)
         self.assertEqual(stale, [], f"stale BINDABLE_CONSTRUCTORS: {stale}")
 
 

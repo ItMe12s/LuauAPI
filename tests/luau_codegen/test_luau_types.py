@@ -74,9 +74,7 @@ class LuauTypeEmissionTests(unittest.TestCase):
 
         self.assertNotIn("cocos2d::", text)
         self.assertIn("export type enumKeyCodes = number", text)
-        self.assertIn(
-            "export type RGBColor = { r: number, g: number, b: number }", text
-        )
+        self.assertIn("export type RGBColor = { r: number, g: number, b: number }", text)
         self.assertNotIn("declare class CCNode end", text)
 
     def test_factories_and_namespace_types(self) -> None:
@@ -175,18 +173,12 @@ class LuauTypeEmissionTests(unittest.TestCase):
         ccobject = Class(
             name="CCObject",
             namespace="cocos2d",
-            methods=[
-                Method(
-                    name="retain", ret="void", args=[], platforms=all_platforms("0x1")
-                )
-            ],
+            methods=[Method(name="retain", ret="void", args=[], platforms=all_platforms("0x1"))],
         )
         widget = Class(
             name="Widget",
             bases=["CCObject"],
-            methods=[
-                Method(name="init", ret="bool", args=[], platforms=all_platforms("0x1"))
-            ],
+            methods=[Method(name="init", ret="bool", args=[], platforms=all_platforms("0x1"))],
         )
         files = emit_luau_types(Root(classes=[ccobject, widget]))
         self.assertEqual(set(files.keys()), {TYPES_FILE})
@@ -532,9 +524,7 @@ class LuauTypeEmissionTests(unittest.TestCase):
         return Method(name=name, ret="bool", args=[], platforms=all_platforms(addr))
 
     def test_base_class_declared_before_derived(self) -> None:
-        ccobject = Class(
-            name="CCObject", namespace="cocos2d", methods=[self._stub_method()]
-        )
+        ccobject = Class(name="CCObject", namespace="cocos2d", methods=[self._stub_method()])
         ccaction = Class(
             name="CCAction",
             namespace="cocos2d",
@@ -548,9 +538,7 @@ class LuauTypeEmissionTests(unittest.TestCase):
         self.assertLess(obj_pos, action_pos)
 
     def test_no_extends_references_class_declared_later(self) -> None:
-        ccobject = Class(
-            name="CCObject", namespace="cocos2d", methods=[self._stub_method()]
-        )
+        ccobject = Class(name="CCObject", namespace="cocos2d", methods=[self._stub_method()])
         finite = Class(
             name="CCFiniteTimeAction",
             namespace="cocos2d",
@@ -579,9 +567,7 @@ class LuauTypeEmissionTests(unittest.TestCase):
         for m in re.finditer(r"declare class (\w+) extends (\w+)", out):
             derived, base = m.group(1), m.group(2)
             base_pos = out.find(f"declare class {base}")
-            self.assertGreaterEqual(
-                base_pos, 0, f"base {base} of {derived} not declared"
-            )
+            self.assertGreaterEqual(base_pos, 0, f"base {base} of {derived} not declared")
             self.assertLess(
                 base_pos,
                 m.start(),
@@ -673,9 +659,7 @@ class LuauOverloadWideningTests(unittest.TestCase):
 
     def _factory(self, *methods: Method) -> str:
         ccobject = Class(name="CCObject", namespace="cocos2d")
-        instance = Method(
-            name="getValue", ret="int", args=[], platforms=all_platforms("0xff")
-        )
+        instance = Method(name="getValue", ret="int", args=[], platforms=all_platforms("0xff"))
         foo = Class(
             name="Foo",
             bases=["CCObject"],
@@ -857,28 +841,18 @@ class F9SingleFileTests(unittest.TestCase):
         ccobject = Class(
             name="CCObject",
             namespace="cocos2d",
-            methods=[
-                Method(
-                    name="retain", ret="void", args=[], platforms=all_platforms("0x1")
-                )
-            ],
+            methods=[Method(name="retain", ret="void", args=[], platforms=all_platforms("0x1"))],
         )
         ccnode = Class(
             name="CCNode",
             namespace="cocos2d",
             bases=["CCObject"],
-            methods=[
-                Method(
-                    name="getTag", ret="int", args=[], platforms=all_platforms("0x2")
-                )
-            ],
+            methods=[Method(name="getTag", ret="int", args=[], platforms=all_platforms("0x2"))],
         )
         player = Class(
             name="PlayerObject",
             bases=["CCObject"],
-            methods=[
-                Method(name="init", ret="bool", args=[], platforms=all_platforms("0x3"))
-            ],
+            methods=[Method(name="init", ret="bool", args=[], platforms=all_platforms("0x3"))],
         )
         files = emit_luau_types(Root(classes=[ccobject, ccnode, player]))
         text = types_text(files)

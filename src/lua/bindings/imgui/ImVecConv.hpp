@@ -21,15 +21,21 @@ namespace luax {
 
     inline void pushImVec2(lua_State* L, ImVec2 const& v) {
         lua_createtable(L, 0, 2);
-        lua_pushnumber(L, v.x); lua_setfield(L, -2, "x");
-        lua_pushnumber(L, v.y); lua_setfield(L, -2, "y");
+        lua_pushnumber(L, v.x);
+        lua_setfield(L, -2, "x");
+        lua_pushnumber(L, v.y);
+        lua_setfield(L, -2, "y");
     }
 
     inline void pushImVec4(lua_State* L, ImVec4 const& v) {
         lua_createtable(L, 0, 4);
-        lua_pushnumber(L, v.x); lua_setfield(L, -2, "x");
-        lua_pushnumber(L, v.y); lua_setfield(L, -2, "y");
-        lua_pushnumber(L, v.z); lua_setfield(L, -2, "z");
-        lua_pushnumber(L, v.w); lua_setfield(L, -2, "w");
+        lua_pushnumber(L, v.x);
+        lua_setfield(L, -2, "x");
+        lua_pushnumber(L, v.y);
+        lua_setfield(L, -2, "y");
+        lua_pushnumber(L, v.z);
+        lua_setfield(L, -2, "z");
+        lua_pushnumber(L, v.w);
+        lua_setfield(L, -2, "w");
     }
-}
+} // namespace luax

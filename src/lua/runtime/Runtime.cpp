@@ -5,28 +5,27 @@
 #include "Loadstring.hpp"
 #include "lua/bindings/geode/CurrentMod.hpp"
 #if !defined(LUAUAPI_HOST_TESTS)
-#include "lua/bindings/Binding.hpp"
-#include "lua/bindings/framework/Ref.hpp"
-#include "lua/module/Requirer.hpp"
+    #include "lua/bindings/Binding.hpp"
+    #include "lua/bindings/framework/Ref.hpp"
+    #include "lua/module/Requirer.hpp"
 #endif
 #include "lua/module/BytecodeCacheKey.hpp"
 #include "lua/module/PathSandbox.hpp"
 #if defined(LUAUAPI_HOST_TESTS)
-#include "lua/bindings/framework/Usertype.hpp"
+    #include "lua/bindings/framework/Usertype.hpp"
 #endif
 
 #include <Geode/Geode.hpp>
 #include <Luau/CodeGen.h>
 #include <Luau/Compiler.h>
 #if !defined(LUAUAPI_HOST_TESTS)
-#include <Luau/Require.h>
+    #include <Luau/Require.h>
 #endif
+#include <cstdlib>
+#include <cstring>
 #include <fmt/format.h>
 #include <lua.h>
 #include <lualib.h>
-
-#include <cstdlib>
-#include <cstring>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -53,6 +52,7 @@ namespace luax {
         class StackGuard {
         public:
             explicit StackGuard(lua_State* L) : m_state(L), m_top(lua_gettop(L)) {}
+
             ~StackGuard() {
                 if (m_active) {
                     lua_settop(m_state, m_top);
@@ -62,7 +62,9 @@ namespace luax {
             StackGuard(StackGuard const&) = delete;
             StackGuard& operator=(StackGuard const&) = delete;
 
-            void dismiss() { m_active = false; }
+            void dismiss() {
+                m_active = false;
+            }
 
         private:
             lua_State* m_state = nullptr;
@@ -77,9 +79,13 @@ namespace luax {
             lua_pop(L, 1);
             return out;
         }
-    }
+    } // namespace
 
-    Runtime::Runtime() : m_ownerThread(mainThreadIdStorage() == std::thread::id{} ? std::this_thread::get_id() : mainThreadIdStorage()) {
+    Runtime::Runtime() :
+        m_ownerThread(
+            mainThreadIdStorage() == std::thread::id{} ? std::this_thread::get_id() :
+                                                         mainThreadIdStorage()
+        ) {
         m_state = lua_newstate(&Runtime::boundedAlloc, this);
         if (!m_state) {
             m_initError = "luau lua_newstate failed";
@@ -95,7 +101,8 @@ namespace luax {
             Luau::CodeGen::create(m_state);
             m_codegenEnabled = true;
             geode::log::info("luau codegen enabled");
-        } else {
+        }
+        else {
             geode::log::info("luau codegen not supported on this platform, using interpreter");
         }
 
@@ -244,16 +251,15 @@ namespace luax {
         return m_status.load(std::memory_order_acquire);
     }
 
-    Runtime::ScriptBudgetGuard::ScriptBudgetGuard(Runtime& runtime, int deadlineMs)
-        : m_runtime(runtime),
-          m_outermost(runtime.m_scriptBudgetDepth == 0),
-          m_previousBudget(runtime.m_scriptBudgetMs),
-          m_previousDeadline(runtime.m_scriptDeadline) {
+    Runtime::ScriptBudgetGuard::ScriptBudgetGuard(Runtime& runtime, int deadlineMs) :
+        m_runtime(runtime), m_outermost(runtime.m_scriptBudgetDepth == 0),
+        m_previousBudget(runtime.m_scriptBudgetMs), m_previousDeadline(runtime.m_scriptDeadline) {
         ++m_runtime.m_scriptBudgetDepth;
         if (m_outermost) {
             m_runtime.m_scriptBudgetMs = deadlineMs;
             if (deadlineMs > 0) {
-                m_runtime.m_scriptDeadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(deadlineMs);
+                m_runtime.m_scriptDeadline =
+                    std::chrono::steady_clock::now() + std::chrono::milliseconds(deadlineMs);
             }
         }
     }
@@ -339,7 +345,8 @@ namespace luax {
         char const* chunkData = luaL_optstring(L, 2, "=loadstring");
         std::string_view chunk(chunkData ? chunkData : "=loadstring");
         bool ok = false;
-        auto const& bytecode = self->getOrCompileBytecode(loadstringBytecodeKey(chunk, source), source, ok);
+        auto const& bytecode =
+            self->getOrCompileBytecode(loadstringBytecodeKey(chunk, source), source, ok);
         if (!ok) {
             lua_pushnil(L);
             lua_pushlstring(L, self->lastError().data(), self->lastError().size());
@@ -352,7 +359,9 @@ namespace luax {
         if (self->m_codegenEnabled) {
             auto cgResult = Luau::CodeGen::compile(L, -1, Luau::CodeGen::CodeGen_ColdFunctions);
             if (cgResult.hasErrors()) {
-                geode::log::warn("luau codegen [{}] partial: {}", chunk, Luau::CodeGen::toString(cgResult.result));
+                geode::log::warn(
+                    "luau codegen [{}] partial: {}", chunk, Luau::CodeGen::toString(cgResult.result)
+                );
             }
         }
 
@@ -364,7 +373,8 @@ namespace luax {
         std::string out;
         if (msg) {
             out.assign(msg);
-        } else {
+        }
+        else {
             out.assign("(non-string error)");
         }
 
@@ -425,10 +435,14 @@ namespace luax {
         m_memoryUsage = allocatorUsageAfterFree(m_memoryUsage, bytes);
     }
 
-    bool Runtime::tryCacheCompiledBytecode(std::string const& key, std::string compiled, long long compileMs) {
+    bool Runtime::tryCacheCompiledBytecode(
+        std::string const& key, std::string compiled, long long compileMs
+    ) {
         if (!compileTimeWithinBudget(compileMs, kMaxCompileDeadlineMs)) {
             setLastError(fmt::format("luau compile exceeded {} ms budget", kMaxCompileDeadlineMs));
-            geode::log::warn("luau compile [{}] exceeded {}ms budget ({}ms)", key, kMaxCompileDeadlineMs, compileMs);
+            geode::log::warn(
+                "luau compile [{}] exceeded {}ms budget ({}ms)", key, kMaxCompileDeadlineMs, compileMs
+            );
             return false;
         }
 
@@ -440,7 +454,8 @@ namespace luax {
         }
 
         trimBytecodeCacheForInsert(entryBytes);
-        while (!memoryBudgetAllows(m_memoryUsage, m_memoryLimit, entryBytes) && !m_bytecodeLru.empty()) {
+        while (!memoryBudgetAllows(m_memoryUsage, m_memoryLimit, entryBytes) &&
+               !m_bytecodeLru.empty()) {
             removeBytecodeCacheEntry(std::prev(m_bytecodeLru.end()));
         }
         if (!reserveExternalMemory(entryBytes)) {
@@ -456,7 +471,9 @@ namespace luax {
         return true;
     }
 
-    std::string const& Runtime::getOrCompileBytecode(std::string const& key, std::string_view source, bool& ok) {
+    std::string const& Runtime::getOrCompileBytecode(
+        std::string const& key, std::string_view source, bool& ok
+    ) {
         ok = true;
         auto it = m_bytecodeIndex.find(key);
         if (it != m_bytecodeIndex.end()) {
@@ -467,7 +484,9 @@ namespace luax {
         auto compileStart = std::chrono::steady_clock::now();
         std::string compiled = compileSource(source);
         auto compileMs = std::chrono::duration_cast<std::chrono::milliseconds>(
-            std::chrono::steady_clock::now() - compileStart).count();
+                             std::chrono::steady_clock::now() - compileStart
+        )
+                             .count();
 
         if (!tryCacheCompiledBytecode(key, std::move(compiled), compileMs)) {
             ok = false;
@@ -491,11 +510,7 @@ namespace luax {
 
     void Runtime::trimBytecodeCacheForInsert(std::size_t incomingBytes) {
         while (bytecodeCacheNeedsEviction(
-            m_bytecodeCacheBytes,
-            kMaxBytecodeCacheBytes,
-            incomingBytes,
-            m_bytecodeIndex.size(),
-            kMaxBytecodeCacheEntries
+            m_bytecodeCacheBytes, kMaxBytecodeCacheBytes, incomingBytes, m_bytecodeIndex.size(), kMaxBytecodeCacheEntries
         )) {
             removeBytecodeCacheEntry(std::prev(m_bytecodeLru.end()));
         }
@@ -540,14 +555,18 @@ namespace luax {
         if (m_codegenEnabled) {
             auto cgResult = Luau::CodeGen::compile(m_state, -1, Luau::CodeGen::CodeGen_ColdFunctions);
             if (cgResult.hasErrors()) {
-                geode::log::warn("luau codegen [{}] partial: {}", chunk, Luau::CodeGen::toString(cgResult.result));
+                geode::log::warn(
+                    "luau codegen [{}] partial: {}", chunk, Luau::CodeGen::toString(cgResult.result)
+                );
             }
         }
 
         auto execStart = std::chrono::steady_clock::now();
         bool ok = protectedCall(0, 0, chunk, deadlineMs);
         auto execMs = std::chrono::duration_cast<std::chrono::milliseconds>(
-            std::chrono::steady_clock::now() - execStart).count();
+                          std::chrono::steady_clock::now() - execStart
+        )
+                          .count();
 
         if (!ok) {
             return false;
@@ -641,7 +660,8 @@ namespace luax {
             if (std::this_thread::get_id() == registered) {
                 return true;
             }
-        } else if (std::this_thread::get_id() == m_ownerThread) {
+        }
+        else if (std::this_thread::get_id() == m_ownerThread) {
             return true;
         }
         geode::log::error("luau runtime accessed off main thread");
@@ -693,4 +713,4 @@ namespace luax {
             self->setLastError(message ? message : "unknown lua panic");
         }
     }
-}
+} // namespace luax

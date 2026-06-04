@@ -21,43 +21,38 @@ namespace luax {
                 auto table = it->second.lock();
                 if (!table || !table->valid()) {
                     it = tables.erase(it);
-                } else {
+                }
+                else {
                     ++it;
                 }
             }
         }
-    }
+    } // namespace
 
     bool LuaDelegateBase::invokeTableField(
-            std::shared_ptr<LuaRef> const& table,
-            char const* field,
-            char const* context,
-            int nargs,
-            int nresults,
-            LuaCallback::PushArgsFn push,
-            void* pushCtx,
-            LuaCallback::PopResultsFn pop,
-            void* popCtx
-        ) {
-            if (!table || !table->valid()) return false;
-            auto* runtime = Runtime::getIfInitialized();
-            if (!runtime || !runtime->ready()) return false;
-            auto* L = runtime->state();
-            if (!L) return false;
+        std::shared_ptr<LuaRef> const& table, char const* field, char const* context, int nargs,
+        int nresults, LuaCallback::PushArgsFn push, void* pushCtx, LuaCallback::PopResultsFn pop,
+        void* popCtx
+    ) {
+        if (!table || !table->valid()) return false;
+        auto* runtime = Runtime::getIfInitialized();
+        if (!runtime || !runtime->ready()) return false;
+        auto* L = runtime->state();
+        if (!L) return false;
 
-            int top = lua_gettop(L);
-            if (!table->push()) return false;
-            lua_getfield(L, -1, field);
-            if (!lua_isfunction(L, -1)) {
-                lua_settop(L, top);
-                return false;
-            }
-            lua_remove(L, -2);
+        int top = lua_gettop(L);
+        if (!table->push()) return false;
+        lua_getfield(L, -1, field);
+        if (!lua_isfunction(L, -1)) {
+            lua_settop(L, top);
+            return false;
+        }
+        lua_remove(L, -2);
 
-            LuaCallback cb;
-            cb.reset(L, -1);
-            lua_pop(L, 1);
-            return cb.invoke(nargs, nresults, context, kHookScriptDeadlineMs, push, pushCtx, pop, popCtx);
+        LuaCallback cb;
+        cb.reset(L, -1);
+        lua_pop(L, 1);
+        return cb.invoke(nargs, nresults, context, kHookScriptDeadlineMs, push, pushCtx, pop, popCtx);
     }
 
     void LuaDelegateBase::checkDelegateTable(lua_State* L, int idx) {
@@ -69,24 +64,15 @@ namespace luax {
     }
 
     void LuaDelegateBase::invokeTableVoid(
-        std::shared_ptr<LuaRef> const& table,
-        char const* field,
-        char const* context,
-        int nargs,
-        LuaCallback::PushArgsFn push,
-        void* pushCtx
+        std::shared_ptr<LuaRef> const& table, char const* field, char const* context, int nargs,
+        LuaCallback::PushArgsFn push, void* pushCtx
     ) {
         invokeTableField(table, field, context, nargs, 0, push, pushCtx, nullptr, nullptr);
     }
 
     bool LuaDelegateBase::invokeTableBool(
-        std::shared_ptr<LuaRef> const& table,
-        char const* field,
-        bool defaultValue,
-        char const* context,
-        int nargs,
-        LuaCallback::PushArgsFn push,
-        void* pushCtx
+        std::shared_ptr<LuaRef> const& table, char const* field, bool defaultValue,
+        char const* context, int nargs, LuaCallback::PushArgsFn push, void* pushCtx
     ) {
         bool result = defaultValue;
         if (!invokeTableField(
@@ -108,13 +94,8 @@ namespace luax {
     }
 
     int LuaDelegateBase::invokeTableInt(
-        std::shared_ptr<LuaRef> const& table,
-        char const* field,
-        int defaultValue,
-        char const* context,
-        int nargs,
-        LuaCallback::PushArgsFn push,
-        void* pushCtx
+        std::shared_ptr<LuaRef> const& table, char const* field, int defaultValue,
+        char const* context, int nargs, LuaCallback::PushArgsFn push, void* pushCtx
     ) {
         int result = defaultValue;
         if (!invokeTableField(
@@ -136,13 +117,8 @@ namespace luax {
     }
 
     std::string LuaDelegateBase::invokeTableString(
-        std::shared_ptr<LuaRef> const& table,
-        char const* field,
-        std::string defaultValue,
-        char const* context,
-        int nargs,
-        LuaCallback::PushArgsFn push,
-        void* pushCtx
+        std::shared_ptr<LuaRef> const& table, char const* field, std::string defaultValue,
+        char const* context, int nargs, LuaCallback::PushArgsFn push, void* pushCtx
     ) {
         std::string result = defaultValue;
         if (!invokeTableField(
@@ -197,4 +173,4 @@ namespace luax {
     void anchorDelegate(cocos2d::CCObject* anchor, cocos2d::CCObject* trampoline) {
         anchorTrampoline(anchor, trampoline);
     }
-}
+} // namespace luax

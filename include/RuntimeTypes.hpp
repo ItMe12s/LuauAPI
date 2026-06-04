@@ -9,4 +9,4 @@ namespace imes::luauapi {
         InitFailed,
         Panicked,
     };
-}
+} // namespace imes::luauapi

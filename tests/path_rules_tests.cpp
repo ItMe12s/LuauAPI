@@ -1,7 +1,6 @@
 #include "lua/module/PathRules.hpp"
 
 #include <catch2/catch_test_macros.hpp>
-
 #include <chrono>
 #include <filesystem>
 #include <string>
@@ -41,8 +40,9 @@ TEST_CASE("root escape text check catches parent traversal") {
 }
 
 TEST_CASE("root containment rejects paths outside root") {
-    auto base = std::filesystem::temp_directory_path()
-        / ("luauapi_path_rules_" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
+    auto base = std::filesystem::temp_directory_path() /
+        ("luauapi_path_rules_" +
+         std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
     auto root = base / "root";
     auto child = root / "Bootstrap.luau";
     auto outside = base / "outside" / "Bootstrap.luau";

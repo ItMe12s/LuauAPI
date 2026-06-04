@@ -24,12 +24,8 @@ class NestedContainerPolicyTests(unittest.TestCase):
         self.assertIn("m_sectionSizes", BASELINE_NESTED_PRIMITIVE_VECTOR_FIELDS)
 
     def test_primitive_nested_vector_outer_shape(self) -> None:
-        self.assertTrue(
-            allow_nested_primitive_vector_outer("gd::vector<gd::vector<int>*>")
-        )
-        self.assertFalse(
-            allow_nested_primitive_vector_outer("gd::vector<gd::vector<bool>*>")
-        )
+        self.assertTrue(allow_nested_primitive_vector_outer("gd::vector<gd::vector<int>*>"))
+        self.assertFalse(allow_nested_primitive_vector_outer("gd::vector<gd::vector<bool>*>"))
 
 
 class NestedContainerTypeMapTests(unittest.TestCase):
@@ -37,9 +33,7 @@ class NestedContainerTypeMapTests(unittest.TestCase):
         label = Class(name="LabelGameObject", namespace="")
         objects = {"LabelGameObject": label}
 
-        info = classify_arg(
-            "gd::unordered_map<int, gd::vector<LabelGameObject*>>", objects
-        )
+        info = classify_arg("gd::unordered_map<int, gd::vector<LabelGameObject*>>", objects)
 
         self.assertIsNotNone(info)
         assert info is not None
@@ -50,9 +44,7 @@ class NestedContainerTypeMapTests(unittest.TestCase):
         self.assertEqual(info.lua_type, "{ [number]: { LabelGameObject? } }")
 
     def test_pair_key_map_to_opaque_object_vector_entry_list(self) -> None:
-        info = classify_arg(
-            "gd::map<std::pair<int, int>, gd::vector<GroupCommandObject2*>>", {}
-        )
+        info = classify_arg("gd::map<std::pair<int, int>, gd::vector<GroupCommandObject2*>>", {})
 
         self.assertIsNotNone(info)
         assert info is not None
@@ -122,12 +114,8 @@ class NestedContainerMarshallingTests(unittest.TestCase):
         )
         push_text = "".join(push_value(info, "labels"))
 
-        self.assertIn(
-            "luax::checkUnorderedMap<int, gd::vector<LabelGameObject*>>", check_text
-        )
-        self.assertIn(
-            "luax::pushUnorderedMap<int, gd::vector<LabelGameObject*>>", push_text
-        )
+        self.assertIn("luax::checkUnorderedMap<int, gd::vector<LabelGameObject*>>", check_text)
+        self.assertIn("luax::pushUnorderedMap<int, gd::vector<LabelGameObject*>>", push_text)
 
     def test_pair_key_map_nested_opaque_vector_marshalling(self) -> None:
         key = TypeInfo(
@@ -150,9 +138,7 @@ class NestedContainerMarshallingTests(unittest.TestCase):
         info = self._map_with_vector_value(
             kind="map",
             cxx="gd::map<std::pair<int, int>, gd::vector<GroupCommandObject2*>>",
-            lua=pair_key_map_entry_lua_type(
-                "number", "number", "{ GroupCommandObject2? }"
-            ),
+            lua=pair_key_map_entry_lua_type("number", "number", "{ GroupCommandObject2? }"),
             value=value,
             key=key,
         )
@@ -256,9 +242,7 @@ class NestedContainerFieldBindingTests(unittest.TestCase):
         )
 
         self.assertIn("checkUnorderedMap<int, gd::vector<LabelGameObject*>>", text)
-        self.assertIn(
-            "luax::assignUnorderedMap(*self->m_labelObjects, std::move(value))", text
-        )
+        self.assertIn("luax::assignUnorderedMap(*self->m_labelObjects, std::move(value))", text)
 
 
 class NestedMapValuePolicyUnitTests(unittest.TestCase):

@@ -6,9 +6,7 @@
 
 namespace luax {
     inline bool escapedRelativePathText(std::string_view text) {
-        return text == ".."
-            || text.starts_with("../")
-            || text.starts_with("..\\");
+        return text == ".." || text.starts_with("../") || text.starts_with("..\\");
     }
 
     inline bool escapedRelativePathValue(std::filesystem::path const& rel) {
@@ -23,10 +21,8 @@ namespace luax {
 
     inline bool isFlatResourcePathValue(std::filesystem::path const& path) {
         auto normalized = path.lexically_normal();
-        return normalized == normalized.filename()
-            && normalized != "."
-            && normalized != ".."
-            && !normalized.empty();
+        return normalized == normalized.filename() && normalized != "." && normalized != ".." &&
+            !normalized.empty();
     }
 
     inline bool hasLuauExtensionValue(std::filesystem::path const& path) {
@@ -37,4 +33,4 @@ namespace luax {
         auto ext = path.extension();
         return !ext.empty() && ext != ".luau";
     }
-}
+} // namespace luax

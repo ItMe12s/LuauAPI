@@ -2,7 +2,6 @@
 #include "lua/module/PathSandbox.hpp"
 
 #include <catch2/catch_test_macros.hpp>
-
 #include <chrono>
 #include <filesystem>
 #include <fstream>
@@ -10,8 +9,9 @@
 
 namespace {
     std::filesystem::path makeTempDir() {
-        auto dir = std::filesystem::temp_directory_path()
-            / ("luauapi_bytecode_cache_key_" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
+        auto dir = std::filesystem::temp_directory_path() /
+            ("luauapi_bytecode_cache_key_" +
+             std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
         REQUIRE(std::filesystem::create_directories(dir));
         return dir;
     }
@@ -26,7 +26,7 @@ namespace {
     bool contains(std::string const& text, std::string const& needle) {
         return text.find(needle) != std::string::npos;
     }
-}
+} // namespace
 
 TEST_CASE("bytecode cache key includes path and metadata tokens") {
     auto dir = makeTempDir();

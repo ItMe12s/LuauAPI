@@ -5,10 +5,9 @@
 #include <Geode/Geode.hpp>
 #include <Geode/utils/cocos.hpp>
 #include <cocos2d.h>
+#include <cstddef>
 #include <lua.h>
 #include <lualib.h>
-
-#include <cstddef>
 #include <memory>
 #include <new>
 #include <string>
@@ -26,7 +25,8 @@ namespace luax {
 
         template <class T>
         char const* readOnlyVectorViewMetatable() {
-            static auto const name = std::string("luax:ReadOnlyVectorView<") + typeid(T).name() + ">";
+            static auto const name =
+                std::string("luax:ReadOnlyVectorView<") + typeid(T).name() + ">";
             return name.c_str();
         }
 
@@ -158,7 +158,8 @@ namespace luax {
             auto* value = (*block->vector)[static_cast<std::size_t>(index - 1)];
             if (value == nullptr) {
                 lua_pushnil(L);
-            } else {
+            }
+            else {
                 lua_pushlightuserdata(L, value);
             }
             return 1;
@@ -227,11 +228,13 @@ namespace luax {
             out = *block->vector;
             return true;
         }
-    }
+    } // namespace detail
 
     template <class T>
     void pushReadOnlyVectorView(lua_State* L, gd::vector<T*> const& vector, cocos2d::CCObject* owner) {
-        static_assert(std::is_base_of_v<cocos2d::CCObject, T>, "vector view elements must be CCObject");
+        static_assert(
+            std::is_base_of_v<cocos2d::CCObject, T>, "vector view elements must be CCObject"
+        );
         if (!owner) {
             lua_pushnil(L);
             return;
@@ -248,7 +251,9 @@ namespace luax {
 
     template <class T>
     void pushOwnedReadOnlyVectorView(lua_State* L, gd::vector<T*> const& vector) {
-        static_assert(std::is_base_of_v<cocos2d::CCObject, T>, "vector view elements must be CCObject");
+        static_assert(
+            std::is_base_of_v<cocos2d::CCObject, T>, "vector view elements must be CCObject"
+        );
         detail::ensureReadOnlyVectorViewMetatable<T>(L);
         auto* storage = lua_newuserdata(L, sizeof(detail::ReadOnlyVectorViewBlock<T>));
         auto* block = new (storage) detail::ReadOnlyVectorViewBlock<T>();
@@ -260,7 +265,9 @@ namespace luax {
 
     template <class T>
     gd::vector<T*> checkObjectVectorView(lua_State* L, int idx, char const* label) {
-        static_assert(std::is_base_of_v<cocos2d::CCObject, T>, "vector view elements must be CCObject");
+        static_assert(
+            std::is_base_of_v<cocos2d::CCObject, T>, "vector view elements must be CCObject"
+        );
         idx = lua_absindex(L, idx);
         gd::vector<T*> out;
         if (detail::tryCopyReadOnlyVectorView<T>(L, idx, out)) {
@@ -276,7 +283,8 @@ namespace luax {
             lua_rawgeti(L, idx, i);
             if (lua_isnil(L, -1)) {
                 out.push_back(nullptr);
-            } else {
+            }
+            else {
                 out.push_back(Usertype<T>::check(L, -1, label));
             }
             lua_pop(L, 1);
@@ -330,13 +338,17 @@ namespace luax {
             lua_rawgeti(L, idx, i);
             if (lua_isnil(L, -1)) {
                 out.push_back(nullptr);
-            } else if (!lua_islightuserdata(L, -1)) {
-                luaL_error(L, "%s expected opaque handle at index %lld", label, static_cast<long long>(i));
-            } else {
+            }
+            else if (!lua_islightuserdata(L, -1)) {
+                luaL_error(
+                    L, "%s expected opaque handle at index %lld", label, static_cast<long long>(i)
+                );
+            }
+            else {
                 out.push_back(static_cast<T*>(lua_touserdata(L, -1)));
             }
             lua_pop(L, 1);
         }
         return out;
     }
-}
+} // namespace luax

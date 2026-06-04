@@ -22,7 +22,6 @@ from luau_codegen.convert.type_map import (
     method_input_arg_count,
     normalize_type,
 )
-from luau_codegen.convert.sel_args import is_ccobject_ptr
 from luau_codegen.policy.containers import (
     _CONTAINER_KINDS,
     container_supported_as_arg,
@@ -149,9 +148,7 @@ def supported(
         info = classify_arg(arg.type, objects, owner_class=cls.name, ctx=ctx)
         if info is None:
             return False, f"unsupported-arg:{arg.type}"
-        if info.kind in _CONTAINER_KINDS and not container_supported_as_arg(
-            info, ret.kind
-        ):
+        if info.kind in _CONTAINER_KINDS and not container_supported_as_arg(info, ret.kind):
             return False, f"unsupported-arg:{arg.type}"
         if info.kind == "delegate" and not delegate_supported_as_arg(info):
             return False, f"unsupported-arg:{arg.type}"
@@ -204,9 +201,7 @@ def group_supported(
     for name, methods in list(by_name.items()):
         by_arity: dict[int, list[Method]] = defaultdict(list)
         for m in methods:
-            by_arity[
-                method_input_arg_count(m, objects, owner_class=cls.name, ctx=ctx)
-            ].append(m)
+            by_arity[method_input_arg_count(m, objects, owner_class=cls.name, ctx=ctx)].append(m)
         kept: list[Method] = []
         preferred = PREFERRED_OVERLOADS.get((cls.name, name))
         for arity, overloads in by_arity.items():
@@ -274,9 +269,8 @@ def linkless_class_names(
     no_call = f"not-callable:{target_platform}"
     for cls in classes:
         if supported_by_class.get(cls.name):
-            if (
-                target_platform in STRICT_DIRECT_PLATFORMS
-                and not _class_has_platform_support(cls, target_platform)
+            if target_platform in STRICT_DIRECT_PLATFORMS and not _class_has_platform_support(
+                cls, target_platform
             ):
                 out.add(cls.name)
             continue
@@ -285,9 +279,8 @@ def linkless_class_names(
             out.add(cls.name)
             continue
         if cls.name in referenced:
-            if (
-                target_platform not in STRICT_DIRECT_PLATFORMS
-                or _class_has_platform_support(cls, target_platform)
+            if target_platform not in STRICT_DIRECT_PLATFORMS or _class_has_platform_support(
+                cls, target_platform
             ):
                 continue
             out.add(cls.name)
@@ -318,11 +311,7 @@ def _skipped_object_ref(
     ctx: CodegenContext | None = None,
 ) -> str:
     ret = classify_return(m.ret, objects, ctx=ctx)
-    if (
-        ret
-        and ret.kind == "object"
-        and _is_skipped_object_type(ret.class_name, skipped_classes)
-    ):
+    if ret and ret.kind == "object" and _is_skipped_object_type(ret.class_name, skipped_classes):
         return ret.class_name
     for arg in m.args:
         info = classify_arg(arg.type, objects, ctx=ctx)

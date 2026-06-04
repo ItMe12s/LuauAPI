@@ -1,10 +1,10 @@
-#include <LuauAPI.hpp>
-
 #include "lua/module/PathSandbox.hpp"
 #include "lua/runtime/Runtime.hpp"
 
+#include <LuauAPI.hpp>
+
 #if !defined(LUAUAPI_HOST_TESTS)
-#include <Geode/utils/async.hpp>
+    #include <Geode/utils/async.hpp>
 #endif
 
 #include <string>
@@ -28,10 +28,7 @@ namespace {
     }
 
     geode::Result<void> executeScriptOnMain(
-        std::filesystem::path const& root,
-        std::string source,
-        std::string chunk,
-        int deadlineMs
+        std::filesystem::path const& root, std::string source, std::string chunk, int deadlineMs
     ) {
         if (luax::Runtime::isShuttingDown()) {
             return geode::Err("luau runtime shutting down");
@@ -60,10 +57,8 @@ namespace {
     }
 
     geode::Result<void> resolveRunFilePath(
-        std::filesystem::path const& resourcesRoot,
-        std::filesystem::path const& relativePath,
-        std::filesystem::path& outPath,
-        std::filesystem::path& outRoot
+        std::filesystem::path const& resourcesRoot, std::filesystem::path const& relativePath,
+        std::filesystem::path& outPath, std::filesystem::path& outRoot
     ) {
         auto rootResult = luax::canonicalRoot(resourcesRoot);
         if (rootResult.isErr()) {
@@ -100,12 +95,11 @@ namespace {
         outPath = path;
         return geode::Ok();
     }
-}
+} // namespace
 
 namespace imes::luauapi {
     geode::Result<void> runFile(
-        std::filesystem::path const& resourcesRoot,
-        std::filesystem::path const& relativePath,
+        std::filesystem::path const& resourcesRoot, std::filesystem::path const& relativePath,
         int deadlineMs
     ) {
         auto threadResult = requireMainThread();
@@ -136,14 +130,14 @@ namespace imes::luauapi {
             return geode::Err(chunkResult.unwrapErr());
         }
 
-        return executeScriptOnMain(root, std::move(sourceResult.unwrap()), chunkResult.unwrap(), deadlineMs);
+        return executeScriptOnMain(
+            root, std::move(sourceResult.unwrap()), chunkResult.unwrap(), deadlineMs
+        );
     }
 
     geode::Result<void> runScript(
-        std::filesystem::path const& resourcesRoot,
-        std::string_view source,
-        std::string_view chunkName,
-        int deadlineMs
+        std::filesystem::path const& resourcesRoot, std::string_view source,
+        std::string_view chunkName, int deadlineMs
     ) {
         auto threadResult = requireMainThread();
         if (threadResult.isErr()) {
@@ -168,18 +162,13 @@ namespace imes::luauapi {
         }
 
         return executeScriptOnMain(
-            rootResult.unwrap(),
-            std::string(source),
-            chunkResult.unwrap(),
-            deadlineMs
+            rootResult.unwrap(), std::string(source), chunkResult.unwrap(), deadlineMs
         );
     }
 
 #if !defined(LUAUAPI_HOST_TESTS)
     arc::Future<geode::Result<void>> runFileAsync(
-        std::filesystem::path resourcesRoot,
-        std::filesystem::path relativePath,
-        int deadlineMs
+        std::filesystem::path resourcesRoot, std::filesystem::path relativePath, int deadlineMs
     ) {
         if (luax::Runtime::isShuttingDown()) {
             co_return geode::Err("luau runtime shutting down");
@@ -208,11 +197,13 @@ namespace imes::luauapi {
         auto source = std::move(sourceResult.unwrap());
         auto chunk = chunkResult.unwrap();
 
-        auto result = co_await geode::async::waitForMainThread<geode::Result<void>>(
-            [root = std::move(root), chunk = std::move(chunk), source = std::move(source), deadlineMs]() mutable {
+        auto result =
+            co_await geode::async::waitForMainThread<geode::Result<void>>([root = std::move(root),
+                                                                           chunk = std::move(chunk),
+                                                                           source = std::move(source),
+                                                                           deadlineMs]() mutable {
                 return executeScriptOnMain(root, std::move(source), chunk, deadlineMs);
-            }
-        );
+            });
         if (!result) {
             co_return geode::Err("luau main-thread execution cancelled");
         }
@@ -220,10 +211,7 @@ namespace imes::luauapi {
     }
 
     arc::Future<geode::Result<void>> runScriptAsync(
-        std::filesystem::path resourcesRoot,
-        std::string source,
-        std::string chunkName,
-        int deadlineMs
+        std::filesystem::path resourcesRoot, std::string source, std::string chunkName, int deadlineMs
     ) {
         if (luax::Runtime::isShuttingDown()) {
             co_return geode::Err("luau runtime shutting down");
@@ -246,11 +234,13 @@ namespace imes::luauapi {
         auto root = rootResult.unwrap();
         auto chunk = chunkResult.unwrap();
 
-        auto result = co_await geode::async::waitForMainThread<geode::Result<void>>(
-            [root = std::move(root), chunk = std::move(chunk), source = std::move(source), deadlineMs]() mutable {
+        auto result =
+            co_await geode::async::waitForMainThread<geode::Result<void>>([root = std::move(root),
+                                                                           chunk = std::move(chunk),
+                                                                           source = std::move(source),
+                                                                           deadlineMs]() mutable {
                 return executeScriptOnMain(root, std::move(source), chunk, deadlineMs);
-            }
-        );
+            });
         if (!result) {
             co_return geode::Err("luau main-thread execution cancelled");
         }
@@ -298,4 +288,4 @@ namespace imes::luauapi {
         auto* runtime = luax::Runtime::getIfInitialized();
         return runtime && runtime->codegenEnabled();
     }
-}
+} // namespace imes::luauapi

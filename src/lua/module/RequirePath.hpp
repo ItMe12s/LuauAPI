@@ -27,4 +27,4 @@ namespace luax {
         }
         return current;
     }
-}
+} // namespace luax

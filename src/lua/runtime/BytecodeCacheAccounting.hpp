@@ -17,10 +17,7 @@ namespace luax {
     }
 
     inline bool bytecodeCacheNeedsEviction(
-        std::size_t usage,
-        std::size_t limit,
-        std::size_t incomingBytes,
-        std::size_t entryCount,
+        std::size_t usage, std::size_t limit, std::size_t incomingBytes, std::size_t entryCount,
         std::size_t maxEntries
     ) {
         if (entryCount >= maxEntries) {
@@ -39,4 +36,4 @@ namespace luax {
     inline bool memoryBudgetAllows(std::size_t usage, std::size_t limit, std::size_t additional) {
         return additional <= limit && usage <= limit - additional;
     }
-}
+} // namespace luax

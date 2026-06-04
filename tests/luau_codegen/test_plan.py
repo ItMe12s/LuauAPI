@@ -44,12 +44,8 @@ class Foo : CCObject {
             root.classes.insert(0, ccobject)
             win_plan = collect_platform_plan(root, "win")
             ios_plan = collect_platform_plan(root, "ios")
-            win_names = [
-                field.name for _, field in win_plan.field_targets_by_class["Foo"]
-            ]
-            ios_names = [
-                field.name for _, field in ios_plan.field_targets_by_class["Foo"]
-            ]
+            win_names = [field.name for _, field in win_plan.field_targets_by_class["Foo"]]
+            ios_names = [field.name for _, field in ios_plan.field_targets_by_class["Foo"]]
             self.assertEqual(win_names, ["m_offset"])
             self.assertEqual(ios_names, ["m_offset", "m_spawnCount"])
         finally:
@@ -146,9 +142,7 @@ class PlanRegressionTests(unittest.TestCase):
             bases=["CCObject"],
             attributes=["link(win)"],
         )
-        cls.methods = [
-            Method(name="doThing", ret="void", args=[], platforms={"win": "0x10"})
-        ]
+        cls.methods = [Method(name="doThing", ret="void", args=[], platforms={"win": "0x10"})]
         root = Root(classes=[ccobject, cls])
         plan = collect_plan(root, "win")
         listed = set(plan_outputs(root, "win", plan=plan))

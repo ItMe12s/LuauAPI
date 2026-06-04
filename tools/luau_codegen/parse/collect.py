@@ -7,9 +7,7 @@ from luau_codegen.parse import broma
 from luau_codegen.model.domain import BRO_FILES, object_classes
 
 
-def collect_bindings_root(
-    bindings_dir: str, geode_sdk_path: str | None = None
-) -> broma.Root:
+def collect_bindings_root(bindings_dir: str, geode_sdk_path: str | None = None) -> broma.Root:
     root = broma.Root()
     for name in BRO_FILES:
         path = os.path.join(bindings_dir, name)

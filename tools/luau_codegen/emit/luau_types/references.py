@@ -69,19 +69,15 @@ _OPAQUE_STUB_BODY: Dict[str, str] = {
     "FMODChannel": "--- @type-only: opaque FMOD handle\ndeclare class FMODChannel end\n\n",
     "FMODSound": "--- @type-only: opaque FMOD handle\ndeclare class FMODSound end\n\n",
     "FMODChannelGroup": (
-        "--- @type-only: opaque FMOD handle\n" "declare class FMODChannelGroup end\n\n"
+        "--- @type-only: opaque FMOD handle\ndeclare class FMODChannelGroup end\n\n"
     ),
     "CCEvent": "--- @type-only: opaque cocos2d handle\ndeclare class CCEvent end\n\n",
-    "CCEditBox": (
-        "--- @type-only: opaque cocos2d handle\n" "declare class CCEditBox end\n\n"
-    ),
+    "CCEditBox": ("--- @type-only: opaque cocos2d handle\ndeclare class CCEditBox end\n\n"),
     "GroupCommandObject2": (
-        "--- @type-only: non-CCObject GD type\n"
-        "declare class GroupCommandObject2 end\n\n"
+        "--- @type-only: non-CCObject GD type\ndeclare class GroupCommandObject2 end\n\n"
     ),
     "DelayedSpawnNode": (
-        "--- @type-only: non-CCObject GD type\n"
-        "declare class DelayedSpawnNode end\n\n"
+        "--- @type-only: non-CCObject GD type\ndeclare class DelayedSpawnNode end\n\n"
     ),
 }
 
@@ -172,9 +168,7 @@ def _emit_delegate_stub_block() -> str:
         seen.add(spec.lua_name)
         fields = []
         for m in spec.methods:
-            params = ", ".join(
-                f"arg{i}: {t}" for i, t in enumerate(m.args_lua, start=1)
-            )
+            params = ", ".join(f"arg{i}: {t}" for i, t in enumerate(m.args_lua, start=1))
             ret = m.ret_lua
             fn = f"({params}) -> ()" if ret == "()" else f"({params}) -> {ret}"
             fields.append(f"    {m.name}: ({fn})?")
@@ -252,12 +246,7 @@ def _refs_from_fields(
         ok, _, _, ret = bindable_field(field, objects, cls, ctx=ctx)
         if ok and ret and ret.kind == "object":
             refs.add(_object_type_name(ret))
-        elif (
-            ok
-            and ret
-            and ret.kind in ("vector_view", "cc_c_array_view")
-            and ret.element_type
-        ):
+        elif ok and ret and ret.kind in ("vector_view", "cc_c_array_view") and ret.element_type:
             refs.add(_object_type_name(ret.element_type))
         elif ok and ret and ret.kind in ("map", "unordered_map") and ret.value_type:
             if ret.value_type.kind == "object":
@@ -282,9 +271,7 @@ def _refs_from_fields(
     return refs
 
 
-def _base_type_refs(
-    cls: Class, objects: Dict[str, Class], skipped_classes: set
-) -> set[str]:
+def _base_type_refs(cls: Class, objects: Dict[str, Class], skipped_classes: set) -> set[str]:
     refs: set[str] = set()
     for base in cls.bases:
         base_cls = objects.get(short_name(base))
@@ -330,9 +317,7 @@ def _refs_from_text(content: str) -> set[str]:
     refs: set[str] = set()
     for match in re.finditer(r"extends (\w+)", content):
         refs.add(match.group(1))
-    for match in re.finditer(
-        r":\s*(\w+)\??(?:\s*[,&)]|\s*$|\s*->)", content, re.MULTILINE
-    ):
+    for match in re.finditer(r":\s*(\w+)\??(?:\s*[,&)]|\s*$|\s*->)", content, re.MULTILINE):
         name = match.group(1)
         if name[0].isupper():
             refs.add(name)

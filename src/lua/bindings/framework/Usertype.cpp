@@ -1,25 +1,20 @@
 #include "Usertype.hpp"
 
 #include "Fields.hpp"
-#include "lua/bindings/framework/BindingHost.hpp"
 #include "lua/Config.hpp"
+#include "lua/bindings/framework/BindingHost.hpp"
 
 #include <Geode/Geode.hpp>
+#include <cstring>
 #include <lua.h>
 #include <luaconf.h>
 #include <lualib.h>
-
-#include <cstring>
 #include <new>
 
 namespace luax::detail {
     namespace {
         bool invokeFieldAccessor(
-            BindingHost* host,
-            int nargs,
-            int nresults,
-            std::string_view context,
-            int deadlineMs
+            BindingHost* host, int nargs, int nresults, std::string_view context, int deadlineMs
         ) {
             if (!host) {
                 return false;
@@ -52,7 +47,9 @@ namespace luax::detail {
                 if (lua_isfunction(L, -1)) {
                     lua_pushvalue(L, 1);
                     if (auto* host = BindingHost::getIfInitialized()) {
-                        if (invokeFieldAccessor(host, 1, 1, "usertype field get", kHookScriptDeadlineMs)) {
+                        if (invokeFieldAccessor(
+                                host, 1, 1, "usertype field get", kHookScriptDeadlineMs
+                            )) {
                             return 1;
                         }
                         lua_settop(L, top);
@@ -76,7 +73,8 @@ namespace luax::detail {
                 if (Fields::tryPush(L, node)) {
                     lua_pushvalue(L, 2);
                     lua_gettable(L, -2);
-                } else {
+                }
+                else {
                     lua_pushnil(L);
                 }
                 return 1;
@@ -100,7 +98,9 @@ namespace luax::detail {
                     lua_pushvalue(L, 1);
                     lua_pushvalue(L, 3);
                     if (auto* host = BindingHost::getIfInitialized()) {
-                        if (!invokeFieldAccessor(host, 2, 0, "usertype field set", kHookScriptDeadlineMs)) {
+                        if (!invokeFieldAccessor(
+                                host, 2, 0, "usertype field set", kHookScriptDeadlineMs
+                            )) {
                             lua_settop(L, top);
                             luaL_error(L, "usertype field set failed");
                         }
@@ -135,7 +135,7 @@ namespace luax::detail {
             luaL_error(L, "%s is read-only", field ? field : "field");
             return 0;
         }
-    }
+    } // namespace
 
     cocos2d::CCObject* liveObject(UserdataBlock* block) {
         if (!block) return nullptr;
@@ -236,7 +236,9 @@ namespace luax::detail {
         lua_pop(L, 2);
     }
 
-    void appendField(lua_State* L, TypeInfo const& info, char const* name, lua_CFunction getter, lua_CFunction setter) {
+    void appendField(
+        lua_State* L, TypeInfo const& info, char const* name, lua_CFunction getter, lua_CFunction setter
+    ) {
         luaL_getmetatable(L, info.mtName.c_str());
         lua_getfield(L, -1, "__fields");
         lua_createtable(L, 0, 2);
@@ -285,7 +287,7 @@ namespace luax::detail {
         if (!obj) {
             luaL_error(L, "%s expected live %s at arg %d", method, targetName, idx);
         }
-        return { obj, info };
+        return {obj, info};
     }
 
     UserdataCandidate tryCandidate(lua_State* L, int idx) {
@@ -297,7 +299,7 @@ namespace luax::detail {
         auto* block = static_cast<UserdataBlock*>(lua_touserdata(L, idx));
         auto* obj = liveObject(block);
         if (!obj) return {};
-        return { obj, info };
+        return {obj, info};
     }
 
     cocos2d::CCNode* tryNodeCandidate(lua_State* L, int idx) {
@@ -306,7 +308,8 @@ namespace luax::detail {
         if (auto* typed = geode::cast::typeinfo_cast<cocos2d::CCNode*>(candidate.obj)) {
             return typed;
         }
-        auto const* nodeInfo = UsertypeRegistry::get().findInfo(std::type_index(typeid(cocos2d::CCNode)));
+        auto const* nodeInfo =
+            UsertypeRegistry::get().findInfo(std::type_index(typeid(cocos2d::CCNode)));
         if (!nodeInfo) return nullptr;
         if (isValidUserdataTag(nodeInfo->tag) && hasBase(*candidate.info, nodeInfo->tag)) {
             return static_cast<cocos2d::CCNode*>(candidate.obj);
@@ -319,7 +322,8 @@ namespace luax::detail {
             lua_pushnil(L);
             return;
         }
-        auto* storage = lua_newuserdatataggedwithmetatable(L, sizeof(UserdataBlock), static_cast<int>(info.tag));
+        auto* storage =
+            lua_newuserdatataggedwithmetatable(L, sizeof(UserdataBlock), static_cast<int>(info.tag));
         auto* block = new (storage) UserdataBlock();
         block->ptr = obj;
         block->flags = 1u;
@@ -330,10 +334,11 @@ namespace luax::detail {
             lua_pushnil(L);
             return;
         }
-        auto* storage = lua_newuserdatataggedwithmetatable(L, sizeof(UserdataBlock), static_cast<int>(info.tag));
+        auto* storage =
+            lua_newuserdatataggedwithmetatable(L, sizeof(UserdataBlock), static_cast<int>(info.tag));
         auto* block = new (storage) UserdataBlock();
         block->ptr = nullptr;
         block->weak = geode::WeakRef<cocos2d::CCObject>(obj);
         block->flags = 0u;
     }
-}
+} // namespace luax::detail

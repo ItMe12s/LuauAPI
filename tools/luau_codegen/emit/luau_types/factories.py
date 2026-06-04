@@ -70,9 +70,7 @@ def _collect_factories(
             continue
         grouped = grouped_by_class[cls.name]
         static_methods = {
-            k: v
-            for k, v in grouped.items()
-            if v[0].is_static and k not in LUAU_KEYWORDS
+            k: v for k, v in grouped.items() if v[0].is_static and k not in LUAU_KEYWORDS
         }
         if static_methods:
             factories[cls.name] = static_methods

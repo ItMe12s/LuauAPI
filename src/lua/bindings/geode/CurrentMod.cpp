@@ -5,9 +5,7 @@
 
 #include <Geode/loader/Loader.hpp>
 #include <Geode/loader/Mod.hpp>
-
 #include <lua.h>
-
 #include <string>
 #include <unordered_map>
 
@@ -45,7 +43,7 @@ namespace {
         static std::unordered_map<std::string, geode::Mod*> cache;
         return cache;
     }
-}
+} // namespace
 
 namespace luax {
     void invalidateCurrentModCache() {
@@ -92,4 +90,4 @@ namespace luax {
         }
         return mod;
     }
-}
+} // namespace luax

@@ -48,12 +48,7 @@ def _write_ccnode_header(sdk_path: str, body: str) -> str:
     )
     _write(
         path,
-        "NS_CC_BEGIN\n"
-        "class CC_DLL CCNode : public CCObject\n"
-        "{\n"
-        f"{body}\n"
-        "};\n"
-        "NS_CC_END\n",
+        f"NS_CC_BEGIN\nclass CC_DLL CCNode : public CCObject\n{{\n{body}\n}};\nNS_CC_END\n",
     )
     return path
 
@@ -153,9 +148,7 @@ public:
             )
 
             root = collect_bindings_root(tmpdir, geode_sdk_path=sdk)
-            ccnode = next(
-                c for c in root.classes if c.qualified_name == "cocos2d::CCNode"
-            )
+            ccnode = next(c for c in root.classes if c.qualified_name == "cocos2d::CCNode")
             names = [m.name for m in ccnode.methods]
             self.assertEqual(names.count("setID"), 1)
             self.assertIn("setVisible", names)

@@ -123,9 +123,7 @@ def main(argv: List[str]) -> int:
         if not args.out:
             log_error("--out is required with --emit-delegates")
             return 2
-        specs_out = args.delegate_specs_out or os.path.join(
-            args.out, "delegate_specs.py"
-        )
+        specs_out = args.delegate_specs_out or os.path.join(args.out, "delegate_specs.py")
         try:
             specs = emit_delegate_artifacts(
                 args.bindings,
@@ -166,18 +164,13 @@ def main(argv: List[str]) -> int:
         log_error(f"I/O failed while loading delegate specs: {exc}")
         return 4
 
-    plan_platforms = tuple(
-        dict.fromkeys(intersection_platforms(args.platform) + (args.platform,))
-    )
+    plan_platforms = tuple(dict.fromkeys(intersection_platforms(args.platform) + (args.platform,)))
     plans_by_platform = {
-        platform: emit_plan.collect_platform_plan(root, platform)
-        for platform in plan_platforms
+        platform: emit_plan.collect_platform_plan(root, platform) for platform in plan_platforms
     }
 
     def collect_target_plan() -> EmitPlan:
-        return emit_plan.collect_plan(
-            root, args.platform, plans_by_platform=plans_by_platform
-        )
+        return emit_plan.collect_plan(root, args.platform, plans_by_platform=plans_by_platform)
 
     if args.parity_report_out:
         plan = collect_target_plan()
@@ -202,9 +195,7 @@ def main(argv: List[str]) -> int:
             return code
         try:
             audit_data = emit_audit.collect_audit(plan, root)
-            _write_if_changed(
-                args.audit_report_out, emit_audit.emit_markdown(audit_data)
-            )
+            _write_if_changed(args.audit_report_out, emit_audit.emit_markdown(audit_data))
         except OSError as exc:
             log_error(f"I/O failed while writing audit report: {exc}")
             return 4

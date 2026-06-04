@@ -93,9 +93,7 @@ class AuditReportTests(unittest.TestCase):
         bucket = data["buckets"]["delegate_arg"]
 
         self.assertEqual(bucket["count"], 0)
-        self.assertIn(
-            "addStandardDelegate", plan.supported_by_class.get("CCTouchDispatcher", [])
-        )
+        self.assertIn("addStandardDelegate", plan.supported_by_class.get("CCTouchDispatcher", []))
 
     def test_audit_supported_primitive_vector_not_in_container_bucket(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")
@@ -348,9 +346,7 @@ class AuditReportTests(unittest.TestCase):
         bucket = data["buckets"]["value_type_arg"]
 
         self.assertEqual(bucket["count"], 0)
-        self.assertNotIn(
-            "FMODAudioEngine.getActiveMusicChannel", "".join(bucket["samples"])
-        )
+        self.assertNotIn("FMODAudioEngine.getActiveMusicChannel", "".join(bucket["samples"]))
         self.assertNotIn("FMODAudioEngine.printResult", "".join(bucket["samples"]))
 
     def test_audit_classifies_http_async_excluded(self) -> None:

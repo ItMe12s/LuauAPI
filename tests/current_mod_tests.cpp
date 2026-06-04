@@ -2,9 +2,7 @@
 #include "lua/runtime/Runtime.hpp"
 
 #include <Geode/loader/Mod.hpp>
-
 #include <catch2/catch_test_macros.hpp>
-
 #include <chrono>
 #include <filesystem>
 #include <thread>
@@ -23,12 +21,13 @@ namespace {
     };
 
     std::filesystem::path makeTempDir() {
-        auto dir = std::filesystem::temp_directory_path()
-            / ("luauapi_current_mod_" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
+        auto dir = std::filesystem::temp_directory_path() /
+            ("luauapi_current_mod_" +
+             std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
         REQUIRE(std::filesystem::create_directories(dir));
         return dir;
     }
-}
+} // namespace
 
 TEST_CASE("currentMod returns nullptr without runtime") {
     geode::Mod::resetForTests();

@@ -115,14 +115,10 @@ def collect_parity(
         for method in cls.methods:
             key = method_key(cls, method)
             supported_platforms = [
-                platform
-                for platform in platforms
-                if key in supported_by_platform[platform]
+                platform for platform in platforms if key in supported_by_platform[platform]
             ]
             hookable_platforms = [
-                platform
-                for platform in platforms
-                if key in hookable_by_platform[platform]
+                platform for platform in platforms if key in hookable_by_platform[platform]
             ]
             skip_reasons = {
                 platform: skip_reasons_by_platform[platform][key]
@@ -155,9 +151,7 @@ def collect_parity(
     for fn in root.functions:
         key = free_function_key(fn)
         supported_platforms = [
-            platform
-            for platform in platforms
-            if key in free_functions_by_platform[platform]
+            platform for platform in platforms if key in free_functions_by_platform[platform]
         ]
         skip_reasons = {
             platform: free_skip_reasons_by_platform[platform][key]
@@ -202,9 +196,7 @@ def _intersection_summary(plan: EmitPlan, total_methods: int) -> dict[str, Any]:
         "methodsSkipped": len(plan.skipped),
         "freeFunctionsEmitted": len(plan.supported_free_functions),
         "freeFunctionsSkipped": len(plan.skipped_free_functions),
-        "hookTargets": sum(
-            len(targets) for targets in plan.hook_targets_by_class.values()
-        ),
+        "hookTargets": sum(len(targets) for targets in plan.hook_targets_by_class.values()),
         "generatedBindingFiles": 2 + len(plan.emitted_classes),
         "emittedClasses": len(plan.emitted_classes),
         "skippedClasses": len(plan.skipped_classes),
@@ -248,9 +240,7 @@ def _collect_hints(
         and mac not in info["supportedPlatforms"]
         and info["skipReasons"].get(mac)
     )
-    hook_only_gaps = [
-        key for key, info in methods.items() if info["hookAddressMissingPlatforms"]
-    ]
+    hook_only_gaps = [key for key, info in methods.items() if info["hookAddressMissingPlatforms"]]
     return {
         "winMissingCallableProof": win_missing[:200],
         "winMissingCallableProofCount": len(win_missing),
@@ -292,16 +282,13 @@ def emit_markdown(data: dict[str, Any]) -> str:
         lines.append(f"- common binding methods: {final['commonBindingMethods']}\n")
         lines.append(f"- common hook targets: {final['commonHookTargets']}\n")
         lines.append(f"- common fields: {final.get('commonFields', 0)}\n")
-        lines.append(
-            f"- common free functions: {final.get('commonFreeFunctions', 0)}\n"
-        )
+        lines.append(f"- common free functions: {final.get('commonFreeFunctions', 0)}\n")
         lines.append(f"- generated binding files: {final['generatedBindingFiles']}\n")
         lines.append(f"- methods removed: {final['methodsRemoved']}\n")
         lines.append(f"- hooks removed: {final['hooksRemoved']}\n")
         lines.append(f"- fields removed: {final.get('fieldsRemoved', 0)}\n")
         lines.append(
-            f"- free functions removed from final surface: "
-            f"{final.get('freeFunctionsRemoved', 0)}\n"
+            f"- free functions removed from final surface: {final.get('freeFunctionsRemoved', 0)}\n"
         )
 
     lines.append("\n## Runtime-Safe Hints\n\n")
@@ -328,9 +315,7 @@ def emit_markdown(data: dict[str, Any]) -> str:
     lines.append(f"- {mac} gaps versus android64: {reason_text}.\n")
 
     lines.append("\n## Samples\n\n")
-    _append_sample(
-        lines, "win missing callable proof", hints["winMissingCallableProof"]
-    )
+    _append_sample(lines, "win missing callable proof", hints["winMissingCallableProof"])
     _append_sample(lines, "ios skipped classes", hints["iosSkippedClasses"])
     _append_sample(lines, "hook address gaps", hints["hookAddressGaps"])
     return "".join(lines)

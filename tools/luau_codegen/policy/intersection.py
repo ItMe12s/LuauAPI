@@ -67,15 +67,13 @@ def hook_method_keys(plan: Any) -> set[str]:
 def bound_field_keys(plan: Any) -> set[str]:
     out: set[str] = set()
     for targets in getattr(plan, "field_targets_by_class", {}).values():
-        for cls, field in targets:
-            out.add(field_key(cls, field))
+        for cls, bound_field in targets:
+            out.add(field_key(cls, bound_field))
     return out
 
 
 def supported_free_function_keys(plan: Any) -> set[str]:
-    return {
-        free_function_key(fn) for fn in getattr(plan, "supported_free_functions", [])
-    }
+    return {free_function_key(fn) for fn in getattr(plan, "supported_free_functions", [])}
 
 
 def collect_intersection(
@@ -83,16 +81,13 @@ def collect_intersection(
     platforms: tuple[str, ...] = INTERSECTION_PLATFORMS,
 ) -> IntersectionResult:
     supported_by_platform = {
-        platform: supported_method_keys(plans_by_platform[platform])
-        for platform in platforms
+        platform: supported_method_keys(plans_by_platform[platform]) for platform in platforms
     }
     hooks_by_platform = {
-        platform: hook_method_keys(plans_by_platform[platform])
-        for platform in platforms
+        platform: hook_method_keys(plans_by_platform[platform]) for platform in platforms
     }
     fields_by_platform = {
-        platform: bound_field_keys(plans_by_platform[platform])
-        for platform in platforms
+        platform: bound_field_keys(plans_by_platform[platform]) for platform in platforms
     }
     free_functions_by_platform = {
         platform: supported_free_function_keys(plans_by_platform[platform])
@@ -109,35 +104,23 @@ def collect_intersection(
     common_free_functions = set.intersection(*free_functions_by_platform.values())
 
     missing_supported = {
-        key: tuple(
-            platform
-            for platform in platforms
-            if key not in supported_by_platform[platform]
-        )
+        key: tuple(platform for platform in platforms if key not in supported_by_platform[platform])
         for key in all_supported
         if key not in common_supported
     }
     missing_hooks = {
-        key: tuple(
-            platform for platform in platforms if key not in hooks_by_platform[platform]
-        )
+        key: tuple(platform for platform in platforms if key not in hooks_by_platform[platform])
         for key in all_hooks
         if key not in common_hooks
     }
     missing_fields = {
-        key: tuple(
-            platform
-            for platform in platforms
-            if key not in fields_by_platform[platform]
-        )
+        key: tuple(platform for platform in platforms if key not in fields_by_platform[platform])
         for key in all_fields
         if key not in common_fields
     }
     missing_free_functions = {
         key: tuple(
-            platform
-            for platform in platforms
-            if key not in free_functions_by_platform[platform]
+            platform for platform in platforms if key not in free_functions_by_platform[platform]
         )
         for key in all_free_functions
         if key not in common_free_functions

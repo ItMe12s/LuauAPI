@@ -38,9 +38,7 @@ class CodegenIoTests(unittest.TestCase):
 
         tmpdir = tempfile.mkdtemp()
         try:
-            with open(
-                os.path.join(tmpdir, "GeometryDash.bro"), "w", encoding="utf-8"
-            ) as f:
+            with open(os.path.join(tmpdir, "GeometryDash.bro"), "w", encoding="utf-8") as f:
                 f.write("class Foo {\n    void bar();\n};\n")
             with warnings.catch_warnings(record=True) as w:
                 warnings.simplefilter("always")
@@ -141,9 +139,7 @@ class CodegenExitCodeTests(unittest.TestCase):
 
         tmpdir = tempfile.mkdtemp()
         try:
-            bindings = os.path.join(
-                ROOT, "tests", "luau_codegen", "fixtures", "delegate_bindings"
-            )
+            bindings = os.path.join(ROOT, "tests", "luau_codegen", "fixtures", "delegate_bindings")
             out_dir = os.path.join(tmpdir, "out")
             specs_path = os.path.join(tmpdir, "delegate_specs.py")
             rc = cg.main(
@@ -229,9 +225,7 @@ class ListAllOutputsCliTests(unittest.TestCase):
             self.assertEqual(rc, 0)
             lines = [line for line in buf.getvalue().splitlines() if line]
             self.assertIn("binding:src/lua/bindings/bindings_CCObject.cpp", lines)
-            self.assertIn(
-                "binding:src/lua/bindings/framework/LuaDelegates.gen.hpp", lines
-            )
+            self.assertIn("binding:src/lua/bindings/framework/LuaDelegates.gen.hpp", lines)
             self.assertIn("type:geode.d.luau", lines)
         finally:
             shutil.rmtree(tmpdir)
@@ -246,18 +240,10 @@ class F11ClassMergeTests(unittest.TestCase):
             bro_a = os.path.join(bindings, "Cocos2d.bro")
             bro_b = os.path.join(bindings, "Extras.bro")
             with open(bro_a, "w", encoding="utf-8") as f:
-                f.write(
-                    "[[link(win)]]\n"
-                    "class test::Foo {\n"
-                    "    void first() = win 0x1;\n"
-                    "}\n"
-                )
+                f.write("[[link(win)]]\nclass test::Foo {\n    void first() = win 0x1;\n}\n")
             with open(bro_b, "w", encoding="utf-8") as f:
                 f.write(
-                    "[[link(android)]]\n"
-                    "class test::Foo {\n"
-                    "    void second() = android 0x2;\n"
-                    "}\n"
+                    "[[link(android)]]\nclass test::Foo {\n    void second() = android 0x2;\n}\n"
                 )
             for name in ("FMOD.bro", "Kazmath.bro", "GeometryDash.bro"):
                 open(os.path.join(bindings, name), "w", encoding="utf-8").close()

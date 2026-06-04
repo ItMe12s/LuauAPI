@@ -4,11 +4,9 @@
 #include "lua/bindings/framework/TableUtil.hpp"
 #include "lua/bindings/geode/JsonConvert.hpp"
 
-#include <matjson.hpp>
-
 #include <lua.h>
 #include <lualib.h>
-
+#include <matjson.hpp>
 #include <string>
 #include <string_view>
 
@@ -42,7 +40,7 @@ namespace {
         push(L, value.dump(indent));
         return 1;
     }
-}
+} // namespace
 
 namespace luax {
     geode::Result<void> registerGeodeJson(lua_State* L) {
@@ -54,7 +52,7 @@ namespace luax {
         lua_pop(L, 1);
         return geode::Ok();
     }
-}
+} // namespace luax
 
 #if !defined(LUAUAPI_HOST_TESTS)
 LUAX_BINDING(geode_json_lib, registerGeodeJson)

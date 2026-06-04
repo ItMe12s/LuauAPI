@@ -1,7 +1,6 @@
 #include "lua/module/PathSandbox.hpp"
 
 #include <catch2/catch_test_macros.hpp>
-
 #include <chrono>
 #include <cstddef>
 #include <filesystem>
@@ -10,8 +9,9 @@
 
 namespace {
     std::filesystem::path makeTempDir() {
-        auto dir = std::filesystem::temp_directory_path()
-            / ("luauapi_path_sandbox_" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
+        auto dir = std::filesystem::temp_directory_path() /
+            ("luauapi_path_sandbox_" +
+             std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
         REQUIRE(std::filesystem::create_directories(dir));
         return dir;
     }
@@ -33,7 +33,7 @@ namespace {
             REQUIRE(out.good());
         }
     }
-}
+} // namespace
 
 TEST_CASE("path string helpers keep virtual and filesystem text distinct") {
     std::filesystem::path nested = std::filesystem::path("sub") / "Bootstrap.luau";
@@ -69,7 +69,8 @@ TEST_CASE("virtual chunk paths reject unsafe or unsupported names") {
     REQUIRE(luax::normalizeVirtualPath("scripts/Bootstrap").isErr());
     REQUIRE(luax::normalizeVirtualPath("Bootstrap.lua").isErr());
 
-    auto absolute = luax::normalizedPathString(std::filesystem::temp_directory_path() / "Bootstrap.luau");
+    auto absolute =
+        luax::normalizedPathString(std::filesystem::temp_directory_path() / "Bootstrap.luau");
     REQUIRE(luax::normalizeVirtualPath(absolute).isErr());
 }
 
@@ -86,8 +87,9 @@ TEST_CASE("canonical root accepts directories and rejects empty roots") {
 }
 
 TEST_CASE("canonical root rejects missing directories") {
-    auto missing = std::filesystem::temp_directory_path()
-        / ("luauapi_missing_root_" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
+    auto missing = std::filesystem::temp_directory_path() /
+        ("luauapi_missing_root_" +
+         std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
     REQUIRE_FALSE(std::filesystem::exists(missing));
     REQUIRE(luax::canonicalRoot(missing).isErr());
 }

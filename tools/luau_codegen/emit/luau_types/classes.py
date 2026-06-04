@@ -40,9 +40,7 @@ def _should_emit_type_class(
     return False
 
 
-def _emitted_base_name(
-    cls: Class, objects: Dict[str, Class], skipped_classes: set
-) -> str | None:
+def _emitted_base_name(cls: Class, objects: Dict[str, Class], skipped_classes: set) -> str | None:
     for b in cls.bases:
         b_cls = objects.get(short_name(b))
         if b_cls and b_cls.name not in skipped_classes:
@@ -63,9 +61,7 @@ def _emit_class(
     base_name = _emitted_base_name(cls, objects, skipped_classes)
     base = f" extends {base_name}" if base_name else ""
     instance_methods = {
-        k: v
-        for k, v in grouped.items()
-        if not v[0].is_static and k not in LUAU_KEYWORDS
+        k: v for k, v in grouped.items() if not v[0].is_static and k not in LUAU_KEYWORDS
     }
     bound_field_names = {field.name for _, field in field_targets}
     field_lines: List[str] = []
@@ -104,9 +100,7 @@ def _emit_class(
                         f"    function {name}({self_prefix}{arg_text}){': ' + ret_type if ret_type != '()' else ''}\n"
                     )
             else:
-                widened = _widened_method_type(
-                    cls, methods, objects, static=False, ctx=ctx
-                )
+                widened = _widened_method_type(cls, methods, objects, static=False, ctx=ctx)
                 lines.append(f"    {name}: {widened}\n")
         lines.append("end\n\n")
     return lines

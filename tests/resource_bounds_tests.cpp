@@ -3,15 +3,13 @@
 #include "lua/runtime/Runtime.hpp"
 
 #include <Geode/loader/Mod.hpp>
-
 #include <catch2/catch_test_macros.hpp>
-#include <lua.h>
-#include <lualib.h>
-
 #include <chrono>
 #include <filesystem>
 #include <fstream>
 #include <iterator>
+#include <lua.h>
+#include <lualib.h>
 #include <optional>
 #include <string>
 #include <thread>
@@ -19,7 +17,7 @@
 namespace luax {
     geode::Result<void> registerGeodeFs(lua_State* L);
     geode::Result<void> registerGeodeJson(lua_State* L);
-}
+} // namespace luax
 
 namespace {
     struct RuntimeGuard {
@@ -37,8 +35,9 @@ namespace {
     };
 
     std::filesystem::path makeTempDir() {
-        auto dir = std::filesystem::temp_directory_path()
-            / ("luauapi_resource_bounds_" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
+        auto dir = std::filesystem::temp_directory_path() /
+            ("luauapi_resource_bounds_" +
+             std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
         REQUIRE(std::filesystem::create_directories(dir));
         return dir;
     }
@@ -76,10 +75,7 @@ namespace {
     }
 
     int callFs(
-        lua_State* L,
-        char const* method,
-        std::string const& root,
-        std::string const& rel,
+        lua_State* L, char const* method, std::string const& root, std::string const& rel,
         std::optional<std::string> data = std::nullopt
     ) {
         lua_settop(L, 0);
@@ -108,7 +104,7 @@ namespace {
         REQUIRE(out.good());
         out << data;
     }
-}
+} // namespace
 
 TEST_CASE("Runtime bytecode cache tracks total bytes and evicts by size") {
     RuntimeGuard guard;
@@ -416,7 +412,13 @@ TEST_CASE("geode.json.dump serializes a value through matjson") {
         return std::string(lua_tostring(L, -1));
     };
 
-    REQUIRE(dumpValue([&] { lua_pushboolean(L, 1); }) == "true");
-    REQUIRE(dumpValue([&] { lua_pushboolean(L, 0); }) == "false");
-    REQUIRE(dumpValue([&] { lua_newtable(L); }) == "{}");
+    REQUIRE(dumpValue([&] {
+                lua_pushboolean(L, 1);
+            }) == "true");
+    REQUIRE(dumpValue([&] {
+                lua_pushboolean(L, 0);
+            }) == "false");
+    REQUIRE(dumpValue([&] {
+                lua_newtable(L);
+            }) == "{}");
 }

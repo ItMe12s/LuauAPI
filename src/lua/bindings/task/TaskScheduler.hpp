@@ -56,4 +56,4 @@ namespace luax {
 
     void armTaskTick();
     void disarmTaskTick();
-}
+} // namespace luax

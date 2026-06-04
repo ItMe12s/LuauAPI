@@ -15,4 +15,4 @@ namespace luax {
         static void evictIfFinalRelease(cocos2d::CCObject* object);
         static void clear();
     };
-}
+} // namespace luax

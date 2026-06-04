@@ -3,8 +3,8 @@
 #include "PathSandbox.hpp"
 
 #if !defined(LUAUAPI_HOST_TESTS)
-#include <Geode/utils/general.hpp>
-#include <Geode/utils/string.hpp>
+    #include <Geode/utils/general.hpp>
+    #include <Geode/utils/string.hpp>
 #endif
 
 #include <chrono>
@@ -51,7 +51,7 @@ namespace luax {
             return geode::utils::string::join(std::span{parts.data(), parts.size()}, separator);
         }
 #endif
-    }
+    } // namespace
 
     std::string bytecodeCacheKey(std::filesystem::path const& path, std::string const& contents) {
         std::error_code ec;
@@ -64,29 +64,34 @@ namespace luax {
         std::int64_t stampNanoseconds = 0;
         if (!ec) {
             stampNanoseconds = static_cast<std::int64_t>(
-                std::chrono::duration_cast<std::chrono::nanoseconds>(stamp.time_since_epoch()).count());
+                std::chrono::duration_cast<std::chrono::nanoseconds>(stamp.time_since_epoch()).count()
+            );
         }
 
-        return joinKeyParts({
-            filesystemPathString(path),
-            "size=" + numericToken(size),
-            "mtime=" + numericToken(stampNanoseconds),
-            "hash=" + contentHashToken(contents),
-        }, "|");
+        return joinKeyParts(
+            {
+                filesystemPathString(path),
+                "size=" + numericToken(size),
+                "mtime=" + numericToken(stampNanoseconds),
+                "hash=" + contentHashToken(contents),
+            },
+            "|"
+        );
     }
 
     std::string loadstringBytecodeKey(std::string_view chunkName, std::string_view source) {
-        return joinKeyParts({
-            std::string(chunkName),
-            "size=" + numericToken(source.size()),
-            "hash=" + contentHashToken(source),
-        }, "|");
+        return joinKeyParts(
+            {
+                std::string(chunkName),
+                "size=" + numericToken(source.size()),
+                "hash=" + contentHashToken(source),
+            },
+            "|"
+        );
     }
 
     std::string runScriptBytecodeKey(
-        std::filesystem::path const& resourcesRoot,
-        std::string_view chunkName,
-        std::string_view source
+        std::filesystem::path const& resourcesRoot, std::string_view chunkName, std::string_view source
     ) {
         std::vector<std::string> parts;
         if (!resourcesRoot.empty()) {
@@ -96,4 +101,4 @@ namespace luax {
         parts.push_back(contentHashToken(source));
         return joinKeyParts(parts, "|");
     }
-}
+} // namespace luax

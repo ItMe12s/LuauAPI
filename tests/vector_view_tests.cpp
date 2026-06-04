@@ -4,7 +4,6 @@
 
 #include <catch2/catch_test_macros.hpp>
 #include <lua.h>
-
 #include <thread>
 #include <vector>
 
@@ -30,7 +29,7 @@ namespace {
         lua_call(L, 2, 1);
         lua_remove(L, -2);
     }
-}
+} // namespace
 
 TEST_CASE("ReadOnlyVectorView snapshots borrowed vector storage") {
     RuntimeGuard guard;

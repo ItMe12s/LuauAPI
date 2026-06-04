@@ -26,9 +26,7 @@ def emit(
 
     files: dict[str, str] = {
         "bindings_internal.hpp": emit_internal_hpp(),
-        "bindings_common.cpp": _emit_common_file(
-            plan.emitted_classes, plan, target_platform
-        ),
+        "bindings_common.cpp": _emit_common_file(plan.emitted_classes, plan, target_platform),
         FREE_FUNCTIONS_FILE: emit_free_functions_file(
             plan.supported_free_functions, plan.objects, ctx=plan.ctx
         ),

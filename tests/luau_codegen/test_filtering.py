@@ -70,9 +70,7 @@ class LinkClassFilterTests(unittest.TestCase):
 
     def test_underscore_internal_rejected_on_link_class(self) -> None:
         cls = Class(name="CCImage", attributes=["link(win, android)"])
-        method = Method(
-            name="_saveImageToJPG", ret="bool", args=[Arg("char const*", "path")]
-        )
+        method = Method(name="_saveImageToJPG", ret="bool", args=[Arg("char const*", "path")])
 
         ok, reason = supported(cls, method, {"CCImage": cls}, "win")
 
@@ -114,11 +112,7 @@ class LinkClassFilterTests(unittest.TestCase):
         for name in ("findHandler", "forceRemoveDelegate"):
             method = Method(
                 name=name,
-                ret=(
-                    "void"
-                    if name == "forceRemoveDelegate"
-                    else "cocos2d::CCTouchHandler*"
-                ),
+                ret=("void" if name == "forceRemoveDelegate" else "cocos2d::CCTouchHandler*"),
                 args=[Arg("cocos2d::CCTouchDelegate*", "delegate")],
             )
             ok, reason = supported(cls, method, objects, "win")

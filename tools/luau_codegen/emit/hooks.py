@@ -42,11 +42,7 @@ def _emit_apply_args_ctx(suffix: str, args: list[tuple]) -> str:
 def _emit_apply_return_ctx(suffix: str, ret: TypeInfo) -> str:
     if ret.kind == "void":
         return ""
-    return (
-        f"    struct ApplyReturnCtx_{suffix} {{\n"
-        f"        {ret.cxx_type}* result;\n"
-        f"    }};\n\n"
-    )
+    return f"    struct ApplyReturnCtx_{suffix} {{\n        {ret.cxx_type}* result;\n    }};\n\n"
 
 
 def _emit_apply_args_fn(
@@ -63,15 +59,14 @@ def _emit_apply_args_fn(
             f"    }}\n\n"
         )
 
-    arg_names = [arg.name for arg, _, _ in args]
     lines = [
         f"    int luaapi_apply_args_{suffix}(lua_State* L) {{\n",
         f"        auto* ctx = static_cast<ApplyArgsCtx_{suffix}*>(lua_tolightuserdata(L, lua_upvalueindex(1)));\n",
-        f'        if (!lua_istable(L, 1)) luaL_error(L, "hook args expected table");\n',
-        f"        int idx = 1;\n",
+        '        if (!lua_istable(L, 1)) luaL_error(L, "hook args expected table");\n',
+        "        int idx = 1;\n",
         f"        bool useArrayArgs = lua_objlen(L, idx) == {len(args)};\n",
         f"        bool useNamedArgs = {'true' if named_args else 'false'};\n",
-        f'        if (!useArrayArgs && !useNamedArgs) luaL_error(L, "hook args table shape invalid");\n',
+        '        if (!useArrayArgs && !useNamedArgs) luaL_error(L, "hook args table shape invalid");\n',
     ]
     for i, (arg, info, name) in enumerate(args, start=1):
         tmp = f"{name}Override"
@@ -104,17 +99,14 @@ def _emit_apply_args_fn(
 
 def _emit_apply_return_fn(suffix: str, ret: TypeInfo, label: str, fn_name: str) -> str:
     if ret.kind == "void":
-        return (
-            f"    int {fn_name}(lua_State* L) {{\n" f"        return 0;\n" f"    }}\n\n"
-        )
+        return f"    int {fn_name}(lua_State* L) {{\n        return 0;\n    }}\n\n"
     tmp = "valueOverride"
     lines = [
         f"    int {fn_name}(lua_State* L) {{\n",
         f"        auto* ctx = static_cast<ApplyReturnCtx_{suffix}*>(lua_tolightuserdata(L, lua_upvalueindex(1)));\n",
     ]
     lines.extend(
-        f"        {line.lstrip()}"
-        for line in emit_stack_check(ret, "1", tmp, label, declare=True)
+        f"        {line.lstrip()}" for line in emit_stack_check(ret, "1", tmp, label, declare=True)
     )
     lines.append(f"        *ctx->result = {tmp};\n")
     lines.append("        return 0;\n")
@@ -158,15 +150,9 @@ def emit_hook_target(
     out.append(_emit_apply_args_fn(suffix, args, named_args))
     if ret.kind != "void":
         out.append(
-            _emit_apply_return_fn(
-                suffix, ret, "hook return", f"luaapi_apply_return_{suffix}"
-            )
+            _emit_apply_return_fn(suffix, ret, "hook return", f"luaapi_apply_return_{suffix}")
         )
-        out.append(
-            _emit_apply_return_fn(
-                suffix, ret, "hook skip", f"luaapi_apply_skip_{suffix}"
-            )
-        )
+        out.append(_emit_apply_return_fn(suffix, ret, "hook skip", f"luaapi_apply_skip_{suffix}"))
 
     out.append(f"    {ret_type} luaapi_hook_{suffix}({params_text}) {{\n")
     if ret.kind != "void":
@@ -183,9 +169,7 @@ def emit_hook_target(
                 ctx_fields.append(f"&{name}")
             else:
                 ctx_fields.append(f"&{name}")
-        out.append(
-            f"        ApplyArgsCtx_{suffix} applyArgsCtx{{ {', '.join(ctx_fields)} }};\n"
-        )
+        out.append(f"        ApplyArgsCtx_{suffix} applyArgsCtx{{ {', '.join(ctx_fields)} }};\n")
     if ret.kind != "void":
         out.append(f"        ApplyReturnCtx_{suffix} applyReturnCtx{{ &result }};\n")
     out.append(
@@ -193,9 +177,7 @@ def emit_hook_target(
     )
     out.extend(
         f"    {line}"
-        for line in push_value(
-            TypeInfo("object", f"{cxx_cls}*", cls.name, cls.name), "self"
-        )
+        for line in push_value(TypeInfo("object", f"{cxx_cls}*", cls.name, cls.name), "self")
     )
     for _, info, name in args:
         out.extend(f"    {line}" for line in push_value(info, name))
@@ -223,9 +205,7 @@ def emit_hook_target(
     )
     out.extend(
         f"    {line}"
-        for line in push_value(
-            TypeInfo("object", f"{cxx_cls}*", cls.name, cls.name), "self"
-        )
+        for line in push_value(TypeInfo("object", f"{cxx_cls}*", cls.name, cls.name), "self")
     )
     for _, info, name in args:
         out.extend(f"    {line}" for line in push_value(info, name))
