@@ -105,6 +105,8 @@ class GeneratedSafetyTests(unittest.TestCase):
             text,
         )
         self.assertIn("return geode::Err(hookResult.unwrapErr());", text)
+        self.assertIn("if (!address)", text)
+        self.assertIn("CCObject::release hook address unresolved", text)
         self.assertNotIn("luau fields release hook failed", text)
 
     def test_hook_shutdown_clears_refs_and_disables_hooks(self) -> None:
@@ -164,7 +166,8 @@ class GeneratedSafetyTests(unittest.TestCase):
         text = emit_internal_hpp()
 
         self.assertIn("applyHookOverride", text)
-        self.assertIn("override rejected", text)
+        self.assertIn("protectedCallWithTraceback", text)
+        self.assertNotIn("lua_pcall(L, 1, 0, 0)", text)
         self.assertIn("continue;", text)
         self.assertNotIn('returned invalid skip value", targetId', text)
 

@@ -45,8 +45,15 @@ def _emit_common_file(
         out.append("geode::Result<void> installFieldsReleaseHook() {\n")
         out.append("    static std::optional<geode::Result<void>> installResult;\n")
         out.append("    if (installResult) return *installResult;\n")
+        out.append(f"    void* const address = {release_address};\n")
+        out.append("    if (!address) {\n")
         out.append(
-            f'    auto result = geode::Mod::get()->hook({release_address}, &luaapi_fields_release_hook, "LuauAPI CCObject::release fields cleanup", tulip::hook::TulipConvention::Default);\n'
+            '        installResult = geode::Err("CCObject::release hook address unresolved");\n'
+        )
+        out.append("        return *installResult;\n")
+        out.append("    }\n")
+        out.append(
+            '    auto result = geode::Mod::get()->hook(address, &luaapi_fields_release_hook, "LuauAPI CCObject::release fields cleanup", tulip::hook::TulipConvention::Default);\n'
         )
         out.append("    if (result.isErr()) {\n")
         out.append("        installResult = geode::Err(result.unwrapErr());\n")

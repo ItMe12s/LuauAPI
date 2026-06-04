@@ -246,8 +246,14 @@ def emit_hook_target(
     out.append(
         f"    geode::Result<geode::Hook*> luaapi_create_hook_{suffix}(std::string const& displayName) {{\n"
     )
+    out.append(f"        void* const address = {address};\n")
+    out.append("        if (!address) {\n")
     out.append(
-        f"        return geode::Mod::get()->hook({address}, "
+        f'            return geode::Err("hook address unresolved for {_cstr(target_id)}");\n'
+    )
+    out.append("        }\n")
+    out.append(
+        f"        return geode::Mod::get()->hook(address, "
         f"&luaapi_hook_{suffix}, displayName, tulip::hook::TulipConvention::Default);\n"
     )
     out.append("    }\n\n")

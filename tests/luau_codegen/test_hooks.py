@@ -309,6 +309,47 @@ class HookApplyFnTests(unittest.TestCase):
         self.assertIn("if (lua_isnil(L, -1))", text)
         self.assertIn("arg0Override = nullptr", text)
 
+    def test_create_hook_rejects_null_address(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        cls = Class(
+            name="CCNode",
+            namespace="cocos2d",
+            bases=["CCObject"],
+            methods=[
+                Method(
+                    name="init",
+                    ret="bool",
+                    args=[],
+                    platforms=all_platforms("0x1"),
+                )
+            ],
+        )
+
+        text = _emit_class_file(
+            cls,
+            {"init": cls.methods},
+            [(cls, cls.methods[0])],
+            [],
+            {"CCObject": ccobject, "CCNode": cls},
+            set(),
+            1,
+            "win",
+        )
+
+        self.assertIn("luaapi_create_hook_CCNode_init_0", text)
+        self.assertIn("void* const address =", text)
+        self.assertIn("if (!address)", text)
+        self.assertIn("hook address unresolved for geode.cocos2d.CCNode:init/0", text)
+        self.assertIn(
+            "geode::Mod::get()->hook(address, &luaapi_hook_CCNode_init_0", text
+        )
+
+    def test_apply_hook_override_uses_protected_call_with_traceback(self) -> None:
+        text = emit_internal_hpp()
+
+        self.assertIn("protectedCallWithTraceback(1, 0, targetId)", text)
+        self.assertNotIn("lua_pcall(L, 1, 0, 0)", text)
+
 
 class HookableSelCallbackTests(unittest.TestCase):
     def test_sel_arg_not_hookable(self) -> None:
