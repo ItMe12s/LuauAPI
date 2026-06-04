@@ -383,6 +383,7 @@ if(LUAUAPI_BUILD_TESTS)
         src/lua/bindings/imgui/ImGuiDrawScheduler.cpp
         src/lua/bindings/task/TaskScheduler.cpp
         src/lua/module/BytecodeCacheKey.cpp
+        src/lua/module/Requirer.cpp
         src/lua/runtime/Loadstring.cpp
         src/lua/runtime/Runtime.cpp
         tests/allocator_accounting_tests.cpp
@@ -399,6 +400,7 @@ if(LUAUAPI_BUILD_TESTS)
         tests/path_sandbox_tests.cpp
         tests/path_rules_tests.cpp
         tests/require_path_tests.cpp
+        tests/requirer_root_tests.cpp
         tests/resource_bounds_tests.cpp
         tests/runtime_tests.cpp
         tests/task_scheduler_tests.cpp
@@ -420,6 +422,7 @@ if(LUAUAPI_BUILD_TESTS)
         Luau.VM
         Luau.Compiler
         Luau.CodeGen
+        Luau.Require
     )
     get_target_property(LUAUAPI_TEST_LINK_LIBS luauapi_tests LINK_LIBRARIES)
     if(LUAUAPI_TEST_LINK_LIBS)

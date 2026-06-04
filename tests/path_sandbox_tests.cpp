@@ -68,6 +68,23 @@ TEST_CASE("canonical root accepts directories and rejects empty roots") {
     std::filesystem::remove_all(dir);
 }
 
+TEST_CASE("canonical root rejects missing directories") {
+    auto missing = std::filesystem::temp_directory_path()
+        / ("luauapi_missing_root_" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
+    REQUIRE_FALSE(std::filesystem::exists(missing));
+    REQUIRE(luax::canonicalRoot(missing).isErr());
+}
+
+TEST_CASE("script path resolution fails when resources root is not configured") {
+    auto dir = makeTempDir();
+    auto insideFile = dir / "Inside.luau";
+    writeFile(insideFile, "return 1");
+
+    REQUIRE(luax::resolveScriptFileInsideRoot({}, insideFile).isErr());
+
+    std::filesystem::remove_all(dir);
+}
+
 TEST_CASE("script path resolution rejects root escapes") {
     auto dir = makeTempDir();
     auto outsideDir = makeTempDir();

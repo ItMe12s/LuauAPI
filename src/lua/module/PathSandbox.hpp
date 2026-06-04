@@ -135,6 +135,10 @@ namespace luax {
         std::filesystem::path const& root,
         std::filesystem::path const& candidate
     ) {
+        if (root.empty()) {
+            return scriptErr<std::filesystem::path>("resources root is not configured");
+        }
+
         std::error_code ec;
         auto path = std::filesystem::weakly_canonical(candidate, ec);
         if (ec) {

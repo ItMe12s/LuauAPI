@@ -55,7 +55,11 @@ namespace luax {
         }
 
         luarequire_WriteResult get_chunkname(lua_State*, void* ctx, char* buffer, size_t buffer_size, size_t* size_out) {
-            return writeString(self(ctx)->chunkname(), buffer, buffer_size, size_out);
+            auto const& name = self(ctx)->chunkname();
+            if (name.empty()) {
+                return WRITE_FAILURE;
+            }
+            return writeString(name, buffer, buffer_size, size_out);
         }
 
         luarequire_WriteResult get_loadname(lua_State*, void* ctx, char* buffer, size_t buffer_size, size_t* size_out) {
@@ -162,9 +166,13 @@ namespace luax {
     Requirer::Requirer(Runtime& runtime) : m_runtime(runtime) {}
 
     void Requirer::setResourcesRoot(std::filesystem::path const& root) {
-        std::error_code ec;
-        m_root = std::filesystem::weakly_canonical(root, ec);
-        if (ec) m_root = root;
+        auto rootResult = canonicalRoot(root);
+        if (rootResult.isErr()) {
+            m_root.clear();
+            m_current.clear();
+            return;
+        }
+        m_root = rootResult.unwrap();
         m_current = m_root;
     }
 
@@ -185,6 +193,9 @@ namespace luax {
     }
 
     luarequire_NavigateResult Requirer::resetTo(char const* requirer_chunkname) {
+        if (m_root.empty()) {
+            return NAVIGATE_NOT_FOUND;
+        }
         if (!requirer_chunkname || requirer_chunkname[0] != '@') {
             return NAVIGATE_NOT_FOUND;
         }
@@ -207,6 +218,9 @@ namespace luax {
     }
 
     luarequire_NavigateResult Requirer::toParent() {
+        if (m_root.empty()) {
+            return NAVIGATE_NOT_FOUND;
+        }
         if (m_current == m_root) return NAVIGATE_NOT_FOUND;
         auto parent = m_current.parent_path();
         if (!pathInsideRoot(parent, m_root)) return NAVIGATE_NOT_FOUND;
@@ -215,6 +229,9 @@ namespace luax {
     }
 
     luarequire_NavigateResult Requirer::toChild(char const* name) {
+        if (m_root.empty()) {
+            return NAVIGATE_NOT_FOUND;
+        }
         if (!name || !isRequireChildNameAllowed(name)) {
             return NAVIGATE_NOT_FOUND;
         }
@@ -237,10 +254,20 @@ namespace luax {
     }
 
     geode::Result<std::filesystem::path> Requirer::resolvedModulePath() const {
-        return resolveScriptFileInsideRoot(m_root, modulePath());
+        if (m_root.empty()) {
+            return geode::Err("resources root is not configured");
+        }
+        auto resolved = resolveScriptFileInsideRoot(m_root, modulePath());
+        if (resolved.isErr()) {
+            return geode::Err(resolved.unwrapErr());
+        }
+        return geode::Ok(resolved.unwrap());
     }
 
     std::string Requirer::chunkname() const {
+        if (m_root.empty()) {
+            return {};
+        }
         std::error_code ec;
         auto rel = std::filesystem::relative(m_current, m_root, ec);
         std::string name = normalizedPathString(ec ? m_current : rel);
