@@ -177,6 +177,8 @@ def emit_report(
             lines.append(f"- ... {len(ambiguous) - 2000} more\n")
     else:
         lines.append("- none\n")
+
+    # Pretty much not needed but I'll keep it for now.
     lines.append("\n## Operational notes\n\n")
     lines.append(
         "- generated Luau types are written to repo `types/` for LSP use and remain gitignored\n"
@@ -192,6 +194,9 @@ def emit_report(
     )
     lines.append(
         "- removed hook callback slots compact on later registry operations, eager compaction is deferred\n"
+    )
+    lines.append(
+        "- CCObject::release hook evicts Lua menu/selector handlers on final release, unresolved hook address is non-fatal\n"
     )
     lines.append("\n## Skipped methods\n\n")
     for cls, method, reason in skipped[:2000]:

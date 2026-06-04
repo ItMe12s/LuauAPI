@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import os
+import tempfile
 import unittest
 from helpers import (
     Arg,  # type: ignore[import-unresolved]
@@ -22,6 +24,7 @@ from helpers import (
     group_supported_free_functions,  # type: ignore[import-unresolved]
     types_text,  # type: ignore[import-unresolved]
 )
+from luau_codegen.emit.metadata import emit_report  # type: ignore[import-unresolved]
 
 
 class GeneratedSafetyTests(unittest.TestCase):
@@ -108,6 +111,30 @@ class GeneratedSafetyTests(unittest.TestCase):
         self.assertIn("if (!address)", text)
         self.assertIn("CCObject::release hook address unresolved", text)
         self.assertNotIn("luau fields release hook failed", text)
+
+    def test_codegen_report_documents_ccobject_release_hook(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        root = Root(classes=[ccobject])
+        plan = collect_plan(root, "win")
+
+        with tempfile.TemporaryDirectory() as tmp:
+            report_path = os.path.join(tmp, "report.md")
+            emit_report(
+                root,
+                report_path,
+                [],
+                "types.luau",
+                [],
+                "win",
+                0,
+                0,
+                plan=plan,
+            )
+            with open(report_path, encoding="utf-8") as handle:
+                text = handle.read()
+
+        self.assertIn("CCObject::release hook", text)
+        self.assertIn("non-fatal", text)
 
     def test_hook_shutdown_clears_refs_and_disables_hooks(self) -> None:
         text = emit_hook_support()

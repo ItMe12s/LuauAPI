@@ -21,17 +21,29 @@ ctest --test-dir build
 
 The C++ tests use Catch2 `v3.15.0` and build into the `luauapi_tests` executable. The files are:
 
-- `tests/allocator_accounting_tests.cpp` covers the bounded allocator math and limits.
-- `tests/api_tests.cpp` covers the public C++ API surface.
-- `tests/binding_tests.cpp` covers binding registration and dispatch.
-- `tests/bytecode_cache_key_tests.cpp` covers the cache key, including changes to size, modify time, and content.
-- `tests/callback_tests.cpp` covers callback registration and invocation.
-- `tests/loadstring_tests.cpp` covers `loadstring` compile and runtime behavior.
-- `tests/path_rules_tests.cpp` covers flat path rules and extension checks.
-- `tests/path_sandbox_tests.cpp` covers file containment and escape rejection.
-- `tests/require_path_tests.cpp` covers require child name rules and the `.luau` extension fill in.
-- `tests/runtime_tests.cpp` covers runtime lifecycle and script execution.
-- `tests/usertype_tests.cpp` covers usertype registration and method dispatch.
+| Test file | Coverage |
+| --------- | -------- |
+| `tests/allocator_accounting_tests.cpp` | Bounded allocator math and limits |
+| `tests/api_tests.cpp` | Public C++ API surface |
+| `tests/binding_tests.cpp` | Binding registration and dispatch |
+| `tests/bytecode_cache_accounting_tests.cpp` | Bytecode cache accounting limits |
+| `tests/bytecode_cache_key_tests.cpp` | Cache key, including changes to size, modify time, and content |
+| `tests/callback_tests.cpp` | Callback registration and invocation |
+| `tests/current_mod_tests.cpp` | Current-mod path helpers against a resources root |
+| `tests/fields_tests.cpp` | `m_fields` and release eviction |
+| `tests/geode_fs_path_tests.cpp` | Geode filesystem binding path resolution inside a root |
+| `tests/imgui_scheduler_tests.cpp` | ImGui draw scheduler registration |
+| `tests/loadstring_tests.cpp` | `loadstring` compile and runtime behavior |
+| `tests/misc_correctness_tests.cpp` | Assorted runtime correctness cases |
+| `tests/path_rules_tests.cpp` | Flat path rules and extension checks |
+| `tests/path_sandbox_tests.cpp` | File containment, virtual chunk paths, and escape rejection |
+| `tests/require_path_tests.cpp` | Require child name rules and the `.luau` extension fill in |
+| `tests/requirer_root_tests.cpp` | Resources root canonicalization and module resolution |
+| `tests/resource_bounds_tests.cpp` | Resource size and require bounds |
+| `tests/runtime_tests.cpp` | Runtime lifecycle and script execution |
+| `tests/task_scheduler_tests.cpp` | Task scheduler binding behavior |
+| `tests/usertype_tests.cpp` | Usertype registration, tag limits, and method dispatch |
+| `tests/vector_view_tests.cpp` | Readonly vector view lifetime |
 
 CTest discovers the Catch2 cases at build time.
 
@@ -61,7 +73,7 @@ PYTHONPATH=tools python -m unittest discover -s tests/luau_codegen -p "test_*.py
 | `test_bindings_fmod.py` | FMOD opaque handle bindings emit lightuserdata |
 | `test_bindings_handlers.py` | SEL/menu handler collapse, schedule, lazy sprite callbacks |
 | `test_bindings_overloads.py` | Ambiguous overload policy, preferred overloads, const mangling |
-| `test_bindings_safety.py` | Generated hooks, fields, containers, hook API safety |
+| `test_bindings_safety.py` | Generated hooks, fields, containers, hook API safety, codegen report notes |
 | `test_broma.py` | Broma parser, class/method attributes |
 | `test_cc_c_array.py` | ccCArray allowlist, type map, marshalling, readonly fields |
 | `test_codegen_cli.py` | CLI I/O, exit codes, binding root collection |
@@ -72,7 +84,7 @@ PYTHONPATH=tools python -m unittest discover -s tests/luau_codegen -p "test_*.py
 | `test_free_functions.py` | Free-function platform overrides and emission |
 | `test_geode_ccnode.py` | Geode `CCNode` SDK scan merge, bindings, anchor enums |
 | `test_geode_scanner.py` | Geode SDK header scan warnings |
-| `test_hooks.py` | Hook offsets, symbols, hook target emission |
+| `test_hooks.py` | Hook offsets, symbols, null guards, protected override calls |
 | `test_luau_types.py` | Luau stub layout, factories, overload widening |
 | `test_marshalling.py` | Lua stack check/push codegen |
 | `test_model.py` | Class lookup, object maps, base resolution |
@@ -90,12 +102,22 @@ PYTHONPATH=tools python -m unittest discover -s tests/luau_codegen -p "test_*.py
 - `tests/allocator_accounting_tests.cpp`
 - `tests/api_tests.cpp`
 - `tests/binding_tests.cpp`
+- `tests/bytecode_cache_accounting_tests.cpp`
 - `tests/bytecode_cache_key_tests.cpp`
 - `tests/callback_tests.cpp`
+- `tests/current_mod_tests.cpp`
+- `tests/fields_tests.cpp`
+- `tests/geode_fs_path_tests.cpp`
+- `tests/imgui_scheduler_tests.cpp`
 - `tests/loadstring_tests.cpp`
+- `tests/misc_correctness_tests.cpp`
 - `tests/path_rules_tests.cpp`
 - `tests/path_sandbox_tests.cpp`
 - `tests/require_path_tests.cpp`
+- `tests/requirer_root_tests.cpp`
+- `tests/resource_bounds_tests.cpp`
 - `tests/runtime_tests.cpp`
+- `tests/task_scheduler_tests.cpp`
 - `tests/usertype_tests.cpp`
+- `tests/vector_view_tests.cpp`
 - `tests/luau_codegen/`

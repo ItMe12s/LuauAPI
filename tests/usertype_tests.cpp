@@ -72,6 +72,24 @@ TEST_CASE("UsertypeRegistry returns error when tag limit is exceeded") {
     REQUIRE(result.isErr());
 }
 
+TEST_CASE("Usertype cannot push userdata when tag registration fails") {
+    RuntimeGuard guard;
+    auto* runtime = luax::Runtime::getOrCreate();
+    auto* L = runtime->state();
+
+    auto& reg = luax::detail::UsertypeRegistry::get();
+    reg.setNextTagForTests(LUA_UTAG_LIMIT);
+
+    REQUIRE(luax::Usertype<OverflowNode>::registerType(L, "OverflowNode").isErr());
+    REQUIRE(luax::Usertype<OverflowNode>::tag() == 0);
+
+    auto* node = new OverflowNode();
+    luax::Usertype<OverflowNode>::pushBorrowed(L, node);
+    REQUIRE(lua_isnil(L, -1));
+    lua_pop(L, 1);
+    node->release();
+}
+
 TEST_CASE("UsertypeRegistry assigns unique tags") {
     RuntimeGuard guard;
     auto& reg = luax::detail::UsertypeRegistry::get();

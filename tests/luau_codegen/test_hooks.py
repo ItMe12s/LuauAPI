@@ -350,6 +350,41 @@ class HookApplyFnTests(unittest.TestCase):
         self.assertIn("protectedCallWithTraceback(1, 0, targetId)", text)
         self.assertNotIn("lua_pcall(L, 1, 0, 0)", text)
 
+    def test_android_linked_create_hook_rejects_null_address(self) -> None:
+        ccobject = Class(
+            name="CCObject", namespace="cocos2d", attributes=["link(android)"]
+        )
+        cls = Class(
+            name="CCNode",
+            namespace="cocos2d",
+            bases=["CCObject"],
+            attributes=["link(android)"],
+            methods=[
+                Method(
+                    name="init",
+                    ret="bool",
+                    args=[],
+                    platforms={"android64": "0x1"},
+                )
+            ],
+        )
+
+        text = _emit_class_file(
+            cls,
+            {"init": cls.methods},
+            [(cls, cls.methods[0])],
+            [],
+            {"CCObject": ccobject, "CCNode": cls},
+            set(),
+            1,
+            "android64",
+        )
+
+        self.assertIn("luaapi_create_hook_CCNode_init_0", text)
+        self.assertIn("dlsym(luaapi_android_libcocos()", text)
+        self.assertIn("if (!address)", text)
+        self.assertIn("hook address unresolved for geode.cocos2d.CCNode:init/0", text)
+
 
 class HookableSelCallbackTests(unittest.TestCase):
     def test_sel_arg_not_hookable(self) -> None:

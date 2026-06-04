@@ -71,5 +71,10 @@ TEST_CASE("Requirer resolves modules under a valid canonical root") {
     REQUIRE(resolved.isOk());
     REQUIRE(std::filesystem::is_regular_file(resolved.unwrap()));
 
+    auto chunk = req.chunkname();
+    REQUIRE_FALSE(chunk.empty());
+    REQUIRE(chunk.starts_with("@"));
+    REQUIRE(chunk.find("Child") != std::string::npos);
+
     std::filesystem::remove_all(dir);
 }
