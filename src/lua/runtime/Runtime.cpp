@@ -441,14 +441,15 @@ namespace luax {
 
         char const* chunkData = luaL_optstring(L, 2, "=loadstring");
         std::string_view chunk(chunkData ? chunkData : "=loadstring");
-        bool ok = false;
-        auto const& bytecode =
-            self->getOrCompileBytecode(loadstringBytecodeKey(chunk, source), source, ok);
-        if (!ok) {
+        auto bytecodeResult =
+            self->getOrCompileBytecode(loadstringBytecodeKey(chunk, source), source);
+        if (bytecodeResult.isErr()) {
             lua_pushnil(L);
-            lua_pushlstring(L, self->lastError().data(), self->lastError().size());
+            auto const& err = bytecodeResult.unwrapErr();
+            lua_pushlstring(L, err.data(), err.size());
             return 2;
         }
+        auto const& bytecode = bytecodeResult.unwrap().get();
         if (loadstringPushResult(L, chunk, bytecode) == LoadstringStatus::Failure) {
             return 2;
         }
@@ -516,6 +517,15 @@ namespace luax {
         m_lastError = redactHostPaths(error, m_resourcesRoot);
     }
 
+    geode::Result<void> Runtime::failWith(std::string error) {
+        setLastError(std::move(error));
+        return geode::Err(m_lastError);
+    }
+
+    geode::Result<void> Runtime::cachedError() const {
+        return geode::Err(m_lastError);
+    }
+
     std::string Runtime::compileSource(std::string_view source) {
         Luau::CompileOptions opts;
         opts.optimizationLevel = 2;
@@ -572,14 +582,13 @@ namespace luax {
         return true;
     }
 
-    std::string const& Runtime::getOrCompileBytecode(
-        std::string const& key, std::string_view source, bool& ok
+    geode::Result<std::reference_wrapper<std::string const>> Runtime::getOrCompileBytecode(
+        std::string const& key, std::string_view source
     ) {
-        ok = true;
         auto it = m_bytecodeIndex.find(key);
         if (it != m_bytecodeIndex.end()) {
             m_bytecodeLru.splice(m_bytecodeLru.begin(), m_bytecodeLru, it->second);
-            return it->second->bytecode;
+            return geode::Ok(std::cref(it->second->bytecode));
         }
 
         auto compileStart = std::chrono::steady_clock::now();
@@ -590,15 +599,17 @@ namespace luax {
                              .count();
 
         if (!tryCacheCompiledBytecode(key, std::move(compiled), compileMs)) {
-            ok = false;
             m_bytecodeScratch.clear();
-            return m_bytecodeScratch;
+            if (m_lastError.empty()) {
+                setLastError("luau compile failed");
+            }
+            return geode::Err(m_lastError);
         }
 
         if (m_bytecodeLru.empty() || m_bytecodeLru.front().key != key) {
-            return m_bytecodeScratch;
+            return geode::Ok(std::cref(m_bytecodeScratch));
         }
-        return m_bytecodeLru.front().bytecode;
+        return geode::Ok(std::cref(m_bytecodeLru.front().bytecode));
     }
 
     void Runtime::removeBytecodeCacheEntry(std::list<BytecodeCacheEntry>::iterator it) {
@@ -617,40 +628,39 @@ namespace luax {
         }
     }
 
-    bool Runtime::runScript(std::string_view src, std::string_view chunkName, int deadlineMs) {
+    geode::Result<void> Runtime::runScript(
+        std::string_view src, std::string_view chunkName, int deadlineMs
+    ) {
         if (!assertMainThread()) {
-            setLastError("luau runtime accessed off main thread");
-            return false;
+            return failWith("luau runtime accessed off main thread");
         }
         if (!ready() || !m_state) {
             if (m_lastError.empty()) {
-                setLastError(m_initError.empty() ? "luau runtime not ready" : m_initError);
+                return failWith(m_initError.empty() ? "luau runtime not ready" : m_initError);
             }
-            return false;
+            return cachedError();
         }
         if (src.size() > kMaxScriptBytes) {
-            setLastError("script exceeds maximum size");
             geode::log::error("luau script exceeds maximum size: {}", chunkName);
-            return false;
+            return failWith("script exceeds maximum size");
         }
         clearLastError();
 
         std::string chunk(chunkName);
         auto bytecodeKey = runScriptBytecodeKey(m_resourcesRoot, chunk, src);
 
-        bool compileOk = false;
-        std::string const& bytecode = getOrCompileBytecode(bytecodeKey, src, compileOk);
-        if (!compileOk) {
-            geode::log::error("luau compile failed [{}] {}", chunk, lastError());
-            return false;
+        auto bytecodeResult = getOrCompileBytecode(bytecodeKey, src);
+        if (bytecodeResult.isErr()) {
+            geode::log::error("luau compile failed [{}] {}", chunk, bytecodeResult.unwrapErr());
+            return geode::Err(bytecodeResult.unwrapErr());
         }
+        auto const& bytecode = bytecodeResult.unwrap().get();
 
         if (luau_load(m_state, chunk.c_str(), bytecode.data(), bytecode.size(), 0) != 0) {
             auto err = formatLuaError(chunk.c_str());
-            setLastError(err);
             geode::log::error("luau load failed {}", err);
             lua_pop(m_state, 1);
-            return false;
+            return failWith(std::move(err));
         }
 
         if (m_codegenEnabled) {
@@ -663,37 +673,37 @@ namespace luax {
         }
 
         auto execStart = std::chrono::steady_clock::now();
-        bool ok = protectedCall(0, 0, chunk, deadlineMs);
+        auto callResult = protectedCall(0, 0, chunk, deadlineMs);
         auto execMs = std::chrono::duration_cast<std::chrono::milliseconds>(
                           std::chrono::steady_clock::now() - execStart
         )
                           .count();
 
-        if (!ok) {
-            return false;
+        if (callResult.isErr()) {
+            return callResult;
         }
 
         geode::log::debug("luau exec [{}] {}ms", chunk, execMs);
-        return true;
+        return geode::Ok();
     }
 
-    bool Runtime::protectedCall(int nargs, int nresults, std::string_view context, int deadlineMs) {
+    geode::Result<void> Runtime::protectedCall(
+        int nargs, int nresults, std::string_view context, int deadlineMs
+    ) {
         if (!assertMainThread()) {
-            setLastError("luau runtime accessed off main thread");
-            return false;
+            return failWith("luau runtime accessed off main thread");
         }
         if (!ready() || !m_state) {
             if (m_lastError.empty()) {
-                setLastError(m_initError.empty() ? "luau runtime not ready" : m_initError);
+                return failWith(m_initError.empty() ? "luau runtime not ready" : m_initError);
             }
-            return false;
+            return cachedError();
         }
         int baseTop = lua_gettop(m_state) - nargs;
         if (nargs < 0 || baseTop < 1 || !lua_isfunction(m_state, baseTop)) {
             auto err = fmt::format("[{}] luau protectedCall missing function", context);
-            setLastError(err);
             geode::log::error("{}", err);
-            return false;
+            return failWith(std::move(err));
         }
 
         lua_getref(m_state, m_tracebackRef);
@@ -708,32 +718,31 @@ namespace luax {
         if (status != 0) {
             std::string ctx(context);
             auto err = formatLuaError(ctx.c_str());
-            setLastError(err);
             geode::log::error("{}", err);
             lua_pop(m_state, 1);
-            return false;
+            return failWith(std::move(err));
         }
 
-        return true;
+        return geode::Ok();
     }
 
-    bool Runtime::protectedCallWithTraceback(int nargs, int nresults, std::string_view context) {
+    geode::Result<void> Runtime::protectedCallWithTraceback(
+        int nargs, int nresults, std::string_view context
+    ) {
         if (!assertMainThread()) {
-            setLastError("luau runtime accessed off main thread");
-            return false;
+            return failWith("luau runtime accessed off main thread");
         }
         if (!m_state || !m_tracebackRef) {
             if (m_lastError.empty()) {
-                setLastError(m_initError.empty() ? "luau runtime not available" : m_initError);
+                return failWith(m_initError.empty() ? "luau runtime not available" : m_initError);
             }
-            return false;
+            return cachedError();
         }
         int baseTop = lua_gettop(m_state) - nargs;
         if (nargs < 0 || baseTop < 1 || !lua_isfunction(m_state, baseTop)) {
             auto err = fmt::format("[{}] luau protectedCall missing function", context);
-            setLastError(err);
             geode::log::error("{}", err);
-            return false;
+            return failWith(std::move(err));
         }
 
         lua_getref(m_state, m_tracebackRef);
@@ -746,13 +755,12 @@ namespace luax {
         if (status != 0) {
             std::string ctx(context);
             auto err = formatLuaError(ctx.c_str());
-            setLastError(err);
             geode::log::error("{}", err);
             lua_pop(m_state, 1);
-            return false;
+            return failWith(std::move(err));
         }
 
-        return true;
+        return geode::Ok();
     }
 
     bool Runtime::assertMainThread() const {

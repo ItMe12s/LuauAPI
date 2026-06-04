@@ -48,12 +48,12 @@ namespace luax {
                 pushArgs(L, pushCtx);
             }
             BindingHost::ResourcesRootScope scope(*host, m_ref->resourcesRoot());
-            bool ok = host->protectedCall(nargs, nresults, context, deadlineMs);
-            if (ok && popResults && nresults > 0) {
+            auto result = host->protectedCall(nargs, nresults, context, deadlineMs);
+            if (result.isOk() && popResults && nresults > 0) {
                 popResults(L, popCtx);
             }
             lua_settop(L, top);
-            return ok;
+            return result.isOk();
         }
 
         std::shared_ptr<LuaRef> const& ref() const {

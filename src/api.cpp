@@ -45,12 +45,9 @@ namespace {
 
         luax::Runtime::ResourcesRootScope rootScope(*runtime, root);
 
-        if (!runtime->runScript(source, chunk, deadlineMs)) {
-            auto const& err = runtime->lastError();
-            if (!err.empty()) {
-                return geode::Err(err);
-            }
-            return geode::Err("luau script failed: " + chunk);
+        auto result = runtime->runScript(source, chunk, deadlineMs);
+        if (result.isErr()) {
+            return geode::Err(result.unwrapErr());
         }
 
         return geode::Ok();

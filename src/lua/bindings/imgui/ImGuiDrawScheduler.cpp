@@ -50,7 +50,7 @@ namespace luax {
         int top = lua_gettop(L);
         if (!cb.callback.push()) return false;
         Runtime::ResourcesRootScope scope(*runtime, cb.callback.resourcesRoot());
-        bool ok = runtime->protectedCall(0, 0, "imgui.draw", kImGuiScriptDeadlineMs);
+        bool ok = runtime->protectedCall(0, 0, "imgui.draw", kImGuiScriptDeadlineMs).isOk();
         lua_settop(L, top);
         return ok;
     }

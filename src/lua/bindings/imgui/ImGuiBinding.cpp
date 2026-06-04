@@ -77,7 +77,7 @@ namespace {
         auto* runtime = Runtime::getIfInitialized();
         if (!runtime) return;
         lua_pushvalue(L, fnIdx);
-        runtime->protectedCall(0, 0, context, kImGuiScriptDeadlineMs);
+        (void)runtime->protectedCall(0, 0, context, kImGuiScriptDeadlineMs);
     }
 
     int imguiOnDraw(lua_State* L) {

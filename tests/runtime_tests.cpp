@@ -54,7 +54,7 @@ TEST_CASE("protectedCall restores stack height on success") {
 
     pushReturnValue(L, 99);
     int topBefore = lua_gettop(L);
-    REQUIRE(runtime->protectedCall(0, 1, "test"));
+    REQUIRE(runtime->protectedCall(0, 1, "test").isOk());
     REQUIRE(lua_gettop(L) == topBefore);
     REQUIRE(lua_tointeger(L, -1) == 99);
     lua_pop(L, 1);
@@ -76,7 +76,7 @@ TEST_CASE("protectedCall restores stack height on failure") {
         "fail"
     );
     int topBefore = lua_gettop(L);
-    REQUIRE_FALSE(runtime->protectedCall(0, 0, "test"));
+    REQUIRE(runtime->protectedCall(0, 0, "test").isErr());
     REQUIRE(lua_gettop(L) == topBefore - 1);
     REQUIRE_FALSE(runtime->lastError().empty());
 }
@@ -85,10 +85,10 @@ TEST_CASE("runScript executes and reports errors") {
     RuntimeGuard guard;
     auto* runtime = luax::Runtime::getOrCreate();
 
-    REQUIRE(runtime->runScript("return 5", "@ok.luau"));
+    REQUIRE(runtime->runScript("return 5", "@ok.luau").isOk());
     REQUIRE(runtime->lastError().empty());
 
-    REQUIRE_FALSE(runtime->runScript("return (", "@bad.luau"));
+    REQUIRE(runtime->runScript("return (", "@bad.luau").isErr());
     REQUIRE_FALSE(runtime->lastError().empty());
 }
 

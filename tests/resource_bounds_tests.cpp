@@ -116,9 +116,7 @@ TEST_CASE("Runtime bytecode cache tracks total bytes and evicts by size") {
 
     for (int i = 0; i < 3; ++i) {
         auto key = "key_" + std::to_string(i);
-        bool ok = false;
-        (void)runtime->getOrCompileBytecode(key, source, ok);
-        REQUIRE(ok);
+        REQUIRE(runtime->getOrCompileBytecode(key, source).isOk());
     }
 
     REQUIRE(runtime->bytecodeCacheBytes() <= luax::kMaxBytecodeCacheBytes);
@@ -133,9 +131,7 @@ TEST_CASE("Runtime bytecode cache counts toward memory usage") {
 
     std::size_t before = runtime->memoryUsage();
     std::string source = "return 42";
-    bool ok = false;
-    (void)runtime->getOrCompileBytecode("memory_usage_key", source, ok);
-    REQUIRE(ok);
+    REQUIRE(runtime->getOrCompileBytecode("memory_usage_key", source).isOk());
     REQUIRE(runtime->memoryUsage() > before);
     REQUIRE(runtime->memoryUsage() >= runtime->bytecodeCacheBytes());
 }
@@ -146,11 +142,8 @@ TEST_CASE("Runtime bytecode cache hits bypass compile budget checks") {
     REQUIRE(runtime != nullptr);
 
     std::string source = "return 99";
-    bool ok = false;
-    (void)runtime->getOrCompileBytecode("cache_hit_key", source, ok);
-    REQUIRE(ok);
-    (void)runtime->getOrCompileBytecode("cache_hit_key", source, ok);
-    REQUIRE(ok);
+    REQUIRE(runtime->getOrCompileBytecode("cache_hit_key", source).isOk());
+    REQUIRE(runtime->getOrCompileBytecode("cache_hit_key", source).isOk());
 }
 
 TEST_CASE("geode.fs.read rejects directories") {

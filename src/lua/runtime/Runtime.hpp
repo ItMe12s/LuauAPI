@@ -49,13 +49,15 @@ namespace luax {
         imes::luauapi::RuntimeStatus status() const;
         bool assertMainThread() const;
 
-        bool runScript(
+        geode::Result<void> runScript(
             std::string_view src, std::string_view chunkName, int deadlineMs = kDefaultScriptDeadlineMs
         );
-        bool protectedCall(
+        geode::Result<void> protectedCall(
             int nargs, int nresults, std::string_view context, int deadlineMs = kDefaultScriptDeadlineMs
         ) override;
-        bool protectedCallWithTraceback(int nargs, int nresults, std::string_view context) override;
+        geode::Result<void> protectedCallWithTraceback(
+            int nargs, int nresults, std::string_view context
+        ) override;
         static std::string compileSource(std::string_view source);
 
         // Only outermost guard sets script budget/deadline.
@@ -93,8 +95,8 @@ namespace luax {
 
         void registerShutdownHook(std::function<void()> fn) override;
 
-        std::string const& getOrCompileBytecode(
-            std::string const& key, std::string_view source, bool& ok
+        geode::Result<std::reference_wrapper<std::string const>> getOrCompileBytecode(
+            std::string const& key, std::string_view source
         );
 
         std::size_t bytecodeCacheBytes() const {
@@ -136,6 +138,8 @@ namespace luax {
 
         std::string formatLuaError(char const* chunk);
         void setLastError(std::string error);
+        geode::Result<void> failWith(std::string error);
+        geode::Result<void> cachedError() const;
         void runShutdownHooks();
         void removeBytecodeCacheEntry(std::list<BytecodeCacheEntry>::iterator it);
         void trimBytecodeCacheForInsert(std::size_t incomingBytes);

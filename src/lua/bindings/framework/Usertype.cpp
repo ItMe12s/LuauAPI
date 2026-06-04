@@ -20,9 +20,9 @@ namespace luax::detail {
                 return false;
             }
             if (host->ready()) {
-                return host->protectedCall(nargs, nresults, context, deadlineMs);
+                return host->protectedCall(nargs, nresults, context, deadlineMs).isOk();
             }
-            return host->protectedCallWithTraceback(nargs, nresults, context);
+            return host->protectedCallWithTraceback(nargs, nresults, context).isOk();
         }
 
         int usertypeIndex(lua_State* L) {

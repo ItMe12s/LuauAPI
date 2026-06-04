@@ -67,7 +67,7 @@ namespace luax {
         int top = lua_gettop(L);
         if (!task.callback.push()) return false;
         Runtime::ResourcesRootScope scope(*runtime, task.callback.resourcesRoot());
-        bool ok = runtime->protectedCall(0, 0, "task", kHookScriptDeadlineMs);
+        bool ok = runtime->protectedCall(0, 0, "task", kHookScriptDeadlineMs).isOk();
         lua_settop(L, top);
         return ok;
     }
