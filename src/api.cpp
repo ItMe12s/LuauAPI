@@ -62,15 +62,7 @@ namespace {
             return geode::Err(rootResult.unwrapErr());
         }
 
-        if (relativePath.empty()) {
-            return geode::Err("relative path is empty");
-        }
-
-        if (relativePath.is_absolute()) {
-            return geode::Err("relative path must not be absolute");
-        }
-
-        auto flatPathResult = luax::normalizeVirtualPath(luax::normalizedPathString(relativePath));
+        auto flatPathResult = luax::validateResourcePath(relativePath);
         if (flatPathResult.isErr()) {
             return geode::Err("relative path must be a flat .luau resource name");
         }

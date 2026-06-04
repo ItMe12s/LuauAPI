@@ -52,6 +52,31 @@ TEST_CASE("path string helpers keep virtual and filesystem text distinct") {
     std::filesystem::remove_all(dir);
 }
 
+TEST_CASE("validateResourcePath normalizes flat luau resources") {
+    auto bootstrap = luax::validateResourcePath("Bootstrap");
+    REQUIRE(bootstrap.isOk());
+    REQUIRE(bootstrap.unwrap() == std::filesystem::path("Bootstrap.luau"));
+
+    auto withExtension = luax::validateResourcePath("Bootstrap.luau");
+    REQUIRE(withExtension.isOk());
+    REQUIRE(withExtension.unwrap() == std::filesystem::path("Bootstrap.luau"));
+
+    auto withoutExtension = luax::validateResourcePath("Child", false);
+    REQUIRE(withoutExtension.isOk());
+    REQUIRE(withoutExtension.unwrap() == std::filesystem::path("Child"));
+}
+
+TEST_CASE("validateResourcePath rejects unsafe or unsupported names") {
+    REQUIRE(luax::validateResourcePath("").isErr());
+    REQUIRE(luax::validateResourcePath("../Bootstrap").isErr());
+    REQUIRE(luax::validateResourcePath("scripts/Bootstrap").isErr());
+    REQUIRE(luax::validateResourcePath("Bootstrap.lua").isErr());
+
+    auto absolute =
+        luax::normalizedPathString(std::filesystem::temp_directory_path() / "Bootstrap.luau");
+    REQUIRE(luax::validateResourcePath(absolute).isErr());
+}
+
 TEST_CASE("virtual chunk paths normalize to flat luau resources") {
     auto withAt = luax::normalizeVirtualPath("@Bootstrap");
     REQUIRE(withAt.isOk());

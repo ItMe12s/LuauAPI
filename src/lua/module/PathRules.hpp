@@ -33,4 +33,25 @@ namespace luax {
         auto ext = path.extension();
         return !ext.empty() && ext != ".luau";
     }
+
+    inline bool isValidResourcePathValue(std::filesystem::path const& path, bool addLuauExtension = true) {
+        if (path.empty() || path.is_absolute()) {
+            return false;
+        }
+
+        auto normalized = path.lexically_normal();
+        if (!isFlatResourcePathValue(normalized) || hasUnsupportedExtensionValue(normalized)) {
+            return false;
+        }
+
+        if (!addLuauExtension) {
+            return true;
+        }
+
+        auto withExtension = normalized;
+        if (!hasLuauExtensionValue(withExtension)) {
+            withExtension += ".luau";
+        }
+        return isFlatResourcePathValue(withExtension);
+    }
 } // namespace luax

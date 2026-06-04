@@ -195,6 +195,37 @@ namespace luax {
         return isFlatResourcePathValue(path);
     }
 
+    inline ScriptResult<std::filesystem::path> validateResourcePath(
+        std::filesystem::path path, bool addLuauExtension = true
+    ) {
+        if (path.empty()) {
+            return scriptErr<std::filesystem::path>("resource path is empty");
+        }
+
+        if (path.is_absolute()) {
+            return scriptErr<std::filesystem::path>("resource path must not be absolute");
+        }
+
+        path = path.lexically_normal();
+        if (!isFlatResourcePath(path)) {
+            return scriptErr<std::filesystem::path>("resource path must be a flat resource name");
+        }
+
+        if (hasUnsupportedExtension(path)) {
+            return scriptErr<std::filesystem::path>("resource path extension must be .luau");
+        }
+
+        if (addLuauExtension && !hasLuauExtension(path)) {
+            path += ".luau";
+        }
+
+        if (!isFlatResourcePath(path)) {
+            return scriptErr<std::filesystem::path>("resource path must be a flat resource name");
+        }
+
+        return scriptOk(std::move(path));
+    }
+
     inline ScriptResult<std::filesystem::path> normalizeVirtualPath(std::string_view rawChunkName) {
         if (rawChunkName.empty()) {
             return scriptErr<std::filesystem::path>("chunk name is empty");
@@ -205,33 +236,29 @@ namespace luax {
             text.erase(text.begin());
         }
 
-        std::filesystem::path path(text);
-        if (path.empty()) {
+        if (text.empty()) {
             return scriptErr<std::filesystem::path>("chunk name is empty");
         }
 
-        if (path.is_absolute()) {
-            return scriptErr<std::filesystem::path>("chunk name must not be absolute");
+        auto validated = validateResourcePath(std::filesystem::path(text));
+        if (validated.isErr()) {
+            auto const& message = validated.unwrapErr();
+            if (message == "resource path is empty") {
+                return scriptErr<std::filesystem::path>("chunk name is empty");
+            }
+            if (message == "resource path must not be absolute") {
+                return scriptErr<std::filesystem::path>("chunk name must not be absolute");
+            }
+            if (message == "resource path must be a flat resource name") {
+                return scriptErr<std::filesystem::path>("chunk name must be a flat resource name");
+            }
+            if (message == "resource path extension must be .luau") {
+                return scriptErr<std::filesystem::path>("chunk name extension must be .luau");
+            }
+            return scriptErr<std::filesystem::path>(message);
         }
 
-        path = path.lexically_normal();
-        if (!isFlatResourcePath(path)) {
-            return scriptErr<std::filesystem::path>("chunk name must be a flat resource name");
-        }
-
-        if (hasUnsupportedExtension(path)) {
-            return scriptErr<std::filesystem::path>("chunk name extension must be .luau");
-        }
-
-        if (!hasLuauExtension(path)) {
-            path += ".luau";
-        }
-
-        if (!isFlatResourcePath(path)) {
-            return scriptErr<std::filesystem::path>("chunk name must be a flat resource name");
-        }
-
-        return scriptOk(path);
+        return validated;
     }
 
     inline ScriptResult<std::filesystem::path> canonicalRoot(std::filesystem::path const& resourcesRoot) {

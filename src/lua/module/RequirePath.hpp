@@ -17,8 +17,7 @@ namespace luax {
         if (name.find('/') != std::string_view::npos || name.find('\\') != std::string_view::npos) {
             return false;
         }
-        auto path = std::filesystem::path(name);
-        return isFlatResourcePathValue(path) && !hasUnsupportedExtensionValue(path);
+        return isValidResourcePathValue(std::filesystem::path(name), false);
     }
 
     inline std::filesystem::path requireModulePath(std::filesystem::path current) {

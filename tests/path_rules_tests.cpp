@@ -22,6 +22,21 @@ TEST_CASE("flat resource paths reject absolute paths") {
     REQUIRE_FALSE(luax::isFlatResourcePathValue(std::filesystem::path("C:/tmp/Bootstrap.luau")));
 }
 
+TEST_CASE("resource path validation accepts flat luau names") {
+    REQUIRE(luax::isValidResourcePathValue("Bootstrap"));
+    REQUIRE(luax::isValidResourcePathValue("Bootstrap.luau"));
+    REQUIRE(luax::isValidResourcePathValue("Bootstrap", false));
+    REQUIRE_FALSE(luax::isValidResourcePathValue("Bootstrap.lua"));
+}
+
+TEST_CASE("resource path validation rejects unsafe names") {
+    REQUIRE_FALSE(luax::isValidResourcePathValue(""));
+    REQUIRE_FALSE(luax::isValidResourcePathValue(".."));
+    REQUIRE_FALSE(luax::isValidResourcePathValue("../Bootstrap"));
+    REQUIRE_FALSE(luax::isValidResourcePathValue("mod/Bootstrap"));
+    REQUIRE_FALSE(luax::isValidResourcePathValue(std::filesystem::path("/tmp/Bootstrap.luau")));
+}
+
 TEST_CASE("extension checks only allow luau or empty extension") {
     REQUIRE(luax::hasLuauExtensionValue("Bootstrap.luau"));
     REQUIRE_FALSE(luax::hasLuauExtensionValue("Bootstrap"));

@@ -217,20 +217,16 @@ namespace luax {
             return NAVIGATE_NOT_FOUND;
         }
         std::string_view rest = requirer_chunkname + 1;
-        auto restPath = std::filesystem::path(rest);
-        if (!isFlatResourcePath(restPath) || hasUnsupportedExtension(restPath)) {
+        auto validated = validateResourcePath(std::filesystem::path(rest), false);
+        if (validated.isErr()) {
             return NAVIGATE_NOT_FOUND;
         }
 
-        std::filesystem::path candidate = m_root / restPath;
-        std::error_code ec;
-        auto canonical = std::filesystem::weakly_canonical(candidate, ec);
-        if (ec) return NAVIGATE_NOT_FOUND;
-
-        if (!pathInsideRoot(canonical, m_root)) {
+        auto resolved = resolveInsideRoot(m_root, normalizedPathString(validated.unwrap()));
+        if (resolved.isErr()) {
             return NAVIGATE_NOT_FOUND;
         }
-        m_current = canonical;
+        m_current = resolved.unwrap();
         return NAVIGATE_SUCCESS;
     }
 

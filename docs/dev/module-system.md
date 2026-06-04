@@ -20,8 +20,10 @@ It keeps all loading inside the resources root.
 
 ## Path rules
 
-The path helpers live in `PathRules.hpp` and `RequirePath.hpp`.
+The path helpers live in `PathRules.hpp`, `PathSandbox.hpp`, and `RequirePath.hpp`.
 
+- `validateResourcePath()` checks flat resource names and `.luau` extension policy.
+- `resolveInsideRoot()` canonicalizes a relative path and enforces root containment.
 - A flat resource path is a single file name with no folders.
 - `.` and `..` are rejected.
 - A relative path that starts with `..` is treated as an escape and rejected.
