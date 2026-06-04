@@ -29,6 +29,10 @@ namespace luax {
         return usage + incomingBytes > limit && entryCount > 0;
     }
 
+    inline bool memoryBudgetAllows(std::size_t usage, std::size_t limit, std::size_t additional) {
+        return additional <= limit && usage <= limit - additional;
+    }
+
     inline bool bytecodeCacheInsertNeedsEviction(
         std::size_t cacheUsage, std::size_t cacheLimit, std::size_t incomingBytes,
         std::size_t entryCount, std::size_t maxEntries, std::size_t memoryUsage, std::size_t memoryLimit
@@ -44,9 +48,5 @@ namespace luax {
 
     inline bool compileTimeWithinBudget(long long compileMs, int budgetMs) {
         return budgetMs <= 0 || compileMs <= budgetMs;
-    }
-
-    inline bool memoryBudgetAllows(std::size_t usage, std::size_t limit, std::size_t additional) {
-        return additional <= limit && usage <= limit - additional;
     }
 } // namespace luax
