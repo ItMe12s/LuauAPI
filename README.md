@@ -79,3 +79,13 @@ For anyone working on the runtime itself.
 - [ccCArray fields](docs/dev/cc-c-array.md)
 - [Nested containers](docs/dev/nested-containers.md)
 - [Pair containers](docs/dev/pair-containers.md)
+
+## Licenses
+
+- [Luau](https://github.com/luau-lang/luau/blob/master/LICENSE.txt)
+- [Geode SDK](https://github.com/geode-sdk/geode/blob/main/LICENSE.txt)
+- [gd-imgui-cocos](https://github.com/matcool/gd-imgui-cocos/blob/geode/LICENSE)
+- [Dear ImGui](https://github.com/ocornut/imgui/blob/master/LICENSE.txt)
+- [Catch2](https://github.com/catchorg/Catch2/blob/devel/LICENSE.txt)
+- [{fmt}](https://github.com/fmtlib/fmt/blob/main/LICENSE)
+- [Isocline](https://github.com/daanx/isocline/blob/main/LICENSE)
