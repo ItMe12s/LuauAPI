@@ -91,16 +91,21 @@ namespace luax {
             if (m_values.empty()) {
                 return;
             }
-            std::vector<std::size_t> indices;
-            indices.reserve(m_values.size());
-            for (std::size_t i = 0; i < m_values.size(); ++i) {
-                indices.push_back(i);
+            std::vector<std::uint64_t> ids;
+            ids.reserve(m_values.size());
+            for (Entry const& entry : m_values) {
+                ids.push_back(entry.id);
             }
-            for (std::size_t i : indices) {
-                if (i >= m_values.size()) {
+            for (std::uint64_t id : ids) {
+                auto it = m_index.find(id);
+                if (it == m_index.end()) {
                     continue;
                 }
-                fn(i, m_values[i].value);
+                std::size_t const index = it->second;
+                if (index >= m_values.size() || m_values[index].id != id) {
+                    continue;
+                }
+                fn(index, m_values[index].value);
             }
         }
 
