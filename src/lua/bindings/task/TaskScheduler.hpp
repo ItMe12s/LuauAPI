@@ -10,7 +10,7 @@
 struct lua_State;
 
 namespace luax {
-    class TaskScheduler {
+    class TaskScheduler final {
     public:
         static TaskScheduler& get();
 

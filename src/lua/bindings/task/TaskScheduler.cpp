@@ -9,8 +9,8 @@
 
 namespace luax {
     TaskScheduler& TaskScheduler::get() {
-        static auto* value = new TaskScheduler();
-        return *value;
+        static TaskScheduler s_instance;
+        return s_instance;
     }
 
     std::uint64_t TaskScheduler::add(LuaRef callback, double delaySeconds, double intervalSeconds) {
@@ -56,9 +56,8 @@ namespace luax {
             return nullptr;
         }
         Task& task = tasks[loc.index];
-        if (task.id != id || task.cancelled) {
+        if (task.id != id || task.cancelled)
             return nullptr;
-        }
         return &task;
     }
 
@@ -104,9 +103,9 @@ namespace luax {
             bool ok = fire(task);
             Task& current = m_timed[i];
             if (!current.cancelled) {
-                if (!ok) {
+                if (!ok)
                     current.cancelled = true;
-                } else if (current.interval > 0.0) {
+                else if (current.interval > 0.0) {
                     current.remaining = current.interval;
                 } else {
                     current.cancelled = true;
@@ -210,7 +209,7 @@ namespace luax {
 
 #if !defined(LUAUAPI_HOST_TESTS)
     namespace {
-        class TaskTickNode : public cocos2d::CCNode {
+        class TaskTickNode final : public cocos2d::CCNode {
         public:
             void update(float dt) override {
                 auto* runtime = Runtime::getIfInitialized();
@@ -221,29 +220,29 @@ namespace luax {
             }
         };
 
-        TaskTickNode* g_tickNode = nullptr;
+        TaskTickNode* s_tickNode = nullptr;
     }
 
     void armTaskTick() {
-        if (g_tickNode) return;
+        if (s_tickNode) return;
         auto* director = cocos2d::CCDirector::sharedDirector();
         if (!director) return;
         auto* scheduler = director->getScheduler();
         if (!scheduler) return;
-        g_tickNode = new TaskTickNode();
-        g_tickNode->init();
-        scheduler->scheduleUpdateForTarget(g_tickNode, 0, false);
+        s_tickNode = new TaskTickNode();
+        s_tickNode->init();
+        scheduler->scheduleUpdateForTarget(s_tickNode, 0, false);
     }
 
     void disarmTaskTick() {
-        if (!g_tickNode) return;
+        if (!s_tickNode) return;
         if (auto* director = cocos2d::CCDirector::sharedDirector()) {
             if (auto* scheduler = director->getScheduler()) {
-                scheduler->unscheduleUpdateForTarget(g_tickNode);
+                scheduler->unscheduleUpdateForTarget(s_tickNode);
             }
         }
-        g_tickNode->release();
-        g_tickNode = nullptr;
+        s_tickNode->release();
+        s_tickNode = nullptr;
     }
 #else
     void armTaskTick() {}

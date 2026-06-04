@@ -179,9 +179,15 @@ namespace luax {
         }
 
         static void pushOwned(lua_State* L, T* obj) {
-            if (!obj) { lua_pushnil(L); return; }
+            if (!obj) {
+                lua_pushnil(L);
+                return;
+            }
             auto const* info = detail::UsertypeRegistry::get().findInfo(std::type_index(typeid(T)));
-            if (!info || !detail::isValidUserdataTag(info->tag)) { lua_pushnil(L); return; }
+            if (!info || !detail::isValidUserdataTag(info->tag)) {
+                lua_pushnil(L);
+                return;
+            }
             detail::pushUserdataOwned(L, static_cast<cocos2d::CCObject*>(obj), *info);
             if (!retainLuaRef(static_cast<cocos2d::CCObject*>(obj), info->name.c_str())) {
                 lua_pop(L, 1);
@@ -190,9 +196,15 @@ namespace luax {
         }
 
         static void pushBorrowed(lua_State* L, T* obj) {
-            if (!obj) { lua_pushnil(L); return; }
+            if (!obj) {
+                lua_pushnil(L);
+                return;
+            }
             auto const* info = detail::UsertypeRegistry::get().findInfo(std::type_index(typeid(T)));
-            if (!info || !detail::isValidUserdataTag(info->tag)) { lua_pushnil(L); return; }
+            if (!info || !detail::isValidUserdataTag(info->tag)) {
+                lua_pushnil(L);
+                return;
+            }
             detail::pushUserdataBorrowed(L, static_cast<cocos2d::CCObject*>(obj), *info);
         }
     };

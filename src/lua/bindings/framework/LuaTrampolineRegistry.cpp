@@ -11,18 +11,20 @@
 namespace luax {
     namespace {
         std::vector<cocos2d::CCObject*>& orphanTrampolines() {
-            static auto* value = new std::vector<cocos2d::CCObject*>();
-            return *value;
+            // Cleared via shutdown hook.
+            static auto* s_orphans = new std::vector<cocos2d::CCObject*>();
+            return *s_orphans;
         }
 
         std::unordered_map<cocos2d::CCObject*, std::vector<cocos2d::CCObject*>>& anchorMap() {
-            static auto* value =
+            // Cleared by shutdown hook.
+            static auto* s_anchors =
                 new std::unordered_map<cocos2d::CCObject*, std::vector<cocos2d::CCObject*>>();
-            return *value;
+            return *s_anchors;
         }
 
-        bool g_shutdownHookRegistered = false;
-        bool g_orphanCapWarned = false;
+        bool s_shutdownHookRegistered = false;
+        bool s_orphanCapWarned = false;
     }
 
     void anchorTrampoline(cocos2d::CCObject* anchor, cocos2d::CCObject* trampoline) {
@@ -50,8 +52,8 @@ namespace luax {
     void registerOrphanTrampoline(cocos2d::CCObject* trampoline) {
         if (!trampoline) return;
         if (orphanTrampolines().size() >= kMaxCallbackTrampolines) {
-            if (!g_orphanCapWarned) {
-                g_orphanCapWarned = true;
+            if (!s_orphanCapWarned) {
+                s_orphanCapWarned = true;
                 geode::log::warn(
                     "orphan trampoline registry exceeded cap ({}), dropping new trampolines",
                     kMaxCallbackTrampolines
@@ -78,10 +80,10 @@ namespace luax {
     }
 
     void ensureTrampolineShutdownHook() {
-        if (g_shutdownHookRegistered) return;
+        if (s_shutdownHookRegistered) return;
         auto* runtime = Runtime::getIfInitialized();
         if (!runtime) return;
         runtime->registerShutdownHook(&clearOrphanTrampolines);
-        g_shutdownHookRegistered = true;
+        s_shutdownHookRegistered = true;
     }
 }

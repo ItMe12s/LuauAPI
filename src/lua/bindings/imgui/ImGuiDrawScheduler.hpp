@@ -8,7 +8,7 @@
 #include <vector>
 
 namespace luax {
-    class ImGuiDrawScheduler {
+    class ImGuiDrawScheduler final {
     public:
         static ImGuiDrawScheduler& get();
 

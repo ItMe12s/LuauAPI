@@ -21,14 +21,13 @@
 namespace {
     using namespace luax;
 
-    thread_local std::vector<char> g_inputTextBuffer;
+    thread_local std::vector<char> s_inputTextBuffer;
 
     std::vector<char>& inputTextBuffer(std::size_t cap) {
-        if (g_inputTextBuffer.size() < cap + 1) {
-            g_inputTextBuffer.resize(cap + 1);
-        }
-        std::fill(g_inputTextBuffer.begin(), g_inputTextBuffer.end(), '\0');
-        return g_inputTextBuffer;
+        if (s_inputTextBuffer.size() < cap + 1)
+            s_inputTextBuffer.resize(cap + 1);
+        std::fill(s_inputTextBuffer.begin(), s_inputTextBuffer.end(), '\0');
+        return s_inputTextBuffer;
     }
 
     constexpr char const* kHandleMeta          = "luax.ImGuiDrawHandle";
@@ -140,9 +139,8 @@ namespace {
 
         bool open = true;
         bool visible = ImGui::Begin(title.c_str(), closable ? &open : nullptr, flags);
-        if (visible) {
+        if (visible)
             callDrawClosure(L, 2, "imgui.window");
-        }
         ImGui::End();
 
         lua_pushboolean(L, open);
@@ -160,9 +158,8 @@ namespace {
         }
 
         bool visible = ImGui::BeginChild(id.c_str(), size);
-        if (visible) {
+        if (visible)
             callDrawClosure(L, 2, "imgui.child");
-        }
         ImGui::EndChild();
         return 0;
     }

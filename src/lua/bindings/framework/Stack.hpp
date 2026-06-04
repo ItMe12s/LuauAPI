@@ -21,7 +21,10 @@ namespace luax {
     inline void push(lua_State* L, float v) { lua_pushnumber(L, v); }
     inline void push(lua_State* L, double v) { lua_pushnumber(L, v); }
     inline void push(lua_State* L, char const* v) {
-        if (!v) { lua_pushnil(L); return; }
+        if (!v) {
+            lua_pushnil(L);
+            return;
+        }
         lua_pushstring(L, v);
     }
     inline void push(lua_State* L, std::string const& v) { lua_pushlstring(L, v.data(), v.size()); }

@@ -6,12 +6,12 @@
 
 namespace luax {
     namespace {
-        bool g_initialized = false;
+        bool s_initialized = false;
     }
 
     void initImGuiHost() {
-        if (g_initialized) return;
-        g_initialized = true;
+        if (s_initialized) return;
+        s_initialized = true;
 
         ImGuiCocos::get()
             .setup([] {})
@@ -22,10 +22,10 @@ namespace luax {
 
     void shutdownImGuiHost() {
         ImGuiDrawScheduler::get().clear();
-        if (g_initialized && ImGuiCocos::get().isInitialized()) {
+        if (s_initialized && ImGuiCocos::get().isInitialized()) {
             ImGuiCocos::get().destroy();
         }
-        g_initialized = false;
+        s_initialized = false;
     }
 
     void imguiHostSetVisible(bool visible) {

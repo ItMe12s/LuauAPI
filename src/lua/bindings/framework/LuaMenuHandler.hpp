@@ -7,7 +7,7 @@
 #include <memory>
 
 namespace luax {
-    class LuaMenuHandler : public cocos2d::CCObject {
+    class LuaMenuHandler final : public cocos2d::CCObject {
     public:
         static LuaMenuHandler* create(lua_State* L, int fnIndex);
 

@@ -5,8 +5,8 @@
 
 namespace luax {
     ImGuiDrawScheduler& ImGuiDrawScheduler::get() {
-        static auto* value = new ImGuiDrawScheduler();
-        return *value;
+        static ImGuiDrawScheduler s_instance;
+        return s_instance;
     }
 
     std::uint64_t ImGuiDrawScheduler::add(LuaRef callback) {

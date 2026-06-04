@@ -7,7 +7,7 @@
 #include <memory>
 
 namespace luax {
-    class LuaScheduleHandler : public cocos2d::CCObject {
+    class LuaScheduleHandler final : public cocos2d::CCObject {
     public:
         static LuaScheduleHandler* create(lua_State* L, int fnIndex);
         void onSchedule(float dt);
@@ -15,7 +15,7 @@ namespace luax {
         std::shared_ptr<LuaCallback> m_callback;
     };
 
-    class LuaCallFuncHandler : public cocos2d::CCObject {
+    class LuaCallFuncHandler final : public cocos2d::CCObject {
     public:
         static LuaCallFuncHandler* create(lua_State* L, int fnIndex);
         void onCallFunc();
@@ -23,7 +23,7 @@ namespace luax {
         std::shared_ptr<LuaCallback> m_callback;
     };
 
-    class LuaCallFuncNHandler : public cocos2d::CCObject {
+    class LuaCallFuncNHandler final : public cocos2d::CCObject {
     public:
         static LuaCallFuncNHandler* create(lua_State* L, int fnIndex);
         void onCallFuncN(cocos2d::CCNode* node);
@@ -31,7 +31,7 @@ namespace luax {
         std::shared_ptr<LuaCallback> m_callback;
     };
 
-    class LuaCallFuncNDHandler : public cocos2d::CCObject {
+    class LuaCallFuncNDHandler final : public cocos2d::CCObject {
     public:
         static LuaCallFuncNDHandler* create(lua_State* L, int fnIndex);
         void onCallFuncND(cocos2d::CCNode* node, void* data);
@@ -39,7 +39,7 @@ namespace luax {
         std::shared_ptr<LuaCallback> m_callback;
     };
 
-    class LuaCallFuncOHandler : public cocos2d::CCObject {
+    class LuaCallFuncOHandler final : public cocos2d::CCObject {
     public:
         static LuaCallFuncOHandler* create(lua_State* L, int fnIndex);
         void onCallFuncO(cocos2d::CCObject* obj);
