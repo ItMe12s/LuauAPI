@@ -27,3 +27,11 @@ TEST_CASE("bytecode cache accounting checks unified memory budget") {
     REQUIRE_FALSE(luax::memoryBudgetAllows(100, 512, 413));
     REQUIRE(luax::memoryBudgetAllows(0, 512, 512));
 }
+
+TEST_CASE("bytecode cache insert eviction combines cache and memory limits") {
+    REQUIRE(luax::bytecodeCacheInsertNeedsEviction(90, 100, 20, 1, 512, 0, 512));
+    REQUIRE_FALSE(luax::bytecodeCacheInsertNeedsEviction(80, 100, 20, 1, 512, 0, 512));
+    REQUIRE(luax::bytecodeCacheInsertNeedsEviction(10, 100, 20, 1, 512, 500, 512));
+    REQUIRE_FALSE(luax::bytecodeCacheInsertNeedsEviction(10, 100, 20, 1, 512, 100, 512));
+    REQUIRE_FALSE(luax::bytecodeCacheInsertNeedsEviction(0, 100, 20, 0, 512, 500, 512));
+}

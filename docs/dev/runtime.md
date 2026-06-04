@@ -40,6 +40,7 @@ A panic callback handles fatal Lua errors.
 
 `getOrCompileBytecode` compiles source to bytecode or returns a cached copy.
 The cache is a least recently used list with an index map, and it holds up to `512` entries.
+Before insert, `trimBytecodeCacheForInsert` evicts using one combined check over cache byte/entry limits and runtime memory usage (`bytecodeCacheInsertNeedsEviction` in `BytecodeCacheAccounting.hpp`).
 The cache key is built in the module layer from the path, size, modify time, and content hash.
 See [Module system](module-system.md).
 

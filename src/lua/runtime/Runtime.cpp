@@ -565,10 +565,6 @@ namespace luax {
         }
 
         trimBytecodeCacheForInsert(entryBytes);
-        while (!memoryBudgetAllows(m_memoryUsage, m_memoryLimit, entryBytes) &&
-               !m_bytecodeLru.empty()) {
-            removeBytecodeCacheEntry(std::prev(m_bytecodeLru.end()));
-        }
         if (!reserveExternalMemory(entryBytes)) {
             setLastError("luau memory limit exceeded");
             geode::log::error("luau memory limit exceeded ({} bytes)", m_memoryLimit);
@@ -621,8 +617,9 @@ namespace luax {
     }
 
     void Runtime::trimBytecodeCacheForInsert(std::size_t incomingBytes) {
-        while (bytecodeCacheNeedsEviction(
-            m_bytecodeCacheBytes, kMaxBytecodeCacheBytes, incomingBytes, m_bytecodeIndex.size(), kMaxBytecodeCacheEntries
+        while (bytecodeCacheInsertNeedsEviction(
+            m_bytecodeCacheBytes, kMaxBytecodeCacheBytes, incomingBytes, m_bytecodeIndex.size(),
+            kMaxBytecodeCacheEntries, m_memoryUsage, m_memoryLimit
         )) {
             removeBytecodeCacheEntry(std::prev(m_bytecodeLru.end()));
         }
