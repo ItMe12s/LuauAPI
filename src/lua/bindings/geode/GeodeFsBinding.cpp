@@ -57,7 +57,8 @@ namespace {
         if (!rootDir(L, root, dir, writable)) {
             luaL_error(
                 L,
-                "%s: unknown root '%s' (expected save/config/persistent/resources)",
+                "%s: unknown root '%s' (expected "
+                "save/config/persistent/resources)",
                 method,
                 root.c_str()
             );

@@ -93,7 +93,10 @@ TEST_CASE("TaskScheduler advance restores stack when protectedCall fails early")
     REQUIRE(lua_gettop(L) == topBefore);
 }
 
-TEST_CASE("TaskScheduler interval task drop-tick fires once after large frame delta") {
+TEST_CASE(
+    "TaskScheduler interval task drop-tick fires once after large frame "
+    "delta"
+) {
     RuntimeGuard guard;
     auto* runtime = luax::Runtime::getOrCreate();
     auto* L = runtime->state();
@@ -229,7 +232,10 @@ TEST_CASE("TaskScheduler m_index stays valid after deferred compaction") {
     lua_pop(L, 1);
 }
 
-TEST_CASE("TaskScheduler cancel still resolves tasks after mixed timed and deferred compaction") {
+TEST_CASE(
+    "TaskScheduler cancel still resolves tasks after mixed timed and "
+    "deferred compaction"
+) {
     RuntimeGuard guard;
     auto* runtime = luax::Runtime::getOrCreate();
     auto* L = runtime->state();

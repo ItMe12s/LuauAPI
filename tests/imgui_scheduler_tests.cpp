@@ -46,7 +46,10 @@ TEST_CASE("ImGuiDrawScheduler fires registered draw callbacks") {
     scheduler.clear();
 }
 
-TEST_CASE("ImGuiDrawScheduler drawAll restores stack when protectedCall fails early") {
+TEST_CASE(
+    "ImGuiDrawScheduler drawAll restores stack when protectedCall fails "
+    "early"
+) {
     RuntimeGuard guard;
     auto* runtime = luax::Runtime::getOrCreate();
     auto* L = runtime->state();

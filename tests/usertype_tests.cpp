@@ -162,7 +162,10 @@ TEST_CASE("Usertype metatable dispatches methods and fields") {
     node->release();
 }
 
-TEST_CASE("Usertype __index returns nil for unknown field without materializing m_fields") {
+TEST_CASE(
+    "Usertype __index returns nil for unknown field without "
+    "materializing m_fields"
+) {
     RuntimeGuard guard;
     auto* runtime = luax::Runtime::getOrCreate();
     auto* L = runtime->state();

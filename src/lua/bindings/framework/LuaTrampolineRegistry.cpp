@@ -54,7 +54,8 @@ namespace luax {
             if (!s_orphanCapWarned) {
                 s_orphanCapWarned = true;
                 geode::log::warn(
-                    "orphan trampoline registry exceeded cap ({}), dropping new trampolines",
+                    "orphan trampoline registry exceeded cap ({}), dropping "
+                    "new trampolines",
                     kMaxCallbackTrampolines
                 );
             }

@@ -56,7 +56,10 @@ namespace {
     }
 } // namespace
 
-TEST_CASE("Generated-style void std::function callback returns cleanly when invoke fails") {
+TEST_CASE(
+    "Generated-style void std::function callback returns cleanly when "
+    "invoke fails"
+) {
     RuntimeGuard guard;
     auto* runtime = luax::Runtime::getOrCreate();
     auto* L = runtime->state();
@@ -70,7 +73,10 @@ TEST_CASE("Generated-style void std::function callback returns cleanly when invo
     REQUIRE(lua_gettop(L) == before);
 }
 
-TEST_CASE("Generated-style bool std::function callback returns false when invoke fails") {
+TEST_CASE(
+    "Generated-style bool std::function callback returns false when "
+    "invoke fails"
+) {
     RuntimeGuard guard;
     auto* runtime = luax::Runtime::getOrCreate();
     auto* L = runtime->state();
@@ -84,7 +90,10 @@ TEST_CASE("Generated-style bool std::function callback returns false when invoke
     REQUIRE(lua_gettop(L) == before);
 }
 
-TEST_CASE("Generated-style bool std::function callback returns Lua result on success") {
+TEST_CASE(
+    "Generated-style bool std::function callback returns Lua result on "
+    "success"
+) {
     RuntimeGuard guard;
     auto* runtime = luax::Runtime::getOrCreate();
     auto* L = runtime->state();
