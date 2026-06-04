@@ -14,10 +14,13 @@ namespace luax::detail {
     std::uint32_t UsertypeRegistry::tagFor(std::type_index idx) {
         auto result = ensureInfo(idx);
         if (result.isErr()) {
-            geode::log::error("UsertypeRegistry: {}", result.unwrapErr());
             return 0;
         }
-        return result.unwrap()->tag;
+        auto const* info = result.unwrap();
+        if (!info || !isValidUserdataTag(info->tag)) {
+            return 0;
+        }
+        return info->tag;
     }
 
     geode::Result<TypeInfo*> UsertypeRegistry::ensureInfo(std::type_index idx) {

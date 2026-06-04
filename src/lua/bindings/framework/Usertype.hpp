@@ -27,6 +27,10 @@ namespace luax {
     };
 
     namespace detail {
+        constexpr bool isValidUserdataTag(std::uint32_t tag) noexcept {
+            return tag != 0 && tag < LUA_UTAG_LIMIT;
+        }
+
         struct TypeInfo {
             std::uint32_t tag = 0;
             std::string name;
@@ -80,7 +84,10 @@ namespace luax {
         static_assert(std::is_base_of_v<cocos2d::CCObject, T>, "Usertype<T> requires T : CCObject");
 
         static std::uint32_t tag() {
-            return detail::UsertypeRegistry::get().tagFor(std::type_index(typeid(T)));
+            if (auto const* info = detail::UsertypeRegistry::get().findInfo(std::type_index(typeid(T)))) {
+                return detail::isValidUserdataTag(info->tag) ? info->tag : 0;
+            }
+            return 0;
         }
 
         static char const* name() {
@@ -97,8 +104,8 @@ namespace luax {
                 return geode::Err(infoResult.unwrapErr());
             }
             auto& info = *infoResult.unwrap();
-            if (info.tag == 0 || info.tag >= LUA_UTAG_LIMIT) {
-                return geode::Err(fmt::format("{} userdata tag {} exceeds LUA_UTAG_LIMIT ({})", nm, info.tag, LUA_UTAG_LIMIT));
+            if (!detail::isValidUserdataTag(info.tag)) {
+                return geode::Err(fmt::format("{} invalid userdata tag {}", nm, info.tag));
             }
             info.name = nm;
             info.mtName = std::string("luax:") + nm;
@@ -107,14 +114,17 @@ namespace luax {
             info.baseClosure.clear();
             info.baseClosure.push_back(info.tag);
             for (std::uint32_t b : baseTags) {
+                if (!detail::isValidUserdataTag(b)) {
+                    return geode::Err(fmt::format("{} invalid base userdata tag {}", nm, b));
+                }
                 if (auto const* base = reg.findByTag(b)) {
                     for (std::uint32_t x : base->baseClosure) {
                         if (std::find(info.baseClosure.begin(), info.baseClosure.end(), x) == info.baseClosure.end()) {
                             info.baseClosure.push_back(x);
                         }
                     }
-                } else if (std::find(info.baseClosure.begin(), info.baseClosure.end(), b) == info.baseClosure.end()) {
-                    info.baseClosure.push_back(b);
+                } else {
+                    return geode::Err(fmt::format("{} unknown base userdata tag {}", nm, b));
                 }
             }
 
@@ -171,7 +181,7 @@ namespace luax {
         static void pushOwned(lua_State* L, T* obj) {
             if (!obj) { lua_pushnil(L); return; }
             auto const* info = detail::UsertypeRegistry::get().findInfo(std::type_index(typeid(T)));
-            if (!info) { lua_pushnil(L); return; }
+            if (!info || !detail::isValidUserdataTag(info->tag)) { lua_pushnil(L); return; }
             detail::pushUserdataOwned(L, static_cast<cocos2d::CCObject*>(obj), *info);
             if (!retainLuaRef(static_cast<cocos2d::CCObject*>(obj), info->name.c_str())) {
                 lua_pop(L, 1);
@@ -182,7 +192,7 @@ namespace luax {
         static void pushBorrowed(lua_State* L, T* obj) {
             if (!obj) { lua_pushnil(L); return; }
             auto const* info = detail::UsertypeRegistry::get().findInfo(std::type_index(typeid(T)));
-            if (!info) { lua_pushnil(L); return; }
+            if (!info || !detail::isValidUserdataTag(info->tag)) { lua_pushnil(L); return; }
             detail::pushUserdataBorrowed(L, static_cast<cocos2d::CCObject*>(obj), *info);
         }
     };

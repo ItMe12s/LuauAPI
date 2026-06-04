@@ -76,12 +76,42 @@ TEST_CASE("UsertypeRegistry assigns unique tags") {
     RuntimeGuard guard;
     auto& reg = luax::detail::UsertypeRegistry::get();
 
-    auto first = reg.tagFor(std::type_index(typeid(TestNode)));
-    auto second = reg.tagFor(std::type_index(typeid(cocos2d::CCNode)));
+    auto firstResult = reg.ensureInfo(std::type_index(typeid(TestNode)));
+    auto secondResult = reg.ensureInfo(std::type_index(typeid(cocos2d::CCNode)));
+    REQUIRE(firstResult.isOk());
+    REQUIRE(secondResult.isOk());
+    auto first = firstResult.unwrap()->tag;
+    auto second = secondResult.unwrap()->tag;
     REQUIRE(first != 0);
     REQUIRE(second != 0);
     REQUIRE(first != second);
     REQUIRE(reg.tagFor(std::type_index(typeid(TestNode))) == first);
+}
+
+TEST_CASE("Usertype tag returns zero before registration") {
+    RuntimeGuard guard;
+    REQUIRE(luax::Usertype<TestNode>::tag() == 0);
+}
+
+TEST_CASE("Usertype registerType rejects invalid base tag") {
+    RuntimeGuard guard;
+    auto* runtime = luax::Runtime::getOrCreate();
+    auto* L = runtime->state();
+
+    auto result = luax::Usertype<TestNode>::registerType(L, "TestNode", {0});
+    REQUIRE(result.isErr());
+}
+
+TEST_CASE("Usertype pushBorrowed returns nil when type is not registered") {
+    RuntimeGuard guard;
+    auto* runtime = luax::Runtime::getOrCreate();
+    auto* L = runtime->state();
+
+    auto* node = new TestNode();
+    luax::Usertype<TestNode>::pushBorrowed(L, node);
+    REQUIRE(lua_isnil(L, -1));
+    lua_pop(L, 1);
+    node->release();
 }
 
 TEST_CASE("Usertype metatable dispatches methods and fields") {

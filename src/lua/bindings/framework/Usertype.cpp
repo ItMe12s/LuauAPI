@@ -175,8 +175,8 @@ namespace luax::detail {
     }
 
     geode::Result<void> ensureUserdataMetatable(lua_State* L, TypeInfo const& info) {
-        if (info.tag == 0 || info.tag >= LUA_UTAG_LIMIT) {
-            return geode::Err(fmt::format("{} userdata tag {} exceeds LUA_UTAG_LIMIT ({})", info.name, info.tag, LUA_UTAG_LIMIT));
+        if (!isValidUserdataTag(info.tag)) {
+            return geode::Err(fmt::format("{} invalid userdata tag {}", info.name, info.tag));
         }
 
         lua_getuserdatametatable(L, static_cast<int>(info.tag));
@@ -308,13 +308,17 @@ namespace luax::detail {
         }
         auto const* nodeInfo = UsertypeRegistry::get().findInfo(std::type_index(typeid(cocos2d::CCNode)));
         if (!nodeInfo) return nullptr;
-        if (nodeInfo->tag != 0 && hasBase(*candidate.info, nodeInfo->tag)) {
+        if (isValidUserdataTag(nodeInfo->tag) && hasBase(*candidate.info, nodeInfo->tag)) {
             return static_cast<cocos2d::CCNode*>(candidate.obj);
         }
         return nullptr;
     }
 
     void pushUserdataOwned(lua_State* L, cocos2d::CCObject* obj, TypeInfo const& info) {
+        if (!isValidUserdataTag(info.tag)) {
+            lua_pushnil(L);
+            return;
+        }
         auto* storage = lua_newuserdatataggedwithmetatable(L, sizeof(UserdataBlock), static_cast<int>(info.tag));
         auto* block = new (storage) UserdataBlock();
         block->ptr = obj;
@@ -322,6 +326,10 @@ namespace luax::detail {
     }
 
     void pushUserdataBorrowed(lua_State* L, cocos2d::CCObject* obj, TypeInfo const& info) {
+        if (!isValidUserdataTag(info.tag)) {
+            lua_pushnil(L);
+            return;
+        }
         auto* storage = lua_newuserdatataggedwithmetatable(L, sizeof(UserdataBlock), static_cast<int>(info.tag));
         auto* block = new (storage) UserdataBlock();
         block->ptr = nullptr;
