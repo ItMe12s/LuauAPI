@@ -364,7 +364,7 @@ class HookApplyFnTests(unittest.TestCase):
                     name="init",
                     ret="bool",
                     args=[],
-                    platforms={"android64": "0x1"},
+                    platforms={"android64": "link"},
                 )
             ],
         )
