@@ -1,6 +1,7 @@
 #include "Usertype.hpp"
 
 #include "Fields.hpp"
+#include "OpaqueHandle.hpp"
 #include "lua/Config.hpp"
 #include "lua/bindings/framework/BindingHost.hpp"
 
@@ -276,6 +277,9 @@ namespace luax::detail {
         }
         int tagInt = lua_userdatatag(L, idx);
         if (tagInt <= 0) {
+            luaL_error(L, "%s expected %s at arg %d", method, targetName, idx);
+        }
+        if (tagInt == detail::opaqueHandleTag()) {
             luaL_error(L, "%s expected %s at arg %d", method, targetName, idx);
         }
         auto* info = UsertypeRegistry::get().findByTag(static_cast<std::uint32_t>(tagInt));

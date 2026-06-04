@@ -58,7 +58,7 @@ namespace luax::detail {
     void UsertypeRegistry::resetForTests() {
         m_byType.clear();
         m_byTag.clear();
-        m_next = 1;
+        m_next = 2;
     }
 #endif
 } // namespace luax::detail

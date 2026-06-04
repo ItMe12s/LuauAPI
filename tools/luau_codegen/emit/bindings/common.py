@@ -19,7 +19,7 @@ def _emit_common_file(emitted_classes: List[Class], plan: EmitPlan, target_platf
         out.append("}\n\n")
     out.append("namespace luauapi_gen {\n\n")
     out.append(
-        f'static_assert({len(emitted_classes)} < LUA_UTAG_LIMIT, "LuauAPI generated userdata tags exceed LUA_UTAG_LIMIT");\n\n'
+        f'static_assert({len(emitted_classes)} + 1 < LUA_UTAG_LIMIT, "LuauAPI generated userdata tags exceed LUA_UTAG_LIMIT");\n\n'
     )
     out.append("LuaHookTarget const* findHookTarget(std::string_view id);\n\n")
     out.append(emit_hook_support())

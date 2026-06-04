@@ -68,7 +68,7 @@ class GeneratedSafetyTests(unittest.TestCase):
         plan = collect_plan(root, "win")
         text = _emit_common_file(plan.emitted_classes, plan, "win")
 
-        self.assertIn("static_assert(1 < LUA_UTAG_LIMIT", text)
+        self.assertIn("static_assert(1 + 1 < LUA_UTAG_LIMIT", text)
 
     def test_common_file_release_hook_evicts_menu_handlers(self) -> None:
         ccobject = Class(

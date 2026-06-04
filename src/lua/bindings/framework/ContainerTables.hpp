@@ -374,7 +374,7 @@ namespace luax {
                         lua_pushnil(L);
                     }
                     else {
-                        lua_pushlightuserdata(L, elem);
+                        pushOpaqueHandle(L, elem);
                     }
                     lua_rawseti(L, tableIndex, i++);
                 }

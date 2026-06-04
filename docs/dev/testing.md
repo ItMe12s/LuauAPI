@@ -70,7 +70,7 @@ PYTHONPATH=tools python -m unittest discover -s tests/luau_codegen -p "test_*.py
 | Test file | Coverage |
 | --------- | -------- |
 | `test_audit.py` | Skip audit buckets, markdown sections, totals vs plan |
-| `test_bindings_fmod.py` | FMOD opaque handle bindings emit lightuserdata |
+| `test_bindings_fmod.py` | FMOD opaque handle bindings emit tagged opaque userdata |
 | `test_bindings_handlers.py` | SEL/menu handler collapse, schedule, lazy sprite callbacks |
 | `test_bindings_overloads.py` | Ambiguous overload policy, preferred overloads, const mangling |
 | `test_bindings_safety.py` | Generated hooks, fields, containers, hook API safety, codegen report notes |

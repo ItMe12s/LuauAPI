@@ -374,6 +374,7 @@ if(LUAUAPI_BUILD_TESTS)
         src/lua/bindings/Binding.cpp
         src/lua/bindings/framework/BindingHost.cpp
         src/lua/bindings/framework/Fields.cpp
+        src/lua/bindings/framework/OpaqueHandle.cpp
         src/lua/bindings/framework/Usertype.cpp
         src/lua/bindings/framework/UsertypeRegistry.cpp
         src/lua/bindings/framework/LuaDelegate.cpp
@@ -399,6 +400,7 @@ if(LUAUAPI_BUILD_TESTS)
         tests/callback_tests.cpp
         tests/geode_fs_path_tests.cpp
         tests/indexed_slot_map_tests.cpp
+        tests/opaque_handle_tests.cpp
         tests/imgui_scheduler_tests.cpp
         tests/loadstring_tests.cpp
         tests/path_sandbox_tests.cpp

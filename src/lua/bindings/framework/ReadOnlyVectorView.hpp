@@ -1,5 +1,6 @@
 #pragma once
 
+#include "OpaqueHandle.hpp"
 #include "Usertype.hpp"
 
 #include <Geode/Geode.hpp>
@@ -160,7 +161,7 @@ namespace luax {
                 lua_pushnil(L);
             }
             else {
-                lua_pushlightuserdata(L, value);
+                pushOpaqueHandle(L, value);
             }
             return 1;
         }
@@ -339,13 +340,8 @@ namespace luax {
             if (lua_isnil(L, -1)) {
                 out.push_back(nullptr);
             }
-            else if (!lua_islightuserdata(L, -1)) {
-                luaL_error(
-                    L, "%s expected opaque handle at index %lld", label, static_cast<long long>(i)
-                );
-            }
             else {
-                out.push_back(static_cast<T*>(lua_touserdata(L, -1)));
+                out.push_back(checkOpaqueHandle<T>(L, -1, label));
             }
             lua_pop(L, 1);
         }

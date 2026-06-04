@@ -840,37 +840,37 @@ class FmodMarshallingTests(unittest.TestCase):
         text = "".join(push_return(info, "state", False))
         self.assertIn("static_cast<int>(state)", text)
 
-    def test_fmod_channel_arg_uses_lightuserdata(self) -> None:
+    def test_fmod_channel_arg_uses_opaque_handle_check(self) -> None:
         info = TypeInfo(
             kind="opaque_handle",
             cxx_type="FMOD::Channel*",
             lua_type="FMODChannel",
         )
         text = "".join(check_arg(Arg("FMOD::Channel*", "channel"), info, 2, "arg0", "test"))
-        self.assertIn("lua_islightuserdata", text)
-        self.assertIn("static_cast<FMOD::Channel*>", text)
+        self.assertIn("checkOpaqueHandle<FMOD::Channel>", text)
+        self.assertNotIn("lua_islightuserdata", text)
         self.assertNotIn("Usertype<FMOD::Channel>", text)
 
-    def test_fmod_channel_return_pushes_lightuserdata(self) -> None:
+    def test_fmod_channel_return_pushes_opaque_handle(self) -> None:
         info = TypeInfo(
             kind="opaque_handle",
             cxx_type="FMOD::Channel*",
             lua_type="FMODChannel?",
         )
         text = "".join(push_return(info, "result", False))
-        self.assertIn("lua_pushlightuserdata(L, result)", text)
-        self.assertIn("lua_pushnil(L)", text)
+        self.assertIn("pushOpaqueHandle(L, result)", text)
+        self.assertNotIn("lua_pushlightuserdata", text)
         self.assertNotIn("Usertype<FMOD::Channel>", text)
 
-    def test_fmod_sound_alias_arg_uses_lightuserdata(self) -> None:
+    def test_fmod_sound_alias_arg_uses_opaque_handle_check(self) -> None:
         info = TypeInfo(
             kind="opaque_handle",
             cxx_type="FMODSound*",
             lua_type="FMODSound",
         )
         text = "".join(check_arg(Arg("FMODSound*", "sound"), info, 2, "arg0", "test"))
-        self.assertIn("lua_islightuserdata", text)
-        self.assertIn("static_cast<FMODSound*>", text)
+        self.assertIn("checkOpaqueHandle<FMODSound>", text)
+        self.assertNotIn("lua_islightuserdata", text)
         self.assertNotIn("Usertype<FMODSound>", text)
 
     def test_fmod_speaker_mode_enum_arg_uses_numeric_check(self) -> None:

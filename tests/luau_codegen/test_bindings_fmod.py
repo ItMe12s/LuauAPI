@@ -11,7 +11,7 @@ from helpers import (
 
 
 class FmodBindingTests(unittest.TestCase):
-    def test_fmod_opaque_handle_binding_emits_lightuserdata(self) -> None:
+    def test_fmod_opaque_handle_binding_emits_tagged_opaque_handle(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")
         cls = Class(
             name="FMODAudioEngine",
@@ -64,11 +64,11 @@ class FmodBindingTests(unittest.TestCase):
         )
 
         self.assertIn("self->stopChannel(arg0)", text)
-        self.assertIn("static_cast<FMOD::Channel*>(lua_touserdata", text)
+        self.assertIn("checkOpaqueHandle<FMOD::Channel>", text)
         self.assertIn("self->channelLinkSound(arg0, arg1)", text)
-        self.assertIn("static_cast<FMODSound*>(lua_touserdata", text)
+        self.assertIn("checkOpaqueHandle<FMODSound>", text)
         self.assertIn("auto result = self->getActiveMusicChannel();", text)
-        self.assertIn("lua_pushlightuserdata(L, result)", text)
+        self.assertIn("pushOpaqueHandle(L, result)", text)
         self.assertIn("static_cast<FMOD_RESULT>", text)
         self.assertIn("auto result = self->preloadEffect(arg0);", text)
         self.assertNotIn("Usertype<FMOD::Channel>", text)

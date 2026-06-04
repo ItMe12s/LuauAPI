@@ -19,6 +19,7 @@ def file_preamble() -> str:
         '#include "lua/bindings/framework/Stack.hpp"\n'
         '#include "lua/bindings/framework/TableUtil.hpp"\n'
         '#include "lua/bindings/framework/Types.hpp"\n'
+        '#include "lua/bindings/framework/OpaqueHandle.hpp"\n'
         '#include "lua/bindings/framework/Usertype.hpp"\n\n'
         "#include <Geode/Geode.hpp>\n"
         "#include <Geode/loader/Hook.hpp>\n"

@@ -1,5 +1,6 @@
 #include "LuaSelectorHandler.hpp"
 
+#include "OpaqueHandle.hpp"
 #include "Usertype.hpp"
 #include "lua/Config.hpp"
 #include "lua/runtime/Runtime.hpp"
@@ -102,7 +103,7 @@ namespace luax {
                 auto* c = static_cast<Ctx*>(raw);
                 Usertype<cocos2d::CCNode>::pushBorrowed(L, c->node);
                 if (c->data == nullptr) lua_pushnil(L);
-                else lua_pushlightuserdata(L, c->data);
+                else pushOpaqueHandle(L, c->data);
             },
             &ctx
         );
