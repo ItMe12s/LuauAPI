@@ -35,6 +35,23 @@ namespace {
     }
 }
 
+TEST_CASE("path string helpers keep virtual and filesystem text distinct") {
+    std::filesystem::path nested = std::filesystem::path("sub") / "Bootstrap.luau";
+    auto virtualText = luax::normalizedPathString(nested);
+    REQUIRE(virtualText.find('\\') == std::string::npos);
+    REQUIRE(virtualText == "sub/Bootstrap.luau");
+
+    auto dir = makeTempDir();
+    auto file = dir / "Module.luau";
+    writeFile(file, "return 1");
+
+    auto fsText = luax::filesystemPathString(file);
+    REQUIRE_FALSE(fsText.empty());
+    REQUIRE(luax::readScriptFile(dir / "missing.luau").isErr());
+
+    std::filesystem::remove_all(dir);
+}
+
 TEST_CASE("virtual chunk paths normalize to flat luau resources") {
     auto withAt = luax::normalizeVirtualPath("@Bootstrap");
     REQUIRE(withAt.isOk());

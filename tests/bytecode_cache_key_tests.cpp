@@ -56,6 +56,22 @@ TEST_CASE("bytecode cache key changes when contents change") {
     std::filesystem::remove_all(dir);
 }
 
+TEST_CASE("run script bytecode key uses filesystem root text") {
+    auto dir = makeTempDir();
+    auto key = luax::runScriptBytecodeKey(dir, "@Bootstrap.luau", "return 1");
+
+    REQUIRE(contains(key, luax::filesystemPathString(dir)));
+    REQUIRE(contains(key, "@Bootstrap.luau"));
+
+    std::filesystem::remove_all(dir);
+}
+
+TEST_CASE("run script bytecode key omits empty resources root") {
+    auto key = luax::runScriptBytecodeKey({}, "@Bootstrap.luau", "return 1");
+    REQUIRE(key.starts_with("@Bootstrap.luau|"));
+    REQUIRE(key.rfind('|') == key.find('|'));
+}
+
 TEST_CASE("bytecode cache key changes when file mtime changes") {
     auto dir = makeTempDir();
     auto file = dir / "Module.luau";

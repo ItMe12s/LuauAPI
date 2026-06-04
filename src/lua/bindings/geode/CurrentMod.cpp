@@ -68,7 +68,7 @@ namespace luax {
             return nullptr;
         }
         auto const& canonical = rootResult.unwrap();
-        auto key = normalizedPathString(canonical);
+        auto key = filesystemPathString(canonical);
 
         auto& cache = modCache();
         if (auto it = cache.find(key); it != cache.end()) {

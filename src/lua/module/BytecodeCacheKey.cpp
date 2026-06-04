@@ -90,7 +90,7 @@ namespace luax {
     ) {
         std::vector<std::string> parts;
         if (!resourcesRoot.empty()) {
-            parts.push_back(normalizedPathString(resourcesRoot));
+            parts.push_back(filesystemPathString(resourcesRoot));
         }
         parts.push_back(std::string(chunkName));
         parts.push_back(contentHashToken(source));

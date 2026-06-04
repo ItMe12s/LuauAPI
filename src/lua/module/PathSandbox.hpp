@@ -73,10 +73,13 @@ namespace luax {
     }
 #endif
 
+    // If anyone misuses theses I swear to god.
+    // POSIX-style path text for virtual chunk names and sandbox-relative checks.
     inline std::string normalizedPathString(std::filesystem::path const& path) {
         return path.generic_string();
     }
 
+    // Platform-safe path text for real filesystem paths.
     inline std::string filesystemPathString(std::filesystem::path const& path) {
 #if defined(LUAUAPI_HOST_TESTS)
         auto text = path.u8string();
