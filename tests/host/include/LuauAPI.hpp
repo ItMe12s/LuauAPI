@@ -31,7 +31,7 @@ namespace imes::luauapi {
 
     bool isReady();
     RuntimeStatus status();
-    std::string_view lastError();
+    std::string lastError();
     std::size_t memoryUsage();
     std::size_t memoryLimit();
     bool codegenEnabled();

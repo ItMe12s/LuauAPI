@@ -21,6 +21,7 @@
 #if !defined(LUAUAPI_HOST_TESTS)
     #include <Luau/Require.h>
 #endif
+#include <cctype>
 #include <cstdlib>
 #include <cstring>
 #include <fmt/format.h>
@@ -77,6 +78,98 @@ namespace luax {
             char const* text = luaL_tolstring(L, idx, &len);
             std::string out = text ? std::string(text, len) : std::string();
             lua_pop(L, 1);
+            return out;
+        }
+
+        bool iequalsPrefix(std::string_view haystack, std::string_view needle) {
+            if (haystack.size() < needle.size()) return false;
+            for (std::size_t i = 0; i < needle.size(); ++i) {
+                auto a = static_cast<unsigned char>(haystack[i]);
+                auto b = static_cast<unsigned char>(needle[i]);
+                if (std::tolower(a) != std::tolower(b)) return false;
+            }
+            return true;
+        }
+
+        std::string formatDebugSource(char const* source, std::filesystem::path const& resourcesRoot) {
+            if (!source || !source[0]) return {};
+            if (source[0] == '@') return source;
+
+            std::string_view text(source);
+            if (!text.empty() && text.front() == '=') {
+                text.remove_prefix(1);
+            }
+
+            std::filesystem::path filePath(text);
+            if (filePath.empty()) return source;
+
+            if (!resourcesRoot.empty() && filePath.is_absolute()) {
+                auto rootResult = canonicalRoot(resourcesRoot);
+                if (rootResult.isOk()) {
+                    std::error_code ec;
+                    auto resolved = std::filesystem::weakly_canonical(filePath, ec);
+                    if (!ec && pathInsideRoot(resolved, rootResult.unwrap())) {
+                        auto rel = resolved.lexically_relative(rootResult.unwrap());
+                        return "@" + normalizedPathString(rel);
+                    }
+                }
+            }
+
+            if (filePath.is_absolute()) {
+                auto name = filePath.filename();
+                if (!name.empty()) {
+                    return "@" + normalizedPathString(name);
+                }
+            }
+
+            return source;
+        }
+
+        std::size_t findRootPrefix(std::string const& text, std::string_view rootText, std::size_t pos) {
+            if (rootText.empty() || pos >= text.size()) return std::string::npos;
+#if defined(_WIN32)
+            for (std::size_t scan = pos; scan + rootText.size() <= text.size(); ++scan) {
+                if (iequalsPrefix(std::string_view(text).substr(scan), rootText)) {
+                    return scan;
+                }
+            }
+            return std::string::npos;
+#else
+            return text.find(rootText, pos);
+#endif
+        }
+
+        void replaceRootPrefix(std::string& text, std::string_view rootText) {
+            if (rootText.empty()) return;
+            std::size_t pos = 0;
+            while (pos < text.size()) {
+                std::size_t const found = findRootPrefix(text, rootText, pos);
+                if (found == std::string::npos) break;
+
+                std::size_t tail = found + rootText.size();
+                while (tail < text.size() && (text[tail] == '/' || text[tail] == '\\')) {
+                    ++tail;
+                }
+                text.replace(found, tail - found, "@");
+                pos = found + 1;
+            }
+        }
+
+        std::string redactHostPaths(std::string_view text, std::filesystem::path const& resourcesRoot) {
+            std::string out(text);
+            if (resourcesRoot.empty()) return out;
+
+            auto rootResult = canonicalRoot(resourcesRoot);
+            if (rootResult.isErr()) return out;
+
+            auto rootText = filesystemPathString(rootResult.unwrap());
+            replaceRootPrefix(out, rootText);
+
+            auto genericRoot = normalizedPathString(rootResult.unwrap());
+            if (genericRoot != rootText) {
+                replaceRootPrefix(out, genericRoot);
+            }
+
             return out;
         }
     } // namespace
@@ -316,9 +409,13 @@ namespace luax {
         int argc = lua_gettop(L);
         std::string out;
 
+        auto* self = static_cast<Runtime*>(lua_callbacks(L)->userdata);
+        std::filesystem::path const& resourcesRoot =
+            self ? self->resourcesRoot() : std::filesystem::path{};
+
         for (int i = 1; i <= argc; ++i) {
             if (i > 1) out.push_back('\t');
-            out.append(valueToString(L, i));
+            out.append(redactHostPaths(valueToString(L, i), resourcesRoot));
         }
 
         geode::log::info("[lua] {}", out);
@@ -369,10 +466,14 @@ namespace luax {
     }
 
     int Runtime::luaTraceback(lua_State* L) {
+        auto* self = static_cast<Runtime*>(lua_callbacks(L)->userdata);
+        std::filesystem::path const& resourcesRoot =
+            self ? self->resourcesRoot() : std::filesystem::path{};
+
         char const* msg = lua_tostring(L, 1);
         std::string out;
         if (msg) {
-            out.assign(msg);
+            out = redactHostPaths(msg, resourcesRoot);
         }
         else {
             out.assign("(non-string error)");
@@ -383,7 +484,7 @@ namespace luax {
         for (int level = 0; lua_getinfo(L, level, "sln", &ar); ++level) {
             out.append("\n    ");
             if (ar.source) {
-                out.append(ar.short_src);
+                out.append(formatDebugSource(ar.short_src, resourcesRoot));
             }
             if (ar.currentline > 0) {
                 out.append(":");
@@ -408,11 +509,11 @@ namespace luax {
             out.append("] ");
         }
         out.append(raw ? raw : "(unknown error)");
-        return out;
+        return redactHostPaths(out, m_resourcesRoot);
     }
 
     void Runtime::setLastError(std::string error) {
-        m_lastError = std::move(error);
+        m_lastError = redactHostPaths(error, m_resourcesRoot);
     }
 
     std::string Runtime::compileSource(std::string_view source) {

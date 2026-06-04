@@ -120,7 +120,7 @@ namespace {
 
     int imguiWindow(lua_State* L) {
         requireFrame(L, "imgui.window");
-        std::string title = check<std::string>(L, 1, "imgui.window");
+        char const* title = luaL_checkstring(L, 1);
         luaL_checktype(L, 2, LUA_TFUNCTION);
 
         ImGuiWindowFlags flags = 0;
@@ -138,7 +138,7 @@ namespace {
         }
 
         bool open = true;
-        bool visible = ImGui::Begin(title.c_str(), closable ? &open : nullptr, flags);
+        bool visible = ImGui::Begin(title, closable ? &open : nullptr, flags);
         if (visible) callDrawClosure(L, 2, "imgui.window");
         ImGui::End();
 
@@ -148,7 +148,7 @@ namespace {
 
     int imguiChild(lua_State* L) {
         requireFrame(L, "imgui.child");
-        std::string id = check<std::string>(L, 1, "imgui.child");
+        char const* id = luaL_checkstring(L, 1);
         luaL_checktype(L, 2, LUA_TFUNCTION);
 
         ImVec2 size(0.0f, 0.0f);
@@ -156,7 +156,7 @@ namespace {
             optFieldVec2(L, 3, "size", size, "imgui.child");
         }
 
-        bool visible = ImGui::BeginChild(id.c_str(), size);
+        bool visible = ImGui::BeginChild(id, size);
         if (visible) callDrawClosure(L, 2, "imgui.child");
         ImGui::EndChild();
         return 0;
@@ -164,57 +164,58 @@ namespace {
 
     int imguiText(lua_State* L) {
         requireFrame(L, "imgui.text");
-        std::string text = check<std::string>(L, 1, "imgui.text");
-        ImGui::TextUnformatted(text.c_str(), text.c_str() + text.size());
+        size_t textLen = 0;
+        char const* text = luaL_checklstring(L, 1, &textLen);
+        ImGui::TextUnformatted(text, text + textLen);
         return 0;
     }
 
     int imguiButton(lua_State* L) {
         requireFrame(L, "imgui.button");
-        std::string label = check<std::string>(L, 1, "imgui.button");
+        char const* label = luaL_checkstring(L, 1);
         ImVec2 size(0.0f, 0.0f);
         if (lua_istable(L, 2)) {
             optFieldVec2(L, 2, "size", size, "imgui.button");
         }
-        lua_pushboolean(L, ImGui::Button(label.c_str(), size));
+        lua_pushboolean(L, ImGui::Button(label, size));
         return 1;
     }
 
     int imguiCheckbox(lua_State* L) {
         requireFrame(L, "imgui.checkbox");
-        std::string label = check<std::string>(L, 1, "imgui.checkbox");
+        char const* label = luaL_checkstring(L, 1);
         bool value = check<bool>(L, 2, "imgui.checkbox");
-        ImGui::Checkbox(label.c_str(), &value);
+        ImGui::Checkbox(label, &value);
         lua_pushboolean(L, value);
         return 1;
     }
 
     int imguiSliderFloat(lua_State* L) {
         requireFrame(L, "imgui.sliderFloat");
-        std::string label = check<std::string>(L, 1, "imgui.sliderFloat");
+        char const* label = luaL_checkstring(L, 1);
         float value = check<float>(L, 2, "imgui.sliderFloat");
         float vmin = check<float>(L, 3, "imgui.sliderFloat");
         float vmax = check<float>(L, 4, "imgui.sliderFloat");
         char const* fmt = lua_isnoneornil(L, 5) ? "%.3f" : luaL_checkstring(L, 5);
-        ImGui::SliderFloat(label.c_str(), &value, vmin, vmax, fmt);
+        ImGui::SliderFloat(label, &value, vmin, vmax, fmt);
         lua_pushnumber(L, value);
         return 1;
     }
 
     int imguiSliderInt(lua_State* L) {
         requireFrame(L, "imgui.sliderInt");
-        std::string label = check<std::string>(L, 1, "imgui.sliderInt");
+        char const* label = luaL_checkstring(L, 1);
         int value = check<int>(L, 2, "imgui.sliderInt");
         int vmin = check<int>(L, 3, "imgui.sliderInt");
         int vmax = check<int>(L, 4, "imgui.sliderInt");
-        ImGui::SliderInt(label.c_str(), &value, vmin, vmax);
+        ImGui::SliderInt(label, &value, vmin, vmax);
         lua_pushinteger(L, value);
         return 1;
     }
 
     int imguiInputText(lua_State* L) {
         requireFrame(L, "imgui.inputText");
-        std::string label = check<std::string>(L, 1, "imgui.inputText");
+        char const* label = luaL_checkstring(L, 1);
         std::string value = check<std::string>(L, 2, "imgui.inputText");
 
         std::size_t cap = kInputTextDefaultCap;
@@ -228,14 +229,14 @@ namespace {
         std::size_t copy = std::min(value.size(), cap);
         std::copy_n(value.data(), copy, buffer.data());
 
-        ImGui::InputText(label.c_str(), buffer.data(), buffer.size());
+        ImGui::InputText(label, buffer.data(), buffer.size());
         lua_pushstring(L, buffer.data());
         return 1;
     }
 
     int imguiInputTextMultiline(lua_State* L) {
         requireFrame(L, "imgui.inputTextMultiline");
-        std::string label = check<std::string>(L, 1, "imgui.inputTextMultiline");
+        char const* label = luaL_checkstring(L, 1);
         std::string value = check<std::string>(L, 2, "imgui.inputTextMultiline");
 
         ImVec2 size(0.0f, 0.0f);
@@ -254,7 +255,7 @@ namespace {
         std::size_t copy = std::min(value.size(), cap);
         std::copy_n(value.data(), copy, buffer.data());
 
-        ImGui::InputTextMultiline(label.c_str(), buffer.data(), buffer.size(), size);
+        ImGui::InputTextMultiline(label, buffer.data(), buffer.size(), size);
         lua_pushstring(L, buffer.data());
         return 1;
     }

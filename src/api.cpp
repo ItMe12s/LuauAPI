@@ -261,11 +261,11 @@ namespace imes::luauapi {
         return runtime ? runtime->status() : RuntimeStatus::NotReady;
     }
 
-    std::string_view lastError() {
+    std::string lastError() {
         if (luax::Runtime::isShuttingDown()) return {};
         if (!luax::Runtime::isMainThread()) return {};
         auto* runtime = luax::Runtime::getIfInitialized();
-        return runtime ? std::string_view(runtime->lastError()) : std::string_view();
+        return runtime ? runtime->lastError() : std::string{};
     }
 
     std::size_t memoryUsage() {

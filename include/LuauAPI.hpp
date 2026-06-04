@@ -48,7 +48,7 @@ namespace imes::luauapi {
 
     LUAUAPI_DLL RuntimeStatus status();
 
-    LUAUAPI_DLL std::string_view lastError();
+    LUAUAPI_DLL std::string lastError();
 
     LUAUAPI_DLL std::size_t memoryUsage();
     LUAUAPI_DLL std::size_t memoryLimit();

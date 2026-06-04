@@ -62,6 +62,9 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(geode_bindings)
 message(STATUS "LuauAPI geode_bindings: ${LUAUAPI_BINDINGS_GIT_TAG}")
 
+# So basically what happened is that Luau and isocline ship without MSVC iterator-debug ABI.
+# Geode/Cocos use the default debug iterator layout when _ITERATOR_DEBUG_LEVEL is 1.
+# And I'm making sure Luau targets use iterator debug level 0 for STL compatibility.
 if (WIN32)
     foreach(LUAU_TARGET
         Luau.Common

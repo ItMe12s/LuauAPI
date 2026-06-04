@@ -58,6 +58,7 @@ namespace luax {
         bool protectedCallWithTraceback(int nargs, int nresults, std::string_view context) override;
         static std::string compileSource(std::string_view source);
 
+        // Only outermost guard sets script budget/deadline.
         class ScriptBudgetGuard final {
         public:
             ScriptBudgetGuard(Runtime& runtime, int deadlineMs);
@@ -86,7 +87,7 @@ namespace luax {
             m_lastError.clear();
         }
 
-        std::string const& lastError() const {
+        std::string lastError() const {
             return m_lastError;
         }
 

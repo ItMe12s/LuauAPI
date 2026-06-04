@@ -79,10 +79,10 @@ Returns the runtime status. Off the main thread or while shutting down, it retur
 ### lastError
 
 ```cpp
-std::string_view lastError();
+std::string lastError();
 ```
 
-Returns the last runtime error string. It is empty off the main thread or while shutting down.
+Returns a copy of the last runtime error string. It is empty off the main thread or while shutting down.
 
 ## Resource functions
 
