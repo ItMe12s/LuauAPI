@@ -52,13 +52,11 @@ namespace luax {
             if (index >= m_values.size()) {
                 return;
             }
-            std::size_t const last = m_values.size() - 1;
-            m_index.erase(m_values[index].id);
-            if (index != last) {
-                m_values[index] = std::move(m_values[last]);
-                m_index[m_values[index].id] = index;
+            if (m_iterationDepth > 0) {
+                m_pendingErase.push_back(m_values[index].id);
+                return;
             }
-            m_values.pop_back();
+            eraseResolved(index);
         }
 
         void clear() {
@@ -91,21 +89,13 @@ namespace luax {
             if (m_values.empty()) {
                 return;
             }
-            std::vector<std::uint64_t> ids;
-            ids.reserve(m_values.size());
-            for (Entry const& entry : m_values) {
-                ids.push_back(entry.id);
+            ++m_iterationDepth;
+            std::size_t const count = m_values.size();
+            for (std::size_t i = 0; i < count; ++i) {
+                fn(i, m_values[i].value);
             }
-            for (std::uint64_t id : ids) {
-                auto it = m_index.find(id);
-                if (it == m_index.end()) {
-                    continue;
-                }
-                std::size_t const index = it->second;
-                if (index >= m_values.size() || m_values[index].id != id) {
-                    continue;
-                }
-                fn(index, m_values[index].value);
+            if (--m_iterationDepth == 0) {
+                flushPendingErase();
             }
         }
 
@@ -133,7 +123,34 @@ namespace luax {
             T value{};
         };
 
+        void eraseResolved(std::size_t index) {
+            std::size_t const last = m_values.size() - 1;
+            m_index.erase(m_values[index].id);
+            if (index != last) {
+                m_values[index] = std::move(m_values[last]);
+                m_index[m_values[index].id] = index;
+            }
+            m_values.pop_back();
+        }
+
+        void flushPendingErase() {
+            for (std::uint64_t id : m_pendingErase) {
+                auto it = m_index.find(id);
+                if (it == m_index.end()) {
+                    continue;
+                }
+                std::size_t const index = it->second;
+                if (index >= m_values.size() || m_values[index].id != id) {
+                    continue;
+                }
+                eraseResolved(index);
+            }
+            m_pendingErase.clear();
+        }
+
         std::vector<Entry> m_values;
         std::unordered_map<std::uint64_t, std::size_t> m_index;
+        std::vector<std::uint64_t> m_pendingErase;
+        std::size_t m_iterationDepth = 0;
     };
 } // namespace luax
