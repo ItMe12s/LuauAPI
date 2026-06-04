@@ -65,6 +65,7 @@ namespace luax {
         if (rootResult.isErr()) {
             return nullptr;
         }
+        // currentMod comes from active script resources only.
         auto const& canonical = rootResult.unwrap();
         auto key = filesystemPathString(canonical);
 

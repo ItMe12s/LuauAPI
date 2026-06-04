@@ -1,7 +1,12 @@
+#include "lua/module/PathSandbox.hpp"
 #include "lua/runtime/Runtime.hpp"
 #include "lua_test_helpers.hpp"
 
+#include <Geode/log.hpp>
 #include <catch2/catch_test_macros.hpp>
+#include <chrono>
+#include <filesystem>
+#include <fstream>
 #include <lua.h>
 #include <lualib.h>
 #include <optional>
@@ -21,6 +26,26 @@ namespace {
 
     void pushReturnValue(lua_State* L, int value) {
         luauapi_test::loadFunction(L, std::string("return ") + std::to_string(value));
+    }
+
+    std::filesystem::path makeTempDir() {
+        auto dir = std::filesystem::temp_directory_path() /
+            ("luauapi_runtime_" +
+             std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
+        REQUIRE(std::filesystem::create_directories(dir));
+        return dir;
+    }
+
+    void requireNoRootLeak(std::string const& text, std::filesystem::path const& root) {
+        auto rootResult = luax::canonicalRoot(root);
+        REQUIRE(rootResult.isOk());
+        auto rootText = luax::filesystemPathString(rootResult.unwrap());
+        auto genericRoot = luax::normalizedPathString(rootResult.unwrap());
+
+        REQUIRE(text.find(rootText) == std::string::npos);
+        if (genericRoot != rootText) {
+            REQUIRE(text.find(genericRoot) == std::string::npos);
+        }
     }
 } // namespace
 
@@ -90,6 +115,66 @@ TEST_CASE("runScript executes and reports errors") {
 
     REQUIRE(runtime->runScript("return (", "@bad.luau").isErr());
     REQUIRE_FALSE(runtime->lastError().empty());
+}
+
+TEST_CASE("runtime errors redact resource-root paths") {
+    RuntimeGuard guard;
+    auto dir = makeTempDir();
+    auto nested = dir / "nested";
+    REQUIRE(std::filesystem::create_directories(nested));
+    auto scriptPath = nested / "secret.luau";
+    {
+        std::ofstream file(scriptPath);
+        file << "error path fixture";
+    }
+
+    auto* runtime = luax::Runtime::getOrCreate();
+    runtime->setResourcesRoot(dir);
+    geode::log::clearCapturedMessages();
+
+    auto pathText = luax::filesystemPathString(scriptPath);
+    auto source = std::string("local function explode()\n") + "    error([=[" + pathText +
+        "]=])\n" + "end\n" + "explode()";
+    auto result = runtime->runScript(source, "@" + pathText);
+
+    REQUIRE(result.isErr());
+    auto err = runtime->lastError();
+    requireNoRootLeak(err, dir);
+    REQUIRE(err.find("secret.luau") != std::string::npos);
+
+    auto const& errors = geode::log::capturedErrorMessages();
+    REQUIRE_FALSE(errors.empty());
+    requireNoRootLeak(errors.back(), dir);
+    REQUIRE(errors.back().find("secret.luau") != std::string::npos);
+
+    std::filesystem::remove_all(dir);
+}
+
+TEST_CASE("print output redacts resource-root paths") {
+    RuntimeGuard guard;
+    auto dir = makeTempDir();
+    auto scriptPath = dir / "print_secret.luau";
+    {
+        std::ofstream file(scriptPath);
+        file << "print path fixture";
+    }
+
+    auto* runtime = luax::Runtime::getOrCreate();
+    runtime->setResourcesRoot(dir);
+    geode::log::clearCapturedMessages();
+
+    auto pathText = luax::filesystemPathString(scriptPath);
+    auto source = std::string("print([=[") + pathText + "]=])";
+    auto before = geode::log::capturedInfoMessages().size();
+    REQUIRE(runtime->runScript(source, "@print.luau").isOk());
+
+    auto const& messages = geode::log::capturedInfoMessages();
+    REQUIRE(messages.size() == before + 1);
+    auto const& line = messages.back();
+    requireNoRootLeak(line, dir);
+    REQUIRE(line.find("print_secret.luau") != std::string::npos);
+
+    std::filesystem::remove_all(dir);
 }
 
 TEST_CASE("Runtime rejects off-main-thread access") {

@@ -93,10 +93,9 @@ namespace luax {
 
         std::string formatDebugSource(char const* source, std::filesystem::path const& resourcesRoot) {
             if (!source || !source[0]) return {};
-            if (source[0] == '@') return source;
 
             std::string_view text(source);
-            if (!text.empty() && text.front() == '=') {
+            if (!text.empty() && (text.front() == '@' || text.front() == '=')) {
                 text.remove_prefix(1);
             }
 
@@ -618,8 +617,13 @@ namespace luax {
 
     void Runtime::trimBytecodeCacheForInsert(std::size_t incomingBytes) {
         while (bytecodeCacheInsertNeedsEviction(
-            m_bytecodeCacheBytes, kMaxBytecodeCacheBytes, incomingBytes, m_bytecodeIndex.size(),
-            kMaxBytecodeCacheEntries, m_memoryUsage, m_memoryLimit
+            m_bytecodeCacheBytes,
+            kMaxBytecodeCacheBytes,
+            incomingBytes,
+            m_bytecodeIndex.size(),
+            kMaxBytecodeCacheEntries,
+            m_memoryUsage,
+            m_memoryLimit
         )) {
             removeBytecodeCacheEntry(std::prev(m_bytecodeLru.end()));
         }

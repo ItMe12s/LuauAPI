@@ -29,6 +29,16 @@ namespace {
         lua_call(L, 2, 1);
         lua_remove(L, -2);
     }
+
+    int pcallIndexReadOnlyOpaqueVectorView(lua_State* L, int viewIndex, int elementIndex) {
+        viewIndex = lua_absindex(L, viewIndex);
+        lua_getmetatable(L, viewIndex);
+        lua_getfield(L, -1, "__index");
+        lua_pushvalue(L, viewIndex);
+        lua_pushinteger(L, elementIndex);
+        lua_remove(L, -4);
+        return lua_pcall(L, 2, 1, 0);
+    }
 } // namespace
 
 TEST_CASE("OpaqueHandle push and check round-trip") {
@@ -86,6 +96,25 @@ TEST_CASE("ReadOnlyOpaqueVectorView indexes tagged opaque handles") {
     lua_pop(L, 2);
 
     owner->release();
+}
+
+TEST_CASE("ReadOnlyOpaqueVectorView rejects access after owner release") {
+    RuntimeGuard guard;
+    auto* runtime = luax::Runtime::getOrCreate();
+    auto* L = runtime->state();
+    REQUIRE(luax::registerOpaqueHandle(L).isOk());
+
+    auto* owner = new TestObj();
+    int first = 1;
+    gd::vector<int*> members;
+    members.push_back(&first);
+
+    luax::pushReadOnlyOpaqueVectorView<int>(L, members, owner);
+    owner->release();
+
+    REQUIRE(pcallIndexReadOnlyOpaqueVectorView(L, -1, 1) != 0);
+    REQUIRE(lua_isstring(L, -1));
+    lua_pop(L, 1);
 }
 
 TEST_CASE("checkOpaqueVectorView accepts table of opaque handles") {

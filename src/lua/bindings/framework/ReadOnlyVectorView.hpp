@@ -243,12 +243,14 @@ namespace luax {
         detail::ensureReadOnlyVectorViewMetatable<T>(L);
         auto* storage = lua_newuserdata(L, sizeof(detail::ReadOnlyVectorViewBlock<T>));
         auto* block = new (storage) detail::ReadOnlyVectorViewBlock<T>();
-        block->owned = std::make_unique<gd::vector<T*>>(vector);
-        block->vector = block->owned.get();
+        block->vector = &vector;
         block->owner = geode::WeakRef<cocos2d::CCObject>(owner);
         luaL_getmetatable(L, detail::readOnlyVectorViewMetatable<T>());
         lua_setmetatable(L, -2);
     }
+
+    template <class T>
+    void pushReadOnlyVectorView(lua_State*, gd::vector<T*> const&&, cocos2d::CCObject*) = delete;
 
     template <class T>
     void pushOwnedReadOnlyVectorView(lua_State* L, gd::vector<T*> const& vector) {
@@ -304,12 +306,14 @@ namespace luax {
         detail::ensureReadOnlyOpaqueVectorViewMetatable<T>(L);
         auto* storage = lua_newuserdata(L, sizeof(detail::ReadOnlyVectorViewBlock<T>));
         auto* block = new (storage) detail::ReadOnlyVectorViewBlock<T>();
-        block->owned = std::make_unique<gd::vector<T*>>(vector);
-        block->vector = block->owned.get();
+        block->vector = &vector;
         block->owner = geode::WeakRef<cocos2d::CCObject>(owner);
         luaL_getmetatable(L, detail::readOnlyOpaqueVectorViewMetatable<T>());
         lua_setmetatable(L, -2);
     }
+
+    template <class T>
+    void pushReadOnlyOpaqueVectorView(lua_State*, gd::vector<T*> const&&, cocos2d::CCObject*) = delete;
 
     template <class T>
     void pushOwnedReadOnlyOpaqueVectorView(lua_State* L, gd::vector<T*> const& vector) {

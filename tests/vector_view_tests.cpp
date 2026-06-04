@@ -29,9 +29,19 @@ namespace {
         lua_call(L, 2, 1);
         lua_remove(L, -2);
     }
+
+    int pcallIndexReadOnlyVectorView(lua_State* L, int viewIndex, int elementIndex) {
+        viewIndex = lua_absindex(L, viewIndex);
+        lua_getmetatable(L, viewIndex);
+        lua_getfield(L, -1, "__index");
+        lua_pushvalue(L, viewIndex);
+        lua_pushinteger(L, elementIndex);
+        lua_remove(L, -4);
+        return lua_pcall(L, 2, 1, 0);
+    }
 } // namespace
 
-TEST_CASE("ReadOnlyVectorView snapshots borrowed vector storage") {
+TEST_CASE("ReadOnlyVectorView tracks borrowed vector storage") {
     RuntimeGuard guard;
     auto* runtime = luax::Runtime::getOrCreate();
     auto* L = runtime->state();
@@ -49,6 +59,11 @@ TEST_CASE("ReadOnlyVectorView snapshots borrowed vector storage") {
 
     members.clear();
     indexReadOnlyVectorView(L, -1, 1);
+    REQUIRE(lua_isnil(L, -1));
+    lua_pop(L, 1);
+
+    members.push_back(child);
+    indexReadOnlyVectorView(L, -1, 1);
     REQUIRE(lua_isuserdata(L, -1));
 
     child->release();
@@ -56,7 +71,7 @@ TEST_CASE("ReadOnlyVectorView snapshots borrowed vector storage") {
     lua_pop(L, 1);
 }
 
-TEST_CASE("ReadOnlyVectorView remains usable after owner release") {
+TEST_CASE("ReadOnlyVectorView rejects access after owner release") {
     RuntimeGuard guard;
     auto* runtime = luax::Runtime::getOrCreate();
     auto* L = runtime->state();
@@ -70,8 +85,8 @@ TEST_CASE("ReadOnlyVectorView remains usable after owner release") {
     luax::pushReadOnlyVectorView<TestObj>(L, members, owner);
     owner->release();
 
-    indexReadOnlyVectorView(L, -1, 1);
-    REQUIRE(lua_isuserdata(L, -1));
+    REQUIRE(pcallIndexReadOnlyVectorView(L, -1, 1) != 0);
+    REQUIRE(lua_isstring(L, -1));
 
     child->release();
     lua_pop(L, 1);
