@@ -17,13 +17,14 @@ namespace luax {
             return 0;
         }
         Task task;
-        task.id = m_nextId++;
+        std::uint64_t const id = m_nextId++;
+        task.id = id;
         task.callback = std::move(callback);
         task.remaining = delaySeconds;
         task.interval = intervalSeconds;
-        m_index[task.id] = TaskLoc{false, m_timed.size()};
-        m_timed.push_back(std::move(task));
-        return m_timed.back().id;
+        m_timed.insertWithId(id, std::move(task));
+        m_deferredIds[id] = false;
+        return id;
     }
 
     std::uint64_t TaskScheduler::addDeferred(LuaRef callback) {
@@ -31,11 +32,12 @@ namespace luax {
             return 0;
         }
         Task task;
-        task.id = m_nextId++;
+        std::uint64_t const id = m_nextId++;
+        task.id = id;
         task.callback = std::move(callback);
-        m_index[task.id] = TaskLoc{true, m_deferred.size()};
-        m_deferred.push_back(std::move(task));
-        return m_deferred.back().id;
+        m_deferred.insertWithId(id, std::move(task));
+        m_deferredIds[id] = true;
+        return id;
     }
 
     void TaskScheduler::cancel(std::uint64_t id) {
@@ -45,18 +47,16 @@ namespace luax {
     }
 
     TaskScheduler::Task* TaskScheduler::find(std::uint64_t id) {
-        auto it = m_index.find(id);
-        if (it == m_index.end()) {
+        auto it = m_deferredIds.find(id);
+        if (it == m_deferredIds.end()) {
             return nullptr;
         }
-        auto& loc = it->second;
-        auto& tasks = loc.deferred ? m_deferred : m_timed;
-        if (loc.index >= tasks.size()) {
+        auto& slots = it->second ? m_deferred : m_timed;
+        Task* task = slots.find(id);
+        if (!task || task->cancelled) {
             return nullptr;
         }
-        Task& task = tasks[loc.index];
-        if (task.id != id || task.cancelled) return nullptr;
-        return &task;
+        return task;
     }
 
     bool TaskScheduler::fire(Task& task) {
@@ -73,23 +73,14 @@ namespace luax {
     }
 
     void TaskScheduler::fireDeferred() {
-        std::vector<std::size_t> due;
-        due.reserve(m_deferred.size());
-        for (std::size_t i = 0; i < m_deferred.size(); ++i) {
-            if (!m_deferred[i].cancelled) {
-                due.push_back(i);
+        m_deferred.forEachIndexSnapshot([&](std::size_t, Task& task) {
+            if (task.cancelled) {
+                return;
             }
-        }
 
-        for (std::size_t i : due) {
-            if (i >= m_deferred.size()) continue;
-            Task& task = m_deferred[i];
-            if (task.cancelled) continue;
-
-            bool ok = fire(task);
-            (void)ok;
-            m_deferred[i].cancelled = true;
-        }
+            (void)fire(task);
+            task.cancelled = true;
+        });
     }
 
     void TaskScheduler::fireTimedDue(std::vector<std::size_t> const& due) {
@@ -112,24 +103,20 @@ namespace luax {
         }
     }
 
-    void TaskScheduler::eraseAt(std::vector<Task>& tasks, bool deferred, std::size_t index) {
-        std::size_t last = tasks.size() - 1;
-        m_index.erase(tasks[index].id);
-        if (index != last) {
-            tasks[index] = std::move(tasks[last]);
-            m_index[tasks[index].id] = TaskLoc{deferred, index};
-        }
-        tasks.pop_back();
+    void TaskScheduler::eraseTaskAt(IndexedSlotMap<Task>& slots, std::size_t index) {
+        std::uint64_t const id = slots.idAt(index);
+        slots.eraseAt(index);
+        m_deferredIds.erase(id);
     }
 
-    void TaskScheduler::compact(std::vector<Task>& tasks, bool deferred) {
-        for (std::size_t i = 0; i < tasks.size();) {
-            if (!tasks[i].cancelled) {
+    void TaskScheduler::compact(IndexedSlotMap<Task>& slots) {
+        for (std::size_t i = 0; i < slots.size();) {
+            if (!slots[i].cancelled) {
                 ++i;
                 continue;
             }
-            tasks[i].callback.reset();
-            eraseAt(tasks, deferred, i);
+            slots[i].callback.reset();
+            eraseTaskAt(slots, i);
         }
     }
 
@@ -140,7 +127,7 @@ namespace luax {
 
         if (!m_deferred.empty()) {
             fireDeferred();
-            compact(m_deferred, true);
+            compact(m_deferred);
         }
 
         if (m_timed.empty()) return;
@@ -158,20 +145,20 @@ namespace luax {
 
         if (!due.empty()) {
             fireTimedDue(due);
-            compact(m_timed, false);
+            compact(m_timed);
         }
     }
 
     void TaskScheduler::clear() {
-        for (auto& task : m_timed) {
-            task.callback.reset();
+        for (std::size_t i = 0; i < m_timed.size(); ++i) {
+            m_timed[i].callback.reset();
         }
-        for (auto& task : m_deferred) {
-            task.callback.reset();
+        for (std::size_t i = 0; i < m_deferred.size(); ++i) {
+            m_deferred[i].callback.reset();
         }
         m_timed.clear();
         m_deferred.clear();
-        m_index.clear();
+        m_deferredIds.clear();
     }
 
     bool TaskScheduler::full() const {
@@ -180,28 +167,24 @@ namespace luax {
 
     std::size_t TaskScheduler::activeCount() const {
         std::size_t n = 0;
-        for (auto const& task : m_timed) {
-            if (!task.cancelled) ++n;
+        for (std::size_t i = 0; i < m_timed.size(); ++i) {
+            if (!m_timed[i].cancelled) ++n;
         }
-        for (auto const& task : m_deferred) {
-            if (!task.cancelled) ++n;
+        for (std::size_t i = 0; i < m_deferred.size(); ++i) {
+            if (!m_deferred[i].cancelled) ++n;
         }
         return n;
     }
 
 #if defined(LUAUAPI_HOST_TESTS)
     bool TaskScheduler::isScheduled(std::uint64_t id) const {
-        auto it = m_index.find(id);
-        if (it == m_index.end()) {
+        auto it = m_deferredIds.find(id);
+        if (it == m_deferredIds.end()) {
             return false;
         }
-        auto const& loc = it->second;
-        auto const& tasks = loc.deferred ? m_deferred : m_timed;
-        if (loc.index >= tasks.size()) {
-            return false;
-        }
-        Task const& task = tasks[loc.index];
-        return task.id == id && !task.cancelled;
+        auto const& slots = it->second ? m_deferred : m_timed;
+        Task const* task = slots.find(id);
+        return task != nullptr && !task->cancelled;
     }
 #endif
 

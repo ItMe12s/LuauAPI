@@ -10,15 +10,15 @@ namespace luax {
     }
 
     std::uint64_t ImGuiDrawScheduler::add(LuaRef callback) {
-        if (m_callbacks.size() >= kMaxImGuiDrawCallbacks) {
+        if (full()) {
             return 0;
         }
         DrawCb cb;
-        cb.id = m_nextId++;
+        std::uint64_t const id = m_nextId++;
+        cb.id = id;
         cb.callback = std::move(callback);
-        m_index[cb.id] = m_callbacks.size();
-        m_callbacks.push_back(std::move(cb));
-        return m_callbacks.back().id;
+        m_slots.insertWithId(id, std::move(cb));
+        return id;
     }
 
     void ImGuiDrawScheduler::cancel(std::uint64_t id) {
@@ -28,18 +28,11 @@ namespace luax {
     }
 
     ImGuiDrawScheduler::DrawCb* ImGuiDrawScheduler::find(std::uint64_t id) {
-        auto it = m_index.find(id);
-        if (it == m_index.end()) {
+        DrawCb* cb = m_slots.find(id);
+        if (!cb || cb->cancelled) {
             return nullptr;
         }
-        if (it->second >= m_callbacks.size()) {
-            return nullptr;
-        }
-        DrawCb& cb = m_callbacks[it->second];
-        if (cb.id != id || cb.cancelled) {
-            return nullptr;
-        }
-        return &cb;
+        return cb;
     }
 
     bool ImGuiDrawScheduler::fire(DrawCb& cb) {
@@ -55,58 +48,51 @@ namespace luax {
         return ok;
     }
 
-    void ImGuiDrawScheduler::eraseAt(std::size_t index) {
-        std::size_t last = m_callbacks.size() - 1;
-        m_index.erase(m_callbacks[index].id);
-        if (index != last) {
-            m_callbacks[index] = std::move(m_callbacks[last]);
-            m_index[m_callbacks[index].id] = index;
+    void ImGuiDrawScheduler::compactCancelled() {
+        for (std::size_t i = 0; i < m_slots.size();) {
+            if (!m_slots[i].cancelled) {
+                ++i;
+                continue;
+            }
+            m_slots[i].callback.reset();
+            m_slots.eraseAt(i);
         }
-        m_callbacks.pop_back();
     }
 
     void ImGuiDrawScheduler::drawAll() {
         auto* runtime = Runtime::getIfInitialized();
-        if (!runtime || m_callbacks.empty()) return;
+        if (!runtime || m_slots.empty()) return;
 
         m_inFrame = true;
 
-        for (std::size_t i = 0; i < m_callbacks.size(); ++i) {
-            DrawCb& cb = m_callbacks[i];
-            if (cb.cancelled) continue;
+        m_slots.forEachIndexSnapshot([&](std::size_t, DrawCb& cb) {
+            if (cb.cancelled) {
+                return;
+            }
             if (!fire(cb)) {
                 cb.cancelled = true;
             }
-        }
+        });
 
         m_inFrame = false;
-
-        for (std::size_t i = 0; i < m_callbacks.size();) {
-            if (!m_callbacks[i].cancelled) {
-                ++i;
-                continue;
-            }
-            m_callbacks[i].callback.reset();
-            eraseAt(i);
-        }
+        compactCancelled();
     }
 
     void ImGuiDrawScheduler::clear() {
-        for (auto& cb : m_callbacks) {
-            cb.callback.reset();
+        for (std::size_t i = 0; i < m_slots.size(); ++i) {
+            m_slots[i].callback.reset();
         }
-        m_callbacks.clear();
-        m_index.clear();
+        m_slots.clear();
     }
 
     bool ImGuiDrawScheduler::full() const {
-        return m_callbacks.size() >= kMaxImGuiDrawCallbacks;
+        return m_slots.size() >= kMaxImGuiDrawCallbacks;
     }
 
     std::size_t ImGuiDrawScheduler::activeCount() const {
         std::size_t n = 0;
-        for (auto const& cb : m_callbacks) {
-            if (!cb.cancelled) ++n;
+        for (std::size_t i = 0; i < m_slots.size(); ++i) {
+            if (!m_slots[i].cancelled) ++n;
         }
         return n;
     }

@@ -81,6 +81,41 @@ TEST_CASE("ImGuiDrawScheduler cancels callbacks that error") {
     REQUIRE(scheduler.activeCount() == 0);
 }
 
+TEST_CASE("ImGuiDrawScheduler m_slots stays valid after swap-and-pop compaction") {
+    RuntimeGuard guard;
+    auto* runtime = luax::Runtime::getOrCreate();
+    auto* L = runtime->state();
+
+    auto refHead = luauapi_test::makeCallback(L, "_G.drawHead = (_G.drawHead or 0) + 1");
+    auto refMid = luauapi_test::makeCallback(L, "_G.drawMid = (_G.drawMid or 0) + 1");
+    auto refTail = luauapi_test::makeCallback(L, "_G.drawTail = (_G.drawTail or 0) + 1");
+
+    auto& scheduler = luax::ImGuiDrawScheduler::get();
+    auto headId = scheduler.add(std::move(refHead));
+    auto midId = scheduler.add(std::move(refMid));
+    auto tailId = scheduler.add(std::move(refTail));
+    REQUIRE(headId != 0);
+    REQUIRE(midId != 0);
+    REQUIRE(tailId != 0);
+
+    scheduler.cancel(midId);
+    scheduler.drawAll();
+
+    REQUIRE(scheduler.activeCount() == 2);
+
+    scheduler.drawAll();
+
+    lua_getglobal(L, "drawHead");
+    REQUIRE(lua_tointeger(L, -1) == 2);
+    lua_pop(L, 1);
+    lua_getglobal(L, "drawMid");
+    REQUIRE(lua_isnil(L, -1));
+    lua_pop(L, 1);
+    lua_getglobal(L, "drawTail");
+    REQUIRE(lua_tointeger(L, -1) == 2);
+    lua_pop(L, 1);
+}
+
 TEST_CASE("ImGuiDrawScheduler honors cancel before draw") {
     RuntimeGuard guard;
     auto* runtime = luax::Runtime::getOrCreate();

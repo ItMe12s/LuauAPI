@@ -1,11 +1,10 @@
 #pragma once
 
 #include "lua/bindings/framework/LuaRef.hpp"
+#include "lua/util/IndexedSlotMap.hpp"
 
 #include <cstddef>
 #include <cstdint>
-#include <unordered_map>
-#include <vector>
 
 namespace luax {
     class ImGuiDrawScheduler final {
@@ -33,10 +32,9 @@ namespace luax {
 
         DrawCb* find(std::uint64_t id);
         bool fire(DrawCb& cb);
-        void eraseAt(std::size_t index);
+        void compactCancelled();
 
-        std::vector<DrawCb> m_callbacks;
-        std::unordered_map<std::uint64_t, std::size_t> m_index;
+        IndexedSlotMap<DrawCb> m_slots;
         std::uint64_t m_nextId = 1;
         bool m_inFrame = false;
     };

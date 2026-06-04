@@ -1,6 +1,7 @@
 #pragma once
 
 #include "lua/bindings/framework/LuaRef.hpp"
+#include "lua/util/IndexedSlotMap.hpp"
 
 #include <cstddef>
 #include <cstdint>
@@ -36,21 +37,16 @@ namespace luax {
             bool cancelled = false;
         };
 
-        struct TaskLoc {
-            bool deferred = false;
-            std::size_t index = 0;
-        };
-
         Task* find(std::uint64_t id);
         bool fire(Task& task);
         void fireDeferred();
         void fireTimedDue(std::vector<std::size_t> const& due);
-        void compact(std::vector<Task>& tasks, bool deferred);
-        void eraseAt(std::vector<Task>& tasks, bool deferred, std::size_t index);
+        void compact(IndexedSlotMap<Task>& slots);
+        void eraseTaskAt(IndexedSlotMap<Task>& slots, std::size_t index);
 
-        std::vector<Task> m_timed;
-        std::vector<Task> m_deferred;
-        std::unordered_map<std::uint64_t, TaskLoc> m_index;
+        IndexedSlotMap<Task> m_timed;
+        IndexedSlotMap<Task> m_deferred;
+        std::unordered_map<std::uint64_t, bool> m_deferredIds;
         std::uint64_t m_nextId = 1;
     };
 

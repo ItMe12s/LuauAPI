@@ -398,6 +398,7 @@ if(LUAUAPI_BUILD_TESTS)
         tests/bytecode_cache_key_tests.cpp
         tests/callback_tests.cpp
         tests/geode_fs_path_tests.cpp
+        tests/indexed_slot_map_tests.cpp
         tests/imgui_scheduler_tests.cpp
         tests/loadstring_tests.cpp
         tests/path_sandbox_tests.cpp
