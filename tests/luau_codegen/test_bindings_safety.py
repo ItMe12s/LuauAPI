@@ -107,9 +107,11 @@ class GeneratedSafetyTests(unittest.TestCase):
             "if (auto hookResult = installFieldsReleaseHook(); hookResult.isErr())",
             text,
         )
-        self.assertIn("return geode::Err(hookResult.unwrapErr());", text)
+        self.assertIn("CCObject::release hook setup skipped", text)
+        self.assertNotIn("return geode::Err(hookResult.unwrapErr());", text)
         self.assertIn("if (!address)", text)
         self.assertIn("CCObject::release hook address unresolved", text)
+        self.assertIn("installResult = geode::Ok();", text)
         self.assertNotIn("luau fields release hook failed", text)
 
     def test_codegen_report_documents_ccobject_release_hook(self) -> None:

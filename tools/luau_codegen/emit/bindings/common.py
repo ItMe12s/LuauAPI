@@ -47,25 +47,38 @@ def _emit_common_file(
         out.append("    if (installResult) return *installResult;\n")
         out.append(f"    void* const address = {release_address};\n")
         out.append("    if (!address) {\n")
+        out.append("        geode::log::warn(\n")
         out.append(
-            '        installResult = geode::Err("CCObject::release hook address unresolved");\n'
+            '            "CCObject::release hook address unresolved, Lua field final-release cleanup disabled"\n'
         )
+        out.append("        );\n")
+        out.append("        installResult = geode::Ok();\n")
         out.append("        return *installResult;\n")
         out.append("    }\n")
         out.append(
             '    auto result = geode::Mod::get()->hook(address, &luaapi_fields_release_hook, "LuauAPI CCObject::release fields cleanup", tulip::hook::TulipConvention::Default);\n'
         )
         out.append("    if (result.isErr()) {\n")
-        out.append("        installResult = geode::Err(result.unwrapErr());\n")
+        out.append("        geode::log::warn(\n")
+        out.append(
+            '            "CCObject::release hook install failed, Lua field final-release cleanup disabled: {}",\n'
+        )
+        out.append("            result.unwrapErr()\n")
+        out.append("        );\n")
+        out.append("        installResult = geode::Ok();\n")
         out.append("        return *installResult;\n")
         out.append("    }\n")
         out.append("    auto* hook = result.unwrap();\n")
         out.append("    if (hook && !hook->isEnabled()) {\n")
         out.append("        auto enableResult = hook->enable();\n")
         out.append("        if (enableResult.isErr()) {\n")
+        out.append("            geode::log::warn(\n")
         out.append(
-            "            installResult = geode::Err(enableResult.unwrapErr());\n"
+            '                "CCObject::release hook enable failed, Lua field final-release cleanup disabled: {}",\n'
         )
+        out.append("                enableResult.unwrapErr()\n")
+        out.append("            );\n")
+        out.append("            installResult = geode::Ok();\n")
         out.append("            return *installResult;\n")
         out.append("        }\n")
         out.append("    }\n")
@@ -118,7 +131,10 @@ def _emit_common_file(
     out.append(
         "    if (auto hookResult = installFieldsReleaseHook(); hookResult.isErr()) {\n"
     )
-    out.append("        return geode::Err(hookResult.unwrapErr());\n")
+    out.append("        geode::log::warn(\n")
+    out.append('            "CCObject::release hook setup skipped: {}",\n')
+    out.append("            hookResult.unwrapErr()\n")
+    out.append("        );\n")
     out.append("    }\n")
     out.append("    if (auto* host = luax::BindingHost::fromState(L)) {\n")
     out.append("        host->registerShutdownHook(&clearHookRegistry);\n")
