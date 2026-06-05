@@ -733,6 +733,9 @@ namespace luax {
         if (!assertMainThread()) {
             return failWith("luau runtime accessed off main thread");
         }
+        if (status() == imes::luauapi::RuntimeStatus::Panicked) {
+            return m_lastError.empty() ? failWith("luau runtime panicked") : cachedError();
+        }
         if (!m_state || !m_tracebackRef) {
             if (m_lastError.empty()) {
                 return failWith(m_initError.empty() ? "luau runtime not available" : m_initError);

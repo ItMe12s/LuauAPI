@@ -80,7 +80,14 @@ namespace luax {
         ) {
             auto path = self(ctx)->resolvedModulePath();
             if (path.isErr()) return WRITE_FAILURE;
-            return writeString(filesystemPathString(path.unwrap()), buffer, buffer_size, size_out);
+            auto filePath = path.unwrap();
+
+            auto contentsResult = readScriptFile(filePath);
+            if (contentsResult.isErr()) return WRITE_FAILURE;
+
+            return writeString(
+                requireCacheKey(filePath, contentsResult.unwrap()), buffer, buffer_size, size_out
+            );
         }
 
         luarequire_ConfigStatus get_config_status(lua_State*, void*) {

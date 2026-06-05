@@ -191,3 +191,62 @@ TEST_CASE("Runtime rejects off-main-thread access") {
     REQUIRE(offThreadAccess.has_value());
     REQUIRE_FALSE(*offThreadAccess);
 }
+
+TEST_CASE("protectedCallWithTraceback rejects panicked runtime without executing callable") {
+    RuntimeGuard guard;
+    auto* runtime = luax::Runtime::getOrCreate();
+    auto* L = runtime->state();
+    REQUIRE(L != nullptr);
+
+    static int executed = 0;
+    auto pushTrackedCallable = [&] {
+        executed = 0;
+        lua_pushcfunction(
+            L,
+            [](lua_State* state) -> int {
+                ++executed;
+                lua_pushinteger(state, 42);
+                return 1;
+            },
+            "shouldNotRun"
+        );
+    };
+
+    SECTION("default panic error") {
+        pushTrackedCallable();
+        int topBefore = lua_gettop(L);
+
+        runtime->clearLastError();
+        runtime->setStatusForTests(imes::luauapi::RuntimeStatus::Panicked);
+
+        REQUIRE(runtime->protectedCallWithTraceback(0, 1, "test").isErr());
+        REQUIRE(executed == 0);
+        REQUIRE(lua_gettop(L) == topBefore);
+        REQUIRE(runtime->lastError().find("luau runtime panicked") != std::string::npos);
+
+        lua_pop(L, 1);
+    }
+
+    SECTION("cached panic error") {
+        lua_pushcfunction(
+            L,
+            [](lua_State* state) -> int {
+                luaL_error(state, "setup boom");
+                return 0;
+            },
+            "setupFail"
+        );
+        REQUIRE(runtime->protectedCall(0, 0, "setup").isErr());
+        auto cached = runtime->lastError();
+        REQUIRE_FALSE(cached.empty());
+
+        runtime->setStatusForTests(imes::luauapi::RuntimeStatus::Panicked);
+        pushTrackedCallable();
+
+        REQUIRE(runtime->protectedCallWithTraceback(0, 1, "test").isErr());
+        REQUIRE(executed == 0);
+        REQUIRE(runtime->lastError() == cached);
+
+        lua_pop(L, 1);
+    }
+}

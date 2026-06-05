@@ -49,6 +49,19 @@ namespace {
         lua_pushliteral(L, "called");
         return 1;
     }
+
+    bool g_fieldAccessorRan = false;
+
+    int trackingGetField(lua_State* L) {
+        g_fieldAccessorRan = true;
+        lua_pushliteral(L, "value");
+        return 1;
+    }
+
+    int trackingSetField(lua_State* L) {
+        g_fieldAccessorRan = true;
+        return 0;
+    }
 } // namespace
 
 TEST_CASE("UsertypeRegistry tagFor returns zero when tag limit is exceeded") {
@@ -264,6 +277,72 @@ TEST_CASE("Usertype field setter uses traceback when runtime is not ready") {
     auto const& err = runtime->lastError();
     REQUIRE(err.find("field setter boom") != std::string::npos);
     REQUIRE(err.find("stack:") != std::string::npos);
+
+    lua_pop(L, 1);
+    node->release();
+}
+
+TEST_CASE("Usertype field getter skips accessor when runtime panicked") {
+    RuntimeGuard guard;
+    auto* runtime = luax::Runtime::getOrCreate();
+    auto* L = runtime->state();
+
+    REQUIRE(luax::Usertype<TestNode>::registerType(L, "TestNode").isOk());
+    luax::Usertype<TestNode>::field(L, "trackedField", &trackingGetField, &setTestField);
+
+    auto* node = new TestNode();
+    luax::Usertype<TestNode>::pushBorrowed(L, node);
+
+    g_fieldAccessorRan = false;
+    runtime->clearLastError();
+    runtime->setStatusForTests(imes::luauapi::RuntimeStatus::Panicked);
+
+    int topBefore = lua_gettop(L);
+    lua_getfield(L, -1, "trackedField");
+    REQUIRE(lua_gettop(L) == topBefore + 1);
+    REQUIRE(lua_isnil(L, -1));
+    REQUIRE_FALSE(g_fieldAccessorRan);
+
+    auto const& err = runtime->lastError();
+    REQUIRE(err.find("luau runtime panicked") != std::string::npos);
+    REQUIRE(err.find("stack:") == std::string::npos);
+
+    lua_pop(L, 2);
+    node->release();
+}
+
+TEST_CASE("Usertype field setter skips accessor when runtime panicked") {
+    RuntimeGuard guard;
+    auto* runtime = luax::Runtime::getOrCreate();
+    auto* L = runtime->state();
+
+    REQUIRE(luax::Usertype<TestNode>::registerType(L, "TestNode").isOk());
+    luax::Usertype<TestNode>::field(L, "trackedField", &getTestField, &trackingSetField);
+
+    auto* node = new TestNode();
+    luax::Usertype<TestNode>::pushBorrowed(L, node);
+
+    g_fieldAccessorRan = false;
+    runtime->clearLastError();
+    runtime->setStatusForTests(imes::luauapi::RuntimeStatus::Panicked);
+
+    lua_pushcfunction(
+        L,
+        [](lua_State* S) -> int {
+            lua_pushliteral(S, "value");
+            lua_setfield(S, 1, "trackedField");
+            return 0;
+        },
+        "assignTrackedField"
+    );
+    lua_pushvalue(L, -2);
+    REQUIRE(lua_pcall(L, 1, 0, 0) != 0);
+    lua_pop(L, 1);
+    REQUIRE_FALSE(g_fieldAccessorRan);
+
+    auto const& err = runtime->lastError();
+    REQUIRE(err.find("luau runtime panicked") != std::string::npos);
+    REQUIRE(err.find("stack:") == std::string::npos);
 
     lua_pop(L, 1);
     node->release();

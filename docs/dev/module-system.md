@@ -15,7 +15,8 @@ It keeps all loading inside the resources root.
 - `to_child` moves down one level, only from the root, and only to a flat allowed name.
 - `jump_to_alias` is not supported and always reports not found.
 - `is_module_present` checks that the resolved file exists.
-- `get_chunkname`, `get_loadname`, and `get_cache_key` report names and the resolved path.
+- `get_chunkname` and `get_loadname` report the chunk name and resolved path.
+- `get_cache_key` reads the module file and returns `requireCacheKey(path, contents)`.
 - `load` reads, compiles, and runs the module.
 
 ## Path rules
@@ -44,10 +45,12 @@ The path helpers live in `PathRules.hpp`, `PathSandbox.hpp`, and `RequirePath.hp
 8. Require exactly one return value. Reject a yield, and reject a runtime error.
 9. Move the returned value back to the caller.
 
-## Bytecode cache key
+## Bytecode and require cache keys
 
-`BytecodeCacheKey.hpp` builds the cache key from the file path, size, modify time, and a content hash.
-The runtime uses this key in its least recently used cache.
+`BytecodeCacheKey.hpp` builds cache keys from file metadata and content.
+
+- `bytecodeCacheKey` combines path, size, mtime, and content hash for the cache.
+- `requireCacheKey` is used by `get_cache_key` so the require cache updates whenever the file or its contents change.
 
 ## Sandbox
 
