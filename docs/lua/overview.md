@@ -59,10 +59,10 @@ Guides teach usage. Reference pages list signatures, types, and limits.
 - Errors are caught and written to the log. They do not crash the game.
 - When you create a `CCNode`, call `:setID()` with your mod id as a prefix. See [Using game objects](guide/using-game-objects.md).
 
-## Tools
+## Developer mode
 
-The mod ships a built-in script executor. It is an ImGui window with a code box and an Execute button.
-It loads by default and you can turn it off with the `enable-executor` mod setting.
+The mod ships built-in developer tools, such as a script executor and other experimental utilities.
+These tools are off by default. Turn them on with developer mode in the mod settings.
 
 See [Core concepts](../getting-started/chapter-5.md) for the full model.
 

@@ -1,16 +1,22 @@
+#include "lua/Config.hpp"
 #include "lua/bindings/Binding.hpp"
+#include "lua/bindings/framework/LuaCallback.hpp"
 #include "lua/bindings/framework/Stack.hpp"
 #include "lua/bindings/framework/TableUtil.hpp"
 #include "lua/bindings/geode/CurrentMod.hpp"
 #include "lua/bindings/geode/JsonConvert.hpp"
+#include "lua/runtime/Runtime.hpp"
 
 #include <Geode/loader/Mod.hpp>
+#include <Geode/loader/SettingV3.hpp>
 #include <Geode/utils/string.hpp>
 #include <lua.h>
 #include <lualib.h>
 #include <matjson.hpp>
+#include <memory>
 #include <string>
 #include <string_view>
+#include <vector>
 
 namespace {
     using namespace luax;
@@ -19,6 +25,36 @@ namespace {
         std::size_t len = 0;
         char const* key = luaL_checklstring(L, idx, &len);
         return std::string_view(key, len);
+    }
+
+    std::vector<geode::ListenerHandle>& settingListeners() {
+        static auto* s = new std::vector<geode::ListenerHandle>();
+        return *s;
+    }
+
+    bool s_settingShutdownHookRegistered = false;
+
+    void clearSettingListeners() {
+        settingListeners().clear();
+        s_settingShutdownHookRegistered = false;
+    }
+
+    void ensureSettingShutdownHook() {
+        if (s_settingShutdownHookRegistered) return;
+        auto* rt = Runtime::getIfInitialized();
+        if (!rt) return;
+        rt->registerShutdownHook(&clearSettingListeners);
+        s_settingShutdownHookRegistered = true;
+    }
+
+    void pushSettingValue(lua_State* L, std::shared_ptr<geode::SettingV3> const& setting) {
+        matjson::Value value;
+        if (setting && setting->save(value)) {
+            pushJson(L, value, 0);
+        }
+        else {
+            lua_pushnil(L);
+        }
     }
 
     int modGetSavedValue(lua_State* L) {
@@ -53,6 +89,70 @@ namespace {
     int modHasSetting(lua_State* L) {
         lua_pushboolean(L, requireCurrentMod(L)->hasSetting(checkKey(L, 1)));
         return 1;
+    }
+
+    int modListenForSettingChanges(lua_State* L) {
+        auto key = std::string(checkKey(L, 1));
+        luaL_checktype(L, 2, LUA_TFUNCTION);
+        auto* mod = requireCurrentMod(L);
+        auto cb = std::make_shared<luax::LuaCallback>(L, 2);
+
+        settingListeners().push_back(
+            geode::SettingChangedEventV3(mod, key).listen(
+                [cb](std::shared_ptr<geode::SettingV3> setting) {
+                    if (!cb->valid()) return;
+                    struct Ctx {
+                        std::shared_ptr<geode::SettingV3> const* s;
+                    } ctx{&setting};
+                    cb->invoke(
+                        1,
+                        0,
+                        "geode.Mod.listenForSettingChanges",
+                        kHookScriptDeadlineMs,
+                        +[](lua_State* L, void* raw) {
+                            pushSettingValue(L, *static_cast<Ctx*>(raw)->s);
+                        },
+                        &ctx
+                    );
+                }
+            )
+        );
+        ensureSettingShutdownHook();
+        return 0;
+    }
+
+    int modListenForAllSettingChanges(lua_State* L) {
+        luaL_checktype(L, 1, LUA_TFUNCTION);
+        auto modID = std::string(requireCurrentMod(L)->getID());
+        auto cb = std::make_shared<luax::LuaCallback>(L, 1);
+
+        settingListeners().push_back(
+            geode::SettingChangedEventV3().listen(
+                [cb, modID](
+                    std::string_view evModID, std::string_view key, std::shared_ptr<geode::SettingV3> setting
+                ) {
+                    if (evModID != modID || !cb->valid()) return;
+                    struct Ctx {
+                        std::string_view key;
+                        std::shared_ptr<geode::SettingV3> const* s;
+                    } ctx{key, &setting};
+                    cb->invoke(
+                        2,
+                        0,
+                        "geode.Mod.listenForAllSettingChanges",
+                        kHookScriptDeadlineMs,
+                        +[](lua_State* L, void* raw) {
+                            auto* c = static_cast<Ctx*>(raw);
+                            lua_pushlstring(L, c->key.data(), c->key.size());
+                            pushSettingValue(L, *c->s);
+                        },
+                        &ctx
+                    );
+                }
+            )
+        );
+        ensureSettingShutdownHook();
+        return 0;
     }
 
     int modGetID(lua_State* L) {
@@ -92,6 +192,8 @@ namespace {
         setTableCFunction(L, -1, "setSavedValue", &modSetSavedValue);
         setTableCFunction(L, -1, "getSettingValue", &modGetSettingValue);
         setTableCFunction(L, -1, "hasSetting", &modHasSetting);
+        setTableCFunction(L, -1, "listenForSettingChanges", &modListenForSettingChanges);
+        setTableCFunction(L, -1, "listenForAllSettingChanges", &modListenForAllSettingChanges);
         setTableCFunction(L, -1, "getID", &modGetID);
         setTableCFunction(L, -1, "getName", &modGetName);
         setTableCFunction(L, -1, "getVersion", &modGetVersion);

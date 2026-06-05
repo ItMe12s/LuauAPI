@@ -21,7 +21,8 @@ From `mod.json`:
 
 ## Settings
 
-- `enable-executor`: turns on the built-in ImGui script executor (on by default).
+- `enable-developer-mode`: turns on the built-in developer tools. Off by default.
+- `enable-executor`: show/hide the script executor. Requires developer mode.
 
 ## Required tools
 

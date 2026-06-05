@@ -2,7 +2,7 @@
 
 ## Summary
 
-This page lists `geode.Mod`. It reads the host mod metadata, paths, saved values, and settings.
+This page lists `geode.Mod`. It reads the host mod metadata, paths, saved values, and settings. It can also listen for setting changes.
 
 ## getSavedValue
 
@@ -36,6 +36,24 @@ geode.Mod.hasSetting(key: string) -> boolean
 ```
 
 Returns true when the setting key exists in `mod.json`.
+
+## listenForSettingChanges
+
+```lua
+geode.Mod.listenForSettingChanges(key: string, callback: (value: any) -> ())
+```
+
+Calls your function whenever the setting with this key changes. The function gets the new value.
+The value is a JSON type such as boolean, number, string, or table. The listener stays active until the script unloads.
+
+## listenForAllSettingChanges
+
+```lua
+geode.Mod.listenForAllSettingChanges(callback: (key: string, value: any) -> ())
+```
+
+Calls your function whenever any setting for this mod changes.
+The function gets the setting key and the new value. The listener stays active until the script unloads.
 
 ## getID
 
@@ -94,9 +112,9 @@ Returns the path to the mod config folder.
 geode.Mod.setSavedValue("count", 3)
 print(geode.Mod.getSavedValue("count"))
 
-if geode.Mod.hasSetting("enable-executor") then
-    print(geode.Mod.getSettingValue("enable-executor"))
-end
+geode.Mod.listenForSettingChanges("my-toggle", function(value)
+    print("my-toggle is now", value)
+end)
 
 print(geode.Mod.getResourcesDir())
 ```

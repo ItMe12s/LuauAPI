@@ -198,6 +198,12 @@ def emit(root: Root, target_platform: str = "win", plan: EmitPlan | None = None)
     lines.append("    setSavedValue: (key: string, value: any) -> (),\n")
     lines.append("    getSettingValue: (key: string) -> any,\n")
     lines.append("    hasSetting: (key: string) -> boolean,\n")
+    lines.append(
+        "    listenForSettingChanges: (key: string, callback: (value: any) -> ()) -> (),\n"
+    )
+    lines.append(
+        "    listenForAllSettingChanges: (callback: (key: string, value: any) -> ()) -> (),\n"
+    )
     lines.append("    getID: () -> string,\n")
     lines.append("    getName: () -> string,\n")
     lines.append("    getVersion: () -> string,\n")

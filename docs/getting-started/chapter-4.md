@@ -44,10 +44,10 @@ $on_mod(Loaded) {
 - It cannot include folders, and it cannot be absolute.
 - The file must sit inside the resources directory you pass, and it must be `4 MiB` or smaller.
 
-## Built-in executor
+## Developer mode
 
-LuauAPI also ships a built-in script executor. It loads `executor_Bootstrap.luau` from LuauAPI resources.
-Turn it off with the `enable-executor` mod setting if you do not need it.
+LuauAPI also ships built-in developer tools. They load when you turn on developer mode in the mod settings.
+Developer mode is off by default. Turn it on only if you need these tools.
 
 ## Related
 
