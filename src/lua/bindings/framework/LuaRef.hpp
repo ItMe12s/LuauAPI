@@ -53,7 +53,7 @@ namespace luax {
             if (!L) return;
             auto* runtime = Runtime::getOrCreate();
             if (!runtime) return;
-            m_state = L;
+            m_state = lua_mainthread(L);
             m_generation = runtime->generation();
             m_resourcesRoot = runtime->resourcesRoot();
             lua_pushvalue(L, index);

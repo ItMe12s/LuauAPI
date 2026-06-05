@@ -29,7 +29,7 @@
 	},
 	"resources": {
 		"files": [
-			"src/scripts/**/*.luau"
+			"src/scripts/*.luau"
 		]
 	},
 	"settings": {

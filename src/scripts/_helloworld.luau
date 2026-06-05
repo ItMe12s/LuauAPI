@@ -1,6 +1,8 @@
 local cocos = geode.cocos2d
 local modId = geode.Mod.getID()
 
+local handle = nil
+
 local function helloWorld(self)
     local director = cocos.CCDirector.sharedDirector()
     if not director then return end
@@ -10,9 +12,10 @@ local function helloWorld(self)
     label:setID(modId .. "/hello-label")
     label:setPosition({ x = winSize.width / 2, y = winSize.height / 2 })
     self:addChild(label)
+    handle:remove()
 end
 
-geode.hook("geode.gd.MenuLayer:init/0", {
+handle = geode.hook("geode.gd.MenuLayer:init/0", {
     after = function(self, result)
         helloWorld(self)
         return result
