@@ -13,7 +13,7 @@ Add a dependency on `imes.luauapi` in your own mod, then include the header.
 ```json
 {
     "dependencies": {
-        "imes.luauapi": ">=1.0.0"
+        "imes.luauapi": ">=0.1.0-beta.1"
     },
     "resources": {
         "files": [
