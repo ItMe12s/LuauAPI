@@ -21,6 +21,20 @@ It includes a higher-level SDK that helps you start simple, iterate faster, and 
 
 ---
 
+## PSA: NORMAL USERS READ THIS
+
+If someone asks you to **turn on Developer Mode** and copy-paste a script, **DON'T DO IT**.
+They're trying trick you. Running untrusted scripts can:
+
+- Delete your save files
+- Steal your account password
+- Download viruses onto your computer or phone
+
+LuauAPI is not responsible for any damages caused by unverified scripts.
+Only download mods from the official [Geode SDK](https://geode-sdk.org/) index or in-game.
+
+---
+
 ## Learn more
 
 [>>> Check out the LuauAPI Documentation <<<](https://github.com/ItMe12s/LuauAPI/blob/master/README.md)

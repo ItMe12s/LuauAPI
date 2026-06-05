@@ -9,7 +9,7 @@ This page lists them and shows how to run them.
 ## Turning tests on
 
 Tests are disabled by default. Enable them with the `LUAUAPI_BUILD_TESTS` option after a normal configure.
-See [Building](../getting-started/building.md) for the base CMake workflow.
+See [Building](../getting-started/chapter-2.md) for the base CMake workflow.
 
 ```bash
 cmake -B build -DLUAUAPI_BUILD_TESTS=ON
@@ -33,8 +33,10 @@ The C++ tests use Catch2 `v3.15.0` and build into the `luauapi_tests` executable
 | `tests/fields_tests.cpp` | `m_fields` and release eviction |
 | `tests/geode_fs_path_tests.cpp` | Geode filesystem binding path resolution inside a root |
 | `tests/imgui_scheduler_tests.cpp` | ImGui draw scheduler registration |
+| `tests/indexed_slot_map_tests.cpp` | Indexed slot map structure used by the schedulers |
 | `tests/loadstring_tests.cpp` | `loadstring` compile and runtime behavior |
 | `tests/misc_correctness_tests.cpp` | Assorted runtime correctness cases |
+| `tests/opaque_handle_tests.cpp` | Opaque pointer userdata handles |
 | `tests/path_rules_tests.cpp` | Flat path rules and extension checks |
 | `tests/path_sandbox_tests.cpp` | File containment, virtual chunk paths, and escape rejection |
 | `tests/require_path_tests.cpp` | Require child name rules and the `.luau` extension fill in |
@@ -50,13 +52,31 @@ CTest discovers the Catch2 cases at build time.
 ## No game libraries in tests
 
 The host tests must not link the game.
-`CMakeLists.txt` fails deliberately if the test target tries to link the Geode bindings, Cocos2d, the extensions library, GLEW, FMOD, or OpenGL.
+
+`CMakeLists.txt` fails deliberately if the test target tries to link:
+
+- Geode bindings
+- Cocos2d
+- the extensions library
+- GLEW
+- FMOD
+- OpenGL
+
 This keeps the tests fast and host only.
 
 ## The Python codegen tests
 
 The test suite under `tests/luau_codegen/` covers the Python binding generator:
-Broma parsing, filtering, C++ bindings, Luau type stubs, plan/parity, CLI I/O, free-function overrides, and the Geode SDK scanner.
+
+- Broma parsing
+- Filtering
+- C++ bindings
+- Luau type stubs
+- Plan/parity
+- CLI I/O
+- Free-function overrides
+- Geode SDK scanner
+
 See [Codegen](codegen.md) for what the generator produces.
 
 CTest registers it as `luauapi_codegen_tests` and runs it via `python -m unittest discover`.
@@ -109,8 +129,10 @@ PYTHONPATH=tools python -m unittest discover -s tests/luau_codegen -p "test_*.py
 - `tests/fields_tests.cpp`
 - `tests/geode_fs_path_tests.cpp`
 - `tests/imgui_scheduler_tests.cpp`
+- `tests/indexed_slot_map_tests.cpp`
 - `tests/loadstring_tests.cpp`
 - `tests/misc_correctness_tests.cpp`
+- `tests/opaque_handle_tests.cpp`
 - `tests/path_rules_tests.cpp`
 - `tests/path_sandbox_tests.cpp`
 - `tests/require_path_tests.cpp`

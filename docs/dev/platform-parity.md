@@ -60,8 +60,8 @@ The `intersection` block has final common counts and how many methods, hooks, fi
 
 Broma bindings may wrap members in platform blocks such as `android, ios { int m_spawnCount; }`.
 The Broma parser attaches a `platforms` set (e.g. `android32`, `android64`, `ios`) to such fields, avoiding header misparsing.
-Per-platform plans only consider fields that apply on that platform,
-the intersected `types/geode.d.luau` omits platform-only members entirely so they never appear in the common Luau surface.
+Per-platform plans only consider fields that apply on that platform.
+The intersected `types/geode.d.luau` omits platform-only members entirely, so they never appear in the common Luau surface.
 
 ## Policy
 

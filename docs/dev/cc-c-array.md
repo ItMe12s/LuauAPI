@@ -5,7 +5,8 @@
 `cocos2d::ccCArray*` stores raw `void*` slots (no retain/release).
 Codegen binds it only for audited dispatcher handler queues where element type and parent ownership are known.
 
-Policy lives in `tools/luau_codegen/model/cc_c_array.py`. Runtime lives in `src/lua/bindings/framework/ReadOnlyCCArrayView.hpp`.
+Policy lives in `tools/luau_codegen/model/cc_c_array.py`.
+Runtime lives in `src/lua/bindings/framework/ReadOnlyCCArrayView.hpp`.
 
 ## Luau shape
 
@@ -19,7 +20,7 @@ and `CCTouchHandler` on the matching dispatcher `m_pHandlersToAdd` / `m_pHandler
 ## Runtime
 
 | C++ API | Role |
-| --- | --- |
+| ------- | ---- |
 | `pushReadOnlyCCArrayView<T>` | Field getter, borrows elements while dispatcher `self` is alive |
 
 The view userdata indexes `1..num` from `ccCArray::arr`, pushes borrowed usertypes, and errors on `__newindex`.

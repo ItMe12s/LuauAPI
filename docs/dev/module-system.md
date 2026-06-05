@@ -2,7 +2,8 @@
 
 ## Summary
 
-The module system implements `require`. It builds on the Luau require runtime with a custom configuration, and it lives in `src/lua/module/`.
+The module system implements `require`.
+It builds on the Luau require runtime with a custom configuration, and it lives in `src/lua/module/`.
 It keeps all loading inside the resources root.
 
 ## The requirer
@@ -54,7 +55,8 @@ The path helpers live in `PathRules.hpp`, `PathSandbox.hpp`, and `RequirePath.hp
 
 ## Sandbox
 
-The path sandbox helpers in `PathSandbox.hpp` read files with a size check and resolve a candidate path so that it stays inside the root. This is the same containment used by the public `runFile` path.
+The path sandbox helpers in `PathSandbox.hpp` read files with a size check and resolve a candidate path so that it stays inside the root.
+This is the same containment used by the public `runFile` path.
 
 ## Source
 

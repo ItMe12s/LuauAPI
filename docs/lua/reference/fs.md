@@ -5,8 +5,8 @@
 This page lists `geode.fs`. It reads and writes files inside the running mod's own directories.
 
 Every call takes a **root** as its first argument. The root selects one of the mod's
-directories, and all access is sandboxed to that directory: a `path` that escapes the
-root (for example with `..`) or an absolute `path` is rejected.
+directories. Access is sandboxed to that directory. A `path` that escapes the root
+(for example with `..`) or an absolute `path` is rejected.
 
 | Root | Directory | Access |
 | --- | --- | --- |

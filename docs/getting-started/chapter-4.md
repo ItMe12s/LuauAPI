@@ -1,4 +1,4 @@
-# Your first script
+# Chapter 4: Your first script
 
 ## Summary
 
@@ -36,22 +36,29 @@ $on_mod(Loaded) {
 }
 ```
 
-`runFile` must run on the main thread. The example uses `queueInMainThread` to guarantee that.
+`runFile` must run on the main thread. The example uses `queueInMainThread` to make sure of that.
 
 ## What the rules are
 
-The file name must be a flat `.luau` resource name. It cannot include folders, and it cannot be absolute.
-The file must sit inside the resources directory you pass, and it must be `4 MiB` or smaller.
+- The file name must be a flat `.luau` resource name.
+- It cannot include folders, and it cannot be absolute.
+- The file must sit inside the resources directory you pass, and it must be `4 MiB` or smaller.
 
-## Next steps
+## Built-in executor
 
-- Editor: [Editor setup](editor-setup.md)
+LuauAPI also ships a built-in script executor. It loads `executor_Bootstrap.luau` from LuauAPI resources.
+Turn it off with the `enable-executor` mod setting if you do not need it.
+
+## Related
+
 - Script side: [Overview](../lua/overview.md)
 - Host side: [Integration guide](../cpp/integration-guide.md)
-- Background: [Core concepts](concepts.md)
 
-LuauAPI also ships a built-in script executor. Turn it off with the `enable-executor` mod setting if you do not need it.
-It loads `executor_Bootstrap.luau` from LuauAPI resources.
+## Next
+
+- [Chapter 5: Core concepts](chapter-5.md)
+
+Back to [Chapter 3: Editor setup](chapter-3.md).
 
 ## Source
 

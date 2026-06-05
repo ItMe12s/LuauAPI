@@ -2,7 +2,8 @@
 
 ## Summary
 
-The `Runtime` class owns the Lua state and everything around it, including memory, deadlines, the bytecode cache, bindings setup, and shutdown.
+The `Runtime` class owns the Lua state and everything around it,
+including memory, deadlines, the bytecode cache, bindings setup, and shutdown.
 It lives in `src/lua/runtime/`.
 
 ## One shared instance
@@ -52,15 +53,18 @@ See [Module system](module-system.md).
 
 ## Resources root
 
-`ResourcesRootScope` sets the current resources root for the length of a run and restores the previous one afterward. The requirer uses this root to resolve modules.
+`ResourcesRootScope` sets the current resources root for the length of a run and restores the previous one afterward.
+The requirer uses this root to resolve modules.
 
 ## Generation counter
 
-`m_generation` increases across runtime restarts. A `LuaRef` records the generation it was created in. After a restart, an old reference sees a generation mismatch and reports itself as invalid.
+`m_generation` increases across runtime restarts. A `LuaRef` records the generation it was created in.
+After a restart, an old reference sees a generation mismatch and reports itself as invalid.
 
 ## Shutdown
 
-`registerShutdownHook` adds a cleanup callback. On shutdown the runtime runs the hooks, releases Lua owned C++ objects, clears field tables, and closes the Lua state.
+`registerShutdownHook` adds a cleanup callback.
+On shutdown the runtime runs the hooks, releases Lua owned C++ objects, clears field tables, and closes the Lua state.
 
 ## Source
 

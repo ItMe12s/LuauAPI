@@ -50,7 +50,7 @@ return M
 
 - [Tasks and time](tasks-and-time.md)
 - [Modules and require](modules-and-require.md)
-- [Core concepts](../getting-started/concepts.md)
+- [Core concepts](../getting-started/chapter-5.md)
 
 ## Source
 

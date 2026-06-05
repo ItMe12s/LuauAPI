@@ -21,13 +21,13 @@
 
 ## Getting started
 
-Start here regardless of your role.
+Start here regardless of your role. Read the chapters in order.
 
-- [Installation](docs/getting-started/installation.md)
-- [Building](docs/getting-started/building.md)
-- [Editor setup](docs/getting-started/editor-setup.md)
-- [Your first script](docs/getting-started/first-script.md)
-- [Core concepts](docs/getting-started/concepts.md)
+- [Chapter 1: Installation](docs/getting-started/chapter-1.md)
+- [Chapter 2: Building](docs/getting-started/chapter-2.md)
+- [Chapter 3: Editor setup](docs/getting-started/chapter-3.md)
+- [Chapter 4: Your first script](docs/getting-started/chapter-4.md)
+- [Chapter 5: Core concepts](docs/getting-started/chapter-5.md)
 
 ## Lua script authors
 

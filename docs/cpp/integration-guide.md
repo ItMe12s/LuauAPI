@@ -32,7 +32,7 @@ namespace lua = imes::luauapi;
 
 All public functions live in the `imes::luauapi` namespace.
 
-LuauAPI loads early with first priority. Check `status()` is `Ready` before you call `runFile`.
+LuauAPI loads early with first priority. Check `status()` is `Ready` before you call `runFile` if needed.
 
 ## You do not start the runtime
 
@@ -42,7 +42,7 @@ and shuts it down when the game exits. Your mod does not create or destroy the r
 ## Run a script file
 
 Use `runFile` with a resources directory and a flat `.luau` file name. It must run on the main thread.
-See [Your first script](../getting-started/first-script.md) for a full bootstrap example.
+See [Your first script](../getting-started/chapter-4.md) for a full bootstrap example.
 
 ```cpp
 auto result = lua::runFile(Mod::get()->getResourcesDir(), "Bootstrap.luau");

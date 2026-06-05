@@ -110,7 +110,7 @@ geode.hook("geode.gd.GameManager:getIntGameVariable/1", {
 `priority` only matters when several hooks share the same target id.
 
 | Callback | Runs first when |
-| --- | --- |
+| -------- | --------------- |
 | `before` | Priority is lower |
 | `after` | Priority is higher |
 

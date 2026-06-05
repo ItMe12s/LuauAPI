@@ -23,9 +23,10 @@ This page gives the big picture for contributors. It names the main parts and tr
 - `src/lua/runtime/`: the runtime and the memory allocator.
 - `src/lua/bindings/`: the binding registry, the framework, task, imgui, and geode bindings.
 - `src/lua/bindings/framework/`: usertypes, the stack, references, and fields.
-- `src/lua/bindings/geode/`: handwritten `geode.Mod` binding.
+- `src/lua/bindings/geode/`: handwritten `geode.fs`, `geode.json`, and `geode.Mod` bindings.
 - `src/lua/bindings/imgui/`: ImGui binding and draw scheduler.
 - `src/lua/module/`: the requirer and the path rules.
+- `src/lua/util/`: small data structures such as the indexed slot map used by the schedulers.
 - `build/luauapi-gen/src/`: generated C++ bindings from codegen.
 - `tools/luau_codegen/`: the Python code generator.
 - `tests/`: the host tests.

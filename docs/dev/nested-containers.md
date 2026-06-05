@@ -27,7 +27,7 @@ Tests live in `tests/luau_codegen/test_nested_containers.py`.
 ## Runtime
 
 | C++ API | Role |
-| --- | --- |
+| ------- | ---- |
 | `checkMapValue` / `pushMapValue` | `gd::vector<...>` map values use vector helpers inside one template |
 | `pushNestedPrimitiveVectorPointers` | Read-only `gd::vector<gd::vector<int>*>` fields |
 
@@ -58,7 +58,7 @@ Nested primitive vector fields register as readonly getters (same pattern as `ve
 These shapes were skipped before nested support. After regen they should bind:
 
 | Field | Type | Notes |
-| --- | --- | --- |
+| ----- | ---- | ----- |
 | `m_labelObjects` | `gd::unordered_map<int, gd::vector<LabelGameObject*>>` | Binds |
 | `m_timeLabelObjects` | `gd::unordered_map<int, gd::vector<LabelGameObject*>>` | Binds |
 | `m_unkMap770` | `gd::map<std::pair<int, int>, gd::vector<GroupCommandObject2*>>` | Binds |

@@ -2,7 +2,10 @@
 
 ## Summary
 
-The build generates Luau type stubs for the game bindings. These stubs provide autocomplete and type checks in your editor. This page describes the stub file and overload policy. For a step-by-step walkthrough, see [Editor setup](../../getting-started/editor-setup.md).
+The build generates Luau type stubs for the game bindings.
+These stubs provide autocomplete and type checks in your editor.
+This page describes the stub file and overload policy.
+For a step-by-step walkthrough, see [Editor setup](../../getting-started/chapter-3.md).
 
 ## What the stubs are
 
@@ -24,14 +27,14 @@ The runtime still selects an overload by argument count, so a matching call type
 ## Regenerating the stubs
 
 The stub file is written during the build by the `luauapi_codegen` target. To refresh it, build the project.
-See [Building](../../getting-started/building.md) and [Codegen](../../dev/codegen.md).
+See [Building](../../getting-started/chapter-2.md) and [Codegen](../../dev/codegen.md).
 
 The `definitionFiles` entry is a fixed single path, so after a rebuild you only reload the editor. There is nothing to re-paste.
 
 ## Related
 
-- [Editor setup](../../getting-started/editor-setup.md)
-- [Building](../../getting-started/building.md)
+- [Editor setup](../../getting-started/chapter-3.md)
+- [Building](../../getting-started/chapter-2.md)
 - [Codegen](../../dev/codegen.md)
 - [Globals](globals.md)
 

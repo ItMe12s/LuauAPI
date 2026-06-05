@@ -9,7 +9,7 @@ This page lists the runtime limits and explains how errors reach the host.
 These values come from `src/lua/Config.hpp`.
 
 | Limit | Value | Meaning |
-| --- | --- | --- |
+| ----- | ----- | ------- |
 | Max script size | `4 MiB` | Largest single script or module |
 | Bytecode cache entries | `512` | Cached compiled scripts, least recently used dropped |
 | Memory cap | `512 MiB` | Hard Lua memory limit |
@@ -28,7 +28,9 @@ For ImGui limits and usage, see [Reference: imgui](../lua/reference/imgui.md).
 
 ## How errors reach you
 
-The run functions return `geode::Result<void>`. On failure they return `Err` with a message. Common messages include the following cases:
+The run functions return `geode::Result<void>`. On failure they return `Err` with a message.
+
+Common messages include the following cases:
 
 - The function was called off the main thread.
 - The runtime is shutting down.
@@ -60,7 +62,7 @@ When an allocation would cross the cap, it fails and Lua reports an out of memor
 ## Related
 
 - [API reference](api-reference.md)
-- [Core concepts](../getting-started/concepts.md)
+- [Core concepts](../getting-started/chapter-5.md)
 
 ## Source
 

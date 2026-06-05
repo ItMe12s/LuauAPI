@@ -39,7 +39,7 @@ A script runs inside the game on the main thread. From a script you can:
 `geode.Mod` holds the host mod id, paths, saves, and settings. See [Reference: mod](reference/mod.md).
 
 These classes are generated from the game bindings, and there are many of them.
-Rather than learning them from a list here, you rely on editor autocomplete backed by the generated type stubs.
+You do not learn them from a list here. You rely on editor autocomplete backed by the generated type stubs.
 See [Type stubs and editor setup](reference/type-stubs.md).
 
 ## Reference page layouts
@@ -64,7 +64,7 @@ Guides teach usage. Reference pages list signatures, types, and limits.
 The mod ships a built-in script executor. It is an ImGui window with a code box and an Execute button.
 It loads by default and you can turn it off with the `enable-executor` mod setting.
 
-See [Core concepts](../getting-started/concepts.md) for the full model.
+See [Core concepts](../getting-started/chapter-5.md) for the full model.
 
 ## Source
 

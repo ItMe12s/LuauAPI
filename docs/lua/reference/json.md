@@ -6,7 +6,7 @@ This page lists `geode.json`. It converts between JSON text and Luau values,
 using the same JSON model as `geode.Mod.getSavedValue`/`setSavedValue`.
 
 JSON types map to Lua as: boolean, number, string, `nil` (null), array table, and object table.
-Conversion is bounded to 32 levels of nesting, anything deeper is treated as null.
+Conversion is bounded to 32 levels of nesting. Anything deeper is treated as null.
 
 ## parse
 

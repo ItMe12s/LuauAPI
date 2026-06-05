@@ -42,7 +42,7 @@ Do not use positional `{ T1, T2 }`, string keys, or `{ [pairTable]: V }`.
 ## Runtime
 
 | C++ API | Role |
-| --- | --- |
+| ------- | ---- |
 | `checkPair` / `pushPair` | One `std::pair` record |
 | `checkMap` / `pushMap` | Scalar keys. Pair values use `checkPair` inside `checkMapValue` |
 | `checkPairKeyMap` / `pushPairKeyMap` | `gd::map<std::pair<K1,K2>, V>` entry list |
@@ -77,7 +77,7 @@ Still unsupported inside pairs: `void*`, unbound raw pointers, nested containers
 These baseline pair-related fields were skipped before pair support. After regen, four of five should bind:
 
 | Field | Type | Notes |
-| --- | --- | --- |
+| ----- | ---- | ----- |
 | `m_targetGroups` | `gd::unordered_map<int, std::pair<int, int>>` | Binds |
 | `m_unkMap578` | `gd::unordered_map<int, std::pair<double, double>>` | Binds |
 | `m_destroyObjectValues` | `gd::map<std::pair<int, int>, std::pair<float, float>>` | Binds |

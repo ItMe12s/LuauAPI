@@ -41,7 +41,7 @@ The most involved part is the hook generator. `emit/hooks.py` emits one C++ func
 4. Runs the registered `after` callbacks, and applies a return override if one was given.
 
 `emit/cxx_templates.py` emits the shared hook runtime that stores callbacks, sorts them by priority, and calls them.
-Invalid hook overrides are type-checked via pcall, wrong types log an error and are ignored.
+Invalid hook overrides are type-checked via pcall. Wrong types log an error and are ignored.
 
 Binding and hook decode share `convert/marshalling.py` `emit_stack_check`, which emits `luax::check<>` calls for all marshallable types.
 The Luau type emitter (`emit/luau_types/`) emits the `geode` namespace stub, including `HookHandle` and `HookCallbackTable`.
@@ -64,7 +64,7 @@ A change to any of these reruns codegen.
 - **Free functions**: from the headers and namespaces listed in `_FUNCTION_SOURCES`, mainly `geode::utils` (including its subnamespaces), `geode::createQuickPopup`, and Geode UI functions. The free-function binding file has a fixed `#include` list, so new sources must be manually added there.
 
 Only `GEODE_DLL` declarations are processed. Functions must be marshallable (no out/non-const ref args), or they're dropped.
-Keep only the first free function per name and arity, log others as `free-function-ambiguous-arity:<n>`.
+Only the first free function per name and arity is kept. The rest are logged as `free-function-ambiguous-arity:<n>`.
 Only headers included by `Geode/ui/UI.hpp` are scanned for UI classes. There is no extra step that removes headers after filtering.
 
 Some headers are purposely ignored:
@@ -80,7 +80,8 @@ After generation, `build/luauapi-gen/` holds helper files for debugging codegen:
 - `parity.json` records overload and parity checks.
 - `audit.md` groups callback, delegate, container, and related skips by category. Regenerated on every codegen run, standalone via `--audit-report-out`.
 
-`emit/metadata.py` writes `schema.json` and `report.md`. `emit/audit.py` writes `audit.md`. The CLI only orchestrates paths and I/O.
+`emit/metadata.py` writes `schema.json` and `report.md`. `emit/audit.py` writes `audit.md`.
+The CLI only orchestrates paths and I/O.
 
 ## Free-function platform policy
 
@@ -100,7 +101,7 @@ Each override sets `namespace`, `name`, and optionally:
 ### Current overrides
 
 | Function | Restriction | Details |
-| --- | --- | --- |
+| -------- | ----------- | ------- |
 | `geode::utils::game::restart` | arity limit | `android`, `android32`, `android64`, `ios`, `mac`, `imac`, `m1`: 1 arg only |
 | `geode::utils::getEnvironmentVariable` | excluded | `ios` only, Geode iOS loader has no implementation |
 
@@ -117,8 +118,8 @@ For `restart`, all mobile and Apple targets allow one argument.
 
 Only add a new platform key after confirming its SDK matches. Do not copy from other families without checking.
 
-`group_supported_free_functions()` filters and deduplicates free functions per platform,
-intersection removes any not present on all main platforms, using `intersection-missing-platform:<platforms>`.
+`group_supported_free_functions()` filters and deduplicates free functions per platform.
+Intersection then removes any not present on all main platforms, using `intersection-missing-platform:<platforms>`.
 Free functions that reference skipped or inaccessible object classes are dropped with `not-callable-type:<platform>:<Class>`.
 
 ## Field and encrypted-value policy
@@ -206,7 +207,7 @@ For how one type stub stays safe on every platform, see [Platform parity](platfo
 ## CLI exit codes
 
 | Code | Meaning |
-| --- | --- |
+| ---- | ------- |
 | 2 | Bad arguments, missing required directories, or Python version below 3.11 |
 | 3 | No Broma classes found after parsing |
 | 4 | I/O error reading inputs or writing outputs |

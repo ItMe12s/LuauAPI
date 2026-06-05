@@ -2,7 +2,8 @@
 
 ## Summary
 
-The bindings framework exposes C++ types to Lua. It lives in `src/lua/bindings/framework/`, with the registry in `src/lua/bindings/Binding.hpp`.
+The bindings framework exposes C++ types to Lua.
+It lives in `src/lua/bindings/framework/`, with the registry in `src/lua/bindings/Binding.hpp`.
 This page explains how to register a binding and how the pieces fit together.
 
 ## The binding registry
@@ -19,7 +20,8 @@ geode::Result<void> registerMyLib(lua_State* L) {
 LUAX_BINDING(my_lib, registerMyLib)
 ```
 
-`LUAX_BINDING` registers the function with a default priority of `10`. Use `LUAX_BINDING_PRIORITY` to set a different priority.
+`LUAX_BINDING` registers the function with a default priority of `10`.
+Use `LUAX_BINDING_PRIORITY` to set a different priority.
 `applyAllBindings` runs every binding in priority order at startup.
 The task library follows this pattern in `src/lua/bindings/task/TaskBinding.cpp`.
 
@@ -27,6 +29,8 @@ The task library follows this pattern in `src/lua/bindings/task/TaskBinding.cpp`
 
 Most game types come from codegen. A few libraries are handwritten in C++:
 
+- `src/lua/bindings/geode/GeodeFsBinding.cpp` exposes `geode.fs`.
+- `src/lua/bindings/geode/GeodeJsonBinding.cpp` exposes `geode.json`.
 - `src/lua/bindings/geode/GeodeModBinding.cpp` exposes `geode.Mod`.
 - `src/lua/bindings/task/TaskBinding.cpp` exposes `task` and `time`.
 - `src/lua/bindings/imgui/ImGuiBinding.cpp` exposes `imgui`.
@@ -35,7 +39,9 @@ Their Luau types come from `tools/luau_codegen/emit/luau_types/` or `tools/luau_
 
 ## Usertypes
 
-`Usertype<T>` exposes a C++ type as Lua userdata with a metatable. `T` must derive from `cocos2d::CCObject`. The main calls are:
+`Usertype<T>` exposes a C++ type as Lua userdata with a metatable. `T` must derive from `cocos2d::CCObject`.
+
+The main calls are:
 
 - `registerType(L, name, baseTags)` registers the type once, with the base type tags for inheritance.
 - `method(L, name, fn)` adds a method.
@@ -55,7 +61,8 @@ Each type record holds its tag, name, metatable name, and base tags for inherita
 
 ## Ownership
 
-An owned userdata holds a strong pointer and increases the C++ retain count. A borrowed userdata holds a weak reference and does not retain.
+An owned userdata holds a strong pointer and increases the C++ retain count.
+A borrowed userdata holds a weak reference and does not retain.
 The global retain map in `Ref.hpp` tracks owned objects.
 When an owned userdata is collected, the retain is released, and on shutdown all Lua retains are cleared.
 
@@ -69,6 +76,7 @@ and helpers to write integers as strings, which avoids float precision loss for 
 
 `Types.hpp` provides `check<T>` specializations and `push(T)` overloads for cocos value types:
 points, sizes, rects, colors, and button configs.
+
 Generated binding and hook code uses these helpers to decode and push table-shaped values.
 The generated hook runtime applies overrides through a pcall trampoline so decode errors are safe.
 
@@ -81,8 +89,9 @@ Field setters call `assignMap`, `assignSet`, or `assignPrimitiveVector` instead 
 
 ## Lua references
 
-`LuaRef` wraps a Lua registry reference with RAII. It records the runtime generation and the resources root,
-and it becomes invalid after a runtime restart. The task scheduler and the hook runtime store callbacks as `LuaRef`.
+`LuaRef` wraps a Lua registry reference with RAII.
+It records the runtime generation and the resources root, and it becomes invalid after a runtime restart.
+The task scheduler and the hook runtime store callbacks as `LuaRef`.
 
 ## Callback bridge
 
@@ -96,7 +105,7 @@ Generated bindings use `LuaCallback` when a method argument is a:
 - `MiniFunction`
 - `Callback` (including non-void returns).
 
-For cocos2d `SEL_*` pairs `(CCObject* target, SEL_... selector)`, codegen collapses the pair into one Luau function
+For cocos2d `SEL_*` pairs `(CCObject* target, SEL_... selector)`,codegen collapses the pair into one Luau function
 and creates the matching handler trampoline (`LuaMenuHandler`, `LuaScheduleHandler`, `LuaCallFunc*Handler`).
 For delegate pointer arguments, codegen accepts a Luau table and creates a `Lua*` delegate trampoline (`LuaDelegate` + generated subclasses).
 
