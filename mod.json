@@ -33,11 +33,27 @@
 		]
 	},
 	"settings": {
+		"title-enable-developer-mode": {
+			"type": "title",
+			"name": "Developer Mode (Read Description)"
+		},
+		"enable-developer-mode": {
+			"type": "bool",
+			"name": "Enable Developer Mode",
+			"description": "Load built-in scripts and environment for developing mods on game startup. Only enable if you know what you're doing.",
+			"default": false,
+			"requires-restart": true
+		},
+		"title-developer-tools": {
+			"type": "title",
+			"name": "Developer Tools"
+		},
 		"enable-executor": {
 			"name": "Enable Script Executor",
-			"description": "Load the built-in ImGui script executor on startup.",
+			"description": "Show/hide the script executor ImGui window.",
 			"type": "bool",
-			"default": true
+			"default": false,
+			"enable-if": "enable-developer-mode"
 		}
 	}
 }

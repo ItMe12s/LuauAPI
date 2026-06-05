@@ -13,12 +13,9 @@ $execute {
 $on_mod(Loaded) {
     luax::Runtime::getOrCreate();
 
-    if (geode::Mod::get()->getSettingValue<bool>("enable-executor")) {
-        auto res =
-            imes::luauapi::runFile(geode::Mod::get()->getResourcesDir(), "executor_Bootstrap.luau");
-        if (res.isErr()) {
-            geode::log::error("[executor] failed to load: {}", res.unwrapErr());
-        }
+    auto result = imes::luauapi::runFile(geode::Mod::get()->getResourcesDir(), "Bootstrap.luau");
+    if (result.isErr()) {
+        geode::log::error("LuauAPI Bootstrap script failed: {}", result.unwrapErr());
     }
 }
 
