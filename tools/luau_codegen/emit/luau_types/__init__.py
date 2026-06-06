@@ -232,6 +232,202 @@ def emit(
     lines.append("    remove: (root: FsRoot, path: string) -> (boolean?, string?),\n")
     lines.append("}\n\n")
 
+    lines.append("export type ProxyOpts = {\n")
+    lines.append("    address: string,\n")
+    lines.append("    port: number?,\n")
+    lines.append("    type: number?,\n")
+    lines.append("    auth: number?,\n")
+    lines.append("    username: string?,\n")
+    lines.append("    password: string?,\n")
+    lines.append("    tunneling: boolean?,\n")
+    lines.append("    certVerification: boolean?,\n")
+    lines.append("}\n\n")
+    lines.append("export type RequestTimings = {\n")
+    lines.append("    queueWait: number,\n")
+    lines.append("    nameLookup: number,\n")
+    lines.append("    connect: number,\n")
+    lines.append("    tlsHandshake: number,\n")
+    lines.append("    requestSend: number,\n")
+    lines.append("    firstByte: number,\n")
+    lines.append("    download: number,\n")
+    lines.append("    total: number,\n")
+    lines.append("}\n\n")
+    lines.append("export type WebProgress = {\n")
+    lines.append("    downloaded: number,\n")
+    lines.append("    downloadTotal: number,\n")
+    lines.append("    downloadProgress: number?,\n")
+    lines.append("    uploaded: number,\n")
+    lines.append("    uploadTotal: number,\n")
+    lines.append("    uploadProgress: number?,\n")
+    lines.append("}\n\n")
+    lines.append("export type RequestOptions = {\n")
+    lines.append("    url: string?,\n")
+    lines.append("    method: string?,\n")
+    lines.append("    headers: { [string]: string }?,\n")
+    lines.append("    params: { [string]: string }?,\n")
+    lines.append("    userAgent: string?,\n")
+    lines.append("    acceptEncoding: string?,\n")
+    lines.append("    timeout: number?,\n")
+    lines.append("    downloadRange: { number }?,\n")
+    lines.append("    certVerification: boolean?,\n")
+    lines.append("    transferBody: boolean?,\n")
+    lines.append("    followRedirects: boolean?,\n")
+    lines.append("    ignoreContentLength: boolean?,\n")
+    lines.append("    caBundle: string?,\n")
+    lines.append("    proxy: ProxyOpts?,\n")
+    lines.append("    version: number?,\n")
+    lines.append("    body: string?,\n")
+    lines.append("    bodyString: string?,\n")
+    lines.append("    bodyJson: any?,\n")
+    lines.append("    bodyMultipart: MultipartForm?,\n")
+    lines.append("    onProgress: ((progress: WebProgress) -> ())?,\n")
+    lines.append("}\n\n")
+    lines.append("export type MultipartForm = {\n")
+    lines.append(
+        "    param: (self: MultipartForm, name: string, value: string) -> MultipartForm,\n"
+    )
+    lines.append(
+        "    file: (self: MultipartForm, name: string, data: string, filename: string, mime: string?) -> MultipartForm,\n"
+    )
+    lines.append(
+        "    fileFrom: (self: MultipartForm, name: string, root: FsRoot, path: string, mime: string?) -> (MultipartForm?, string?),\n"
+    )
+    lines.append("    getBoundary: (self: MultipartForm) -> string,\n")
+    lines.append("    getHeader: (self: MultipartForm) -> string,\n")
+    lines.append("    getBody: (self: MultipartForm) -> string,\n")
+    lines.append("}\n\n")
+    lines.append("export type WebResponse = {\n")
+    lines.append("    info: (self: WebResponse) -> boolean,\n")
+    lines.append("    ok: (self: WebResponse) -> boolean,\n")
+    lines.append("    redirected: (self: WebResponse) -> boolean,\n")
+    lines.append("    badClient: (self: WebResponse) -> boolean,\n")
+    lines.append("    badServer: (self: WebResponse) -> boolean,\n")
+    lines.append("    error: (self: WebResponse) -> boolean,\n")
+    lines.append("    cancelled: (self: WebResponse) -> boolean,\n")
+    lines.append("    code: (self: WebResponse) -> number,\n")
+    lines.append("    text: (self: WebResponse) -> (string?, string?),\n")
+    lines.append("    json: (self: WebResponse) -> (any?, string?),\n")
+    lines.append("    bytes: (self: WebResponse) -> string,\n")
+    lines.append(
+        "    saveTo: (self: WebResponse, root: FsRoot, path: string) -> (boolean?, string?),\n"
+    )
+    lines.append("    headers: (self: WebResponse) -> { string },\n")
+    lines.append("    header: (self: WebResponse, name: string) -> string?,\n")
+    lines.append("    headersNamed: (self: WebResponse, name: string) -> { string }?,\n")
+    lines.append("    errorMessage: (self: WebResponse) -> string,\n")
+    lines.append("    verboseLogs: (self: WebResponse) -> string,\n")
+    lines.append("    timings: (self: WebResponse) -> RequestTimings,\n")
+    lines.append("}\n\n")
+    lines.append("export type WebHandle = {\n")
+    lines.append("    cancel: (self: WebHandle) -> boolean,\n")
+    lines.append("    id: (self: WebHandle) -> number?,\n")
+    lines.append("}\n\n")
+    lines.append("export type WebRequest = {\n")
+    lines.append("    header: (self: WebRequest, name: string, value: string) -> WebRequest,\n")
+    lines.append("    removeHeader: (self: WebRequest, name: string) -> WebRequest,\n")
+    lines.append("    param: (self: WebRequest, name: string, value: string) -> WebRequest,\n")
+    lines.append("    removeParam: (self: WebRequest, name: string) -> WebRequest,\n")
+    lines.append("    method: (self: WebRequest, method: string) -> WebRequest,\n")
+    lines.append("    url: (self: WebRequest, url: string) -> WebRequest,\n")
+    lines.append("    userAgent: (self: WebRequest, name: string) -> WebRequest,\n")
+    lines.append("    acceptEncoding: (self: WebRequest, encoding: string) -> WebRequest,\n")
+    lines.append("    timeout: (self: WebRequest, seconds: number) -> WebRequest,\n")
+    lines.append(
+        "    downloadRange: (self: WebRequest, start: number, stop: number) -> WebRequest,\n"
+    )
+    lines.append("    certVerification: (self: WebRequest, enabled: boolean) -> WebRequest,\n")
+    lines.append("    transferBody: (self: WebRequest, enabled: boolean) -> WebRequest,\n")
+    lines.append("    followRedirects: (self: WebRequest, enabled: boolean) -> WebRequest,\n")
+    lines.append("    ignoreContentLength: (self: WebRequest, enabled: boolean) -> WebRequest,\n")
+    lines.append("    caBundle: (self: WebRequest, content: string) -> WebRequest,\n")
+    lines.append("    proxy: (self: WebRequest, opts: ProxyOpts) -> WebRequest,\n")
+    lines.append("    version: (self: WebRequest, version: number) -> WebRequest,\n")
+    lines.append("    body: (self: WebRequest, data: string) -> WebRequest,\n")
+    lines.append("    bodyString: (self: WebRequest, data: string) -> WebRequest,\n")
+    lines.append("    bodyJson: (self: WebRequest, value: any) -> WebRequest,\n")
+    lines.append("    bodyMultipart: (self: WebRequest, form: MultipartForm) -> WebRequest,\n")
+    lines.append(
+        "    onProgress: (self: WebRequest, callback: (progress: WebProgress) -> ()) -> WebRequest,\n"
+    )
+    lines.append(
+        "    send: ((self: WebRequest, method: string, url: string, callback: (response: WebResponse) -> ()) -> WebHandle) & ((self: WebRequest, method: string, url: string, options: RequestOptions, callback: (response: WebResponse) -> ()) -> WebHandle),\n"
+    )
+    lines.append(
+        "    get: ((self: WebRequest, url: string, callback: (response: WebResponse) -> ()) -> WebHandle) & ((self: WebRequest, url: string, options: RequestOptions, callback: (response: WebResponse) -> ()) -> WebHandle),\n"
+    )
+    lines.append(
+        "    post: ((self: WebRequest, url: string, callback: (response: WebResponse) -> ()) -> WebHandle) & ((self: WebRequest, url: string, options: RequestOptions, callback: (response: WebResponse) -> ()) -> WebHandle),\n"
+    )
+    lines.append(
+        "    put: ((self: WebRequest, url: string, callback: (response: WebResponse) -> ()) -> WebHandle) & ((self: WebRequest, url: string, options: RequestOptions, callback: (response: WebResponse) -> ()) -> WebHandle),\n"
+    )
+    lines.append(
+        "    patch: ((self: WebRequest, url: string, callback: (response: WebResponse) -> ()) -> WebHandle) & ((self: WebRequest, url: string, options: RequestOptions, callback: (response: WebResponse) -> ()) -> WebHandle),\n"
+    )
+    lines.append("    getID: (self: WebRequest) -> number,\n")
+    lines.append("    getMethod: (self: WebRequest) -> string,\n")
+    lines.append("    getUrl: (self: WebRequest) -> string,\n")
+    lines.append("    getHeaders: (self: WebRequest) -> { [string]: { string } },\n")
+    lines.append("    getUrlParams: (self: WebRequest) -> { [string]: string },\n")
+    lines.append("    getBody: (self: WebRequest) -> string?,\n")
+    lines.append("    getTimeout: (self: WebRequest) -> number?,\n")
+    lines.append("    getVersion: (self: WebRequest) -> number,\n")
+    lines.append("    getProgress: (self: WebRequest) -> WebProgress,\n")
+    lines.append("}\n\n")
+    lines.append("export type WebListenerHandle = {\n")
+    lines.append("    disconnect: (self: WebListenerHandle) -> (),\n")
+    lines.append("}\n\n")
+    lines.append("export type WebNamespace = {\n")
+    lines.append("    openLinkInBrowser: (url: string) -> (),\n")
+    lines.append("    newRequest: () -> WebRequest,\n")
+    lines.append("    multipart: () -> MultipartForm,\n")
+    lines.append(
+        "    get: ((url: string, callback: (response: WebResponse) -> ()) -> WebHandle) & ((url: string, options: RequestOptions, callback: (response: WebResponse) -> ()) -> WebHandle),\n"
+    )
+    lines.append(
+        "    post: ((url: string, callback: (response: WebResponse) -> ()) -> WebHandle) & ((url: string, options: RequestOptions, callback: (response: WebResponse) -> ()) -> WebHandle),\n"
+    )
+    lines.append(
+        "    put: ((url: string, callback: (response: WebResponse) -> ()) -> WebHandle) & ((url: string, options: RequestOptions, callback: (response: WebResponse) -> ()) -> WebHandle),\n"
+    )
+    lines.append(
+        "    patch: ((url: string, callback: (response: WebResponse) -> ()) -> WebHandle) & ((url: string, options: RequestOptions, callback: (response: WebResponse) -> ()) -> WebHandle),\n"
+    )
+    lines.append(
+        "    fetch: ((url: string, callback: (response: WebResponse) -> ()) -> WebHandle) & ((url: string, options: RequestOptions, callback: (response: WebResponse) -> ()) -> WebHandle) & ((options: RequestOptions, callback: (response: WebResponse) -> ()) -> WebHandle),\n"
+    )
+    lines.append(
+        "    onRequestIntercept: (callback: (modID: string, request: WebRequest) -> boolean?, priority: number?) -> WebListenerHandle,\n"
+    )
+    lines.append(
+        "    onRequestInterceptFor: (modID: string, callback: (request: WebRequest) -> boolean?, priority: number?) -> WebListenerHandle,\n"
+    )
+    lines.append(
+        "    onRequestInterceptById: (requestID: number, callback: (request: WebRequest) -> boolean?, priority: number?) -> WebListenerHandle,\n"
+    )
+    lines.append(
+        "    onResponse: (callback: (modID: string, response: WebResponse) -> boolean?, priority: number?) -> WebListenerHandle,\n"
+    )
+    lines.append(
+        "    onResponseFor: (modID: string, callback: (response: WebResponse) -> boolean?, priority: number?) -> WebListenerHandle,\n"
+    )
+    lines.append(
+        "    onResponseById: (requestID: number, callback: (response: WebResponse) -> boolean?, priority: number?) -> WebListenerHandle,\n"
+    )
+    lines.append(
+        "    HttpVersion: { DEFAULT: number, VERSION_1_0: number, VERSION_1_1: number, VERSION_2_0: number, VERSION_2TLS: number, VERSION_2_PRIOR_KNOWLEDGE: number, VERSION_3: number, VERSION_3ONLY: number },\n"
+    )
+    lines.append(
+        "    ProxyType: { HTTP: number, HTTPS: number, HTTPS2: number, SOCKS4: number, SOCKS4A: number, SOCKS5: number, SOCKS5H: number },\n"
+    )
+    lines.append(
+        "    Error: { CURL_INITIALIZATION_ERROR: number, REQUEST_CANCELLED: number, QUEUE_FULL: number, CHANNEL_CLOSED: number },\n"
+    )
+    lines.append(
+        "    HttpAuth: { BASIC: number, DIGEST: number, DIGEST_IE: number, BEARER: number, NEGOTIATE: number, NTLM: number, NTLM_WB: number, ANY: number, ANYSAFE: number, ONLY: number, AWS_SIGV4: number },\n"
+    )
+    lines.append("}\n\n")
+
     lines.append("export type GeodeNamespace = {\n")
     lines.append("    cocos2d: Cocos2dNamespace,\n")
     lines.append("    gd: GDNamespace,\n")

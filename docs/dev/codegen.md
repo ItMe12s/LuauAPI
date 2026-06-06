@@ -69,7 +69,13 @@ Only headers included by `Geode/ui/UI.hpp` are scanned for UI classes. There is 
 
 Some headers are purposely ignored:
 
-`web.hpp`, `utils/Task.hpp`, `utils/async.hpp`, and `utils/file.hpp` because async, HTTP, and file I/O are handled separately.
+- `web.hpp`
+- `utils/Task.hpp`
+- `utils/async.hpp`
+- `utils/file.hpp`
+
+These are excluded because async, HTTP, and file I/O are handled separately.
+`web.hpp` is exposed through the handwritten `GeodeWebBinding.cpp` binding instead of the free-function scanner.
 
 ## Handwritten type-stub fields
 

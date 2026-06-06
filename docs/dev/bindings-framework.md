@@ -32,6 +32,7 @@ Most game types come from codegen. A few libraries are handwritten in C++:
 - `src/lua/bindings/geode/GeodeFsBinding.cpp` exposes `geode.fs`.
 - `src/lua/bindings/geode/GeodeJsonBinding.cpp` exposes `geode.json`.
 - `src/lua/bindings/geode/GeodeModBinding.cpp` exposes `geode.Mod`.
+- `src/lua/bindings/geode/GeodeWebBinding.cpp` exposes `geode.utils.web`.
 - `src/lua/bindings/task/TaskBinding.cpp` exposes `task` and `time`.
 - `src/lua/bindings/imgui/ImGuiBinding.cpp` exposes `imgui`.
 

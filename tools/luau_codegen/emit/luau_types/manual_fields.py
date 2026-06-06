@@ -3,6 +3,9 @@ from __future__ import annotations
 from typing import Dict, List
 
 MANUAL_FREE_FN_FIELDS: Dict[str, List[str]] = {
+    "geode.utils": [
+        "web: WebNamespace",
+    ],
     "geode.cocos": [
         "invert3B: (arg1: RGBColor) -> RGBColor",
         "invert4B: (arg1: RGBAColor) -> RGBAColor",

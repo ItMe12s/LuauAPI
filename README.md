@@ -51,6 +51,7 @@ For anyone writing `.luau` files that run inside the game.
   - [imgui](docs/lua/reference/imgui.md)
   - [json](docs/lua/reference/json.md)
   - [fs](docs/lua/reference/fs.md)
+  - [web](docs/lua/reference/web.md)
   - [cocos](docs/lua/reference/cocos.md)
   - [base64](docs/lua/reference/base64.md)
   - [permission](docs/lua/reference/permission.md)
