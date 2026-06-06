@@ -21,7 +21,7 @@
     #endif
 #endif
 
-#include <RuntimeTypes.hpp>
+#include "RuntimeTypes.hpp"
 
 namespace imes::luauapi {
     LUAUAPI_DLL geode::Result<void> runFile(
