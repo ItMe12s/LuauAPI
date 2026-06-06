@@ -189,7 +189,8 @@ set(LUAUAPI_GEODE_COCOS_HEADERS
 set(LUAUAPI_GEODE_UTILS_HEADERS
     "${LUAUAPI_GEODE_SDK_PATH}/loader/include/Geode/utils/general.hpp"
     "${LUAUAPI_GEODE_SDK_PATH}/loader/include/Geode/utils/string.hpp"
-    "${LUAUAPI_GEODE_SDK_PATH}/loader/include/Geode/utils/random.hpp")
+    "${LUAUAPI_GEODE_SDK_PATH}/loader/include/Geode/utils/random.hpp"
+    "${LUAUAPI_GEODE_SDK_PATH}/loader/include/Geode/utils/cocos.hpp")
 
 set(LUAUAPI_CODEGEN_CMD
     ${CMAKE_COMMAND} -E env "PYTHONPATH=${CMAKE_CURRENT_SOURCE_DIR}/tools"

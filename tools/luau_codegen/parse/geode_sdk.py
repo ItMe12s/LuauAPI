@@ -80,6 +80,7 @@ _FUNCTION_SOURCES = (
     ("ui/GeodeUI.hpp", frozenset({"geode"}), None),
     ("utils/string.hpp", frozenset({"geode::utils::string"}), None),
     ("utils/random.hpp", frozenset({"geode::utils::random"}), None),
+    ("utils/cocos.hpp", frozenset({"geode::cocos"}), None),
 )
 
 

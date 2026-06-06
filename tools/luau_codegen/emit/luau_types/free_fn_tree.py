@@ -9,16 +9,27 @@ if TYPE_CHECKING:
 from luau_codegen.emit.luau_types.method_types import _DUMMY_CLS, _method_type
 
 
+def _new_node() -> dict:
+    return {"children": {}, "functions": {}, "manual": []}
+
+
 def _build_function_tree(
     functions: List[Function],
     objects: Dict[str, Class],
+    manual_fields: Dict[str, List[str]] | None = None,
 ) -> dict:
-    tree: dict = {"children": {}, "functions": {}}
+    tree: dict = _new_node()
     for fn in functions:
         node = tree
         for seg in fn.lua_path.split(".")[1:]:
-            node = node["children"].setdefault(seg, {"children": {}, "functions": {}})
+            node = node["children"].setdefault(seg, _new_node())
         node["functions"].setdefault(fn.name, []).append(fn)
+
+    for lua_path, fields in (manual_fields or {}).items():
+        node = tree
+        for seg in lua_path.split(".")[1:]:
+            node = node["children"].setdefault(seg, _new_node())
+        node["manual"].extend(fields)
     return tree
 
 
@@ -36,6 +47,8 @@ def _emit_function_tree(
             for fn in node["functions"][name]
         ]
         lines.append(f"{pad}{name}: {_method_type(_DUMMY_CLS, methods, objects, ctx=ctx)},\n")
+    for field in sorted(node.get("manual", [])):
+        lines.append(f"{pad}{field},\n")
     for seg in sorted(node["children"]):
         lines.append(f"{pad}{seg}: {{\n")
         lines.extend(_emit_function_tree(node["children"][seg], objects, indent + 1, ctx=ctx))

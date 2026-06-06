@@ -172,7 +172,8 @@ def emit_free_functions_file(
         "#include <Geode/ui/GeodeUI.hpp>\n",
         "#include <Geode/utils/general.hpp>\n",
         "#include <Geode/utils/string.hpp>\n",
-        "#include <Geode/utils/random.hpp>\n\n",
+        "#include <Geode/utils/random.hpp>\n",
+        "#include <Geode/utils/cocos.hpp>\n\n",
         "namespace luauapi_gen::free_functions {\n\n",
         "namespace {\n\n",
     ]

@@ -10,6 +10,7 @@ from luau_codegen.util.platforms import VALID_PLATFORMS
 from luau_codegen.policy.intersection import intersection_platforms
 from luau_codegen.emit import bindings as emit_bindings
 from luau_codegen.emit import luau_types as emit_types
+from luau_codegen.emit.luau_types.manual_fields import MANUAL_FREE_FN_FIELDS
 from luau_codegen.emit import parity
 from luau_codegen.emit import plan as emit_plan
 from luau_codegen.emit.plan import EmitPlan, ambiguous_overloads
@@ -220,7 +221,9 @@ def main(argv: List[str]) -> int:
             print(f"binding:src/{rel}")
         for rel in delegate_gen_rel_paths():
             print(f"binding:{rel}")
-        type_files = emit_types.emit(root, args.platform, plan=plan)
+        type_files = emit_types.emit(
+            root, args.platform, plan=plan, manual_fields=MANUAL_FREE_FN_FIELDS
+        )
         for name in sorted(type_files):
             print(f"type:{name}")
         return 0
@@ -262,7 +265,9 @@ def main(argv: List[str]) -> int:
 
         schema_path = os.path.join(args.out, "schema.json")
         report_path = os.path.join(args.out, "report.md")
-        type_files = emit_types.emit(root, args.platform, plan=plan)
+        type_files = emit_types.emit(
+            root, args.platform, plan=plan, manual_fields=MANUAL_FREE_FN_FIELDS
+        )
         for filename, content in type_files.items():
             _write_if_changed(os.path.join(args.types_out, filename), content)
         _cleanup_type_orphans(args.types_out, type_files)

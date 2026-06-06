@@ -67,7 +67,12 @@ def _header(label: str) -> List[str]:
     ]
 
 
-def emit(root: Root, target_platform: str = "win", plan: EmitPlan | None = None) -> Dict[str, str]:
+def emit(
+    root: Root,
+    target_platform: str = "win",
+    plan: EmitPlan | None = None,
+    manual_fields: Dict[str, list] | None = None,
+) -> Dict[str, str]:
     if plan is None:
         plan = collect_plan(root, target_platform)
     classes = plan.classes
@@ -130,7 +135,7 @@ def emit(root: Root, target_platform: str = "win", plan: EmitPlan | None = None)
 
     geode_factory_text = "".join(_emit_factory_records(geode_factories, objects, ctx=plan.ctx))
 
-    function_tree = _build_function_tree(plan.supported_free_functions, objects)
+    function_tree = _build_function_tree(plan.supported_free_functions, objects, manual_fields)
     function_field_lines = _emit_function_tree(function_tree, objects, 1, ctx=plan.ctx)
 
     defined = {name for name, _ in cocos_chunks} | {name for name, _ in gd_chunks}
