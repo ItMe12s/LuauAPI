@@ -5,34 +5,11 @@
 This page shows how another Geode mod uses LuauAPI to run scripts from C++.
 You depend on the mod, include the header, and call the run functions on the main thread.
 
-## Depend on the API
+## Before you start
 
-LuauAPI exports its public header, and the mod exposes `include/**/*.hpp` as its API in `mod.json`.
-Add a dependency on `imes.luauapi` in your own mod, then include the header.
-
-```json
-{
-    "dependencies": {
-        "imes.luauapi": ">=0.1.0-beta.1"
-    },
-    "resources": {
-        "files": [
-            "mod/*.luau"
-        ]
-    }
-}
-```
-
-Put your `.luau` files under the resources path you declare. Pack them with your mod.
-
-```cpp
-#include <imes.luauapi/include/LuauAPI.hpp>
-namespace lua = imes::luauapi;
-```
-
+Set up the dependency and header first. See [Your first script](../getting-started/chapter-4.md)
+for the `mod.json` dependency, resources, and include.
 All public functions live in the `imes::luauapi` namespace.
-
-LuauAPI loads early with first priority. Check `status()` is `Ready` before you call `runFile` if needed.
 
 ## You do not start the runtime
 

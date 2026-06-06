@@ -2,9 +2,38 @@
 
 ## Summary
 
-This page walks through the smallest working setup. You write a Luau file, then run it from a host mod.
+This page walks through the smallest working setup. You depend on LuauAPI, write a Luau file, then run it from a host mod.
 
-## Step 1: write the script
+## Step 1: depend on LuauAPI
+
+LuauAPI exports its public header, and the mod exposes `include/**/*.hpp` as its API in `mod.json`.
+Add a dependency on `imes.luauapi` in your own mod, then include the header.
+
+```json
+{
+    "dependencies": {
+        "imes.luauapi": ">=0.1.0-beta.1"
+    },
+    "resources": {
+        "files": [
+            "mod/*.luau"
+        ]
+    }
+}
+```
+
+Put your `.luau` files under the resources path you declare. Pack them with your mod.
+
+```cpp
+#include <imes.luauapi/include/LuauAPI.hpp>
+namespace lua = imes::luauapi;
+```
+
+All public functions live in the `imes::luauapi` namespace.
+
+LuauAPI loads early with first priority. Check `status()` is `Ready` before you call `runFile` if needed.
+
+## Step 2: write the script
 
 Create a `.luau` file in your mod resources and name it `Bootstrap.luau`.
 
@@ -14,7 +43,7 @@ print("Hello from Luau")
 
 `print` writes to the Geode log, and each argument is separated by a tab.
 
-## Step 2: run it from C++
+## Step 3: run it from C++
 
 Run the file from a mod that depends on LuauAPI. Use `runFile` with your resources directory and the file name.
 
