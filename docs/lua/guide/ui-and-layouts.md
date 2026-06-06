@@ -12,9 +12,12 @@ Geode's UI classes are exposed directly under the `geode` namespace, alongside `
 You create one through its factory `create`, the same way you create engine objects. The result can be nil, so check it.
 
 ```lua
-local sprite = geode.CircleButtonSprite.create(geode.cocos2d.CCSprite.create("GJ_plusBtn_001.png"))
+local cc2d = geode.cocos2d
+local modId = geode.Mod.getID()
+
+local sprite = geode.CircleButtonSprite.create(cc2d.CCSprite.create("GJ_plusBtn_001.png"))
 if not sprite then return end
-sprite:setID(geode.Mod.getID() .. "/add-button")
+sprite:setID(modId .. "/add-button")
 ```
 
 Commonly used factories include:
@@ -36,8 +39,11 @@ You set a layout on any `CCNode` with `:setLayout()`, then call `:updateLayout()
 - The `*Options` factories (`AxisLayoutOptions`, `AnchorLayoutOptions`, ...) tweak per-child behavior, attached with `:setLayoutOptions()`.
 
 ```lua
-local menu = geode.cocos2d.CCMenu.create()
-menu:setID(geode.Mod.getID() .. "/my-menu")
+local cc2d = geode.cocos2d
+local modId = geode.Mod.getID()
+
+local menu = cc2d.CCMenu.create()
+menu:setID(modId .. "/my-menu")
 menu:setLayout(geode.ColumnLayout.create())
 -- add your buttons to `menu` here
 menu:updateLayout()

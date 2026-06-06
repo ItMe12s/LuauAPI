@@ -20,7 +20,7 @@ and `CCTouchHandler` on the matching dispatcher `m_pHandlersToAdd` / `m_pHandler
 ## Runtime
 
 | C++ API | Role |
-| ------- | ---- |
+| --- | --- |
 | `pushReadOnlyCCArrayView<T>` | Field getter, borrows elements while dispatcher `self` is alive |
 
 The view userdata indexes `1..num` from `ccCArray::arr`, pushes borrowed usertypes, and errors on `__newindex`.

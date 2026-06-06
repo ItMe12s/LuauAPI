@@ -53,7 +53,7 @@ Static methods, constructors, and destructors are skipped.
 
 The custom command depends on the Python sources, the Bromas, the extra stubs in `tools/luau_codegen/extra_bindings/`, and the Geode UI headers.
 Rebuild also triggers on extra classes from `Geode/ui/*.hpp` (via `parse/geode_sdk.py`)
-and utility free-function headers (`utils/general.hpp`, `utils/string.hpp`, `utils/random.hpp`).
+and utility free-function headers (`utils/general.hpp`, `utils/string.hpp`, `utils/random.hpp`, `utils/cocos.hpp`).
 A change to any of these reruns codegen.
 
 ## Geode SDK scan scope
@@ -61,7 +61,7 @@ A change to any of these reruns codegen.
 `parse/geode_sdk.py` discovers extra bindings straight from the installed Geode SDK headers:
 
 - **UI classes and enums**: from `Geode/ui/*.hpp` headers included by `UI.hpp`. Only these are bindable, as other headers aren't included in codegen.
-- **Free functions**: from the headers and namespaces listed in `_FUNCTION_SOURCES`, mainly `geode::utils` (including its subnamespaces), `geode::createQuickPopup`, and Geode UI functions. The free-function binding file has a fixed `#include` list, so new sources must be manually added there.
+- **Free functions**: from the headers and namespaces listed in `_FUNCTION_SOURCES`, mainly `geode::utils` (including its subnamespaces), `geode::cocos`, `geode::createQuickPopup`, and Geode UI functions. The free-function binding file has a fixed `#include` list, so new sources must be manually added there.
 
 Only `GEODE_DLL` declarations are processed. Functions must be marshallable (no out/non-const ref args), or they're dropped.
 Only the first free function per name and arity is kept. The rest are logged as `free-function-ambiguous-arity:<n>`.
@@ -70,6 +70,14 @@ Only headers included by `Geode/ui/UI.hpp` are scanned for UI classes. There is 
 Some headers are purposely ignored:
 
 `web.hpp`, `utils/Task.hpp`, `utils/async.hpp`, and `utils/file.hpp` because async, HTTP, and file I/O are handled separately.
+
+## Handwritten type-stub fields
+
+Some bindings are written by hand in `src/lua/bindings/`, not generated. Their type
+signatures still need to be in `types/geode.d.luau`. There are two ways to add them:
+
+- `tools/luau_codegen/extra_bindings/*.dluau`: appended at the end of the stub. Use this for new top-level globals like `task` or `imgui`.
+- `tools/luau_codegen/emit/luau_types/manual_fields.py`: injects fields into a namespace that codegen already emits, such as `geode.cocos`. A trailing `.dluau` cannot reopen that table, so fields that live under a generated namespace go here.
 
 ## Metadata outputs
 
@@ -101,7 +109,7 @@ Each override sets `namespace`, `name`, and optionally:
 ### Current overrides
 
 | Function | Restriction | Details |
-| -------- | ----------- | ------- |
+| --- | --- | --- |
 | `geode::utils::game::restart` | arity limit | `android`, `android32`, `android64`, `ios`, `mac`, `imac`, `m1`: 1 arg only |
 | `geode::utils::getEnvironmentVariable` | excluded | `ios` only, Geode iOS loader has no implementation |
 
@@ -207,7 +215,7 @@ For how one type stub stays safe on every platform, see [Platform parity](platfo
 ## CLI exit codes
 
 | Code | Meaning |
-| ---- | ------- |
+| --- | --- |
 | 2 | Bad arguments, missing required directories, or Python version below 3.11 |
 | 3 | No Broma classes found after parsing |
 | 4 | I/O error reading inputs or writing outputs |

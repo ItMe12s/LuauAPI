@@ -9,7 +9,7 @@ This page lists the runtime limits and explains how errors reach the host.
 These values come from `src/lua/Config.hpp`.
 
 | Limit | Value | Meaning |
-| ----- | ----- | ------- |
+| --- | --- | --- |
 | Max script size | `4 MiB` | Largest single script or module |
 | Bytecode cache entries | `512` | Cached compiled scripts, least recently used dropped |
 | Memory cap | `512 MiB` | Hard Lua memory limit |

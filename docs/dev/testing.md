@@ -22,7 +22,7 @@ ctest --test-dir build
 The C++ tests use Catch2 `v3.15.0` and build into the `luauapi_tests` executable. The files are:
 
 | Test file | Coverage |
-| --------- | -------- |
+| --- | --- |
 | `tests/allocator_accounting_tests.cpp` | Bounded allocator math and limits |
 | `tests/api_tests.cpp` | Public C++ API surface |
 | `tests/binding_tests.cpp` | Binding registration and dispatch |
@@ -88,7 +88,7 @@ PYTHONPATH=tools python -m unittest discover -s tests/luau_codegen -p "test_*.py
 ```
 
 | Test file | Coverage |
-| --------- | -------- |
+| --- | --- |
 | `test_audit.py` | Skip audit buckets, markdown sections, totals vs plan |
 | `test_bindings_fmod.py` | FMOD opaque handle bindings emit tagged opaque userdata |
 | `test_bindings_handlers.py` | SEL/menu handler collapse, schedule, lazy sprite callbacks |

@@ -13,10 +13,10 @@ It covers the `geode.cocos2d` and `geode.gd` namespaces, table shaped values suc
 You usually begin from a singleton or a factory.
 
 ```lua
-local cocos2d = geode.cocos2d
+local cc2d = geode.cocos2d
 local gd = geode.gd
 
-local director = cocos2d.CCDirector.sharedDirector()
+local director = cc2d.CCDirector.sharedDirector()
 local gm = gd.GameManager.get()
 ```
 
@@ -25,7 +25,7 @@ local gm = gd.GameManager.get()
 Many classes provide a `create` factory. Always check the result, because it can be nil.
 
 ```lua
-local label = cocos2d.CCLabelBMFont.create("Hello, World!", "bigFont.fnt")
+local label = cc2d.CCLabelBMFont.create("Hello, World!", "bigFont.fnt")
 if not label then return end
 label:setScale(0.5)
 ```
@@ -40,14 +40,14 @@ This applies to sprites, labels, menus, layers, and any other `CCNode` subclass.
 Prefix the ID with your mod id plus a slash. Use lowercase kebab-case. No spaces.
 
 ```lua
-local cocos2d = geode.cocos2d
+local cc2d = geode.cocos2d
 local modId = geode.Mod.getID()
 
-local sprite = cocos2d.CCSprite.createWithSpriteFrameName(modId .. "/coolSprite.png")
+local sprite = cc2d.CCSprite.createWithSpriteFrameName(modId .. "/coolSprite.png")
 if not sprite then return end
 sprite:setID(modId .. "/cool-sprite")
 
-local label = cocos2d.CCLabelBMFont.create("Hello!", "bigFont.fnt")
+local label = cc2d.CCLabelBMFont.create("Hello!", "bigFont.fnt")
 if not label then return end
 label:setID(modId .. "/hello-label")
 ```

@@ -17,6 +17,8 @@ A script runs inside the game on the main thread. From a script you can:
 - Store per object data with `geode.fields`.
 - Read mod metadata, paths, saves, and settings with `geode.Mod`. See [Reference: mod](reference/mod.md).
 - Encode/decode JSON with `geode.json`, and read/write mod files with `geode.fs`. See [Reference: json](reference/json.md) and [Reference: fs](reference/fs.md).
+- Work with cocos2d nodes and colors using `geode.cocos`. See [Reference: cocos](reference/cocos.md).
+- Use extra utilities: base64 with `geode.utils.base64`, OS permissions with `geode.utils.permission`, named colors with `geode.ColorProvider`, version strings with `geode.VersionInfo`, and key combinations with `geode.Keybind`.
 - Pass Luau functions as C++ callbacks, selector handlers, and delegate tables where bindings support it. See [Reference: callbacks](reference/callbacks.md) and [Reference: delegates](reference/delegates.md).
 - Draw a debug overlay with `imgui`. See [Reference: imgui](reference/imgui.md).
 - Share an API with other mods through the global table. See [Sharing APIs between mods](guide/sharing-apis-between-mods.md).
@@ -28,9 +30,22 @@ A script runs inside the game on the main thread. From a script you can:
 - `require(path)` loads a sibling module. See [Modules and require](guide/modules-and-require.md).
 - `task` schedules callbacks. See [Tasks and time](guide/tasks-and-time.md).
 - `time` reads the steady clock and the unix clock.
-- `geode` is the game bindings root. It holds `cocos2d`, `gd`, `Mod`, `json`, `fs`, `hook`, `skip`, and `fields`.
+- `geode` is the game bindings root. It holds `cocos2d`, `gd`, `Mod`, `json`, `fs`, `cocos`, `utils`, `ColorProvider`, `VersionInfo`, `Keybind`, `hook`, `skip`, and `fields`.
 - `imgui` draws a Dear ImGui debug overlay. See [Reference: imgui](reference/imgui.md).
 - `_G` is the shared global table. Use it to share an API with other mods. See [Sharing APIs between mods](guide/sharing-apis-between-mods.md).
+
+## Recommended aliases
+
+Cache the namespaces you use a lot in locals at the top of a module. This keeps lines short and reads better.
+
+```lua
+local cc = geode.cocos
+local cc2d = geode.cocos2d
+local gd = geode.gd
+local modId = geode.Mod.getID()
+```
+
+Use `modId` to prefix node IDs and saved keys with your mod id. The reference examples on this site follow this style.
 
 ## The geode namespace
 
@@ -46,8 +61,8 @@ See [Type stubs and editor setup](reference/type-stubs.md).
 
 Lua reference pages use one of three layouts. Pick the page that matches what you need.
 
-- **Per-symbol headings** (`## print`, `## geode.json.parse`): small APIs with a few exports. Used by [globals](reference/globals.md), [mod](reference/mod.md), [fs](reference/fs.md), [json](reference/json.md), and [hooks](reference/hooks.md).
-- **Types and Functions** (`## Types`, `## Functions`, `### name`): larger APIs with shared types. Used by [task](reference/task.md), [time](reference/time.md), and [imgui](reference/imgui.md).
+- **Per-symbol headings** (`## print`, `## geode.json.parse`): small APIs with a few exports. Used by [globals](reference/globals.md), [mod](reference/mod.md), [fs](reference/fs.md), [json](reference/json.md), [hooks](reference/hooks.md), [base64](reference/base64.md), [permission](reference/permission.md), [ColorProvider](reference/color-provider.md), [VersionInfo](reference/version-info.md), and [Keybind](reference/keybind.md).
+- **Types and Functions** (`## Types`, `## Functions`, `### name`): larger APIs with shared types. Used by [task](reference/task.md), [time](reference/time.md), [imgui](reference/imgui.md), and [cocos](reference/cocos.md).
 - **Topic sections** (behavior grouped by concept): pattern APIs without a flat symbol list. Used by [callbacks](reference/callbacks.md) and [delegates](reference/delegates.md).
 
 Guides teach usage. Reference pages list signatures, types, and limits.
