@@ -1,0 +1,12 @@
+export type HookHandle = {
+    enable: (self: HookHandle) -> (boolean, string?),
+    disable: (self: HookHandle) -> (boolean, string?),
+    remove: (self: HookHandle) -> boolean,
+    isEnabled: (self: HookHandle) -> boolean,
+}
+
+export type HookCallbackTable = {
+    before: ((...any) -> any?)?,
+    after: ((...any) -> any?)?,
+    priority: number?,
+}

@@ -1,0 +1,14 @@
+export type ModNamespace = {
+    getSavedValue: (key: string) -> any,
+    setSavedValue: (key: string, value: any) -> (),
+    getSettingValue: (key: string) -> any,
+    hasSetting: (key: string) -> boolean,
+    listenForSettingChanges: (key: string, callback: (value: any) -> ()) -> (),
+    listenForAllSettingChanges: (callback: (key: string, value: any) -> ()) -> (),
+    getID: () -> string,
+    getName: () -> string,
+    getVersion: () -> string,
+    getResourcesDir: () -> string,
+    getSaveDir: () -> string,
+    getConfigDir: () -> string,
+}

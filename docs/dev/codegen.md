@@ -82,7 +82,7 @@ These are excluded because async, HTTP, and file I/O are handled separately.
 Some bindings are written by hand in `src/lua/bindings/`, not generated. Their type
 signatures still need to be in `types/geode.d.luau`. There are two ways to add them:
 
-- `tools/luau_codegen/extra_bindings/*.dluau`: appended at the end of the stub. Use this for new top-level globals like `task` or `imgui`.
+- `tools/luau_codegen/extra_bindings/*.dluau`: appended at the end of the stub. Use it for new globals like `task` or `imgui`, and for support types the `geode` namespace references, such as `WebNamespace`, `ModNamespace`, `JsonNamespace`, `FsNamespace`, `HookHandle`, and `HookCallbackTable`. Order does not matter for `export type` aliases, so they resolve even after `declare geode`.
 - `tools/luau_codegen/emit/luau_types/manual_fields.py`: injects fields into a namespace that codegen already emits, such as `geode.cocos`. A trailing `.dluau` cannot reopen that table, so fields that live under a generated namespace go here.
 
 ## Metadata outputs

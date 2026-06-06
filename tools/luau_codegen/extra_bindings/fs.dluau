@@ -1,0 +1,10 @@
+export type FsRoot = "save" | "config" | "persistent" | "resources"
+
+export type FsNamespace = {
+    read: (root: FsRoot, path: string) -> (string?, string?),
+    write: (root: FsRoot, path: string, data: string) -> (boolean?, string?),
+    exists: (root: FsRoot, path: string) -> (boolean?, string?),
+    list: (root: FsRoot, path: string) -> ({ string }?, string?),
+    mkdir: (root: FsRoot, path: string) -> (boolean?, string?),
+    remove: (root: FsRoot, path: string) -> (boolean?, string?),
+}

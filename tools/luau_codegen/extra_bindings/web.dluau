@@ -1,0 +1,152 @@
+export type ProxyOpts = {
+    address: string,
+    port: number?,
+    type: number?,
+    auth: number?,
+    username: string?,
+    password: string?,
+    tunneling: boolean?,
+    certVerification: boolean?,
+}
+
+export type RequestTimings = {
+    queueWait: number,
+    nameLookup: number,
+    connect: number,
+    tlsHandshake: number,
+    requestSend: number,
+    firstByte: number,
+    download: number,
+    total: number,
+}
+
+export type WebProgress = {
+    downloaded: number,
+    downloadTotal: number,
+    downloadProgress: number?,
+    uploaded: number,
+    uploadTotal: number,
+    uploadProgress: number?,
+}
+
+export type RequestOptions = {
+    url: string?,
+    method: string?,
+    headers: { [string]: string }?,
+    params: { [string]: string }?,
+    userAgent: string?,
+    acceptEncoding: string?,
+    timeout: number?,
+    downloadRange: { number }?,
+    certVerification: boolean?,
+    transferBody: boolean?,
+    followRedirects: boolean?,
+    ignoreContentLength: boolean?,
+    caBundle: string?,
+    proxy: ProxyOpts?,
+    version: number?,
+    body: string?,
+    bodyString: string?,
+    bodyJson: any?,
+    bodyMultipart: MultipartForm?,
+    onProgress: ((progress: WebProgress) -> ())?,
+}
+
+export type MultipartForm = {
+    param: (self: MultipartForm, name: string, value: string) -> MultipartForm,
+    file: (self: MultipartForm, name: string, data: string, filename: string, mime: string?) -> MultipartForm,
+    fileFrom: (self: MultipartForm, name: string, root: FsRoot, path: string, mime: string?) -> (MultipartForm?, string?),
+    getBoundary: (self: MultipartForm) -> string,
+    getHeader: (self: MultipartForm) -> string,
+    getBody: (self: MultipartForm) -> string,
+}
+
+export type WebResponse = {
+    info: (self: WebResponse) -> boolean,
+    ok: (self: WebResponse) -> boolean,
+    redirected: (self: WebResponse) -> boolean,
+    badClient: (self: WebResponse) -> boolean,
+    badServer: (self: WebResponse) -> boolean,
+    error: (self: WebResponse) -> boolean,
+    cancelled: (self: WebResponse) -> boolean,
+    code: (self: WebResponse) -> number,
+    text: (self: WebResponse) -> (string?, string?),
+    json: (self: WebResponse) -> (any?, string?),
+    bytes: (self: WebResponse) -> string,
+    saveTo: (self: WebResponse, root: FsRoot, path: string) -> (boolean?, string?),
+    headers: (self: WebResponse) -> { string },
+    header: (self: WebResponse, name: string) -> string?,
+    headersNamed: (self: WebResponse, name: string) -> { string }?,
+    errorMessage: (self: WebResponse) -> string,
+    verboseLogs: (self: WebResponse) -> string,
+    timings: (self: WebResponse) -> RequestTimings,
+}
+
+export type WebHandle = {
+    cancel: (self: WebHandle) -> boolean,
+    id: (self: WebHandle) -> number?,
+}
+
+export type WebRequest = {
+    header: (self: WebRequest, name: string, value: string) -> WebRequest,
+    removeHeader: (self: WebRequest, name: string) -> WebRequest,
+    param: (self: WebRequest, name: string, value: string) -> WebRequest,
+    removeParam: (self: WebRequest, name: string) -> WebRequest,
+    method: (self: WebRequest, method: string) -> WebRequest,
+    url: (self: WebRequest, url: string) -> WebRequest,
+    userAgent: (self: WebRequest, name: string) -> WebRequest,
+    acceptEncoding: (self: WebRequest, encoding: string) -> WebRequest,
+    timeout: (self: WebRequest, seconds: number) -> WebRequest,
+    downloadRange: (self: WebRequest, start: number, stop: number) -> WebRequest,
+    certVerification: (self: WebRequest, enabled: boolean) -> WebRequest,
+    transferBody: (self: WebRequest, enabled: boolean) -> WebRequest,
+    followRedirects: (self: WebRequest, enabled: boolean) -> WebRequest,
+    ignoreContentLength: (self: WebRequest, enabled: boolean) -> WebRequest,
+    caBundle: (self: WebRequest, content: string) -> WebRequest,
+    proxy: (self: WebRequest, opts: ProxyOpts) -> WebRequest,
+    version: (self: WebRequest, version: number) -> WebRequest,
+    body: (self: WebRequest, data: string) -> WebRequest,
+    bodyString: (self: WebRequest, data: string) -> WebRequest,
+    bodyJson: (self: WebRequest, value: any) -> WebRequest,
+    bodyMultipart: (self: WebRequest, form: MultipartForm) -> WebRequest,
+    onProgress: (self: WebRequest, callback: (progress: WebProgress) -> ()) -> WebRequest,
+    send: ((self: WebRequest, method: string, url: string, callback: (response: WebResponse) -> ()) -> WebHandle) & ((self: WebRequest, method: string, url: string, options: RequestOptions, callback: (response: WebResponse) -> ()) -> WebHandle),
+    get: ((self: WebRequest, url: string, callback: (response: WebResponse) -> ()) -> WebHandle) & ((self: WebRequest, url: string, options: RequestOptions, callback: (response: WebResponse) -> ()) -> WebHandle),
+    post: ((self: WebRequest, url: string, callback: (response: WebResponse) -> ()) -> WebHandle) & ((self: WebRequest, url: string, options: RequestOptions, callback: (response: WebResponse) -> ()) -> WebHandle),
+    put: ((self: WebRequest, url: string, callback: (response: WebResponse) -> ()) -> WebHandle) & ((self: WebRequest, url: string, options: RequestOptions, callback: (response: WebResponse) -> ()) -> WebHandle),
+    patch: ((self: WebRequest, url: string, callback: (response: WebResponse) -> ()) -> WebHandle) & ((self: WebRequest, url: string, options: RequestOptions, callback: (response: WebResponse) -> ()) -> WebHandle),
+    getID: (self: WebRequest) -> number,
+    getMethod: (self: WebRequest) -> string,
+    getUrl: (self: WebRequest) -> string,
+    getHeaders: (self: WebRequest) -> { [string]: { string } },
+    getUrlParams: (self: WebRequest) -> { [string]: string },
+    getBody: (self: WebRequest) -> string?,
+    getTimeout: (self: WebRequest) -> number?,
+    getVersion: (self: WebRequest) -> number,
+    getProgress: (self: WebRequest) -> WebProgress,
+}
+
+export type WebListenerHandle = {
+    disconnect: (self: WebListenerHandle) -> (),
+}
+
+export type WebNamespace = {
+    openLinkInBrowser: (url: string) -> (),
+    newRequest: () -> WebRequest,
+    multipart: () -> MultipartForm,
+    get: ((url: string, callback: (response: WebResponse) -> ()) -> WebHandle) & ((url: string, options: RequestOptions, callback: (response: WebResponse) -> ()) -> WebHandle),
+    post: ((url: string, callback: (response: WebResponse) -> ()) -> WebHandle) & ((url: string, options: RequestOptions, callback: (response: WebResponse) -> ()) -> WebHandle),
+    put: ((url: string, callback: (response: WebResponse) -> ()) -> WebHandle) & ((url: string, options: RequestOptions, callback: (response: WebResponse) -> ()) -> WebHandle),
+    patch: ((url: string, callback: (response: WebResponse) -> ()) -> WebHandle) & ((url: string, options: RequestOptions, callback: (response: WebResponse) -> ()) -> WebHandle),
+    fetch: ((url: string, callback: (response: WebResponse) -> ()) -> WebHandle) & ((url: string, options: RequestOptions, callback: (response: WebResponse) -> ()) -> WebHandle) & ((options: RequestOptions, callback: (response: WebResponse) -> ()) -> WebHandle),
+    onRequestIntercept: (callback: (modID: string, request: WebRequest) -> boolean?, priority: number?) -> WebListenerHandle,
+    onRequestInterceptFor: (modID: string, callback: (request: WebRequest) -> boolean?, priority: number?) -> WebListenerHandle,
+    onRequestInterceptById: (requestID: number, callback: (request: WebRequest) -> boolean?, priority: number?) -> WebListenerHandle,
+    onResponse: (callback: (modID: string, response: WebResponse) -> boolean?, priority: number?) -> WebListenerHandle,
+    onResponseFor: (modID: string, callback: (response: WebResponse) -> boolean?, priority: number?) -> WebListenerHandle,
+    onResponseById: (requestID: number, callback: (response: WebResponse) -> boolean?, priority: number?) -> WebListenerHandle,
+    HttpVersion: { DEFAULT: number, VERSION_1_0: number, VERSION_1_1: number, VERSION_2_0: number, VERSION_2TLS: number, VERSION_2_PRIOR_KNOWLEDGE: number, VERSION_3: number, VERSION_3ONLY: number },
+    ProxyType: { HTTP: number, HTTPS: number, HTTPS2: number, SOCKS4: number, SOCKS4A: number, SOCKS5: number, SOCKS5H: number },
+    Error: { CURL_INITIALIZATION_ERROR: number, REQUEST_CANCELLED: number, QUEUE_FULL: number, CHANNEL_CLOSED: number },
+    HttpAuth: { BASIC: number, DIGEST: number, DIGEST_IE: number, BEARER: number, NEGOTIATE: number, NTLM: number, NTLM_WB: number, ANY: number, ANYSAFE: number, ONLY: number, AWS_SIGV4: number },
+}

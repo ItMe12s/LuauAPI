@@ -178,5 +178,5 @@ end)
 ## Source
 
 - `src/lua/bindings/geode/GeodeWebBinding.cpp`
-- `tools/luau_codegen/emit/luau_types/__init__.py`
+- `tools/luau_codegen/extra_bindings/web.dluau`
 - `tools/luau_codegen/emit/luau_types/manual_fields.py`

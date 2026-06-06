@@ -85,6 +85,7 @@ type HookHandle = {
 ## Source
 
 - `tools/luau_codegen/emit/luau_types/`
+- `tools/luau_codegen/extra_bindings/hook.dluau`
 - `tools/luau_codegen/emit/cxx_templates.py`
 - `tools/luau_codegen/emit/hooks.py`
 - `src/lua/Config.hpp`

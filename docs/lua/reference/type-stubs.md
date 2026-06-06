@@ -15,6 +15,13 @@ Every file in `tools/luau_codegen/extra_bindings/` is appended to the same outpu
 
 - `task.dluau` adds `task`, `time`, and `loadstring`
 - `imgui.dluau` adds `imgui`
+- `web.dluau` adds `WebNamespace` and its request and response types
+- `hook.dluau` adds `HookHandle` and `HookCallbackTable`
+- `mod.dluau` adds `ModNamespace`
+- `json.dluau` adds `JsonNamespace`
+- `fs.dluau` adds `FsRoot` and `FsNamespace`
+
+Files for a global like `task` use `declare`. Files that only add support types use `export type`.
 
 There is no separate `imgui.d.luau` in `types/` after a build.
 
@@ -44,4 +51,9 @@ The `definitionFiles` entry is a fixed single path, so after a rebuild you only 
 - `tools/luau_codegen/emit/luau_types/`
 - `tools/luau_codegen/extra_bindings/task.dluau`
 - `tools/luau_codegen/extra_bindings/imgui.dluau`
+- `tools/luau_codegen/extra_bindings/web.dluau`
+- `tools/luau_codegen/extra_bindings/hook.dluau`
+- `tools/luau_codegen/extra_bindings/mod.dluau`
+- `tools/luau_codegen/extra_bindings/json.dluau`
+- `tools/luau_codegen/extra_bindings/fs.dluau`
 - `CMakeLists.txt`

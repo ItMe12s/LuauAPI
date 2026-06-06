@@ -101,3 +101,4 @@ geode.fs.remove("save", "state.json")
 
 - `src/lua/bindings/geode/GeodeFsBinding.cpp`
 - `src/lua/module/PathSandbox.hpp`
+- `tools/luau_codegen/extra_bindings/fs.dluau`
