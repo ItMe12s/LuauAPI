@@ -13,7 +13,13 @@ cmake -B build
 cmake --build build
 ```
 
-The first `cmake -B build` also runs the codegen listing at configure time. Python 3.11+ must be on PATH before you configure.
+Two shortcuts do the same thing:
+
+- `geode build` runs the Geode CLI, which configures, builds, and installs the mod.
+- In VSCode, open the Command Palette (Ctrl+Shift+P or F1), run **CMake: Configure**, then
+  **CMake: Build** (CMake Tools extension).
+
+The first configure also runs the codegen listing. Python 3.11+ must be on PATH before you configure.
 For platform builds, use the Geode CLI or the CI workflow in `.github/workflows/multi-platform.yml`.
 
 ## Code generation

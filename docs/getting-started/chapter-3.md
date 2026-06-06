@@ -3,30 +3,38 @@
 ## Summary
 
 This page sets up VSCode so your `.luau` files get autocomplete and type checks for `geode`, `cocos2d`, `gd`, `task`, and `time`.
-You build LuauAPI to make the type stubs, copy them into your mod, then point the Luau language server at them.
+You get the `geode.d.luau` type stub, place it in your mod, then point the Luau language server at it.
 For the stub file layout and overload policy, see [Type stubs](../lua/reference/type-stubs.md).
 
 ## Step 1: install the extension
 
 Install VSCode and the Luau Language Server extension, `luau-lsp` by JohnnyMorganz.
 
-## Step 2: build LuauAPI to get the types
+## Step 2: get the type stub
 
-The build writes the type stubs into the `types/` folder.
-They are not committed to the repo, so you must build LuauAPI yourself to make them.
+Pick the path that fits you.
 
-```bash
-cmake -B build
-cmake --build build
-```
+### For API users (recommended)
 
-After the build, `types/` holds the `.d.luau` stub file.
-See [Chapter 2: Building](chapter-2.md) for details.
+1. Install LuauAPI from the Geode index in-game or LuauAPI GitHub release tab.
+2. Download `geode.d.luau` from the LuauAPI GitHub release tab (this file is located next to the `.geode` mod file).
 
-## Step 3: copy the types folder into your mod
+No build is needed for this setup. This follows the standard Geode SDK mod workflow.
 
-Copy the whole `types/` folder from the LuauAPI repo into the root of your own mod repo.
-The generator writes a single stub `types/geode.d.luau` file that contains all declared types.
+### For developers / latest features
+
+Build LuauAPI from the repository to generate the stub yourself.
+Run `geode build`, or `cmake -B build` + `cmake --build build`, or use the VSCode Command Palette.
+After the build, the `types/` folder holds the `geode.d.luau` stub.
+See [Chapter 2: Building](chapter-2.md).
+
+The stub is a single file, `geode.d.luau`, that contains all declared types.
+
+## Step 3: place the stub in your mod
+
+Put `geode.d.luau` in a `types/` folder at the root of your own mod repo,
+so the path is `types/geode.d.luau`.
+Whether you downloaded it from the release tab or built it, the file is the same.
 
 This file includes:
 
@@ -101,12 +109,15 @@ Open a `.luau` file and type `geode.` to confirm autocomplete works.
 
 After you pull changes that affect the bindings:
 
-1. Rebuild (`cmake --build build`) to regenerate `types/geode.d.luau`.
+1. Rebuild to regenerate `types/geode.d.luau`.
 2. Reload the window. The `definitionFiles` entry is a fixed single path, so there is nothing to re-paste.
 
 ## Keeping types current
 
-When LuauAPI updates its bindings, rebuild it and recopy the `types/` folder into your mod.
+When LuauAPI updates its bindings, refresh your stub:
+
+- **API users:** download the new `geode.d.luau` from the release tab and replace your copy.
+- **Developers:** rebuild LuauAPI and recopy the file into your mod.
 
 ## Related
 

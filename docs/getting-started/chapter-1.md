@@ -4,6 +4,26 @@
 
 This page lists what you need to build and use LuauAPI. It is a Geode mod that ships a shared Luau runtime.
 
+## How to get LuauAPI
+
+There are two main ways to get LuauAPI, based on what you need.
+
+### For making mods using LuauAPI
+
+Install LuauAPI from the Geode index in-game. You do not need any build steps or extra tools.
+
+For editor autocomplete, download `geode.d.luau` from the GitHub release tab.
+You can also get the `.geode` file there.
+
+See [Chapter 3: Editor setup](chapter-3.md) for help setting up your editor.
+
+### For developing LuauAPI
+
+If you want to work on LuauAPI itself or try features that are not released yet, you need to build from this repository.
+The rest of this page and [Chapter 2: Building](chapter-2.md) will give you all the steps.
+
+The next parts ("Required tools", "Fetched dependencies", "Supported platforms") are for people building from source.
+
 ## What LuauAPI is
 
 LuauAPI ships as a Geode mod with the id `imes.luauapi`.

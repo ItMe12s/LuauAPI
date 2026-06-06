@@ -31,6 +31,11 @@ Methods and factories with several overloads are emitted as one widened signatur
 Leading arguments are typed where every overload agrees, then the rest fall back to `...any`.
 The runtime still selects an overload by argument count, so a matching call type checks and dispatches correctly.
 
+## Getting the stub
+
+`geode.d.luau` ships on the GitHub release tab next to the `.geode` mod, like a normal Geode SDK mod.
+API users download it from there. Building only refreshes it for development or to test latest features.
+
 ## Regenerating the stubs
 
 The stub file is written during the build by the `luauapi_codegen` target. To refresh it, build the project.
