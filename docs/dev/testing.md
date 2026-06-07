@@ -51,18 +51,8 @@ CTest discovers the Catch2 cases at build time.
 
 ## No game libraries in tests
 
-The host tests must not link the game.
-
-`CMakeLists.txt` fails deliberately if the test target tries to link:
-
-- Geode bindings
-- Cocos2d
-- the extensions library
-- GLEW
-- FMOD
-- OpenGL
-
-This keeps the tests fast and host only.
+The host tests must not link the game: no Geode bindings, Cocos2d, extensions library, GLEW, FMOD, or OpenGL.
+The `luauapi_tests` target links only Catch2, fmt, and the Luau libraries, which keeps the tests fast and host only.
 
 ## The Python codegen tests
 

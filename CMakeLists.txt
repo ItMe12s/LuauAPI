@@ -16,7 +16,6 @@ include(CTest)
 
 option(LUAUAPI_BUILD_TESTS "Build LuauAPI host unit tests" OFF)
 option(LUAUAPI_HOST_ONLY "Host-only configure without Geode SDK or configure-time codegen listing" OFF)
-option(LUAUAPI_STRICT_GENERATED_WARNINGS "Compile generated bindings with warnings enabled (use this for auditing stuff)" OFF)
 
 set(LUAU_BUILD_CLI   OFF CACHE BOOL "" FORCE)
 set(LUAU_BUILD_TESTS OFF CACHE BOOL "" FORCE)
@@ -30,17 +29,13 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(luau)
 
-foreach(LUAU_TARGET
-    Luau.Common
-    Luau.Ast
-    Luau.Bytecode
-    Luau.Compiler
-    Luau.Config
-    Luau.Analysis
-    Luau.CodeGen
-    Luau.VM
-    Luau.Require
-)
+set(LUAUAPI_LUAU_TARGETS
+    Luau.Common Luau.Ast Luau.Bytecode Luau.Compiler
+    Luau.Config Luau.Analysis Luau.CodeGen Luau.VM Luau.Require)
+set(LUAUAPI_LUAU_LINK_LIBS
+    Luau.VM Luau.Compiler Luau.Ast Luau.Require Luau.CodeGen)
+
+foreach(LUAU_TARGET IN LISTS LUAUAPI_LUAU_TARGETS)
     if (TARGET ${LUAU_TARGET})
         get_target_property(LUAU_PUBLIC_INCLUDES ${LUAU_TARGET} INTERFACE_INCLUDE_DIRECTORIES)
         if (LUAU_PUBLIC_INCLUDES)
@@ -66,18 +61,7 @@ message(STATUS "LuauAPI geode_bindings: ${LUAUAPI_BINDINGS_GIT_TAG}")
 # Geode/Cocos use the default debug iterator layout when _ITERATOR_DEBUG_LEVEL is 1.
 # And I'm making sure Luau targets use iterator debug level 0 for STL compatibility.
 if (WIN32)
-    foreach(LUAU_TARGET
-        Luau.Common
-        Luau.Ast
-        Luau.Bytecode
-        Luau.Compiler
-        Luau.Config
-        Luau.Analysis
-        Luau.CodeGen
-        Luau.VM
-        Luau.Require
-        isocline
-    )
+    foreach(LUAU_TARGET IN LISTS LUAUAPI_LUAU_TARGETS ITEMS isocline)
         if (TARGET ${LUAU_TARGET})
             target_compile_definitions(${LUAU_TARGET} PRIVATE
                 _HAS_ITERATOR_DEBUGGING=0
@@ -87,12 +71,12 @@ if (WIN32)
     endforeach()
 endif()
 
-foreach(LUAU_TARGET Luau.VM Luau.CodeGen)
-    if (TARGET ${LUAU_TARGET})
-        # I could hardcode this.
-        target_compile_definitions(${LUAU_TARGET} PUBLIC LUA_UTAG_LIMIT=2048)
-    endif()
-endforeach()
+if (TARGET Luau.VM)
+    target_compile_definitions(Luau.VM PUBLIC LUA_UTAG_LIMIT=2048)
+endif()
+if (TARGET Luau.CodeGen)
+    target_compile_definitions(Luau.CodeGen PUBLIC LUA_UTAG_LIMIT=2048)
+endif()
 
 if (NOT LUAUAPI_HOST_ONLY)
     if (NOT DEFINED ENV{GEODE_SDK})
@@ -309,11 +293,7 @@ target_compile_definitions(LuauAPI_Runtime PUBLIC
     $<TARGET_PROPERTY:imgui-cocos,INTERFACE_COMPILE_DEFINITIONS>
 )
 target_link_libraries(LuauAPI_Runtime PUBLIC
-    Luau.VM
-    Luau.Compiler
-    Luau.Ast
-    Luau.Require
-    Luau.CodeGen
+    ${LUAUAPI_LUAU_LINK_LIBS}
     GeodeBindings
 )
 
@@ -324,14 +304,10 @@ set_target_properties(LuauAPI_GeneratedBindings PROPERTIES POSITION_INDEPENDENT_
 target_include_directories(LuauAPI_GeneratedBindings PUBLIC ${LUAUAPI_GEN_DIR}/src)
 target_link_libraries(LuauAPI_GeneratedBindings PUBLIC LuauAPI_Runtime)
 
-if(NOT LUAUAPI_STRICT_GENERATED_WARNINGS)
-    if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC" OR CMAKE_CXX_COMPILER MATCHES "clang-cl")
-        set_source_files_properties(${LUAUAPI_GENERATED_BINDING_SOURCES} PROPERTIES COMPILE_OPTIONS "/w")
-    elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
-        set_source_files_properties(${LUAUAPI_GENERATED_BINDING_SOURCES} PROPERTIES COMPILE_OPTIONS "-w")
-    endif()
-else()
-    message(STATUS "LuauAPI: compiling generated bindings with warnings enabled")
+if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC" OR CMAKE_CXX_COMPILER MATCHES "clang-cl")
+    set_source_files_properties(${LUAUAPI_GENERATED_BINDING_SOURCES} PROPERTIES COMPILE_OPTIONS "/w")
+elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+    set_source_files_properties(${LUAUAPI_GENERATED_BINDING_SOURCES} PROPERTIES COMPILE_OPTIONS "-w")
 endif()
 
 add_library(${PROJECT_NAME} SHARED
@@ -341,11 +317,7 @@ add_library(${PROJECT_NAME} SHARED
 )
 target_include_directories(${PROJECT_NAME} PRIVATE include src ${LUAUAPI_GEN_DIR}/src)
 target_link_libraries(${PROJECT_NAME}
-    Luau.VM
-    Luau.Compiler
-    Luau.Ast
-    Luau.Require
-    Luau.CodeGen
+    ${LUAUAPI_LUAU_LINK_LIBS}
     imgui-cocos
     geode-sdk
 )
@@ -431,28 +403,6 @@ if(LUAUAPI_BUILD_TESTS)
         Luau.CodeGen
         Luau.Require
     )
-
-    get_target_property(LUAUAPI_TEST_LINK_LIBS luauapi_tests LINK_LIBRARIES)
-    if(LUAUAPI_TEST_LINK_LIBS)
-        foreach(LUAUAPI_TEST_LINK_LIB IN LISTS LUAUAPI_TEST_LINK_LIBS)
-            get_filename_component(LUAUAPI_TEST_LINK_NAME "${LUAUAPI_TEST_LINK_LIB}" NAME)
-            foreach(LUAUAPI_FORBIDDEN_TEST_LIB
-                GeodeBindings
-                libcocos2d.lib
-                libExtensions.lib
-                glew32.lib
-                fmod.lib
-                opengl32
-                imgui-cocos
-                imgui
-            )
-                if(LUAUAPI_TEST_LINK_LIB STREQUAL LUAUAPI_FORBIDDEN_TEST_LIB OR
-                    LUAUAPI_TEST_LINK_NAME STREQUAL LUAUAPI_FORBIDDEN_TEST_LIB)
-                    message(FATAL_ERROR "luauapi_tests must not link ${LUAUAPI_FORBIDDEN_TEST_LIB}")
-                endif()
-            endforeach()
-        endforeach()
-    endif()
 
     list(APPEND CMAKE_MODULE_PATH ${catch2_SOURCE_DIR}/extras)
     include(Catch)

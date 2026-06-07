@@ -17,7 +17,7 @@ It includes a higher-level SDK that helps you start simple, iterate faster, and 
 - Luau LSP autocompletion (3)
 - JIT and JIT-less support
 - Rich built-in libraries, including `task`, `loadstring`, and more
-- Developer tooling, including in-game tools you turn on with developer mode in the mod settings
+- In-game developer tools (enable via developer mode)
 
 ---
 

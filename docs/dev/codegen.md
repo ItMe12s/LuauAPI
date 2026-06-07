@@ -29,7 +29,6 @@ The Geometry Dash version is read from the `"win"` entry in `mod.json`.
 CMake options:
 
 - `LUAUAPI_HOST_ONLY=ON` skips Geode SDK and configure-time codegen listing. Use for host-only tooling without `GEODE_SDK`.
-- `LUAUAPI_STRICT_GENERATED_WARNINGS=ON` compiles generated bindings with warnings enabled for audits.
 
 ## The hook generator
 
