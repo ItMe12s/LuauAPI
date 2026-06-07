@@ -10,6 +10,7 @@ from luau_codegen.policy.fields import bindable_field
 from luau_codegen.policy.containers import _CONTAINER_KINDS
 from luau_codegen.policy.filtering import call_label, returns_owned
 from luau_codegen.emit.cxx_templates import file_preamble
+from luau_codegen.emit.bindings.dispatch import emit_arity_dispatcher
 from luau_codegen.emit.hooks import emit_hook_target, hook_id, hook_suffix
 from luau_codegen.emit.bindings.vector_push import (
     emit_owned_vector_return_push,
@@ -460,18 +461,15 @@ def _emit_dispatcher(
         return ""
     first = methods[0]
     fn = f"luaapi_{cxx_id(cls.name)}_{cxx_id(name)}"
-    out = [f"    int {fn}(lua_State* L) {{\n"]
     adjust = 0 if first.is_static else 1
-    out.append(f"        switch (lua_gettop(L) - {adjust}) {{\n")
-    for idx, m in enumerate(methods):
-        out.append(
-            f"            case {method_input_arg_count(m, objects, owner_class=cls.name, ctx=ctx)}: return luaapi_{cxx_id(cls.name)}_{cxx_id(name)}_{idx}(L);\n"
+    cases = [
+        (
+            method_input_arg_count(m, objects, owner_class=cls.name, ctx=ctx),
+            f"luaapi_{cxx_id(cls.name)}_{cxx_id(name)}_{idx}",
         )
-    out.append("            default: break;\n")
-    out.append("        }\n")
-    out.append(f'        luaL_error(L, "{call_label(cls, first)} unsupported overload arity");\n')
-    out.append("    }\n\n")
-    return "".join(out)
+        for idx, m in enumerate(methods)
+    ]
+    return emit_arity_dispatcher(fn, f"lua_gettop(L) - {adjust}", cases, call_label(cls, first))
 
 
 def _emit_class_file(

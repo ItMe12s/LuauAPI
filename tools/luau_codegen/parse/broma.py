@@ -79,6 +79,7 @@ class Root:
     classes: List[Class] = dataclasses.field(default_factory=list)
     functions: List["Function"] = dataclasses.field(default_factory=list)
     codegen_ctx: CodegenContext | None = None
+    scan_warnings: List[str] = dataclasses.field(default_factory=list)
 
 
 _PLATFORMS = ("win", "imac", "m1", "ios", "android", "android32", "android64", "mac")

@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.21)
 
-set(CMAKE_CXX_STANDARD 26)
+set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 if ("${CMAKE_SYSTEM_NAME}" STREQUAL "iOS" OR IOS)
     set(CMAKE_OSX_ARCHITECTURES "arm64")
@@ -143,6 +143,7 @@ elseif (APPLE AND CMAKE_OSX_ARCHITECTURES MATCHES "arm64")
 elseif (APPLE)
     set(LUAUAPI_CODEGEN_PLATFORM "imac")
 else()
+    message(WARNING "LuauAPI: unrecognized host platform, defaulting codegen platform to \"win\"")
     set(LUAUAPI_CODEGEN_PLATFORM "win")
 endif()
 
@@ -168,6 +169,8 @@ file(GLOB LUAUAPI_EXTRA_DLUAU_FILES CONFIGURE_DEPENDS
     ${CMAKE_CURRENT_SOURCE_DIR}/tools/luau_codegen/extra_bindings/*.dluau)
 file(GLOB LUAUAPI_GEODE_UI_HEADERS CONFIGURE_DEPENDS
     "${LUAUAPI_GEODE_SDK_PATH}/loader/include/Geode/ui/*.hpp")
+set(LUAUAPI_GEODE_UI_MANIFEST
+    "${LUAUAPI_GEODE_SDK_PATH}/loader/include/Geode/UI.hpp")
 set(LUAUAPI_GEODE_COCOS_HEADERS
     "${LUAUAPI_GEODE_SDK_PATH}/loader/include/Geode/cocos/base_nodes/CCNode.h")
 set(LUAUAPI_GEODE_UTILS_HEADERS
@@ -235,6 +238,7 @@ add_custom_command(
         ${LUAUAPI_BRO_FILES}
         ${LUAUAPI_EXTRA_DLUAU_FILES}
         ${LUAUAPI_GEODE_UI_HEADERS}
+        ${LUAUAPI_GEODE_UI_MANIFEST}
         ${LUAUAPI_GEODE_COCOS_HEADERS}
         ${LUAUAPI_GEODE_UTILS_HEADERS}
     COMMENT "LuauAPI Broma codegen"
@@ -311,11 +315,11 @@ elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
 endif()
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC" OR CMAKE_CXX_COMPILER MATCHES "clang-cl")
-    target_compile_options(LuauAPI_GeneratedBindings PRIVATE /O1)
+    target_compile_options(LuauAPI_GeneratedBindings PRIVATE $<$<NOT:$<CONFIG:Debug>>:/O1>)
 elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-    target_compile_options(LuauAPI_GeneratedBindings PRIVATE -Oz)
+    target_compile_options(LuauAPI_GeneratedBindings PRIVATE $<$<NOT:$<CONFIG:Debug>>:-Oz>)
 elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
-    target_compile_options(LuauAPI_GeneratedBindings PRIVATE -Os)
+    target_compile_options(LuauAPI_GeneratedBindings PRIVATE $<$<NOT:$<CONFIG:Debug>>:-Os>)
 endif()
 
 add_library(${PROJECT_NAME} SHARED

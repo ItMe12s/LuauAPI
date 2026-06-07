@@ -26,6 +26,7 @@ from luau_codegen.convert.type_map import (
     require_classify_return,
 )
 from luau_codegen.emit.cxx_templates import file_preamble
+from luau_codegen.emit.bindings.dispatch import emit_arity_dispatcher
 from luau_codegen.policy.containers import _CONTAINER_KINDS
 
 FREE_FUNCTIONS_FILE = "bindings_free_functions.cpp"
@@ -140,7 +141,7 @@ def _emit_free_dispatcher(
         return ""
     base = _free_fn_base(fns[0])
     label = f"{fns[0].lua_path}.{fns[0].name}"
-    out = [f"    int {base}(lua_State* L) {{\n", "        switch (lua_gettop(L)) {\n"]
+    cases = []
     for idx, fn in enumerate(fns):
         arg_infos = [require_classify_arg(arg.type, objects, ctx=ctx) for arg in fn.args]
         ret = require_classify_return(fn.ret, objects, ctx=ctx)
@@ -149,12 +150,8 @@ def _emit_free_dispatcher(
             for lua_arg in iter_lua_method_args(fn, arg_infos, ret_kind=ret.kind)
             if not lua_arg.out_only
         )
-        out.append(f"            case {input_count}: return {base}_{idx}(L);\n")
-    out.append("            default: break;\n")
-    out.append("        }\n")
-    out.append(f'        luaL_error(L, "{label} unsupported overload arity");\n')
-    out.append("    }\n\n")
-    return "".join(out)
+        cases.append((input_count, f"{base}_{idx}"))
+    return emit_arity_dispatcher(base, "lua_gettop(L)", cases, label)
 
 
 def emit_free_functions_file(

@@ -57,11 +57,6 @@ namespace {
         push(L, result.unwrap());
         return 1;
     }
-
-    void setIntField(lua_State* L, char const* name, int value) {
-        lua_pushinteger(L, value);
-        lua_setfield(L, -2, name);
-    }
 } // namespace
 
 namespace luax {

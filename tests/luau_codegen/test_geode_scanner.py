@@ -4,7 +4,6 @@ import os
 import shutil
 import tempfile
 import unittest
-import warnings
 from unittest import mock
 from helpers import (
     Class,  # type: ignore[import-unresolved]
@@ -15,7 +14,10 @@ from helpers import (
 
 class M1ScannerWarningTests(unittest.TestCase):
     def test_bad_header_emits_warning(self) -> None:
-        from luau_codegen.parse.geode_sdk import scan_geode_sdk  # type: ignore[import-unresolved]
+        from luau_codegen.parse.geode_sdk import (  # type: ignore[import-unresolved]
+            scan_geode_sdk,
+            take_scan_warnings,
+        )
 
         tmpdir = tempfile.mkdtemp()
         try:
@@ -26,15 +28,18 @@ class M1ScannerWarningTests(unittest.TestCase):
                 f.write('#include "ui/Bad.hpp"\n')
             with open(os.path.join(ui_dir, "Bad.hpp"), "w") as f:
                 f.write("this is not valid C++ {{{{ [[[ ;;;")
-            with warnings.catch_warnings(record=True) as w:
-                warnings.simplefilter("always")
+            take_scan_warnings()
+            with self.assertLogs("luau_codegen.geode_sdk", level="WARNING") as logs:
                 with mock.patch(
                     "luau_codegen.parse.geode_sdk._scan_header",
                     side_effect=ValueError("bad"),
                 ):
                     scan_geode_sdk(tmpdir)
-            warned = any("[luauapi] failed to scan" in str(x.message) for x in w)
-            self.assertTrue(warned)
+            recorded = take_scan_warnings()
+            self.assertTrue(any("[luauapi] failed to scan" in m for m in recorded))
+            self.assertTrue(
+                any("[luauapi] failed to scan" in line for line in logs.output)
+            )
         finally:
             shutil.rmtree(tmpdir)
 
@@ -66,7 +71,9 @@ class M1ScannerWarningTests(unittest.TestCase):
             ccobject = Class(name="CCObject", namespace="cocos2d")
             objects = {"CCObject": ccobject, "GoodUI": classes[0]}
             ok_win, _ = supported(classes[0], classes[0].methods[0], objects, "win")
-            ok_android, reason = supported(classes[0], classes[0].methods[0], objects, "android64")
+            ok_android, reason = supported(
+                classes[0], classes[0].methods[0], objects, "android64"
+            )
             self.assertTrue(ok_win)
             self.assertTrue(ok_android)
             self.assertEqual(reason, "")
@@ -82,8 +89,12 @@ class ExtraScanScopeTests(unittest.TestCase):
         try:
             utils_dir = os.path.join(tmpdir, "loader", "include", "Geode", "utils")
             os.makedirs(utils_dir)
-            with open(os.path.join(utils_dir, "random.hpp"), "w", encoding="utf-8") as f:
-                f.write("namespace geode::utils::random { GEODE_DLL std::string generateUUID(); }")
+            with open(
+                os.path.join(utils_dir, "random.hpp"), "w", encoding="utf-8"
+            ) as f:
+                f.write(
+                    "namespace geode::utils::random { GEODE_DLL std::string generateUUID(); }"
+                )
             fns = {f.name: f for f in scan_geode_functions(tmpdir)}
             self.assertIn("generateUUID", fns)
             self.assertEqual(fns["generateUUID"].namespace, "geode::utils::random")

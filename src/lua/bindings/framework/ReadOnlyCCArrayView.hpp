@@ -1,5 +1,6 @@
 #pragma once
 
+#include "ReadOnlyView.hpp"
 #include "Usertype.hpp"
 
 #include <Geode/Geode.hpp>
@@ -84,21 +85,15 @@ namespace luax {
 
         template <class T>
         void ensureReadOnlyCCArrayViewMetatable(lua_State* L) {
-            if (luaL_newmetatable(L, readOnlyCCArrayViewMetatable<T>())) {
-                lua_pushcfunction(L, &readOnlyCCArrayViewIndex<T>, "__index");
-                lua_setfield(L, -2, "__index");
-                lua_pushcfunction(L, &readOnlyCCArrayViewLen<T>, "__len");
-                lua_setfield(L, -2, "__len");
-                lua_pushcfunction(L, &readOnlyCCArrayViewNewIndex<T>, "__newindex");
-                lua_setfield(L, -2, "__newindex");
-                lua_pushcfunction(L, &readOnlyCCArrayViewGc<T>, "__gc");
-                lua_setfield(L, -2, "__gc");
-                lua_pushstring(L, "locked");
-                lua_setfield(L, -2, "__metatable");
-                lua_pushstring(L, "ReadOnlyCCArrayView");
-                lua_setfield(L, -2, "__type");
-            }
-            lua_pop(L, 1);
+            registerReadOnlyMetatable(
+                L,
+                readOnlyCCArrayViewMetatable<T>(),
+                &readOnlyCCArrayViewIndex<T>,
+                &readOnlyCCArrayViewLen<T>,
+                &readOnlyCCArrayViewNewIndex<T>,
+                &readOnlyCCArrayViewGc<T>,
+                "ReadOnlyCCArrayView"
+            );
         }
     } // namespace detail
 

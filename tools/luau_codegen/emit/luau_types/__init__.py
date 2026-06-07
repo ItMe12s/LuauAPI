@@ -41,9 +41,7 @@ geode_namespace = "geode"
 
 __all__ = ["emit", "TYPES_FILE"]
 
-_PACKAGE_DIR = os.path.dirname(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-)
+_PACKAGE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
 def _collect_extra_dluau() -> str:
@@ -58,11 +56,7 @@ def _collect_extra_dluau() -> str:
     if not parts:
         return ""
     body = "\n\n".join(parts)
-    return (
-        "\n\n-- Custom definitions from tools/luau_codegen/extra_bindings/\n"
-        + body
-        + "\n"
-    )
+    return "\n\n-- Custom definitions from tools/luau_codegen/extra_bindings/\n" + body + "\n"
 
 
 def _header(label: str) -> List[str]:
@@ -130,32 +124,22 @@ def emit(
     cocos_factories = _collect_factories(
         classes, grouped_by_class, skipped_classes, cocos_namespace
     )
-    gd_factories = _collect_factories(
-        classes, grouped_by_class, skipped_classes, gd_namespace
-    )
+    gd_factories = _collect_factories(classes, grouped_by_class, skipped_classes, gd_namespace)
     geode_factories = _collect_factories(
         classes, grouped_by_class, skipped_classes, geode_namespace
     )
     cocos_factory_text = "".join(
         _emit_factories(cocos_factories, objects, cocos_namespace, ctx=plan.ctx)
     )
-    gd_factory_text = "".join(
-        _emit_factories(gd_factories, objects, gd_namespace, ctx=plan.ctx)
-    )
+    gd_factory_text = "".join(_emit_factories(gd_factories, objects, gd_namespace, ctx=plan.ctx))
 
-    geode_factory_text = "".join(
-        _emit_factory_records(geode_factories, objects, ctx=plan.ctx)
-    )
+    geode_factory_text = "".join(_emit_factory_records(geode_factories, objects, ctx=plan.ctx))
 
-    function_tree = _build_function_tree(
-        plan.supported_free_functions, objects, manual_fields
-    )
+    function_tree = _build_function_tree(plan.supported_free_functions, objects, manual_fields)
     function_field_lines = _emit_function_tree(function_tree, objects, 1, ctx=plan.ctx)
 
     defined = {name for name, _ in cocos_chunks} | {name for name, _ in gd_chunks}
-    refs = _refs_from_classes(
-        defined, grouped_by_class, objects, skipped_classes, ctx=plan.ctx
-    )
+    refs = _refs_from_classes(defined, grouped_by_class, objects, skipped_classes, ctx=plan.ctx)
     refs |= _factory_object_refs(cocos_factories, objects, ctx=plan.ctx)
     refs |= _factory_object_refs(gd_factories, objects, ctx=plan.ctx)
     refs |= _factory_object_refs(geode_factories, objects, ctx=plan.ctx)
@@ -210,9 +194,7 @@ def emit(
     lines.append("    fs: FsNamespace,\n")
     lines.extend(_factory_field_lines(geode_factories))
     lines.extend(function_field_lines)
-    lines.append(
-        "    hook: (target: string, callback: HookCallbackTable) -> HookHandle,\n"
-    )
+    lines.append("    hook: (target: string, callback: HookCallbackTable) -> HookHandle,\n")
     lines.append("    skip: (value: any?) -> any,\n")
     lines.append("    fields: (self: CCNode) -> { [string]: any },\n")
     lines.append("}\n\n")

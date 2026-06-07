@@ -9,7 +9,11 @@ You depend on the mod, include the header, and call the run functions on the mai
 
 Set up the dependency and header first. See [Your first script](../getting-started/chapter-4.md)
 for the `mod.json` dependency, resources, and include.
-All public functions live in the `imes::luauapi` namespace.
+All public functions live in the `imes::luauapi` namespace. The examples below use the alias
+
+```cpp
+namespace lua = imes::luauapi;
+```
 
 ## You do not start the runtime
 

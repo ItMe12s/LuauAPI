@@ -23,6 +23,7 @@ def collect_bindings_root(bindings_dir: str, geode_sdk_path: str | None = None) 
             scan_geode_ccnode_additions,
             scan_geode_enums,
             scan_geode_functions,
+            take_scan_warnings,
         )
 
         geode_enums = scan_geode_enums(geode_sdk_path)
@@ -31,6 +32,7 @@ def collect_bindings_root(bindings_dir: str, geode_sdk_path: str | None = None) 
         if ccnode_additions:
             root.classes.append(ccnode_additions)
         root.functions.extend(scan_geode_functions(geode_sdk_path))
+        root.scan_warnings.extend(take_scan_warnings())
     from luau_codegen.policy.filtering import method_key
 
     seen: dict[str, broma.Class] = {}

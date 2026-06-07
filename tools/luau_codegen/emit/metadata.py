@@ -175,6 +175,13 @@ def emit_report(
     else:
         lines.append("- none\n")
 
+    lines.append("\n## SDK scan warnings\n\n")
+    if root.scan_warnings:
+        for warning in root.scan_warnings:
+            lines.append(f"- {warning}\n")
+    else:
+        lines.append("- none\n")
+
     # Pretty much not needed but I'll keep it for now.
     lines.append("\n## Operational notes\n\n")
     lines.append(

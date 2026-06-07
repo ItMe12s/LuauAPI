@@ -29,6 +29,11 @@ For ImGui limits and usage, see [Reference: imgui](../lua/reference/imgui.md).
 ## How errors reach you
 
 The run functions return `geode::Result<void>`. On failure they return `Err` with a message.
+The examples below use the alias
+
+```cpp
+namespace lua = imes::luauapi;
+```
 
 Common messages include the following cases:
 

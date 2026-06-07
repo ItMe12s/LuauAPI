@@ -140,7 +140,7 @@ namespace luax::detail {
 
     cocos2d::CCObject* liveObject(UserdataBlock* block) {
         if (!block) return nullptr;
-        if (block->flags & 1u) {
+        if (block->flags & kUserdataOwnedFlag) {
             return block->ptr;
         }
         return block->weak.lock().data();
@@ -149,7 +149,7 @@ namespace luax::detail {
     void destructorDispatch(lua_State*, void* ud) {
         auto* block = static_cast<UserdataBlock*>(ud);
         if (!block) return;
-        if (block->flags & 1u) {
+        if (block->flags & kUserdataOwnedFlag) {
             if (block->ptr) {
                 releaseLuaRetain(block->ptr, "__gc", false);
             }
@@ -330,7 +330,7 @@ namespace luax::detail {
             lua_newuserdatataggedwithmetatable(L, sizeof(UserdataBlock), static_cast<int>(info.tag));
         auto* block = new (storage) UserdataBlock();
         block->ptr = obj;
-        block->flags = 1u;
+        block->flags = kUserdataOwnedFlag;
     }
 
     void pushUserdataBorrowed(lua_State* L, cocos2d::CCObject* obj, TypeInfo const& info) {

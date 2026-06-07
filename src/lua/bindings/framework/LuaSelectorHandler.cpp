@@ -5,14 +5,17 @@
 #include "lua/Config.hpp"
 #include "lua/runtime/Runtime.hpp"
 
-namespace luax {
-    LuaScheduleHandler* LuaScheduleHandler::create(lua_State* L, int fnIndex) {
-        luaL_checktype(L, fnIndex, LUA_TFUNCTION);
-        auto* handler = new LuaScheduleHandler();
-        handler->m_callback = std::make_shared<LuaCallback>(L, fnIndex);
-        handler->autorelease();
-        return handler;
+#define LUAX_SELECTOR_CREATE(HandlerType)                                \
+    HandlerType* HandlerType::create(lua_State* L, int fnIndex) {        \
+        luaL_checktype(L, fnIndex, LUA_TFUNCTION);                       \
+        auto* handler = new HandlerType();                               \
+        handler->m_callback = std::make_shared<LuaCallback>(L, fnIndex); \
+        handler->autorelease();                                          \
+        return handler;                                                  \
     }
+
+namespace luax {
+    LUAX_SELECTOR_CREATE(LuaScheduleHandler)
 
     void LuaScheduleHandler::onSchedule(float dt) {
         if (!m_callback || !m_callback->valid()) return;
@@ -35,26 +38,14 @@ namespace luax {
         );
     }
 
-    LuaCallFuncHandler* LuaCallFuncHandler::create(lua_State* L, int fnIndex) {
-        luaL_checktype(L, fnIndex, LUA_TFUNCTION);
-        auto* handler = new LuaCallFuncHandler();
-        handler->m_callback = std::make_shared<LuaCallback>(L, fnIndex);
-        handler->autorelease();
-        return handler;
-    }
+    LUAX_SELECTOR_CREATE(LuaCallFuncHandler)
 
     void LuaCallFuncHandler::onCallFunc() {
         if (!m_callback || !m_callback->valid()) return;
         m_callback->invoke(0, 0, "callfunc callback", kHookScriptDeadlineMs);
     }
 
-    LuaCallFuncNHandler* LuaCallFuncNHandler::create(lua_State* L, int fnIndex) {
-        luaL_checktype(L, fnIndex, LUA_TFUNCTION);
-        auto* handler = new LuaCallFuncNHandler();
-        handler->m_callback = std::make_shared<LuaCallback>(L, fnIndex);
-        handler->autorelease();
-        return handler;
-    }
+    LUAX_SELECTOR_CREATE(LuaCallFuncNHandler)
 
     void LuaCallFuncNHandler::onCallFuncN(cocos2d::CCNode* node) {
         if (!m_callback || !m_callback->valid()) return;
@@ -77,13 +68,7 @@ namespace luax {
         );
     }
 
-    LuaCallFuncNDHandler* LuaCallFuncNDHandler::create(lua_State* L, int fnIndex) {
-        luaL_checktype(L, fnIndex, LUA_TFUNCTION);
-        auto* handler = new LuaCallFuncNDHandler();
-        handler->m_callback = std::make_shared<LuaCallback>(L, fnIndex);
-        handler->autorelease();
-        return handler;
-    }
+    LUAX_SELECTOR_CREATE(LuaCallFuncNDHandler)
 
     void LuaCallFuncNDHandler::onCallFuncND(cocos2d::CCNode* node, void* data) {
         if (!m_callback || !m_callback->valid()) return;
@@ -109,13 +94,7 @@ namespace luax {
         );
     }
 
-    LuaCallFuncOHandler* LuaCallFuncOHandler::create(lua_State* L, int fnIndex) {
-        luaL_checktype(L, fnIndex, LUA_TFUNCTION);
-        auto* handler = new LuaCallFuncOHandler();
-        handler->m_callback = std::make_shared<LuaCallback>(L, fnIndex);
-        handler->autorelease();
-        return handler;
-    }
+    LUAX_SELECTOR_CREATE(LuaCallFuncOHandler)
 
     void LuaCallFuncOHandler::onCallFuncO(cocos2d::CCObject* obj) {
         if (!m_callback || !m_callback->valid()) return;
@@ -138,3 +117,5 @@ namespace luax {
         );
     }
 } // namespace luax
+
+#undef LUAX_SELECTOR_CREATE

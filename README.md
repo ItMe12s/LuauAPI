@@ -87,6 +87,12 @@ For anyone working on the runtime itself.
 - [Nested containers](docs/dev/nested-containers.md)
 - [Pair containers](docs/dev/pair-containers.md)
 
+## Project
+
+- [About](about.md)
+- [Support](support.md)
+- [Changelog](changelog.md)
+
 ## Licenses
 
 - [Luau](https://github.com/luau-lang/luau/blob/master/LICENSE.txt)

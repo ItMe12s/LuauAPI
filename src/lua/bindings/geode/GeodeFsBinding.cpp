@@ -2,85 +2,21 @@
 #include "lua/bindings/Binding.hpp"
 #include "lua/bindings/framework/Stack.hpp"
 #include "lua/bindings/framework/TableUtil.hpp"
-#include "lua/bindings/geode/CurrentMod.hpp"
-#include "lua/module/PathSandbox.hpp"
+#include "lua/bindings/geode/ModSandbox.hpp"
 
-#include <Geode/loader/Mod.hpp>
 #include <Geode/utils/file.hpp>
 #include <Geode/utils/string.hpp>
 #include <filesystem>
 #include <lua.h>
 #include <lualib.h>
-#include <optional>
 #include <string>
 #include <vector>
 
 namespace {
     using namespace luax;
 
-    bool rootDir(lua_State* L, std::string const& name, std::filesystem::path& out, bool& writable) {
-        auto* mod = requireCurrentMod(L);
-        if (name == "save") {
-            out = mod->getSaveDir();
-            writable = true;
-            return true;
-        }
-        if (name == "config") {
-            out = mod->getConfigDir();
-            writable = true;
-            return true;
-        }
-        if (name == "persistent") {
-            out = mod->getPersistentDir();
-            writable = true;
-            return true;
-        }
-        if (name == "resources") {
-            out = mod->getResourcesDir();
-            writable = false;
-            return true;
-        }
-        return false;
-    }
-
-    struct Target {
-        std::filesystem::path path;
-        bool writable;
-    };
-
-    std::optional<Target> resolveTarget(lua_State* L, char const* method) {
-        auto root = check<std::string>(L, 1, method);
-        auto rel = check<std::string>(L, 2, method);
-
-        std::filesystem::path dir;
-        bool writable = false;
-        if (!rootDir(L, root, dir, writable)) {
-            luaL_error(
-                L,
-                "%s: unknown root '%s' (expected "
-                "save/config/persistent/resources)",
-                method,
-                root.c_str()
-            );
-        }
-
-        auto resolved = resolveInsideRoot(dir, rel);
-        if (resolved.isErr()) {
-            lua_pushnil(L);
-            push(L, std::string(resolved.unwrapErr()));
-            return std::nullopt;
-        }
-        return Target{resolved.unwrap(), writable};
-    }
-
-    int pushReadOnlyError(lua_State* L) {
-        lua_pushnil(L);
-        push(L, std::string("root is read-only"));
-        return 2;
-    }
-
     int fsRead(lua_State* L) {
-        auto target = resolveTarget(L, "geode.fs.read");
+        auto target = resolveSandboxTarget(L, 1, 2, "geode.fs.read");
         if (!target) return 2;
 
         std::error_code ec;
@@ -107,9 +43,8 @@ namespace {
     }
 
     int fsWrite(lua_State* L) {
-        auto target = resolveTarget(L, "geode.fs.write");
+        auto target = resolveSandboxTarget(L, 1, 2, "geode.fs.write", true);
         if (!target) return 2;
-        if (!target->writable) return pushReadOnlyError(L);
 
         auto data = check<std::string>(L, 3, "geode.fs.write");
 
@@ -134,7 +69,7 @@ namespace {
     }
 
     int fsExists(lua_State* L) {
-        auto target = resolveTarget(L, "geode.fs.exists");
+        auto target = resolveSandboxTarget(L, 1, 2, "geode.fs.exists");
         if (!target) return 2;
 
         std::error_code ec;
@@ -144,7 +79,7 @@ namespace {
     }
 
     int fsList(lua_State* L) {
-        auto target = resolveTarget(L, "geode.fs.list");
+        auto target = resolveSandboxTarget(L, 1, 2, "geode.fs.list");
         if (!target) return 2;
 
         auto entries = geode::utils::file::readDirectory(target->path, false);
@@ -179,9 +114,8 @@ namespace {
     }
 
     int fsMkdir(lua_State* L) {
-        auto target = resolveTarget(L, "geode.fs.mkdir");
+        auto target = resolveSandboxTarget(L, 1, 2, "geode.fs.mkdir", true);
         if (!target) return 2;
-        if (!target->writable) return pushReadOnlyError(L);
 
         auto made = geode::utils::file::createDirectoryAll(target->path);
         if (made.isErr()) {
@@ -194,9 +128,8 @@ namespace {
     }
 
     int fsRemove(lua_State* L) {
-        auto target = resolveTarget(L, "geode.fs.remove");
+        auto target = resolveSandboxTarget(L, 1, 2, "geode.fs.remove", true);
         if (!target) return 2;
-        if (!target->writable) return pushReadOnlyError(L);
 
         std::error_code ec;
         std::filesystem::remove(target->path, ec);

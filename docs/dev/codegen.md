@@ -34,10 +34,10 @@ CMake options:
 
 Bindings make up most of the binary size, so the build minimizes it using two methods:
 
-- `-Oz` is set on the binding target to compile all bindings for minimal size. This ensures consistent optimization and avoids "OptimizationLevel differs" errors.
+- A size flag is set on the binding target so all bindings compile for minimal size. This is `-Oz` on Clang, `-Os` on GCC, and `/O1` on MSVC and clang-cl. It keeps optimization consistent and avoids the OptimizationLevel differs error.
 - Linker `/OPT:REF` and `/OPT:ICF`, which drop unused code and fold identical functions.
 
-These apply to non-debug builds only.
+These apply to non-debug builds only. The compile flag is guarded so Debug builds stay debuggable.
 
 ## The hook generator
 
@@ -92,6 +92,15 @@ signatures still need to be in `types/geode.d.luau`. There are two ways to add t
 
 - `tools/luau_codegen/extra_bindings/*.dluau`: appended at the end of the stub. Use it for new globals like `task` or `imgui`, and for support types the `geode` namespace references, such as `WebNamespace`, `ModNamespace`, `JsonNamespace`, `FsNamespace`, `HookHandle`, and `HookCallbackTable`. Order does not matter for `export type` aliases, so they resolve even after `declare geode`.
 - `tools/luau_codegen/emit/luau_types/manual_fields.py`: injects fields into a namespace that codegen already emits, such as `geode.cocos`. A trailing `.dluau` cannot reopen that table, so fields that live under a generated namespace go here.
+
+Some namespaces have functions implemented by hand in C++ (`geode.cocos`,
+`geode.utils.base64`, `geode.utils.permission`, `geode.ColorProvider`,
+`geode.VersionInfo`, and `geode.Keybind`). For these, the runtime registration in
+`src/lua/bindings/geode/*.cpp` and the `manual_fields.py` declarations are two
+copies of the same surface, so they must stay in sync. When you add, remove, or
+rename a registered function, update `manual_fields.py` to match.
+`tests/luau_codegen/test_manual_fields_sync.py` checks that the two match and fails
+CI on drift.
 
 ## Metadata outputs
 

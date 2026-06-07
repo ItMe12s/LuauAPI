@@ -1,8 +1,25 @@
 from __future__ import annotations
 
+import logging
 import os
 import re
 from typing import List
+
+_log = logging.getLogger("luau_codegen.geode_sdk")
+
+_SCAN_WARNINGS: List[str] = []
+
+
+def take_scan_warnings() -> List[str]:
+    global _SCAN_WARNINGS
+    warnings, _SCAN_WARNINGS = _SCAN_WARNINGS, []
+    return warnings
+
+
+def _record_scan_failure(message: str) -> None:
+    _log.warning(message)
+    _SCAN_WARNINGS.append(message)
+
 
 from luau_codegen.parse.broma import (
     Class,
@@ -113,9 +130,7 @@ def scan_geode_sdk(sdk_path: str) -> List[Class]:
         try:
             classes.extend(_scan_header(os.path.join(ui_dir, filename)))
         except Exception as exc:
-            import warnings
-
-            warnings.warn(f"[luauapi] failed to scan {filename}: {exc}")
+            _record_scan_failure(f"[luauapi] failed to scan {filename}: {exc}")
     return classes
 
 
@@ -133,9 +148,7 @@ def scan_geode_enums(sdk_path: str) -> dict[str, str]:
         try:
             out.update(_scan_header_enums(os.path.join(ui_dir, filename)))
         except Exception as exc:
-            import warnings
-
-            warnings.warn(f"[luauapi] failed to scan enums {filename}: {exc}")
+            _record_scan_failure(f"[luauapi] failed to scan enums {filename}: {exc}")
     return out
 
 
@@ -149,9 +162,7 @@ def scan_geode_functions(sdk_path: str) -> List[Function]:
         try:
             out.extend(_scan_header_functions(path, namespaces, names))
         except Exception as exc:
-            import warnings
-
-            warnings.warn(f"[luauapi] failed to scan functions {rel}: {exc}")
+            _record_scan_failure(f"[luauapi] failed to scan functions {rel}: {exc}")
     return out
 
 

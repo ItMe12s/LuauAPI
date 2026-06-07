@@ -5,6 +5,7 @@ Executor.footer = 48
 Executor.ranCount = 0
 Executor.code = "print('hello from executor :3')"
 Executor.status = ""
+Executor.initialized = false
 Executor.enabled = geode.Mod.getSettingValue("enable-executor")
 
 geode.Mod.listenForSettingChanges("enable-executor", function(value)
@@ -27,13 +28,14 @@ function Executor.execute(code: string)
         Executor.setStatus(false, "Code is empty")
         return
     end
-    Executor.ranCount += 1
 
     local fn, err = loadstring(code, "=executor")
     if not fn then
         Executor.setStatus(false, tostring(err))
         return
     end
+
+    Executor.ranCount += 1
 
     task.defer(function()
         local ok, res = pcall(fn)
@@ -75,6 +77,9 @@ function Executor.draw()
 end
 
 function Executor.init()
+    if Executor.initialized then return end
+    Executor.initialized = true
+
     imgui.onDraw(function()
         if not Executor.enabled then return end
         Executor.draw()

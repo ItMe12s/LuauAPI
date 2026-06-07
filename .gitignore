@@ -66,3 +66,6 @@ build-*/
 # Whatever this project does
 **/__pycache__
 types/
+
+# Lmao this guy is vibecoding
+.cursor/

@@ -8,6 +8,7 @@ namespace luax {
     constexpr std::size_t kMaxScriptBytes = 4 * 1024 * 1024;
     constexpr std::size_t kMaxFsReadBytes = 32 * 1024 * 1024;
     constexpr std::size_t kMaxJsonParseBytes = 8 * 1024 * 1024;
+    constexpr int kMaxJsonDepth = 32;
     constexpr std::size_t kMaxFsListEntries = 4096;
     constexpr std::size_t kMaxFsListNameBytes = 256 * 1024;
     constexpr int kMaxCompileDeadlineMs = 5000;

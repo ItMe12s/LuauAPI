@@ -19,6 +19,8 @@
 #include <vector>
 
 namespace luax {
+    constexpr std::uint32_t kUserdataOwnedFlag = 1u;
+
     struct UserdataBlock {
         cocos2d::CCObject* ptr = nullptr;
         geode::WeakRef<cocos2d::CCObject> weak;
