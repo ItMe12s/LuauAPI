@@ -808,7 +808,11 @@ namespace {
     }
 
     int responseJson(lua_State* L) {
-        auto result = checkResponse(L, 1, "WebResponse:json").json();
+        auto& response = checkResponse(L, 1, "WebResponse:json");
+        if (!responseDataWithinLimit(response.data().size())) {
+            return pushResponseSizeExceeded(L);
+        }
+        auto result = response.json();
         if (result.isErr()) {
             lua_pushnil(L);
             push(L, std::string(result.unwrapErr()));

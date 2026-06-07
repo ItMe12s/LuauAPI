@@ -5,6 +5,8 @@ import os
 import re
 from typing import List
 
+from luau_codegen.model.free_fn_sources import FREE_FUNCTION_SOURCES
+
 _log = logging.getLogger("luau_codegen.geode_sdk")
 
 _SCAN_WARNINGS: List[str] = []
@@ -79,26 +81,7 @@ _FUNC_DECL = re.compile(
     r"GEODE_DLL\s+([A-Za-z_][\w:<>,\s\*&]*?)\s+([A-Za-z_]\w*)\s*\(([^{};]*)\)\s*;"
 )
 
-_FUNCTION_SOURCES = (
-    (
-        "utils/general.hpp",
-        frozenset(
-            {
-                "geode::utils",
-                "geode::utils::clipboard",
-                "geode::utils::game",
-                "geode::utils::thread",
-                "geode::utils::platform",
-            }
-        ),
-        None,
-    ),
-    ("ui/Popup.hpp", frozenset({"geode"}), frozenset({"createQuickPopup"})),
-    ("ui/GeodeUI.hpp", frozenset({"geode"}), None),
-    ("utils/string.hpp", frozenset({"geode::utils::string"}), None),
-    ("utils/random.hpp", frozenset({"geode::utils::random"}), None),
-    ("utils/cocos.hpp", frozenset({"geode::cocos"}), None),
-)
+_FUNCTION_SOURCES = FREE_FUNCTION_SOURCES
 
 
 def _included_headers(sdk_path: str) -> set[str]:

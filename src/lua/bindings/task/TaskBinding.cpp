@@ -4,6 +4,7 @@
 #include "lua/bindings/framework/TableUtil.hpp"
 #include "lua/runtime/Runtime.hpp"
 
+#include <Geode/Geode.hpp>
 #include <chrono>
 #include <lua.h>
 #include <lualib.h>
@@ -37,6 +38,22 @@ namespace {
         }
     }
 
+    bool s_armWarned = false;
+
+    void ensureTaskTickArmed() {
+        if (armTaskTick()) {
+            s_armWarned = false;
+            return;
+        }
+        if (!s_armWarned) {
+            s_armWarned = true;
+            geode::log::warn(
+                "task: scheduler tick not armed yet (game scene not ready); callbacks will run "
+                "once the scene is available"
+            );
+        }
+    }
+
     int taskSpawn(lua_State* L) {
         luaL_checktype(L, 1, LUA_TFUNCTION);
         int nargs = lua_gettop(L) - 1;
@@ -53,6 +70,7 @@ namespace {
         luaL_checktype(L, 2, LUA_TFUNCTION);
         if (seconds < 0.0) seconds = 0.0;
         ensureCapacity(L);
+        ensureTaskTickArmed();
         LuaRef ref;
         ref.reset(L, 2);
         std::uint64_t id = TaskScheduler::get().add(std::move(ref), seconds, 0.0);
@@ -67,6 +85,7 @@ namespace {
             luaL_error(L, "task.every: interval must be > 0");
         }
         ensureCapacity(L);
+        ensureTaskTickArmed();
         LuaRef ref;
         ref.reset(L, 2);
         std::uint64_t id = TaskScheduler::get().add(std::move(ref), seconds, seconds);
@@ -77,6 +96,7 @@ namespace {
     int taskDefer(lua_State* L) {
         luaL_checktype(L, 1, LUA_TFUNCTION);
         ensureCapacity(L);
+        ensureTaskTickArmed();
         LuaRef ref;
         ref.reset(L, 1);
         std::uint64_t id = TaskScheduler::get().addDeferred(std::move(ref));

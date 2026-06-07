@@ -50,6 +50,6 @@ namespace luax {
         std::uint64_t m_nextId = 1;
     };
 
-    void armTaskTick();
+    bool armTaskTick();
     void disarmTaskTick();
 } // namespace luax

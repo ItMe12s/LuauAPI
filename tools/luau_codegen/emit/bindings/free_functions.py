@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Dict, List
 if TYPE_CHECKING:
     from luau_codegen.model.codegen_context import CodegenContext
 
+from luau_codegen.model.free_fn_sources import free_function_includes
 from luau_codegen.parse.broma import Class, Function
 from luau_codegen.util.identifiers import cxx_id
 from luau_codegen.emit.bindings.vector_push import (
@@ -163,14 +164,10 @@ def emit_free_functions_file(
     for fn in functions:
         by_key[(fn.namespace, fn.name)].append(fn)
 
+    includes = "".join(f"#include <{header}>\n" for header in free_function_includes())
     out = [
         file_preamble(),
-        "#include <Geode/ui/Popup.hpp>\n",
-        "#include <Geode/ui/GeodeUI.hpp>\n",
-        "#include <Geode/utils/general.hpp>\n",
-        "#include <Geode/utils/string.hpp>\n",
-        "#include <Geode/utils/random.hpp>\n",
-        "#include <Geode/utils/cocos.hpp>\n\n",
+        includes + "\n",
         "namespace luauapi_gen::free_functions {\n\n",
         "namespace {\n\n",
     ]

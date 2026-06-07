@@ -41,7 +41,10 @@ def _emit_function_tree(
 ) -> List[str]:
     pad = "    " * indent
     lines: List[str] = []
+    manual_names = {field.split(":", 1)[0].strip() for field in node.get("manual", [])}
     for name in sorted(node["functions"]):
+        if name in manual_names:
+            continue
         methods = [
             Method(name=fn.name, ret=fn.ret, args=fn.args, is_static=True)
             for fn in node["functions"][name]

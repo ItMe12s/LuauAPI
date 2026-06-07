@@ -36,6 +36,7 @@ geode.fs.write(root: FsRoot, path: string, data: string) -> (boolean?, string?)
 
 Writes `data` to a file, creating parent directories as needed. Returns `true`, or `nil`
 and an error message. Writing to the read-only `resources` root fails.
+Writes are capped at 32 MB.
 
 ## exists
 

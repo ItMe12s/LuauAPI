@@ -47,6 +47,11 @@ namespace {
         if (!target) return 2;
 
         auto data = check<std::string>(L, 3, "geode.fs.write");
+        if (data.size() > kMaxFsWriteBytes) {
+            lua_pushnil(L);
+            push(L, std::string("data exceeds maximum write size"));
+            return 2;
+        }
 
         auto parent = target->path.parent_path();
         if (!parent.empty()) {

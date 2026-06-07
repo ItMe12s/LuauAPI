@@ -29,6 +29,7 @@ The C++ tests use Catch2 `v3.15.0` and build into the `luauapi_tests` executable
 | `tests/bytecode_cache_accounting_tests.cpp` | Bytecode cache accounting limits |
 | `tests/bytecode_cache_key_tests.cpp` | Cache key, including changes to size, modify time, and content |
 | `tests/callback_tests.cpp` | Callback registration and invocation |
+| `tests/config_bounds_tests.cpp` | Resource byte caps stay aligned (web/fs read/write) |
 | `tests/current_mod_tests.cpp` | Current-mod path helpers against a resources root |
 | `tests/fields_tests.cpp` | `m_fields` and release eviction |
 | `tests/geode_fs_path_tests.cpp` | Geode filesystem binding path resolution inside a root |
@@ -36,6 +37,7 @@ The C++ tests use Catch2 `v3.15.0` and build into the `luauapi_tests` executable
 | `tests/indexed_slot_map_tests.cpp` | Indexed slot map structure used by the schedulers |
 | `tests/loadstring_tests.cpp` | `loadstring` compile and runtime behavior |
 | `tests/misc_correctness_tests.cpp` | Assorted runtime correctness cases |
+| `tests/mod_sandbox_tests.cpp` | Mod sandbox path resolution and root access policy |
 | `tests/opaque_handle_tests.cpp` | Opaque pointer userdata handles |
 | `tests/path_rules_tests.cpp` | Flat path rules and extension checks |
 | `tests/path_sandbox_tests.cpp` | File containment, virtual chunk paths, and escape rejection |
@@ -81,6 +83,7 @@ PYTHONPATH=tools python -m unittest discover -s tests/luau_codegen -p "test_*.py
 | Test file | Coverage |
 | --- | --- |
 | `test_audit.py` | Skip audit buckets, markdown sections, totals vs plan |
+| `test_binding_guards.py` | Web/fs size-cap enforcement, task-tick arming signature, free-fn manifest sync |
 | `test_bindings_fmod.py` | FMOD opaque handle bindings emit tagged opaque userdata |
 | `test_bindings_handlers.py` | SEL/menu handler collapse, schedule, lazy sprite callbacks |
 | `test_bindings_overloads.py` | Ambiguous overload policy, preferred overloads, const mangling |

@@ -100,6 +100,9 @@ response:timings() -> RequestTimings
 
 `saveTo` accepts only writable roots: `"save"`, `"config"`, and `"persistent"`.
 
+Response bodies are capped at 32 MB. `:text()`, `:bytes()`, `:json()`, and `:saveTo()`
+return `nil` and an error message when the body exceeds the cap.
+
 ## MultipartForm
 
 ```lua

@@ -204,21 +204,22 @@ namespace luax {
         TaskTickNode* s_tickNode = nullptr;
     } // namespace
 
-    void armTaskTick() {
-        if (s_tickNode) return;
+    bool armTaskTick() {
+        if (s_tickNode) return true;
         auto* director = cocos2d::CCDirector::sharedDirector();
         if (!director) {
             geode::log::error("task scheduler: CCDirector unavailable, task tick not armed");
-            return;
+            return false;
         }
         auto* scheduler = director->getScheduler();
         if (!scheduler) {
             geode::log::error("task scheduler: cocos2d scheduler unavailable, task tick not armed");
-            return;
+            return false;
         }
         s_tickNode = new TaskTickNode();
         s_tickNode->init();
         scheduler->scheduleUpdateForTarget(s_tickNode, 0, false);
+        return true;
     }
 
     void disarmTaskTick() {
@@ -232,7 +233,9 @@ namespace luax {
         s_tickNode = nullptr;
     }
 #else
-    void armTaskTick() {}
+    bool armTaskTick() {
+        return false;
+    }
 
     void disarmTaskTick() {}
 #endif

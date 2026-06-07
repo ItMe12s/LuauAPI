@@ -61,7 +61,8 @@ Static methods, constructors, and destructors are skipped.
 
 The custom command depends on the Python sources, the Bromas, the extra stubs in `tools/luau_codegen/extra_bindings/`, and the Geode UI headers.
 Rebuild also triggers on extra classes from `Geode/ui/*.hpp` (via `parse/geode_sdk.py`)
-and utility free-function headers (`utils/general.hpp`, `utils/string.hpp`, `utils/random.hpp`, `utils/cocos.hpp`).
+and the free-function headers listed in `model/free_fn_sources.py`
+(`utils/general.hpp`, `ui/Popup.hpp`, `ui/GeodeUI.hpp`, `utils/string.hpp`, `utils/random.hpp`, `utils/cocos.hpp`).
 A change to any of these reruns codegen.
 
 ## Geode SDK scan scope
@@ -69,7 +70,7 @@ A change to any of these reruns codegen.
 `parse/geode_sdk.py` discovers extra bindings straight from the installed Geode SDK headers:
 
 - **UI classes and enums**: from `Geode/ui/*.hpp` headers included by `UI.hpp`. Only these are bindable, as other headers aren't included in codegen.
-- **Free functions**: from the headers and namespaces listed in `_FUNCTION_SOURCES`, mainly `geode::utils` (including its subnamespaces), `geode::cocos`, `geode::createQuickPopup`, and Geode UI functions. The free-function binding file has a fixed `#include` list, so new sources must be manually added there.
+- **Free functions**: from the headers and namespaces listed in `model/free_fn_sources.py` (`FREE_FUNCTION_SOURCES`), mainly `geode::utils` (including its subnamespaces), `geode::cocos`, `geode::createQuickPopup`, and Geode UI functions. Both the scanner (`parse/geode_sdk.py`) and the generated binding file's `#include` list derive from that one manifest, so adding a free-function header there updates both. `test_binding_guards.py` asserts they stay in sync.
 
 Only `GEODE_DLL` declarations are processed. Functions must be marshallable (no out/non-const ref args), or they're dropped.
 Only the first free function per name and arity is kept. The rest are logged as `free-function-ambiguous-arity:<n>`.
