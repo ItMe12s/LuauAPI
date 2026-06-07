@@ -7,6 +7,7 @@
     #include <Geode/utils/async.hpp>
 #endif
 
+#include <optional>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -155,6 +156,16 @@ namespace imes::luauapi {
         );
     }
 
+    geode::Result<void> resolveAsyncMainThreadResult(std::optional<geode::Result<void>> const& result) {
+        if (!result) {
+            if (luax::Runtime::isShuttingDown()) {
+                return geode::Err("luau runtime shutting down");
+            }
+            return geode::Err("luau main-thread execution cancelled");
+        }
+        return *result;
+    }
+
 #if !defined(LUAUAPI_HOST_TESTS)
     arc::Future<geode::Result<void>> runFileAsync(
         std::filesystem::path resourcesRoot, std::filesystem::path relativePath, int deadlineMs
@@ -193,10 +204,7 @@ namespace imes::luauapi {
                                                                            deadlineMs]() mutable {
                 return executeScriptOnMain(root, std::move(source), chunk, deadlineMs);
             });
-        if (!result) {
-            co_return geode::Err("luau main-thread execution cancelled");
-        }
-        co_return std::move(*result);
+        co_return resolveAsyncMainThreadResult(result);
     }
 
     arc::Future<geode::Result<void>> runScriptAsync(
@@ -230,10 +238,7 @@ namespace imes::luauapi {
                                                                            deadlineMs]() mutable {
                 return executeScriptOnMain(root, std::move(source), chunk, deadlineMs);
             });
-        if (!result) {
-            co_return geode::Err("luau main-thread execution cancelled");
-        }
-        co_return std::move(*result);
+        co_return resolveAsyncMainThreadResult(result);
     }
 #endif
 

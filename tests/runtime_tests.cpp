@@ -71,6 +71,39 @@ TEST_CASE("Runtime shutdown clears initialization state") {
     REQUIRE(luax::Runtime::getIfInitialized() == nullptr);
 }
 
+TEST_CASE("Runtime rejects execution while shutting down") {
+    RuntimeGuard guard;
+    auto* runtime = luax::Runtime::getOrCreate();
+    auto* L = runtime->state();
+    REQUIRE(L != nullptr);
+
+    luax::Runtime::setShuttingDownForTests(true);
+
+    auto scriptResult = runtime->runScript("return 1", "@shutdown.luau");
+    REQUIRE(scriptResult.isErr());
+    REQUIRE(runtime->lastError() == "luau runtime shutting down");
+
+    pushReturnValue(L, 7);
+    auto callResult = runtime->protectedCall(0, 1, "shutdown");
+    REQUIRE(callResult.isErr());
+    REQUIRE(runtime->lastError() == "luau runtime shutting down");
+
+    pushReturnValue(L, 8);
+    auto tracebackResult = runtime->protectedCallWithTraceback(0, 1, "shutdown");
+    REQUIRE(tracebackResult.isErr());
+    REQUIRE(runtime->lastError() == "luau runtime shutting down");
+}
+
+TEST_CASE("Runtime shutdown clears initialization state and blocks recreation") {
+    RuntimeGuard guard;
+    REQUIRE(luax::Runtime::getOrCreate() != nullptr);
+
+    luax::Runtime::shutdown();
+    REQUIRE(luax::Runtime::isShuttingDown());
+    REQUIRE(luax::Runtime::getOrCreate() == nullptr);
+    REQUIRE(luax::Runtime::getIfInitialized() == nullptr);
+}
+
 TEST_CASE("protectedCall restores stack height on success") {
     RuntimeGuard guard;
     auto* runtime = luax::Runtime::getOrCreate();

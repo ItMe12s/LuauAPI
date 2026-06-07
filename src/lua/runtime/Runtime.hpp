@@ -39,6 +39,7 @@ namespace luax {
         static bool isShuttingDown();
 #if defined(LUAUAPI_HOST_TESTS)
         static void resetForTests();
+        static void setShuttingDownForTests(bool value);
         void setStatusForTests(imes::luauapi::RuntimeStatus status);
 #endif
         static void setMainThreadId(std::thread::id id);

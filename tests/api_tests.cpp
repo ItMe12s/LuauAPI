@@ -97,3 +97,25 @@ TEST_CASE("isReady reflects runtime initialization") {
     REQUIRE(imes::luauapi::isReady());
     REQUIRE(imes::luauapi::status() == imes::luauapi::RuntimeStatus::Ready);
 }
+
+TEST_CASE("api rejects work while runtime is shutting down") {
+    RuntimeGuard guard;
+    luax::Runtime::getOrCreate();
+    auto root = makeTempDir() / "shutdown";
+    std::filesystem::create_directories(root);
+
+    luax::Runtime::shutdown();
+    REQUIRE(luax::Runtime::isShuttingDown());
+
+    auto scriptResult = imes::luauapi::runScript(root, "return 1", "shutdown.luau");
+    REQUIRE(scriptResult.isErr());
+    REQUIRE(scriptResult.unwrapErr() == "luau runtime shutting down");
+
+    writeScript(root / "entry.luau", "return 2");
+    auto fileResult = imes::luauapi::runFile(root, "entry.luau");
+    REQUIRE(fileResult.isErr());
+    REQUIRE(fileResult.unwrapErr() == "luau runtime shutting down");
+
+    REQUIRE_FALSE(imes::luauapi::isReady());
+    REQUIRE(imes::luauapi::status() == imes::luauapi::RuntimeStatus::NotReady);
+}

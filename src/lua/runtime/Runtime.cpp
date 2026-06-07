@@ -310,6 +310,10 @@ namespace luax {
         runtime.reset();
     }
 
+    void Runtime::setShuttingDownForTests(bool value) {
+        shuttingDownStorage().store(value, std::memory_order_release);
+    }
+
     void Runtime::setStatusForTests(imes::luauapi::RuntimeStatus status) {
         m_status.store(status, std::memory_order_release);
     }
@@ -635,6 +639,9 @@ namespace luax {
         if (!assertMainThread()) {
             return failWith("luau runtime accessed off main thread");
         }
+        if (isShuttingDown()) {
+            return failWith("luau runtime shutting down");
+        }
         if (!ready() || !m_state) {
             if (m_lastError.empty()) {
                 return failWith(m_initError.empty() ? "luau runtime not ready" : m_initError);
@@ -694,6 +701,9 @@ namespace luax {
         if (!assertMainThread()) {
             return failWith("luau runtime accessed off main thread");
         }
+        if (isShuttingDown()) {
+            return failWith("luau runtime shutting down");
+        }
         if (!ready() || !m_state) {
             if (m_lastError.empty()) {
                 return failWith(m_initError.empty() ? "luau runtime not ready" : m_initError);
@@ -732,6 +742,9 @@ namespace luax {
     ) {
         if (!assertMainThread()) {
             return failWith("luau runtime accessed off main thread");
+        }
+        if (isShuttingDown()) {
+            return failWith("luau runtime shutting down");
         }
         if (status() == imes::luauapi::RuntimeStatus::Panicked) {
             return m_lastError.empty() ? failWith("luau runtime panicked") : cachedError();
