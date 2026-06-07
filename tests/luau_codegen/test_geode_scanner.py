@@ -78,6 +78,46 @@ class M1ScannerWarningTests(unittest.TestCase):
 
 
 class ExtraScanScopeTests(unittest.TestCase):
+    def test_function_source_manifest_keeps_expected_headers(self) -> None:
+        from luau_codegen.parse import geode_sdk  # type: ignore[import-unresolved]
+
+        rels = {rel for rel, _, _ in geode_sdk._FUNCTION_SOURCES}
+        self.assertGreaterEqual(
+            rels,
+            {
+                "utils/general.hpp",
+                "ui/Popup.hpp",
+                "ui/GeodeUI.hpp",
+                "utils/string.hpp",
+                "utils/random.hpp",
+                "utils/cocos.hpp",
+            },
+        )
+
+    def test_multiline_free_function_decl_scanned(self) -> None:
+        from luau_codegen.parse.geode_sdk import scan_geode_functions  # type: ignore[import-unresolved]
+
+        tmpdir = tempfile.mkdtemp()
+        try:
+            utils_dir = os.path.join(tmpdir, "loader", "include", "Geode", "utils")
+            os.makedirs(utils_dir)
+            with open(os.path.join(utils_dir, "general.hpp"), "w", encoding="utf-8") as f:
+                f.write(
+                    "namespace geode::utils::game {\n"
+                    "GEODE_DLL std::string\n"
+                    "normalizePath(\n"
+                    "    char const* input,\n"
+                    "    int flags\n"
+                    ");\n"
+                    "}\n"
+                )
+            fns = {f.name: f for f in scan_geode_functions(tmpdir)}
+            self.assertIn("normalizePath", fns)
+            self.assertEqual(fns["normalizePath"].namespace, "geode::utils::game")
+            self.assertEqual(len(fns["normalizePath"].args), 2)
+        finally:
+            shutil.rmtree(tmpdir)
+
     def test_utils_namespace_free_functions_scanned(self) -> None:
         from luau_codegen.parse.geode_sdk import scan_geode_functions  # type: ignore[import-unresolved]
 

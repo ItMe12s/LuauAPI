@@ -110,11 +110,30 @@ def _emit_ccnode_schedule(
 ) -> List[str]:
     sel_var = "sel0"
     out = check_sel_handler(lua_idx, sel_var, sel_info, label)
-    interval = remaining_call_args[0] if remaining_call_args else "0.f"
-    out.append(
-        "        cocos2d::CCDirector::sharedDirector()->getScheduler()->scheduleSelector("
-        f"schedule_selector(luax::LuaScheduleHandler::onSchedule), {sel_var}_handler, {interval}, !self->isRunning());\n"
-    )
+    selector = "schedule_selector(luax::LuaScheduleHandler::onSchedule)"
+    paused = "!self->isRunning()"
+    if m.name == "scheduleOnce":
+        if len(remaining_call_args) > 1:
+            raise ValueError(f"{label} has unsupported scheduleOnce tail args")
+        delay = remaining_call_args[0] if remaining_call_args else "0.f"
+        out.append(
+            "        cocos2d::CCDirector::sharedDirector()->getScheduler()->scheduleSelector("
+            f"{selector}, {sel_var}_handler, 0.f, 0u, {delay}, {paused});\n"
+        )
+    elif len(remaining_call_args) == 3:
+        interval, repeat, delay = remaining_call_args[:3]
+        out.append(
+            "        cocos2d::CCDirector::sharedDirector()->getScheduler()->scheduleSelector("
+            f"{selector}, {sel_var}_handler, {interval}, {repeat}, {delay}, {paused});\n"
+        )
+    elif len(remaining_call_args) <= 1:
+        interval = remaining_call_args[0] if remaining_call_args else "0.f"
+        out.append(
+            "        cocos2d::CCDirector::sharedDirector()->getScheduler()->scheduleSelector("
+            f"{selector}, {sel_var}_handler, {interval}, {paused});\n"
+        )
+    else:
+        raise ValueError(f"{label} has unsupported schedule tail args")
     out.append(f"        luax::anchorTrampoline(self, {sel_var}_handler);\n")
     out.append("        return 0;\n")
     return out

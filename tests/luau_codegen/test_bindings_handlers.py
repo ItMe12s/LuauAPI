@@ -203,8 +203,99 @@ class CCNodeScheduleBindingTests(unittest.TestCase):
             "schedule_selector(luax::LuaScheduleHandler::onSchedule)",
             text,
         )
+        self.assertIn(
+            "scheduleSelector(schedule_selector(luax::LuaScheduleHandler::onSchedule), "
+            "sel0_handler, arg1, !self->isRunning())",
+            text,
+        )
         self.assertIn("anchorTrampoline(self, sel0_handler)", text)
-        self.assertIn("scheduleSelector(", text)
+        self.assertNotIn("sel0_handler, arg1, 0u", text)
+
+    def test_ccnode_schedule_forwards_repeat_and_delay(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        ccnode = Class(
+            name="CCNode",
+            namespace="cocos2d",
+            bases=["CCObject"],
+            methods=[
+                Method(
+                    name="schedule",
+                    ret="void",
+                    args=[
+                        Arg("SEL_SCHEDULE", "selector"),
+                        Arg("float", "interval"),
+                        Arg("unsigned int", "repeat"),
+                        Arg("float", "delay"),
+                    ],
+                    platforms=all_platforms("0x1"),
+                )
+            ],
+        )
+        objects = {
+            "CCObject": ccobject,
+            "CCNode": ccnode,
+            "cocos2d::CCObject": ccobject,
+            "cocos2d::CCNode": ccnode,
+        }
+
+        text = _emit_class_file(
+            ccnode,
+            {m.name: [m] for m in ccnode.methods},
+            [],
+            [],
+            objects,
+            set(),
+            1,
+            "win",
+        )
+
+        self.assertIn(
+            "scheduleSelector(schedule_selector(luax::LuaScheduleHandler::onSchedule), "
+            "sel0_handler, arg1, arg2, arg3, !self->isRunning())",
+            text,
+        )
+
+    def test_ccnode_schedule_once_uses_one_shot_scheduler_call(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        ccnode = Class(
+            name="CCNode",
+            namespace="cocos2d",
+            bases=["CCObject"],
+            methods=[
+                Method(
+                    name="scheduleOnce",
+                    ret="void",
+                    args=[
+                        Arg("SEL_SCHEDULE", "selector"),
+                        Arg("float", "delay"),
+                    ],
+                    platforms=all_platforms("0x1"),
+                )
+            ],
+        )
+        objects = {
+            "CCObject": ccobject,
+            "CCNode": ccnode,
+            "cocos2d::CCObject": ccobject,
+            "cocos2d::CCNode": ccnode,
+        }
+
+        text = _emit_class_file(
+            ccnode,
+            {m.name: [m] for m in ccnode.methods},
+            [],
+            [],
+            objects,
+            set(),
+            1,
+            "win",
+        )
+
+        self.assertIn(
+            "scheduleSelector(schedule_selector(luax::LuaScheduleHandler::onSchedule), "
+            "sel0_handler, 0.f, 0u, arg1, !self->isRunning())",
+            text,
+        )
 
     def test_ccnode_unschedule_passes_literal_schedule_selector(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")
