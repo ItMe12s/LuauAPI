@@ -35,7 +35,7 @@ CMake options:
 Bindings make up most of the binary size, so the build minimizes it using two methods:
 
 - A size flag is set on the binding target so all bindings compile for minimal size. This is `-Oz` on Clang, `-Os` on GCC, and `/O1` on MSVC and clang-cl. It keeps optimization consistent and avoids the OptimizationLevel differs error.
-- Linker `/OPT:REF` and `/OPT:ICF`, which drop unused code and fold identical functions.
+- On Windows only (MSVC and clang-cl), linker `/OPT:REF` and `/OPT:ICF` drop unused code and fold identical functions. Other platforms rely on the size compile flag alone.
 
 These apply to non-debug builds only. The compile flag is guarded so Debug builds stay debuggable.
 
@@ -101,6 +101,11 @@ copies of the same surface, so they must stay in sync. When you add, remove, or
 rename a registered function, update `manual_fields.py` to match.
 `tests/luau_codegen/test_manual_fields_sync.py` checks that the two match and fails
 CI on drift.
+
+Namespaces declared in `extra_bindings/*.dluau` and registered by hand in C++
+(`ModNamespace`, `FsNamespace`, `JsonNamespace`, `WebNamespace`, and similar) are another two-copy surface.
+When you add, remove, or rename a function there, update both the `.dluau` stub and the matching `Geode*Binding.cpp` registrar.
+`tests/luau_codegen/test_extra_bindings_sync.py` checks mod, fs, json, and web and fails CI on drift.
 
 ## Metadata outputs
 

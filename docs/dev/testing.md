@@ -66,6 +66,7 @@ The test suite under `tests/luau_codegen/` covers the Python binding generator:
 - CLI I/O
 - Free-function overrides
 - Geode SDK scanner
+- Drift guards for handwritten bindings, extra-binding stubs, and the host public API header
 
 See [Codegen](codegen.md) for what the generator produces.
 
@@ -90,12 +91,14 @@ PYTHONPATH=tools python -m unittest discover -s tests/luau_codegen -p "test_*.py
 | `test_constructors.py` | `BINDABLE_CONSTRUCTORS` opt-in, `new` factory emission |
 | `test_delegate_generator.py` | Delegate spec collection, C++ trampoline emission |
 | `test_denylist.py` | Denylist and preferred-overload entry validity |
+| `test_extra_bindings_sync.py` | `extra_bindings/{mod,fs,json,web}.dluau` vs handwritten C++ registration |
 | `test_filtering.py` | Method eligibility, link classes, denylist |
 | `test_free_functions.py` | Free-function platform overrides and emission |
 | `test_geode_ccnode.py` | Geode `CCNode` SDK scan merge, bindings, anchor enums |
 | `test_geode_scanner.py` | Geode SDK header scan warnings |
 | `test_hooks.py` | Hook offsets, symbols, null guards, protected override calls |
 | `test_luau_types.py` | Luau stub layout, factories, overload widening |
+| `test_manual_fields_sync.py` | `manual_fields.py` vs handwritten Geode namespace C++ registration |
 | `test_marshalling.py` | Lua stack check/push codegen |
 | `test_model.py` | Class lookup, object maps, base resolution |
 | `test_nested_containers.py` | Nested container policy, type map, marshalling, fields |
@@ -103,6 +106,7 @@ PYTHONPATH=tools python -m unittest discover -s tests/luau_codegen -p "test_*.py
 | `test_pair_design.py` | Pair record shapes, pair-key maps, baseline field policy |
 | `test_parity.py` | Cross-platform parity report |
 | `test_plan.py` | Emit plan, intersection, class merge |
+| `test_public_api_header_sync.py` | `include/LuauAPI.hpp` vs host test header, minus intentional async omissions |
 | `test_type_map.py` | C++ to Lua type classification |
 | `test_value_struct_gate.py` | Gated value struct denylist and stub emission |
 
