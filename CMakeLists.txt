@@ -403,6 +403,7 @@ if(LUAUAPI_BUILD_TESTS)
         tests/resource_bounds_tests.cpp
         tests/runtime_tests.cpp
         tests/task_scheduler_tests.cpp
+        tests/handle_gc_tests.cpp
         tests/usertype_tests.cpp
         tests/vector_view_tests.cpp
         tests/misc_correctness_tests.cpp
