@@ -37,9 +37,7 @@ class M1ScannerWarningTests(unittest.TestCase):
                     scan_geode_sdk(tmpdir)
             recorded = take_scan_warnings()
             self.assertTrue(any("[luauapi] failed to scan" in m for m in recorded))
-            self.assertTrue(
-                any("[luauapi] failed to scan" in line for line in logs.output)
-            )
+            self.assertTrue(any("[luauapi] failed to scan" in line for line in logs.output))
         finally:
             shutil.rmtree(tmpdir)
 
@@ -71,9 +69,7 @@ class M1ScannerWarningTests(unittest.TestCase):
             ccobject = Class(name="CCObject", namespace="cocos2d")
             objects = {"CCObject": ccobject, "GoodUI": classes[0]}
             ok_win, _ = supported(classes[0], classes[0].methods[0], objects, "win")
-            ok_android, reason = supported(
-                classes[0], classes[0].methods[0], objects, "android64"
-            )
+            ok_android, reason = supported(classes[0], classes[0].methods[0], objects, "android64")
             self.assertTrue(ok_win)
             self.assertTrue(ok_android)
             self.assertEqual(reason, "")
@@ -89,12 +85,8 @@ class ExtraScanScopeTests(unittest.TestCase):
         try:
             utils_dir = os.path.join(tmpdir, "loader", "include", "Geode", "utils")
             os.makedirs(utils_dir)
-            with open(
-                os.path.join(utils_dir, "random.hpp"), "w", encoding="utf-8"
-            ) as f:
-                f.write(
-                    "namespace geode::utils::random { GEODE_DLL std::string generateUUID(); }"
-                )
+            with open(os.path.join(utils_dir, "random.hpp"), "w", encoding="utf-8") as f:
+                f.write("namespace geode::utils::random { GEODE_DLL std::string generateUUID(); }")
             fns = {f.name: f for f in scan_geode_functions(tmpdir)}
             self.assertIn("generateUUID", fns)
             self.assertEqual(fns["generateUUID"].namespace, "geode::utils::random")

@@ -8,9 +8,7 @@ from luau_codegen.emit.luau_types.manual_fields import (  # type: ignore[import-
     MANUAL_FREE_FN_FIELDS,
 )
 
-_REPO_ROOT = os.path.dirname(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-)
+_REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 _NAMESPACE_SOURCES = {
     "geode.cocos": "src/lua/bindings/geode/GeodeCocosBinding.cpp",
@@ -42,9 +40,7 @@ def _registered_fields(namespace: str) -> set[str]:
 
 
 def _declared_fields(namespace: str) -> set[str]:
-    return {
-        entry.split(":", 1)[0].strip() for entry in MANUAL_FREE_FN_FIELDS[namespace]
-    }
+    return {entry.split(":", 1)[0].strip() for entry in MANUAL_FREE_FN_FIELDS[namespace]}
 
 
 class ManualFieldsSyncTests(unittest.TestCase):

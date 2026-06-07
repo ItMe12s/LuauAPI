@@ -31,6 +31,22 @@
 namespace {
     using namespace luax;
 
+    constexpr char kResponseSizeExceededMsg[] = "response exceeds maximum size";
+
+    void logWebCallbackFailure(char const* context) {
+        geode::log::warn("[lua:{}] callback failed", context);
+    }
+
+    bool responseDataWithinLimit(std::size_t size) {
+        return size <= kMaxWebResponseBytes;
+    }
+
+    int pushResponseSizeExceeded(lua_State* L) {
+        lua_pushnil(L);
+        push(L, std::string(kResponseSizeExceededMsg));
+        return 2;
+    }
+
     int optPriority(lua_State* L, int idx) {
         if (lua_gettop(L) < idx || lua_isnil(L, idx)) return geode::Priority::Normal;
         return check<int>(L, idx, "geode.utils.web listener");
@@ -133,16 +149,18 @@ namespace {
                 struct Ctx {
                     web::WebProgress const* progress;
                 } ctx{&progress};
-                cb->invoke(
-                    1,
-                    0,
-                    "geode.utils.web.onProgress",
-                    kHookScriptDeadlineMs,
-                    +[](lua_State* L, void* raw) {
-                        pushProgress(L, *static_cast<Ctx*>(raw)->progress);
-                    },
-                    &ctx
-                );
+                if (!cb->invoke(
+                        1,
+                        0,
+                        "geode.utils.web.onProgress",
+                        kHookScriptDeadlineMs,
+                        +[](lua_State* L, void* raw) {
+                            pushProgress(L, *static_cast<Ctx*>(raw)->progress);
+                        },
+                        &ctx
+                    )) {
+                    logWebCallbackFailure("geode.utils.web.onProgress");
+                }
             });
         });
     }
@@ -266,16 +284,18 @@ namespace {
                 struct Ctx {
                     web::WebResponse* response;
                 } ctx{&response};
-                cb->invoke(
-                    1,
-                    0,
-                    "geode.utils.web request",
-                    kHookScriptDeadlineMs,
-                    +[](lua_State* L, void* raw) {
-                        pushResponse(L, std::move(*static_cast<Ctx*>(raw)->response));
-                    },
-                    &ctx
-                );
+                if (!cb->invoke(
+                        1,
+                        0,
+                        "geode.utils.web request",
+                        kHookScriptDeadlineMs,
+                        +[](lua_State* L, void* raw) {
+                            pushResponse(L, std::move(*static_cast<Ctx*>(raw)->response));
+                        },
+                        &ctx
+                    )) {
+                    logWebCallbackFailure("geode.utils.web request");
+                }
             }
         );
         return task;
@@ -779,7 +799,11 @@ namespace {
             push(L, std::string(result.unwrapErr()));
             return 2;
         }
-        push(L, result.unwrap());
+        auto text = std::move(result.unwrap());
+        if (!responseDataWithinLimit(text.size())) {
+            return pushResponseSizeExceeded(L);
+        }
+        push(L, text);
         return 1;
     }
 
@@ -796,12 +820,18 @@ namespace {
 
     int responseBytes(lua_State* L) {
         auto const& data = checkResponse(L, 1, "WebResponse:bytes").data();
+        if (!responseDataWithinLimit(data.size())) {
+            return pushResponseSizeExceeded(L);
+        }
         lua_pushlstring(L, reinterpret_cast<char const*>(data.data()), data.size());
         return 1;
     }
 
     int responseSaveTo(lua_State* L) {
         auto& response = checkResponse(L, 1, "WebResponse:saveTo");
+        if (!responseDataWithinLimit(response.data().size())) {
+            return pushResponseSizeExceeded(L);
+        }
         auto target = resolveSandboxTarget(L, 2, 3, "WebResponse:saveTo", true);
         if (!target) return 2;
 
@@ -1002,6 +1032,9 @@ namespace {
             },
             &ctx
         );
+        if (!ok) {
+            logWebCallbackFailure(context);
+        }
         return ok && ctx.stop;
     }
 
@@ -1034,6 +1067,9 @@ namespace {
             },
             &ctx
         );
+        if (!ok) {
+            logWebCallbackFailure(context);
+        }
         return ok && ctx.stop;
     }
 
