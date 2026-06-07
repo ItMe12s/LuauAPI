@@ -45,10 +45,10 @@ Timings are milliseconds.
 geode.utils.web.openLinkInBrowser(url: string) -> ()
 geode.utils.web.newRequest() -> WebRequest
 geode.utils.web.multipart() -> MultipartForm
-geode.utils.web.get(url: string, options: RequestOptions?, callback: (response: WebResponse) -> ()) -> WebHandle
-geode.utils.web.post(url: string, options: RequestOptions?, callback: (response: WebResponse) -> ()) -> WebHandle
-geode.utils.web.put(url: string, options: RequestOptions?, callback: (response: WebResponse) -> ()) -> WebHandle
-geode.utils.web.patch(url: string, options: RequestOptions?, callback: (response: WebResponse) -> ()) -> WebHandle
+geode.utils.web.get(url: string, options: RequestOptions?, callback: (response: WebResponse?, err: string?) -> ()) -> WebHandle
+geode.utils.web.post(url: string, options: RequestOptions?, callback: (response: WebResponse?, err: string?) -> ()) -> WebHandle
+geode.utils.web.put(url: string, options: RequestOptions?, callback: (response: WebResponse?, err: string?) -> ()) -> WebHandle
+geode.utils.web.patch(url: string, options: RequestOptions?, callback: (response: WebResponse?, err: string?) -> ()) -> WebHandle
 geode.utils.web.fetch(urlOrOptions, optionsOrCallback, callback?) -> WebHandle
 ```
 
@@ -103,6 +103,23 @@ response:timings() -> RequestTimings
 Response bodies are capped at 32 MB. `:text()`, `:bytes()`, `:json()`, and `:saveTo()`
 return `nil` and an error message when the body exceeds the cap.
 
+Async request callbacks and response listeners receive `(response?, err?)`.
+When a response body exceeds the cap, Lua gets `nil` and `"response exceeds maximum size"`
+instead of a boxed `WebResponse`.
+
+The following sources of request bodies are capped at 32 MB:
+
+- `RequestOptions.body`
+- `RequestOptions.bodyString`
+- `WebRequest:body`
+- `WebRequest:bodyString`
+- `MultipartForm:file`
+- `MultipartForm:fileFrom`
+- `MultipartForm:getBody()`
+
+If request data exceeds the limit, the function either returns `nil` and `"request body exceeds maximum size"`
+or parses the options and raises that error.
+
 ## MultipartForm
 
 ```lua
@@ -138,6 +155,9 @@ Available listeners:
 - `onResponse(callback, priority?)`
 - `onResponseFor(modID, callback, priority?)`
 - `onResponseById(requestID, callback, priority?)`
+
+Response listener callbacks receive `(response?, err?)` or `(modID, response?, err?)`.
+Oversized bodies arrive as `nil` plus `"response exceeds maximum size"`.
 
 ## Constants
 
@@ -181,5 +201,12 @@ end)
 ## Source
 
 - `src/lua/bindings/geode/GeodeWebBinding.cpp`
+- `src/lua/bindings/geode/GeodeWebOptions.cpp`
+- `src/lua/bindings/geode/GeodeWebRequest.cpp`
+- `src/lua/bindings/geode/GeodeWebResponse.cpp`
+- `src/lua/bindings/geode/GeodeWebMultipart.cpp`
+- `src/lua/bindings/geode/GeodeWebListeners.cpp`
+- `src/lua/bindings/geode/WebCaps.hpp`
+- `src/lua/bindings/geode/WebInternal.hpp`
 - `tools/luau_codegen/extra_bindings/web.dluau`
 - `tools/luau_codegen/emit/luau_types/manual_fields.py`

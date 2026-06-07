@@ -5,6 +5,8 @@
 TEST_CASE("resource byte caps stay aligned across bindings") {
     REQUIRE(luax::kMaxWebResponseBytes == luax::kMaxFsReadBytes);
     REQUIRE(luax::kMaxWebResponseBytes == 32 * 1024 * 1024);
+    REQUIRE(luax::kMaxWebRequestBytes == luax::kMaxFsWriteBytes);
+    REQUIRE(luax::kMaxWebRequestBytes == 32 * 1024 * 1024);
 }
 
 TEST_CASE("filesystem read and write caps are symmetric") {

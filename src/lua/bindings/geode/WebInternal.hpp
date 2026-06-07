@@ -1,6 +1,7 @@
 #pragma once
 
 #include "lua/bindings/framework/LuaCallback.hpp"
+#include "lua/bindings/geode/WebCaps.hpp"
 #include "lua/runtime/Runtime.hpp"
 
 #include <Geode/Geode.hpp>
@@ -137,38 +138,28 @@ namespace luax {
         );
     }
 
-    inline WebRequestBox* checkRequestBox(lua_State* L, int idx, char const* method) {
-        auto* box = static_cast<WebRequestBox*>(luaL_checkudata(L, idx, kRequestMeta));
-        if (!box) luaL_error(L, "%s expected WebRequest at arg %d", method, idx);
-        return box;
+    inline WebRequestBox* checkRequestBox(lua_State* L, int idx, [[maybe_unused]] char const* method) {
+        return static_cast<WebRequestBox*>(luaL_checkudata(L, idx, kRequestMeta));
     }
 
     inline web::WebRequest& checkRequest(lua_State* L, int idx, char const* method) {
         return checkRequestBox(L, idx, method)->request;
     }
 
-    inline web::WebResponse& checkResponse(lua_State* L, int idx, char const* method) {
-        auto* box = static_cast<WebResponseBox*>(luaL_checkudata(L, idx, kResponseMeta));
-        if (!box) luaL_error(L, "%s expected WebResponse at arg %d", method, idx);
-        return box->response;
+    inline web::WebResponse& checkResponse(lua_State* L, int idx, [[maybe_unused]] char const* method) {
+        return static_cast<WebResponseBox*>(luaL_checkudata(L, idx, kResponseMeta))->response;
     }
 
-    inline MultipartBox* checkMultipartBox(lua_State* L, int idx, char const* method) {
-        auto* box = static_cast<MultipartBox*>(luaL_checkudata(L, idx, kMultipartMeta));
-        if (!box) luaL_error(L, "%s expected MultipartForm at arg %d", method, idx);
-        return box;
+    inline MultipartBox* checkMultipartBox(lua_State* L, int idx, [[maybe_unused]] char const* method) {
+        return static_cast<MultipartBox*>(luaL_checkudata(L, idx, kMultipartMeta));
     }
 
-    inline WebHandleBox* checkHandle(lua_State* L, int idx, char const* method) {
-        auto* box = static_cast<WebHandleBox*>(luaL_checkudata(L, idx, kHandleMeta));
-        if (!box) luaL_error(L, "%s expected WebHandle at arg %d", method, idx);
-        return box;
+    inline WebHandleBox* checkHandle(lua_State* L, int idx, [[maybe_unused]] char const* method) {
+        return static_cast<WebHandleBox*>(luaL_checkudata(L, idx, kHandleMeta));
     }
 
-    inline WebListenerBox* checkListener(lua_State* L, int idx, char const* method) {
-        auto* box = static_cast<WebListenerBox*>(luaL_checkudata(L, idx, kListenerMeta));
-        if (!box) luaL_error(L, "%s expected WebListenerHandle at arg %d", method, idx);
-        return box;
+    inline WebListenerBox* checkListener(lua_State* L, int idx, [[maybe_unused]] char const* method) {
+        return static_cast<WebListenerBox*>(luaL_checkudata(L, idx, kListenerMeta));
     }
 
     inline void pushRequest(lua_State* L, web::WebRequest request) {
@@ -179,10 +170,23 @@ namespace luax {
     }
 
     inline void pushResponse(lua_State* L, web::WebResponse response) {
+        if (response.data().size() > kMaxWebResponseBytes) {
+            luaL_error(L, "%s", kWebResponseSizeExceededMsg);
+        }
         auto* box = static_cast<WebResponseBox*>(lua_newuserdata(L, sizeof(WebResponseBox)));
         new (box) WebResponseBox{std::move(response)};
         luaL_getmetatable(L, kResponseMeta);
         lua_setmetatable(L, -2);
+    }
+
+    inline void pushResponseOrError(lua_State* L, web::WebResponse response) {
+        if (!responseDataWithinLimit(response.data().size())) {
+            lua_pushnil(L);
+            push(L, std::string(kWebResponseSizeExceededMsg));
+            return;
+        }
+        pushResponse(L, std::move(response));
+        lua_pushnil(L);
     }
 
     inline void pushMultipart(lua_State* L, web::MultipartForm form = web::MultipartForm()) {

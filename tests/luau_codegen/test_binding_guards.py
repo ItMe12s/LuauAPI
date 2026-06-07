@@ -12,6 +12,14 @@ from luau_codegen.model.free_fn_sources import FREE_FUNCTION_SOURCES  # type: ig
 _REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 _WEB_BINDING = "src/lua/bindings/geode/GeodeWebBinding.cpp"
+_WEB_BINDING_SOURCES = (
+    "src/lua/bindings/geode/GeodeWebBinding.cpp",
+    "src/lua/bindings/geode/GeodeWebOptions.cpp",
+    "src/lua/bindings/geode/GeodeWebRequest.cpp",
+    "src/lua/bindings/geode/GeodeWebResponse.cpp",
+    "src/lua/bindings/geode/GeodeWebMultipart.cpp",
+    "src/lua/bindings/geode/GeodeWebListeners.cpp",
+)
 _WEB_INTERNAL = "src/lua/bindings/geode/WebInternal.hpp"
 _FS_BINDING = "src/lua/bindings/geode/GeodeFsBinding.cpp"
 _COCOS_BINDING = "src/lua/bindings/geode/GeodeCocosBinding.cpp"
@@ -50,6 +58,10 @@ _REQUEST_BODY_METHODS = (
     "multipartFileFrom",
     "multipartGetBody",
 )
+
+
+def _web_binding_source() -> str:
+    return "\n".join(_read_repo_file(path) for path in _WEB_BINDING_SOURCES)
 
 
 def _read_repo_file(rel_path: str) -> str:
@@ -92,7 +104,7 @@ def _registered_cocos_fields() -> set[str]:
 
 class BindingGuardTests(unittest.TestCase):
     def test_web_response_methods_enforce_size_cap(self) -> None:
-        source = _read_repo_file(_WEB_BINDING)
+        source = _web_binding_source()
         for method in (
             "responseText",
             "responseBytes",
@@ -125,7 +137,7 @@ class BindingGuardTests(unittest.TestCase):
         self.assertIn("kMaxWebRequestBytes", config)
 
     def test_apply_options_enforces_request_body_cap(self) -> None:
-        source = _read_repo_file(_WEB_BINDING)
+        source = _web_binding_source()
         body = _function_body(source, "applyOptions", ret="void")
         self.assertIn(
             "requestBodyWithinLimit",
@@ -134,7 +146,7 @@ class BindingGuardTests(unittest.TestCase):
         )
 
     def test_request_body_methods_enforce_size_cap(self) -> None:
-        source = _read_repo_file(_WEB_BINDING)
+        source = _web_binding_source()
         for method in _REQUEST_BODY_METHODS:
             with self.subTest(method=method):
                 body = _function_body(source, method)
@@ -145,7 +157,7 @@ class BindingGuardTests(unittest.TestCase):
                 )
 
     def test_async_request_callback_rejects_oversized_response(self) -> None:
-        source = _read_repo_file(_WEB_BINDING)
+        source = _web_binding_source()
         body = _function_body(source, "startRequest", ret="std::shared_ptr<WebTask>")
         self.assertIn(
             "responseDataWithinLimit",
@@ -154,7 +166,7 @@ class BindingGuardTests(unittest.TestCase):
         )
 
     def test_response_listener_rejects_oversized_response(self) -> None:
-        source = _read_repo_file(_WEB_BINDING)
+        source = _web_binding_source()
         body = _function_body(source, "invokeResponseEventNow", ret="bool")
         self.assertIn(
             "responseDataWithinLimit",
@@ -163,11 +175,11 @@ class BindingGuardTests(unittest.TestCase):
         )
 
     def test_geode_web_binding_does_not_use_luaL_register(self) -> None:
-        source = _read_repo_file(_WEB_BINDING)
+        source = _web_binding_source()
         self.assertNotIn(
             "luaL_register",
             source,
-            "GeodeWebBinding must register metatable methods with luaL_setfuncs",
+            "GeodeWebBinding must register metatable methods without luaL_register",
         )
 
     def test_web_internal_has_no_dead_checkudata_null_checks(self) -> None:
@@ -179,7 +191,7 @@ class BindingGuardTests(unittest.TestCase):
         )
 
     def test_web_listener_registrars_use_shared_helper(self) -> None:
-        source = _read_repo_file(_WEB_BINDING)
+        source = _web_binding_source()
         self.assertIn(
             "registerWebListener(",
             source,
@@ -287,7 +299,7 @@ class CallbackFailureLoggingGuardTests(unittest.TestCase):
         )
 
     def test_web_binding_logs_invoke_failures(self) -> None:
-        source = _read_repo_file(_WEB_BINDING)
+        source = _web_binding_source()
         self.assertIn("logWebCallbackFailure", source)
         cases = (
             ("setProgressCallback", "void"),
