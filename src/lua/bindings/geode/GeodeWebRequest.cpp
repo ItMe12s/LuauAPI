@@ -1,8 +1,8 @@
-#include "lua/bindings/geode/GeodeWebInternal.hpp"
 #include "lua/bindings/framework/LuaCallback.hpp"
 #include "lua/bindings/framework/Stack.hpp"
 #include "lua/bindings/framework/TableUtil.hpp"
 #include "lua/bindings/geode/CurrentMod.hpp"
+#include "lua/bindings/geode/GeodeWebInternal.hpp"
 #include "lua/bindings/geode/JsonConvert.hpp"
 #include "lua/bindings/geode/WebCaps.hpp"
 

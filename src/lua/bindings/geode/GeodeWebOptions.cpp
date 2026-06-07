@@ -1,7 +1,7 @@
-#include "lua/bindings/geode/GeodeWebInternal.hpp"
 #include "lua/bindings/framework/LuaCallback.hpp"
 #include "lua/bindings/framework/Stack.hpp"
 #include "lua/bindings/framework/TableUtil.hpp"
+#include "lua/bindings/geode/GeodeWebInternal.hpp"
 #include "lua/bindings/geode/JsonConvert.hpp"
 #include "lua/bindings/geode/WebCaps.hpp"
 
@@ -28,9 +28,7 @@ namespace luax::webdetail {
             return static_cast<web::ProxyType>(value);
         }
 
-        void applyStringMap(
-            lua_State* L, int idx, char const* field, char const* method, auto&& setter
-        ) {
+        void applyStringMap(lua_State* L, int idx, char const* field, char const* method, auto&& setter) {
             lua_getfield(L, idx, field);
             if (lua_isnil(L, -1)) {
                 lua_pop(L, 1);

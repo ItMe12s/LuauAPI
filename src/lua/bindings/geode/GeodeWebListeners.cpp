@@ -1,7 +1,7 @@
-#include "lua/bindings/geode/GeodeWebInternal.hpp"
 #include "lua/bindings/framework/LuaCallback.hpp"
 #include "lua/bindings/framework/Stack.hpp"
 #include "lua/bindings/framework/TableUtil.hpp"
+#include "lua/bindings/geode/GeodeWebInternal.hpp"
 #include "lua/bindings/geode/WebCaps.hpp"
 #include "lua/runtime/Runtime.hpp"
 
@@ -98,8 +98,8 @@ namespace luax::webdetail {
         }
 
         bool invokeResponseEvent(
-            std::shared_ptr<LuaCallback> cb, char const* context, std::optional<std::string_view> modID,
-            web::WebResponse const& response
+            std::shared_ptr<LuaCallback> cb, char const* context,
+            std::optional<std::string_view> modID, web::WebResponse const& response
         ) {
             if (!cb || !cb->valid()) return false;
             if (Runtime::isMainThread()) {
@@ -162,28 +162,20 @@ namespace luax::webdetail {
     }
 
     int webOnRequestIntercept(lua_State* L) {
-        return registerWebListener(
-            L,
-            1,
-            2,
-            [](std::shared_ptr<LuaCallback> cb, int priority) {
-                return web::WebRequestInterceptEvent().listen(
-                    [cb](std::string_view modID, web::WebRequest& req) {
-                        return invokeRequestEvent(cb, "geode.utils.web.onRequestIntercept", modID, req);
-                    },
-                    priority
-                );
-            }
-        );
+        return registerWebListener(L, 1, 2, [](std::shared_ptr<LuaCallback> cb, int priority) {
+            return web::WebRequestInterceptEvent().listen(
+                [cb](std::string_view modID, web::WebRequest& req) {
+                    return invokeRequestEvent(cb, "geode.utils.web.onRequestIntercept", modID, req);
+                },
+                priority
+            );
+        });
     }
 
     int webOnRequestInterceptFor(lua_State* L) {
         auto modID = check<std::string>(L, 1, "geode.utils.web.onRequestInterceptFor");
         return registerWebListener(
-            L,
-            2,
-            3,
-            [modID = std::move(modID)](std::shared_ptr<LuaCallback> cb, int priority) {
+            L, 2, 3, [modID = std::move(modID)](std::shared_ptr<LuaCallback> cb, int priority) {
                 return web::WebRequestInterceptEvent(modID).listen(
                     [cb](web::WebRequest& req) {
                         return invokeRequestEvent(
@@ -200,46 +192,33 @@ namespace luax::webdetail {
         auto id = static_cast<std::size_t>(
             checkNonNegativeInteger(L, 1, "geode.utils.web.onRequestInterceptById")
         );
-        return registerWebListener(
-            L,
-            2,
-            3,
-            [id](std::shared_ptr<LuaCallback> cb, int priority) {
-                return web::IDBasedWebRequestInterceptEvent(id).listen(
-                    [cb](web::WebRequest& req) {
-                        return invokeRequestEvent(
-                            cb, "geode.utils.web.onRequestInterceptById", std::nullopt, req
-                        );
-                    },
-                    priority
-                );
-            }
-        );
+        return registerWebListener(L, 2, 3, [id](std::shared_ptr<LuaCallback> cb, int priority) {
+            return web::IDBasedWebRequestInterceptEvent(id).listen(
+                [cb](web::WebRequest& req) {
+                    return invokeRequestEvent(
+                        cb, "geode.utils.web.onRequestInterceptById", std::nullopt, req
+                    );
+                },
+                priority
+            );
+        });
     }
 
     int webOnResponse(lua_State* L) {
-        return registerWebListener(
-            L,
-            1,
-            2,
-            [](std::shared_ptr<LuaCallback> cb, int priority) {
-                return web::WebResponseEvent().listen(
-                    [cb](std::string_view modID, web::WebResponse const& response) {
-                        return invokeResponseEvent(cb, "geode.utils.web.onResponse", modID, response);
-                    },
-                    priority
-                );
-            }
-        );
+        return registerWebListener(L, 1, 2, [](std::shared_ptr<LuaCallback> cb, int priority) {
+            return web::WebResponseEvent().listen(
+                [cb](std::string_view modID, web::WebResponse const& response) {
+                    return invokeResponseEvent(cb, "geode.utils.web.onResponse", modID, response);
+                },
+                priority
+            );
+        });
     }
 
     int webOnResponseFor(lua_State* L) {
         auto modID = check<std::string>(L, 1, "geode.utils.web.onResponseFor");
         return registerWebListener(
-            L,
-            2,
-            3,
-            [modID = std::move(modID)](std::shared_ptr<LuaCallback> cb, int priority) {
+            L, 2, 3, [modID = std::move(modID)](std::shared_ptr<LuaCallback> cb, int priority) {
                 return web::WebResponseEvent(modID).listen(
                     [cb](web::WebResponse const& response) {
                         return invokeResponseEvent(
@@ -255,21 +234,16 @@ namespace luax::webdetail {
     int webOnResponseById(lua_State* L) {
         auto id =
             static_cast<std::size_t>(checkNonNegativeInteger(L, 1, "geode.utils.web.onResponseById"));
-        return registerWebListener(
-            L,
-            2,
-            3,
-            [id](std::shared_ptr<LuaCallback> cb, int priority) {
-                return web::IDBasedWebResponseEvent(id).listen(
-                    [cb](web::WebResponse const& response) {
-                        return invokeResponseEvent(
-                            cb, "geode.utils.web.onResponseById", std::nullopt, response
-                        );
-                    },
-                    priority
-                );
-            }
-        );
+        return registerWebListener(L, 2, 3, [id](std::shared_ptr<LuaCallback> cb, int priority) {
+            return web::IDBasedWebResponseEvent(id).listen(
+                [cb](web::WebResponse const& response) {
+                    return invokeResponseEvent(
+                        cb, "geode.utils.web.onResponseById", std::nullopt, response
+                    );
+                },
+                priority
+            );
+        });
     }
 
     void registerConstants(lua_State* L) {

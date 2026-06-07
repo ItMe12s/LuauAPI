@@ -1,5 +1,5 @@
-#include "lua/bindings/geode/GeodeWebInternal.hpp"
 #include "lua/bindings/framework/Stack.hpp"
+#include "lua/bindings/geode/GeodeWebInternal.hpp"
 #include "lua/bindings/geode/JsonConvert.hpp"
 #include "lua/bindings/geode/ModSandbox.hpp"
 #include "lua/bindings/geode/WebCaps.hpp"
