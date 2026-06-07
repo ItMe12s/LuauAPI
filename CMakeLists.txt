@@ -310,6 +310,14 @@ elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
     set_source_files_properties(${LUAUAPI_GENERATED_BINDING_SOURCES} PROPERTIES COMPILE_OPTIONS "-w")
 endif()
 
+if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC" OR CMAKE_CXX_COMPILER MATCHES "clang-cl")
+    target_compile_options(LuauAPI_GeneratedBindings PRIVATE /O1)
+elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    target_compile_options(LuauAPI_GeneratedBindings PRIVATE -Oz)
+elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+    target_compile_options(LuauAPI_GeneratedBindings PRIVATE -Os)
+endif()
+
 add_library(${PROJECT_NAME} SHARED
     src/main.cpp
     $<TARGET_OBJECTS:LuauAPI_Runtime>
@@ -323,6 +331,12 @@ target_link_libraries(${PROJECT_NAME}
 )
 luauapi_apply_compile_settings(${PROJECT_NAME})
 setup_geode_mod(${PROJECT_NAME})
+
+if(WIN32)
+    target_link_options(${PROJECT_NAME} PRIVATE
+        $<$<NOT:$<CONFIG:Debug>>:LINKER:/OPT:REF>
+        $<$<NOT:$<CONFIG:Debug>>:LINKER:/OPT:ICF>)
+endif()
 endif()
 
 if(LUAUAPI_BUILD_TESTS)

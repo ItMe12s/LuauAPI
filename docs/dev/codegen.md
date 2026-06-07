@@ -13,8 +13,8 @@ The generator reads Broma binding files for one Geometry Dash version and one pl
 - A single Luau type stub, `types/geode.d.luau`, holding the bound classes, the per-namespace factories, the enum aliases, and the `geode` namespace root. It gives editors autocomplete and type checks.
 - Metadata files, including a schema, a report, and a parity file.
 
-The generated C++ is compiled into the main library.
-Because it is machine written, you do not edit it, and the build compiles it with warnings disabled.
+The generated C++ is compiled into the main library. Because it is machine written, you do not edit it.
+The build compiles it with warnings disabled and optimized for size, since the bindings are large and not performance critical.
 
 ## How the build calls it
 
@@ -29,6 +29,15 @@ The Geometry Dash version is read from the `"win"` entry in `mod.json`.
 CMake options:
 
 - `LUAUAPI_HOST_ONLY=ON` skips Geode SDK and configure-time codegen listing. Use for host-only tooling without `GEODE_SDK`.
+
+## Binary size
+
+Bindings make up most of the binary size, so the build minimizes it using two methods:
+
+- `-Oz` is set on the binding target to compile all bindings for minimal size. This ensures consistent optimization and avoids "OptimizationLevel differs" errors.
+- Linker `/OPT:REF` and `/OPT:ICF`, which drop unused code and fold identical functions.
+
+These apply to non-debug builds only.
 
 ## The hook generator
 
