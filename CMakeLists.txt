@@ -372,6 +372,7 @@ if(LUAUAPI_BUILD_TESTS)
         src/lua/bindings/framework/LuaTrampolineRegistry.cpp
         src/lua/bindings/task/TaskBinding.cpp
         src/lua/bindings/geode/CurrentMod.cpp
+        src/lua/bindings/geode/ModSandbox.cpp
         src/lua/bindings/geode/GeodeFsBinding.cpp
         src/lua/bindings/geode/GeodeJsonBinding.cpp
         src/lua/bindings/geode/JsonConvert.cpp
@@ -389,6 +390,7 @@ if(LUAUAPI_BUILD_TESTS)
         tests/fields_tests.cpp
         tests/bytecode_cache_key_tests.cpp
         tests/callback_tests.cpp
+        tests/config_bounds_tests.cpp
         tests/geode_fs_path_tests.cpp
         tests/indexed_slot_map_tests.cpp
         tests/opaque_handle_tests.cpp
@@ -404,6 +406,7 @@ if(LUAUAPI_BUILD_TESTS)
         tests/usertype_tests.cpp
         tests/vector_view_tests.cpp
         tests/misc_correctness_tests.cpp
+        tests/mod_sandbox_tests.cpp
     )
     target_compile_features(luauapi_tests PRIVATE cxx_std_23)
     target_include_directories(luauapi_tests PRIVATE
