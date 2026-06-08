@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from typing import TYPE_CHECKING, Dict, List
+from typing import TYPE_CHECKING, Dict, List, Optional
 
 if TYPE_CHECKING:
     from luau_codegen.model.codegen_context import CodegenContext
@@ -28,6 +28,7 @@ from luau_codegen.convert.type_map import (
 )
 from luau_codegen.emit.cxx_templates import file_preamble
 from luau_codegen.emit.bindings.dispatch import emit_arity_dispatcher
+from luau_codegen.emit.luau_types.manual_fields import manual_field_names_by_path
 from luau_codegen.policy.containers import _CONTAINER_KINDS
 
 FREE_FUNCTIONS_FILE = "bindings_free_functions.cpp"
@@ -159,9 +160,13 @@ def emit_free_functions_file(
     functions: List[Function],
     objects: Dict[str, Class],
     ctx: CodegenContext | None = None,
+    manual_fields: Optional[Dict[str, List[str]]] = None,
 ) -> str:
+    manual_names = manual_field_names_by_path(manual_fields)
     by_key: dict[tuple[str, str], list[Function]] = defaultdict(list)
     for fn in functions:
+        if fn.name in manual_names.get(fn.lua_path, frozenset()):
+            continue
         by_key[(fn.namespace, fn.name)].append(fn)
 
     includes = "".join(f"#include <{header}>\n" for header in free_function_includes())

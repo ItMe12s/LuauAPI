@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Dict, List, Optional
+
 from luau_codegen.parse.broma import Root
 from luau_codegen.emit.plan import EmitPlan, collect_plan
 from luau_codegen.emit.cxx_templates import emit_internal_hpp
@@ -19,7 +21,10 @@ __all__ = [
 
 
 def emit(
-    root: Root, target_platform: str = "win", plan: EmitPlan | None = None
+    root: Root,
+    target_platform: str = "win",
+    plan: EmitPlan | None = None,
+    manual_fields: Optional[Dict[str, List[str]]] = None,
 ) -> tuple[dict[str, str], list[tuple[str, str, str]]]:
     if plan is None:
         plan = collect_plan(root, target_platform)
@@ -28,7 +33,10 @@ def emit(
         "bindings_internal.hpp": emit_internal_hpp(),
         "bindings_common.cpp": _emit_common_file(plan.emitted_classes, plan, target_platform),
         FREE_FUNCTIONS_FILE: emit_free_functions_file(
-            plan.supported_free_functions, plan.objects, ctx=plan.ctx
+            plan.supported_free_functions,
+            plan.objects,
+            ctx=plan.ctx,
+            manual_fields=manual_fields,
         ),
     }
 

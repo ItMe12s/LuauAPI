@@ -253,7 +253,9 @@ def main(argv: List[str]) -> int:
     current_files: set[str] = set()
 
     try:
-        binding_files, skipped = emit_bindings.emit(root, args.platform, plan=plan)
+        binding_files, skipped = emit_bindings.emit(
+            root, args.platform, plan=plan, manual_fields=MANUAL_FREE_FN_FIELDS
+        )
         for rel, content in binding_files.items():
             rel_path = os.path.join("src", rel).replace("\\", "/")
             current_files.add(rel_path)

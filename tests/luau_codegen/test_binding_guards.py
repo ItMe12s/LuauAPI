@@ -260,6 +260,45 @@ class BindingGuardTests(unittest.TestCase):
                 )
 
 
+class ManualFieldsBindingGuardTests(unittest.TestCase):
+    def test_binding_emission_skips_manual_free_fn_fields(self) -> None:
+        from luau_codegen.emit.bindings.free_functions import emit_free_functions_file
+        from luau_codegen.parse.broma import Arg, Function
+
+        functions: list[Function] = []
+        for lua_path, entries in MANUAL_FREE_FN_FIELDS.items():
+            namespace = lua_path.replace(".", "::")
+            for entry in entries:
+                name = entry.split(":", 1)[0].strip()
+                if name[0].isupper():
+                    continue
+                functions.append(
+                    Function(
+                        name=name,
+                        namespace=namespace,
+                        ret="void",
+                        args=[Arg("int", "a")],
+                    )
+                )
+
+        out = emit_free_functions_file(functions, {}, manual_fields=MANUAL_FREE_FN_FIELDS)
+        for fn in functions:
+            with self.subTest(fn=f"{fn.lua_path}.{fn.name}"):
+                self.assertNotIn(
+                    f'lua_setfield(L, -2, "{fn.name}")',
+                    out,
+                    "generated C++ bindings must not register handwritten free functions",
+                )
+
+    def test_binding_emission_keeps_non_manual_free_fn_fields(self) -> None:
+        from luau_codegen.emit.bindings.free_functions import emit_free_functions_file
+        from luau_codegen.parse.broma import Function
+
+        fn = Function(name="getObjectName", namespace="geode::cocos", ret="void", args=[])
+        out = emit_free_functions_file([fn], {}, manual_fields=MANUAL_FREE_FN_FIELDS)
+        self.assertIn('lua_setfield(L, -2, "getObjectName")', out)
+
+
 class CocosHybridGuardTests(unittest.TestCase):
     def test_utils_cocos_hpp_in_free_function_manifest(self) -> None:
         headers = {rel for rel, _ns, _names in FREE_FUNCTION_SOURCES}
