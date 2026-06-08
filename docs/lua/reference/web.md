@@ -149,10 +149,13 @@ handle:disconnect()
 ```
 
 Request intercept callbacks may return `true` to stop propagation when Geode fires the event on the main thread.
-If an intercept event fires off the main thread, LuauAPI does not call Lua and lets the event propagate.
+Intercept handlers run right away so Lua can safely tweak the request as it happens.
+If the event fires off the main thread, Lua is skipped, the event keeps going, and you'll see a one-time warning in the log.
 
-Response listeners from Geode's web worker are queued back to the main thread before Lua is called,
-so their return value is best treated as informational.
+If a response listener runs in Geode's web worker, it's delayed until the main thread before Lua handles it.
+Even though your callback eventually runs on the main thread, its return value can't stop other listeners.
+Use these mainly for side effects.
+When Geode fires the response event on the main thread in the first place, returning `true` still stops the next listeners.
 
 Available listeners:
 

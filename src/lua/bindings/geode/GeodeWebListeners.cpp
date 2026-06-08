@@ -23,7 +23,17 @@ namespace luax::webdetail {
             std::shared_ptr<LuaCallback> const& cb, char const* context,
             std::optional<std::string_view> modID, web::WebRequest& request
         ) {
-            if (!Runtime::isMainThread() || !cb || !cb->valid()) return false;
+            if (!Runtime::isMainThread()) {
+                // Must run on the main thread so Lua can change the request
+                // and return stop before Geode continues.
+                static bool loggedOffThreadSkip = false;
+                if (!loggedOffThreadSkip) {
+                    loggedOffThreadSkip = true;
+                    geode::log::warn("[lua:{}] off-thread intercept skipped", context);
+                }
+                return false;
+            }
+            if (!cb || !cb->valid()) return false;
 
             struct Ctx {
                 std::optional<std::string_view> modID;
@@ -105,6 +115,9 @@ namespace luax::webdetail {
             if (Runtime::isMainThread()) {
                 return invokeResponseEventNow(cb, context, modID, response);
             }
+            // This is running outside the main thread.
+            // The listener will be executed on the main thread later.
+            // Only use these response hooks for side effects.
             std::optional<std::string> ownedModID;
             if (modID) ownedModID = std::string(*modID);
             geode::queueInMainThread(
