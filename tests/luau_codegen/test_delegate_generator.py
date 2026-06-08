@@ -68,6 +68,23 @@ class DelegateGeneratorTests(unittest.TestCase):
         self.assertIn("invokeTableObject<LevelSettingsObject>", text)
         self.assertIn("getLevelSettings", text)
 
+    def test_override_emits_unique_parameter_names(self) -> None:
+        spec = DelegateSpec(
+            cxx_type="CCEGLViewProtocol",
+            lua_name="CCEGLViewProtocol",
+            cpp_class="LuaCCEGLViewProtocol",
+            methods=[
+                DelegateMethod(
+                    "setFrameSize",
+                    "void",
+                    [("float", "arg"), ("float", "arg")],
+                )
+            ],
+        )
+        text = emit_override(spec, spec.methods[0])
+        self.assertIn("void setFrameSize(float arg, float arg1) override", text)
+        self.assertIn("Ctx ctx{ arg, arg1 }", text)
+
 
 if __name__ == "__main__":
     unittest.main()

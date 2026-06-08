@@ -28,9 +28,11 @@ def _method_to_delegate(method, norm) -> tuple[str, str, list[tuple[str, str]]] 
 
     if not method.is_virtual:
         return None
+    if method.is_ctor or method.is_dtor or method.name.startswith("~"):
+        return None
     if lua_for(method.ret) is None:
         return None
-    args = [(norm(a.type), a.name or "arg") for a in method.args]
+    args = [(norm(a.type), a.name or f"arg{i}") for i, a in enumerate(method.args)]
     if any(lua_for(t) is None for t, _ in args):
         return None
     return method.name, method.ret, args

@@ -283,6 +283,21 @@ LUA_TYPES: dict[str, str] = {
 }
 
 ENUM_SUFFIXES = ("Type", "Error", "Action", "Command", "Mode")
+PRIMITIVE_POINTER_BASES = frozenset(
+    {
+        "bool",
+        "char",
+        "double",
+        "float",
+        "int",
+        "long",
+        "short",
+        "unsigned char",
+        "unsigned int",
+        "unsigned long",
+        "unsigned short",
+    }
+)
 
 
 @dataclass
@@ -316,7 +331,11 @@ def lua_for(cxx: str) -> str | None:
     if n in LUA_TYPES:
         return LUA_TYPES[n]
     if n.endswith("*"):
-        return n.split("::")[-1][:-1] or None
+        base = n[:-1].strip()
+        short = base.split("::")[-1]
+        if base in PRIMITIVE_POINTER_BASES or short.endswith(("Delegate", "Protocol")):
+            return None
+        return short or None
     if any(n.endswith(s) for s in ENUM_SUFFIXES):
         return "number"
     return None
@@ -380,6 +399,23 @@ def method_args(spec: DelegateSpec, m: DelegateMethod) -> list[tuple[str, str]]:
         if key in METHOD_CXX_ARGS:
             return METHOD_CXX_ARGS[key]
     return m.args
+
+
+def unique_cxx_args(args: list[tuple[str, str]]) -> list[tuple[str, str]]:
+    out: list[tuple[str, str]] = []
+    seen: set[str] = set()
+    for i, (param_type, name) in enumerate(args):
+        base = name.strip() or f"arg{i}"
+        if re.match(r"^[A-Za-z_]\w*$", base) is None:
+            base = f"arg{i}"
+        candidate = base
+        suffix = i
+        while candidate in seen:
+            candidate = f"{base}{suffix}"
+            suffix += 1
+        seen.add(candidate)
+        out.append((param_type, candidate))
+    return out
 
 
 def should_emit_method(spec: DelegateSpec, m: DelegateMethod) -> bool:
@@ -566,7 +602,7 @@ def emit_gen_hpp(specs: dict[str, DelegateSpec]) -> str:
 def emit_override(spec: DelegateSpec, m: DelegateMethod) -> str:
     if not cpp_emit_supported(spec, m):
         return ""
-    args = method_args(spec, m)
+    args = unique_cxx_args(method_args(spec, m))
     params = ", ".join(cxx_emit_param(t, n) for t, n in args)
     ctx_fields = "; ".join(f"{cxx_ctx_type(t)} p{i}" for i, (t, _) in enumerate(args))
     ctx_init = ", ".join(n for _, n in args)

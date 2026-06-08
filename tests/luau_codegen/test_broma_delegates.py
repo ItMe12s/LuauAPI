@@ -44,6 +44,26 @@ class geode::ui::SampleDelegate {
         self.assertEqual(methods["onEvent"].args, [("int", "id")])
         self.assertEqual(methods["shouldClose"].ret, "bool")
 
+    def test_parse_delegate_ignores_destructor_and_names_unnamed_args(self) -> None:
+        bro = """
+class CCEGLViewProtocol {
+    virtual ~CCEGLViewProtocol() = default;
+    virtual void setFrameSize(float, float) = inline;
+    virtual void setTouchDelegate(EGLTouchDelegate* delegate) = inline;
+    virtual void handleTouchesBegin(int count, int* ids, float* xs, float* ys) = inline;
+};
+"""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = os.path.join(tmpdir, "View.bro")
+            with open(path, "w", encoding="utf-8") as f:
+                f.write(bro)
+            parsed = parse_broma(tmpdir)
+        methods = {m.name: m for m in parsed["CCEGLViewProtocol"]}
+        self.assertNotIn("~CCEGLViewProtocol", methods)
+        self.assertEqual(methods["setFrameSize"].args, [("float", "arg0"), ("float", "arg1")])
+        self.assertNotIn("setTouchDelegate", methods)
+        self.assertNotIn("handleTouchesBegin", methods)
+
     def test_collect_delegate_ptrs_from_setter_signatures(self) -> None:
         bro = """
 class Holder {

@@ -113,14 +113,6 @@ if (LUAUAPI_HOST_ONLY)
 endif()
 
 if (NOT LUAUAPI_HOST_ONLY)
-file(READ ${CMAKE_CURRENT_SOURCE_DIR}/mod.json LUAUAPI_MOD_JSON)
-string(REGEX MATCH "\"win\"[ \t\r\n]*:[ \t\r\n]*\"([^\"]+)\"" LUAUAPI_GD_MATCH "${LUAUAPI_MOD_JSON}")
-if (CMAKE_MATCH_1)
-    set(LUAUAPI_GD_VERSION "${CMAKE_MATCH_1}")
-else()
-    set(LUAUAPI_GD_VERSION "2.2081")
-endif()
-
 if (WIN32)
     set(LUAUAPI_CODEGEN_PLATFORM "win")
 elseif (ANDROID)
@@ -145,6 +137,27 @@ elseif (APPLE)
 else()
     message(WARNING "LuauAPI: unrecognized host platform, defaulting codegen platform to \"win\"")
     set(LUAUAPI_CODEGEN_PLATFORM "win")
+endif()
+
+set(LUAUAPI_GD_KEY "${LUAUAPI_CODEGEN_PLATFORM}")
+if (LUAUAPI_CODEGEN_PLATFORM MATCHES "^android")
+    set(LUAUAPI_GD_KEY "android")
+elseif (LUAUAPI_CODEGEN_PLATFORM STREQUAL "m1" OR LUAUAPI_CODEGEN_PLATFORM STREQUAL "imac")
+    set(LUAUAPI_GD_KEY "mac")
+endif()
+
+file(READ ${CMAKE_CURRENT_SOURCE_DIR}/mod.json LUAUAPI_MOD_JSON)
+string(REGEX MATCH "\"${LUAUAPI_GD_KEY}\"[ \t\r\n]*:[ \t\r\n]*\"([^\"]+)\"" LUAUAPI_GD_MATCH "${LUAUAPI_MOD_JSON}")
+if (LUAUAPI_GD_MATCH)
+    set(LUAUAPI_GD_VERSION "${CMAKE_MATCH_1}")
+else()
+    string(REGEX MATCH "\"win\"[ \t\r\n]*:[ \t\r\n]*\"([^\"]+)\"" LUAUAPI_GD_FALLBACK_MATCH "${LUAUAPI_MOD_JSON}")
+    if (LUAUAPI_GD_FALLBACK_MATCH)
+        message(WARNING "LuauAPI: gd.${LUAUAPI_GD_KEY} missing from mod.json, falling back to gd.win")
+        set(LUAUAPI_GD_VERSION "${CMAKE_MATCH_1}")
+    else()
+        set(LUAUAPI_GD_VERSION "2.2081")
+    endif()
 endif()
 
 set(LUAUAPI_BINDINGS_DIR
@@ -360,6 +373,9 @@ if(LUAUAPI_BUILD_TESTS)
     )
     FetchContent_MakeAvailable(fmt)
 
+    file(GLOB LUAUAPI_TEST_SOURCES CONFIGURE_DEPENDS
+        ${CMAKE_CURRENT_SOURCE_DIR}/tests/*.cpp)
+
     add_executable(luauapi_tests
         src/api.cpp
         src/lua/bindings/Binding.cpp
@@ -382,32 +398,7 @@ if(LUAUAPI_BUILD_TESTS)
         src/lua/module/Requirer.cpp
         src/lua/runtime/Loadstring.cpp
         src/lua/runtime/Runtime.cpp
-        tests/allocator_accounting_tests.cpp
-        tests/api_tests.cpp
-        tests/binding_tests.cpp
-        tests/bytecode_cache_accounting_tests.cpp
-        tests/current_mod_tests.cpp
-        tests/fields_tests.cpp
-        tests/bytecode_cache_key_tests.cpp
-        tests/callback_tests.cpp
-        tests/config_bounds_tests.cpp
-        tests/geode_fs_path_tests.cpp
-        tests/indexed_slot_map_tests.cpp
-        tests/opaque_handle_tests.cpp
-        tests/imgui_scheduler_tests.cpp
-        tests/loadstring_tests.cpp
-        tests/path_sandbox_tests.cpp
-        tests/path_rules_tests.cpp
-        tests/require_path_tests.cpp
-        tests/requirer_root_tests.cpp
-        tests/resource_bounds_tests.cpp
-        tests/runtime_tests.cpp
-        tests/task_scheduler_tests.cpp
-        tests/handle_gc_tests.cpp
-        tests/usertype_tests.cpp
-        tests/vector_view_tests.cpp
-        tests/misc_correctness_tests.cpp
-        tests/mod_sandbox_tests.cpp
+        ${LUAUAPI_TEST_SOURCES}
     )
     target_compile_features(luauapi_tests PRIVATE cxx_std_23)
     target_include_directories(luauapi_tests PRIVATE

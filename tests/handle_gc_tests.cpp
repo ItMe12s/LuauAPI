@@ -1,4 +1,5 @@
 #include "lua/bindings/Binding.hpp"
+#include "lua/bindings/imgui/ImGuiDrawScheduler.hpp"
 #include "lua/bindings/task/TaskScheduler.hpp"
 #include "lua/runtime/Runtime.hpp"
 #include "lua_test_helpers.hpp"
@@ -21,6 +22,7 @@ namespace {
         }
 
         ~RuntimeGuard() {
+            luax::ImGuiDrawScheduler::get().clear();
             luax::TaskScheduler::get().clear();
             luax::Runtime::resetForTests();
             luax::resetBindingsForTests();
@@ -92,6 +94,27 @@ TEST_CASE("Task handle __gc cancels scheduled interval task") {
 
     scheduler.advance(1.0, L);
     lua_getglobal(L, "intervalGcHits");
+    REQUIRE(lua_isnil(L, -1));
+    lua_pop(L, 1);
+}
+
+TEST_CASE("ImGui draw handle cancellation prevents stale callback from drawing") {
+    RuntimeGuard guard;
+    auto* runtime = luax::Runtime::getOrCreate();
+    auto* L = runtime->state();
+
+    auto ref = luauapi_test::makeCallback(L, "_G.imguiGcHits = (_G.imguiGcHits or 0) + 1");
+    auto& scheduler = luax::ImGuiDrawScheduler::get();
+    auto id = scheduler.add(std::move(ref));
+    REQUIRE(id != 0);
+    REQUIRE(scheduler.activeCount() == 1);
+
+    scheduler.cancel(id);
+    lua_gc(L, LUA_GCCOLLECT, 0);
+    scheduler.drawAll();
+
+    REQUIRE(scheduler.activeCount() == 0);
+    lua_getglobal(L, "imguiGcHits");
     REQUIRE(lua_isnil(L, -1));
     lua_pop(L, 1);
 }

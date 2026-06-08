@@ -9,16 +9,8 @@ This page explains how to register a binding and how the pieces fit together.
 ## The binding registry
 
 A binding is a function that takes a `lua_State*` and returns a `geode::Result<void>`.
-You register it with a macro, and every binding runs once when the runtime is built.
-
-```cpp
-geode::Result<void> registerMyLib(lua_State* L) {
-    // set up globals here
-    return geode::Ok();
-}
-
-LUAX_BINDING(my_lib, registerMyLib)
-```
+Register it with `LUAX_BINDING`.
+Each binding runs once when the runtime is built.
 
 `LUAX_BINDING` registers the function with a default priority of `10`.
 Use `LUAX_BINDING_PRIORITY` to set a different priority.
@@ -32,7 +24,9 @@ Most game types come from codegen. A few libraries are handwritten in C++:
 - `src/lua/bindings/geode/GeodeFsBinding.cpp` exposes `geode.fs`.
 - `src/lua/bindings/geode/GeodeJsonBinding.cpp` exposes `geode.json`.
 - `src/lua/bindings/geode/GeodeModBinding.cpp` exposes `geode.Mod`.
-- `src/lua/bindings/geode/GeodeWebBinding.cpp` exposes `geode.utils.web`.
+- `src/lua/bindings/geode/GeodeWebBinding.cpp` registers `geode.utils.web`.
+  Web logic lives in `GeodeWebRequest.cpp`, `GeodeWebOptions.cpp`, `GeodeWebResponse.cpp`, `GeodeWebMultipart.cpp`, and `GeodeWebListeners.cpp`.
+  Shared caps and helpers live in `WebCaps.hpp` and `GeodeWebInternal.hpp`.
 - `src/lua/bindings/geode/GeodeBase64Binding.cpp` exposes `geode.utils.base64`.
 - `src/lua/bindings/geode/GeodePermissionBinding.cpp` exposes `geode.utils.permission`.
 - `src/lua/bindings/geode/GeodeCocosBinding.cpp` exposes the handwritten `geode.cocos` helpers.
