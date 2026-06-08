@@ -397,7 +397,13 @@ namespace luax::webdetail {
     }
 
     int requestBodyJson(lua_State* L) {
-        auto value = toJson(L, 2, 0);
+        auto valueResult = toJson(L, 2, 0);
+        if (valueResult.isErr()) {
+            lua_pushnil(L);
+            push(L, std::string(valueResult.unwrapErr()));
+            return 2;
+        }
+        auto value = std::move(valueResult.unwrap());
         if (!requestJsonBodyWithinLimit(value)) {
             return pushRequestBodyExceeded(L);
         }

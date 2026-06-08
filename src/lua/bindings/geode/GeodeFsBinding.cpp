@@ -79,7 +79,12 @@ namespace {
 
         std::error_code ec;
         bool exists = std::filesystem::exists(target->path, ec);
-        push(L, exists && !ec);
+        if (ec) {
+            lua_pushnil(L);
+            push(L, ec.message());
+            return 2;
+        }
+        push(L, exists);
         return 1;
     }
 

@@ -44,8 +44,8 @@ Writes are capped at 32 MB.
 geode.fs.exists(root: FsRoot, path: string) -> (boolean?, string?)
 ```
 
-Returns whether a file or directory exists at `path`,
-or `nil` and an error message when the path escapes the root.
+Returns `true` when a file or directory exists at `path`. Returns `false` when it is missing.
+Returns `nil` and an error message when the path escapes the root or the filesystem fails.
 
 ## list
 

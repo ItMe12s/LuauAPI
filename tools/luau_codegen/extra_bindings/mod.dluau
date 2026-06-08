@@ -1,7 +1,7 @@
 export type ModNamespace = {
-    getSavedValue: (key: string) -> any,
-    setSavedValue: (key: string, value: any) -> (),
-    getSettingValue: (key: string) -> any,
+    getSavedValue: (key: string) -> (any?, string?),
+    setSavedValue: (key: string, value: any) -> (boolean?, string?),
+    getSettingValue: (key: string) -> (any?, string?),
     hasSetting: (key: string) -> boolean,
     listenForSettingChanges: (key: string, callback: (value: any) -> ()) -> (),
     listenForAllSettingChanges: (callback: (key: string, value: any) -> ()) -> (),

@@ -27,7 +27,11 @@ namespace {
             push(L, std::string(result.unwrapErr()));
             return 2;
         }
-        pushJson(L, result.unwrap());
+        if (auto pushed = pushJson(L, result.unwrap(), 0); pushed.isErr()) {
+            lua_pushnil(L);
+            push(L, std::string(pushed.unwrapErr()));
+            return 2;
+        }
         return 1;
     }
 
@@ -36,8 +40,11 @@ namespace {
         if (!lua_isnoneornil(L, 2)) {
             indent = static_cast<int>(luaL_checkinteger(L, 2));
         }
-        auto value = toJson(L, 1);
-        push(L, value.dump(indent));
+        auto valueResult = toJson(L, 1, 0);
+        if (valueResult.isErr()) {
+            luaL_error(L, "%s", valueResult.unwrapErr().c_str());
+        }
+        push(L, valueResult.unwrap().dump(indent));
         return 1;
     }
 } // namespace

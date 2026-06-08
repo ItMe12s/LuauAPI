@@ -54,8 +54,7 @@ namespace luax::detail {
                             return 1;
                         }
                         lua_settop(L, top);
-                        lua_pushnil(L);
-                        return 1;
+                        luaL_error(L, "usertype field get failed");
                     }
                     lua_settop(L, top);
                     luaL_error(L, "luau runtime not available");

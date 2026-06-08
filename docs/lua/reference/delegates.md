@@ -30,6 +30,10 @@ layer:registerWithTouchDispatcher({
 Only include methods you care about.
 Missing keys are not called from C++ unless the engine invokes that virtual (defaults apply inside the trampoline).
 
+When a callback errors, times out, or is missing, LuauAPI logs the failure and returns the method default.
+`bool` methods return `false`. `int` methods return `0`. `string` methods return an empty string.
+Object methods return `nil`. See [Callbacks](callbacks.md).
+
 Method names and argument types match the C++ interface.
 Multi-touch variants (`ccTouchesBegan`, etc.) use `CCSet` for the touch set.
 

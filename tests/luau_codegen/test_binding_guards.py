@@ -30,6 +30,8 @@ _LUA_SELECTOR = "src/lua/bindings/framework/LuaSelectorHandler.cpp"
 _LUA_MENU = "src/lua/bindings/framework/LuaMenuHandler.cpp"
 _LUA_DELEGATE = "src/lua/bindings/framework/LuaDelegate.cpp"
 _LUA_CALLBACK = "src/lua/bindings/framework/LuaCallback.hpp"
+_USERTYPE = "src/lua/bindings/framework/Usertype.cpp"
+_JSON_CONVERT = "src/lua/bindings/geode/JsonConvert.cpp"
 _GEODE_MOD = "src/lua/bindings/geode/GeodeModBinding.cpp"
 _GEODE_PERMISSION = "src/lua/bindings/geode/GeodePermissionBinding.cpp"
 _CONFIG_HEADER = "src/lua/Config.hpp"
@@ -458,6 +460,42 @@ class HandleGcGuardTests(unittest.TestCase):
         )
         register_body = _function_body(source, "registerHandleMetatable", ret="void")
         self.assertIn('"__gc"', register_body)
+
+
+class ErrorSemanticsGuardTests(unittest.TestCase):
+    def test_usertype_field_get_raises_on_failure(self) -> None:
+        source = _read_repo_file(_USERTYPE)
+        body = _function_body(source, "usertypeIndex")
+        self.assertIn('luaL_error(L, "usertype field get failed")', body)
+        self.assertNotRegex(
+            body,
+            r"invokeFieldAccessor\([^)]+\)\)\s*\{\s*return 1;\s*\}\s*lua_settop\(L, top\);\s*lua_pushnil\(L\);\s*return 1;",
+            "usertype field get must not silently return nil on protected-call failure",
+        )
+
+    def test_fs_exists_returns_error_on_filesystem_failure(self) -> None:
+        source = _read_repo_file(_FS_BINDING)
+        body = _function_body(source, "fsExists")
+        self.assertIn("if (ec)", body)
+        self.assertIn("return 2", body)
+
+    def test_json_convert_reports_depth_overflow(self) -> None:
+        source = _read_repo_file(_JSON_CONVERT)
+        self.assertIn("kJsonDepthExceededMsg", source)
+        self.assertIn("geode::Result<void> pushJson", source)
+        self.assertIn("geode::Result<matjson::Value> toJson", source)
+
+    def test_mod_set_saved_value_checks_conversion_and_container(self) -> None:
+        source = _read_repo_file(_GEODE_MOD)
+        body = _function_body(source, "modSetSavedValue")
+        self.assertIn("valueResult.isErr()", body)
+        self.assertIn("isObject()", body)
+        self.assertIn("return 2", body)
+
+    def test_delegate_default_return_policy_documented(self) -> None:
+        source = _read_repo_file("docs/lua/reference/delegates.md")
+        self.assertIn("logs the failure", source)
+        self.assertIn("method default", source)
 
 
 class FreeFnManifestSyncTests(unittest.TestCase):

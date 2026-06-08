@@ -213,9 +213,7 @@ namespace luax {
             if (!director) {
                 if (!s_directorErrorLogged) {
                     s_directorErrorLogged = true;
-                    geode::log::error(
-                        "task scheduler: CCDirector unavailable, task tick not armed"
-                    );
+                    geode::log::error("task scheduler: CCDirector unavailable, task tick not armed");
                 }
                 return false;
             }

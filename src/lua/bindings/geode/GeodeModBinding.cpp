@@ -49,10 +49,14 @@ namespace {
 
     void pushSettingValue(lua_State* L, std::shared_ptr<geode::SettingV3> const& setting) {
         matjson::Value value;
-        if (setting && setting->save(value)) {
-            pushJson(L, value, 0);
+        if (!setting || !setting->save(value)) {
+            lua_pushnil(L);
+            return;
         }
-        else {
+        if (auto pushed = pushJson(L, value, 0); pushed.isErr()) {
+            geode::log::warn(
+                "geode.Mod setting value exceeds json depth limit: {}", pushed.unwrapErr()
+            );
             lua_pushnil(L);
         }
     }
@@ -64,15 +68,31 @@ namespace {
             lua_pushnil(L);
             return 1;
         }
-        pushJson(L, result.unwrap(), 0);
+        if (auto pushed = pushJson(L, result.unwrap(), 0); pushed.isErr()) {
+            lua_pushnil(L);
+            push(L, std::string(pushed.unwrapErr()));
+            return 2;
+        }
         return 1;
     }
 
     int modSetSavedValue(lua_State* L) {
         auto key = checkKey(L, 1);
-        auto value = toJson(L, 2, 0);
-        requireCurrentMod(L)->getSaveContainer().set(key, std::move(value));
-        return 0;
+        auto valueResult = toJson(L, 2, 0);
+        if (valueResult.isErr()) {
+            lua_pushnil(L);
+            push(L, std::string(valueResult.unwrapErr()));
+            return 2;
+        }
+        auto& saved = requireCurrentMod(L)->getSaveContainer();
+        if (!saved.isObject()) {
+            lua_pushnil(L);
+            push(L, std::string("save container is not an object"));
+            return 2;
+        }
+        saved.set(key, std::move(valueResult.unwrap()));
+        push(L, true);
+        return 1;
     }
 
     int modGetSettingValue(lua_State* L) {
@@ -82,7 +102,11 @@ namespace {
             lua_pushnil(L);
             return 1;
         }
-        pushJson(L, result.unwrap(), 0);
+        if (auto pushed = pushJson(L, result.unwrap(), 0); pushed.isErr()) {
+            lua_pushnil(L);
+            push(L, std::string(pushed.unwrapErr()));
+            return 2;
+        }
         return 1;
     }
 

@@ -85,7 +85,11 @@ namespace luax::webdetail {
             push(L, std::string(result.unwrapErr()));
             return 2;
         }
-        pushJson(L, result.unwrap(), 0);
+        if (auto pushed = pushJson(L, result.unwrap(), 0); pushed.isErr()) {
+            lua_pushnil(L);
+            push(L, std::string(pushed.unwrapErr()));
+            return 2;
+        }
         return 1;
     }
 

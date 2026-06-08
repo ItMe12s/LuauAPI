@@ -7,27 +7,30 @@ This page lists `geode.Mod`. It reads the host mod metadata, paths, saved values
 ## getSavedValue
 
 ```lua
-geode.Mod.getSavedValue(key: string) -> any?
+geode.Mod.getSavedValue(key: string) -> (any?, string?)
 ```
 
 Reads a value from the mod save file. Values are JSON types such as boolean, number, string, table, or array.
 Returns `nil` when the key is missing or the read fails.
+Returns `nil` and an error message when the stored value is too deeply nested.
 
 ## setSavedValue
 
 ```lua
-geode.Mod.setSavedValue(key: string, value: any) -> ()
+geode.Mod.setSavedValue(key: string, value: any) -> (boolean?, string?)
 ```
 
 Writes a JSON value to the mod save file. Tables and arrays are stored as JSON objects and arrays.
+Returns `true` on success. Returns `nil` and an error message when conversion or save fails.
 
 ## getSettingValue
 
 ```lua
-geode.Mod.getSettingValue(key: string) -> any?
+geode.Mod.getSettingValue(key: string) -> (any?, string?)
 ```
 
 Reads a mod setting from `mod.json`. Returns `nil` when the key is missing or the read fails.
+Returns `nil` and an error message when the stored value is too deeply nested.
 
 ## hasSetting
 

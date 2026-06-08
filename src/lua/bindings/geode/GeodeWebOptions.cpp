@@ -236,7 +236,11 @@ namespace luax::webdetail {
 
         lua_getfield(L, idx, "bodyJson");
         if (!lua_isnil(L, -1)) {
-            auto value = toJson(L, -1, 0);
+            auto valueResult = toJson(L, -1, 0);
+            if (valueResult.isErr()) {
+                luaL_error(L, "%s", valueResult.unwrapErr().c_str());
+            }
+            auto value = std::move(valueResult.unwrap());
             if (!requestJsonBodyWithinLimit(value)) {
                 luaL_error(L, "%s", kWebRequestBodyExceededMsg);
             }
