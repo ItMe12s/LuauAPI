@@ -234,16 +234,24 @@ TEST_CASE("Usertype field getter uses traceback when runtime is not ready") {
     runtime->clearLastError();
     runtime->setStatusForTests(imes::luauapi::RuntimeStatus::NotReady);
 
-    int topBefore = lua_gettop(L);
-    lua_getfield(L, -1, "boomField");
-    REQUIRE(lua_gettop(L) == topBefore + 1);
-    REQUIRE(lua_isnil(L, -1));
+    lua_pushcfunction(
+        L,
+        [](lua_State* S) -> int {
+            lua_getfield(S, 1, "boomField");
+            lua_pop(S, 1);
+            return 0;
+        },
+        "getBoomField"
+    );
+    lua_pushvalue(L, -2);
+    REQUIRE(lua_pcall(L, 1, 0, 0) != 0);
+    lua_pop(L, 1);
 
     auto const& err = runtime->lastError();
     REQUIRE(err.find("field getter boom") != std::string::npos);
     REQUIRE(err.find("stack:") != std::string::npos);
 
-    lua_pop(L, 2);
+    lua_pop(L, 1);
     node->release();
 }
 
@@ -297,17 +305,25 @@ TEST_CASE("Usertype field getter skips accessor when runtime panicked") {
     runtime->clearLastError();
     runtime->setStatusForTests(imes::luauapi::RuntimeStatus::Panicked);
 
-    int topBefore = lua_gettop(L);
-    lua_getfield(L, -1, "trackedField");
-    REQUIRE(lua_gettop(L) == topBefore + 1);
-    REQUIRE(lua_isnil(L, -1));
+    lua_pushcfunction(
+        L,
+        [](lua_State* S) -> int {
+            lua_getfield(S, 1, "trackedField");
+            lua_pop(S, 1);
+            return 0;
+        },
+        "getTrackedField"
+    );
+    lua_pushvalue(L, -2);
+    REQUIRE(lua_pcall(L, 1, 0, 0) != 0);
+    lua_pop(L, 1);
     REQUIRE_FALSE(g_fieldAccessorRan);
 
     auto const& err = runtime->lastError();
     REQUIRE(err.find("luau runtime panicked") != std::string::npos);
     REQUIRE(err.find("stack:") == std::string::npos);
 
-    lua_pop(L, 2);
+    lua_pop(L, 1);
     node->release();
 }
 
