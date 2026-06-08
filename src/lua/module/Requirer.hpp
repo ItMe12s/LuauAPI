@@ -4,6 +4,8 @@
 #include <Luau/Require.h>
 #include <filesystem>
 #include <lua.h>
+#include <optional>
+#include <string>
 
 namespace luax {
     class Runtime;
@@ -47,6 +49,7 @@ namespace luax {
 
         Runtime& m_runtime;
         std::filesystem::path m_root;
+        std::optional<std::string> m_rootError;
         std::filesystem::path m_current;
         std::filesystem::path m_pendingLoadPath;
         std::string m_pendingLoadContents;

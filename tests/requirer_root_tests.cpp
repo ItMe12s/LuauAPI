@@ -43,14 +43,18 @@ TEST_CASE("Requirer rejects empty and unresolvable resources roots") {
 
     req.setResourcesRoot({});
     REQUIRE(req.resourcesRoot().empty());
-    REQUIRE(req.resolvedModulePath().isErr());
+    auto emptyRootErr = req.resolvedModulePath();
+    REQUIRE(emptyRootErr.isErr());
+    REQUIRE(emptyRootErr.unwrapErr() == "resources root is empty");
     REQUIRE(req.chunkname().empty());
     REQUIRE(req.toChild("Child") == NAVIGATE_NOT_FOUND);
 
     auto missing = std::filesystem::temp_directory_path() / "luauapi_requirer_missing_root";
     req.setResourcesRoot(missing);
     REQUIRE(req.resourcesRoot().empty());
-    REQUIRE(req.resolvedModulePath().isErr());
+    auto missingRootErr = req.resolvedModulePath();
+    REQUIRE(missingRootErr.isErr());
+    REQUIRE(missingRootErr.unwrapErr().find("resources root is not a directory") != std::string::npos);
     REQUIRE(req.toChild("Child") == NAVIGATE_NOT_FOUND);
 }
 

@@ -124,11 +124,13 @@ namespace luax {
                 "require: resources root canonicalization failed: {}", rootResult.unwrapErr()
             );
             m_root.clear();
+            m_rootError = rootResult.unwrapErr();
             m_current.clear();
             clearPendingLoad();
             return;
         }
         m_root = rootResult.unwrap();
+        m_rootError.reset();
         m_current = m_root;
         clearPendingLoad();
     }
@@ -211,6 +213,9 @@ namespace luax {
 
     geode::Result<std::filesystem::path> Requirer::resolvedModulePath() const {
         if (m_root.empty()) {
+            if (m_rootError) {
+                return geode::Err(*m_rootError);
+            }
             return geode::Err("resources root is not configured");
         }
         auto resolved = resolveScriptFileInsideRoot(m_root, modulePath());
