@@ -79,10 +79,8 @@ Regenerate with the normal build (`luauapi_codegen`) or see [Codegen](../../dev/
 
 ## Limits
 
-| Limit | Value |
-| --- | --- |
-| Callback script budget | `50 ms` (`kHookScriptDeadlineMs`) per delegate method invocation |
-| Orphan delegate registry | `4096` soft cap (`kMaxCallbackTrampolines`) |
+Delegate method invocations run under a script budget, and orphan delegate bridges have a soft registry cap.
+See [Limits and errors](../../cpp/limits-and-errors.md) for the values.
 
 ## Related
 

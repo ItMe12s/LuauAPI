@@ -18,7 +18,7 @@ geode::Result<void> runFile(
 
 Reads and runs a `.luau` file, and must run on the main thread.
 `relativePath` must be a flat `.luau` name inside `resourcesRoot`.
-It cannot be absolute and cannot contain folders, and the file must be `4 MiB` or smaller.
+It cannot be absolute or contain folders, and must be within the size limit.
 It returns `Ok` on success, or `Err` with a message.
 
 ### runScript
@@ -33,7 +33,7 @@ geode::Result<void> runScript(
 ```
 
 Runs inline source, and must run on the main thread. `chunkName` names the chunk in logs and errors.
-The source must be `4 MiB` or smaller. It returns `Ok` or `Err`.
+The source must be within the size limit. It returns `Ok` or `Err`.
 
 ### runFileAsync
 

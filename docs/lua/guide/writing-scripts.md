@@ -23,7 +23,7 @@ The host can read the last error after a run. See [Limits and errors](../cpp/lim
 
 Every run has a deadline in milliseconds. When a script runs past its deadline, the runtime stops it and raises an error.
 
-The default run deadline is `250 ms`. Hook and task callbacks receive `50 ms`.
+A normal run uses the default deadline. Hook and task callbacks get a shorter budget.
 Avoid long loops and blocking calls. Spread heavy work across frames with `task`.
 See [Limits and errors](../cpp/limits-and-errors.md) for all deadline values.
 

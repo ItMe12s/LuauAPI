@@ -25,9 +25,9 @@ The runtime follows the game lifecycle:
 Scripts load from a resources directory that the host provides.
 This directory is the root, and scripts and modules cannot escape it.
 
-Script and module names must be flat. That means a single file name with the `.luau` extension.
-Folders, `..`, and absolute paths are not allowed.
-Several places enforce this rule, which keeps all loading inside the root.
+Script and module names must be flat: a single file name with the `.luau` extension.
+Folders, `..`, and absolute paths are not allowed, which keeps all loading inside the root.
+See [Modules and require](../lua/guide/modules-and-require.md) for the require rules.
 
 ## Deadlines and memory
 

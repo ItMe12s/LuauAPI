@@ -72,9 +72,8 @@ type HookHandle = {
 
 ## Limits
 
-- Total callbacks across all targets: `4096`.
-- Callbacks per target: `64`.
-- Callback budget: `50 ms`.
+Hook callbacks are capped per target and globally, and each runs under a script budget.
+See [Limits and errors](../../cpp/limits-and-errors.md) for the values.
 
 ## Related
 

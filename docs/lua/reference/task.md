@@ -67,8 +67,8 @@ Cancels a scheduled task. You can also call `handle:cancel()`.
 
 ## Limits
 
-- The most scheduled tasks at once is `4096`. Going over raises an error.
-- Each callback runs with a `50 ms` budget.
+Scheduled tasks have a maximum count, and each callback runs under a script budget.
+See [Limits and errors](../../cpp/limits-and-errors.md) for the values.
 
 ## Related
 

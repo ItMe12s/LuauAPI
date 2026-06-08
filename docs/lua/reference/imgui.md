@@ -11,10 +11,12 @@ ImGui here is debug and tooling UI. It is not meant for player-facing, in-game U
 
 ## Model
 
-You register a draw callback with `imgui.onDraw`. The runtime calls it every frame inside an ImGui frame.
-You build windows and widgets from inside that callback.
-ImGui is immediate mode. There is no stored widget tree.
-A widget that holds a value, like a checkbox or a slider or a text box, returns its new value each frame. Your script stores it.
+Use `imgui.onDraw` to set a draw callback.
+The runtime runs this callback every frame.
+Build your windows and widgets inside the callback.
+ImGui uses immediate mode, it does not save any widget state.
+Widgets like checkboxes, sliders, or text boxes return their value each frame.
+Store values in your script if you want to keep them.
 
 ```lua
 local state = { enabled = false, speed = 1.0 }
@@ -186,6 +188,7 @@ Use it to size widgets to the window. Negative sizes also fill the space, typica
 
 - `tools/luau_codegen/extra_bindings/imgui.dluau`
 - `src/lua/bindings/imgui/ImGuiBinding.cpp`
+- `src/lua/bindings/imgui/ImGuiDrawHandleBinding.cpp`
 - `src/lua/bindings/imgui/ImGuiDrawScheduler.cpp`
 - `src/lua/bindings/imgui/ImGuiHost.cpp`
 - `src/lua/Config.hpp`

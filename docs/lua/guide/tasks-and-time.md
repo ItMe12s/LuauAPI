@@ -9,7 +9,7 @@ Tasks run on the game tick and follow the game, so they freeze when the game pau
 
 ### task.spawn
 
-Runs a function immediately, under the callback budget (`50 ms`). Extra arguments are passed to the function.
+Runs a function immediately, under the callback budget. Extra arguments are passed to the function.
 Errors are logged rather than thrown, and the call returns nothing.
 
 ```lua
@@ -87,11 +87,11 @@ print(time.now(), time.unix())
 ## How tasks run
 
 Tasks are driven by the game scheduler. They advance each frame by the frame delta.
-Each callback runs on the main thread with a `50 ms` budget.
+Each callback runs on the main thread under the callback budget.
 
 ## Limits and notes
 
-- The most you can schedule at once is `4096`. Going over raises an error.
+- Scheduling has a maximum task count. Going over raises an error.
 - `task.every` requires an interval greater than zero.
 - Callback errors are logged rather than thrown. One-shot tasks end after they run, repeated tasks stop after an error.
 - If the game scheduler is not ready at startup, scheduled callbacks run once the scheduler can be armed.

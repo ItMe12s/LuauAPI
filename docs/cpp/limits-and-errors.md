@@ -19,6 +19,7 @@ These values come from `src/lua/Config.hpp`.
 | Max directory entries | `4096` | Largest `geode.fs.list` entry count |
 | Max directory name bytes | `256 KiB` | Total returned names from `geode.fs.list` |
 | Bytecode cache entries | `512` | Cached compiled scripts, least recently used dropped |
+| Bytecode cache size | `64 MiB` | Total bytes across cached compiled scripts |
 | Memory cap | `512 MiB` | Hard Lua memory limit |
 | Hook callbacks, global | `4096` | Total hook callbacks across all targets |
 | Hook callbacks, per target | `64` | Hook callbacks on one target |
@@ -29,7 +30,7 @@ These values come from `src/lua/Config.hpp`.
 | Menu handler trampolines | `4096` soft cap | Orphan `SEL_MenuHandler` bridges. Warns once when exceeded, never drops |
 | ImGui draw deadline | `16 ms` | Budget for one ImGui draw callback |
 
-The public default deadline is also defined in `include/LuauAPI.hpp` as `kDefaultScriptDeadlineMs`.
+The default deadline `kDefaultScriptDeadlineMs` is defined in `include/RuntimeTypes.hpp` and exposed through `include/LuauAPI.hpp`.
 
 For ImGui limits and usage, see [Reference: imgui](../lua/reference/imgui.md).
 
@@ -79,6 +80,7 @@ When an allocation would cross the cap, it fails and Lua reports an out of memor
 ## Source
 
 - `src/lua/Config.hpp`
+- `include/RuntimeTypes.hpp`
 - `include/LuauAPI.hpp`
 - `src/api.cpp`
 - `src/lua/runtime/Runtime.cpp`

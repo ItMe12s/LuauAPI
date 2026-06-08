@@ -10,7 +10,7 @@ Three shapes are supported:
 - **`SEL_*` selector handlers**: Cocos2d selector typedefs (`SEL_MenuHandler`, `SEL_SCHEDULE`, `SEL_CallFunc`, `SEL_CallFuncN`, `SEL_CallFuncND`, `SEL_CallFuncO`). Pass one Luau function with the matching signature instead of `(target, selector)` pairs where pairing applies.
 - **Delegate tables**: Virtual interfaces passed as delegate pointers. See [Delegates](delegates.md).
 
-Callbacks run on the main thread with the same script budget as hooks (`50 ms`).
+Callbacks run on the main thread with the same script budget as hooks.
 If a callback raises an error, LuauAPI logs the failure and applies the callback site's fallback behavior.
 Selector, menu, delegate, setting, web, and permission callbacks keep their registration lifetime.
 Task intervals and ImGui draw callbacks are removed after a callback error to avoid repeated log spam.
@@ -84,10 +84,8 @@ Task and ImGui handles cancel their callback when you call `:cancel()` or when t
 
 ## Limits
 
-| Limit | Value |
-| --- | --- |
-| Callback script budget | `50 ms` (`kHookScriptDeadlineMs`) |
-| Orphan handler registry | `4096` soft cap (`kMaxCallbackTrampolines`). Warns once, never drops |
+Callbacks run under a script budget, and orphan handler bridges have a soft registry cap.
+See [Limits and errors](../../cpp/limits-and-errors.md) for the values.
 
 ## Related
 

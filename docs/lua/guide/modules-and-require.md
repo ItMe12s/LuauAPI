@@ -38,8 +38,8 @@ The rules are strict by design, because they keep loading inside the resources r
 
 ## Size and caching
 
-A module must be `4 MiB` or smaller.
-Compiled modules use the same bytecode cache as scripts, and the cache key includes the path, size, modify time, and content hash.
+A module uses the same size limit as a script. See [Limits and errors](../../cpp/limits-and-errors.md) for all limits.
+Compiled modules share the bytecode cache with scripts. The cache key is the path, size, modify time, and content hash.
 
 ## What happens on load
 
@@ -49,9 +49,8 @@ The single returned value is handed back to the caller.
 
 ## Limits and notes
 
-- Modules load with the default script deadline of `250 ms`.
-- A module that yields is rejected with an error.
-- A module that returns zero or many values is rejected with an error.
+Modules load with the default script deadline. See [Limits and errors](../../cpp/limits-and-errors.md) for all limits.
+The rules above are enforced at load time. Breaking any of them returns an error.
 
 ## Related
 

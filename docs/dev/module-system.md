@@ -37,7 +37,7 @@ The path helpers live in `PathRules.hpp`, `PathSandbox.hpp`, and `RequirePath.hp
 `load` runs these steps:
 
 1. Resolve the module path inside the root, or raise an error.
-2. Check the file size against the `4 MiB` limit.
+2. Check the file size against the script size limit.
 3. Read the file.
 4. Compile to bytecode, using the runtime cache.
 5. Create a new thread and sandbox it.

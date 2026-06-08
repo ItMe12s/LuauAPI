@@ -158,6 +158,7 @@ In practice most game types are generated. See [Codegen](codegen.md).
 - `src/lua/bindings/framework/LuaRef.hpp`
 - `src/lua/bindings/framework/LuaCallback.hpp`
 - `src/lua/bindings/framework/LuaMenuHandler.hpp`
+- `src/lua/bindings/framework/LuaSelectorHandler.hpp`
 - `src/lua/bindings/framework/Ref.hpp`
 - `src/lua/bindings/framework/Types.hpp`
 - `src/lua/bindings/framework/ContainerTables.hpp`

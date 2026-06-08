@@ -171,9 +171,7 @@ See [Using game objects](using-game-objects.md).
 
 ## Limits and notes
 
-Counts and the `50 ms` callback budget: [Hooks reference](../reference/hooks.md).
-Hooks run on the main thread.
-Shared runtime caps: [Limits and errors](../../cpp/limits-and-errors.md).
+Hooks run on the main thread. For callback counts and the script budget, see [Limits and errors](../../cpp/limits-and-errors.md).
 
 ## Related
 

@@ -69,9 +69,9 @@ $on_mod(Loaded) {
 
 ## What the rules are
 
-- The file name must be a flat `.luau` resource name.
-- It cannot include folders, and it cannot be absolute.
-- The file must sit inside the resources directory you pass, and it must be `4 MiB` or smaller.
+The file name must be a flat `.luau` resource name inside the resources directory you pass.
+No folders, no `..`, no absolute paths, and it must be within the size limit.
+See [Modules and require](../lua/guide/modules-and-require.md) and [Limits and errors](../cpp/limits-and-errors.md).
 
 ## Developer mode
 
