@@ -1,16 +1,37 @@
 #pragma once
 
+#include <functional>
 #include <optional>
 #include <string>
+#include <type_traits>
 #include <utility>
 
 namespace geode {
+    namespace impl {
+        template <class U>
+        struct OkHolder {
+            U value;
+        };
+    }
+
     template <class T>
     class Result {
+        using Stored = std::conditional_t<
+            std::is_reference_v<T>,
+            std::reference_wrapper<std::remove_reference_t<T>>,
+            T>;
+        using Bare = std::remove_reference_t<T>;
+
     public:
+        Result() = default;
+
+        template <class U>
+        Result(impl::OkHolder<U> holder)
+            : m_value(static_cast<Stored>(std::move(holder.value))) {}
+
         static Result ok(T value) {
             Result result;
-            result.m_value = std::move(value);
+            result.m_value = static_cast<Stored>(value);
             return result;
         }
 
@@ -23,8 +44,8 @@ namespace geode {
         bool isOk() const { return m_value.has_value(); }
         bool isErr() const { return !isOk(); }
 
-        T& unwrap() { return *m_value; }
-        T const& unwrap() const { return *m_value; }
+        Bare& unwrap() { return ref(); }
+        Bare const& unwrap() const { return ref(); }
         std::string const& unwrapErr() const { return m_error; }
 
         T unwrapOr(T fallback) const {
@@ -32,7 +53,16 @@ namespace geode {
         }
 
     private:
-        std::optional<T> m_value;
+        Bare& ref() {
+            if constexpr (std::is_reference_v<T>) return m_value->get();
+            else return *m_value;
+        }
+        Bare const& ref() const {
+            if constexpr (std::is_reference_v<T>) return m_value->get();
+            else return *m_value;
+        }
+
+        std::optional<Stored> m_value;
         std::string m_error;
     };
 
@@ -61,9 +91,9 @@ namespace geode {
         std::string m_error;
     };
 
-    template <class T>
-    inline Result<T> Ok(T value) {
-        return Result<T>::ok(std::move(value));
+    template <class U>
+    inline impl::OkHolder<std::decay_t<U>> Ok(U&& value) {
+        return { std::forward<U>(value) };
     }
 
     inline Result<void> Ok() {
