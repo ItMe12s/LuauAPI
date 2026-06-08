@@ -54,10 +54,17 @@ _WEB_LISTENER_REGISTRARS = (
 _REQUEST_BODY_METHODS = (
     "requestBody",
     "requestBodyString",
+    "requestBodyJson",
     "requestBodyMultipart",
+    "multipartParam",
     "multipartFile",
     "multipartFileFrom",
     "multipartGetBody",
+)
+
+_REQUEST_BODY_CAP_CHECKS = (
+    "requestBodyWithinLimit",
+    "requestJsonBodyWithinLimit",
 )
 
 
@@ -151,9 +158,8 @@ class BindingGuardTests(unittest.TestCase):
         for method in _REQUEST_BODY_METHODS:
             with self.subTest(method=method):
                 body = _function_body(source, method)
-                self.assertIn(
-                    "requestBodyWithinLimit",
-                    body,
+                self.assertTrue(
+                    any(check in body for check in _REQUEST_BODY_CAP_CHECKS),
                     f"{method} must enforce kMaxWebRequestBytes",
                 )
 

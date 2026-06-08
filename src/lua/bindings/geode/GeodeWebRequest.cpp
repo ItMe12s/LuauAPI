@@ -398,6 +398,9 @@ namespace luax::webdetail {
 
     int requestBodyJson(lua_State* L) {
         auto value = toJson(L, 2, 0);
+        if (!requestJsonBodyWithinLimit(value)) {
+            return pushRequestBodyExceeded(L);
+        }
         return requestChain(
             L,
             [&](web::WebRequest& req) {

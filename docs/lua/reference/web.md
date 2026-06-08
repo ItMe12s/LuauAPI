@@ -113,10 +113,13 @@ The following sources of request bodies are capped at 32 MB:
 
 - `RequestOptions.body`
 - `RequestOptions.bodyString`
+- `RequestOptions.bodyJson`
 - `RequestOptions.bodyMultipart`
 - `WebRequest:body`
 - `WebRequest:bodyString`
+- `WebRequest:bodyJson`
 - `WebRequest:bodyMultipart`
+- `MultipartForm:param`
 - `MultipartForm:file`
 - `MultipartForm:fileFrom`
 - `MultipartForm:getBody()`

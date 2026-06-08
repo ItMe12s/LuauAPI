@@ -235,7 +235,13 @@ namespace luax::webdetail {
         }
 
         lua_getfield(L, idx, "bodyJson");
-        if (!lua_isnil(L, -1)) req.bodyJSON(toJson(L, -1, 0));
+        if (!lua_isnil(L, -1)) {
+            auto value = toJson(L, -1, 0);
+            if (!requestJsonBodyWithinLimit(value)) {
+                luaL_error(L, "%s", kWebRequestBodyExceededMsg);
+            }
+            req.bodyJSON(value);
+        }
         lua_pop(L, 1);
 
         lua_getfield(L, idx, "bodyMultipart");

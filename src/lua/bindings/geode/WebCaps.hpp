@@ -5,6 +5,7 @@
 
 #include <cstddef>
 #include <lua.h>
+#include <matjson.hpp>
 #include <string>
 
 namespace luax {
@@ -17,6 +18,10 @@ namespace luax {
 
     inline bool requestBodyWithinLimit(std::size_t size) {
         return size <= kMaxWebRequestBytes;
+    }
+
+    inline bool requestJsonBodyWithinLimit(matjson::Value const& value) {
+        return requestBodyWithinLimit(value.dump(matjson::NO_INDENTATION).size());
     }
 
     inline int pushResponseSizeExceeded(lua_State* L) {

@@ -20,6 +20,9 @@ namespace luax::webdetail {
         auto name = check<std::string>(L, 2, "MultipartForm:param");
         auto value = check<std::string>(L, 3, "MultipartForm:param");
         box->form.param(std::move(name), std::move(value));
+        if (!requestBodyWithinLimit(box->form.getBody().size())) {
+            return pushRequestBodyExceeded(L);
+        }
         lua_pushvalue(L, 1);
         return 1;
     }

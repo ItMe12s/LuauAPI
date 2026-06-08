@@ -53,7 +53,7 @@ export type RequestOptions = {
 }
 
 export type MultipartForm = {
-    param: (self: MultipartForm, name: string, value: string) -> MultipartForm,
+    param: (self: MultipartForm, name: string, value: string) -> (MultipartForm?, string?),
     file: (self: MultipartForm, name: string, data: string, filename: string, mime: string?) -> (MultipartForm?, string?),
     fileFrom: (self: MultipartForm, name: string, root: FsRoot, path: string, mime: string?) -> (MultipartForm?, string?),
     getBoundary: (self: MultipartForm) -> string,
@@ -107,7 +107,7 @@ export type WebRequest = {
     version: (self: WebRequest, version: number) -> WebRequest,
     body: (self: WebRequest, data: string) -> (WebRequest?, string?),
     bodyString: (self: WebRequest, data: string) -> (WebRequest?, string?),
-    bodyJson: (self: WebRequest, value: any) -> WebRequest,
+    bodyJson: (self: WebRequest, value: any) -> (WebRequest?, string?),
     bodyMultipart: (self: WebRequest, form: MultipartForm) -> (WebRequest?, string?),
     onProgress: (self: WebRequest, callback: (progress: WebProgress) -> ()) -> WebRequest,
     send: ((self: WebRequest, method: string, url: string, callback: (response: WebResponse?, err: string?) -> ()) -> WebHandle) & ((self: WebRequest, method: string, url: string, options: RequestOptions, callback: (response: WebResponse?, err: string?) -> ()) -> WebHandle),
