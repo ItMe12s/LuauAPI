@@ -78,16 +78,7 @@ namespace luax {
         luarequire_WriteResult get_cache_key(
             lua_State*, void* ctx, char* buffer, size_t buffer_size, size_t* size_out
         ) {
-            auto path = self(ctx)->resolvedModulePath();
-            if (path.isErr()) return WRITE_FAILURE;
-            auto filePath = path.unwrap();
-
-            auto contentsResult = readScriptFile(filePath);
-            if (contentsResult.isErr()) return WRITE_FAILURE;
-
-            return writeString(
-                requireCacheKey(filePath, contentsResult.unwrap()), buffer, buffer_size, size_out
-            );
+            return self(ctx)->writeCacheKey(buffer, buffer_size, size_out);
         }
 
         luarequire_ConfigStatus get_config_status(lua_State*, void*) {
@@ -101,103 +92,45 @@ namespace luax {
         int load(
             lua_State* L, void* ctx, char const* /*path*/, char const* chunkname, char const* loadname
         ) {
-            Requirer* req = self(ctx);
-
-            auto pathResult = req->resolvedModulePath();
-            if (pathResult.isErr()) {
-                luaL_error(
-                    L, "module '%s' cannot be resolved: %s", loadname, pathResult.unwrapErr().c_str()
-                );
-            }
-            auto filePath = pathResult.unwrap();
-
-            std::error_code ec;
-            auto fileSize = std::filesystem::file_size(filePath, ec);
-            if (ec || fileSize > kMaxScriptBytes) {
-                luaL_error(
-                    L,
-                    "module '%s' exceeds maximum size or cannot be read",
-                    filesystemPathString(filePath).c_str()
-                );
-            }
-
-            auto contentsResult = readScriptFile(filePath);
-            if (contentsResult.isErr()) {
-                luaL_error(
-                    L,
-                    "could not read module '%s': %s",
-                    filesystemPathString(filePath).c_str(),
-                    contentsResult.unwrapErr().c_str()
-                );
-            }
-            auto const& contents = contentsResult.unwrap();
-
-            auto bytecodeResult =
-                req->runtime().getOrCompileBytecode(bytecodeCacheKey(filePath, contents), contents);
-            if (bytecodeResult.isErr()) {
-                luaL_error(
-                    L, "module '%s' compile failed: %s", chunkname, bytecodeResult.unwrapErr().c_str()
-                );
-            }
-            auto const& bytecode = bytecodeResult.unwrap().get();
-
-            lua_State* GL = lua_mainthread(L);
-            lua_State* ML = lua_newthread(GL);
-            lua_xmove(GL, L, 1);
-
-            luaL_sandboxthread(ML);
-
-            int loadStatus = luau_load(ML, chunkname, bytecode.data(), bytecode.size(), 0);
-            if (loadStatus != 0) {
-                char const* err = lua_tostring(ML, -1);
-                std::string msg = err ? err : "(unknown load error)";
-                lua_pop(L, 1);
-                luaL_error(L, "module '%s' failed to load: %s", chunkname, msg.c_str());
-            }
-
-            if (req->runtime().codegenEnabled()) {
-                Luau::CodeGen::compile(ML, -1, Luau::CodeGen::CodeGen_ColdFunctions);
-            }
-
-            int resumeStatus = 0;
-            {
-                Runtime::ScriptBudgetGuard budget(req->runtime(), kDefaultScriptDeadlineMs);
-                resumeStatus = lua_resume(ML, L, 0);
-            }
-            if (resumeStatus == 0) {
-                if (lua_gettop(ML) != 1) {
-                    lua_pop(L, 1);
-                    luaL_error(L, "module '%s' must return a single value", chunkname);
-                }
-            }
-            else if (resumeStatus == LUA_YIELD) {
-                lua_pop(L, 1);
-                luaL_error(L, "module '%s' yielded", chunkname);
-            }
-            else {
-                char const* err = lua_tostring(ML, -1);
-                std::string msg = err ? err : "(unknown runtime error)";
-                lua_pop(L, 1);
-                luaL_error(L, "error running module '%s': %s", chunkname, msg.c_str());
-            }
-
-            lua_xmove(ML, L, 1);
-            lua_remove(L, -2);
-            return 1;
+            return self(ctx)->loadModule(L, chunkname, loadname);
         }
     } // namespace
 
     Requirer::Requirer(Runtime& runtime) : m_runtime(runtime) {}
 
+    void Requirer::clearPendingLoad() {
+        m_pendingLoadPath.clear();
+        m_pendingLoadContents.clear();
+    }
+
+    void Requirer::cachePendingLoad(std::filesystem::path const& path, std::string contents) {
+        m_pendingLoadPath = path;
+        m_pendingLoadContents = std::move(contents);
+    }
+
+    geode::Result<std::string const&> Requirer::pendingLoadContents(
+        std::filesystem::path const& path
+    ) const {
+        if (m_pendingLoadPath.empty() || path != m_pendingLoadPath) {
+            return geode::Err("pending module contents unavailable");
+        }
+        return geode::Ok(std::cref(m_pendingLoadContents));
+    }
+
     void Requirer::setResourcesRoot(std::filesystem::path const& root) {
         auto rootResult = canonicalRoot(root);
         if (rootResult.isErr()) {
+            geode::log::error(
+                "require: resources root canonicalization failed: {}", rootResult.unwrapErr()
+            );
             m_root.clear();
             m_current.clear();
+            clearPendingLoad();
             return;
         }
         m_root = rootResult.unwrap();
         m_current = m_root;
+        clearPendingLoad();
     }
 
     void Requirer::initConfig(luarequire_Configuration* config) {
@@ -234,6 +167,7 @@ namespace luax {
             return NAVIGATE_NOT_FOUND;
         }
         m_current = resolved.unwrap();
+        clearPendingLoad();
         return NAVIGATE_SUCCESS;
     }
 
@@ -245,6 +179,7 @@ namespace luax {
         auto parent = m_current.parent_path();
         if (!pathInsideRoot(parent, m_root)) return NAVIGATE_NOT_FOUND;
         m_current = parent;
+        clearPendingLoad();
         return NAVIGATE_SUCCESS;
     }
 
@@ -258,6 +193,7 @@ namespace luax {
         if (m_current != m_root) return NAVIGATE_NOT_FOUND;
         auto next = (m_root / name).lexically_normal();
         m_current = next;
+        clearPendingLoad();
         return NAVIGATE_SUCCESS;
     }
 
@@ -296,5 +232,109 @@ namespace luax {
             name += ".luau";
         }
         return "@" + name;
+    }
+
+    luarequire_WriteResult Requirer::writeCacheKey(char* buffer, size_t bufferSize, size_t* sizeOut) {
+        auto path = resolvedModulePath();
+        if (path.isErr()) return WRITE_FAILURE;
+        auto filePath = path.unwrap();
+
+        auto contentsResult = readScriptFile(filePath);
+        if (contentsResult.isErr()) return WRITE_FAILURE;
+
+        auto const& contents = contentsResult.unwrap();
+        cachePendingLoad(filePath, contents);
+        return writeString(requireCacheKey(filePath, contents), buffer, bufferSize, sizeOut);
+    }
+
+    int Requirer::loadModule(lua_State* L, char const* chunkname, char const* loadname) {
+        auto pathResult = resolvedModulePath();
+        if (pathResult.isErr()) {
+            luaL_error(
+                L, "module '%s' cannot be resolved: %s", loadname, pathResult.unwrapErr().c_str()
+            );
+        }
+        auto filePath = pathResult.unwrap();
+
+        std::error_code ec;
+        auto fileSize = std::filesystem::file_size(filePath, ec);
+        if (ec || fileSize > kMaxScriptBytes) {
+            luaL_error(
+                L,
+                "module '%s' exceeds maximum size or cannot be read",
+                filesystemPathString(filePath).c_str()
+            );
+        }
+
+        geode::Result<std::string const&> contentsResult = pendingLoadContents(filePath);
+        std::string fallbackContents;
+        if (contentsResult.isErr()) {
+            auto readResult = readScriptFile(filePath);
+            if (readResult.isErr()) {
+                luaL_error(
+                    L,
+                    "could not read module '%s': %s",
+                    filesystemPathString(filePath).c_str(),
+                    readResult.unwrapErr().c_str()
+                );
+            }
+            fallbackContents = readResult.unwrap();
+            contentsResult = geode::Ok(std::cref(fallbackContents));
+        }
+        auto const& contents = contentsResult.unwrap();
+        clearPendingLoad();
+
+        auto bytecodeResult =
+            m_runtime.getOrCompileBytecode(bytecodeCacheKey(filePath, contents), contents);
+        if (bytecodeResult.isErr()) {
+            luaL_error(
+                L, "module '%s' compile failed: %s", chunkname, bytecodeResult.unwrapErr().c_str()
+            );
+        }
+        auto const& bytecode = bytecodeResult.unwrap().get();
+
+        lua_State* GL = lua_mainthread(L);
+        lua_State* ML = lua_newthread(GL);
+        lua_xmove(GL, L, 1);
+
+        luaL_sandboxthread(ML);
+
+        int loadStatus = luau_load(ML, chunkname, bytecode.data(), bytecode.size(), 0);
+        if (loadStatus != 0) {
+            char const* err = lua_tostring(ML, -1);
+            std::string msg = err ? err : "(unknown load error)";
+            lua_pop(L, 1);
+            luaL_error(L, "module '%s' failed to load: %s", chunkname, msg.c_str());
+        }
+
+        if (m_runtime.codegenEnabled()) {
+            Luau::CodeGen::compile(ML, -1, Luau::CodeGen::CodeGen_ColdFunctions);
+        }
+
+        int resumeStatus = 0;
+        {
+            Runtime::ScriptBudgetGuard budget(m_runtime, kDefaultScriptDeadlineMs);
+            resumeStatus = lua_resume(ML, L, 0);
+        }
+        if (resumeStatus == 0) {
+            if (lua_gettop(ML) != 1) {
+                lua_pop(L, 1);
+                luaL_error(L, "module '%s' must return a single value", chunkname);
+            }
+        }
+        else if (resumeStatus == LUA_YIELD) {
+            lua_pop(L, 1);
+            luaL_error(L, "module '%s' yielded", chunkname);
+        }
+        else {
+            char const* err = lua_tostring(ML, -1);
+            std::string msg = err ? err : "(unknown runtime error)";
+            lua_pop(L, 1);
+            luaL_error(L, "error running module '%s': %s", chunkname, msg.c_str());
+        }
+
+        lua_xmove(ML, L, 1);
+        lua_remove(L, -2);
+        return 1;
     }
 } // namespace luax

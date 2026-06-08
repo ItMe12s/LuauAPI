@@ -27,6 +27,7 @@
 #include <fmt/format.h>
 #include <lua.h>
 #include <lualib.h>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -695,8 +696,8 @@ namespace luax {
         return geode::Ok();
     }
 
-    geode::Result<void> Runtime::protectedCall(
-        int nargs, int nresults, std::string_view context, int deadlineMs
+    geode::Result<void> Runtime::protectedCallImpl(
+        int nargs, int nresults, std::string_view context, ProtectedCallPolicy policy, int deadlineMs
     ) {
         if (!assertMainThread()) {
             return failWith("luau runtime accessed off main thread");
@@ -704,12 +705,24 @@ namespace luax {
         if (isShuttingDown()) {
             return failWith("luau runtime shutting down");
         }
-        if (!ready() || !m_state) {
+        if (policy == ProtectedCallPolicy::WithBudget) {
+            if (!ready() || !m_state) {
+                if (m_lastError.empty()) {
+                    return failWith(m_initError.empty() ? "luau runtime not ready" : m_initError);
+                }
+                return cachedError();
+            }
+        }
+        else if (status() == imes::luauapi::RuntimeStatus::Panicked) {
+            return m_lastError.empty() ? failWith("luau runtime panicked") : cachedError();
+        }
+        else if (!m_state || !m_tracebackRef) {
             if (m_lastError.empty()) {
-                return failWith(m_initError.empty() ? "luau runtime not ready" : m_initError);
+                return failWith(m_initError.empty() ? "luau runtime not available" : m_initError);
             }
             return cachedError();
         }
+
         int baseTop = lua_gettop(m_state) - nargs;
         if (nargs < 0 || baseTop < 1 || !lua_isfunction(m_state, baseTop)) {
             auto err = fmt::format("[{}] luau protectedCall missing function", context);
@@ -721,7 +734,10 @@ namespace luax {
         lua_insert(m_state, -nargs - 2);
         int errfunc = lua_gettop(m_state) - nargs - 1;
 
-        ScriptBudgetGuard budget(*this, deadlineMs);
+        std::optional<ScriptBudgetGuard> budget;
+        if (policy == ProtectedCallPolicy::WithBudget) {
+            budget.emplace(*this, deadlineMs);
+        }
 
         int status = lua_pcall(m_state, nargs, nresults, errfunc);
         lua_remove(m_state, errfunc);
@@ -737,47 +753,18 @@ namespace luax {
         return geode::Ok();
     }
 
+    geode::Result<void> Runtime::protectedCall(
+        int nargs, int nresults, std::string_view context, int deadlineMs
+    ) {
+        return protectedCallImpl(nargs, nresults, context, ProtectedCallPolicy::WithBudget, deadlineMs);
+    }
+
     geode::Result<void> Runtime::protectedCallWithTraceback(
         int nargs, int nresults, std::string_view context
     ) {
-        if (!assertMainThread()) {
-            return failWith("luau runtime accessed off main thread");
-        }
-        if (isShuttingDown()) {
-            return failWith("luau runtime shutting down");
-        }
-        if (status() == imes::luauapi::RuntimeStatus::Panicked) {
-            return m_lastError.empty() ? failWith("luau runtime panicked") : cachedError();
-        }
-        if (!m_state || !m_tracebackRef) {
-            if (m_lastError.empty()) {
-                return failWith(m_initError.empty() ? "luau runtime not available" : m_initError);
-            }
-            return cachedError();
-        }
-        int baseTop = lua_gettop(m_state) - nargs;
-        if (nargs < 0 || baseTop < 1 || !lua_isfunction(m_state, baseTop)) {
-            auto err = fmt::format("[{}] luau protectedCall missing function", context);
-            geode::log::error("{}", err);
-            return failWith(std::move(err));
-        }
-
-        lua_getref(m_state, m_tracebackRef);
-        lua_insert(m_state, -nargs - 2);
-        int errfunc = lua_gettop(m_state) - nargs - 1;
-
-        int status = lua_pcall(m_state, nargs, nresults, errfunc);
-        lua_remove(m_state, errfunc);
-
-        if (status != 0) {
-            std::string ctx(context);
-            auto err = formatLuaError(ctx.c_str());
-            geode::log::error("{}", err);
-            lua_pop(m_state, 1);
-            return failWith(std::move(err));
-        }
-
-        return geode::Ok();
+        return protectedCallImpl(
+            nargs, nresults, context, ProtectedCallPolicy::TracebackOnly, kDefaultScriptDeadlineMs
+        );
     }
 
     bool Runtime::assertMainThread() const {

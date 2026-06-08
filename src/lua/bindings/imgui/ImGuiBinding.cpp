@@ -344,9 +344,7 @@ namespace {
         lua_setglobal(L, "imgui");
 
         if (auto* runtime = static_cast<Runtime*>(lua_callbacks(L)->userdata)) {
-            runtime->registerShutdownHook([] {
-                ImGuiDrawScheduler::get().clear();
-            });
+            runtime->registerShutdownHook(&shutdownImGuiHost);
         }
 
         return geode::Ok();

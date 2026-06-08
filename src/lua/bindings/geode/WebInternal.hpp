@@ -78,16 +78,19 @@ namespace luax {
     };
 
     inline std::vector<std::weak_ptr<WebTask>>& activeTasks() {
-        static auto* tasks = new std::vector<std::weak_ptr<WebTask>>();
-        return *tasks;
+        static std::vector<std::weak_ptr<WebTask>> tasks;
+        return tasks;
     }
 
     inline std::vector<std::weak_ptr<WebListenerState>>& activeListeners() {
-        static auto* listeners = new std::vector<std::weak_ptr<WebListenerState>>();
-        return *listeners;
+        static std::vector<std::weak_ptr<WebListenerState>> listeners;
+        return listeners;
     }
 
-    inline bool s_shutdownHookRegistered = false;
+    inline bool& webShutdownHookRegistered() {
+        static bool registered = false;
+        return registered;
+    }
 
     inline void clearWebState() {
         for (auto& weak : activeTasks()) {
@@ -102,15 +105,15 @@ namespace luax {
             }
         }
         activeListeners().clear();
-        s_shutdownHookRegistered = false;
+        webShutdownHookRegistered() = false;
     }
 
     inline void ensureShutdownHook() {
-        if (s_shutdownHookRegistered) return;
+        if (webShutdownHookRegistered()) return;
         auto* rt = Runtime::getIfInitialized();
         if (!rt) return;
         rt->registerShutdownHook(&clearWebState);
-        s_shutdownHookRegistered = true;
+        webShutdownHookRegistered() = true;
     }
 
     inline void compactWeakState() {

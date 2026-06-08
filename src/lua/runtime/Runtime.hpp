@@ -137,10 +137,18 @@ namespace luax {
             std::string bytecode;
         };
 
+        enum class ProtectedCallPolicy {
+            WithBudget,
+            TracebackOnly,
+        };
+
         std::string formatLuaError(char const* chunk);
         void setLastError(std::string error);
         geode::Result<void> failWith(std::string error);
         geode::Result<void> cachedError() const;
+        geode::Result<void> protectedCallImpl(
+            int nargs, int nresults, std::string_view context, ProtectedCallPolicy policy, int deadlineMs
+        );
         void runShutdownHooks();
         void removeBytecodeCacheEntry(std::list<BytecodeCacheEntry>::iterator it);
         void trimBytecodeCacheForInsert(std::size_t incomingBytes);

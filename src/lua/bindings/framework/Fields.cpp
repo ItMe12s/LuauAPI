@@ -10,9 +10,16 @@ namespace luax {
             geode::WeakRef<cocos2d::CCNode> owner;
         };
 
+        constexpr std::size_t kLazyPurgeInterval = 64;
+
         std::unordered_map<cocos2d::CCNode*, FieldEntry>& fieldTables() {
-            static auto* value = new std::unordered_map<cocos2d::CCNode*, FieldEntry>();
-            return *value;
+            static std::unordered_map<cocos2d::CCNode*, FieldEntry> tables;
+            return tables;
+        }
+
+        std::size_t& fieldAccessCounter() {
+            static std::size_t counter = 0;
+            return counter;
         }
 
         bool entryStillOwnsNode(FieldEntry const& entry, cocos2d::CCNode* node) {
@@ -32,14 +39,20 @@ namespace luax {
                 ++it;
             }
         }
+
+        void maybePurgeStaleFieldEntries() {
+            auto& counter = fieldAccessCounter();
+            if (++counter % kLazyPurgeInterval != 0) {
+                return;
+            }
+            purgeStaleFieldEntries();
+        }
     } // namespace
 
     bool Fields::tryPush(lua_State* L, cocos2d::CCNode* node) {
         if (!L || !node) {
             return false;
         }
-
-        purgeStaleFieldEntries();
 
         auto& tables = fieldTables();
         auto it = tables.find(node);
@@ -61,7 +74,7 @@ namespace luax {
             return;
         }
 
-        purgeStaleFieldEntries();
+        maybePurgeStaleFieldEntries();
 
         auto& tables = fieldTables();
         auto it = tables.find(node);

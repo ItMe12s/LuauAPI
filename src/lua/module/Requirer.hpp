@@ -37,9 +37,18 @@ namespace luax {
         geode::Result<std::filesystem::path> resolvedModulePath() const;
         std::string chunkname() const;
 
+        luarequire_WriteResult writeCacheKey(char* buffer, size_t bufferSize, size_t* sizeOut);
+        int loadModule(lua_State* L, char const* chunkname, char const* loadname);
+
     private:
+        void clearPendingLoad();
+        void cachePendingLoad(std::filesystem::path const& path, std::string contents);
+        geode::Result<std::string const&> pendingLoadContents(std::filesystem::path const& path) const;
+
         Runtime& m_runtime;
         std::filesystem::path m_root;
         std::filesystem::path m_current;
+        std::filesystem::path m_pendingLoadPath;
+        std::string m_pendingLoadContents;
     };
 } // namespace luax

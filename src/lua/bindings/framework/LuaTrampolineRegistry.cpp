@@ -10,16 +10,13 @@
 namespace luax {
     namespace {
         std::vector<cocos2d::CCObject*>& orphanTrampolines() {
-            // Cleared via shutdown hook.
-            static auto* s_orphans = new std::vector<cocos2d::CCObject*>();
-            return *s_orphans;
+            static std::vector<cocos2d::CCObject*> orphans;
+            return orphans;
         }
 
         std::unordered_map<cocos2d::CCObject*, std::vector<cocos2d::CCObject*>>& anchorMap() {
-            // Cleared by shutdown hook.
-            static auto* s_anchors =
-                new std::unordered_map<cocos2d::CCObject*, std::vector<cocos2d::CCObject*>>();
-            return *s_anchors;
+            static std::unordered_map<cocos2d::CCObject*, std::vector<cocos2d::CCObject*>> anchors;
+            return anchors;
         }
 
         bool s_shutdownHookRegistered = false;

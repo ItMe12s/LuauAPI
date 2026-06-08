@@ -11,8 +11,8 @@
 namespace luax {
     namespace {
         std::unordered_map<void*, std::weak_ptr<LuaRef>>& delegateTables() {
-            static auto* value = new std::unordered_map<void*, std::weak_ptr<LuaRef>>();
-            return *value;
+            static std::unordered_map<void*, std::weak_ptr<LuaRef>> tables;
+            return tables;
         }
 
         void pruneExpiredDelegateTables() {
