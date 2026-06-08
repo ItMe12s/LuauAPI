@@ -27,5 +27,4 @@ FREE_FUNCTION_SOURCES: Tuple[FreeFnSource, ...] = (
 
 
 def free_function_includes() -> Tuple[str, ...]:
-    """Return the ``Geode/<header>`` include paths in manifest order."""
     return tuple(f"Geode/{rel}" for rel, _ns, _names in FREE_FUNCTION_SOURCES)

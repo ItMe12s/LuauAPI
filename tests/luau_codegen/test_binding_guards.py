@@ -69,6 +69,11 @@ _REQUEST_BODY_CAP_CHECKS = (
     "requestJsonBodyWithinLimit",
 )
 
+_MULTIPART_CUMULATIVE_BODY_METHODS = (
+    "multipartFile",
+    "multipartFileFrom",
+)
+
 
 def _web_binding_source() -> str:
     return "\n".join(_read_repo_file(path) for path in _WEB_BINDING_SOURCES)
@@ -168,6 +173,35 @@ class BindingGuardTests(unittest.TestCase):
                 self.assertTrue(
                     any(check in body for check in _REQUEST_BODY_CAP_CHECKS),
                     f"{method} must enforce kMaxWebRequestBytes",
+                )
+
+    def test_multipart_file_methods_enforce_cumulative_body_cap(self) -> None:
+        source = _web_binding_source()
+        param_body = _function_body(source, "multipartParam")
+        self.assertIn(
+            "getBody().size()",
+            param_body,
+            "multipartParam is the canonical cumulative cap pattern",
+        )
+        for method in _MULTIPART_CUMULATIVE_BODY_METHODS:
+            with self.subTest(method=method):
+                body = _function_body(source, method)
+                append = body.find("form.file(")
+                self.assertNotEqual(
+                    append,
+                    -1,
+                    f"{method} must append via form.file",
+                )
+                after_append = body[append:]
+                self.assertIn(
+                    "getBody().size()",
+                    after_append,
+                    f"{method} must check cumulative body size after form.file append",
+                )
+                self.assertIn(
+                    "requestBodyWithinLimit",
+                    after_append,
+                    f"{method} must enforce kMaxWebRequestBytes on cumulative body",
                 )
 
     def test_async_request_callback_rejects_oversized_response(self) -> None:

@@ -24,7 +24,6 @@ ALLOWED_NESTED_PRIMITIVE_VECTOR_INNER = "gd::vector<int>*"
 
 
 def allow_nested_map_value(key: TypeInfo, value: TypeInfo) -> bool:
-    """Map/unordered_map values that are object or opaque vector views only."""
     if value.kind != "vector_view":
         return False
     element = value.element_type

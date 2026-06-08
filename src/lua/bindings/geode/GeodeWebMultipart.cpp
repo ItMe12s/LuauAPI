@@ -41,6 +41,9 @@ namespace luax::webdetail {
         auto bytes =
             std::span<uint8_t const>(reinterpret_cast<uint8_t const*>(data.data()), data.size());
         box->form.file(std::move(name), bytes, std::move(filename), std::move(mime));
+        if (!requestBodyWithinLimit(box->form.getBody().size())) {
+            return pushRequestBodyExceeded(L);
+        }
         lua_pushvalue(L, 1);
         return 1;
     }
@@ -65,6 +68,9 @@ namespace luax::webdetail {
             lua_pushnil(L);
             push(L, std::string(result.unwrapErr()));
             return 2;
+        }
+        if (!requestBodyWithinLimit(box->form.getBody().size())) {
+            return pushRequestBodyExceeded(L);
         }
         lua_pushvalue(L, 1);
         return 1;
