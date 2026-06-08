@@ -33,7 +33,7 @@ _FS_BINDING = "src/lua/bindings/geode/GeodeFsBinding.cpp"
 _COCOS_BINDING = "src/lua/bindings/geode/GeodeCocosBinding.cpp"
 _TASK_SCHEDULER = "src/lua/bindings/task/TaskScheduler.cpp"
 _TASK_BINDING = "src/lua/bindings/task/TaskBinding.cpp"
-_IMGUI_BINDING = "src/lua/bindings/imgui/ImGuiBinding.cpp"
+_IMGUI_BINDING = "src/lua/bindings/imgui/ImGuiDrawHandleBinding.cpp"
 _LUA_SELECTOR = "src/lua/bindings/framework/LuaSelectorHandler.cpp"
 _LUA_MENU = "src/lua/bindings/framework/LuaMenuHandler.cpp"
 _LUA_DELEGATE = "src/lua/bindings/framework/LuaDelegate.cpp"
@@ -574,7 +574,7 @@ class HandleGcGuardTests(unittest.TestCase):
             gc_match,
             "imgui handle __gc must cancel the draw callback id",
         )
-        register_body = _function_body(source, "registerHandleMetatable", ret="void")
+        register_body = _function_body(source, "registerImGuiDrawHandleMetatable", ret="void")
         self.assertIn('"__gc"', register_body)
 
 
