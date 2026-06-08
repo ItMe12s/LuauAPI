@@ -42,7 +42,11 @@ A repeating task is rescheduled, while a one shot or deferred task is marked can
 
 `armTaskTick` creates a small `CCNode` and schedules its update with the Cocos2d scheduler. The update calls `advance`.
 Because it uses the game scheduler, tasks follow the game tick and freeze when the game pauses.
-`disarmTaskTick` unschedules and releases the node.
+If the director or scheduler is not ready, `armTaskTick` will queue a one-shot retry on the main thread until arming works.
+This makes sure early `task.delay`, `task.every`, or `task.defer` still run without needing to call another task function.
+Failures from the director or scheduler are logged only once.
+`TaskBinding` gives one warning to the user.
+`disarmTaskTick` removes the node and stops any pending arm retry.
 
 ## Limits
 

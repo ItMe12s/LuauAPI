@@ -202,27 +202,61 @@ namespace luax {
         };
 
         TaskTickNode* s_tickNode = nullptr;
+        bool s_armPending = false;
+        bool s_retryQueued = false;
+        bool s_directorErrorLogged = false;
+        bool s_schedulerErrorLogged = false;
+
+        bool tryArmTaskTick() {
+            if (s_tickNode) return true;
+            auto* director = cocos2d::CCDirector::sharedDirector();
+            if (!director) {
+                if (!s_directorErrorLogged) {
+                    s_directorErrorLogged = true;
+                    geode::log::error(
+                        "task scheduler: CCDirector unavailable, task tick not armed"
+                    );
+                }
+                return false;
+            }
+            auto* scheduler = director->getScheduler();
+            if (!scheduler) {
+                if (!s_schedulerErrorLogged) {
+                    s_schedulerErrorLogged = true;
+                    geode::log::error(
+                        "task scheduler: cocos2d scheduler unavailable, task tick not armed"
+                    );
+                }
+                return false;
+            }
+            s_tickNode = new TaskTickNode();
+            s_tickNode->init();
+            scheduler->scheduleUpdateForTarget(s_tickNode, 0, false);
+            s_armPending = false;
+            return true;
+        }
+
+        void scheduleArmRetry() {
+            if (s_retryQueued || s_tickNode) return;
+            s_armPending = true;
+            s_retryQueued = true;
+            geode::queueInMainThread([] {
+                s_retryQueued = false;
+                if (!s_armPending || s_tickNode) return;
+                if (tryArmTaskTick()) return;
+                scheduleArmRetry();
+            });
+        }
     } // namespace
 
     bool armTaskTick() {
-        if (s_tickNode) return true;
-        auto* director = cocos2d::CCDirector::sharedDirector();
-        if (!director) {
-            geode::log::error("task scheduler: CCDirector unavailable, task tick not armed");
-            return false;
-        }
-        auto* scheduler = director->getScheduler();
-        if (!scheduler) {
-            geode::log::error("task scheduler: cocos2d scheduler unavailable, task tick not armed");
-            return false;
-        }
-        s_tickNode = new TaskTickNode();
-        s_tickNode->init();
-        scheduler->scheduleUpdateForTarget(s_tickNode, 0, false);
-        return true;
+        if (tryArmTaskTick()) return true;
+        scheduleArmRetry();
+        return false;
     }
 
     void disarmTaskTick() {
+        s_armPending = false;
         if (!s_tickNode) return;
         if (auto* director = cocos2d::CCDirector::sharedDirector()) {
             if (auto* scheduler = director->getScheduler()) {

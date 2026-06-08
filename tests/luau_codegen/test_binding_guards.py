@@ -265,6 +265,18 @@ class BindingGuardTests(unittest.TestCase):
                     f"{fn} must lazily re-arm the scheduler tick",
                 )
 
+    def test_arm_task_tick_retries_until_scene_ready(self) -> None:
+        source = _read_repo_file(_TASK_SCHEDULER)
+        host_guard = "#if !defined(LUAUAPI_HOST_TESTS)"
+        start = source.find(host_guard)
+        self.assertNotEqual(start, -1, "missing host-test guard in TaskScheduler.cpp")
+        end = source.find("#else", start)
+        self.assertNotEqual(end, -1, "missing host-test else branch")
+        production = source[start:end]
+        self.assertIn("queueInMainThread", production)
+        self.assertIn("scheduleArmRetry", production)
+        self.assertIn("s_armPending = false", production)
+
 
 class ManualFieldsBindingGuardTests(unittest.TestCase):
     def test_binding_emission_skips_manual_free_fn_fields(self) -> None:
