@@ -10,7 +10,7 @@ Overview of the binding generator, not a full reference for every internal modul
 The generator reads Broma binding files for one Geometry Dash version and one platform. It writes:
 
 - C++ binding sources into `build/luauapi-gen/src`. These expose game classes to Lua and implement the hook functions.
-- A single Luau type stub, `types/geode.d.luau`, holding the bound classes, the per-namespace factories, the enum aliases, and the `geode` namespace root. It gives editors autocomplete and type checks.
+- One Luau type stub file is made at `types/geode.d.luau`. It has all bound classes, factory functions, enum names, and the root `geode` namespace. This file lets editors show autocomplete and type checks. The `types/` folder is created in the repo root during build and is gitignored. This location is picked for working with local LSP tools.
 - Metadata files, including a schema, a report, and a parity file.
 
 The generated C++ is compiled into the main library. Because it is machine written, you do not edit it.

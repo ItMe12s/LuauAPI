@@ -256,6 +256,49 @@ class BindingGuardTests(unittest.TestCase):
             "response listeners must reject oversized responses before pushResponse",
         )
 
+    def test_off_thread_request_intercept_warns_before_skip(self) -> None:
+        source = _read_repo_file("src/lua/bindings/geode/GeodeWebListeners.cpp")
+        body = _function_body(source, "invokeRequestEvent", ret="bool")
+        self.assertIn(
+            "!Runtime::isMainThread()",
+            body,
+            "invokeRequestEvent must detect off-thread intercept events",
+        )
+        self.assertIn(
+            "off-thread intercept skipped",
+            body,
+            "off-thread intercept skip must log a one-time warning",
+        )
+        self.assertIn(
+            "loggedOffThreadSkip",
+            body,
+            "off-thread intercept warning must only fire once",
+        )
+
+    def test_off_thread_response_listener_is_side_effects_only(self) -> None:
+        source = _read_repo_file("src/lua/bindings/geode/GeodeWebListeners.cpp")
+        body = _function_body(source, "invokeResponseEvent", ret="bool")
+        self.assertIn(
+            "queueInMainThread",
+            body,
+            "off-thread response listeners must defer to the main thread",
+        )
+        self.assertIn(
+            "side effects",
+            body.lower(),
+            "invokeResponseEvent must document side-effects-only off-thread semantics",
+        )
+        self.assertIn(
+            "(void)invokeResponseEventNow",
+            body,
+            "off-thread response listeners must discard the synchronous stop result",
+        )
+        self.assertIn(
+            "return false",
+            body,
+            "off-thread response listeners must not stop propagation synchronously",
+        )
+
     def test_geode_web_binding_does_not_use_luaL_register(self) -> None:
         source = _web_binding_source()
         self.assertNotIn(

@@ -211,6 +211,7 @@ end)
 ## Source
 
 - `src/lua/bindings/geode/GeodeWebBinding.cpp`
+- `src/lua/bindings/geode/GeodeWebApply.cpp`
 - `src/lua/bindings/geode/GeodeWebOptions.cpp`
 - `src/lua/bindings/geode/GeodeWebRequest.cpp`
 - `src/lua/bindings/geode/GeodeWebResponse.cpp`

@@ -12,7 +12,9 @@ local function helloWorld(self)
     label:setID(modId .. "/hello-label")
     label:setPosition({ x = winSize.width / 2, y = winSize.height / 2 })
     self:addChild(label)
-    handle:remove()
+    if handle then
+        handle:remove()
+    end
 end
 
 handle = geode.hook("geode.gd.MenuLayer:init/0", {

@@ -25,8 +25,20 @@ Most game types come from codegen. A few libraries are handwritten in C++:
 - `src/lua/bindings/geode/GeodeJsonBinding.cpp` exposes `geode.json`.
 - `src/lua/bindings/geode/GeodeModBinding.cpp` exposes `geode.Mod`.
 - `src/lua/bindings/geode/GeodeWebBinding.cpp` registers `geode.utils.web`.
-  Web logic lives in `GeodeWebRequest.cpp`, `GeodeWebOptions.cpp`, `GeodeWebResponse.cpp`, `GeodeWebMultipart.cpp`, and `GeodeWebListeners.cpp`.
-  Shared caps and helpers live in `WebCaps.hpp` and `GeodeWebInternal.hpp`.
+
+The web binding is split across several translation units:
+
+| File | Role |
+| --- | --- |
+| `GeodeWebBinding.cpp` | Entry registration and userdata metatables |
+| `GeodeWebApply.cpp` | Shared `apply*` helpers for request options and body caps |
+| `GeodeWebOptions.cpp` | Options-table parsing (`applyOptions`) |
+| `GeodeWebRequest.cpp` | Fluent `WebRequest` chain methods and `send` |
+| `GeodeWebResponse.cpp` | `WebResponse` accessors |
+| `GeodeWebMultipart.cpp` | `MultipartForm` builders |
+| `GeodeWebListeners.cpp` | Request intercept and response listeners |
+| `WebCaps.hpp` / `GeodeWebInternal.hpp` | Size caps and shared Lua helpers |
+
 - `src/lua/bindings/geode/GeodeBase64Binding.cpp` exposes `geode.utils.base64`.
 - `src/lua/bindings/geode/GeodePermissionBinding.cpp` exposes `geode.utils.permission`.
 - `src/lua/bindings/geode/GeodeCocosBinding.cpp` exposes the handwritten `geode.cocos` helpers.

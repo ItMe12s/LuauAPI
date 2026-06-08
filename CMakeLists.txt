@@ -392,6 +392,7 @@ if(LUAUAPI_BUILD_TESTS)
         src/lua/bindings/geode/GeodeFsBinding.cpp
         src/lua/bindings/geode/GeodeJsonBinding.cpp
         src/lua/bindings/geode/JsonConvert.cpp
+        src/lua/bindings/imgui/ImGuiDrawHandleBinding.cpp
         src/lua/bindings/imgui/ImGuiDrawScheduler.cpp
         src/lua/bindings/task/TaskScheduler.cpp
         src/lua/module/BytecodeCacheKey.cpp

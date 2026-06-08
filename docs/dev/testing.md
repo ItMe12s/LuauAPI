@@ -33,7 +33,7 @@ The C++ tests use Catch2 `v3.15.0` and build into the `luauapi_tests` executable
 | `tests/current_mod_tests.cpp` | Current-mod path helpers against a resources root |
 | `tests/fields_tests.cpp` | `m_fields` and release eviction |
 | `tests/geode_fs_path_tests.cpp` | Geode filesystem binding path resolution inside a root |
-| `tests/handle_gc_tests.cpp` | Task handle garbage collection cancellation |
+| `tests/handle_gc_tests.cpp` | Task and ImGui draw handle `__gc` cancellation |
 | `tests/imgui_scheduler_tests.cpp` | ImGui draw scheduler registration |
 | `tests/indexed_slot_map_tests.cpp` | Indexed slot map structure used by the schedulers |
 | `tests/loadstring_tests.cpp` | `loadstring` compile and runtime behavior |

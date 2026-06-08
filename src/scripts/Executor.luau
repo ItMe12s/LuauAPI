@@ -9,7 +9,7 @@ Executor.ranCount = 0
 Executor.code = "print('hello from executor :3')"
 Executor.status = ""
 Executor.initialized = false
-Executor.drawHandle = nil :: any
+Executor.drawHandle = nil :: ImGuiDrawHandle?
 Executor.enabled = geode.Mod.getSettingValue("enable-executor")
 
 function Executor.setStatus(successful: boolean, output: string)

@@ -273,6 +273,8 @@ namespace luax {
 
         geode::Result<std::string const&> contentsResult = pendingLoadContents(filePath);
         std::string fallbackContents;
+        // writeCacheKey can already read this file so reuse that copy if it's available.
+        // Cache may be cleared by navigation so reread if needed.
         if (contentsResult.isErr()) {
             auto readResult = readScriptFile(filePath);
             if (readResult.isErr()) {
