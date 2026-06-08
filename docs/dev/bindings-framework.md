@@ -113,9 +113,18 @@ Generated bindings use `LuaCallback` when a method argument is a:
 - `MiniFunction`
 - `Callback` (including non-void returns).
 
-For cocos2d `SEL_*` pairs `(CCObject* target, SEL_... selector)`,codegen collapses the pair into one Luau function
+For cocos2d `SEL_*` pairs `(CCObject* target, SEL_... selector)`, codegen collapses the pair into one Luau function
 and creates the matching handler trampoline (`LuaMenuHandler`, `LuaScheduleHandler`, `LuaCallFunc*Handler`).
 For delegate pointer arguments, codegen accepts a Luau table and creates a `Lua*` delegate trampoline (`LuaDelegate` + generated subclasses).
+
+Ignored callback failures are logged and keep their existing lifetime semantics:
+
+- Selector
+- Menu
+- Delegate
+- Setting
+- Web
+- Permission
 
 See [Reference: callbacks](../lua/reference/callbacks.md) and [Reference: delegates](../lua/reference/delegates.md) for script-facing usage.
 

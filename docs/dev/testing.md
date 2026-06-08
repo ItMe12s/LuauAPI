@@ -33,6 +33,7 @@ The C++ tests use Catch2 `v3.15.0` and build into the `luauapi_tests` executable
 | `tests/current_mod_tests.cpp` | Current-mod path helpers against a resources root |
 | `tests/fields_tests.cpp` | `m_fields` and release eviction |
 | `tests/geode_fs_path_tests.cpp` | Geode filesystem binding path resolution inside a root |
+| `tests/handle_gc_tests.cpp` | Task handle garbage collection cancellation |
 | `tests/imgui_scheduler_tests.cpp` | ImGui draw scheduler registration |
 | `tests/indexed_slot_map_tests.cpp` | Indexed slot map structure used by the schedulers |
 | `tests/loadstring_tests.cpp` | `loadstring` compile and runtime behavior |
@@ -122,13 +123,16 @@ PYTHONPATH=tools python -m unittest discover -s tests/luau_codegen -p "test_*.py
 - `tests/bytecode_cache_accounting_tests.cpp`
 - `tests/bytecode_cache_key_tests.cpp`
 - `tests/callback_tests.cpp`
+- `tests/config_bounds_tests.cpp`
 - `tests/current_mod_tests.cpp`
 - `tests/fields_tests.cpp`
 - `tests/geode_fs_path_tests.cpp`
+- `tests/handle_gc_tests.cpp`
 - `tests/imgui_scheduler_tests.cpp`
 - `tests/indexed_slot_map_tests.cpp`
 - `tests/loadstring_tests.cpp`
 - `tests/misc_correctness_tests.cpp`
+- `tests/mod_sandbox_tests.cpp`
 - `tests/opaque_handle_tests.cpp`
 - `tests/path_rules_tests.cpp`
 - `tests/path_sandbox_tests.cpp`

@@ -104,7 +104,19 @@ namespace {
 
     int imguiCancel(lua_State* L) {
         auto* handle = static_cast<ImGuiDrawHandle*>(luaL_checkudata(L, 1, kHandleMeta));
-        ImGuiDrawScheduler::get().cancel(handle->id);
+        if (handle->id != 0) {
+            ImGuiDrawScheduler::get().cancel(handle->id);
+            handle->id = 0;
+        }
+        return 0;
+    }
+
+    int imguiHandleGc(lua_State* L) {
+        auto* handle = static_cast<ImGuiDrawHandle*>(luaL_checkudata(L, 1, kHandleMeta));
+        if (handle->id != 0) {
+            ImGuiDrawScheduler::get().cancel(handle->id);
+            handle->id = 0;
+        }
         return 0;
     }
 
@@ -295,6 +307,8 @@ namespace {
         if (luaL_newmetatable(L, kHandleMeta)) {
             lua_pushcfunction(L, &imguiCancel, "cancel");
             lua_setfield(L, -2, "cancel");
+            lua_pushcfunction(L, &imguiHandleGc, "__gc");
+            lua_setfield(L, -2, "__gc");
             lua_pushvalue(L, -1);
             lua_setfield(L, -2, "__index");
             lua_pushstring(L, "locked");

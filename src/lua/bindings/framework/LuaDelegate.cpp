@@ -52,7 +52,12 @@ namespace luax {
         LuaCallback cb;
         cb.reset(L, -1);
         lua_pop(L, 1);
-        return cb.invoke(nargs, nresults, context, kHookScriptDeadlineMs, push, pushCtx, pop, popCtx);
+        bool ok =
+            cb.invoke(nargs, nresults, context, kHookScriptDeadlineMs, push, pushCtx, pop, popCtx);
+        if (!ok) {
+            logCallbackFailure(context);
+        }
+        return ok;
     }
 
     void LuaDelegateBase::checkDelegateTable(lua_State* L, int idx) {

@@ -64,6 +64,8 @@ g_task.spawn(
 ```
 
 The script still runs on the main thread. Only the wait is asynchronous.
+`runFileAsync` and `runScriptAsync` return `arc::Future<geode::Result<void>>`,
+the `TaskHolder` example above is the normal Geode pattern for consuming that future.
 
 ## Check status before running
 

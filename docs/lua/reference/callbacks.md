@@ -11,6 +11,9 @@ Three shapes are supported:
 - **Delegate tables**: Virtual interfaces passed as delegate pointers. See [Delegates](delegates.md).
 
 Callbacks run on the main thread with the same script budget as hooks (`50 ms`).
+If a callback raises an error, LuauAPI logs the failure and applies the callback site's fallback behavior.
+Selector, menu, delegate, setting, web, and permission callbacks keep their registration lifetime.
+Task intervals and ImGui draw callbacks are removed after a callback error to avoid repeated log spam.
 
 ## std::function-style callbacks
 
@@ -77,6 +80,7 @@ Each selector handler trampoline is retained and associated with an anchor `CCOb
 When the anchor's retain count drops to one before `release`, all its handlers are cleaned up, like `geode.fields` tables.
 
 `std::function` wrappers are held for the duration of the C++ call that received them (same `LuaCallback` lifetime as before).
+Task and ImGui handles cancel their callback when you call `:cancel()` or when the handle userdata is collected.
 
 ## Limits
 

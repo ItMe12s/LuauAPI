@@ -69,6 +69,7 @@ imgui.cancel(handle: ImGuiDrawHandle) -> ()
 ```
 
 Removes a draw callback. You can also call `handle:cancel()`. A callback that raises an error is removed automatically.
+Dropping the handle also cancels the callback when Lua collects the handle userdata.
 
 ### imgui.setVisible / imgui.toggle / imgui.isVisible
 

@@ -104,16 +104,18 @@ namespace {
                     struct Ctx {
                         std::shared_ptr<geode::SettingV3> const* s;
                     } ctx{&setting};
-                    cb->invoke(
-                        1,
-                        0,
-                        "geode.Mod.listenForSettingChanges",
-                        kHookScriptDeadlineMs,
-                        +[](lua_State* L, void* raw) {
-                            pushSettingValue(L, *static_cast<Ctx*>(raw)->s);
-                        },
-                        &ctx
-                    );
+                    if (!cb->invoke(
+                            1,
+                            0,
+                            "geode.Mod.listenForSettingChanges",
+                            kHookScriptDeadlineMs,
+                            +[](lua_State* L, void* raw) {
+                                pushSettingValue(L, *static_cast<Ctx*>(raw)->s);
+                            },
+                            &ctx
+                        )) {
+                        logCallbackFailure("geode.Mod.listenForSettingChanges");
+                    }
                 }
             )
         );
@@ -136,18 +138,20 @@ namespace {
                         std::string_view key;
                         std::shared_ptr<geode::SettingV3> const* s;
                     } ctx{key, &setting};
-                    cb->invoke(
-                        2,
-                        0,
-                        "geode.Mod.listenForAllSettingChanges",
-                        kHookScriptDeadlineMs,
-                        +[](lua_State* L, void* raw) {
-                            auto* c = static_cast<Ctx*>(raw);
-                            lua_pushlstring(L, c->key.data(), c->key.size());
-                            pushSettingValue(L, *c->s);
-                        },
-                        &ctx
-                    );
+                    if (!cb->invoke(
+                            2,
+                            0,
+                            "geode.Mod.listenForAllSettingChanges",
+                            kHookScriptDeadlineMs,
+                            +[](lua_State* L, void* raw) {
+                                auto* c = static_cast<Ctx*>(raw);
+                                lua_pushlstring(L, c->key.data(), c->key.size());
+                                pushSettingValue(L, *c->s);
+                            },
+                            &ctx
+                        )) {
+                        logCallbackFailure("geode.Mod.listenForAllSettingChanges");
+                    }
                 }
             )
         );

@@ -108,7 +108,7 @@ export type WebRequest = {
     body: (self: WebRequest, data: string) -> (WebRequest?, string?),
     bodyString: (self: WebRequest, data: string) -> (WebRequest?, string?),
     bodyJson: (self: WebRequest, value: any) -> WebRequest,
-    bodyMultipart: (self: WebRequest, form: MultipartForm) -> WebRequest,
+    bodyMultipart: (self: WebRequest, form: MultipartForm) -> (WebRequest?, string?),
     onProgress: (self: WebRequest, callback: (progress: WebProgress) -> ()) -> WebRequest,
     send: ((self: WebRequest, method: string, url: string, callback: (response: WebResponse?, err: string?) -> ()) -> WebHandle) & ((self: WebRequest, method: string, url: string, options: RequestOptions, callback: (response: WebResponse?, err: string?) -> ()) -> WebHandle),
     get: ((self: WebRequest, url: string, callback: (response: WebResponse?, err: string?) -> ()) -> WebHandle) & ((self: WebRequest, url: string, options: RequestOptions, callback: (response: WebResponse?, err: string?) -> ()) -> WebHandle),

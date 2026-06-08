@@ -3,12 +3,17 @@
 #include "lua/bindings/framework/BindingHost.hpp"
 #include "lua/bindings/framework/LuaRef.hpp"
 
+#include <Geode/loader/Log.hpp>
 #include <functional>
 #include <lua.h>
 #include <memory>
 #include <string_view>
 
 namespace luax {
+    inline void logCallbackFailure(std::string_view context) {
+        geode::log::warn("[lua:{}] callback failed", context);
+    }
+
     class LuaCallback {
     public:
         using PushArgsFn = void (*)(lua_State* L, void* ctx);

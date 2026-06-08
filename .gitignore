@@ -66,6 +66,8 @@ build-*/
 # Whatever this project does
 **/__pycache__
 .pytest_cache/
+.ruff_cache/
+.mypy_cache/
 types/
 
 # Lmao this guy is vibecoding

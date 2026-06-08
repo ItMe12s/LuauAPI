@@ -38,6 +38,8 @@ type RequestOptions = {
 `ProxyOpts`, `WebProgress`, and `RequestTimings` are table types in the generated stubs.
 `WebRequest`, `WebResponse`, `WebHandle`, `MultipartForm`, and `WebListenerHandle` are userdata.
 Timings are milliseconds.
+Setting `certVerification` to false disables TLS certificate verification for that request.
+This is intentional escape-hatch behavior for scripts that own the risk.
 
 ## Functions
 
@@ -111,8 +113,10 @@ The following sources of request bodies are capped at 32 MB:
 
 - `RequestOptions.body`
 - `RequestOptions.bodyString`
+- `RequestOptions.bodyMultipart`
 - `WebRequest:body`
 - `WebRequest:bodyString`
+- `WebRequest:bodyMultipart`
 - `MultipartForm:file`
 - `MultipartForm:fileFrom`
 - `MultipartForm:getBody()`

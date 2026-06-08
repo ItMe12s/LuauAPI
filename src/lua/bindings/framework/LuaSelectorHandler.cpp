@@ -25,24 +25,28 @@ namespace luax {
         };
 
         Ctx ctx{dt};
-        m_callback->invoke(
-            1,
-            0,
-            "schedule callback",
-            kHookScriptDeadlineMs,
-            +[](lua_State* L, void* raw) {
-                auto* c = static_cast<Ctx*>(raw);
-                lua_pushnumber(L, static_cast<double>(c->dt));
-            },
-            &ctx
-        );
+        if (!m_callback->invoke(
+                1,
+                0,
+                "schedule callback",
+                kHookScriptDeadlineMs,
+                +[](lua_State* L, void* raw) {
+                    auto* c = static_cast<Ctx*>(raw);
+                    lua_pushnumber(L, static_cast<double>(c->dt));
+                },
+                &ctx
+            )) {
+            logCallbackFailure("schedule callback");
+        }
     }
 
     LUAX_SELECTOR_CREATE(LuaCallFuncHandler)
 
     void LuaCallFuncHandler::onCallFunc() {
         if (!m_callback || !m_callback->valid()) return;
-        m_callback->invoke(0, 0, "callfunc callback", kHookScriptDeadlineMs);
+        if (!m_callback->invoke(0, 0, "callfunc callback", kHookScriptDeadlineMs)) {
+            logCallbackFailure("callfunc callback");
+        }
     }
 
     LUAX_SELECTOR_CREATE(LuaCallFuncNHandler)
@@ -55,17 +59,19 @@ namespace luax {
         };
 
         Ctx ctx{node};
-        m_callback->invoke(
-            1,
-            0,
-            "callfuncn callback",
-            kHookScriptDeadlineMs,
-            +[](lua_State* L, void* raw) {
-                auto* c = static_cast<Ctx*>(raw);
-                Usertype<cocos2d::CCNode>::pushBorrowed(L, c->node);
-            },
-            &ctx
-        );
+        if (!m_callback->invoke(
+                1,
+                0,
+                "callfuncn callback",
+                kHookScriptDeadlineMs,
+                +[](lua_State* L, void* raw) {
+                    auto* c = static_cast<Ctx*>(raw);
+                    Usertype<cocos2d::CCNode>::pushBorrowed(L, c->node);
+                },
+                &ctx
+            )) {
+            logCallbackFailure("callfuncn callback");
+        }
     }
 
     LUAX_SELECTOR_CREATE(LuaCallFuncNDHandler)
@@ -79,19 +85,21 @@ namespace luax {
         };
 
         Ctx ctx{node, data};
-        m_callback->invoke(
-            2,
-            0,
-            "callfuncnd callback",
-            kHookScriptDeadlineMs,
-            +[](lua_State* L, void* raw) {
-                auto* c = static_cast<Ctx*>(raw);
-                Usertype<cocos2d::CCNode>::pushBorrowed(L, c->node);
-                if (c->data == nullptr) lua_pushnil(L);
-                else pushOpaqueHandle(L, c->data);
-            },
-            &ctx
-        );
+        if (!m_callback->invoke(
+                2,
+                0,
+                "callfuncnd callback",
+                kHookScriptDeadlineMs,
+                +[](lua_State* L, void* raw) {
+                    auto* c = static_cast<Ctx*>(raw);
+                    Usertype<cocos2d::CCNode>::pushBorrowed(L, c->node);
+                    if (c->data == nullptr) lua_pushnil(L);
+                    else pushOpaqueHandle(L, c->data);
+                },
+                &ctx
+            )) {
+            logCallbackFailure("callfuncnd callback");
+        }
     }
 
     LUAX_SELECTOR_CREATE(LuaCallFuncOHandler)
@@ -104,17 +112,19 @@ namespace luax {
         };
 
         Ctx ctx{obj};
-        m_callback->invoke(
-            1,
-            0,
-            "callfunco callback",
-            kHookScriptDeadlineMs,
-            +[](lua_State* L, void* raw) {
-                auto* c = static_cast<Ctx*>(raw);
-                Usertype<cocos2d::CCObject>::pushBorrowed(L, c->obj);
-            },
-            &ctx
-        );
+        if (!m_callback->invoke(
+                1,
+                0,
+                "callfunco callback",
+                kHookScriptDeadlineMs,
+                +[](lua_State* L, void* raw) {
+                    auto* c = static_cast<Ctx*>(raw);
+                    Usertype<cocos2d::CCObject>::pushBorrowed(L, c->obj);
+                },
+                &ctx
+            )) {
+            logCallbackFailure("callfunco callback");
+        }
     }
 } // namespace luax
 

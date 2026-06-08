@@ -11,6 +11,13 @@ These values come from `src/lua/Config.hpp`.
 | Limit | Value | Meaning |
 | --- | --- | --- |
 | Max script size | `4 MiB` | Largest single script or module |
+| Max filesystem read/write | `32 MiB` | Largest `geode.fs.read` or `geode.fs.write` payload |
+| Max web response body | `32 MiB` | Largest body boxed as `WebResponse` |
+| Max web request body | `32 MiB` | Largest request or multipart body payload |
+| Max JSON parse size | `8 MiB` | Largest string accepted by JSON parsing helpers |
+| Max JSON depth | `32` | Deepest JSON value converted between Lua and C++ |
+| Max directory entries | `4096` | Largest `geode.fs.list` entry count |
+| Max directory name bytes | `256 KiB` | Total returned names from `geode.fs.list` |
 | Bytecode cache entries | `512` | Cached compiled scripts, least recently used dropped |
 | Memory cap | `512 MiB` | Hard Lua memory limit |
 | Hook callbacks, global | `4096` | Total hook callbacks across all targets |

@@ -84,7 +84,8 @@ These baseline pair-related fields were skipped before pair support. After regen
 | `m_accountIDForIcon` | `gd::map<std::pair<int, UnlockType>, int>` | Binds |
 | `m_unkMap770` | `gd::map<std::pair<int, int>, gd::vector<GroupCommandObject2*>>` | Binds via [nested containers](nested-containers.md) |
 
-The codegen audit report (`audit.md`, via `--audit-report-out`) groups remaining pair skips in the `pair` bucket.
+The codegen audit report (`audit.md`, via `--audit-report-out`)
+lists remaining pair skips under the existing container and fallback buckets in `## Samples by bucket`.
 
 ## SEL pairs
 

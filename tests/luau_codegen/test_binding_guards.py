@@ -54,6 +54,7 @@ _WEB_LISTENER_REGISTRARS = (
 _REQUEST_BODY_METHODS = (
     "requestBody",
     "requestBodyString",
+    "requestBodyMultipart",
     "multipartFile",
     "multipartFileFrom",
     "multipartGetBody",

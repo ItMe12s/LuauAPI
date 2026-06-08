@@ -23,7 +23,7 @@ end, "world")
 Runs a function once after a delay in seconds and returns a handle. A negative delay is treated as zero.
 
 ```lua
-task.delay(1.5, function()
+local delayed = task.delay(1.5, function()
     print("1.5 seconds later")
 end)
 ```
@@ -44,7 +44,7 @@ end)
 Runs a function once on the next tick and returns a handle.
 
 ```lua
-task.defer(function()
+local deferred = task.defer(function()
     print("next frame")
 end)
 ```
@@ -61,6 +61,8 @@ task.cancel(handle)
 
 `task.delay`, `task.every`, and `task.defer` each return a handle.
 The handle has a `cancel` method, so you can cancel either with the method or with `task.cancel`.
+Keep the handle while you expect the callback to run.
+Dropping the handle cancels the task when Lua collects the handle userdata.
 
 ```lua
 local ticks = 0
@@ -91,7 +93,8 @@ Each callback runs on the main thread with a `50 ms` budget.
 
 - The most you can schedule at once is `4096`. Going over raises an error.
 - `task.every` requires an interval greater than zero.
-- Callback errors are logged rather than thrown.
+- Callback errors are logged rather than thrown. One-shot tasks end after they run, repeated tasks stop after an error.
+- If the game scheduler is not ready at startup, scheduled callbacks run once the scheduler can be armed.
 
 See [Limits and errors](../../cpp/limits-and-errors.md) for the full limits table.
 

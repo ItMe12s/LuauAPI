@@ -55,6 +55,7 @@ geode.fs.list(root: FsRoot, path: string) -> ({ string }?, string?)
 
 Lists the immediate entries of a directory (file and directory names, not full paths, not
 recursive). Returns an array table, or `nil` and an error message.
+Listings are capped at 4096 entries and 256 KiB of returned name bytes.
 
 ## mkdir
 

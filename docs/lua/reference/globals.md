@@ -40,6 +40,7 @@ Sources over 4 MiB are rejected with `nil, "script exceeds maximum size"`.
 If the runtime is not ready, returns `nil, "luau runtime not ready"`.
 
 `loadstring` is always available, can compile any string, and ignores the `require` sandbox.
+Treat it as trusted-code execution. LuauAPI intentionally leaves policy to the script or developer tools that call it.
 Calling the returned function from Lua does not start a new script deadline.
 It only inherits an existing guarded call path, such as code already running inside a `task` callback.
 

@@ -2,6 +2,7 @@
 #include "lua/bindings/framework/Stack.hpp"
 #include "lua/bindings/framework/TableUtil.hpp"
 #include "lua/bindings/framework/Types.hpp"
+
 #include <Geode/utils/cocos.hpp>
 #include <cocos2d.h>
 #include <lua.h>

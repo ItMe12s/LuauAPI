@@ -22,17 +22,19 @@ namespace luax {
         };
 
         Ctx ctx{sender};
-        m_callback->invoke(
-            1,
-            0,
-            "menu callback",
-            kHookScriptDeadlineMs,
-            +[](lua_State* L, void* raw) {
-                auto* c = static_cast<Ctx*>(raw);
-                Usertype<cocos2d::CCObject>::pushBorrowed(L, c->sender);
-            },
-            &ctx
-        );
+        if (!m_callback->invoke(
+                1,
+                0,
+                "menu callback",
+                kHookScriptDeadlineMs,
+                +[](lua_State* L, void* raw) {
+                    auto* c = static_cast<Ctx*>(raw);
+                    Usertype<cocos2d::CCObject>::pushBorrowed(L, c->sender);
+                },
+                &ctx
+            )) {
+            logCallbackFailure("menu callback");
+        }
     }
 
     void anchorMenuHandler(cocos2d::CCObject* anchor, LuaMenuHandler* handler) {

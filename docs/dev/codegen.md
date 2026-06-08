@@ -61,8 +61,7 @@ Static methods, constructors, and destructors are skipped.
 
 The custom command depends on the Python sources, the Bromas, the extra stubs in `tools/luau_codegen/extra_bindings/`, and the Geode UI headers.
 Rebuild also triggers on extra classes from `Geode/ui/*.hpp` (via `parse/geode_sdk.py`)
-and the free-function headers listed in `model/free_fn_sources.py`
-(`utils/general.hpp`, `ui/Popup.hpp`, `ui/GeodeUI.hpp`, `utils/string.hpp`, `utils/random.hpp`, `utils/cocos.hpp`).
+and the free-function headers listed in `model/free_fn_sources.py`.
 A change to any of these reruns codegen.
 
 ## Geode SDK scan scope

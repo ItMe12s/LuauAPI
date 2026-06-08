@@ -239,7 +239,13 @@ namespace luax::webdetail {
         lua_pop(L, 1);
 
         lua_getfield(L, idx, "bodyMultipart");
-        if (!lua_isnil(L, -1)) req.bodyMultipart(checkMultipartBox(L, -1, method)->form);
+        if (!lua_isnil(L, -1)) {
+            auto& form = checkMultipartBox(L, -1, method)->form;
+            if (!requestBodyWithinLimit(form.getBody().size())) {
+                luaL_error(L, "%s", kWebRequestBodyExceededMsg);
+            }
+            req.bodyMultipart(form);
+        }
         lua_pop(L, 1);
 
         lua_getfield(L, idx, "onProgress");

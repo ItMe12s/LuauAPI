@@ -50,7 +50,7 @@ namespace luax::webdetail {
 
         std::error_code ec;
         auto fileSize = std::filesystem::file_size(target->path, ec);
-        if (ec || !requestBodyWithinLimit(fileSize)) {
+        if (!ec && !requestBodyWithinLimit(fileSize)) {
             return pushRequestBodyExceeded(L);
         }
 

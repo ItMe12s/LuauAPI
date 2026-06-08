@@ -36,16 +36,18 @@ namespace {
         auto cb = std::make_shared<luax::LuaCallback>(L, 2);
         permission::requestPermission(perm, [cb](bool granted) {
             bool g = granted;
-            cb->invoke(
-                1,
-                0,
-                "geode.utils.permission.requestPermission",
-                kHookScriptDeadlineMs,
-                +[](lua_State* L, void* raw) {
-                    lua_pushboolean(L, *static_cast<bool*>(raw));
-                },
-                &g
-            );
+            if (!cb->invoke(
+                    1,
+                    0,
+                    "geode.utils.permission.requestPermission",
+                    kHookScriptDeadlineMs,
+                    +[](lua_State* L, void* raw) {
+                        lua_pushboolean(L, *static_cast<bool*>(raw));
+                    },
+                    &g
+                )) {
+                logCallbackFailure("geode.utils.permission.requestPermission");
+            }
         });
         return 0;
     }

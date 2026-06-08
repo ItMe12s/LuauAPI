@@ -409,6 +409,9 @@ namespace luax::webdetail {
 
     int requestBodyMultipart(lua_State* L) {
         auto& form = checkMultipartBox(L, 2, "WebRequest:bodyMultipart")->form;
+        if (!requestBodyWithinLimit(form.getBody().size())) {
+            return pushRequestBodyExceeded(L);
+        }
         return requestChain(
             L,
             [&](web::WebRequest& req) {

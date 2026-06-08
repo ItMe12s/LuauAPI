@@ -106,7 +106,19 @@ namespace {
 
     int taskCancel(lua_State* L) {
         auto* handle = static_cast<TaskHandle*>(luaL_checkudata(L, 1, kHandleMeta));
-        TaskScheduler::get().cancel(handle->id);
+        if (handle->id != 0) {
+            TaskScheduler::get().cancel(handle->id);
+            handle->id = 0;
+        }
+        return 0;
+    }
+
+    int taskHandleGc(lua_State* L) {
+        auto* handle = static_cast<TaskHandle*>(luaL_checkudata(L, 1, kHandleMeta));
+        if (handle->id != 0) {
+            TaskScheduler::get().cancel(handle->id);
+            handle->id = 0;
+        }
         return 0;
     }
 
@@ -128,6 +140,8 @@ namespace {
         if (luaL_newmetatable(L, kHandleMeta)) {
             lua_pushcfunction(L, &taskCancel, "cancel");
             lua_setfield(L, -2, "cancel");
+            lua_pushcfunction(L, &taskHandleGc, "__gc");
+            lua_setfield(L, -2, "__gc");
             lua_pushvalue(L, -1);
             lua_setfield(L, -2, "__index");
             lua_pushstring(L, "locked");
@@ -158,7 +172,7 @@ namespace luax {
         setTableCFunction(L, -1, "unix", &timeUnix);
         lua_setglobal(L, "time");
 
-        armTaskTick();
+        ensureTaskTickArmed();
         if (auto* runtime = static_cast<Runtime*>(lua_callbacks(L)->userdata)) {
             runtime->registerShutdownHook([] {
                 disarmTaskTick();
