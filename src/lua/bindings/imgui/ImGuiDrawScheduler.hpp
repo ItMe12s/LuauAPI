@@ -17,6 +17,7 @@ namespace luax {
         void clear();
 
         std::size_t activeCount() const;
+        bool isScheduled(std::uint64_t id) const;
         bool full() const;
 
         bool inFrame() const {

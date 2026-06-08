@@ -96,4 +96,9 @@ namespace luax {
         }
         return n;
     }
+
+    bool ImGuiDrawScheduler::isScheduled(std::uint64_t id) const {
+        DrawCb const* cb = m_slots.find(id);
+        return cb != nullptr && !cb->cancelled;
+    }
 } // namespace luax
