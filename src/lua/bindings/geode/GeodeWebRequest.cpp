@@ -7,7 +7,6 @@
 #include "lua/bindings/geode/WebCaps.hpp"
 
 #include <Geode/utils/web.hpp>
-#include <chrono>
 #include <cstdint>
 #include <lua.h>
 #include <lualib.h>
@@ -177,7 +176,7 @@ namespace luax::webdetail {
         return requestChain(
             L,
             [&](web::WebRequest& req) {
-                req.header(std::move(name), std::move(value));
+                applyHeader(req, std::move(name), std::move(value));
             },
             "WebRequest:header"
         );
@@ -200,7 +199,7 @@ namespace luax::webdetail {
         return requestChain(
             L,
             [&](web::WebRequest& req) {
-                req.param(std::move(name), std::move(value));
+                applyParam(req, std::move(name), std::move(value));
             },
             "WebRequest:param"
         );
@@ -222,7 +221,7 @@ namespace luax::webdetail {
         return requestChain(
             L,
             [&](web::WebRequest& req) {
-                req.method(std::move(value));
+                applyMethod(req, std::move(value));
             },
             "WebRequest:method"
         );
@@ -233,7 +232,7 @@ namespace luax::webdetail {
         return requestChain(
             L,
             [&](web::WebRequest& req) {
-                req.url(std::move(value));
+                applyUrl(req, std::move(value));
             },
             "WebRequest:url"
         );
@@ -244,7 +243,7 @@ namespace luax::webdetail {
         return requestChain(
             L,
             [&](web::WebRequest& req) {
-                req.userAgent(std::move(value));
+                applyUserAgent(req, std::move(value));
             },
             "WebRequest:userAgent"
         );
@@ -255,7 +254,7 @@ namespace luax::webdetail {
         return requestChain(
             L,
             [&](web::WebRequest& req) {
-                req.acceptEncoding(std::move(value));
+                applyAcceptEncoding(req, std::move(value));
             },
             "WebRequest:acceptEncoding"
         );
@@ -267,7 +266,7 @@ namespace luax::webdetail {
         return requestChain(
             L,
             [&](web::WebRequest& req) {
-                req.timeout(std::chrono::seconds(seconds));
+                applyTimeout(req, seconds);
             },
             "WebRequest:timeout"
         );
@@ -284,7 +283,7 @@ namespace luax::webdetail {
         return requestChain(
             L,
             [&](web::WebRequest& req) {
-                req.downloadRange({start, stop});
+                applyDownloadRange(req, start, stop);
             },
             "WebRequest:downloadRange"
         );
@@ -295,7 +294,7 @@ namespace luax::webdetail {
         return requestChain(
             L,
             [&](web::WebRequest& req) {
-                req.certVerification(value);
+                applyCertVerification(req, value);
             },
             "WebRequest:certVerification"
         );
@@ -306,7 +305,7 @@ namespace luax::webdetail {
         return requestChain(
             L,
             [&](web::WebRequest& req) {
-                req.transferBody(value);
+                applyTransferBody(req, value);
             },
             "WebRequest:transferBody"
         );
@@ -317,7 +316,7 @@ namespace luax::webdetail {
         return requestChain(
             L,
             [&](web::WebRequest& req) {
-                req.followRedirects(value);
+                applyFollowRedirects(req, value);
             },
             "WebRequest:followRedirects"
         );
@@ -328,7 +327,7 @@ namespace luax::webdetail {
         return requestChain(
             L,
             [&](web::WebRequest& req) {
-                req.ignoreContentLength(value);
+                applyIgnoreContentLength(req, value);
             },
             "WebRequest:ignoreContentLength"
         );
@@ -339,7 +338,7 @@ namespace luax::webdetail {
         return requestChain(
             L,
             [&](web::WebRequest& req) {
-                req.CABundleContent(std::move(value));
+                applyCaBundle(req, std::move(value));
             },
             "WebRequest:caBundle"
         );
@@ -350,7 +349,7 @@ namespace luax::webdetail {
         return requestChain(
             L,
             [&](web::WebRequest& req) {
-                req.proxyOpts(std::move(opts));
+                applyProxy(req, std::move(opts));
             },
             "WebRequest:proxy"
         );
@@ -361,7 +360,7 @@ namespace luax::webdetail {
         return requestChain(
             L,
             [&](web::WebRequest& req) {
-                req.version(version);
+                applyVersion(req, version);
             },
             "WebRequest:version"
         );
@@ -369,31 +368,18 @@ namespace luax::webdetail {
 
     int requestBody(lua_State* L) {
         auto data = check<std::string>(L, 2, "WebRequest:body");
-        if (!requestBodyWithinLimit(data.size())) {
-            return pushRequestBodyExceeded(L);
-        }
-        return requestChain(
-            L,
-            [&](web::WebRequest& req) {
-                geode::ByteVector bytes(data.begin(), data.end());
-                req.body(std::move(bytes));
-            },
-            "WebRequest:body"
-        );
+        auto& req = checkRequest(L, 1, "WebRequest:body");
+        if (!applyBody(req, data)) return pushRequestBodyExceeded(L);
+        lua_pushvalue(L, 1);
+        return 1;
     }
 
     int requestBodyString(lua_State* L) {
         auto data = check<std::string>(L, 2, "WebRequest:bodyString");
-        if (!requestBodyWithinLimit(data.size())) {
-            return pushRequestBodyExceeded(L);
-        }
-        return requestChain(
-            L,
-            [&](web::WebRequest& req) {
-                req.bodyString(data);
-            },
-            "WebRequest:bodyString"
-        );
+        auto& req = checkRequest(L, 1, "WebRequest:bodyString");
+        if (!applyBodyString(req, data)) return pushRequestBodyExceeded(L);
+        lua_pushvalue(L, 1);
+        return 1;
     }
 
     int requestBodyJson(lua_State* L) {
@@ -403,31 +389,18 @@ namespace luax::webdetail {
             push(L, std::string(valueResult.unwrapErr()));
             return 2;
         }
-        auto value = std::move(valueResult.unwrap());
-        if (!requestJsonBodyWithinLimit(value)) {
-            return pushRequestBodyExceeded(L);
-        }
-        return requestChain(
-            L,
-            [&](web::WebRequest& req) {
-                req.bodyJSON(value);
-            },
-            "WebRequest:bodyJson"
-        );
+        auto& req = checkRequest(L, 1, "WebRequest:bodyJson");
+        if (!applyBodyJson(req, std::move(valueResult.unwrap()))) return pushRequestBodyExceeded(L);
+        lua_pushvalue(L, 1);
+        return 1;
     }
 
     int requestBodyMultipart(lua_State* L) {
         auto& form = checkMultipartBox(L, 2, "WebRequest:bodyMultipart")->form;
-        if (!requestBodyWithinLimit(form.getBody().size())) {
-            return pushRequestBodyExceeded(L);
-        }
-        return requestChain(
-            L,
-            [&](web::WebRequest& req) {
-                req.bodyMultipart(form);
-            },
-            "WebRequest:bodyMultipart"
-        );
+        auto& req = checkRequest(L, 1, "WebRequest:bodyMultipart");
+        if (!applyBodyMultipart(req, form)) return pushRequestBodyExceeded(L);
+        lua_pushvalue(L, 1);
+        return 1;
     }
 
     int requestOnProgress(lua_State* L) {

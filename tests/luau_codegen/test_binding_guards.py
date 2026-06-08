@@ -14,11 +14,19 @@ _REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__f
 _WEB_BINDING = "src/lua/bindings/geode/GeodeWebBinding.cpp"
 _WEB_BINDING_SOURCES = (
     "src/lua/bindings/geode/GeodeWebBinding.cpp",
+    "src/lua/bindings/geode/GeodeWebApply.cpp",
     "src/lua/bindings/geode/GeodeWebOptions.cpp",
     "src/lua/bindings/geode/GeodeWebRequest.cpp",
     "src/lua/bindings/geode/GeodeWebResponse.cpp",
     "src/lua/bindings/geode/GeodeWebMultipart.cpp",
     "src/lua/bindings/geode/GeodeWebListeners.cpp",
+)
+
+_REQUEST_BODY_APPLY_HELPERS = (
+    "applyBody",
+    "applyBodyString",
+    "applyBodyJson",
+    "applyBodyMultipart",
 )
 _WEB_INTERNAL = "src/lua/bindings/geode/WebInternal.hpp"
 _FS_BINDING = "src/lua/bindings/geode/GeodeFsBinding.cpp"
@@ -159,17 +167,43 @@ class BindingGuardTests(unittest.TestCase):
     def test_apply_options_enforces_request_body_cap(self) -> None:
         source = _web_binding_source()
         body = _function_body(source, "applyOptions", ret="void")
-        self.assertIn(
-            "requestBodyWithinLimit",
-            body,
-            "applyOptions must enforce kMaxWebRequestBytes for option bodies",
-        )
+        for helper in _REQUEST_BODY_APPLY_HELPERS:
+            with self.subTest(helper=helper):
+                self.assertIn(
+                    helper,
+                    body,
+                    "applyOptions must delegate request bodies to shared apply* helpers",
+                )
+                helper_body = _function_body(source, helper, ret="bool")
+                self.assertTrue(
+                    any(check in helper_body for check in _REQUEST_BODY_CAP_CHECKS),
+                    f"{helper} must enforce kMaxWebRequestBytes",
+                )
 
     def test_request_body_methods_enforce_size_cap(self) -> None:
         source = _web_binding_source()
         for method in _REQUEST_BODY_METHODS:
             with self.subTest(method=method):
                 body = _function_body(source, method)
+                if method in _REQUEST_BODY_APPLY_HELPERS or method.startswith("requestBody"):
+                    helper = {
+                        "requestBody": "applyBody",
+                        "requestBodyString": "applyBodyString",
+                        "requestBodyJson": "applyBodyJson",
+                        "requestBodyMultipart": "applyBodyMultipart",
+                    }.get(method)
+                    if helper is not None:
+                        self.assertIn(
+                            helper,
+                            body,
+                            f"{method} must delegate body size checks to {helper}",
+                        )
+                        helper_body = _function_body(source, helper, ret="bool")
+                        self.assertTrue(
+                            any(check in helper_body for check in _REQUEST_BODY_CAP_CHECKS),
+                            f"{helper} must enforce kMaxWebRequestBytes",
+                        )
+                        continue
                 self.assertTrue(
                     any(check in body for check in _REQUEST_BODY_CAP_CHECKS),
                     f"{method} must enforce kMaxWebRequestBytes",

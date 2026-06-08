@@ -6,7 +6,6 @@
 #include "lua/bindings/geode/WebCaps.hpp"
 
 #include <Geode/utils/web.hpp>
-#include <chrono>
 #include <cstdint>
 #include <lua.h>
 #include <lualib.h>
@@ -185,53 +184,49 @@ namespace luax::webdetail {
         luaL_checktype(L, idx, LUA_TTABLE);
 
         applyStringMap(L, idx, "headers", method, [&](std::string name, std::string value) {
-            req.header(std::move(name), std::move(value));
+            applyHeader(req, std::move(name), std::move(value));
         });
         applyStringMap(L, idx, "params", method, [&](std::string name, std::string value) {
-            req.param(std::move(name), std::move(value));
+            applyParam(req, std::move(name), std::move(value));
         });
 
-        if (auto value = optStringField(L, idx, "method", method)) req.method(std::move(*value));
-        if (auto value = optStringField(L, idx, "url", method)) req.url(std::move(*value));
+        if (auto value = optStringField(L, idx, "method", method))
+            applyMethod(req, std::move(*value));
+        if (auto value = optStringField(L, idx, "url", method)) applyUrl(req, std::move(*value));
         if (auto value = optStringField(L, idx, "userAgent", method))
-            req.userAgent(std::move(*value));
+            applyUserAgent(req, std::move(*value));
         if (auto value = optStringField(L, idx, "acceptEncoding", method))
-            req.acceptEncoding(std::move(*value));
+            applyAcceptEncoding(req, std::move(*value));
         if (auto value = optNumberField(L, idx, "timeout", method)) {
             if (*value < 0) luaL_error(L, "%s expected timeout >= 0", method);
-            req.timeout(std::chrono::seconds(static_cast<std::int64_t>(*value)));
+            applyTimeout(req, *value);
         }
-        if (auto value = optDownloadRange(L, idx, method)) req.downloadRange(*value);
+        if (auto value = optDownloadRange(L, idx, method))
+            applyDownloadRange(req, value->first, value->second);
         if (auto value = optBoolField(L, idx, "certVerification", method))
-            req.certVerification(*value);
-        if (auto value = optBoolField(L, idx, "transferBody", method)) req.transferBody(*value);
+            applyCertVerification(req, *value);
+        if (auto value = optBoolField(L, idx, "transferBody", method))
+            applyTransferBody(req, *value);
         if (auto value = optBoolField(L, idx, "followRedirects", method))
-            req.followRedirects(*value);
+            applyFollowRedirects(req, *value);
         if (auto value = optBoolField(L, idx, "ignoreContentLength", method))
-            req.ignoreContentLength(*value);
+            applyIgnoreContentLength(req, *value);
         if (auto value = optStringField(L, idx, "caBundle", method))
-            req.CABundleContent(std::move(*value));
+            applyCaBundle(req, std::move(*value));
 
         lua_getfield(L, idx, "proxy");
-        if (!lua_isnil(L, -1)) req.proxyOpts(checkProxyOpts(L, -1, method));
+        if (!lua_isnil(L, -1)) applyProxy(req, checkProxyOpts(L, -1, method));
         lua_pop(L, 1);
 
         lua_getfield(L, idx, "version");
-        if (!lua_isnil(L, -1)) req.version(checkHttpVersion(L, -1, method));
+        if (!lua_isnil(L, -1)) applyVersion(req, checkHttpVersion(L, -1, method));
         lua_pop(L, 1);
 
         if (auto value = optStringField(L, idx, "body", method)) {
-            if (!requestBodyWithinLimit(value->size())) {
-                luaL_error(L, "%s", kWebRequestBodyExceededMsg);
-            }
-            geode::ByteVector bytes(value->begin(), value->end());
-            req.body(std::move(bytes));
+            if (!applyBody(req, *value)) luaL_error(L, "%s", kWebRequestBodyExceededMsg);
         }
         if (auto value = optStringField(L, idx, "bodyString", method)) {
-            if (!requestBodyWithinLimit(value->size())) {
-                luaL_error(L, "%s", kWebRequestBodyExceededMsg);
-            }
-            req.bodyString(*value);
+            if (!applyBodyString(req, *value)) luaL_error(L, "%s", kWebRequestBodyExceededMsg);
         }
 
         lua_getfield(L, idx, "bodyJson");
@@ -240,21 +235,16 @@ namespace luax::webdetail {
             if (valueResult.isErr()) {
                 luaL_error(L, "%s", valueResult.unwrapErr().c_str());
             }
-            auto value = std::move(valueResult.unwrap());
-            if (!requestJsonBodyWithinLimit(value)) {
+            if (!applyBodyJson(req, std::move(valueResult.unwrap()))) {
                 luaL_error(L, "%s", kWebRequestBodyExceededMsg);
             }
-            req.bodyJSON(value);
         }
         lua_pop(L, 1);
 
         lua_getfield(L, idx, "bodyMultipart");
         if (!lua_isnil(L, -1)) {
             auto& form = checkMultipartBox(L, -1, method)->form;
-            if (!requestBodyWithinLimit(form.getBody().size())) {
-                luaL_error(L, "%s", kWebRequestBodyExceededMsg);
-            }
-            req.bodyMultipart(form);
+            if (!applyBodyMultipart(req, form)) luaL_error(L, "%s", kWebRequestBodyExceededMsg);
         }
         lua_pop(L, 1);
 
