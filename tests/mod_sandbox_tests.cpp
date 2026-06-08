@@ -10,6 +10,7 @@
 #include <filesystem>
 #include <lua.h>
 #include <lualib.h>
+#include <string_view>
 #include <thread>
 
 namespace {
@@ -45,7 +46,7 @@ namespace {
         lua_pushlstring(L, args->path.data(), args->path.size());
         auto target = luax::resolveSandboxTarget(L, 1, 2, "test", args->requireWritable);
         if (!target) {
-            return lua_gettop(L);
+            return 2;
         }
         luax::push(L, luax::filesystemPathString(target->path));
         lua_pushboolean(L, target->writable);
@@ -63,6 +64,20 @@ namespace {
         outResults = lua_gettop(L);
         return true;
     }
+
+    void ensureWritableRoots(geode::Mod* mod) {
+        REQUIRE(std::filesystem::create_directories(mod->getSaveDir()));
+        REQUIRE(std::filesystem::create_directories(mod->getConfigDir()));
+        REQUIRE(std::filesystem::create_directories(mod->getPersistentDir()));
+    }
+
+    std::filesystem::path expectedResolvedPath(
+        std::filesystem::path const& root, std::string_view relative
+    ) {
+        auto resolved = luax::resolveInsideRoot(root, relative);
+        REQUIRE(resolved.isOk());
+        return resolved.unwrap();
+    }
 } // namespace
 
 TEST_CASE("resolveSandboxTarget maps writable mod roots") {
@@ -73,6 +88,7 @@ TEST_CASE("resolveSandboxTarget maps writable mod roots") {
     auto* runtime = luax::Runtime::getOrCreate();
     runtime->setResourcesRoot(dir);
     auto* L = runtime->state();
+    ensureWritableRoots(mod);
 
     for (auto const* root : {"save", "config", "persistent"}) {
         ResolveArgs args{root, "nested/file.txt", true};
@@ -82,7 +98,7 @@ TEST_CASE("resolveSandboxTarget maps writable mod roots") {
         REQUIRE(lua_isstring(L, 1));
         REQUIRE(lua_toboolean(L, 2));
 
-        auto expected = (mod->getResourcesDir() / root / "nested" / "file.txt").lexically_normal();
+        auto expected = expectedResolvedPath(mod->getResourcesDir() / root, "nested/file.txt");
         REQUIRE(std::string(lua_tostring(L, 1)) == luax::filesystemPathString(expected));
         lua_pop(L, results);
     }
@@ -107,7 +123,7 @@ TEST_CASE("resolveSandboxTarget maps read-only resources root") {
     REQUIRE(lua_isstring(L, 1));
     REQUIRE_FALSE(lua_toboolean(L, 2));
 
-    auto expected = (mod->getResourcesDir() / "asset.txt").lexically_normal();
+    auto expected = expectedResolvedPath(mod->getResourcesDir(), "asset.txt");
     REQUIRE(std::string(lua_tostring(L, 1)) == luax::filesystemPathString(expected));
     lua_pop(L, results);
 
@@ -145,6 +161,7 @@ TEST_CASE("resolveSandboxTarget rejects path escapes") {
     auto* runtime = luax::Runtime::getOrCreate();
     runtime->setResourcesRoot(dir);
     auto* L = runtime->state();
+    REQUIRE(std::filesystem::create_directories(mod->getSaveDir()));
 
     ResolveArgs args{"save", "../escape.txt", false};
     int results = 0;

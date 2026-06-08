@@ -2,6 +2,7 @@
 #include "lua/bindings/Binding.hpp"
 #include "lua/bindings/framework/LuaRef.hpp"
 #include "lua/bindings/framework/TableUtil.hpp"
+#include "lua/bindings/framework/UserdataTags.hpp"
 #include "lua/runtime/Runtime.hpp"
 
 #include <Geode/Geode.hpp>
@@ -23,11 +24,23 @@ namespace {
         return origin;
     }
 
+    void cancelHandle(TaskHandle* handle) {
+        if (handle && handle->id != 0) {
+            TaskScheduler::get().cancel(handle->id);
+            handle->id = 0;
+        }
+    }
+
+    void taskHandleDtor(lua_State* L, void* ud) {
+        (void)L;
+        cancelHandle(static_cast<TaskHandle*>(ud));
+    }
+
     void pushHandle(lua_State* L, std::uint64_t id) {
-        auto* handle = static_cast<TaskHandle*>(lua_newuserdata(L, sizeof(TaskHandle)));
+        auto* handle = static_cast<TaskHandle*>(
+            lua_newuserdatataggedwithmetatable(L, sizeof(TaskHandle), detail::taskHandleTag())
+        );
         handle->id = id;
-        luaL_getmetatable(L, kHandleMeta);
-        lua_setmetatable(L, -2);
     }
 
     void ensureCapacity(lua_State* L) {
@@ -106,19 +119,13 @@ namespace {
 
     int taskCancel(lua_State* L) {
         auto* handle = static_cast<TaskHandle*>(luaL_checkudata(L, 1, kHandleMeta));
-        if (handle->id != 0) {
-            TaskScheduler::get().cancel(handle->id);
-            handle->id = 0;
-        }
+        cancelHandle(handle);
         return 0;
     }
 
     int taskHandleGc(lua_State* L) {
         auto* handle = static_cast<TaskHandle*>(luaL_checkudata(L, 1, kHandleMeta));
-        if (handle->id != 0) {
-            TaskScheduler::get().cancel(handle->id);
-            handle->id = 0;
-        }
+        cancelHandle(handle);
         return 0;
     }
 
@@ -150,6 +157,17 @@ namespace {
             lua_setfield(L, -2, "__type");
         }
         lua_pop(L, 1);
+
+        lua_getuserdatametatable(L, detail::taskHandleTag());
+        if (!lua_isnil(L, -1)) {
+            lua_pop(L, 1);
+            return;
+        }
+        lua_pop(L, 1);
+
+        luaL_getmetatable(L, kHandleMeta);
+        lua_setuserdatametatable(L, detail::taskHandleTag());
+        lua_setuserdatadtor(L, detail::taskHandleTag(), &taskHandleDtor);
     }
 } // namespace
 

@@ -549,33 +549,42 @@ class CallbackFailureLoggingGuardTests(unittest.TestCase):
 class HandleGcGuardTests(unittest.TestCase):
     def test_task_handle_metatable_registers_gc_cancellation(self) -> None:
         source = _read_repo_file(_TASK_BINDING)
-        self.assertIn('"__gc"', source)
-        gc_match = re.search(
-            r"int\s+(\w+Gc)\(lua_State\* L\)\s*\{[^}]*TaskScheduler::get\(\)\.cancel",
+        cancel_match = re.search(
+            r"void\s+cancelHandle\(TaskHandle\* handle\)\s*\{[^}]*TaskScheduler::get\(\)\.cancel",
             source,
             re.DOTALL,
         )
         self.assertIsNotNone(
-            gc_match,
-            "task handle __gc must cancel the scheduled task id",
+            cancel_match,
+            "task handle cleanup must cancel the scheduled task id",
         )
+        self.assertIn("lua_newuserdatataggedwithmetatable", source)
+        self.assertIn("detail::taskHandleTag()", source)
         register_body = _function_body(source, "registerHandleMetatable", ret="void")
-        self.assertIn('"__gc"', register_body)
+        self.assertIn("lua_setuserdatametatable(L, detail::taskHandleTag())", register_body)
+        self.assertIn(
+            "lua_setuserdatadtor(L, detail::taskHandleTag(), &taskHandleDtor)", register_body
+        )
 
     def test_imgui_handle_metatable_registers_gc_cancellation(self) -> None:
         source = _read_repo_file(_IMGUI_BINDING)
-        self.assertIn('"__gc"', source)
-        gc_match = re.search(
-            r"int\s+(\w+Gc)\(lua_State\* L\)\s*\{[^}]*ImGuiDrawScheduler::get\(\)\.cancel",
+        cancel_match = re.search(
+            r"void\s+cancelHandle\(ImGuiDrawHandle\* handle\)\s*\{[^}]*ImGuiDrawScheduler::get\(\)\.cancel",
             source,
             re.DOTALL,
         )
         self.assertIsNotNone(
-            gc_match,
-            "imgui handle __gc must cancel the draw callback id",
+            cancel_match,
+            "imgui handle cleanup must cancel the draw callback id",
         )
+        self.assertIn("lua_newuserdatataggedwithmetatable", source)
+        self.assertIn("detail::imguiDrawHandleTag()", source)
         register_body = _function_body(source, "registerImGuiDrawHandleMetatable", ret="void")
-        self.assertIn('"__gc"', register_body)
+        self.assertIn("lua_setuserdatametatable(L, detail::imguiDrawHandleTag())", register_body)
+        self.assertIn(
+            "lua_setuserdatadtor(L, detail::imguiDrawHandleTag(), &imguiHandleDtor)",
+            register_body,
+        )
 
 
 class ErrorSemanticsGuardTests(unittest.TestCase):

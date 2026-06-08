@@ -278,7 +278,7 @@ namespace luax::detail {
         if (tagInt <= 0) {
             luaL_error(L, "%s expected %s at arg %d", method, targetName, idx);
         }
-        if (tagInt == detail::opaqueHandleTag()) {
+        if (detail::isReservedUserdataTag(static_cast<std::uint32_t>(tagInt))) {
             luaL_error(L, "%s expected %s at arg %d", method, targetName, idx);
         }
         auto* info = UsertypeRegistry::get().findByTag(static_cast<std::uint32_t>(tagInt));

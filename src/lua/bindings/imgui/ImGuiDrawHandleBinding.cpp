@@ -5,6 +5,7 @@
 #include "lua/Config.hpp"
 #include "lua/bindings/framework/LuaRef.hpp"
 #include "lua/bindings/framework/TableUtil.hpp"
+#include "lua/bindings/framework/UserdataTags.hpp"
 
 #include <cstdint>
 #include <lua.h>
@@ -18,29 +19,35 @@ namespace luax {
             std::uint64_t id;
         };
 
+        void cancelHandle(ImGuiDrawHandle* handle) {
+            if (handle && handle->id != 0) {
+                ImGuiDrawScheduler::get().cancel(handle->id);
+                handle->id = 0;
+            }
+        }
+
+        void imguiHandleDtor(lua_State* L, void* ud) {
+            (void)L;
+            cancelHandle(static_cast<ImGuiDrawHandle*>(ud));
+        }
+
         void pushHandle(lua_State* L, std::uint64_t id) {
-            auto* handle = static_cast<ImGuiDrawHandle*>(lua_newuserdata(L, sizeof(ImGuiDrawHandle)));
+            auto* handle = static_cast<ImGuiDrawHandle*>(lua_newuserdatataggedwithmetatable(
+                L, sizeof(ImGuiDrawHandle), detail::imguiDrawHandleTag()
+            ));
             handle->id = id;
-            luaL_getmetatable(L, kHandleMeta);
-            lua_setmetatable(L, -2);
         }
 
         int imguiHandleGc(lua_State* L) {
             auto* handle = static_cast<ImGuiDrawHandle*>(luaL_checkudata(L, 1, kHandleMeta));
-            if (handle->id != 0) {
-                ImGuiDrawScheduler::get().cancel(handle->id);
-                handle->id = 0;
-            }
+            cancelHandle(handle);
             return 0;
         }
     } // namespace
 
     int imguiCancel(lua_State* L) {
         auto* handle = static_cast<ImGuiDrawHandle*>(luaL_checkudata(L, 1, kHandleMeta));
-        if (handle->id != 0) {
-            ImGuiDrawScheduler::get().cancel(handle->id);
-            handle->id = 0;
-        }
+        cancelHandle(handle);
         return 0;
     }
 
@@ -77,6 +84,17 @@ namespace luax {
             lua_setfield(L, -2, "__type");
         }
         lua_pop(L, 1);
+
+        lua_getuserdatametatable(L, detail::imguiDrawHandleTag());
+        if (!lua_isnil(L, -1)) {
+            lua_pop(L, 1);
+            return;
+        }
+        lua_pop(L, 1);
+
+        luaL_getmetatable(L, kHandleMeta);
+        lua_setuserdatametatable(L, detail::imguiDrawHandleTag());
+        lua_setuserdatadtor(L, detail::imguiDrawHandleTag(), &imguiHandleDtor);
     }
 
     geode::Result<void> registerImGuiDrawHandle(lua_State* L) {

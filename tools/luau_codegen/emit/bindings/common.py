@@ -10,7 +10,11 @@ from luau_codegen.emit.bindings.class_file import _gen_ns
 
 
 def _emit_common_file(emitted_classes: List[Class], plan: EmitPlan, target_platform: str) -> str:
-    out = [file_preamble(), '#include "bindings_internal.hpp"\n\n']
+    out = [
+        file_preamble(),
+        '#include "bindings_internal.hpp"\n',
+        '#include "lua/bindings/framework/UserdataTags.hpp"\n\n',
+    ]
     for cls in emitted_classes:
         gen_ns = _gen_ns(cls)
         out.append(f"namespace luauapi_gen::{gen_ns} {{\n")
@@ -19,7 +23,9 @@ def _emit_common_file(emitted_classes: List[Class], plan: EmitPlan, target_platf
         out.append("}\n\n")
     out.append("namespace luauapi_gen {\n\n")
     out.append(
-        f'static_assert({len(emitted_classes)} + 1 < LUA_UTAG_LIMIT, "LuauAPI generated userdata tags exceed LUA_UTAG_LIMIT");\n\n'
+        "static_assert("
+        f"luax::detail::kFirstDynamicUsertypeTag + {len(emitted_classes)} < LUA_UTAG_LIMIT, "
+        '"LuauAPI generated userdata tags exceed LUA_UTAG_LIMIT");\n\n'
     )
     out.append("LuaHookTarget const* findHookTarget(std::string_view id);\n\n")
     out.append(emit_hook_support())

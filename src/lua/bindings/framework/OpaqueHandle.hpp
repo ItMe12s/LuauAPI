@@ -1,5 +1,7 @@
 #pragma once
 
+#include "UserdataTags.hpp"
+
 #include <Geode/Result.hpp>
 #include <cstdint>
 #include <lua.h>
@@ -10,10 +12,6 @@ namespace luax {
     };
 
     namespace detail {
-        constexpr int opaqueHandleTag() noexcept {
-            return 1;
-        }
-
         bool isOpaqueHandle(lua_State* L, int idx);
         void ensureOpaqueHandleMetatable(lua_State* L);
     } // namespace detail

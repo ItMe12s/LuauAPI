@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Ref.hpp"
+#include "UserdataTags.hpp"
 
 #include <Geode/Result.hpp>
 #include <Geode/utils/cocos.hpp>
@@ -61,7 +62,7 @@ namespace luax {
         private:
             std::unordered_map<std::type_index, TypeInfo> m_byType;
             std::unordered_map<std::uint32_t, std::type_index> m_byTag;
-            std::uint32_t m_next = 2;
+            std::uint32_t m_next = kFirstDynamicUsertypeTag;
         };
 
         cocos2d::CCObject* liveObject(UserdataBlock* block);

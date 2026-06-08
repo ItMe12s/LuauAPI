@@ -18,6 +18,7 @@
 **Heads up: LuauAPI is still early, so expect things to change.**
 
 **You are assumed to have basic modding knowledge. [Learn Geode SDK here](https://docs.geode-sdk.org).**
+**And some knowledge on Lua/Luau scripting!!!**
 
 ## Getting started
 
