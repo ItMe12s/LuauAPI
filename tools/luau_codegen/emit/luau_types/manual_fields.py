@@ -17,9 +17,6 @@ MANUAL_FREE_FN_FIELDS: Dict[str, List[str]] = {
         "ccDrawColor4B: (arg1: RGBAColor) -> ()",
         "cc3bFromHexString: (arg1: string, arg2: boolean?) -> (RGBColor?, string?)",
         "cc4bFromHexString: (arg1: string, arg2: boolean?, arg3: boolean?) -> (RGBAColor?, string?)",
-        "getObjectName: (arg1: CCObject) -> string",
-        "handleTouchPriority: (arg1: CCNode, arg2: boolean?) -> ()",
-        "handleTouchPriorityWith: (arg1: CCNode, arg2: number, arg3: boolean?) -> ()",
     ],
     "geode.utils.base64": [
         "encode: (data: string, variant: number?) -> string",

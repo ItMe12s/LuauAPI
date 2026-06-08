@@ -7,6 +7,10 @@ This page lists `geode.cocos`. It holds helper functions for cocos2d nodes and c
 These are utility functions, not classes. The node classes themselves live on
 `geode.cocos2d`. See [Lua overview](../overview.md).
 
+`geode.cocos` is a hybrid namespace.
+Node helpers come from codegen over `Geode/utils/cocos.hpp`.
+Color helpers and hex parsers are handwritten in `GeodeCocosBinding.cpp`.
+
 Colors use plain tables:
 
 | Type | Shape | Notes |
@@ -87,5 +91,6 @@ end
 
 ## Source
 
+- `build/luauapi-gen/bindings_free_functions.cpp`
 - `src/lua/bindings/geode/GeodeCocosBinding.cpp`
 - `tools/luau_codegen/emit/luau_types/manual_fields.py`

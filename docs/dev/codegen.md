@@ -94,14 +94,19 @@ signatures still need to be in `types/geode.d.luau`. There are two ways to add t
 - `tools/luau_codegen/extra_bindings/*.dluau`: appended at the end of the stub. Use it for new globals like `task` or `imgui`, and for support types the `geode` namespace references, such as `WebNamespace`, `ModNamespace`, `JsonNamespace`, `FsNamespace`, `HookHandle`, and `HookCallbackTable`. Order does not matter for `export type` aliases, so they resolve even after `declare geode`.
 - `tools/luau_codegen/emit/luau_types/manual_fields.py`: injects fields into a namespace that codegen already emits, such as `geode.cocos`. A trailing `.dluau` cannot reopen that table, so fields that live under a generated namespace go here.
 
-Some namespaces have functions implemented by hand in C++ (`geode.cocos`,
-`geode.utils.base64`, `geode.utils.permission`, `geode.ColorProvider`,
-`geode.VersionInfo`, and `geode.Keybind`). For these, the runtime registration in
+Some namespaces have functions implemented by hand in C++ (`geode.utils.base64`,
+`geode.utils.permission`, `geode.ColorProvider`, `geode.VersionInfo`, and
+`geode.Keybind`). For these, the runtime registration in
 `src/lua/bindings/geode/*.cpp` and the `manual_fields.py` declarations are two
 copies of the same surface, so they must stay in sync. When you add, remove, or
 rename a registered function, update `manual_fields.py` to match.
 `tests/luau_codegen/test_manual_fields_sync.py` checks that the two match and fails
 CI on drift.
+
+`geode.cocos` is hybrid. Codegen scans `utils/cocos.hpp` and emits `geode::cocos` helpers into `bindings_free_functions.cpp`.
+`GeodeCocosBinding.cpp` registers only color helpers, `ccDrawColor4B`, and hex parsers that return `(value?, err?)`.
+Do not duplicate generated wrappers like `getObjectName` in the handwritten binding or `manual_fields.py`.
+`tests/luau_codegen/test_binding_guards.py` enforces that split.
 
 Namespaces declared in `extra_bindings/*.dluau` and registered by hand in C++
 (`ModNamespace`, `FsNamespace`, `JsonNamespace`, `WebNamespace`, and similar) are another two-copy surface.

@@ -2,8 +2,6 @@
 #include "lua/bindings/framework/Stack.hpp"
 #include "lua/bindings/framework/TableUtil.hpp"
 #include "lua/bindings/framework/Types.hpp"
-#include "lua/bindings/framework/Usertype.hpp"
-
 #include <Geode/utils/cocos.hpp>
 #include <cocos2d.h>
 #include <lua.h>
@@ -98,27 +96,6 @@ namespace {
         push(L, result.unwrap());
         return 1;
     }
-
-    int cocosGetObjectName(lua_State* L) {
-        auto* obj = Usertype<cocos2d::CCObject>::check(L, 1, "geode.cocos.getObjectName");
-        push(L, std::string(geode::cocos::getObjectName(obj)));
-        return 1;
-    }
-
-    int cocosHandleTouchPriority(lua_State* L) {
-        auto* node = Usertype<cocos2d::CCNode>::check(L, 1, "geode.cocos.handleTouchPriority");
-        bool force = optBool(L, 2, false);
-        geode::cocos::handleTouchPriority(node, force);
-        return 0;
-    }
-
-    int cocosHandleTouchPriorityWith(lua_State* L) {
-        auto* node = Usertype<cocos2d::CCNode>::check(L, 1, "geode.cocos.handleTouchPriorityWith");
-        auto priority = check<int>(L, 2, "geode.cocos.handleTouchPriorityWith");
-        bool force = optBool(L, 3, false);
-        geode::cocos::handleTouchPriorityWith(node, priority, force);
-        return 0;
-    }
 } // namespace
 
 namespace luax {
@@ -134,9 +111,6 @@ namespace luax {
         setTableCFunction(L, -1, "ccDrawColor4B", &cocosDrawColor4B);
         setTableCFunction(L, -1, "cc3bFromHexString", &cocosCc3bFromHexString);
         setTableCFunction(L, -1, "cc4bFromHexString", &cocosCc4bFromHexString);
-        setTableCFunction(L, -1, "getObjectName", &cocosGetObjectName);
-        setTableCFunction(L, -1, "handleTouchPriority", &cocosHandleTouchPriority);
-        setTableCFunction(L, -1, "handleTouchPriorityWith", &cocosHandleTouchPriorityWith);
         lua_pop(L, 1);
         return geode::Ok();
     }

@@ -35,14 +35,15 @@ Most game types come from codegen. A few libraries are handwritten in C++:
 - `src/lua/bindings/geode/GeodeWebBinding.cpp` exposes `geode.utils.web`.
 - `src/lua/bindings/geode/GeodeBase64Binding.cpp` exposes `geode.utils.base64`.
 - `src/lua/bindings/geode/GeodePermissionBinding.cpp` exposes `geode.utils.permission`.
-- `src/lua/bindings/geode/GeodeCocosBinding.cpp` exposes `geode.cocos`.
+- `src/lua/bindings/geode/GeodeCocosBinding.cpp` exposes the handwritten `geode.cocos` helpers.
 - `src/lua/bindings/geode/GeodeColorProviderBinding.cpp` exposes `geode.ColorProvider`.
 - `src/lua/bindings/geode/GeodeKeybindBinding.cpp` exposes `geode.Keybind`.
 - `src/lua/bindings/geode/GeodeVersionBinding.cpp` exposes `geode.VersionInfo`.
 - `src/lua/bindings/task/TaskBinding.cpp` exposes `task` and `time`.
 - `src/lua/bindings/imgui/ImGuiBinding.cpp` exposes `imgui`.
 
-Their Luau types come from `tools/luau_codegen/emit/luau_types/` or `tools/luau_codegen/extra_bindings/`.
+Generated free functions in `bindings_free_functions.cpp` cover the rest of `geode.cocos`.
+Luau types for these bindings come from `tools/luau_codegen/emit/luau_types/` or `tools/luau_codegen/extra_bindings/`.
 
 ## Usertypes
 
