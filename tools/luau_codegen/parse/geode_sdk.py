@@ -31,6 +31,12 @@ from luau_codegen.parse.broma import (
     split_arg,
     split_top_level,
 )
+from luau_codegen.parse.cpp_scan import (
+    balanced_delimiter_end,
+    find_unbalanced,
+    scan_angle_block,
+    template_preceded,
+)
 from luau_codegen.parse.text import strip_comments
 
 _PREPROCESSOR = re.compile(r"^\s*#[^\n]*$", re.MULTILINE)
@@ -172,7 +178,7 @@ def scan_geode_ccnode_additions(sdk_path: str) -> Class | None:
         return None
 
     brace_start = match.end() - 1
-    brace_end = _balanced_end(text, brace_start)
+    brace_end = balanced_delimiter_end(text, brace_start)
     body = text[brace_start + 1 : brace_end]
     line = text[: match.start()].count("\n") + 1
     methods = _extract_public_methods(
@@ -270,7 +276,7 @@ def _scan_header_enums(path: str) -> dict[str, str]:
     class_ranges: list[tuple[int, int]] = []
     for match in _CLASS_DECL.finditer(text):
         brace_start = match.end() - 1
-        brace_end = _balanced_end(text, brace_start)
+        brace_end = balanced_delimiter_end(text, brace_start)
         class_ranges.append((brace_start, brace_end))
 
     out: dict[str, str] = {}
@@ -287,23 +293,8 @@ def _strip_preproc(text: str) -> str:
     return _PREPROCESSOR.sub("", text)
 
 
-def _balanced_end(text: str, start: int) -> int:
-    depth = 0
-    i = start
-    while i < len(text):
-        ch = text[i]
-        if ch == "{":
-            depth += 1
-        elif ch == "}":
-            depth -= 1
-            if depth == 0:
-                return i
-        i += 1
-    return len(text)
-
-
 def _find_namespace(text: str) -> str:
-    m = re.search(r"\bnamespace\s+(\w+)\s*\{", text)
+    m = re.search(r"\bnamespace\s+([\w:]+)\s*\{", text)
     return m.group(1) if m else ""
 
 
@@ -315,11 +306,6 @@ def _parse_bases(raw: str) -> List[str]:
         if clean:
             bases.append(clean)
     return bases
-
-
-def _is_template_preceded(text: str, pos: int) -> bool:
-    before = text[:pos].rstrip()
-    return bool(re.search(r"template\s*<[^>]*>\s*$", before, re.DOTALL))
 
 
 def _normalize_types(text: str) -> str:
@@ -369,10 +355,10 @@ def _extract_public_methods(
             continue
 
         if _NESTED_DECL.match(body, i):
-            brace = body.find("{", i)
-            semi = body.find(";", i)
+            brace = find_unbalanced(body, i, "{")
+            semi = find_unbalanced(body, i, ";")
             if brace != -1 and (semi == -1 or brace < semi):
-                i = _balanced_end(body, brace) + 1
+                i = balanced_delimiter_end(body, brace) + 1
             else:
                 i = semi + 1 if semi != -1 else length
             continue
@@ -380,24 +366,17 @@ def _extract_public_methods(
         if body.startswith("template", i):
             tm = _TEMPLATE_DECL.match(body, i)
             if tm:
-                depth = 1
-                j = tm.end()
-                while j < length and depth > 0:
-                    if body[j] == "<":
-                        depth += 1
-                    elif body[j] == ">":
-                        depth -= 1
-                    j += 1
-                brace = body.find("{", j)
-                semi = body.find(";", j)
+                j = scan_angle_block(body, tm.end() - 1)
+                brace = find_unbalanced(body, j, "{")
+                semi = find_unbalanced(body, j, ";")
                 if brace != -1 and (semi == -1 or brace < semi):
-                    i = _balanced_end(body, brace) + 1
+                    i = balanced_delimiter_end(body, brace) + 1
                 else:
                     i = semi + 1 if semi != -1 else length
                 continue
 
-        brace = _find_unbalanced(body, i, "{")
-        semi = _find_unbalanced(body, i, ";")
+        brace = find_unbalanced(body, i, "{")
+        semi = find_unbalanced(body, i, ";")
 
         if brace != -1 and (semi == -1 or brace < semi):
             stmt = body[i:brace].strip()
@@ -411,7 +390,7 @@ def _extract_public_methods(
                 m = parse_method(class_name, cleaned, base_line, access)
                 if m:
                     methods.append(m)
-            i = _balanced_end(body, brace) + 1
+            i = balanced_delimiter_end(body, brace) + 1
             if i < length and body[i] == ";":
                 i += 1
             continue
@@ -440,26 +419,6 @@ def _method_stmt_allowed(stmt: str, geode_only: bool) -> bool:
     return not geode_only or "GEODE_DLL" in stmt
 
 
-def _find_unbalanced(text: str, start: int, target: str) -> int:
-    depth_paren = 0
-    depth_angle = 0
-    i = start
-    while i < len(text):
-        ch = text[i]
-        if ch == "(":
-            depth_paren += 1
-        elif ch == ")":
-            depth_paren -= 1
-        elif ch == "<":
-            depth_angle += 1
-        elif ch == ">":
-            depth_angle -= 1
-        if ch == target and depth_paren == 0 and depth_angle <= 0:
-            return i
-        i += 1
-    return -1
-
-
 def _scan_header(path: str) -> List[Class]:
     with open(path, "r", encoding="utf-8") as f:
         text = f.read()
@@ -471,7 +430,7 @@ def _scan_header(path: str) -> List[Class]:
     classes: List[Class] = []
 
     for match in _CLASS_DECL.finditer(text):
-        if _is_template_preceded(text, match.start()):
+        if template_preceded(text, match.start()):
             continue
 
         name = match.group(1)
@@ -479,7 +438,7 @@ def _scan_header(path: str) -> List[Class]:
         bases = _parse_bases(bases_raw)
 
         brace_start = match.end() - 1
-        brace_end = _balanced_end(text, brace_start)
+        brace_end = balanced_delimiter_end(text, brace_start)
         body = text[brace_start + 1 : brace_end]
 
         line = text[: match.start()].count("\n") + 1

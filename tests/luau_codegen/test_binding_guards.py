@@ -81,9 +81,14 @@ def _read_repo_file(rel_path: str) -> str:
 
 
 def _function_body(source: str, name: str, *, ret: str = "int") -> str:
-    marker = f"{ret} {name}("
-    start = source.find(marker)
-    assert start != -1, f"missing {ret} {name} implementation"
+    if "::" in name:
+        pattern = rf"{re.escape(ret)}\s+{re.escape(name)}\s*\("
+    else:
+        pattern = rf"{re.escape(ret)}\s+(?:[\w:]+::)?{re.escape(name)}\s*\("
+    match = re.search(pattern, source)
+    assert match is not None, f"missing {ret} {name} implementation"
+    start = match.start()
+    marker = match.group(0)
     rest = source[start + len(marker) :]
     next_fn = re.search(r"\n    (?:int|void|bool|std::|geode::)", rest)
     end = start + len(marker) + next_fn.start() if next_fn else len(source)

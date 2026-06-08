@@ -77,6 +77,91 @@ class M1ScannerWarningTests(unittest.TestCase):
             shutil.rmtree(tmpdir)
 
 
+class GeodeScannerFixtureTests(unittest.TestCase):
+    def test_nested_namespace_class_scanned(self) -> None:
+        from luau_codegen.parse.geode_sdk import scan_geode_sdk  # type: ignore[import-unresolved]
+
+        tmpdir = tempfile.mkdtemp()
+        try:
+            ui_dir = os.path.join(tmpdir, "loader", "include", "Geode", "ui")
+            os.makedirs(ui_dir)
+            include_dir = os.path.dirname(ui_dir)
+            with open(os.path.join(include_dir, "UI.hpp"), "w", encoding="utf-8") as f:
+                f.write('#include "ui/Nested.hpp"\n')
+            with open(os.path.join(ui_dir, "Nested.hpp"), "w", encoding="utf-8") as f:
+                f.write(
+                    "namespace geode::ui { "
+                    "class GEODE_DLL NestedUI : public cocos2d::CCObject { "
+                    "public: void open(); "
+                    "}; "
+                    "}"
+                )
+            classes = scan_geode_sdk(tmpdir)
+            self.assertEqual(len(classes), 1)
+            self.assertEqual(classes[0].namespace, "geode::ui")
+            self.assertEqual(classes[0].name, "NestedUI")
+        finally:
+            shutil.rmtree(tmpdir)
+
+    def test_template_specialization_class_skipped(self) -> None:
+        from luau_codegen.parse.geode_sdk import scan_geode_sdk  # type: ignore[import-unresolved]
+
+        tmpdir = tempfile.mkdtemp()
+        try:
+            ui_dir = os.path.join(tmpdir, "loader", "include", "Geode", "ui")
+            os.makedirs(ui_dir)
+            include_dir = os.path.dirname(ui_dir)
+            with open(os.path.join(include_dir, "UI.hpp"), "w", encoding="utf-8") as f:
+                f.write('#include "ui/Template.hpp"\n')
+            with open(os.path.join(ui_dir, "Template.hpp"), "w", encoding="utf-8") as f:
+                f.write(
+                    "namespace geode { "
+                    "template<typename T> "
+                    "class GEODE_DLL Box { public: void reset(); }; "
+                    "template<> "
+                    "class GEODE_DLL Box<int> : public cocos2d::CCObject { "
+                    "public: void reset(); "
+                    "}; "
+                    "class GEODE_DLL PlainUI : public cocos2d::CCObject { "
+                    "public: void open(); "
+                    "}; "
+                    "}"
+                )
+            classes = scan_geode_sdk(tmpdir)
+            names = [c.name for c in classes]
+            self.assertEqual(names, ["PlainUI"])
+        finally:
+            shutil.rmtree(tmpdir)
+
+    def test_method_with_attribute_and_brace_in_string_literal(self) -> None:
+        from luau_codegen.parse.geode_sdk import scan_geode_sdk  # type: ignore[import-unresolved]
+
+        tmpdir = tempfile.mkdtemp()
+        try:
+            ui_dir = os.path.join(tmpdir, "loader", "include", "Geode", "ui")
+            os.makedirs(ui_dir)
+            include_dir = os.path.dirname(ui_dir)
+            with open(os.path.join(include_dir, "UI.hpp"), "w", encoding="utf-8") as f:
+                f.write('#include "ui/Attr.hpp"\n')
+            with open(os.path.join(ui_dir, "Attr.hpp"), "w", encoding="utf-8") as f:
+                f.write(
+                    "namespace geode { "
+                    "class GEODE_DLL AttrUI : public cocos2d::CCObject { "
+                    "public: "
+                    "[[nodiscard]] void show(char const* label); "
+                    'void hide() { log("}"); } '
+                    "}; "
+                    "}"
+                )
+            classes = scan_geode_sdk(tmpdir)
+            self.assertEqual(len(classes), 1)
+            names = [m.name for m in classes[0].methods]
+            self.assertIn("show", names)
+            self.assertIn("hide", names)
+        finally:
+            shutil.rmtree(tmpdir)
+
+
 class ExtraScanScopeTests(unittest.TestCase):
     def test_function_source_manifest_keeps_expected_headers(self) -> None:
         from luau_codegen.parse import geode_sdk  # type: ignore[import-unresolved]

@@ -6,8 +6,12 @@ import textwrap
 import importlib
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from luau_codegen.cli.io import _write_if_changed
+
+if TYPE_CHECKING:
+    from luau_codegen.model import delegate_specs as delegate_specs_module
 
 DELEGATE_GEN_REL_PATHS: tuple[str, ...] = (
     "src/lua/bindings/framework/LuaDelegates.gen.hpp",
@@ -30,6 +34,43 @@ def delegate_gen_rel_paths() -> tuple[str, ...]:
 DELEGATE_SPECS_MODULE = "luau_codegen.model.delegate_specs"
 
 
+def _lua_arg_tuple(values: list[str | None]) -> tuple[str, ...] | None:
+    out: list[str] = []
+    for value in values:
+        if value is None:
+            return None
+        out.append(value)
+    return tuple(out)
+
+
+def _to_module_specs(
+    specs: dict[str, DelegateSpec],
+) -> dict[str, delegate_specs_module.DelegateSpec]:
+    from luau_codegen.model import delegate_specs as mod_specs
+
+    out: dict[str, mod_specs.DelegateSpec] = {}
+    for cxx, spec in sorted(specs.items()):
+        methods = []
+        for m in spec.methods:
+            if not cpp_emit_supported(spec, m):
+                continue
+            rl = lua_for(m.ret)
+            args_lua = _lua_arg_tuple([lua_for(a[0]) for a in method_args(spec, m)])
+            if rl is None or args_lua is None:
+                continue
+            methods.append(mod_specs.DelegateMethodSpec(m.name, rl, args_lua))
+        if not methods:
+            continue
+        out[cxx] = mod_specs.DelegateSpec(
+            cxx_type=cxx,
+            lua_name=spec.lua_name,
+            cpp_class=spec.cpp_class,
+            create_fn=f"{spec.cpp_class}::create",
+            methods=tuple(methods),
+        )
+    return out
+
+
 def install_delegate_specs_module(
     specs: dict[str, DelegateSpec],
     *,
@@ -44,7 +85,9 @@ def install_delegate_specs_module(
         mod.__file__ = str(specs_path)
     if preserve_existing_on_empty and not specs and getattr(mod, "DELEGATE_SPECS", None):
         return
-    exec(emit_specs_py(specs), mod.__dict__)
+    module_specs = _to_module_specs(specs)
+    setattr(mod, "DELEGATE_SPECS", module_specs)
+    setattr(mod, "DELEGATE_CXX_TYPES", frozenset(module_specs.keys()))
 
 
 COCOS_DELEGATES: dict[str, list[tuple[str, str, list[tuple[str, str]]]]] = {
@@ -294,44 +337,21 @@ def resolve_bindings_dir(bindings_dir: Path | str | None = None) -> Path:
 def parse_broma(
     bindings_dir: Path | str | None = None,
 ) -> dict[str, list[DelegateMethod]]:
-    out: dict[str, list[DelegateMethod]] = {}
-    for bro in resolve_bindings_dir(bindings_dir).glob("*.bro"):
-        text = bro.read_text(encoding="utf-8", errors="replace")
-        for m in re.finditer(r"class\s+([\w:]+)\s*\{([^}]*)\}", text, re.DOTALL):
-            name = m.group(1)
-            if not (name.endswith("Delegate") or name.endswith("Protocol")):
-                continue
-            methods = []
-            for vm in re.finditer(r"virtual\s+([\w:<>,\s*&]+?)\s+(\w+)\s*\(([^)]*)\)", m.group(2)):
-                ret, mn, raw = norm(vm.group(1)), vm.group(2), vm.group(3).strip()
-                args = []
-                if raw:
-                    for part in raw.split(","):
-                        part = part.strip()
-                        if not part:
-                            continue
-                        if " " in part:
-                            t, a = part.rsplit(" ", 1)
-                            args.append((norm(t), a))
-                        else:
-                            args.append((norm(part), "arg"))
-                if lua_for(ret) and all(lua_for(a[0]) for a in args):
-                    methods.append(DelegateMethod(mn, ret, args))
-            if methods:
-                out[name] = methods
-    return out
+    from luau_codegen.parse.broma_delegates import parse_delegate_classes
+
+    return parse_delegate_classes(
+        resolve_bindings_dir(bindings_dir),
+        norm=norm,
+        delegate_method_cls=DelegateMethod,
+    )
 
 
 def collect(bindings_dir: Path | str | None = None) -> dict[str, DelegateSpec]:
+    from luau_codegen.parse.broma_delegates import collect_delegate_ptrs
+
     bro_dir = resolve_bindings_dir(bindings_dir)
     broma = parse_broma(bro_dir)
-    ptrs: set[str] = set()
-    for bro in bro_dir.glob("*.bro"):
-        for m in re.finditer(
-            r"([\w:]+(?:Delegate|Protocol))\*",
-            bro.read_text(encoding="utf-8", errors="replace"),
-        ):
-            ptrs.add(m.group(1))
+    ptrs = collect_delegate_ptrs(bro_dir, norm=norm)
     specs: dict[str, DelegateSpec] = {}
     for ptr in sorted(ptrs):
         if ptr in SKIP or ptr.split("::")[-1] in SKIP:
