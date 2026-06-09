@@ -548,6 +548,48 @@ namespace luax {
                 lua_rawseti(L, tableIndex, i++);
             }
         }
+
+        template <class Map>
+        void pushAssociativeMapPointer(lua_State* L, Map* map) {
+            pushViaPointer(L, map, [](lua_State* state, Map const& value) {
+                pushAssociativeMap<typename Map::key_type, typename Map::mapped_type, Map>(
+                    state, value
+                );
+            });
+        }
+
+        template <class Map>
+        void pushAssociativeMapPointer(lua_State* L, Map const* map) {
+            pushAssociativeMapPointer(L, const_cast<Map*>(map));
+        }
+
+        template <class Set>
+        void pushSetContainerPointer(lua_State* L, Set* set) {
+            pushViaPointer(L, set, [](lua_State* state, Set const& value) {
+                pushSetAsTable<typename Set::value_type, Set>(state, value);
+            });
+        }
+
+        template <class Set>
+        void pushSetContainerPointer(lua_State* L, Set const* set) {
+            pushSetContainerPointer(L, const_cast<Set*>(set));
+        }
+
+        template <class Map>
+        void assignAssociativeMap(Map& dest, Map src) {
+            dest.clear();
+            for (auto& entry : src) {
+                dest[std::move(entry.first)] = std::move(entry.second);
+            }
+        }
+
+        template <class Set>
+        void assignSetContainer(Set& dest, Set src) {
+            dest.clear();
+            for (auto& elem : src) {
+                dest.insert(std::move(elem));
+            }
+        }
     } // namespace detail
 
     template <class K1, class K2, class V>
@@ -598,30 +640,22 @@ namespace luax {
 
     template <class K, class V>
     void pushMap(lua_State* L, gd::map<K, V>* map) {
-        detail::pushViaPointer(L, map, [](lua_State* state, gd::map<K, V> const& value) {
-            pushMap(state, value);
-        });
+        detail::pushAssociativeMapPointer(L, map);
     }
 
     template <class K, class V>
     void pushMap(lua_State* L, gd::map<K, V> const* map) {
-        detail::pushViaPointer(L, map, [](lua_State* state, gd::map<K, V> const& value) {
-            pushMap(state, value);
-        });
+        detail::pushAssociativeMapPointer(L, map);
     }
 
     template <class K, class V>
     void pushUnorderedMap(lua_State* L, gd::unordered_map<K, V>* map) {
-        detail::pushViaPointer(L, map, [](lua_State* state, gd::unordered_map<K, V> const& value) {
-            pushUnorderedMap(state, value);
-        });
+        detail::pushAssociativeMapPointer(L, map);
     }
 
     template <class K, class V>
     void pushUnorderedMap(lua_State* L, gd::unordered_map<K, V> const* map) {
-        detail::pushViaPointer(L, map, [](lua_State* state, gd::unordered_map<K, V> const& value) {
-            pushUnorderedMap(state, value);
-        });
+        detail::pushAssociativeMapPointer(L, map);
     }
 
     template <class T>
@@ -646,49 +680,23 @@ namespace luax {
 
     template <class T>
     void pushSet(lua_State* L, gd::set<T>* set) {
-        detail::pushViaPointer(L, set, [](lua_State* state, gd::set<T> const& value) {
-            pushSet(state, value);
-        });
+        detail::pushSetContainerPointer(L, set);
     }
 
     template <class T>
     void pushSet(lua_State* L, gd::set<T> const* set) {
-        detail::pushViaPointer(L, set, [](lua_State* state, gd::set<T> const& value) {
-            pushSet(state, value);
-        });
+        detail::pushSetContainerPointer(L, set);
     }
 
     template <class T>
     void pushUnorderedSet(lua_State* L, gd::unordered_set<T>* set) {
-        detail::pushViaPointer(L, set, [](lua_State* state, gd::unordered_set<T> const& value) {
-            pushUnorderedSet(state, value);
-        });
+        detail::pushSetContainerPointer(L, set);
     }
 
     template <class T>
     void pushUnorderedSet(lua_State* L, gd::unordered_set<T> const* set) {
-        detail::pushViaPointer(L, set, [](lua_State* state, gd::unordered_set<T> const& value) {
-            pushUnorderedSet(state, value);
-        });
+        detail::pushSetContainerPointer(L, set);
     }
-
-    namespace detail {
-        template <class Map>
-        void assignAssociativeMap(Map& dest, Map src) {
-            dest.clear();
-            for (auto& entry : src) {
-                dest[std::move(entry.first)] = std::move(entry.second);
-            }
-        }
-
-        template <class Set>
-        void assignSetContainer(Set& dest, Set src) {
-            dest.clear();
-            for (auto& elem : src) {
-                dest.insert(std::move(elem));
-            }
-        }
-    } // namespace detail
 
     template <class K1, class K2, class V>
     void assignPairKeyMap(gd::map<std::pair<K1, K2>, V>& dest, gd::map<std::pair<K1, K2>, V> src) {
