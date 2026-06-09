@@ -1,6 +1,7 @@
 #include "lua/bindings/framework/LuaCallback.hpp"
 #include "lua/bindings/framework/Stack.hpp"
 #include "lua/bindings/framework/TableUtil.hpp"
+#include "lua/bindings/geode/GeodeWebConstants.manifest.hpp"
 #include "lua/bindings/geode/GeodeWebInternal.hpp"
 #include "lua/bindings/geode/WebCaps.hpp"
 #include "lua/runtime/Runtime.hpp"
@@ -292,6 +293,44 @@ namespace luax::webdetail {
                 L, kListenerDescriptors[static_cast<std::size_t>(id)]
             );
         }
+
+        struct IntEnumEntry {
+            char const* name;
+            int value;
+        };
+
+        struct LongEnumEntry {
+            char const* name;
+            long value;
+        };
+
+        constexpr IntEnumEntry kHttpVersionEntries[] = {LUAX_WEB_HTTP_VERSION(LUAX_WEB_INT_ENUM_ENTRY)};
+
+        constexpr IntEnumEntry kProxyTypeEntries[] = {LUAX_WEB_PROXY_TYPE(LUAX_WEB_INT_ENUM_ENTRY)};
+
+        constexpr IntEnumEntry kGeodeWebErrorEntries[] = {
+            LUAX_WEB_GEODE_WEB_ERROR(LUAX_WEB_INT_ENUM_ENTRY)
+        };
+
+        constexpr LongEnumEntry kHttpAuthEntries[] = {LUAX_WEB_HTTP_AUTH(LUAX_WEB_LONG_ENUM_ENTRY)};
+
+        template <typename T, std::size_t N>
+        void registerIntEnumTable(lua_State* L, T const (&entries)[N], char const* tableName) {
+            lua_createtable(L, 0, static_cast<int>(N));
+            for (auto const& entry : entries) {
+                setIntField(L, entry.name, entry.value);
+            }
+            lua_setfield(L, -2, tableName);
+        }
+
+        template <typename T, std::size_t N>
+        void registerLongEnumTable(lua_State* L, T const (&entries)[N], char const* tableName) {
+            lua_createtable(L, 0, static_cast<int>(N));
+            for (auto const& entry : entries) {
+                setLongField(L, entry.name, entry.value);
+            }
+            lua_setfield(L, -2, tableName);
+        }
     } // namespace
 
     int handleCancel(lua_State* L) {
@@ -343,52 +382,9 @@ namespace luax::webdetail {
     }
 
     void registerConstants(lua_State* L) {
-        lua_createtable(L, 0, 8);
-        setIntField(L, "DEFAULT", static_cast<int>(web::HttpVersion::DEFAULT));
-        setIntField(L, "VERSION_1_0", static_cast<int>(web::HttpVersion::VERSION_1_0));
-        setIntField(L, "VERSION_1_1", static_cast<int>(web::HttpVersion::VERSION_1_1));
-        setIntField(L, "VERSION_2_0", static_cast<int>(web::HttpVersion::VERSION_2_0));
-        setIntField(L, "VERSION_2TLS", static_cast<int>(web::HttpVersion::VERSION_2TLS));
-        setIntField(
-            L, "VERSION_2_PRIOR_KNOWLEDGE", static_cast<int>(web::HttpVersion::VERSION_2_PRIOR_KNOWLEDGE)
-        );
-        setIntField(L, "VERSION_3", static_cast<int>(web::HttpVersion::VERSION_3));
-        setIntField(L, "VERSION_3ONLY", static_cast<int>(web::HttpVersion::VERSION_3ONLY));
-        lua_setfield(L, -2, "HttpVersion");
-
-        lua_createtable(L, 0, 7);
-        setIntField(L, "HTTP", static_cast<int>(web::ProxyType::HTTP));
-        setIntField(L, "HTTPS", static_cast<int>(web::ProxyType::HTTPS));
-        setIntField(L, "HTTPS2", static_cast<int>(web::ProxyType::HTTPS2));
-        setIntField(L, "SOCKS4", static_cast<int>(web::ProxyType::SOCKS4));
-        setIntField(L, "SOCKS4A", static_cast<int>(web::ProxyType::SOCKS4A));
-        setIntField(L, "SOCKS5", static_cast<int>(web::ProxyType::SOCKS5));
-        setIntField(L, "SOCKS5H", static_cast<int>(web::ProxyType::SOCKS5H));
-        lua_setfield(L, -2, "ProxyType");
-
-        lua_createtable(L, 0, 4);
-        setIntField(
-            L,
-            "CURL_INITIALIZATION_ERROR",
-            static_cast<int>(web::GeodeWebError::CURL_INITIALIZATION_ERROR)
-        );
-        setIntField(L, "REQUEST_CANCELLED", static_cast<int>(web::GeodeWebError::REQUEST_CANCELLED));
-        setIntField(L, "QUEUE_FULL", static_cast<int>(web::GeodeWebError::QUEUE_FULL));
-        setIntField(L, "CHANNEL_CLOSED", static_cast<int>(web::GeodeWebError::CHANNEL_CLOSED));
-        lua_setfield(L, -2, "Error");
-
-        lua_createtable(L, 0, 11);
-        setLongField(L, "BASIC", web::http_auth::BASIC);
-        setLongField(L, "DIGEST", web::http_auth::DIGEST);
-        setLongField(L, "DIGEST_IE", web::http_auth::DIGEST_IE);
-        setLongField(L, "BEARER", web::http_auth::BEARER);
-        setLongField(L, "NEGOTIATE", web::http_auth::NEGOTIATE);
-        setLongField(L, "NTLM", web::http_auth::NTLM);
-        setLongField(L, "NTLM_WB", web::http_auth::NTLM_WB);
-        setLongField(L, "ANY", web::http_auth::ANY);
-        setLongField(L, "ANYSAFE", web::http_auth::ANYSAFE);
-        setLongField(L, "ONLY", web::http_auth::ONLY);
-        setLongField(L, "AWS_SIGV4", web::http_auth::AWS_SIGV4);
-        lua_setfield(L, -2, "HttpAuth");
+        registerIntEnumTable(L, kHttpVersionEntries, "HttpVersion");
+        registerIntEnumTable(L, kProxyTypeEntries, "ProxyType");
+        registerIntEnumTable(L, kGeodeWebErrorEntries, "Error");
+        registerLongEnumTable(L, kHttpAuthEntries, "HttpAuth");
     }
 } // namespace luax::webdetail
