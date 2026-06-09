@@ -159,6 +159,68 @@ namespace luax::detail {
     inline void pushViaPointer(lua_State* L, T const* ptr, PushFn&& pushValue) {
         pushViaPointer(L, const_cast<T*>(ptr), std::forward<PushFn>(pushValue));
     }
+
+    template <class PushElemFn>
+    inline void pushIndexedTable(lua_State* L, std::size_t size, PushElemFn&& pushElem) {
+        lua_createtable(L, static_cast<int>(size), 0);
+        int tableIndex = lua_gettop(L);
+        for (std::size_t i = 0; i < size; ++i) {
+            pushElem(L, i);
+            lua_rawseti(L, tableIndex, static_cast<int>(i + 1));
+        }
+    }
+
+    template <class T, class Dest, class Src>
+    inline void assignContainer(Dest& dest, Src& src, std::size_t count) {
+        using DestElem = std::decay_t<decltype(dest[0])>;
+        for (std::size_t i = 0; i < count; ++i) {
+            if constexpr (std::is_same_v<T, bool>) {
+                dest[i] = static_cast<DestElem>(src[i]);
+            }
+            else {
+                dest[i] = static_cast<DestElem>(std::move(src[i]));
+            }
+        }
+    }
+
+    inline int absCheckIndexedTable(lua_State* L, int idx) {
+        idx = lua_absindex(L, idx);
+        luaL_checktype(L, idx, LUA_TTABLE);
+        return idx;
+    }
+
+    inline lua_Integer indexedTableLength(lua_State* L, int absIdx) {
+        return static_cast<lua_Integer>(lua_objlen(L, absIdx));
+    }
+
+    inline void requireNonNegativeIndexedLength(
+        lua_State* L, lua_Integer len, char const* label, char const* kind
+    ) {
+        if (len < 0) {
+            luaL_error(L, "%s: invalid %s length", label, kind);
+        }
+    }
+
+    inline void requireExactIndexedLength(
+        lua_State* L, lua_Integer len, std::size_t expected, char const* label
+    ) {
+        if (len != static_cast<lua_Integer>(expected)) {
+            luaL_error(
+                L, "%s: expected array length %zu, got %lld", label, expected, static_cast<long long>(len)
+            );
+        }
+    }
+
+    template <class CheckElemFn>
+    inline void checkIndexedTableElements(
+        lua_State* L, int absIdx, lua_Integer len, CheckElemFn&& checkElem
+    ) {
+        for (lua_Integer i = 1; i <= len; ++i) {
+            lua_rawgeti(L, absIdx, i);
+            checkElem(L, i);
+            lua_pop(L, 1);
+        }
+    }
 } // namespace luax::detail
 
 namespace luax {
@@ -201,31 +263,22 @@ namespace luax {
 
     template <class T>
     gd::vector<T> checkPrimitiveVector(lua_State* L, int idx, char const* label) {
-        idx = lua_absindex(L, idx);
-        luaL_checktype(L, idx, LUA_TTABLE);
-        auto len = static_cast<lua_Integer>(lua_objlen(L, idx));
-        if (len < 0) {
-            luaL_error(L, "%s: invalid vector length", label);
-        }
+        idx = detail::absCheckIndexedTable(L, idx);
+        auto len = detail::indexedTableLength(L, idx);
+        detail::requireNonNegativeIndexedLength(L, len, label, "vector");
         gd::vector<T> out;
         out.reserve(static_cast<std::size_t>(len));
-        for (lua_Integer i = 1; i <= len; ++i) {
-            lua_rawgeti(L, idx, i);
-            out.push_back(detail::checkPrimitiveVectorElement<T>(L, -1, label));
-            lua_pop(L, 1);
-        }
+        detail::checkIndexedTableElements(L, idx, len, [&](lua_State* state, lua_Integer) {
+            out.push_back(detail::checkPrimitiveVectorElement<T>(state, -1, label));
+        });
         return out;
     }
 
     template <class T>
     void pushPrimitiveVector(lua_State* L, gd::vector<T> const& vector) {
-        lua_createtable(L, static_cast<int>(vector.size()), 0);
-        int tableIndex = lua_gettop(L);
-        int i = 1;
-        for (auto const& elem : vector) {
-            detail::pushPrimitiveVectorElement(L, elem);
-            lua_rawseti(L, tableIndex, i++);
-        }
+        detail::pushIndexedTable(L, vector.size(), [&](lua_State* state, std::size_t i) {
+            detail::pushPrimitiveVectorElement(state, vector[i]);
+        });
     }
 
     template <class T>
@@ -244,32 +297,22 @@ namespace luax {
 
     template <class T, std::size_t N>
     std::array<T, N> checkStdArray(lua_State* L, int idx, char const* label) {
-        idx = lua_absindex(L, idx);
-        luaL_checktype(L, idx, LUA_TTABLE);
-        auto len = static_cast<lua_Integer>(lua_objlen(L, idx));
-        if (len != static_cast<lua_Integer>(N)) {
-            luaL_error(
-                L, "%s: expected array length %zu, got %lld", label, N, static_cast<long long>(len)
-            );
-        }
+        idx = detail::absCheckIndexedTable(L, idx);
+        auto len = detail::indexedTableLength(L, idx);
+        detail::requireExactIndexedLength(L, len, N, label);
         std::array<T, N> out{};
-        for (std::size_t i = 0; i < N; ++i) {
-            lua_rawgeti(L, idx, static_cast<int>(i + 1));
-            out[i] = detail::checkPrimitiveVectorElement<T>(L, -1, label);
-            lua_pop(L, 1);
-        }
+        detail::checkIndexedTableElements(L, idx, len, [&](lua_State* state, lua_Integer i) {
+            out[static_cast<std::size_t>(i - 1)] =
+                detail::checkPrimitiveVectorElement<T>(state, -1, label);
+        });
         return out;
     }
 
     template <class T, std::size_t N>
     void pushStdArray(lua_State* L, std::array<T, N> const& array) {
-        lua_createtable(L, static_cast<int>(N), 0);
-        int tableIndex = lua_gettop(L);
-        int i = 1;
-        for (auto const& elem : array) {
-            detail::pushPrimitiveVectorElement(L, elem);
-            lua_rawseti(L, tableIndex, i++);
-        }
+        detail::pushIndexedTable(L, N, [&](lua_State* state, std::size_t i) {
+            detail::pushPrimitiveVectorElement(state, array[i]);
+        });
     }
 
     template <class T, std::size_t N>
@@ -288,37 +331,19 @@ namespace luax {
 
     template <class T, std::size_t N, class U>
     void pushStdArray(lua_State* L, U const (&array)[N]) {
-        lua_createtable(L, static_cast<int>(N), 0);
-        int tableIndex = lua_gettop(L);
-        int slot = 1;
-        for (std::size_t i = 0; i < N; ++i) {
-            detail::pushPrimitiveVectorElement<T>(L, static_cast<T>(array[i]));
-            lua_rawseti(L, tableIndex, slot++);
-        }
+        detail::pushIndexedTable(L, N, [&](lua_State* state, std::size_t i) {
+            detail::pushPrimitiveVectorElement<T>(state, static_cast<T>(array[i]));
+        });
     }
 
     template <class T, std::size_t N>
     void assignStdArray(std::array<T, N>& dest, std::array<T, N> src) {
-        for (std::size_t i = 0; i < N; ++i) {
-            if constexpr (std::is_same_v<T, bool>) {
-                dest[i] = src[i];
-            }
-            else {
-                dest[i] = std::move(src[i]);
-            }
-        }
+        detail::assignContainer<T>(dest, src, N);
     }
 
     template <class T, std::size_t N, class U>
     void assignStdArray(U (&dest)[N], std::array<T, N> src) {
-        for (std::size_t i = 0; i < N; ++i) {
-            if constexpr (std::is_same_v<T, bool>) {
-                dest[i] = static_cast<U>(src[i]);
-            }
-            else {
-                dest[i] = static_cast<U>(std::move(src[i]));
-            }
-        }
+        detail::assignContainer<T>(dest, src, N);
     }
 
     template <class K>
@@ -372,26 +397,23 @@ namespace luax {
             using Elem = detail::gd_vector_element_t<V>;
             if constexpr (std::is_pointer_v<Elem>) {
                 using Pointee = std::remove_pointer_t<Elem>;
-                lua_createtable(L, static_cast<int>(value.size()), 0);
-                int tableIndex = lua_gettop(L);
-                int i = 1;
-                for (auto* elem : value) {
+                detail::pushIndexedTable(L, value.size(), [&](lua_State* state, std::size_t i) {
+                    auto* elem = value[i];
                     if constexpr (std::is_base_of_v<cocos2d::CCObject, Pointee>) {
                         if (elem == nullptr) {
-                            lua_pushnil(L);
+                            lua_pushnil(state);
                         }
                         else {
-                            Usertype<Pointee>::pushBorrowed(L, elem);
+                            Usertype<Pointee>::pushBorrowed(state, elem);
                         }
                     }
                     else if (elem == nullptr) {
-                        lua_pushnil(L);
+                        lua_pushnil(state);
                     }
                     else {
-                        pushOpaqueHandle(L, elem);
+                        pushOpaqueHandle(state, elem);
                     }
-                    lua_rawseti(L, tableIndex, i++);
-                }
+                });
             }
             else {
                 pushPrimitiveVector<Elem>(L, value);
@@ -413,18 +435,15 @@ namespace luax {
 
     template <class T>
     void pushNestedPrimitiveVectorPointers(lua_State* L, gd::vector<gd::vector<T>*> const& outer) {
-        lua_createtable(L, static_cast<int>(outer.size()), 0);
-        int tableIndex = lua_gettop(L);
-        int i = 1;
-        for (auto* inner : outer) {
+        detail::pushIndexedTable(L, outer.size(), [&](lua_State* state, std::size_t i) {
+            auto* inner = outer[i];
             if (inner == nullptr) {
-                lua_createtable(L, 0, 0);
+                lua_createtable(state, 0, 0);
             }
             else {
-                pushPrimitiveVector<T>(L, *inner);
+                pushPrimitiveVector<T>(state, *inner);
             }
-            lua_rawseti(L, tableIndex, i++);
-        }
+        });
     }
 
     template <class T>
@@ -444,12 +463,9 @@ namespace luax {
     namespace detail {
         template <class K1, class K2, class V, class Map>
         Map checkPairKeyAssociativeMap(lua_State* L, int idx, char const* label) {
-            idx = lua_absindex(L, idx);
-            luaL_checktype(L, idx, LUA_TTABLE);
-            auto len = static_cast<lua_Integer>(lua_objlen(L, idx));
-            if (len < 0) {
-                luaL_error(L, "%s: invalid map length", label);
-            }
+            idx = absCheckIndexedTable(L, idx);
+            auto len = indexedTableLength(L, idx);
+            requireNonNegativeIndexedLength(L, len, label, "map");
             Map out;
             for (lua_Integer i = 1; i <= len; ++i) {
                 lua_rawgeti(L, idx, i);
@@ -523,30 +539,22 @@ namespace luax {
 
         template <class T, class Set>
         Set checkSetFromTable(lua_State* L, int idx, char const* label) {
-            idx = lua_absindex(L, idx);
-            luaL_checktype(L, idx, LUA_TTABLE);
-            auto len = static_cast<lua_Integer>(lua_objlen(L, idx));
-            if (len < 0) {
-                luaL_error(L, "%s: invalid set length", label);
-            }
+            idx = absCheckIndexedTable(L, idx);
+            auto len = indexedTableLength(L, idx);
+            requireNonNegativeIndexedLength(L, len, label, "set");
             Set out;
-            for (lua_Integer i = 1; i <= len; ++i) {
-                lua_rawgeti(L, idx, i);
-                out.insert(checkMapValue<T>(L, -1, label));
-                lua_pop(L, 1);
-            }
+            checkIndexedTableElements(L, idx, len, [&](lua_State* state, lua_Integer) {
+                out.insert(checkMapValue<T>(state, -1, label));
+            });
             return out;
         }
 
         template <class T, class Set>
         void pushSetAsTable(lua_State* L, Set const& set) {
-            lua_createtable(L, static_cast<int>(set.size()), 0);
-            int tableIndex = lua_gettop(L);
-            int i = 1;
-            for (auto const& elem : set) {
-                pushMapValue(L, elem);
-                lua_rawseti(L, tableIndex, i++);
-            }
+            auto it = set.begin();
+            pushIndexedTable(L, set.size(), [&](lua_State* state, std::size_t) {
+                pushMapValue(state, *it++);
+            });
         }
 
         template <class Map>
