@@ -1,7 +1,7 @@
 #pragma once
 
 #include "OpaqueHandle.hpp"
-#include "ReadOnlyView.hpp"
+#include "ReadOnlySequenceView.hpp"
 #include "Usertype.hpp"
 
 #include <Geode/Geode.hpp>
@@ -15,14 +15,63 @@
 #include <string>
 #include <type_traits>
 #include <typeinfo>
+#include <utility>
 
 namespace luax {
     namespace detail {
         template <class T>
-        struct ReadOnlyVectorViewBlock {
-            gd::vector<T*> const* vector = nullptr;
-            geode::WeakRef<cocos2d::CCObject> owner;
-            std::unique_ptr<gd::vector<T*>> owned;
+        struct GdVectorBackingPolicy {
+            struct Block {
+                gd::vector<T*> const* vector = nullptr;
+                geode::WeakRef<cocos2d::CCObject> owner;
+                std::unique_ptr<gd::vector<T*>> owned;
+            };
+
+            using CopyOut = gd::vector<T*>;
+            using BorrowedArgs = std::pair<gd::vector<T*> const&, cocos2d::CCObject*>;
+            using OwnedArgs = gd::vector<T*> const&;
+
+            static constexpr bool kSupportsCopy = true;
+            static constexpr bool kSupportsBorrowed = true;
+            static constexpr bool kSupportsOwned = true;
+            static constexpr char const* kTypeName = "ReadOnlyVectorView";
+            static constexpr char const* kLiveError = "read-only vector view is no longer live";
+            static constexpr char const* kNewIndexError =
+                "read-only vector view cannot be modified";
+
+            static bool storageLive(Block const& block) {
+                return block.vector != nullptr;
+            }
+
+            static bool ownerLive(Block const& block) {
+                return static_cast<bool>(block.owned) || block.owner.lock().data() != nullptr;
+            }
+
+            static std::size_t size(Block const& block) {
+                return block.vector->size();
+            }
+
+            static T* at(Block const& block, std::size_t index) {
+                return (*block.vector)[index];
+            }
+
+            static void copyOut(Block const& block, CopyOut& out) {
+                out = *block.vector;
+            }
+
+            static bool canPushBorrowed(BorrowedArgs const& args) {
+                return args.second != nullptr;
+            }
+
+            static void initBorrowed(Block& block, BorrowedArgs const& args) {
+                block.vector = &args.first;
+                block.owner = geode::WeakRef<cocos2d::CCObject>(args.second);
+            }
+
+            static void initOwned(Block& block, OwnedArgs const& args) {
+                block.owned = std::make_unique<gd::vector<T*>>(args);
+                block.vector = block.owned.get();
+            }
         };
 
         struct VectorObjectPolicy {
@@ -49,122 +98,20 @@ namespace luax {
         };
 
         template <class T, class Policy>
-        char const* readOnlyVectorViewMetatable() {
-            static auto const name = std::string(Policy::kPrefix) + typeid(T).name() + ">";
-            return name.c_str();
-        }
-
-        template <class T, class Policy>
-        ReadOnlyVectorViewBlock<T>* checkReadOnlyVectorView(lua_State* L, int idx) {
-            auto* block = static_cast<ReadOnlyVectorViewBlock<T>*>(
-                luaL_checkudata(L, idx, readOnlyVectorViewMetatable<T, Policy>())
-            );
-            if (!block || !block->vector) {
-                luaL_error(L, "read-only vector view is no longer live");
-            }
-            if (block->owned) {
-                return block;
-            }
-            if (!block->owner.lock().data()) {
-                luaL_error(L, "read-only vector view is no longer live");
-            }
-            return block;
-        }
-
-        template <class T, class Policy>
-        int readOnlyVectorViewIndex(lua_State* L) {
-            auto* block = checkReadOnlyVectorView<T, Policy>(L, 1);
-            auto index = luaL_checkinteger(L, 2);
-            if (index < 1 || static_cast<std::size_t>(index) > block->vector->size()) {
-                lua_pushnil(L);
-                return 1;
-            }
-            Policy::template pushElement<T>(L, (*block->vector)[static_cast<std::size_t>(index - 1)]);
-            return 1;
-        }
-
-        template <class T, class Policy>
-        int readOnlyVectorViewLen(lua_State* L) {
-            auto* block = checkReadOnlyVectorView<T, Policy>(L, 1);
-            lua_pushinteger(L, static_cast<lua_Integer>(block->vector->size()));
-            return 1;
-        }
-
-        template <class T, class Policy>
-        int readOnlyVectorViewNewIndex(lua_State* L) {
-            luaL_error(L, "read-only vector view cannot be modified");
-            return 0;
-        }
-
-        template <class T, class Policy>
-        int readOnlyVectorViewGc(lua_State* L) {
-            auto* block = static_cast<ReadOnlyVectorViewBlock<T>*>(
-                luaL_checkudata(L, 1, readOnlyVectorViewMetatable<T, Policy>())
-            );
-            if (block) block->~ReadOnlyVectorViewBlock<T>();
-            return 0;
-        }
-
-        template <class T, class Policy>
-        void ensureReadOnlyVectorViewMetatable(lua_State* L) {
-            registerReadOnlyMetatable(
-                L,
-                readOnlyVectorViewMetatable<T, Policy>(),
-                &readOnlyVectorViewIndex<T, Policy>,
-                &readOnlyVectorViewLen<T, Policy>,
-                &readOnlyVectorViewNewIndex<T, Policy>,
-                &readOnlyVectorViewGc<T, Policy>,
-                "ReadOnlyVectorView"
-            );
-        }
-
-        template <class T, class Policy>
         bool tryCopyReadOnlyVectorView(lua_State* L, int idx, gd::vector<T*>& out) {
-            if (!lua_isuserdata(L, idx)) {
-                return false;
-            }
-            auto* block = static_cast<ReadOnlyVectorViewBlock<T>*>(nullptr);
-            if (lua_getmetatable(L, idx)) {
-                luaL_getmetatable(L, (readOnlyVectorViewMetatable<T, Policy>()));
-                if (lua_rawequal(L, -1, -2)) {
-                    block = static_cast<ReadOnlyVectorViewBlock<T>*>(lua_touserdata(L, idx));
-                }
-                lua_pop(L, 2);
-            }
-            if (!block || !block->vector) {
-                return false;
-            }
-            if (!block->owned && !block->owner.lock().data()) {
-                return false;
-            }
-            out = *block->vector;
-            return true;
+            return tryCopyReadOnlySequenceView<T, GdVectorBackingPolicy<T>, Policy>(L, idx, out);
         }
 
         template <class T, class Policy>
         void pushBorrowedVectorView(lua_State* L, gd::vector<T*> const& vector, cocos2d::CCObject* owner) {
-            if (!owner) {
-                lua_pushnil(L);
-                return;
-            }
-            ensureReadOnlyVectorViewMetatable<T, Policy>(L);
-            auto* storage = lua_newuserdata(L, sizeof(ReadOnlyVectorViewBlock<T>));
-            auto* block = new (storage) ReadOnlyVectorViewBlock<T>();
-            block->vector = &vector;
-            block->owner = geode::WeakRef<cocos2d::CCObject>(owner);
-            luaL_getmetatable(L, (readOnlyVectorViewMetatable<T, Policy>()));
-            lua_setmetatable(L, -2);
+            pushBorrowedSequenceView<T, GdVectorBackingPolicy<T>, Policy>(
+                L, std::pair<gd::vector<T*> const&, cocos2d::CCObject*>(vector, owner)
+            );
         }
 
         template <class T, class Policy>
         void pushOwnedVectorView(lua_State* L, gd::vector<T*> const& vector) {
-            ensureReadOnlyVectorViewMetatable<T, Policy>(L);
-            auto* storage = lua_newuserdata(L, sizeof(ReadOnlyVectorViewBlock<T>));
-            auto* block = new (storage) ReadOnlyVectorViewBlock<T>();
-            block->owned = std::make_unique<gd::vector<T*>>(vector);
-            block->vector = block->owned.get();
-            luaL_getmetatable(L, (readOnlyVectorViewMetatable<T, Policy>()));
-            lua_setmetatable(L, -2);
+            pushOwnedSequenceView<T, GdVectorBackingPolicy<T>, Policy>(L, vector);
         }
     } // namespace detail
 

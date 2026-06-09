@@ -1,6 +1,6 @@
 #pragma once
 
-#include "ReadOnlyView.hpp"
+#include "ReadOnlySequenceView.hpp"
 #include "Usertype.hpp"
 
 #include <Geode/Geode.hpp>
@@ -12,89 +12,66 @@
 #include <string>
 #include <type_traits>
 #include <typeinfo>
+#include <utility>
 
 namespace luax {
     namespace detail {
         template <class T>
-        struct ReadOnlyCCArrayViewBlock {
-            cocos2d::ccCArray const* array = nullptr;
-            geode::WeakRef<cocos2d::CCObject> owner;
+        struct CcCArrayBackingPolicy {
+            struct Block {
+                cocos2d::ccCArray const* array = nullptr;
+                geode::WeakRef<cocos2d::CCObject> owner;
+            };
+
+            using BorrowedArgs = std::pair<cocos2d::ccCArray*, cocos2d::CCObject*>;
+
+            static constexpr bool kSupportsCopy = false;
+            static constexpr bool kSupportsBorrowed = true;
+            static constexpr bool kSupportsOwned = false;
+            static constexpr char const* kTypeName = "ReadOnlyCCArrayView";
+            static constexpr char const* kLiveError = "read-only ccCArray view is no longer live";
+            static constexpr char const* kNewIndexError =
+                "read-only ccCArray view cannot be modified";
+
+            static bool storageLive(Block const& block) {
+                return block.array != nullptr;
+            }
+
+            static bool ownerLive(Block const& block) {
+                return block.owner.lock().data() != nullptr;
+            }
+
+            static std::size_t size(Block const& block) {
+                return static_cast<std::size_t>(block.array->num);
+            }
+
+            static T* at(Block const& block, std::size_t index) {
+                return static_cast<T*>(block.array->arr[index]);
+            }
+
+            static bool canPushBorrowed(BorrowedArgs const& args) {
+                return args.first != nullptr && args.second != nullptr;
+            }
+
+            static void initBorrowed(Block& block, BorrowedArgs const& args) {
+                block.array = args.first;
+                block.owner = geode::WeakRef<cocos2d::CCObject>(args.second);
+            }
         };
 
-        template <class T>
-        char const* readOnlyCCArrayViewMetatable() {
-            static auto const name =
-                std::string("luax:ReadOnlyCCArrayView<") + typeid(T).name() + ">";
-            return name.c_str();
-        }
+        struct CCArrayObjectPolicy {
+            static constexpr char const* kPrefix = "luax:ReadOnlyCCArrayView<";
 
-        template <class T>
-        ReadOnlyCCArrayViewBlock<T>* checkReadOnlyCCArrayView(lua_State* L, int idx) {
-            auto* block = static_cast<ReadOnlyCCArrayViewBlock<T>*>(
-                luaL_checkudata(L, idx, readOnlyCCArrayViewMetatable<T>())
-            );
-            if (!block || !block->array) {
-                luaL_error(L, "read-only ccCArray view is no longer live");
+            template <class U>
+            static void pushElement(lua_State* L, U* value) {
+                if (value == nullptr) {
+                    lua_pushnil(L);
+                }
+                else {
+                    Usertype<U>::pushBorrowed(L, value);
+                }
             }
-            if (!block->owner.lock().data()) {
-                luaL_error(L, "read-only ccCArray view is no longer live");
-            }
-            return block;
-        }
-
-        template <class T>
-        int readOnlyCCArrayViewIndex(lua_State* L) {
-            auto* block = checkReadOnlyCCArrayView<T>(L, 1);
-            auto index = luaL_checkinteger(L, 2);
-            if (index < 1 ||
-                static_cast<std::size_t>(index) > static_cast<std::size_t>(block->array->num)) {
-                lua_pushnil(L);
-                return 1;
-            }
-            auto* value = static_cast<T*>(block->array->arr[static_cast<std::size_t>(index - 1)]);
-            if (value == nullptr) {
-                lua_pushnil(L);
-            }
-            else {
-                Usertype<T>::pushBorrowed(L, value);
-            }
-            return 1;
-        }
-
-        template <class T>
-        int readOnlyCCArrayViewLen(lua_State* L) {
-            auto* block = checkReadOnlyCCArrayView<T>(L, 1);
-            lua_pushinteger(L, static_cast<lua_Integer>(block->array->num));
-            return 1;
-        }
-
-        template <class T>
-        int readOnlyCCArrayViewNewIndex(lua_State* L) {
-            luaL_error(L, "read-only ccCArray view cannot be modified");
-            return 0;
-        }
-
-        template <class T>
-        int readOnlyCCArrayViewGc(lua_State* L) {
-            auto* block = static_cast<ReadOnlyCCArrayViewBlock<T>*>(
-                luaL_checkudata(L, 1, readOnlyCCArrayViewMetatable<T>())
-            );
-            if (block) block->~ReadOnlyCCArrayViewBlock<T>();
-            return 0;
-        }
-
-        template <class T>
-        void ensureReadOnlyCCArrayViewMetatable(lua_State* L) {
-            registerReadOnlyMetatable(
-                L,
-                readOnlyCCArrayViewMetatable<T>(),
-                &readOnlyCCArrayViewIndex<T>,
-                &readOnlyCCArrayViewLen<T>,
-                &readOnlyCCArrayViewNewIndex<T>,
-                &readOnlyCCArrayViewGc<T>,
-                "ReadOnlyCCArrayView"
-            );
-        }
+        };
     } // namespace detail
 
     template <class T>
@@ -102,16 +79,8 @@ namespace luax {
         static_assert(
             std::is_base_of_v<cocos2d::CCObject, T>, "ccCArray view elements must be CCObject"
         );
-        if (!array || !owner) {
-            lua_pushnil(L);
-            return;
-        }
-        detail::ensureReadOnlyCCArrayViewMetatable<T>(L);
-        auto* storage = lua_newuserdata(L, sizeof(detail::ReadOnlyCCArrayViewBlock<T>));
-        auto* block = new (storage) detail::ReadOnlyCCArrayViewBlock<T>();
-        block->array = array;
-        block->owner = geode::WeakRef<cocos2d::CCObject>(owner);
-        luaL_getmetatable(L, detail::readOnlyCCArrayViewMetatable<T>());
-        lua_setmetatable(L, -2);
+        detail::pushBorrowedSequenceView<T, detail::CcCArrayBackingPolicy<T>, detail::CCArrayObjectPolicy>(
+            L, std::pair<cocos2d::ccCArray*, cocos2d::CCObject*>(array, owner)
+        );
     }
 } // namespace luax
