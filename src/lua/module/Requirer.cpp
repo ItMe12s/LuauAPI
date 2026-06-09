@@ -118,6 +118,13 @@ namespace luax {
     }
 
     void Requirer::setResourcesRoot(std::filesystem::path const& root) {
+        if (root.empty()) {
+            m_root.clear();
+            m_rootError.reset();
+            m_current.clear();
+            clearPendingLoad();
+            return;
+        }
         auto rootResult = canonicalRoot(root);
         if (rootResult.isErr()) {
             geode::log::error(
@@ -273,8 +280,6 @@ namespace luax {
 
         geode::Result<std::string const&> contentsResult = pendingLoadContents(filePath);
         std::string fallbackContents;
-        // writeCacheKey can already read this file so reuse that copy if it's available.
-        // Cache may be cleared by navigation so reread if needed.
         if (contentsResult.isErr()) {
             auto readResult = readScriptFile(filePath);
             if (readResult.isErr()) {
@@ -289,8 +294,6 @@ namespace luax {
             contentsResult = geode::Ok(std::cref(fallbackContents));
         }
         auto const& contents = contentsResult.unwrap();
-        clearPendingLoad();
-
         auto bytecodeResult =
             m_runtime.getOrCompileBytecode(bytecodeCacheKey(filePath, contents), contents);
         if (bytecodeResult.isErr()) {
@@ -299,6 +302,7 @@ namespace luax {
             );
         }
         auto const& bytecode = bytecodeResult.unwrap().get();
+        clearPendingLoad();
 
         lua_State* GL = lua_mainthread(L);
         lua_State* ML = lua_newthread(GL);
