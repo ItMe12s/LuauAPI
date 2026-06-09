@@ -2,9 +2,8 @@
 
 ## Summary
 
-Set up VSCode so your `.luau` files get autocomplete and type checks for `geode`, `cocos2d`, `gd`,
-`task`, and `time`. You get the `geode.d.luau` type stub, place it in your mod, then point the Luau
-language server at it.
+Set up VSCode so your `.luau` files get autocomplete and type checks for `geode`, `cocos2d`, `gd`, `task`, and `time`.
+You get the `geode.d.luau` type stub, place it in your mod, then point the Luau language server at it.
 
 ## Step 1: install the extension
 
@@ -12,12 +11,20 @@ Install VSCode and the Luau Language Server extension, `luau-lsp` by JohnnyMorga
 
 ## Step 2: get the type stub
 
-Download `geode.d.luau` from the LuauAPI GitHub release tab. It sits next to the `.geode` mod file.
-No build is needed. If you build LuauAPI from source instead, the stub is written to `types/` after
-a build. See [Building from source](../contributor/building.md).
+Download `geode.d.luau` from the LuauAPI GitHub release tab.
+It sits next to the `.geode` mod file. No build is needed.
+If you build LuauAPI from source instead, the stub is written to `types/` after a build.
+See [Building from source](../contributor/building.md).
 
-The stub is one file that holds all bound classes, factories, enum aliases, the `geode` namespace,
-the `task` and `time` APIs, `loadstring`, and the ImGui APIs.
+The stub file includes:
+
+- All bound classes
+- Factories
+- Enum aliases
+- The `geode` namespace
+- The `task` and `time` APIs
+- `loadstring`
+- The ImGui APIs
 
 ## Step 3: place the stub
 
@@ -38,8 +45,8 @@ Create `.luaurc` in your mod root.
 
 ## Step 5: add .vscode/settings.json
 
-Create `.vscode/settings.json` in your mod root. The stub is large, so the fflags override stops
-type-check errors about code complexity. Keep these values.
+Create `.vscode/settings.json` in your mod root.
+The stub is large, so the fflags override stops type-check errors about code complexity.
 
 ```json
 {
@@ -76,8 +83,8 @@ Reload the VSCode window, open a `.luau` file, and type `geode.` to confirm auto
 
 ## Keeping types current
 
-When LuauAPI updates its bindings, download the new `geode.d.luau` from the release tab and replace
-your copy. The `definitionFiles` entry is a fixed single path, so you only reload after a swap.
+When LuauAPI updates its bindings, download the new `geode.d.luau` from the release tab and replace your copy.
+The `definitionFiles` entry is a fixed single path, so you only reload after a swap.
 
 ## Next
 

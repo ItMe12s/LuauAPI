@@ -2,18 +2,20 @@
 
 ## Summary
 
-How to add LuauAPI to your own Geode mod. Install the mod, declare a dependency, and pack your
-`.luau` files as resources. No build steps are needed for this path.
+How to build a Geode mod that uses LuauAPI.
+Install the mod, declare a dependency, and pack your `.luau` files as resources.
+No build steps are needed for this path.
 
 ## Install the mod
 
-Install LuauAPI from the Geode index in-game, or grab the `.geode` file from the GitHub release
-tab. LuauAPI ships with the mod id `imes.luauapi`. It loads early with first priority, so the
-runtime is ready for other mods as soon as the game starts.
+Install LuauAPI from the Geode index in-game, or grab the `.geode` file from the GitHub release tab.
+LuauAPI ships with the mod id `imes.luauapi`.
+It loads early with first priority, so the runtime is ready for other mods as soon as the game starts.
 
 ## Depend on it
 
-Add a dependency on `imes.luauapi` in your mod and declare your script files as resources.
+If you do not have a mod yet, create one with the Geode CLI (`geode new`).
+Then add a dependency on `imes.luauapi` in your `mod.json` and declare your script files as resources.
 
 ```json
 {
@@ -28,8 +30,8 @@ Add a dependency on `imes.luauapi` in your mod and declare your script files as 
 }
 ```
 
-Put your `.luau` files under the resources path you declare. They get packed with your mod and
-load from your mod resources directory at runtime.
+Put your `.luau` files under the resources path you declare.
+They get packed with your mod and load from your mod resources directory at runtime.
 
 ## Settings
 
@@ -40,7 +42,10 @@ LuauAPI ships two settings, both off by default:
 
 ## Supported platforms
 
-LuauAPI supports Windows, macOS (arm64 and x86_64), iOS (arm64), and Android (32-bit and 64-bit).
+- Windows
+- macOS (arm64 and x86_64)
+- iOS (arm64)
+- Android (32-bit and 64-bit)
 
 ## Next
 

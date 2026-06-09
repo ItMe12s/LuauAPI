@@ -22,7 +22,7 @@
 
 ## Getting started
 
-For mod authors adding Luau scripting to their own Geode mod.
+For mod authors building a Geode mod using Luau scripting.
 
 - [Overview](docs/getting-started/overview.md)
 - [Installation](docs/getting-started/installation.md)

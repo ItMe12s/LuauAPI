@@ -2,13 +2,12 @@
 
 ## Summary
 
-A few small scripts that show the common things a script does. Each one is complete and runnable on
-its own. For full signatures, see the [Lua reference](../reference/lua/globals.md).
+A few small scripts that show the common things a script does. Each one is complete and runnable on its own.
+For full signatures, see the [Lua reference](../reference/lua/globals.md).
 
 ## Log and return a module
 
-A file run with `runFile` does not need to return anything. A file loaded with `require` must
-return exactly one value.
+A file run with `runFile` does not need to return anything. A file loaded with `require` must return exactly one value.
 
 ```lua
 -- Helper.luau

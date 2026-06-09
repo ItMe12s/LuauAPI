@@ -2,7 +2,7 @@
 
 ## Summary
 
-The smallest working setup. You write a Luau file, then run it from your mod C++ with `runFile`.
+The smallest working mod. You write a Luau file, then run it from your Geode mod's C++ with `runFile`.
 
 ## Step 1: write the script
 
@@ -16,8 +16,8 @@ print("Hello from Luau")
 
 ## Step 2: run it from C++
 
-Include the header and call `runFile` with your resources directory and the file name. All public
-functions live in the `imes::luauapi` namespace.
+Include the header and call `runFile` with your resources directory and the file name.
+All public functions live in the `imes::luauapi` namespace.
 
 ```cpp
 #include <Geode/Geode.hpp>
@@ -42,14 +42,14 @@ LuauAPI owns the runtime, so you do not start it. Check `status()` is `Ready` fi
 
 ## The rules
 
-The file name must be a flat `.luau` resource name inside the resources directory you pass. No
-folders, no `..`, no absolute paths, and it must be within the size limit. See
-[Modules](../reference/lua/modules.md) and [Limits and errors](../reference/cpp/limits-and-errors.md).
+The file name must be a flat `.luau` resource name inside the resources directory you pass.
+No folders, no `..`, no absolute paths, and it must be within the size limit.
+See [Modules](../reference/lua/modules.md) and [Limits and errors](../reference/cpp/limits-and-errors.md).
 
 ## Developer mode
 
-LuauAPI ships built-in developer tools, such as a script executor. They load only when you turn on
-developer mode in the mod settings. It is off by default.
+LuauAPI ships built-in developer tools, such as a script executor.
+They load only when you turn on developer mode in the mod settings. It is off by default.
 
 ## Next
 
