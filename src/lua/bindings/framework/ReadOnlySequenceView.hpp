@@ -97,7 +97,7 @@ namespace luax::detail {
         using Block = typename BackingPolicy::Block;
         auto* block = static_cast<Block*>(nullptr);
         if (lua_getmetatable(L, idx)) {
-            luaL_getmetatable(L, readOnlySequenceViewMetatable<T, BackingPolicy, ElementPolicy>());
+            luaL_getmetatable(L, (readOnlySequenceViewMetatable<T, BackingPolicy, ElementPolicy>()));
             if (lua_rawequal(L, -1, -2)) {
                 block = static_cast<Block*>(lua_touserdata(L, idx));
             }
@@ -126,7 +126,7 @@ namespace luax::detail {
         auto* storage = lua_newuserdata(L, sizeof(Block));
         auto* block = new (storage) Block();
         BackingPolicy::initBorrowed(*block, args);
-        luaL_getmetatable(L, readOnlySequenceViewMetatable<T, BackingPolicy, ElementPolicy>());
+        luaL_getmetatable(L, (readOnlySequenceViewMetatable<T, BackingPolicy, ElementPolicy>()));
         lua_setmetatable(L, -2);
     }
 
@@ -139,7 +139,7 @@ namespace luax::detail {
         auto* storage = lua_newuserdata(L, sizeof(Block));
         auto* block = new (storage) Block();
         BackingPolicy::initOwned(*block, args);
-        luaL_getmetatable(L, readOnlySequenceViewMetatable<T, BackingPolicy, ElementPolicy>());
+        luaL_getmetatable(L, (readOnlySequenceViewMetatable<T, BackingPolicy, ElementPolicy>()));
         lua_setmetatable(L, -2);
     }
 } // namespace luax::detail
