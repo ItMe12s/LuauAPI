@@ -2,17 +2,18 @@
 
 ## Summary
 
-Codegen and `ContainerTables.hpp` bind `std::pair` inside Geode containers. Pair bodies are record
-tables. Maps with a pair key use an entry list, not dictionary keys. Policy constants live in
-`tools/luau_codegen/model/pair_design.py`. Tests live in `tests/luau_codegen/test_pair_design.py`.
+Codegen and `ContainerTables.hpp` bind `std::pair` inside Geode containers.
+Pair bodies are record tables. Maps with a pair key use an entry list, not dictionary keys.
+Policy constants live in `tools/luau_codegen/model/pair_design.py`.
+Tests live in `tests/luau_codegen/test_pair_design.py`.
 
 ## Luau shapes
 
 - Pair body (standalone, vector element, set element, or map value):
-  `std::pair<int, int>` becomes `{ first: number, second: number }`,
-  `std::pair<int, cocos2d::CCObject*>` becomes `{ first: number, second: CCObject? }`.
+  - `std::pair<int, int>` becomes `{ first: number, second: number }`,
+  - `std::pair<int, cocos2d::CCObject*>` becomes `{ first: number, second: CCObject? }`.
 - Map with scalar key and pair value (normal dictionary):
-  `gd::unordered_map<int, std::pair<int, int>>` becomes `{ [number]: { first: number, second: number } }`.
+  - `gd::unordered_map<int, std::pair<int, int>>` becomes `{ [number]: { first: number, second: number } }`.
 - Map with pair key (entry list, because Lua cannot use tables as keys):
 
 ```lua
@@ -24,8 +25,9 @@ tables. Maps with a pair key use an entry list, not dictionary keys. Policy cons
 ```
 
   Stub type pattern: `{ { first: K1, second: K2, value: V } }`.
+
 - Vector or set of pairs (array of pair records):
-  `gd::vector<std::pair<int, int>>` becomes `{ { first: number, second: number } }`.
+  - `gd::vector<std::pair<int, int>>` becomes `{ { first: number, second: number } }`.
 
 Do not use positional `{ T1, T2 }`, string keys, or `{ [pairTable]: V }`.
 
@@ -39,17 +41,39 @@ Do not use positional `{ T1, T2 }`, string keys, or `{ [pairTable]: V }`.
 | `checkUnorderedPairKeyMap` / `pushUnorderedPairKeyMap` | Unordered variant |
 | `assignPairKeyMap` / `assignUnorderedPairKeyMap` | Field setters for pair-key maps |
 
-Read requires `first` and `second` on pair records. Object pointer members allow nil. Push uses
-borrowed usertypes. Field setters still clear and re-insert. No whole-container `operator=`.
+Read requires `first` and `second` on pair records. Object pointer members allow nil. Push uses borrowed usertypes.
+Field setters still clear and re-insert. No whole-container `operator=`.
 
 ## Codegen
 
-In `convert/type_map.py`: `TypeInfo.kind == "pair"` from `std::pair<First, Second>`, allowed in
-vector elements, set elements, and map values. Pair map keys use entry-list `lua_type`.
-`convert/marshalling.py` emits `checkPair`, `pushPair`, and pair-key map helpers when needed. `first`
-and `second` follow map value rules: primitives, wideint as string, strings, enums as number, gated
-value structs, and bound object pointers as `T?`. Still unsupported inside pairs: `void*`, unbound
-raw pointers, nested containers, denied value structs.
+In `convert/type_map.py`:
+
+- Pairs are detected with `TypeInfo.kind == "pair"` from `std::pair<First, Second>`.
+- Pairs are allowed in:
+  - vector elements
+  - set elements
+  - map values
+- Pair map keys use entry-list `lua_type`.
+
+In `convert/marshalling.py`:
+
+- Emits `checkPair`, `pushPair`, and helpers for pair-key maps as needed.
+
+`first` and `second` members follow map value rules:
+
+- Primitives
+- Wideint as string
+- Strings
+- Enums as number
+- Gated value structs
+- Bound object pointers as `T?`
+
+Still unsupported inside pairs:
+
+- `void*`
+- Unbound raw pointers
+- Nested containers
+- Denied value structs
 
 ## Known gaps
 

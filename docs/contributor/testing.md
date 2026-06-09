@@ -2,14 +2,15 @@
 
 ## Summary
 
-The project has host tests that run without the game. They cover the parts that do not need Cocos2d,
-such as paths, the allocator, cache keys, and the Python code generator. This page lists them and
-shows how to run them.
+The project has host tests that run without the game.
+They cover the parts that do not need Cocos2d,
+such as paths, the allocator, cache keys, and the Python code generator.
+This page lists them and shows how to run them.
 
 ## Turning tests on
 
-Tests are off by default. Enable them with `LUAUAPI_BUILD_TESTS` after a normal configure. See
-[Building from source](building.md).
+Tests are off by default. Enable them with `LUAUAPI_BUILD_TESTS` after a normal configure.
+See [Building from source](building.md).
 
 ```bash
 cmake -B build -DLUAUAPI_BUILD_TESTS=ON
@@ -19,8 +20,9 @@ ctest --test-dir build
 
 ## The C++ tests
 
-The C++ tests use Catch2 `v3.15.0` and build into the `luauapi_tests` executable. CTest discovers
-the cases at build time. The files are:
+The C++ tests use Catch2 `v3.15.0` and build into the `luauapi_tests` executable.
+
+CTest discovers the cases at build time. The files are:
 
 | Test file | Coverage |
 | --- | --- |
@@ -53,25 +55,47 @@ the cases at build time. The files are:
 
 ## No game libraries in tests
 
-The host tests must not link the game: no Geode bindings, Cocos2d, extensions, GLEW, FMOD, or
-OpenGL. The `luauapi_tests` target links only Catch2, fmt, and the Luau libraries, which keeps the
-tests fast and host only.
+The host tests must not link the following game libraries:
+
+- Geode bindings
+- Cocos2d
+- extensions
+- GLEW
+- FMOD
+- OpenGL
+
+The `luauapi_tests` target links only:
+
+- Catch2
+- fmt
+- Luau libraries
+
+Which keeps the tests fast and host only.
 
 ## The Python codegen tests
 
-The suite under `tests/luau_codegen/` covers the Python binding generator: Broma parsing, filtering,
-C++ bindings, Luau type stubs, plan and parity, CLI I/O, free-function overrides, the Geode SDK
-scanner, and drift guards for handwritten bindings, extra-binding stubs, and the host public API
-header. CTest registers it as `luauapi_codegen_tests` and runs it via `python -m unittest discover`.
+The suite under `tests/luau_codegen/` covers:
+
+- Broma parsing
+- Filtering
+- C++ bindings
+- Luau type stubs
+- Plan and parity
+- CLI I/O
+- Free-function overrides
+- The Geode SDK scanner
+- Drift guards for handwritten bindings, extra-binding stubs, and the host public API header
+
+CTest registers it as `luauapi_codegen_tests` and runs it via `python -m unittest discover`.
 
 ```bash
 PYTHONPATH=tools python -m unittest discover -s tests/luau_codegen -p "test_*.py"
 ```
 
 Notable drift guards: `test_manual_fields_sync.py`, `test_extra_bindings_sync.py`,
-`test_public_api_header_sync.py`, and `test_binding_guards.py`. They prove the stub, handwritten
-bindings, and public header stay in sync, so docs sourced from them stay accurate. See
-[Codegen](codegen/codegen.md) for what the generator produces.
+`test_public_api_header_sync.py`, and `test_binding_guards.py`.
+They prove the stub, handwritten bindings, and public header stay in sync, so docs sourced from them stay accurate.
+See [Codegen](codegen/codegen.md) for what the generator produces.
 
 ## Related
 

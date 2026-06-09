@@ -2,10 +2,10 @@
 
 ## Summary
 
-`cocos2d::ccCArray*` stores raw `void*` slots with no retain or release. Codegen binds it only for
-audited dispatcher handler queues where the element type and parent ownership are known. Policy lives
-in `tools/luau_codegen/model/cc_c_array.py`. Runtime lives in
-`src/lua/bindings/framework/ReadOnlyCCArrayView.hpp`.
+`cocos2d::ccCArray*` stores raw `void*` slots with no retain or release.
+Codegen binds it only for audited dispatcher handler queues where the element type and parent ownership are known.
+Policy lives in `tools/luau_codegen/model/cc_c_array.py`.
+Runtime lives in `src/lua/bindings/framework/ReadOnlyCCArrayView.hpp`.
 
 ## Luau shape
 
@@ -13,8 +13,8 @@ Proven fields expose a read-only sequence:
 
 - `cocos2d::ccCArray*` on `CCKeyboardDispatcher.m_pHandlersToAdd` becomes `{ CCKeyboardHandler? }`
 
-The same pattern applies to `CCKeypadHandler`, `CCMouseHandler`, and `CCTouchHandler` on the matching
-dispatcher `m_pHandlersToAdd` and `m_pHandlersToRemove` fields in the allowlist.
+The same pattern applies to `CCKeypadHandler`, `CCMouseHandler`, and `CCTouchHandler`
+on the matching dispatcher `m_pHandlersToAdd` and `m_pHandlersToRemove` fields in the allowlist.
 
 ## Runtime
 
@@ -22,8 +22,7 @@ dispatcher `m_pHandlersToAdd` and `m_pHandlersToRemove` fields in the allowlist.
 | --- | --- |
 | `pushReadOnlyCCArrayView<T>` | Field getter, borrows elements while dispatcher `self` is alive |
 
-The view userdata indexes `1..num` from `ccCArray::arr`, pushes borrowed usertypes, and errors on
-`__newindex`.
+The view userdata indexes `1..num` from `ccCArray::arr`, pushes borrowed usertypes, and errors on `__newindex`.
 
 ## Rejected
 

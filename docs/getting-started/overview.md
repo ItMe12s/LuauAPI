@@ -13,8 +13,7 @@ whether a brand new mod or one you already have.
    This is the common path and needs no build steps. Most mods using LuauAPI are built this way.
    See [Installation](installation.md) and [Your first script](first-script.md).
 2. Build LuauAPI from source if you want unreleased features or to work on the runtime itself.
-   That path lives in the contributor docs.
-   See [Building](../contributor/building.md).
+   That path lives in the contributor docs. See [Building](../contributor/building.md).
 
 ## Key concepts
 
@@ -24,8 +23,7 @@ whether a brand new mod or one you already have.
   Script and module names are flat single file names with the `.luau` extension.
   No folders, no `..`, no absolute paths.
 - Deadlines and memory. Each run has a time budget in milliseconds. Going over raises an error.
-  Memory has a hard cap with no soft limit.
-  See [Limits and errors](../reference/cpp/limits-and-errors.md).
+  Memory has a hard cap with no soft limit. See [Limits and errors](../reference/cpp/limits-and-errors.md).
 - Errors are logged, not fatal. The host runs scripts in a protected call,
   so an error is caught and written to the log instead of crashing the game.
 

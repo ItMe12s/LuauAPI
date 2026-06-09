@@ -2,8 +2,8 @@
 
 ## Summary
 
-The big picture for contributors. This page names the main parts and traces how a script gets from a
-file to running code.
+The big picture for contributors.
+This page names the main parts and traces how a script gets from a file to running code.
 
 ## The parts
 
@@ -34,9 +34,9 @@ file to running code.
 
 ## Lifecycle
 
-The runtime follows the mod and game lifecycle, wired in `src/main.cpp`. The main thread id is
-recorded at mod load, the runtime is created when the mod is loaded, and it shuts down when the game
-is exiting.
+The runtime follows the mod and game lifecycle, wired in `src/main.cpp`.
+The main thread id is recorded at mod load, the runtime is created when the mod is loaded,
+and it shuts down when the game is exiting.
 
 ## How a script runs
 
@@ -51,20 +51,21 @@ For `runFile`:
 
 ## How a hook runs
 
-A script registers a callback with `geode.hook`. The generated hook function for that game method is
-installed. When the game calls the method, the generated function runs the `before` callbacks, then
-the original unless skipped, then the `after` callbacks.
+A script registers a callback with `geode.hook`.
+The generated hook function for that game method is installed.
+When the game calls the method, the generated function runs the `before` callbacks,
+then the original unless skipped, then the `after` callbacks.
 
 ## How ImGui draw runs
 
-A script registers a callback with `imgui.onDraw`. `ImGuiDrawScheduler` stores it and runs it each
-frame inside an ImGui frame, within the ImGui deadline. See [ImGui draw scheduler](internals/imgui-draw-scheduler.md).
+A script registers a callback with `imgui.onDraw`. `ImGuiDrawScheduler` stores it
+and runs it each frame inside an ImGui frame, within the ImGui deadline.
+See [ImGui draw scheduler](internals/imgui-draw-scheduler.md).
 
 ## Threading
 
-The runtime is single threaded. Almost every call must run on the main thread, and the runtime
-enforces this. The async API does its file work off thread, then hops to the main thread to run the
-script.
+The runtime is single threaded. Almost every call must run on the main thread, and the runtime enforces this.
+The async API does its file work off thread, then hops to the main thread to run the script.
 
 ## Related
 
