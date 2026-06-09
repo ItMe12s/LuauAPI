@@ -19,7 +19,6 @@ namespace luax {
         }
         Task task;
         std::uint64_t const id = m_nextId++;
-        task.id = id;
         task.callback = std::move(callback);
         task.remaining = delaySeconds;
         task.interval = intervalSeconds;
@@ -34,7 +33,6 @@ namespace luax {
         }
         Task task;
         std::uint64_t const id = m_nextId++;
-        task.id = id;
         task.callback = std::move(callback);
         m_deferred.insertWithId(id, std::move(task));
         m_deferredIds[id] = true;
@@ -42,9 +40,8 @@ namespace luax {
     }
 
     void TaskScheduler::cancel(std::uint64_t id) {
-        if (auto* task = find(id)) {
-            task->cancelled = true;
-        }
+        m_timed.cancel(id);
+        m_deferred.cancel(id);
     }
 
     TaskScheduler::Task* TaskScheduler::find(std::uint64_t id) {
@@ -52,12 +49,8 @@ namespace luax {
         if (it == m_deferredIds.end()) {
             return nullptr;
         }
-        auto& slots = it->second ? m_deferred : m_timed;
-        Task* task = slots.find(id);
-        if (!task || task->cancelled) {
-            return nullptr;
-        }
-        return task;
+        auto& store = it->second ? m_deferred : m_timed;
+        return store.find(id);
     }
 
     bool TaskScheduler::fire(Task& task) {
@@ -95,20 +88,20 @@ namespace luax {
         }
     }
 
-    void TaskScheduler::eraseTaskAt(IndexedSlotMap<Task>& slots, std::size_t index) {
-        std::uint64_t const id = slots.idAt(index);
-        slots.eraseAt(index);
+    void TaskScheduler::eraseTaskAt(ScheduledSlotStore<Task>& store, std::size_t index) {
+        std::uint64_t const id = store.slots().idAt(index);
+        store.slots().eraseAt(index);
         m_deferredIds.erase(id);
     }
 
-    void TaskScheduler::compact(IndexedSlotMap<Task>& slots) {
-        for (std::size_t i = 0; i < slots.size();) {
-            if (!slots[i].cancelled) {
+    void TaskScheduler::compact(ScheduledSlotStore<Task>& store) {
+        for (std::size_t i = 0; i < store.size();) {
+            if (!store[i].cancelled) {
                 ++i;
                 continue;
             }
-            slots[i].callback.reset();
-            eraseTaskAt(slots, i);
+            store[i].callback.reset();
+            eraseTaskAt(store, i);
         }
     }
 
@@ -142,12 +135,6 @@ namespace luax {
     }
 
     void TaskScheduler::clear() {
-        for (std::size_t i = 0; i < m_timed.size(); ++i) {
-            m_timed[i].callback.reset();
-        }
-        for (std::size_t i = 0; i < m_deferred.size(); ++i) {
-            m_deferred[i].callback.reset();
-        }
         m_timed.clear();
         m_deferred.clear();
         m_deferredIds.clear();
@@ -158,14 +145,7 @@ namespace luax {
     }
 
     std::size_t TaskScheduler::activeCount() const {
-        std::size_t n = 0;
-        for (std::size_t i = 0; i < m_timed.size(); ++i) {
-            if (!m_timed[i].cancelled) ++n;
-        }
-        for (std::size_t i = 0; i < m_deferred.size(); ++i) {
-            if (!m_deferred[i].cancelled) ++n;
-        }
-        return n;
+        return m_timed.activeCount() + m_deferred.activeCount();
     }
 
 #if defined(LUAUAPI_HOST_TESTS)
@@ -174,9 +154,8 @@ namespace luax {
         if (it == m_deferredIds.end()) {
             return false;
         }
-        auto const& slots = it->second ? m_deferred : m_timed;
-        Task const* task = slots.find(id);
-        return task != nullptr && !task->cancelled;
+        auto const& store = it->second ? m_deferred : m_timed;
+        return store.isScheduled(id);
     }
 #endif
 

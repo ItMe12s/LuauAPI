@@ -1,7 +1,7 @@
 #pragma once
 
 #include "lua/bindings/framework/LuaRef.hpp"
-#include "lua/util/IndexedSlotMap.hpp"
+#include "lua/bindings/framework/ScheduledSlotStore.hpp"
 
 #include <cstddef>
 #include <cstdint>
@@ -33,10 +33,8 @@ namespace luax {
 
         DrawCb* find(std::uint64_t id);
         bool fire(DrawCb& cb);
-        void compactCancelled();
 
-        IndexedSlotMap<DrawCb> m_slots;
-        std::uint64_t m_nextId = 1;
+        ScheduledSlotStore<DrawCb> m_store;
         bool m_inFrame = false;
     };
 } // namespace luax

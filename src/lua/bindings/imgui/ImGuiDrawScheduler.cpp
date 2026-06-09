@@ -15,49 +15,29 @@ namespace luax {
             return 0;
         }
         DrawCb cb;
-        std::uint64_t const id = m_nextId++;
-        cb.id = id;
         cb.callback = std::move(callback);
-        m_slots.insertWithId(id, std::move(cb));
-        return id;
+        return m_store.insert(std::move(cb));
     }
 
     void ImGuiDrawScheduler::cancel(std::uint64_t id) {
-        if (auto* cb = find(id)) {
-            cb->cancelled = true;
-        }
+        m_store.cancel(id);
     }
 
     ImGuiDrawScheduler::DrawCb* ImGuiDrawScheduler::find(std::uint64_t id) {
-        DrawCb* cb = m_slots.find(id);
-        if (!cb || cb->cancelled) {
-            return nullptr;
-        }
-        return cb;
+        return m_store.find(id);
     }
 
     bool ImGuiDrawScheduler::fire(DrawCb& cb) {
         return fireProtectedCallback(cb.callback, "imgui.draw", kImGuiScriptDeadlineMs);
     }
 
-    void ImGuiDrawScheduler::compactCancelled() {
-        for (std::size_t i = 0; i < m_slots.size();) {
-            if (!m_slots[i].cancelled) {
-                ++i;
-                continue;
-            }
-            m_slots[i].callback.reset();
-            m_slots.eraseAt(i);
-        }
-    }
-
     void ImGuiDrawScheduler::drawAll() {
         auto* runtime = Runtime::getIfInitialized();
-        if (!runtime || m_slots.empty()) return;
+        if (!runtime || m_store.empty()) return;
 
         m_inFrame = true;
 
-        m_slots.forEachIndexSnapshot([&](std::size_t, DrawCb& cb) {
+        m_store.forEachIndexSnapshot([&](std::size_t, DrawCb& cb) {
             if (cb.cancelled) {
                 return;
             }
@@ -67,30 +47,22 @@ namespace luax {
         });
 
         m_inFrame = false;
-        compactCancelled();
+        m_store.compactCancelled();
     }
 
     void ImGuiDrawScheduler::clear() {
-        for (std::size_t i = 0; i < m_slots.size(); ++i) {
-            m_slots[i].callback.reset();
-        }
-        m_slots.clear();
+        m_store.clear();
     }
 
     bool ImGuiDrawScheduler::full() const {
-        return m_slots.size() >= kMaxImGuiDrawCallbacks;
+        return m_store.full(kMaxImGuiDrawCallbacks);
     }
 
     std::size_t ImGuiDrawScheduler::activeCount() const {
-        std::size_t n = 0;
-        for (std::size_t i = 0; i < m_slots.size(); ++i) {
-            if (!m_slots[i].cancelled) ++n;
-        }
-        return n;
+        return m_store.activeCount();
     }
 
     bool ImGuiDrawScheduler::isScheduled(std::uint64_t id) const {
-        DrawCb const* cb = m_slots.find(id);
-        return cb != nullptr && !cb->cancelled;
+        return m_store.isScheduled(id);
     }
 } // namespace luax

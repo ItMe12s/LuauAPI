@@ -36,6 +36,7 @@ _TASK_BINDING = "src/lua/bindings/task/TaskBinding.cpp"
 _IMGUI_BINDING = "src/lua/bindings/imgui/ImGuiDrawHandleBinding.cpp"
 _SCHEDULED_HANDLE_BINDING = "src/lua/bindings/framework/ScheduledHandleBinding.hpp"
 _SCHEDULED_CALLBACK = "src/lua/bindings/framework/ScheduledCallback.hpp"
+_SCHEDULED_SLOT_STORE = "src/lua/bindings/framework/ScheduledSlotStore.hpp"
 _LUA_SELECTOR = "src/lua/bindings/framework/LuaSelectorHandler.cpp"
 _LUA_MENU = "src/lua/bindings/framework/LuaMenuHandler.cpp"
 _LUA_DELEGATE = "src/lua/bindings/framework/LuaDelegate.cpp"
@@ -589,6 +590,18 @@ class HandleGcGuardTests(unittest.TestCase):
 
         imgui_scheduler = _read_repo_file("src/lua/bindings/imgui/ImGuiDrawScheduler.cpp")
         self.assertIn("fireProtectedCallback", imgui_scheduler)
+
+    def test_schedulers_store_slots_via_framework_mixin(self) -> None:
+        store_source = _read_repo_file(_SCHEDULED_SLOT_STORE)
+        self.assertIn("ScheduledSlotStore", store_source)
+        self.assertIn("compactCancelled", store_source)
+
+        task_scheduler = _read_repo_file(_TASK_SCHEDULER)
+        self.assertIn("ScheduledSlotStore", task_scheduler)
+
+        imgui_scheduler = _read_repo_file("src/lua/bindings/imgui/ImGuiDrawScheduler.cpp")
+        self.assertIn("m_store", imgui_scheduler)
+        self.assertIn("compactCancelled", imgui_scheduler)
 
 
 class ErrorSemanticsGuardTests(unittest.TestCase):
