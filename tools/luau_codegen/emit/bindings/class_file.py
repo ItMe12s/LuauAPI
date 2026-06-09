@@ -12,19 +12,17 @@ from luau_codegen.policy.filtering import call_label, returns_owned
 from luau_codegen.emit.cxx_templates import file_preamble
 from luau_codegen.emit.bindings.dispatch import emit_arity_dispatcher
 from luau_codegen.emit.hooks import emit_hook_target, hook_id, hook_suffix
-from luau_codegen.emit.bindings.vector_push import (
-    emit_owned_vector_return_push,
-    emit_vector_out_push,
+from luau_codegen.emit.bindings.invoke_common import (
+    emit_invoke_return_tail,
+    emit_invoke_void_tail,
+    emit_lua_invoke_arg,
 )
 from luau_codegen.convert.marshalling import (
     check_arg,
     check_sel_handler,
-    push_return,
     push_value,
-    sel_call_args,
-    sel_selector_call_arg,
 )
-from luau_codegen.convert.sel_args import LuaMethodArg, iter_lua_method_args
+from luau_codegen.convert.sel_args import iter_lua_method_args
 from luau_codegen.model.domain import cxx_name, lua_namespace, short_name
 from luau_codegen.convert.type_map import (
     TypeInfo,
@@ -46,58 +44,8 @@ def _classify_method_args(
     ]
 
 
-def _emit_vector_return_push(ret: TypeInfo, m: Method, expr: str) -> List[str]:
-    if ret.kind != "vector_view":
-        return push_return(ret, expr, returns_owned(m) or m.is_bound_ctor)
-    if ret.is_ref and not m.is_static:
-        return push_return(ret, expr, False, owner_expr="self")
-    return emit_owned_vector_return_push(ret, expr)
-
-
-def _emit_vector_out_push(info: TypeInfo, var: str) -> List[str]:
-    return emit_vector_out_push(info, var)
-
-
 def _gen_ns(cls: Class) -> str:
     return f"ns_{cxx_id(cls.name)}"
-
-
-def _emit_trampoline_anchors(
-    selector_handlers: List[tuple[str, str]],
-    delegate_trampolines: List[str],
-    ret: TypeInfo,
-    m: Method,
-) -> List[str]:
-    if not selector_handlers and not delegate_trampolines:
-        return []
-    lines: List[str] = []
-
-    def anchor_handler(handler: str, variant: str, anchor: str) -> str:
-        if variant == "menu":
-            return f"luax::anchorMenuHandler({anchor}, {handler});\n"
-        return f"luax::anchorTrampoline({anchor}, {handler});\n"
-
-    def orphan_handler(handler: str, variant: str) -> str:
-        if variant == "menu":
-            return f"luax::registerOrphanMenuHandler({handler});\n"
-        return f"luax::registerOrphanTrampoline({handler});\n"
-
-    if ret.kind == "object":
-        for handler, variant in selector_handlers:
-            lines.append(f"        {anchor_handler(handler, variant, 'result')}")
-        for trampoline in delegate_trampolines:
-            lines.append(f"        luax::anchorDelegate(result, {trampoline});\n")
-    elif not m.is_static:
-        for handler, variant in selector_handlers:
-            lines.append(f"        {anchor_handler(handler, variant, 'self')}")
-        for trampoline in delegate_trampolines:
-            lines.append(f"        luax::anchorDelegate(self, {trampoline});\n")
-    else:
-        for handler, variant in selector_handlers:
-            lines.append(f"        {orphan_handler(handler, variant)}")
-        for trampoline in delegate_trampolines:
-            lines.append(f"        luax::registerOrphanTrampoline({trampoline});\n")
-    return lines
 
 
 def _emit_ccnode_schedule(
@@ -137,61 +85,6 @@ def _emit_ccnode_schedule(
     out.append(f"        luax::anchorTrampoline(self, {sel_var}_handler);\n")
     out.append("        return 0;\n")
     return out
-
-
-def _emit_out_arg(info: TypeInfo, var: str) -> tuple[List[str], str]:
-    if info.kind == "value" and info.lua_type == "UIButtonConfig":
-        return [f"        UIButtonConfig {var}{{}};\n"], var
-    if info.kind == "enum":
-        return [f"        {info.cxx_type} {var}{{}};\n"], var
-    if info.kind in _CONTAINER_KINDS:
-        return [f"        {info.cxx_type} {var}{{}};\n"], (f"&{var}" if info.is_vector_ptr else var)
-    return [f"        {info.cxx_type} {var}{{}};\n"], var
-
-
-def _emit_lua_method_arg(
-    lua_arg: LuaMethodArg,
-    *,
-    lua_idx: int,
-    label: str,
-    call_args: List[str],
-    selector_handlers: List[tuple[str, str]],
-    delegate_trampolines: List[str],
-) -> tuple[List[str], int]:
-    out: List[str] = []
-    info = lua_arg.info
-    arg_idx = lua_arg.arg_index
-    var = f"arg{arg_idx}"
-
-    if lua_arg.out_only:
-        lines, call_expr = _emit_out_arg(info, var)
-        out.extend(lines)
-        call_args.append(call_expr)
-        return out, lua_idx
-
-    if lua_arg.orphan:
-        sel_var = f"sel{arg_idx}"
-        out.extend(check_sel_handler(lua_idx, sel_var, info, label))
-        call_args.append(sel_selector_call_arg(info))
-        selector_handlers.append((f"{sel_var}_handler", info.class_name or "menu"))
-        return out, lua_idx + 1
-
-    if lua_arg.sel_pair and not lua_arg.implicit_self_target:
-        sel_var = f"sel{arg_idx}"
-        out.extend(check_sel_handler(lua_idx, sel_var, info, label))
-        call_args.extend(sel_call_args(sel_var, info, handler_first=lua_arg.handler_first))
-        selector_handlers.append((f"{sel_var}_handler", info.class_name or "menu"))
-        return out, lua_idx + 1
-
-    out.extend(check_arg(lua_arg.arg, info, lua_idx, var, label))
-    if info.kind == "callback":
-        call_args.append(f"std::move({var})")
-    elif info.kind == "delegate":
-        call_args.append(var)
-        delegate_trampolines.append(f"{var}_trampoline")
-    else:
-        call_args.append(var)
-    return out, lua_idx + 1
 
 
 def _emit_invoke(
@@ -268,7 +161,7 @@ def _emit_invoke(
             out.extend(_emit_ccnode_schedule(cls, m, label, lua_idx, lua_arg.info, remaining))
             out.append("    }\n\n")
             return "".join(out)
-        lines, lua_idx = _emit_lua_method_arg(
+        lines, lua_idx = emit_lua_invoke_arg(
             lua_arg,
             lua_idx=lua_idx,
             label=label,
@@ -289,20 +182,30 @@ def _emit_invoke(
         (i, arg_infos[i]) for i in range(len(m.args)) if ret.kind == "void" and arg_infos[i].is_out
     ]
     if ret.kind == "void":
-        out.append(f"        {target};\n")
-        out.extend(_emit_trampoline_anchors(selector_handlers, delegate_trampolines, ret, m))
-        if out_refs:
-            for i, oinfo in out_refs:
-                out.extend(_emit_vector_out_push(oinfo, f"arg{i}"))
-            out.append(f"        return {len(out_refs)};\n")
-        else:
-            out.extend(push_return(ret, "", False))
+        out.extend(
+            emit_invoke_void_tail(
+                target,
+                ret=ret,
+                out_refs=out_refs,
+                selector_handlers=selector_handlers,
+                delegate_trampolines=delegate_trampolines,
+                is_static=m.is_static,
+            )
+        )
     else:
-        out.append(f"        auto result = {target};\n")
-        if m.is_bound_ctor:
-            out.append("        result->autorelease();\n")
-        out.extend(_emit_trampoline_anchors(selector_handlers, delegate_trampolines, ret, m))
-        out.extend(_emit_vector_return_push(ret, m, "result"))
+        ref_owner = "self" if ret.kind == "vector_view" and ret.is_ref and not m.is_static else None
+        out.extend(
+            emit_invoke_return_tail(
+                target,
+                ret=ret,
+                selector_handlers=selector_handlers,
+                delegate_trampolines=delegate_trampolines,
+                is_static=m.is_static,
+                owned_return=returns_owned(m) or m.is_bound_ctor,
+                ref_owner_expr=ref_owner,
+                pre_push_lines=["        result->autorelease();\n"] if m.is_bound_ctor else None,
+            )
+        )
     out.append("    }\n\n")
     return "".join(out)
 
