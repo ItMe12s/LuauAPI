@@ -31,7 +31,6 @@ namespace luax {
             bool cancelled = false;
         };
 
-        DrawCb* find(std::uint64_t id);
         bool fire(DrawCb& cb);
 
         ScheduledSlotStore<DrawCb> m_store;

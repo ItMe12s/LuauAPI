@@ -5,7 +5,6 @@
 #include "lua/runtime/Runtime.hpp"
 
 #include <Geode/Geode.hpp>
-#include <algorithm>
 
 namespace luax {
     TaskScheduler& TaskScheduler::get() {
@@ -42,15 +41,6 @@ namespace luax {
     void TaskScheduler::cancel(std::uint64_t id) {
         m_timed.cancel(id);
         m_deferred.cancel(id);
-    }
-
-    TaskScheduler::Task* TaskScheduler::find(std::uint64_t id) {
-        auto it = m_deferredIds.find(id);
-        if (it == m_deferredIds.end()) {
-            return nullptr;
-        }
-        auto& store = it->second ? m_deferred : m_timed;
-        return store.find(id);
     }
 
     bool TaskScheduler::fire(Task& task) {

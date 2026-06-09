@@ -37,7 +37,6 @@ namespace luax {
             bool cancelled = false;
         };
 
-        Task* find(std::uint64_t id);
         bool fire(Task& task);
         void fireDeferred();
         void fireTimedDue(std::vector<std::size_t> const& due);

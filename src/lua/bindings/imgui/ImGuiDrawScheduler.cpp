@@ -23,10 +23,6 @@ namespace luax {
         m_store.cancel(id);
     }
 
-    ImGuiDrawScheduler::DrawCb* ImGuiDrawScheduler::find(std::uint64_t id) {
-        return m_store.find(id);
-    }
-
     bool ImGuiDrawScheduler::fire(DrawCb& cb) {
         return fireProtectedCallback(cb.callback, "imgui.draw", kImGuiScriptDeadlineMs);
     }
