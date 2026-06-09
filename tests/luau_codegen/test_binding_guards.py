@@ -615,7 +615,7 @@ class ErrorSemanticsGuardTests(unittest.TestCase):
         body = _function_body(source, "modSetSavedValue")
         self.assertIn("valueResult.isErr()", body)
         self.assertIn("isObject()", body)
-        self.assertIn("return 2", body)
+        self.assertGreaterEqual(body.count("pushNilErr"), 2)
 
     def test_delegate_default_return_policy_documented(self) -> None:
         source = _read_repo_file("docs/lua/reference/delegates.md")
