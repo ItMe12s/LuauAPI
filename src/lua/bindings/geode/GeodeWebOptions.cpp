@@ -27,42 +27,6 @@ namespace luax::webdetail {
             return static_cast<web::ProxyType>(value);
         }
 
-        void applyStringMap(lua_State* L, int idx, char const* field, char const* method, auto&& setter) {
-            lua_getfield(L, idx, field);
-            if (lua_isnil(L, -1)) {
-                lua_pop(L, 1);
-                return;
-            }
-            luaL_checktype(L, -1, LUA_TTABLE);
-            int table = lua_absindex(L, -1);
-            lua_pushnil(L);
-            while (lua_next(L, table) != 0) {
-                auto key = check<std::string>(L, -2, method);
-                auto value = check<std::string>(L, -1, method);
-                setter(std::move(key), std::move(value));
-                lua_pop(L, 1);
-            }
-            lua_pop(L, 1);
-        }
-
-        std::optional<std::pair<std::uint64_t, std::uint64_t>> optDownloadRange(
-            lua_State* L, int idx, char const* method
-        ) {
-            lua_getfield(L, idx, "downloadRange");
-            if (lua_isnil(L, -1)) {
-                lua_pop(L, 1);
-                return std::nullopt;
-            }
-            luaL_checktype(L, -1, LUA_TTABLE);
-            lua_rawgeti(L, -1, 1);
-            auto start = checkNonNegativeInteger(L, -1, method);
-            lua_pop(L, 1);
-            lua_rawgeti(L, -1, 2);
-            auto stop = checkNonNegativeInteger(L, -1, method);
-            lua_pop(L, 2);
-            if (start > stop) luaL_error(L, "%s expected downloadRange start <= stop", method);
-            return std::pair<std::uint64_t, std::uint64_t>{start, stop};
-        }
     } // namespace
 
     int optPriority(lua_State* L, int idx) {
@@ -183,44 +147,7 @@ namespace luax::webdetail {
         idx = lua_absindex(L, idx);
         luaL_checktype(L, idx, LUA_TTABLE);
 
-        applyStringMap(L, idx, "headers", method, [&](std::string name, std::string value) {
-            applyHeader(req, std::move(name), std::move(value));
-        });
-        applyStringMap(L, idx, "params", method, [&](std::string name, std::string value) {
-            applyParam(req, std::move(name), std::move(value));
-        });
-
-        if (auto value = optStringField(L, idx, "method", method))
-            applyMethod(req, std::move(*value));
-        if (auto value = optStringField(L, idx, "url", method)) applyUrl(req, std::move(*value));
-        if (auto value = optStringField(L, idx, "userAgent", method))
-            applyUserAgent(req, std::move(*value));
-        if (auto value = optStringField(L, idx, "acceptEncoding", method))
-            applyAcceptEncoding(req, std::move(*value));
-        if (auto value = optNumberField(L, idx, "timeout", method)) {
-            if (*value < 0) luaL_error(L, "%s expected timeout >= 0", method);
-            applyTimeout(req, *value);
-        }
-        if (auto value = optDownloadRange(L, idx, method))
-            applyDownloadRange(req, value->first, value->second);
-        if (auto value = optBoolField(L, idx, "certVerification", method))
-            applyCertVerification(req, *value);
-        if (auto value = optBoolField(L, idx, "transferBody", method))
-            applyTransferBody(req, *value);
-        if (auto value = optBoolField(L, idx, "followRedirects", method))
-            applyFollowRedirects(req, *value);
-        if (auto value = optBoolField(L, idx, "ignoreContentLength", method))
-            applyIgnoreContentLength(req, *value);
-        if (auto value = optStringField(L, idx, "caBundle", method))
-            applyCaBundle(req, std::move(*value));
-
-        lua_getfield(L, idx, "proxy");
-        if (!lua_isnil(L, -1)) applyProxy(req, checkProxyOpts(L, -1, method));
-        lua_pop(L, 1);
-
-        lua_getfield(L, idx, "version");
-        if (!lua_isnil(L, -1)) applyVersion(req, checkHttpVersion(L, -1, method));
-        lua_pop(L, 1);
+        applyScalarOptions(L, req, idx, method);
 
         if (auto value = optStringField(L, idx, "body", method)) {
             if (!applyBody(req, *value)) luaL_error(L, "%s", kWebRequestBodyExceededMsg);

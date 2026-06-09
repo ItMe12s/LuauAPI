@@ -19,21 +19,7 @@ namespace luax::webdetail {
     int optPriority(lua_State* L, int idx);
     void applyOptions(lua_State* L, web::WebRequest& req, int idx, char const* method);
 
-    void applyHeader(web::WebRequest& req, std::string name, std::string value);
-    void applyParam(web::WebRequest& req, std::string name, std::string value);
-    void applyMethod(web::WebRequest& req, std::string value);
-    void applyUrl(web::WebRequest& req, std::string value);
-    void applyUserAgent(web::WebRequest& req, std::string value);
-    void applyAcceptEncoding(web::WebRequest& req, std::string value);
-    void applyTimeout(web::WebRequest& req, double seconds);
-    void applyDownloadRange(web::WebRequest& req, std::uint64_t start, std::uint64_t stop);
-    void applyCertVerification(web::WebRequest& req, bool value);
-    void applyTransferBody(web::WebRequest& req, bool value);
-    void applyFollowRedirects(web::WebRequest& req, bool value);
-    void applyIgnoreContentLength(web::WebRequest& req, bool value);
-    void applyCaBundle(web::WebRequest& req, std::string value);
-    void applyProxy(web::WebRequest& req, web::ProxyOpts opts);
-    void applyVersion(web::WebRequest& req, web::HttpVersion version);
+    void applyScalarOptions(lua_State* L, web::WebRequest& req, int idx, char const* method);
     bool applyBody(web::WebRequest& req, std::string const& data);
     bool applyBodyString(web::WebRequest& req, std::string const& data);
     bool applyBodyJson(web::WebRequest& req, matjson::Value value);

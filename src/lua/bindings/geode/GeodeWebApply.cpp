@@ -1,74 +1,119 @@
+#include "lua/bindings/framework/Stack.hpp"
+#include "lua/bindings/framework/TableUtil.hpp"
 #include "lua/bindings/geode/GeodeWebInternal.hpp"
 #include "lua/bindings/geode/WebCaps.hpp"
 
 #include <Geode/utils/web.hpp>
 #include <chrono>
 #include <cstdint>
+#include <lua.h>
+#include <lualib.h>
 #include <matjson.hpp>
+#include <optional>
 #include <string>
 #include <utility>
 
 namespace luax::webdetail {
     using namespace luax;
 
-    void applyHeader(web::WebRequest& req, std::string name, std::string value) {
-        req.header(std::move(name), std::move(value));
-    }
+    namespace {
+        using StringMoveFn = web::WebRequest& (web::WebRequest::*)(std::string);
+        using BoolFn = web::WebRequest& (web::WebRequest::*)(bool);
 
-    void applyParam(web::WebRequest& req, std::string name, std::string value) {
-        req.param(std::move(name), std::move(value));
-    }
+        struct StringOptionDescriptor {
+            char const* field;
+            StringMoveFn setter;
+        };
 
-    void applyMethod(web::WebRequest& req, std::string value) {
-        req.method(std::move(value));
-    }
+        struct BoolOptionDescriptor {
+            char const* field;
+            BoolFn setter;
+        };
 
-    void applyUrl(web::WebRequest& req, std::string value) {
-        req.url(std::move(value));
-    }
+        StringOptionDescriptor const kStringOptions[] = {
+            {"method", &web::WebRequest::method},
+            {"url", &web::WebRequest::url},
+            {"userAgent", &web::WebRequest::userAgent},
+            {"acceptEncoding", &web::WebRequest::acceptEncoding},
+            {"caBundle", &web::WebRequest::CABundleContent},
+        };
 
-    void applyUserAgent(web::WebRequest& req, std::string value) {
-        req.userAgent(std::move(value));
-    }
+        BoolOptionDescriptor const kBoolOptions[] = {
+            {"certVerification", &web::WebRequest::certVerification},
+            {"transferBody", &web::WebRequest::transferBody},
+            {"followRedirects", &web::WebRequest::followRedirects},
+            {"ignoreContentLength", &web::WebRequest::ignoreContentLength},
+        };
 
-    void applyAcceptEncoding(web::WebRequest& req, std::string value) {
-        req.acceptEncoding(std::move(value));
-    }
+        void applyStringMap(lua_State* L, int idx, char const* field, char const* method, auto&& setter) {
+            lua_getfield(L, idx, field);
+            if (lua_isnil(L, -1)) {
+                lua_pop(L, 1);
+                return;
+            }
+            luaL_checktype(L, -1, LUA_TTABLE);
+            int table = lua_absindex(L, -1);
+            lua_pushnil(L);
+            while (lua_next(L, table) != 0) {
+                auto key = check<std::string>(L, -2, method);
+                auto value = check<std::string>(L, -1, method);
+                setter(std::move(key), std::move(value));
+                lua_pop(L, 1);
+            }
+            lua_pop(L, 1);
+        }
 
-    void applyTimeout(web::WebRequest& req, double seconds) {
-        req.timeout(std::chrono::seconds(static_cast<std::int64_t>(seconds)));
-    }
+        std::optional<std::pair<std::uint64_t, std::uint64_t>> optDownloadRange(
+            lua_State* L, int idx, char const* method
+        ) {
+            lua_getfield(L, idx, "downloadRange");
+            if (lua_isnil(L, -1)) {
+                lua_pop(L, 1);
+                return std::nullopt;
+            }
+            luaL_checktype(L, -1, LUA_TTABLE);
+            lua_rawgeti(L, -1, 1);
+            auto start = checkNonNegativeInteger(L, -1, method);
+            lua_pop(L, 1);
+            lua_rawgeti(L, -1, 2);
+            auto stop = checkNonNegativeInteger(L, -1, method);
+            lua_pop(L, 2);
+            if (start > stop) luaL_error(L, "%s expected downloadRange start <= stop", method);
+            return std::pair<std::uint64_t, std::uint64_t>{start, stop};
+        }
+    } // namespace
 
-    void applyDownloadRange(web::WebRequest& req, std::uint64_t start, std::uint64_t stop) {
-        req.downloadRange({start, stop});
-    }
+    void applyScalarOptions(lua_State* L, web::WebRequest& req, int idx, char const* method) {
+        applyStringMap(L, idx, "headers", method, [&](std::string name, std::string value) {
+            req.header(std::move(name), std::move(value));
+        });
+        applyStringMap(L, idx, "params", method, [&](std::string name, std::string value) {
+            req.param(std::move(name), std::move(value));
+        });
 
-    void applyCertVerification(web::WebRequest& req, bool value) {
-        req.certVerification(value);
-    }
+        for (auto const& desc : kStringOptions) {
+            if (auto value = optStringField(L, idx, desc.field, method))
+                (req.*desc.setter)(std::move(*value));
+        }
 
-    void applyTransferBody(web::WebRequest& req, bool value) {
-        req.transferBody(value);
-    }
+        if (auto value = optNumberField(L, idx, "timeout", method)) {
+            if (*value < 0) luaL_error(L, "%s expected timeout >= 0", method);
+            req.timeout(std::chrono::seconds(static_cast<std::int64_t>(*value)));
+        }
+        if (auto value = optDownloadRange(L, idx, method))
+            req.downloadRange({value->first, value->second});
 
-    void applyFollowRedirects(web::WebRequest& req, bool value) {
-        req.followRedirects(value);
-    }
+        for (auto const& desc : kBoolOptions) {
+            if (auto value = optBoolField(L, idx, desc.field, method)) (req.*desc.setter)(*value);
+        }
 
-    void applyIgnoreContentLength(web::WebRequest& req, bool value) {
-        req.ignoreContentLength(value);
-    }
+        lua_getfield(L, idx, "proxy");
+        if (!lua_isnil(L, -1)) req.proxyOpts(checkProxyOpts(L, -1, method));
+        lua_pop(L, 1);
 
-    void applyCaBundle(web::WebRequest& req, std::string value) {
-        req.CABundleContent(std::move(value));
-    }
-
-    void applyProxy(web::WebRequest& req, web::ProxyOpts opts) {
-        req.proxyOpts(std::move(opts));
-    }
-
-    void applyVersion(web::WebRequest& req, web::HttpVersion version) {
-        req.version(version);
+        lua_getfield(L, idx, "version");
+        if (!lua_isnil(L, -1)) req.version(checkHttpVersion(L, -1, method));
+        lua_pop(L, 1);
     }
 
     bool applyBody(web::WebRequest& req, std::string const& data) {

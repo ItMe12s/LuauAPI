@@ -7,6 +7,7 @@
 #include "lua/bindings/geode/WebCaps.hpp"
 
 #include <Geode/utils/web.hpp>
+#include <chrono>
 #include <cstdint>
 #include <lua.h>
 #include <lualib.h>
@@ -35,7 +36,7 @@ namespace luax::webdetail {
             char const* ctx = "WebRequest:header";
             auto name = check<std::string>(L, 2, ctx);
             auto value = check<std::string>(L, 3, ctx);
-            applyHeader(req, std::move(name), std::move(value));
+            req.header(std::move(name), std::move(value));
         }
 
         void applyRemoveHeaderChain(lua_State* L, web::WebRequest& req) {
@@ -48,7 +49,7 @@ namespace luax::webdetail {
             char const* ctx = "WebRequest:param";
             auto name = check<std::string>(L, 2, ctx);
             auto value = check<std::string>(L, 3, ctx);
-            applyParam(req, std::move(name), std::move(value));
+            req.param(std::move(name), std::move(value));
         }
 
         void applyRemoveParamChain(lua_State* L, web::WebRequest& req) {
@@ -59,33 +60,29 @@ namespace luax::webdetail {
 
         void applyMethodChain(lua_State* L, web::WebRequest& req) {
             char const* ctx = "WebRequest:method";
-            auto value = check<std::string>(L, 2, ctx);
-            applyMethod(req, std::move(value));
+            req.method(check<std::string>(L, 2, ctx));
         }
 
         void applyUrlChain(lua_State* L, web::WebRequest& req) {
             char const* ctx = "WebRequest:url";
-            auto value = check<std::string>(L, 2, ctx);
-            applyUrl(req, std::move(value));
+            req.url(check<std::string>(L, 2, ctx));
         }
 
         void applyUserAgentChain(lua_State* L, web::WebRequest& req) {
             char const* ctx = "WebRequest:userAgent";
-            auto value = check<std::string>(L, 2, ctx);
-            applyUserAgent(req, std::move(value));
+            req.userAgent(check<std::string>(L, 2, ctx));
         }
 
         void applyAcceptEncodingChain(lua_State* L, web::WebRequest& req) {
             char const* ctx = "WebRequest:acceptEncoding";
-            auto value = check<std::string>(L, 2, ctx);
-            applyAcceptEncoding(req, std::move(value));
+            req.acceptEncoding(check<std::string>(L, 2, ctx));
         }
 
         void applyTimeoutChain(lua_State* L, web::WebRequest& req) {
             char const* ctx = "WebRequest:timeout";
             auto seconds = check<int>(L, 2, ctx);
             if (seconds < 0) luaL_error(L, "WebRequest:timeout expected seconds >= 0");
-            applyTimeout(req, seconds);
+            req.timeout(std::chrono::seconds(static_cast<std::int64_t>(seconds)));
         }
 
         void applyDownloadRangeChain(lua_State* L, web::WebRequest& req) {
@@ -96,49 +93,42 @@ namespace luax::webdetail {
             auto start = static_cast<std::uint64_t>(lua_tointeger(L, 2));
             auto stop = static_cast<std::uint64_t>(lua_tointeger(L, 3));
             if (start > stop) luaL_error(L, "WebRequest:downloadRange expected start <= stop");
-            applyDownloadRange(req, start, stop);
+            req.downloadRange({start, stop});
         }
 
         void applyCertVerificationChain(lua_State* L, web::WebRequest& req) {
             char const* ctx = "WebRequest:certVerification";
-            auto value = check<bool>(L, 2, ctx);
-            applyCertVerification(req, value);
+            req.certVerification(check<bool>(L, 2, ctx));
         }
 
         void applyTransferBodyChain(lua_State* L, web::WebRequest& req) {
             char const* ctx = "WebRequest:transferBody";
-            auto value = check<bool>(L, 2, ctx);
-            applyTransferBody(req, value);
+            req.transferBody(check<bool>(L, 2, ctx));
         }
 
         void applyFollowRedirectsChain(lua_State* L, web::WebRequest& req) {
             char const* ctx = "WebRequest:followRedirects";
-            auto value = check<bool>(L, 2, ctx);
-            applyFollowRedirects(req, value);
+            req.followRedirects(check<bool>(L, 2, ctx));
         }
 
         void applyIgnoreContentLengthChain(lua_State* L, web::WebRequest& req) {
             char const* ctx = "WebRequest:ignoreContentLength";
-            auto value = check<bool>(L, 2, ctx);
-            applyIgnoreContentLength(req, value);
+            req.ignoreContentLength(check<bool>(L, 2, ctx));
         }
 
         void applyCaBundleChain(lua_State* L, web::WebRequest& req) {
             char const* ctx = "WebRequest:caBundle";
-            auto value = check<std::string>(L, 2, ctx);
-            applyCaBundle(req, std::move(value));
+            req.CABundleContent(check<std::string>(L, 2, ctx));
         }
 
         void applyProxyChain(lua_State* L, web::WebRequest& req) {
             char const* ctx = "WebRequest:proxy";
-            auto opts = checkProxyOpts(L, 2, ctx);
-            applyProxy(req, std::move(opts));
+            req.proxyOpts(checkProxyOpts(L, 2, ctx));
         }
 
         void applyVersionChain(lua_State* L, web::WebRequest& req) {
             char const* ctx = "WebRequest:version";
-            auto version = checkHttpVersion(L, 2, ctx);
-            applyVersion(req, version);
+            req.version(checkHttpVersion(L, 2, ctx));
         }
 
         RequestMethodDescriptor const kRequestChainDescriptors[] = {
