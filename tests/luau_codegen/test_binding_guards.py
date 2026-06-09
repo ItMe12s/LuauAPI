@@ -34,6 +34,8 @@ _COCOS_BINDING = "src/lua/bindings/geode/GeodeCocosBinding.cpp"
 _TASK_SCHEDULER = "src/lua/bindings/task/TaskScheduler.cpp"
 _TASK_BINDING = "src/lua/bindings/task/TaskBinding.cpp"
 _IMGUI_BINDING = "src/lua/bindings/imgui/ImGuiDrawHandleBinding.cpp"
+_SCHEDULED_HANDLE_BINDING = "src/lua/bindings/framework/ScheduledHandleBinding.hpp"
+_SCHEDULED_CALLBACK = "src/lua/bindings/framework/ScheduledCallback.hpp"
 _LUA_SELECTOR = "src/lua/bindings/framework/LuaSelectorHandler.cpp"
 _LUA_MENU = "src/lua/bindings/framework/LuaMenuHandler.cpp"
 _LUA_DELEGATE = "src/lua/bindings/framework/LuaDelegate.cpp"
@@ -558,44 +560,35 @@ class CallbackFailureLoggingGuardTests(unittest.TestCase):
 
 
 class HandleGcGuardTests(unittest.TestCase):
+    def test_scheduled_handle_binding_cancels_via_scheduler(self) -> None:
+        source = _read_repo_file(_SCHEDULED_HANDLE_BINDING)
+        self.assertIn("Scheduler::get().cancel", source)
+        self.assertIn("lua_newuserdatataggedwithmetatable", source)
+        self.assertIn("lua_setuserdatadtor", source)
+        self.assertIn("lua_setuserdatametatable", source)
+
     def test_task_handle_metatable_registers_gc_cancellation(self) -> None:
         source = _read_repo_file(_TASK_BINDING)
-        cancel_match = re.search(
-            r"void\s+cancelHandle\(TaskHandle\* handle\)\s*\{[^}]*TaskScheduler::get\(\)\.cancel",
-            source,
-            re.DOTALL,
-        )
-        self.assertIsNotNone(
-            cancel_match,
-            "task handle cleanup must cancel the scheduled task id",
-        )
-        self.assertIn("lua_newuserdatataggedwithmetatable", source)
+        self.assertIn("ScheduledHandleBinding", source)
         self.assertIn("detail::taskHandleTag()", source)
-        register_body = _function_body(source, "registerHandleMetatable", ret="void")
-        self.assertIn("lua_setuserdatametatable(L, detail::taskHandleTag())", register_body)
-        self.assertIn(
-            "lua_setuserdatadtor(L, detail::taskHandleTag(), &taskHandleDtor)", register_body
-        )
+        self.assertIn("TaskHandleBinding::registerMetatable", source)
 
     def test_imgui_handle_metatable_registers_gc_cancellation(self) -> None:
         source = _read_repo_file(_IMGUI_BINDING)
-        cancel_match = re.search(
-            r"void\s+cancelHandle\(ImGuiDrawHandle\* handle\)\s*\{[^}]*ImGuiDrawScheduler::get\(\)\.cancel",
-            source,
-            re.DOTALL,
-        )
-        self.assertIsNotNone(
-            cancel_match,
-            "imgui handle cleanup must cancel the draw callback id",
-        )
-        self.assertIn("lua_newuserdatataggedwithmetatable", source)
+        self.assertIn("ScheduledHandleBinding", source)
         self.assertIn("detail::imguiDrawHandleTag()", source)
-        register_body = _function_body(source, "registerImGuiDrawHandleMetatable", ret="void")
-        self.assertIn("lua_setuserdatametatable(L, detail::imguiDrawHandleTag())", register_body)
-        self.assertIn(
-            "lua_setuserdatadtor(L, detail::imguiDrawHandleTag(), &imguiHandleDtor)",
-            register_body,
-        )
+        self.assertIn("ImGuiDrawHandleBinding::registerMetatable", source)
+
+    def test_schedulers_fire_callbacks_via_framework_helper(self) -> None:
+        callback_source = _read_repo_file(_SCHEDULED_CALLBACK)
+        self.assertIn("fireProtectedCallback", callback_source)
+        self.assertIn("protectedCall", callback_source)
+
+        task_scheduler = _read_repo_file(_TASK_SCHEDULER)
+        self.assertIn("fireProtectedCallback", task_scheduler)
+
+        imgui_scheduler = _read_repo_file("src/lua/bindings/imgui/ImGuiDrawScheduler.cpp")
+        self.assertIn("fireProtectedCallback", imgui_scheduler)
 
 
 class ErrorSemanticsGuardTests(unittest.TestCase):

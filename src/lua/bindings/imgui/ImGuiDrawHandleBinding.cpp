@@ -4,6 +4,7 @@
 #include "ImGuiHost.hpp"
 #include "lua/Config.hpp"
 #include "lua/bindings/framework/LuaRef.hpp"
+#include "lua/bindings/framework/ScheduledHandleBinding.hpp"
 #include "lua/bindings/framework/TableUtil.hpp"
 #include "lua/bindings/framework/UserdataTags.hpp"
 
@@ -13,42 +14,25 @@
 
 namespace luax {
     namespace {
-        constexpr char const* kHandleMeta = "luax.ImGuiDrawHandle";
+        struct ImGuiDrawHandleTraits {
+            using Scheduler = ImGuiDrawScheduler;
+            static constexpr char const* kMeta = "luax.ImGuiDrawHandle";
+            static constexpr char const* kTypeName = "ImGuiDrawHandle";
 
-        struct ImGuiDrawHandle {
-            std::uint64_t id;
+            static constexpr int userdataTag() noexcept {
+                return detail::imguiDrawHandleTag();
+            }
         };
 
-        void cancelHandle(ImGuiDrawHandle* handle) {
-            if (handle && handle->id != 0) {
-                ImGuiDrawScheduler::get().cancel(handle->id);
-                handle->id = 0;
-            }
-        }
-
-        void imguiHandleDtor(lua_State* L, void* ud) {
-            (void)L;
-            cancelHandle(static_cast<ImGuiDrawHandle*>(ud));
-        }
+        using ImGuiDrawHandleBinding = ScheduledHandleBinding<ImGuiDrawHandleTraits>;
 
         void pushHandle(lua_State* L, std::uint64_t id) {
-            auto* handle = static_cast<ImGuiDrawHandle*>(lua_newuserdatataggedwithmetatable(
-                L, sizeof(ImGuiDrawHandle), detail::imguiDrawHandleTag()
-            ));
-            handle->id = id;
-        }
-
-        int imguiHandleGc(lua_State* L) {
-            auto* handle = static_cast<ImGuiDrawHandle*>(luaL_checkudata(L, 1, kHandleMeta));
-            cancelHandle(handle);
-            return 0;
+            ImGuiDrawHandleBinding::push(L, id);
         }
     } // namespace
 
     int imguiCancel(lua_State* L) {
-        auto* handle = static_cast<ImGuiDrawHandle*>(luaL_checkudata(L, 1, kHandleMeta));
-        cancelHandle(handle);
-        return 0;
+        return ImGuiDrawHandleBinding::luaCancel(L);
     }
 
     int imguiOnDraw(lua_State* L) {
@@ -71,30 +55,7 @@ namespace luax {
     }
 
     void registerImGuiDrawHandleMetatable(lua_State* L) {
-        if (luaL_newmetatable(L, kHandleMeta)) {
-            lua_pushcfunction(L, &imguiCancel, "cancel");
-            lua_setfield(L, -2, "cancel");
-            lua_pushcfunction(L, &imguiHandleGc, "__gc");
-            lua_setfield(L, -2, "__gc");
-            lua_pushvalue(L, -1);
-            lua_setfield(L, -2, "__index");
-            lua_pushstring(L, "locked");
-            lua_setfield(L, -2, "__metatable");
-            lua_pushstring(L, "ImGuiDrawHandle");
-            lua_setfield(L, -2, "__type");
-        }
-        lua_pop(L, 1);
-
-        lua_getuserdatametatable(L, detail::imguiDrawHandleTag());
-        if (!lua_isnil(L, -1)) {
-            lua_pop(L, 1);
-            return;
-        }
-        lua_pop(L, 1);
-
-        luaL_getmetatable(L, kHandleMeta);
-        lua_setuserdatametatable(L, detail::imguiDrawHandleTag());
-        lua_setuserdatadtor(L, detail::imguiDrawHandleTag(), &imguiHandleDtor);
+        ImGuiDrawHandleBinding::registerMetatable(L);
     }
 
     geode::Result<void> registerImGuiDrawHandle(lua_State* L) {

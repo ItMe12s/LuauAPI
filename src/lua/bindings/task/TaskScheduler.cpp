@@ -1,6 +1,7 @@
 #include "TaskScheduler.hpp"
 
 #include "lua/Config.hpp"
+#include "lua/bindings/framework/ScheduledCallback.hpp"
 #include "lua/runtime/Runtime.hpp"
 
 #include <Geode/Geode.hpp>
@@ -60,16 +61,7 @@ namespace luax {
     }
 
     bool TaskScheduler::fire(Task& task) {
-        auto* runtime = Runtime::getIfInitialized();
-        if (!runtime) return false;
-        auto* L = task.callback.luaState();
-        if (!L) return false;
-        int top = lua_gettop(L);
-        if (!task.callback.push()) return false;
-        Runtime::ResourcesRootScope scope(*runtime, task.callback.resourcesRoot());
-        bool ok = runtime->protectedCall(0, 0, "task", kHookScriptDeadlineMs).isOk();
-        lua_settop(L, top);
-        return ok;
+        return fireProtectedCallback(task.callback, "task", kHookScriptDeadlineMs);
     }
 
     void TaskScheduler::fireDeferred() {
