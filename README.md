@@ -22,71 +22,64 @@
 
 ## Getting started
 
-Start here regardless of your role. Read the chapters in order.
+For mod authors adding Luau scripting to their own Geode mod.
 
-- [Chapter 1: Installation](docs/getting-started/chapter-1.md)
-- [Chapter 2: Building](docs/getting-started/chapter-2.md)
-- [Chapter 3: Editor setup](docs/getting-started/chapter-3.md)
-- [Chapter 4: Your first script](docs/getting-started/chapter-4.md)
-- [Chapter 5: Core concepts](docs/getting-started/chapter-5.md)
+- [Overview](docs/getting-started/overview.md)
+- [Installation](docs/getting-started/installation.md)
+- [Your first script](docs/getting-started/first-script.md)
+- [Editor setup](docs/getting-started/editor-setup.md)
+- [Examples](docs/getting-started/examples.md)
 
-## Lua script authors
+## Reference
 
-For anyone writing `.luau` files that run inside the game.
+API reference for everything a script or host can call.
 
-- [Overview](docs/lua/overview.md)
-- Guides
-  - [Writing scripts](docs/lua/guide/writing-scripts.md)
-  - [Hooks](docs/lua/guide/hooks.md)
-  - [Tasks and time](docs/lua/guide/tasks-and-time.md)
-  - [Using game objects](docs/lua/guide/using-game-objects.md)
-  - [UI and layouts](docs/lua/guide/ui-and-layouts.md)
-  - [Modules and require](docs/lua/guide/modules-and-require.md)
-  - [Sharing APIs between mods](docs/lua/guide/sharing-apis-between-mods.md)
-- Reference
-  - [Globals](docs/lua/reference/globals.md)
-  - [Hooks](docs/lua/reference/hooks.md)
-  - [mod](docs/lua/reference/mod.md)
-  - [task](docs/lua/reference/task.md)
-  - [time](docs/lua/reference/time.md)
-  - [imgui](docs/lua/reference/imgui.md)
-  - [json](docs/lua/reference/json.md)
-  - [fs](docs/lua/reference/fs.md)
-  - [web](docs/lua/reference/web.md)
-  - [cocos](docs/lua/reference/cocos.md)
-  - [base64](docs/lua/reference/base64.md)
-  - [permission](docs/lua/reference/permission.md)
-  - [ColorProvider](docs/lua/reference/color-provider.md)
-  - [VersionInfo](docs/lua/reference/version-info.md)
-  - [Keybind](docs/lua/reference/keybind.md)
-  - [Callbacks](docs/lua/reference/callbacks.md)
-  - [Delegates](docs/lua/reference/delegates.md)
-  - [Type stubs and editor setup](docs/lua/reference/type-stubs.md)
+- Lua
+  - [Globals](docs/reference/lua/globals.md)
+  - [Hooks](docs/reference/lua/hooks.md)
+  - [Tasks and time](docs/reference/lua/tasks.md)
+  - [Modules](docs/reference/lua/modules.md)
+  - [Game objects](docs/reference/lua/game-objects.md)
+  - [UI and layouts](docs/reference/lua/ui.md)
+  - [Sharing APIs between mods](docs/reference/lua/sharing-apis.md)
+  - [Callbacks](docs/reference/lua/callbacks.md)
+  - [Delegates](docs/reference/lua/delegates.md)
+  - [mod](docs/reference/lua/mod.md)
+  - [fs](docs/reference/lua/fs.md)
+  - [json](docs/reference/lua/json.md)
+  - [web](docs/reference/lua/web.md)
+  - [imgui](docs/reference/lua/imgui.md)
+  - [cocos](docs/reference/lua/cocos.md)
+  - [base64](docs/reference/lua/base64.md)
+  - [permission](docs/reference/lua/permission.md)
+  - [ColorProvider](docs/reference/lua/color-provider.md)
+  - [VersionInfo](docs/reference/lua/version-info.md)
+  - [Keybind](docs/reference/lua/keybind.md)
+  - [Type stubs](docs/reference/lua/type-stubs.md)
+- C++
+  - [API reference](docs/reference/cpp/api-reference.md)
+  - [Integration guide](docs/reference/cpp/integration-guide.md)
+  - [Limits and errors](docs/reference/cpp/limits-and-errors.md)
 
-## C++ host integrators
+## Contributor
 
-For anyone embedding the runtime in their own Geode mod and running scripts from C++.
+For anyone working on LuauAPI itself.
 
-- [Integration guide](docs/cpp/integration-guide.md)
-- [API reference](docs/cpp/api-reference.md)
-- [Limits and errors](docs/cpp/limits-and-errors.md)
-
-## Contributors
-
-For anyone working on the runtime itself.
-
-- [Architecture](docs/dev/architecture.md)
-- [Runtime](docs/dev/runtime.md)
-- [Bindings framework](docs/dev/bindings-framework.md)
-- [Module system](docs/dev/module-system.md)
-- [Task scheduler](docs/dev/task-scheduler.md)
-- [Codegen](docs/dev/codegen.md)
-- [Testing](docs/dev/testing.md)
-- [ImGui draw scheduler](docs/dev/imgui-draw-scheduler.md)
-- [Platform parity](docs/dev/platform-parity.md)
-- [ccCArray fields](docs/dev/cc-c-array.md)
-- [Nested containers](docs/dev/nested-containers.md)
-- [Pair containers](docs/dev/pair-containers.md)
+- [Architecture](docs/contributor/architecture.md)
+- [Building from source](docs/contributor/building.md)
+- [Testing](docs/contributor/testing.md)
+- Internals
+  - [Runtime](docs/contributor/internals/runtime.md)
+  - [Bindings framework](docs/contributor/internals/bindings-framework.md)
+  - [Module system](docs/contributor/internals/module-system.md)
+  - [Task scheduler](docs/contributor/internals/task-scheduler.md)
+  - [ImGui draw scheduler](docs/contributor/internals/imgui-draw-scheduler.md)
+- Codegen
+  - [Codegen](docs/contributor/codegen/codegen.md)
+  - [Platform parity](docs/contributor/codegen/platform-parity.md)
+  - [ccCArray fields](docs/contributor/codegen/cc-c-array.md)
+  - [Nested containers](docs/contributor/codegen/nested-containers.md)
+  - [Pair containers](docs/contributor/codegen/pair-containers.md)
 
 ## Project
 

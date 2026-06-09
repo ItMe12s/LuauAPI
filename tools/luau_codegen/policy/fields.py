@@ -19,7 +19,7 @@ from luau_codegen.convert.type_map import (
 # Obfuscated or encrypted value fields (for example, SeedValue, SeedValueRR, SeedValueSFd) are not listed here.
 # These lack a marshallable type and follow the "unsupported-arg"/"unsupported-return" skip path below.
 # Don't bind encrypted fields, it's unsafe and unnecessary.
-# See docs/dev/codegen.md "Field and encrypted-value policy".
+# See docs/contributor/codegen/codegen.md "Field and encrypted-value policy".
 INACCESSIBLE_FIELDS = {
     ("CCObject", "m_nChildIndex"),
 }

@@ -635,7 +635,7 @@ class ErrorSemanticsGuardTests(unittest.TestCase):
         self.assertGreaterEqual(body.count("pushNilErr"), 2)
 
     def test_delegate_default_return_policy_documented(self) -> None:
-        source = _read_repo_file("docs/lua/reference/delegates.md")
+        source = _read_repo_file("docs/reference/lua/delegates.md")
         self.assertIn("logs the failure", source)
         self.assertIn("method default", source)
 

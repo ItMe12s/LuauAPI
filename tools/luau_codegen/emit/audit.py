@@ -145,7 +145,7 @@ def emit_markdown(data: dict[str, Any]) -> str:
     lines = [
         "# LuauAPI skip audit\n\n",
         "Callback, delegate, container, and related skips grouped by category.\n",
-        "See `docs/lua/reference/callbacks.md` and `docs/lua/reference/delegates.md` "
+        "See `docs/reference/lua/callbacks.md` and `docs/reference/lua/delegates.md` "
         "for supported callback and delegate patterns.\n\n",
         "## Summary\n\n",
         "| Bucket | Skips | Category |\n",
