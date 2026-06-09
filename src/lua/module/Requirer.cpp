@@ -256,7 +256,7 @@ namespace luax {
 
         auto const& contents = contentsResult.unwrap();
         cachePendingLoad(filePath, contents);
-        return writeString(requireCacheKey(filePath, contents), buffer, bufferSize, sizeOut);
+        return writeString(fileCacheKey(filePath, contents), buffer, bufferSize, sizeOut);
     }
 
     int Requirer::loadModule(lua_State* L, char const* chunkname, char const* loadname) {
@@ -295,7 +295,7 @@ namespace luax {
         }
         auto const& contents = contentsResult.unwrap();
         auto bytecodeResult =
-            m_runtime.getOrCompileBytecode(bytecodeCacheKey(filePath, contents), contents);
+            m_runtime.getOrCompileBytecode(fileCacheKey(filePath, contents), contents);
         if (bytecodeResult.isErr()) {
             luaL_error(
                 L, "module '%s' compile failed: %s", chunkname, bytecodeResult.unwrapErr().c_str()

@@ -1,10 +1,12 @@
 #pragma once
 
+#include <Geode/Result.hpp>
 #include <array>
 #include <charconv>
 #include <cstdint>
 #include <lua.h>
 #include <lualib.h>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <system_error>
@@ -101,6 +103,25 @@ namespace luax {
     template <class... Ts>
     inline int pushTuple(lua_State* L, std::tuple<Ts...> const& t) {
         return pushTupleImpl(L, t, std::index_sequence_for<Ts...>{});
+    }
+
+    inline int pushNilErr(lua_State* L, std::string_view err) {
+        lua_pushnil(L);
+        push(L, err);
+        return 2;
+    }
+
+    inline void pushNilErrCallback(lua_State* L, std::string_view err) {
+        lua_pushnil(L);
+        push(L, err);
+    }
+
+    template <class T>
+    inline std::optional<int> returnIfErr(lua_State* L, geode::Result<T> const& result) {
+        if (result.isErr()) {
+            return pushNilErr(L, result.unwrapErr());
+        }
+        return std::nullopt;
     }
 
     template <class T>

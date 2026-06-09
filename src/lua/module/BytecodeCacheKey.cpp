@@ -52,39 +52,32 @@ namespace luax {
         }
 #endif
 
-        std::string fileCacheKey(std::filesystem::path const& path, std::string const& contents) {
-            std::error_code ec;
-            auto size = std::filesystem::file_size(path, ec);
-            if (ec) {
-                size = 0;
-            }
-
-            auto stamp = std::filesystem::last_write_time(path, ec);
-            std::int64_t stampNanoseconds = 0;
-            if (!ec) {
-                stampNanoseconds = static_cast<std::int64_t>(
-                    std::chrono::duration_cast<std::chrono::nanoseconds>(stamp.time_since_epoch()).count()
-                );
-            }
-
-            return joinKeyParts(
-                {
-                    filesystemPathString(path),
-                    "size=" + numericToken(size),
-                    "mtime=" + numericToken(stampNanoseconds),
-                    "hash=" + contentHashToken(contents),
-                },
-                "|"
-            );
-        }
     } // namespace
 
-    std::string bytecodeCacheKey(std::filesystem::path const& path, std::string const& contents) {
-        return fileCacheKey(path, contents);
-    }
+    std::string fileCacheKey(std::filesystem::path const& path, std::string const& contents) {
+        std::error_code ec;
+        auto size = std::filesystem::file_size(path, ec);
+        if (ec) {
+            size = 0;
+        }
 
-    std::string requireCacheKey(std::filesystem::path const& path, std::string const& contents) {
-        return fileCacheKey(path, contents);
+        auto stamp = std::filesystem::last_write_time(path, ec);
+        std::int64_t stampNanoseconds = 0;
+        if (!ec) {
+            stampNanoseconds = static_cast<std::int64_t>(
+                std::chrono::duration_cast<std::chrono::nanoseconds>(stamp.time_since_epoch()).count()
+            );
+        }
+
+        return joinKeyParts(
+            {
+                filesystemPathString(path),
+                "size=" + numericToken(size),
+                "mtime=" + numericToken(stampNanoseconds),
+                "hash=" + contentHashToken(contents),
+            },
+            "|"
+        );
     }
 
     std::string loadstringBytecodeKey(std::string_view chunkName, std::string_view source) {

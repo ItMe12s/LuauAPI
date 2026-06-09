@@ -46,12 +46,12 @@ namespace {
     }
 } // namespace
 
-TEST_CASE("bytecode cache key includes path and metadata tokens") {
+TEST_CASE("file cache key includes path and metadata tokens") {
     auto dir = makeTempDir();
     auto file = dir.path / "Module.luau";
     writeFile(file, "return 1");
 
-    auto key = luax::bytecodeCacheKey(file, "return 1");
+    auto key = luax::fileCacheKey(file, "return 1");
 
     REQUIRE(contains(key, luax::filesystemPathString(file)));
     REQUIRE(contains(key, "|size="));
@@ -59,13 +59,13 @@ TEST_CASE("bytecode cache key includes path and metadata tokens") {
     REQUIRE(contains(key, "|hash="));
 }
 
-TEST_CASE("bytecode cache key changes when contents change") {
+TEST_CASE("file cache key changes when contents change") {
     auto dir = makeTempDir();
     auto file = dir.path / "Module.luau";
     writeFile(file, "return 1");
 
-    auto first = luax::bytecodeCacheKey(file, "return 1");
-    auto second = luax::bytecodeCacheKey(file, "return 2");
+    auto first = luax::fileCacheKey(file, "return 1");
+    auto second = luax::fileCacheKey(file, "return 2");
 
     REQUIRE(first != second);
 }
@@ -84,52 +84,17 @@ TEST_CASE("run script bytecode key omits empty resources root") {
     REQUIRE(key.rfind('|') == key.find('|'));
 }
 
-TEST_CASE("bytecode cache key changes when file mtime changes") {
+TEST_CASE("file cache key changes when file mtime changes") {
     auto dir = makeTempDir();
     auto file = dir.path / "Module.luau";
     writeFile(file, "return 1");
 
-    auto first = luax::bytecodeCacheKey(file, "return 1");
+    auto first = luax::fileCacheKey(file, "return 1");
 
     auto bumped = std::filesystem::last_write_time(file) + std::chrono::hours(1);
     std::filesystem::last_write_time(file, bumped);
 
-    auto second = luax::bytecodeCacheKey(file, "return 1");
-
-    REQUIRE(first != second);
-}
-
-TEST_CASE("require cache key matches bytecode cache key") {
-    auto dir = makeTempDir();
-    auto file = dir.path / "Module.luau";
-    writeFile(file, "return 1");
-
-    REQUIRE(luax::requireCacheKey(file, "return 1") == luax::bytecodeCacheKey(file, "return 1"));
-}
-
-TEST_CASE("require cache key changes when contents change") {
-    auto dir = makeTempDir();
-    auto file = dir.path / "Module.luau";
-    writeFile(file, "return 1");
-    auto first = luax::requireCacheKey(file, "return 1");
-
-    writeFile(file, "return 2");
-    auto second = luax::requireCacheKey(file, "return 2");
-
-    REQUIRE(first != second);
-}
-
-TEST_CASE("require cache key changes when file mtime changes") {
-    auto dir = makeTempDir();
-    auto file = dir.path / "Module.luau";
-    writeFile(file, "return 1");
-
-    auto first = luax::requireCacheKey(file, "return 1");
-
-    auto bumped = std::filesystem::last_write_time(file) + std::chrono::hours(1);
-    std::filesystem::last_write_time(file, bumped);
-
-    auto second = luax::requireCacheKey(file, "return 1");
+    auto second = luax::fileCacheKey(file, "return 1");
 
     REQUIRE(first != second);
 }
