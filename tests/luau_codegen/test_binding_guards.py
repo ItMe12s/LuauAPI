@@ -318,21 +318,32 @@ class BindingGuardTests(unittest.TestCase):
     def test_web_listener_registrars_use_shared_helper(self) -> None:
         source = _web_binding_source()
         self.assertIn(
-            "registerWebListener(",
+            "kListenerDescriptors",
             source,
-            "web listener registration should be centralized",
+            "web listener registration should use a descriptor table",
+        )
+        body = _function_body(source, "registerListenerFromDescriptor")
+        self.assertIn(
+            "registerWebListener(",
+            body,
+            "registerListenerFromDescriptor must delegate to registerWebListener",
+        )
+        self.assertNotIn(
+            "rememberListener(state)",
+            body,
+            "registerListenerFromDescriptor must not duplicate listener bookkeeping",
         )
         for fn in _WEB_LISTENER_REGISTRARS:
             with self.subTest(fn=fn):
-                body = _function_body(source, fn)
+                wrapper = _function_body(source, fn)
                 self.assertIn(
-                    "registerWebListener(",
-                    body,
-                    f"{fn} must delegate to registerWebListener",
+                    "listenerDispatch(",
+                    wrapper,
+                    f"{fn} must delegate to listenerDispatch",
                 )
                 self.assertNotIn(
                     "rememberListener(state)",
-                    body,
+                    wrapper,
                     f"{fn} must not duplicate listener bookkeeping",
                 )
 

@@ -7,6 +7,7 @@
 
 #include <Geode/loader/Priority.hpp>
 #include <Geode/utils/web.hpp>
+#include <cstdint>
 #include <lua.h>
 #include <lualib.h>
 #include <memory>
@@ -147,6 +148,150 @@ namespace luax::webdetail {
             pushListener(L, std::move(state));
             return 1;
         }
+
+        enum class ListenerFilterKind : std::uint8_t {
+            Global,
+            ModId,
+            ById,
+        };
+
+        enum class ListenerEventKind : std::uint8_t {
+            RequestIntercept,
+            Response,
+        };
+
+        struct ListenerDescriptor {
+            char const* context;
+            ListenerFilterKind filter;
+            ListenerEventKind event;
+        };
+
+        geode::ListenerHandle connectRequestIntercept(
+            std::shared_ptr<LuaCallback> cb, int priority, ListenerDescriptor const& desc,
+            std::optional<std::string> modID, std::optional<std::size_t> id
+        ) {
+            char const* ctx = desc.context;
+            switch (desc.filter) {
+                case ListenerFilterKind::Global:
+                    return web::WebRequestInterceptEvent().listen(
+                        [cb, ctx](std::string_view modIDView, web::WebRequest& req) {
+                            return invokeRequestEvent(cb, ctx, modIDView, req);
+                        },
+                        priority
+                    );
+                case ListenerFilterKind::ModId:
+                    return web::WebRequestInterceptEvent(std::move(*modID))
+                        .listen(
+                            [cb, ctx](web::WebRequest& req) {
+                                return invokeRequestEvent(cb, ctx, std::nullopt, req);
+                            },
+                            priority
+                        );
+                case ListenerFilterKind::ById:
+                    return web::IDBasedWebRequestInterceptEvent(*id).listen(
+                        [cb, ctx](web::WebRequest& req) {
+                            return invokeRequestEvent(cb, ctx, std::nullopt, req);
+                        },
+                        priority
+                    );
+            }
+        }
+
+        geode::ListenerHandle connectResponse(
+            std::shared_ptr<LuaCallback> cb, int priority, ListenerDescriptor const& desc,
+            std::optional<std::string> modID, std::optional<std::size_t> id
+        ) {
+            char const* ctx = desc.context;
+            switch (desc.filter) {
+                case ListenerFilterKind::Global:
+                    return web::WebResponseEvent().listen(
+                        [cb, ctx](std::string_view modIDView, web::WebResponse const& response) {
+                            return invokeResponseEvent(cb, ctx, modIDView, response);
+                        },
+                        priority
+                    );
+                case ListenerFilterKind::ModId:
+                    return web::WebResponseEvent(std::move(*modID))
+                        .listen(
+                            [cb, ctx](web::WebResponse const& response) {
+                                return invokeResponseEvent(cb, ctx, std::nullopt, response);
+                            },
+                            priority
+                        );
+                case ListenerFilterKind::ById:
+                    return web::IDBasedWebResponseEvent(*id).listen(
+                        [cb, ctx](web::WebResponse const& response) {
+                            return invokeResponseEvent(cb, ctx, std::nullopt, response);
+                        },
+                        priority
+                    );
+            }
+        }
+
+        ListenerDescriptor const kListenerDescriptors[] = {
+            {"geode.utils.web.onRequestIntercept",
+             ListenerFilterKind::Global,
+             ListenerEventKind::RequestIntercept},
+            {"geode.utils.web.onRequestInterceptFor",
+             ListenerFilterKind::ModId,
+             ListenerEventKind::RequestIntercept},
+            {"geode.utils.web.onRequestInterceptById",
+             ListenerFilterKind::ById,
+             ListenerEventKind::RequestIntercept},
+            {"geode.utils.web.onResponse", ListenerFilterKind::Global, ListenerEventKind::Response},
+            {"geode.utils.web.onResponseFor", ListenerFilterKind::ModId, ListenerEventKind::Response},
+            {"geode.utils.web.onResponseById", ListenerFilterKind::ById, ListenerEventKind::Response},
+        };
+
+        enum class ListenerId : std::size_t {
+            RequestIntercept = 0,
+            RequestInterceptFor,
+            RequestInterceptById,
+            Response,
+            ResponseFor,
+            ResponseById,
+        };
+
+        int registerListenerFromDescriptor(lua_State* L, ListenerDescriptor const& desc) {
+            int callbackIdx = 0;
+            int priorityIdx = 0;
+            std::optional<std::string> modID;
+            std::optional<std::size_t> id;
+
+            switch (desc.filter) {
+                case ListenerFilterKind::Global:
+                    callbackIdx = 1;
+                    priorityIdx = 2;
+                    break;
+                case ListenerFilterKind::ModId:
+                    modID = check<std::string>(L, 1, desc.context);
+                    callbackIdx = 2;
+                    priorityIdx = 3;
+                    break;
+                case ListenerFilterKind::ById:
+                    id = static_cast<std::size_t>(checkNonNegativeInteger(L, 1, desc.context));
+                    callbackIdx = 2;
+                    priorityIdx = 3;
+                    break;
+            }
+
+            auto connect = [desc, modID = std::move(modID), id](
+                               std::shared_ptr<LuaCallback> cb, int priority
+                           ) mutable -> geode::ListenerHandle {
+                if (desc.event == ListenerEventKind::RequestIntercept) {
+                    return connectRequestIntercept(cb, priority, desc, std::move(modID), id);
+                }
+                return connectResponse(cb, priority, desc, std::move(modID), id);
+            };
+
+            return registerWebListener(L, callbackIdx, priorityIdx, std::move(connect));
+        }
+
+        int listenerDispatch(lua_State* L, ListenerId id) {
+            return registerListenerFromDescriptor(
+                L, kListenerDescriptors[static_cast<std::size_t>(id)]
+            );
+        }
     } // namespace
 
     int handleCancel(lua_State* L) {
@@ -174,88 +319,27 @@ namespace luax::webdetail {
     }
 
     int webOnRequestIntercept(lua_State* L) {
-        return registerWebListener(L, 1, 2, [](std::shared_ptr<LuaCallback> cb, int priority) {
-            return web::WebRequestInterceptEvent().listen(
-                [cb](std::string_view modID, web::WebRequest& req) {
-                    return invokeRequestEvent(cb, "geode.utils.web.onRequestIntercept", modID, req);
-                },
-                priority
-            );
-        });
+        return listenerDispatch(L, ListenerId::RequestIntercept);
     }
 
     int webOnRequestInterceptFor(lua_State* L) {
-        auto modID = check<std::string>(L, 1, "geode.utils.web.onRequestInterceptFor");
-        return registerWebListener(
-            L, 2, 3, [modID = std::move(modID)](std::shared_ptr<LuaCallback> cb, int priority) {
-                return web::WebRequestInterceptEvent(modID).listen(
-                    [cb](web::WebRequest& req) {
-                        return invokeRequestEvent(
-                            cb, "geode.utils.web.onRequestInterceptFor", std::nullopt, req
-                        );
-                    },
-                    priority
-                );
-            }
-        );
+        return listenerDispatch(L, ListenerId::RequestInterceptFor);
     }
 
     int webOnRequestInterceptById(lua_State* L) {
-        auto id = static_cast<std::size_t>(
-            checkNonNegativeInteger(L, 1, "geode.utils.web.onRequestInterceptById")
-        );
-        return registerWebListener(L, 2, 3, [id](std::shared_ptr<LuaCallback> cb, int priority) {
-            return web::IDBasedWebRequestInterceptEvent(id).listen(
-                [cb](web::WebRequest& req) {
-                    return invokeRequestEvent(
-                        cb, "geode.utils.web.onRequestInterceptById", std::nullopt, req
-                    );
-                },
-                priority
-            );
-        });
+        return listenerDispatch(L, ListenerId::RequestInterceptById);
     }
 
     int webOnResponse(lua_State* L) {
-        return registerWebListener(L, 1, 2, [](std::shared_ptr<LuaCallback> cb, int priority) {
-            return web::WebResponseEvent().listen(
-                [cb](std::string_view modID, web::WebResponse const& response) {
-                    return invokeResponseEvent(cb, "geode.utils.web.onResponse", modID, response);
-                },
-                priority
-            );
-        });
+        return listenerDispatch(L, ListenerId::Response);
     }
 
     int webOnResponseFor(lua_State* L) {
-        auto modID = check<std::string>(L, 1, "geode.utils.web.onResponseFor");
-        return registerWebListener(
-            L, 2, 3, [modID = std::move(modID)](std::shared_ptr<LuaCallback> cb, int priority) {
-                return web::WebResponseEvent(modID).listen(
-                    [cb](web::WebResponse const& response) {
-                        return invokeResponseEvent(
-                            cb, "geode.utils.web.onResponseFor", std::nullopt, response
-                        );
-                    },
-                    priority
-                );
-            }
-        );
+        return listenerDispatch(L, ListenerId::ResponseFor);
     }
 
     int webOnResponseById(lua_State* L) {
-        auto id =
-            static_cast<std::size_t>(checkNonNegativeInteger(L, 1, "geode.utils.web.onResponseById"));
-        return registerWebListener(L, 2, 3, [id](std::shared_ptr<LuaCallback> cb, int priority) {
-            return web::IDBasedWebResponseEvent(id).listen(
-                [cb](web::WebResponse const& response) {
-                    return invokeResponseEvent(
-                        cb, "geode.utils.web.onResponseById", std::nullopt, response
-                    );
-                },
-                priority
-            );
-        });
+        return listenerDispatch(L, ListenerId::ResponseById);
     }
 
     void registerConstants(lua_State* L) {
