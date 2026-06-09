@@ -304,8 +304,10 @@ set_target_properties(LuauAPI_Runtime PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_include_directories(LuauAPI_Runtime PUBLIC
     include
     src
+    ${LUAUAPI_GEN_DIR}/src
     $<TARGET_PROPERTY:imgui-cocos,INTERFACE_INCLUDE_DIRECTORIES>
 )
+add_dependencies(LuauAPI_Runtime luauapi_codegen)
 target_compile_definitions(LuauAPI_Runtime PUBLIC
     $<TARGET_PROPERTY:imgui-cocos,INTERFACE_COMPILE_DEFINITIONS>
 )

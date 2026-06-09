@@ -2,89 +2,12 @@
 
 #include "Stack.hpp"
 #include "Usertype.hpp"
+#include "lua/bindings/framework/Types.generated.hpp"
 
 #include <cocos2d.h>
 #include <lua.h>
 
 namespace luax {
-    template <>
-    inline cocos2d::CCPoint check<cocos2d::CCPoint>(lua_State* L, int idx, char const* method) {
-        return {fieldNumber(L, idx, "x", method), fieldNumber(L, idx, "y", method)};
-    }
-
-    template <>
-    inline cocos2d::CCSize check<cocos2d::CCSize>(lua_State* L, int idx, char const* method) {
-        return {fieldNumber(L, idx, "width", method), fieldNumber(L, idx, "height", method)};
-    }
-
-    template <>
-    inline cocos2d::CCRect check<cocos2d::CCRect>(lua_State* L, int idx, char const* method) {
-        return {
-            {fieldNumber(L, idx, "x", method), fieldNumber(L, idx, "y", method)},
-            {fieldNumber(L, idx, "width", method), fieldNumber(L, idx, "height", method)},
-        };
-    }
-
-    template <>
-    inline cocos2d::ccColor3B check<cocos2d::ccColor3B>(lua_State* L, int idx, char const* method) {
-        auto r = static_cast<unsigned char>(fieldNumber(L, idx, "r", method));
-        auto g = static_cast<unsigned char>(fieldNumber(L, idx, "g", method));
-        auto b = static_cast<unsigned char>(fieldNumber(L, idx, "b", method));
-        return {r, g, b};
-    }
-
-    template <>
-    inline cocos2d::ccColor4B check<cocos2d::ccColor4B>(lua_State* L, int idx, char const* method) {
-        auto r = static_cast<unsigned char>(fieldNumber(L, idx, "r", method));
-        auto g = static_cast<unsigned char>(fieldNumber(L, idx, "g", method));
-        auto b = static_cast<unsigned char>(fieldNumber(L, idx, "b", method));
-        auto a = static_cast<unsigned char>(fieldNumber(L, idx, "a", method));
-        return {r, g, b, a};
-    }
-
-    template <>
-    inline cocos2d::ccColor4F check<cocos2d::ccColor4F>(lua_State* L, int idx, char const* method) {
-        return {
-            static_cast<GLfloat>(fieldNumber(L, idx, "r", method)),
-            static_cast<GLfloat>(fieldNumber(L, idx, "g", method)),
-            static_cast<GLfloat>(fieldNumber(L, idx, "b", method)),
-            static_cast<GLfloat>(fieldNumber(L, idx, "a", method)),
-        };
-    }
-
-    template <>
-    inline cocos2d::ccBlendFunc check<cocos2d::ccBlendFunc>(lua_State* L, int idx, char const* method) {
-        return {
-            static_cast<GLenum>(fieldNumber(L, idx, "src", method)),
-            static_cast<GLenum>(fieldNumber(L, idx, "dst", method)),
-        };
-    }
-
-    template <>
-    inline cocos2d::ccHSVValue check<cocos2d::ccHSVValue>(lua_State* L, int idx, char const* method) {
-        return {
-            static_cast<float>(fieldNumber(L, idx, "h", method)),
-            static_cast<float>(fieldNumber(L, idx, "s", method)),
-            static_cast<float>(fieldNumber(L, idx, "v", method)),
-            fieldBool(L, idx, "absoluteSaturation", method),
-            fieldBool(L, idx, "absoluteBrightness", method),
-        };
-    }
-
-    template <>
-    inline cocos2d::CCAffineTransform check<cocos2d::CCAffineTransform>(
-        lua_State* L, int idx, char const* method
-    ) {
-        return {
-            static_cast<float>(fieldNumber(L, idx, "a", method)),
-            static_cast<float>(fieldNumber(L, idx, "b", method)),
-            static_cast<float>(fieldNumber(L, idx, "c", method)),
-            static_cast<float>(fieldNumber(L, idx, "d", method)),
-            static_cast<float>(fieldNumber(L, idx, "tx", method)),
-            static_cast<float>(fieldNumber(L, idx, "ty", method)),
-        };
-    }
-
     template <>
     inline UIButtonConfig check<UIButtonConfig>(lua_State* L, int idx, char const* method) {
         UIButtonConfig config{};
@@ -103,102 +26,6 @@ namespace luax {
         config.m_player2 = fieldBool(L, idx, "player2", method);
         config.m_split = fieldBool(L, idx, "split", method);
         return config;
-    }
-
-    inline void push(lua_State* L, cocos2d::CCPoint const& point) {
-        lua_createtable(L, 0, 2);
-        lua_pushnumber(L, point.x);
-        lua_setfield(L, -2, "x");
-        lua_pushnumber(L, point.y);
-        lua_setfield(L, -2, "y");
-    }
-
-    inline void push(lua_State* L, cocos2d::CCSize const& size) {
-        lua_createtable(L, 0, 2);
-        lua_pushnumber(L, size.width);
-        lua_setfield(L, -2, "width");
-        lua_pushnumber(L, size.height);
-        lua_setfield(L, -2, "height");
-    }
-
-    inline void push(lua_State* L, cocos2d::CCRect const& rect) {
-        lua_createtable(L, 0, 2);
-        push(L, rect.origin);
-        lua_setfield(L, -2, "origin");
-        push(L, rect.size);
-        lua_setfield(L, -2, "size");
-    }
-
-    inline void push(lua_State* L, cocos2d::ccColor3B const& color) {
-        lua_createtable(L, 0, 3);
-        lua_pushinteger(L, color.r);
-        lua_setfield(L, -2, "r");
-        lua_pushinteger(L, color.g);
-        lua_setfield(L, -2, "g");
-        lua_pushinteger(L, color.b);
-        lua_setfield(L, -2, "b");
-    }
-
-    inline void push(lua_State* L, cocos2d::ccColor4B const& color) {
-        lua_createtable(L, 0, 4);
-        lua_pushinteger(L, color.r);
-        lua_setfield(L, -2, "r");
-        lua_pushinteger(L, color.g);
-        lua_setfield(L, -2, "g");
-        lua_pushinteger(L, color.b);
-        lua_setfield(L, -2, "b");
-        lua_pushinteger(L, color.a);
-        lua_setfield(L, -2, "a");
-    }
-
-    inline void push(lua_State* L, cocos2d::ccColor4F const& color) {
-        lua_createtable(L, 0, 4);
-        lua_pushnumber(L, color.r);
-        lua_setfield(L, -2, "r");
-        lua_pushnumber(L, color.g);
-        lua_setfield(L, -2, "g");
-        lua_pushnumber(L, color.b);
-        lua_setfield(L, -2, "b");
-        lua_pushnumber(L, color.a);
-        lua_setfield(L, -2, "a");
-    }
-
-    inline void push(lua_State* L, cocos2d::ccBlendFunc const& blend) {
-        lua_createtable(L, 0, 2);
-        lua_pushnumber(L, static_cast<double>(blend.src));
-        lua_setfield(L, -2, "src");
-        lua_pushnumber(L, static_cast<double>(blend.dst));
-        lua_setfield(L, -2, "dst");
-    }
-
-    inline void push(lua_State* L, cocos2d::ccHSVValue const& hsv) {
-        lua_createtable(L, 0, 5);
-        lua_pushnumber(L, hsv.h);
-        lua_setfield(L, -2, "h");
-        lua_pushnumber(L, hsv.s);
-        lua_setfield(L, -2, "s");
-        lua_pushnumber(L, hsv.v);
-        lua_setfield(L, -2, "v");
-        luax::push(L, hsv.absoluteSaturation);
-        lua_setfield(L, -2, "absoluteSaturation");
-        luax::push(L, hsv.absoluteBrightness);
-        lua_setfield(L, -2, "absoluteBrightness");
-    }
-
-    inline void push(lua_State* L, cocos2d::CCAffineTransform const& t) {
-        lua_createtable(L, 0, 6);
-        lua_pushnumber(L, t.a);
-        lua_setfield(L, -2, "a");
-        lua_pushnumber(L, t.b);
-        lua_setfield(L, -2, "b");
-        lua_pushnumber(L, t.c);
-        lua_setfield(L, -2, "c");
-        lua_pushnumber(L, t.d);
-        lua_setfield(L, -2, "d");
-        lua_pushnumber(L, t.tx);
-        lua_setfield(L, -2, "tx");
-        lua_pushnumber(L, t.ty);
-        lua_setfield(L, -2, "ty");
     }
 
     inline void push(lua_State* L, UIButtonConfig const& config) {

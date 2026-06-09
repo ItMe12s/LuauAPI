@@ -20,6 +20,7 @@ from luau_codegen.emit.delegates import (
     emit_delegate_artifacts,
     install_delegate_specs_module,
 )
+from luau_codegen.emit.types_binding import types_gen_rel_path, write_types_generated
 from luau_codegen.parse.collect import collect_bindings_root
 from luau_codegen.cli.io import (
     _cleanup_orphans,
@@ -211,6 +212,7 @@ def main(argv: List[str]) -> int:
             print(f"src/{rel}")
         for rel in delegate_gen_rel_paths():
             print(rel)
+        print(types_gen_rel_path())
         return 0
 
     if args.list_all_outputs:
@@ -221,6 +223,7 @@ def main(argv: List[str]) -> int:
             print(f"binding:src/{rel}")
         for rel in delegate_gen_rel_paths():
             print(f"binding:{rel}")
+        print(f"binding:{types_gen_rel_path()}")
         type_files = emit_types.emit(
             root, args.platform, plan=plan, manual_fields=MANUAL_FREE_FN_FIELDS
         )
@@ -264,6 +267,9 @@ def main(argv: List[str]) -> int:
             written_paths.append(cxx_path)
 
         _cleanup_orphans(args.out, current_files)
+
+        types_gen_path = write_types_generated(args.out)
+        written_paths.append(types_gen_path)
 
         schema_path = os.path.join(args.out, "schema.json")
         report_path = os.path.join(args.out, "report.md")

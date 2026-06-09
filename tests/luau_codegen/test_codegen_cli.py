@@ -226,6 +226,10 @@ class ListAllOutputsCliTests(unittest.TestCase):
             lines = [line for line in buf.getvalue().splitlines() if line]
             self.assertIn("binding:src/lua/bindings/bindings_CCObject.cpp", lines)
             self.assertIn("binding:src/lua/bindings/framework/LuaDelegates.gen.hpp", lines)
+            self.assertIn(
+                "binding:src/lua/bindings/framework/Types.generated.hpp",
+                lines,
+            )
             self.assertIn("type:geode.d.luau", lines)
         finally:
             shutil.rmtree(tmpdir)
