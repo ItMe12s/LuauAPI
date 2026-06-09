@@ -20,135 +20,131 @@ namespace luax::webdetail {
     using namespace luax;
 
     namespace {
-        struct RequestMethodDescriptor {
-            char const* context;
-            void (*apply)(lua_State* L, web::WebRequest& req);
+        enum class ChainOp : std::uint8_t {
+            Header,
+            RemoveHeader,
+            Param,
+            RemoveParam,
+            Method,
+            Url,
+            UserAgent,
+            AcceptEncoding,
+            Timeout,
+            DownloadRange,
+            CertVerification,
+            TransferBody,
+            FollowRedirects,
+            IgnoreContentLength,
+            CaBundle,
+            Proxy,
+            Version,
         };
 
-        int requestMethodFromTable(lua_State* L, RequestMethodDescriptor const& desc) {
+        struct RequestChainDescriptor {
+            char const* context;
+            ChainOp op;
+        };
+
+        void applyRequestChain(lua_State* L, web::WebRequest& req, RequestChainDescriptor const& desc) {
+            switch (desc.op) {
+                case ChainOp::Header: {
+                    auto name = check<std::string>(L, 2, desc.context);
+                    auto value = check<std::string>(L, 3, desc.context);
+                    req.header(std::move(name), std::move(value));
+                    return;
+                }
+                case ChainOp::RemoveHeader:
+                    req.removeHeader(check<std::string>(L, 2, desc.context));
+                    return;
+                case ChainOp::Param: {
+                    auto name = check<std::string>(L, 2, desc.context);
+                    auto value = check<std::string>(L, 3, desc.context);
+                    req.param(std::move(name), std::move(value));
+                    return;
+                }
+                case ChainOp::RemoveParam:
+                    req.removeParam(check<std::string>(L, 2, desc.context));
+                    return;
+                case ChainOp::Method:
+                    req.method(check<std::string>(L, 2, desc.context));
+                    return;
+                case ChainOp::Url:
+                    req.url(check<std::string>(L, 2, desc.context));
+                    return;
+                case ChainOp::UserAgent:
+                    req.userAgent(check<std::string>(L, 2, desc.context));
+                    return;
+                case ChainOp::AcceptEncoding:
+                    req.acceptEncoding(check<std::string>(L, 2, desc.context));
+                    return;
+                case ChainOp::Timeout: {
+                    auto seconds = check<int>(L, 2, desc.context);
+                    if (seconds < 0) luaL_error(L, "WebRequest:timeout expected seconds >= 0");
+                    req.timeout(std::chrono::seconds(static_cast<std::int64_t>(seconds)));
+                    return;
+                }
+                case ChainOp::DownloadRange:
+                    if (!lua_isnumber(L, 2) || lua_tointeger(L, 2) < 0)
+                        luaL_error(L, "WebRequest:downloadRange expected non-negative integer at arg 2");
+                    if (!lua_isnumber(L, 3) || lua_tointeger(L, 3) < 0)
+                        luaL_error(L, "WebRequest:downloadRange expected non-negative integer at arg 3");
+                    {
+                        auto start = static_cast<std::uint64_t>(lua_tointeger(L, 2));
+                        auto stop = static_cast<std::uint64_t>(lua_tointeger(L, 3));
+                        if (start > stop)
+                            luaL_error(L, "WebRequest:downloadRange expected start <= stop");
+                        req.downloadRange({start, stop});
+                    }
+                    return;
+                case ChainOp::CertVerification:
+                    req.certVerification(check<bool>(L, 2, desc.context));
+                    return;
+                case ChainOp::TransferBody:
+                    req.transferBody(check<bool>(L, 2, desc.context));
+                    return;
+                case ChainOp::FollowRedirects:
+                    req.followRedirects(check<bool>(L, 2, desc.context));
+                    return;
+                case ChainOp::IgnoreContentLength:
+                    req.ignoreContentLength(check<bool>(L, 2, desc.context));
+                    return;
+                case ChainOp::CaBundle:
+                    req.CABundleContent(check<std::string>(L, 2, desc.context));
+                    return;
+                case ChainOp::Proxy:
+                    req.proxyOpts(checkProxyOpts(L, 2, desc.context));
+                    return;
+                case ChainOp::Version:
+                    req.version(checkHttpVersion(L, 2, desc.context));
+                    return;
+            }
+        }
+
+        int requestMethodFromTable(lua_State* L, RequestChainDescriptor const& desc) {
             auto& req = checkRequest(L, 1, desc.context);
-            desc.apply(L, req);
+            applyRequestChain(L, req, desc);
             lua_pushvalue(L, 1);
             return 1;
         }
 
-        void applyHeaderChain(lua_State* L, web::WebRequest& req) {
-            char const* ctx = "WebRequest:header";
-            auto name = check<std::string>(L, 2, ctx);
-            auto value = check<std::string>(L, 3, ctx);
-            req.header(std::move(name), std::move(value));
-        }
-
-        void applyRemoveHeaderChain(lua_State* L, web::WebRequest& req) {
-            char const* ctx = "WebRequest:removeHeader";
-            auto name = check<std::string>(L, 2, ctx);
-            req.removeHeader(name);
-        }
-
-        void applyParamChain(lua_State* L, web::WebRequest& req) {
-            char const* ctx = "WebRequest:param";
-            auto name = check<std::string>(L, 2, ctx);
-            auto value = check<std::string>(L, 3, ctx);
-            req.param(std::move(name), std::move(value));
-        }
-
-        void applyRemoveParamChain(lua_State* L, web::WebRequest& req) {
-            char const* ctx = "WebRequest:removeParam";
-            auto name = check<std::string>(L, 2, ctx);
-            req.removeParam(name);
-        }
-
-        void applyMethodChain(lua_State* L, web::WebRequest& req) {
-            char const* ctx = "WebRequest:method";
-            req.method(check<std::string>(L, 2, ctx));
-        }
-
-        void applyUrlChain(lua_State* L, web::WebRequest& req) {
-            char const* ctx = "WebRequest:url";
-            req.url(check<std::string>(L, 2, ctx));
-        }
-
-        void applyUserAgentChain(lua_State* L, web::WebRequest& req) {
-            char const* ctx = "WebRequest:userAgent";
-            req.userAgent(check<std::string>(L, 2, ctx));
-        }
-
-        void applyAcceptEncodingChain(lua_State* L, web::WebRequest& req) {
-            char const* ctx = "WebRequest:acceptEncoding";
-            req.acceptEncoding(check<std::string>(L, 2, ctx));
-        }
-
-        void applyTimeoutChain(lua_State* L, web::WebRequest& req) {
-            char const* ctx = "WebRequest:timeout";
-            auto seconds = check<int>(L, 2, ctx);
-            if (seconds < 0) luaL_error(L, "WebRequest:timeout expected seconds >= 0");
-            req.timeout(std::chrono::seconds(static_cast<std::int64_t>(seconds)));
-        }
-
-        void applyDownloadRangeChain(lua_State* L, web::WebRequest& req) {
-            if (!lua_isnumber(L, 2) || lua_tointeger(L, 2) < 0)
-                luaL_error(L, "WebRequest:downloadRange expected non-negative integer at arg 2");
-            if (!lua_isnumber(L, 3) || lua_tointeger(L, 3) < 0)
-                luaL_error(L, "WebRequest:downloadRange expected non-negative integer at arg 3");
-            auto start = static_cast<std::uint64_t>(lua_tointeger(L, 2));
-            auto stop = static_cast<std::uint64_t>(lua_tointeger(L, 3));
-            if (start > stop) luaL_error(L, "WebRequest:downloadRange expected start <= stop");
-            req.downloadRange({start, stop});
-        }
-
-        void applyCertVerificationChain(lua_State* L, web::WebRequest& req) {
-            char const* ctx = "WebRequest:certVerification";
-            req.certVerification(check<bool>(L, 2, ctx));
-        }
-
-        void applyTransferBodyChain(lua_State* L, web::WebRequest& req) {
-            char const* ctx = "WebRequest:transferBody";
-            req.transferBody(check<bool>(L, 2, ctx));
-        }
-
-        void applyFollowRedirectsChain(lua_State* L, web::WebRequest& req) {
-            char const* ctx = "WebRequest:followRedirects";
-            req.followRedirects(check<bool>(L, 2, ctx));
-        }
-
-        void applyIgnoreContentLengthChain(lua_State* L, web::WebRequest& req) {
-            char const* ctx = "WebRequest:ignoreContentLength";
-            req.ignoreContentLength(check<bool>(L, 2, ctx));
-        }
-
-        void applyCaBundleChain(lua_State* L, web::WebRequest& req) {
-            char const* ctx = "WebRequest:caBundle";
-            req.CABundleContent(check<std::string>(L, 2, ctx));
-        }
-
-        void applyProxyChain(lua_State* L, web::WebRequest& req) {
-            char const* ctx = "WebRequest:proxy";
-            req.proxyOpts(checkProxyOpts(L, 2, ctx));
-        }
-
-        void applyVersionChain(lua_State* L, web::WebRequest& req) {
-            char const* ctx = "WebRequest:version";
-            req.version(checkHttpVersion(L, 2, ctx));
-        }
-
-        RequestMethodDescriptor const kRequestChainDescriptors[] = {
-            {"WebRequest:header", applyHeaderChain},
-            {"WebRequest:removeHeader", applyRemoveHeaderChain},
-            {"WebRequest:param", applyParamChain},
-            {"WebRequest:removeParam", applyRemoveParamChain},
-            {"WebRequest:method", applyMethodChain},
-            {"WebRequest:url", applyUrlChain},
-            {"WebRequest:userAgent", applyUserAgentChain},
-            {"WebRequest:acceptEncoding", applyAcceptEncodingChain},
-            {"WebRequest:timeout", applyTimeoutChain},
-            {"WebRequest:downloadRange", applyDownloadRangeChain},
-            {"WebRequest:certVerification", applyCertVerificationChain},
-            {"WebRequest:transferBody", applyTransferBodyChain},
-            {"WebRequest:followRedirects", applyFollowRedirectsChain},
-            {"WebRequest:ignoreContentLength", applyIgnoreContentLengthChain},
-            {"WebRequest:caBundle", applyCaBundleChain},
-            {"WebRequest:proxy", applyProxyChain},
-            {"WebRequest:version", applyVersionChain},
+        RequestChainDescriptor const kRequestChainDescriptors[] = {
+            {"WebRequest:header", ChainOp::Header},
+            {"WebRequest:removeHeader", ChainOp::RemoveHeader},
+            {"WebRequest:param", ChainOp::Param},
+            {"WebRequest:removeParam", ChainOp::RemoveParam},
+            {"WebRequest:method", ChainOp::Method},
+            {"WebRequest:url", ChainOp::Url},
+            {"WebRequest:userAgent", ChainOp::UserAgent},
+            {"WebRequest:acceptEncoding", ChainOp::AcceptEncoding},
+            {"WebRequest:timeout", ChainOp::Timeout},
+            {"WebRequest:downloadRange", ChainOp::DownloadRange},
+            {"WebRequest:certVerification", ChainOp::CertVerification},
+            {"WebRequest:transferBody", ChainOp::TransferBody},
+            {"WebRequest:followRedirects", ChainOp::FollowRedirects},
+            {"WebRequest:ignoreContentLength", ChainOp::IgnoreContentLength},
+            {"WebRequest:caBundle", ChainOp::CaBundle},
+            {"WebRequest:proxy", ChainOp::Proxy},
+            {"WebRequest:version", ChainOp::Version},
         };
 
         enum class RequestChainId : std::size_t {
