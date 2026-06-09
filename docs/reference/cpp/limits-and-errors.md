@@ -28,13 +28,14 @@ The runtime limits and how errors reach the host. The values come from `src/lua/
 | ImGui draw deadline | `16 ms` | Budget for one ImGui draw callback |
 | Menu handler trampolines | `4096` soft cap | Orphan `SEL_MenuHandler` bridges, warns once, never drops |
 
-The default deadline `kDefaultScriptDeadlineMs` is defined in `include/RuntimeTypes.hpp` and exposed
-through `include/LuauAPI.hpp`. For ImGui usage, see [imgui](../lua/imgui.md).
+The default deadline `kDefaultScriptDeadlineMs` is defined in `include/RuntimeTypes.hpp`
+and exposed through `include/LuauAPI.hpp`. For ImGui usage, see [imgui](../lua/imgui.md).
 
 ## How errors reach you
 
-The run functions return `geode::Result<void>`. On failure they return `Err` with a message. Common
-cases:
+The run functions return `geode::Result<void>`. On failure they return `Err` with a message.
+
+Common cases:
 
 - The function was called off the main thread.
 - The runtime is shutting down or not ready.
@@ -42,8 +43,7 @@ cases:
 - The script or file is larger than the size limit.
 - The script raised an error or hit its deadline.
 
-You can also read the last runtime error with `lastError`. It is empty off the main thread or while
-shutting down.
+You can also read the last runtime error with `lastError`. It is empty off the main thread or while shutting down.
 
 ```cpp
 namespace lua = imes::luauapi;
@@ -57,14 +57,14 @@ if (result.isErr()) {
 
 ## Deadlines and interrupts
 
-A run that passes its deadline is interrupted and turned into an error. The check happens at Luau
-instruction boundaries, so a very tight loop can run slightly past the deadline before the check
-fires.
+A run that passes its deadline is interrupted and turned into an error.
+The check happens at Luau instruction boundaries,
+so a very tight loop can run slightly past the deadline before the check fires.
 
 ## Memory behavior
 
-The memory cap is hard. There is no soft limit and no extra collection step. When an allocation would
-cross the cap, it fails and Lua reports an out of memory error.
+The memory cap is hard. There is no soft limit and no extra collection step.
+When an allocation would cross the cap, it fails and Lua reports an out of memory error.
 
 ## Related
 

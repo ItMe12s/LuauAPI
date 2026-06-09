@@ -2,9 +2,9 @@
 
 ## Summary
 
-`geode.VersionInfo` parses and compares version strings. It uses a small part of semver. A version
-looks like `v1.2.3` or `v1.2.3-beta.1`. The functions take strings, so you do not build a version by
-hand. They return `nil` and an error message on a bad version, so you can handle them without `pcall`.
+`geode.VersionInfo` parses and compares version strings. It uses a small part of semver.
+A version looks like `v1.2.3` or `v1.2.3-beta.1`. The functions take strings, so you do not build a version by hand.
+They return `nil` and an error message on a bad version, so you can handle them without `pcall`.
 
 ## parse
 
@@ -20,8 +20,8 @@ Parses a version string into its parts. Returns a table, or `nil` and an error m
 geode.VersionInfo.compare(a: string, b: string) -> (number?, string?)
 ```
 
-Compares two versions. Returns `-1` if `a` is older, `0` if equal, `1` if `a` is newer. Returns
-`nil` and an error message if either string is bad.
+Compares two versions. Returns `-1` if `a` is older, `0` if equal, `1` if `a` is newer.
+Returns `nil` and an error message if either string is bad.
 
 ## matches
 

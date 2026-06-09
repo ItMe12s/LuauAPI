@@ -2,8 +2,9 @@
 
 ## Summary
 
-All mods share one runtime and one global table. A value one script puts on a global is visible to
-other mods later. Use this to let one mod expose a Luau API to others.
+All mods share one runtime and one global table.
+A value one script puts on a global is visible to other mods later.
+Use this to let one mod expose a Luau API to others.
 
 ## Publishing
 
@@ -23,8 +24,7 @@ _G["imes.luauapi"] = {
 ## Consuming
 
 Read the other mod's table by its id. Always index `_G` with the key, never as a bare global name.
-The global table is a safe environment, so a bare read can cache `nil` forever. Indexing `_G` stays
-dynamic.
+The global table is a safe environment, so a bare read can cache `nil` forever. Indexing `_G` stays dynamic.
 
 ```lua
 local OtherMod = _G["other.mod.id"]
@@ -32,9 +32,10 @@ local OtherMod = _G["other.mod.id"]
 
 ## Handling load order
 
-The provider may run after you, so the first read can be `nil`. Do not busy wait. A `repeat` loop
-never works here, because your script runs in one call with a time budget while the provider runs in
-a later call. Poll with `task` instead.
+The provider may run after you, so the first read can be `nil`.
+Do not busy wait. A `repeat` loop never works here,
+because your script runs in one call with a time budget while the provider runs in a later call.
+Poll with `task` instead.
 
 ```lua
 local function whenReady(id, callback)

@@ -2,8 +2,9 @@
 
 ## Summary
 
-`geode.utils.base64` encodes and decodes base64 text. Every function takes an optional `variant`
-that picks the alphabet and padding. Use the `Variant` table for the values.
+`geode.utils.base64` encodes and decodes base64 text.
+Every function takes an optional `variant` that picks the alphabet and padding.
+Use the `Variant` table for the values.
 
 | Name | Value | Notes |
 | --- | --- | --- |
@@ -12,8 +13,8 @@ that picks the alphabet and padding. Use the `Variant` table for the values.
 | `Url` | 2 | url safe alphabet |
 | `UrlWithPad` | 3 | url safe alphabet, with padding |
 
-A bad variant value raises a Lua error. The decode functions return `nil` and an error message on
-bad input, so you can handle them without `pcall`.
+A bad variant value raises a Lua error.
+The decode functions return `nil` and an error message on bad input, so you can handle them without `pcall`.
 
 ## encode
 
@@ -29,8 +30,8 @@ Encodes a string into base64. The default variant is `UrlWithPad`.
 geode.utils.base64.decode(data: string, variant: number?) -> (string?, string?)
 ```
 
-Decodes base64 into raw bytes, returned as a string. Returns the bytes, or `nil` and an error
-message. The default variant is `Url`.
+Decodes base64 into raw bytes, returned as a string.
+Returns the bytes, or `nil` and an error message. The default variant is `Url`.
 
 ## decodeString
 

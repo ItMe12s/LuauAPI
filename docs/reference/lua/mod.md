@@ -2,8 +2,8 @@
 
 ## Summary
 
-`geode.Mod` reads the host mod metadata, paths, saved values, and settings. It can also listen for
-setting changes.
+`geode.Mod` reads the host mod metadata, paths, saved values, and settings.
+It can also listen for setting changes.
 
 ## getSavedValue
 
@@ -11,9 +11,18 @@ setting changes.
 geode.Mod.getSavedValue(key: string) -> (any?, string?)
 ```
 
-Reads a value from the mod save file. Values are JSON types: boolean, number, string, table, array.
-Returns `nil` when the key is missing or the read fails. Returns `nil` and an error message when the
-stored value is too deeply nested.
+Reads a value from the mod save file.
+
+Values are JSON types:
+
+- boolean
+- number
+- string
+- table
+- array
+
+Returns `nil` when the key is missing or the read fails.
+Returns `nil` and an error message when the stored value is too deeply nested.
 
 ## setSavedValue
 
@@ -21,8 +30,8 @@ stored value is too deeply nested.
 geode.Mod.setSavedValue(key: string, value: any) -> (boolean?, string?)
 ```
 
-Writes a JSON value to the mod save file. Returns `true` on success. Returns `nil` and an error
-message when conversion or save fails.
+Writes a JSON value to the mod save file.
+Returns `true` on success. Returns `nil` and an error message when conversion or save fails.
 
 ## getSettingValue
 
@@ -46,8 +55,8 @@ Returns true when the setting key exists in `mod.json`.
 geode.Mod.listenForSettingChanges(key: string, callback: (value: any) -> ())
 ```
 
-Calls your function whenever the setting with this key changes. The listener stays active until the
-script unloads.
+Calls your function whenever the setting with this key changes.
+The listener stays active until the script unloads.
 
 ## listenForAllSettingChanges
 
@@ -65,8 +74,8 @@ geode.Mod.getName() -> string
 geode.Mod.getVersion() -> string
 ```
 
-`getID` returns the mod id, for example `my.mod.id`. Use it as the prefix when you call `:setID()`
-on nodes you create. See [Game objects](game-objects.md).
+`getID` returns the mod id, for example `my.mod.id`.
+Use it as the prefix when you call `:setID()` on nodes you create. See [Game objects](game-objects.md).
 
 ## getResourcesDir, getSaveDir, getConfigDir
 

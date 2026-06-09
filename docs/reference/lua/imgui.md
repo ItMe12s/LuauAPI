@@ -2,15 +2,16 @@
 
 ## Summary
 
-The `imgui` library lets a script draw a [Dear ImGui](https://github.com/ocornut/imgui) overlay on
-top of the game, backed by [gd-imgui-cocos](https://github.com/matcool/gd-imgui-cocos). It is debug
-and tooling UI, not player-facing UI. Types match `tools/luau_codegen/extra_bindings/imgui.dluau`.
+The `imgui` library lets a script draw a [Dear ImGui](https://github.com/ocornut/imgui) overlay on top of the game,
+backed by [gd-imgui-cocos](https://github.com/matcool/gd-imgui-cocos). It is debug and tooling UI, not player-facing UI.
+Types match `tools/luau_codegen/extra_bindings/imgui.dluau`.
 
 ## Model
 
-Use `imgui.onDraw` to set a draw callback. The runtime runs it every frame. Build windows and
-widgets inside the callback. ImGui is immediate mode and saves no widget state, so widgets return
-their value each frame. Store values in your script if you want to keep them.
+Use `imgui.onDraw` to set a draw callback.
+The runtime runs it every frame. Build windows and widgets inside the callback.
+ImGui is immediate mode and saves no widget state, so widgets return their value each frame.
+Store values in your script if you want to keep them.
 
 ```lua
 local state = { enabled = false, speed = 1.0 }
@@ -50,9 +51,9 @@ imgui.toggle() -> ()
 imgui.isVisible() -> boolean
 ```
 
-`imgui.onDraw` registers a per-frame callback and returns a handle. The first call starts the ImGui
-backend. `imgui.cancel` or `handle:cancel()` removes it, and dropping the handle cancels it on GC. A
-callback that errors is removed automatically. While hidden, draw callbacks do not run.
+`imgui.onDraw` registers a per-frame callback and returns a handle. The first call starts the ImGui backend.
+`imgui.cancel` or `handle:cancel()` removes it, and dropping the handle cancels it on GC.
+A callback that errors is removed automatically. While hidden, draw callbacks do not run.
 
 ## Containers
 
@@ -62,9 +63,9 @@ imgui.child(id: string, fn: () -> (), opts: ImGuiChildOpts?) -> ()
 ```
 
 Both run `fn` then always close the region, even if `fn` errors, so the frame stays balanced.
-`imgui.window` returns whether the window wants to stay open. With `opts.closable` true, the window
-shows a close button and returns false the frame it is pressed. `opts.size` and `opts.pos` apply on
-first use, `opts.flags` is a raw ImGui flags number.
+`imgui.window` returns whether the window wants to stay open.
+With `opts.closable` true, the window shows a close button and returns false the frame it is pressed.
+`opts.size` and `opts.pos` apply on first use, `opts.flags` is a raw ImGui flags number.
 
 ## Widgets
 
@@ -78,9 +79,9 @@ imgui.inputText(label: string, value: string, maxLen: number?) -> string
 imgui.inputTextMultiline(label: string, value: string, size: ImGuiVec2?, maxLen: number?) -> string
 ```
 
-`imgui.text` draws the string verbatim, so `%` is safe. `imgui.button` returns true the frame it is
-clicked. `imgui.checkbox` and the sliders return their new value, which you store and pass back next
-frame. `fmt` defaults to `"%.3f"`. `maxLen` is the buffer size, default `16384`, capped at `65536`.
+`imgui.text` draws the string verbatim, so `%` is safe. `imgui.button` returns true the frame it is clicked.
+`imgui.checkbox` and the sliders return their new value, which you store and pass back next frame.
+`fmt` defaults to `"%.3f"`. `maxLen` is the buffer size, default `16384`, capped at `65536`.
 
 ## Layout helpers
 
@@ -91,8 +92,9 @@ imgui.spacing() -> ()
 imgui.getContentRegionAvail() -> ImGuiVec2
 ```
 
-`imgui.sameLine` keeps the next widget on the current line. `imgui.getContentRegionAvail` returns
-the space left in the current window as `{ x, y }` in pixels. Negative sizes also fill the space.
+`imgui.sameLine` keeps the next widget on the current line.
+`imgui.getContentRegionAvail` returns the space left in the current window as `{ x, y }` in pixels.
+Negative sizes also fill the space.
 
 ## Limits
 

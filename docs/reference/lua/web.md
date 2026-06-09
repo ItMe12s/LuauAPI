@@ -2,9 +2,10 @@
 
 ## Summary
 
-`geode.utils.web` exposes Geode's async web request system to Lua. Requests run on Geode's web
-worker and call Lua completion and progress callbacks on the main thread. This binding does not
-expose `openLinkUnsafe` or any `*Sync` request method. File writes are sandboxed to mod roots.
+`geode.utils.web` exposes Geode's async web request system to Lua.
+Requests run on Geode's web worker and call Lua completion and progress callbacks on the main thread.
+This binding does not expose `openLinkUnsafe` or any `*Sync` request method.
+File writes are sandboxed to mod roots.
 
 ## Types
 
@@ -33,9 +34,22 @@ type RequestOptions = {
 }
 ```
 
-`ProxyOpts`, `WebProgress`, and `RequestTimings` are table types. `WebRequest`, `WebResponse`,
-`WebHandle`, `MultipartForm`, and `WebListenerHandle` are userdata. Timings are milliseconds. Setting
-`certVerification` to false disables TLS verification for that request, an intentional escape hatch.
+Table types:
+
+- `ProxyOpts`
+- `WebProgress`
+- `RequestTimings`
+
+Userdata types:
+
+- `WebRequest`
+- `WebResponse`
+- `WebHandle`
+- `MultipartForm`
+- `WebListenerHandle`
+  
+Timings are milliseconds.
+Setting `certVerification` to false disables TLS verification for that request, an intentional escape hatch.
 
 ## Functions
 
@@ -50,15 +64,25 @@ geode.utils.web.patch(url: string, options: RequestOptions?, callback: (response
 geode.utils.web.fetch(urlOrOptions, optionsOrCallback, callback?) -> WebHandle
 ```
 
-The shortcut request functions also accept `callback` as the second argument when no options are
-needed.
+The shortcut request functions also accept `callback` as the second argument when no options are needed.
 
 ## WebRequest
 
-`WebRequest` is a chainable builder. It supports headers, query params, proxy options, timeouts,
-range requests, body data, JSON bodies, multipart bodies, progress callbacks, and request
-introspection. Send methods are async and return a `WebHandle`. Dropping the handle or calling
-`:cancel()` cancels a still-pending request.
+`WebRequest` is a chainable builder that supports:
+
+- headers
+- query parameters
+- proxy options
+- timeouts
+- range requests
+- body data
+- JSON bodies
+- multipart bodies
+- progress callbacks
+- request introspection
+
+Send methods are async and return a `WebHandle`.
+Dropping the handle or calling `:cancel()` cancels a still-pending request.
 
 ```lua
 local req = geode.utils.web.newRequest()
@@ -86,9 +110,22 @@ response:verboseLogs() -> string
 response:timings() -> RequestTimings
 ```
 
-`saveTo` accepts only writable roots: `"save"`, `"config"`, and `"persistent"`. Response bodies are
-capped at 32 MB. `:text()`, `:bytes()`, `:json()`, and `:saveTo()` return `nil` and an error message
-when the body exceeds the cap. Async callbacks and response listeners receive `(response?, err?)`.
+The writable roots accepted by `saveTo` are:
+
+- `"save"`
+- `"config"`
+- `"persistent"`
+
+Response bodies are capped at 32 MB.
+
+These methods return `nil` and an error message when the body exceeds the cap:
+
+- `:text()`
+- `:bytes()`
+- `:json()`
+- `:saveTo()`
+
+Async callbacks and response listeners receive `(response?, err?)`.
 An oversized body arrives as `nil` and `"response exceeds maximum size"`.
 
 ## MultipartForm
@@ -104,11 +141,22 @@ form:fileFrom("config", "config", "data.json", "application/json")
 
 ## Request body caps
 
-These body sources are capped at 32 MB: `RequestOptions.body`, `RequestOptions.bodyString`,
-`RequestOptions.bodyJson`, `RequestOptions.bodyMultipart`, `WebRequest:body`, `WebRequest:bodyString`,
-`WebRequest:bodyJson`, `WebRequest:bodyMultipart`, `MultipartForm:param`, `MultipartForm:file`,
-`MultipartForm:fileFrom`, and `MultipartForm:getBody()`. Over the limit, the call returns `nil` and
-`"request body exceeds maximum size"` or raises that error while parsing options.
+The following body sources are capped at 32 MB:
+
+- `RequestOptions.body`
+- `RequestOptions.bodyString`
+- `RequestOptions.bodyJson`
+- `RequestOptions.bodyMultipart`
+- `WebRequest:body`
+- `WebRequest:bodyString`
+- `WebRequest:bodyJson`
+- `WebRequest:bodyMultipart`
+- `MultipartForm:param`
+- `MultipartForm:file`
+- `MultipartForm:fileFrom`
+- `MultipartForm:getBody()`
+
+Over the limit, the call returns `nil` and `"request body exceeds maximum size"`or raises that error while parsing options.
 
 ## Listeners
 
@@ -120,17 +168,25 @@ end)
 handle:disconnect()
 ```
 
-Request intercept callbacks may return `true` to stop propagation when Geode fires the event on the
-main thread. Intercept handlers run right away so Lua can tweak the request as it happens. If the
-event fires off the main thread, Lua is skipped, the event continues, and you see a one-time warning.
+Request intercept callbacks may return `true` to stop propagation when Geode fires the event on the main thread.
+Intercept handlers run right away so Lua can tweak the request as it happens.
+If the event fires off the main thread, Lua is skipped, the event continues, and you see a one-time warning.
 
-A response listener that would run on the web worker is delayed until the main thread. Its return
-value cannot stop other listeners, so use these mainly for side effects. When Geode fires the
-response event on the main thread, returning `true` still stops the next listeners.
+A response listener that would run on the web worker is delayed until the main thread.
+Its return value cannot stop other listeners, so use these mainly for side effects.
+When Geode fires the response event on the main thread, returning `true` still stops the next listeners.
 
-Available listeners: `onRequestIntercept`, `onRequestInterceptFor`, `onRequestInterceptById`,
-`onResponse`, `onResponseFor`, `onResponseById`, each taking an optional `priority`. Response
-callbacks receive `(response?, err?)` or `(modID, response?, err?)`.
+Available listeners:
+
+- `onRequestIntercept`
+- `onRequestInterceptFor`
+- `onRequestInterceptById`
+- `onResponse`
+- `onResponseFor`
+- `onResponseById`
+
+Each accepts an optional `priority` argument.
+Response callbacks receive `(response?, err?)` or `(modID, response?, err?)`
 
 ## Constants
 

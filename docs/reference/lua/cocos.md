@@ -2,8 +2,8 @@
 
 ## Summary
 
-`geode.cocos` holds helper functions for cocos2d nodes and colors. These are utility functions, not
-classes. The node classes themselves live on `geode.cocos2d`.
+`geode.cocos` holds helper functions for cocos2d nodes and colors.
+These are utility functions, not classes. The node classes themselves live on `geode.cocos2d`.
 
 `geode.cocos` is a hybrid namespace. Node helpers come from codegen over `Geode/utils/cocos.hpp`.
 Color helpers and hex parsers are handwritten in `GeodeCocosBinding.cpp`.
@@ -56,8 +56,8 @@ Colors use plain tables:
 | `cc4bFromHexString(hex: string, requireAlpha: boolean?, permissive: boolean?) -> (RGBAColor?, string?)` | Parse a hex string with alpha. |
 | `ccDrawColor4B(color: RGBAColor) -> ()` | Set the draw color, only valid inside a draw call. |
 
-The hex parse functions return `nil` and an error message on a bad string, so you can handle them
-without `pcall`. With `permissive` true, a short string like `"f"` reads as white.
+The hex parse functions return `nil` and an error message on a bad string, so you can handle them without `pcall`.
+With `permissive` true, a short string like `"f"` reads as white.
 
 ## Example
 

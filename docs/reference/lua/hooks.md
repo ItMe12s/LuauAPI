@@ -2,9 +2,10 @@
 
 ## Summary
 
-A hook runs your code before or after a game function. You can read arguments, change arguments,
-skip the original, or change the return value. `geode.hook` registers a callback and returns a
-handle. Types match the generated stub `types/geode.d.luau`.
+A hook runs your code before or after a game function.
+You can read arguments, change arguments, skip the original, or change the return value.
+`geode.hook` registers a callback and returns a handle.
+Types match the generated stub `types/geode.d.luau`.
 
 ## geode.hook
 
@@ -12,8 +13,8 @@ handle. Types match the generated stub `types/geode.d.luau`.
 geode.hook(target: string, callback: HookCallbackTable) -> HookHandle
 ```
 
-Registers a callback on a target function. You must pass exactly two arguments. An unknown target
-raises an error. The hook is enabled when you register it.
+Registers a callback on a target function. You must pass exactly two arguments.
+An unknown target raises an error. The hook is enabled when you register it.
 
 ```lua
 local handle = geode.hook("geode.gd.MenuLayer:init/0", {
@@ -44,18 +45,17 @@ type HookCallbackTable = {
 }
 ```
 
-Provide at least one of `before` or `after`. `priority` orders callbacks on the same target,
-default `0`.
+Provide at least one of `before` or `after`. `priority` orders callbacks on the same target, default `0`.
 
 ## The before callback
 
 `before` receives `self` and the method arguments. Its return decides what happens:
 
 - `nil` or nothing: run the original.
-- `{ args = {...} }`: replace arguments (positional or named keys). Wrong types are logged and the
-  original args are kept.
-- `geode.skip(value)`: skip the original and use `value` as the return. For void methods use
-  `geode.skip()`.
+- `{ args = {...} }`: replace arguments (positional or named keys).
+  Wrong types are logged and the original args are kept.
+- `geode.skip(value)`: skip the original and use `value` as the return.
+  For void methods use `geode.skip()`.
 - Any other non-nil value: logged and ignored, original still runs.
 
 ```lua
@@ -87,9 +87,9 @@ geode.hook("geode.gd.GameManager:getIntGameVariable/1", {
 
 ## Priority and order
 
-`priority` only matters when several hooks share the same target. A lower value runs `before`
-first. A higher value runs `after` first. On a tie, earlier registration wins for `before`, later
-registration wins for `after`.
+`priority` only matters when several hooks share the same target.
+A lower value runs `before` first. A higher value runs `after` first.
+On a tie, earlier registration wins for `before`, later registration wins for `after`.
 
 ## geode.skip
 
@@ -97,8 +97,9 @@ registration wins for `after`.
 geode.skip(value: any?) -> any
 ```
 
-Builds a skip marker for use as a `before` return. The original does not run and the value becomes
-the return. Use no argument for functions that return nothing.
+Builds a skip marker for use as a `before` return.
+The original does not run and the value becomes the return.
+Use no argument for functions that return nothing.
 
 ## HookHandle
 
@@ -126,8 +127,9 @@ print(handle:isEnabled())
 geode.fields(self: CCNode) -> { [string]: any }
 ```
 
-Returns a plain table tied to the node, alive as long as the node. The `m_fields` property returns
-the same table. Useful for storing per-object state from a hook. See [Game objects](game-objects.md).
+Returns a plain table tied to the node, alive as long as the node.
+The `m_fields` property returns the same table. Useful for storing per-object state from a hook.
+See [Game objects](game-objects.md).
 
 ```lua
 geode.hook("geode.gd.MenuLayer:init/0", {
@@ -141,8 +143,9 @@ geode.hook("geode.gd.MenuLayer:init/0", {
 
 ## Limits
 
-Hooks run on the main thread. Callbacks are capped per target and globally, and each runs under a
-script budget. See [Limits and errors](../cpp/limits-and-errors.md).
+Hooks run on the main thread.
+Callbacks are capped per target and globally, and each runs under a script budget.
+See [Limits and errors](../cpp/limits-and-errors.md).
 
 ## Related
 

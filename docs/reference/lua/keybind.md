@@ -17,8 +17,8 @@
 geode.Keybind.fromString(str: string) -> ({ key: number, modifiers: number }?, string?)
 ```
 
-Parses a string such as `"Ctrl + A"` into a keybind. Returns the keybind, or `nil` and an error
-message.
+Parses a string such as `"Ctrl + A"` into a keybind.
+Returns the keybind, or `nil` and an error message.
 
 ## toString
 

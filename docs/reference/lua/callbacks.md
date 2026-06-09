@@ -2,19 +2,24 @@
 
 ## Summary
 
-Some C++ APIs take a callback or selector handler. LuauAPI bridges a Luau function into those slots
-at call time. Three shapes are supported: `std::function` style arguments, `SEL_*` selector
-handlers, and delegate tables.
+Some C++ APIs take a callback or selector handler.
+LuauAPI bridges a Luau function into those slots at call time.
 
-Callbacks run on the main thread with the same script budget as hooks. If a callback raises an
-error, LuauAPI logs the failure and applies the callback site's fallback. Selector, menu, delegate,
-setting, web, and permission callbacks keep their registration lifetime. Task intervals and ImGui
-draw callbacks are removed after an error to avoid log spam.
+The supported callback shapes are:
+
+- `std::function` style arguments
+- `SEL_*` selector handlers
+- Delegate tables
+
+Callbacks run on the main thread with the same script budget as hooks.
+If a callback raises an error, LuauAPI logs the failure and applies the callback site's fallback.
+Selector, menu, delegate, setting, web, and permission callbacks keep their registration lifetime.
+Task intervals and ImGui draw callbacks are removed after an error to avoid log spam.
 
 ## std::function style callbacks
 
-When a bound method takes a `std::function<...>` (or Geode `Function` / `MiniFunction`, or the
-`Callback` alias for `std::function<void()>`), pass a Luau function with a matching signature.
+When a bound method takes a `std::function<...>` (or Geode `Function` / `MiniFunction`,
+or the `Callback` alias for `std::function<void()>`), pass a Luau function with a matching signature.
 
 ```lua
 -- void callback
@@ -28,14 +33,22 @@ local ok = someObject:tryAction(function(layer: FLAlertLayer, accepted: boolean)
 end)
 ```
 
-Supported callback arguments must use only bindable argument types (no nested callbacks) and
-bindable return types when the C++ side is not `void` (bool, numbers, strings, enums, objects, and
-value types such as `CCPoint` or `RGBAColor`).
+Supported callback arguments must use only bindable argument types (no nested callbacks)
+and bindable return types when the C++ side is not `void`.
+
+Supported bindable return types include:
+
+- booleans
+- numbers
+- strings
+- enums
+- objects
+- value types (such as `CCPoint` or `RGBAColor`).
 
 ## Selector handlers
 
-Cocos2d APIs normally take a target object and a selector. In Luau, pass one function with the
-signature implied by the selector type.
+Cocos2d APIs normally take a target object and a selector.
+In Luau, pass one function with the signature implied by the selector type.
 
 | C++ selector | Luau function shape |
 | --- | --- |
@@ -58,8 +71,8 @@ node:schedule(function(dt: number)
 end, 1.0)
 ```
 
-Some schedule APIs accept a selector without an explicit target. Pass the function alone, and the
-handler object is used as the target.
+Some schedule APIs accept a selector without an explicit target.
+Pass the function alone, and the handler object is used as the target.
 
 ## Delegate tables
 
@@ -73,15 +86,14 @@ Each selector handler trampoline is retained and associated with an anchor `CCOb
 - `self` for instance methods that do not return an object.
 - The orphan registry for static calls and void-return methods, cleared on runtime shutdown.
 
-When the anchor's retain count drops to one before `release`, all its handlers are cleaned up, like
-`geode.fields` tables. `std::function` wrappers are held for the duration of the C++ call that
-received them. Task and ImGui handles cancel their callback when you call `:cancel()` or when the
-handle userdata is collected.
+When the anchor's retain count drops to one before `release`, all its handlers are cleaned up,
+like `geode.fields` tables. `std::function` wrappers are held for the duration of the C++ call that received them.
+Task and ImGui handles cancel their callback when you call `:cancel()` or when the handle userdata is collected.
 
 ## Limits
 
-Callbacks run under a script budget, and orphan handler bridges have a soft registry cap. See
-[Limits and errors](../cpp/limits-and-errors.md).
+Callbacks run under a script budget, and orphan handler bridges have a soft registry cap.
+See [Limits and errors](../cpp/limits-and-errors.md).
 
 ## Related
 

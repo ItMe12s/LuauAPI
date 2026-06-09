@@ -2,14 +2,24 @@
 
 ## Summary
 
-How to read and create game objects from a script. Covers the `geode.cocos2d` and `geode.gd`
-namespaces, table-shaped values like points and sizes, and per-object fields.
+How to read and create game objects from a script.
+Covers the `geode.cocos2d` and `geode.gd` namespaces,
+table-shaped values like points and sizes, and per-object fields.
 
 ## The two namespaces
 
-- `geode.cocos2d` holds engine classes, for example `CCDirector`, `CCLabelBMFont`, `CCSprite`, and
-  action classes such as `CCMoveTo`.
-- `geode.gd` holds Geometry Dash classes, for example `GameManager`, `GameStatsManager`, `MenuLayer`.
+`geode.cocos2d` holds engine classes, e.g.:
+
+- `CCDirector`
+- `CCLabelBMFont`
+- `CCSprite`
+- action classes such as `CCMoveTo`
+
+`geode.gd` holds Geometry Dash classes, e.g.:
+
+- `GameManager`
+- `GameStatsManager`
+- `MenuLayer`
 
 You usually begin from a singleton or a factory.
 
@@ -33,9 +43,18 @@ label:setScale(0.5)
 
 ## Node IDs for mod compatibility
 
-Geode adds string IDs to `CCNode`. When you create a node, call `:setID()` with your mod id as a
-prefix, lowercase kebab-case, no spaces. String IDs let you find nodes with `getChildByID` and
-layouts instead of fragile child indexes, which is how Geode mods stay compatible.
+Geode adds string IDs to `CCNode`.
+
+When creating a node, always call `:setID()` and pass an id string:
+
+- The id should start with your mod id as a prefix
+- Use lowercase kebab-case
+- Do not use spaces
+
+Example: `mod-id/my-node-id`
+
+String IDs let you find nodes with `getChildByID` and layouts instead of fragile child indexes,
+which is how Geode mods stay compatible.
 
 ```lua
 local cc2d = geode.cocos2d
@@ -72,8 +91,8 @@ bg:setContentSize({ width = 170, height = 84 })
 
 ## Per-object fields
 
-Store your own data on an object with `geode.fields(node)` or the `m_fields` property. Both return
-the same plain table for that object, alive as long as the object.
+Store your own data on an object with `geode.fields(node)` or the `m_fields` property.
+Both return the same plain table for that object, alive as long as the object.
 
 ```lua
 local fields = geode.fields(self)
@@ -82,8 +101,8 @@ fields.count = (fields.count or 0) + 1
 
 ## Ownership
 
-The runtime tracks whether an object is owned by Lua or only borrowed and handles it for you. You do
-not manage retain or release by hand. See the [bindings framework](../../contributor/internals/bindings-framework.md).
+The runtime tracks whether an object is owned by Lua or only borrowed and handles it for you.
+You do not manage retain or release by hand. See the [bindings framework](../../contributor/internals/bindings-framework.md).
 
 ## Related
 

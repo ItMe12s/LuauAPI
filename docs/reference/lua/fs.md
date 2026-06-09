@@ -2,8 +2,9 @@
 
 ## Summary
 
-`geode.fs` reads and writes files inside the running mod's own directories. Every call takes a root
-as its first argument. The root selects one of the mod's directories, and access is sandboxed to it.
+`geode.fs` reads and writes files inside the running mod's own directories.
+Every call takes a root as its first argument.
+The root selects one of the mod's directories, and access is sandboxed to it.
 A path that escapes the root (for example with `..`) or an absolute path is rejected.
 
 | Root | Directory | Access |
@@ -13,8 +14,14 @@ A path that escapes the root (for example with `..`) or an absolute path is reje
 | `"persistent"` | `getPersistentDir()` | read + write |
 | `"resources"` | `getResourcesDir()` | read only |
 
-An unknown root raises a Lua error. Recoverable failures (missing file, escaped path, write to a
-read-only root) return `nil` and an error message, so you can handle them without `pcall`.
+An unknown root raises a Lua error.
+
+- Recoverable failures include:
+  - Missing file
+  - Escaped path
+  - Attempt to write to a read-only root
+
+In these cases, the function returns `nil` and an error message so you can handle them without `pcall`.
 
 ## read
 
@@ -30,8 +37,8 @@ Reads a file's contents. Returns the contents, or `nil` and an error message. Re
 geode.fs.write(root: FsRoot, path: string, data: string) -> (boolean?, string?)
 ```
 
-Writes `data` to a file, creating parent directories as needed. Returns `true`, or `nil` and an
-error message. Writing to the read-only `resources` root fails. Writes are capped at 32 MB.
+Writes `data` to a file, creating parent directories as needed. Returns `true`, or `nil` and an error message.
+Writing to the read-only `resources` root fails. Writes are capped at 32 MB.
 
 ## exists
 
@@ -39,8 +46,8 @@ error message. Writing to the read-only `resources` root fails. Writes are cappe
 geode.fs.exists(root: FsRoot, path: string) -> (boolean?, string?)
 ```
 
-Returns `true` when a file or directory exists, `false` when missing. Returns `nil` and an error
-message when the path escapes the root or the filesystem fails.
+Returns `true` when a file or directory exists, `false` when missing.
+Returns `nil` and an error message when the path escapes the root or the filesystem fails.
 
 ## list
 
@@ -48,8 +55,9 @@ message when the path escapes the root or the filesystem fails.
 geode.fs.list(root: FsRoot, path: string) -> ({ string }?, string?)
 ```
 
-Lists the immediate entries of a directory (names, not full paths, not recursive). Returns an array
-table, or `nil` and an error message. Listings are capped at 4096 entries and 256 KiB of name bytes.
+Lists the immediate entries of a directory (names, not full paths, not recursive).
+Returns an array table, or `nil` and an error message.
+Listings are capped at 4096 entries and 256 KiB of name bytes.
 
 ## mkdir
 
@@ -57,8 +65,8 @@ table, or `nil` and an error message. Listings are capped at 4096 entries and 25
 geode.fs.mkdir(root: FsRoot, path: string) -> (boolean?, string?)
 ```
 
-Creates a directory and any missing parents. Returns `true`, or `nil` and an error message. Fails on
-the read-only `resources` root.
+Creates a directory and any missing parents. Returns `true`, or `nil` and an error message.
+Fails on the read-only `resources` root.
 
 ## remove
 
@@ -66,8 +74,8 @@ the read-only `resources` root.
 geode.fs.remove(root: FsRoot, path: string) -> (boolean?, string?)
 ```
 
-Removes a single file or empty directory (never recursive). Returns `true`, or `nil` and an error
-message. Fails on the read-only `resources` root.
+Removes a single file or empty directory (never recursive).
+Returns `true`, or `nil` and an error message. Fails on the read-only `resources` root.
 
 ## Example
 

@@ -2,9 +2,9 @@
 
 ## Summary
 
-`geode.utils.permission` reads and requests operating system permissions. This matters on mobile. On
-desktop most permissions are already granted. Use the `Permission` table for the values. A bad
-permission value raises a Lua error.
+`geode.utils.permission` reads and requests operating system permissions. This matters on mobile.
+On desktop most permissions are already granted. Use the `Permission` table for the values.
+A bad permission value raises a Lua error.
 
 | Name | Value |
 | --- | --- |

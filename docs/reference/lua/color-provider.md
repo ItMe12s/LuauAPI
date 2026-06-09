@@ -2,12 +2,13 @@
 
 ## Summary
 
-`geode.ColorProvider` is a shared index of named colors. Mods define colors by id, and texture packs
-can then change them. Use it for colors you want a texture pack to override. Prefix the id with your
-mod id.
+`geode.ColorProvider` is a shared index of named colors.
+Mods define colors by id, and texture packs can then change them.
+Use it for colors you want a texture pack to override.
+Prefix the id with your mod id.
 
-Colors use plain tables. `RGBAColor` is `{ r, g, b, a }` and `RGBColor` is `{ r, g, b }`. Each field
-is 0 to 255. An unknown id reads as white.
+Colors use plain tables. `RGBAColor` is `{ r, g, b, a }` and `RGBColor` is `{ r, g, b }`.
+Each field is 0 to 255. An unknown id reads as white.
 
 ## define
 

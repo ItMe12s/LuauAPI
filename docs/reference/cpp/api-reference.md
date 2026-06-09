@@ -2,8 +2,8 @@
 
 ## Summary
 
-The public C++ API in `imes::luauapi`. Signatures match `include/LuauAPI.hpp`. All functions must be
-called on the main thread.
+The public C++ API in `imes::luauapi`. Signatures match `include/LuauAPI.hpp`.
+All functions must be called on the main thread.
 
 ## Run functions
 
@@ -22,9 +22,9 @@ geode::Result<void> runScript(
 );
 ```
 
-`runFile` reads and runs a `.luau` file. `relativePath` must be a flat `.luau` name inside
-`resourcesRoot`, not absolute or with folders, and within the size limit. `runScript` runs inline
-source, and `chunkName` names the chunk in logs and errors. Both return `Ok` or `Err` with a message.
+`runFile` reads and runs a `.luau` file.
+`relativePath` must be a flat `.luau` name inside `resourcesRoot`, not absolute or with folders, and within the size limit.
+`runScript` runs inline source, and `chunkName` names the chunk in logs and errors. Both return `Ok` or `Err` with a message.
 
 ## Async run functions
 
@@ -43,8 +43,8 @@ arc::Future<geode::Result<void>> runScriptAsync(
 );
 ```
 
-These resolve the path and read the file on the calling thread, then run the script on the main
-thread, and return a future. If the main thread work is cancelled, they return an error.
+These resolve the path and read the file on the calling thread, then run the script on the main thread, and return a future.
+If the main thread work is cancelled, they return an error.
 
 ## Status functions
 
@@ -56,8 +56,7 @@ std::string lastError();
 
 `isReady` is true only on the main thread when the runtime is initialized and not shutting down.
 `status` returns the runtime status, or `NotReady` off the main thread or while shutting down.
-`lastError` returns a copy of the last runtime error string, empty off the main thread or while
-shutting down.
+`lastError` returns a copy of the last runtime error string, empty off the main thread or while shutting down.
 
 ## Resource functions
 
@@ -68,8 +67,8 @@ bool codegenEnabled();
 ```
 
 `memoryUsage` and `memoryLimit` return current Lua memory use and the cap in bytes, both `0` off the
-main thread or while shutting down. `codegenEnabled` is true when native code generation is on. See
-[Limits and errors](limits-and-errors.md) for the cap value.
+main thread or while shutting down. `codegenEnabled` is true when native code generation is on.
+See [Limits and errors](limits-and-errors.md) for the cap value.
 
 ## RuntimeStatus
 
@@ -89,8 +88,8 @@ enum class RuntimeStatus {
 
 ## Default deadline
 
-`kDefaultScriptDeadlineMs` is `250`. The run functions use it when you do not pass `deadlineMs`. It
-is defined in `include/RuntimeTypes.hpp` and exposed through `include/LuauAPI.hpp`.
+`kDefaultScriptDeadlineMs` is `250`. The run functions use it when you do not pass `deadlineMs`.
+It is defined in `include/RuntimeTypes.hpp` and exposed through `include/LuauAPI.hpp`.
 
 ## Related
 
