@@ -86,8 +86,7 @@ namespace luax::webdetail {
                     auto* c = static_cast<Ctx*>(raw);
                     if (c->modID) push(L, *c->modID);
                     if (!responseDataWithinLimit(c->response.data().size())) {
-                        lua_pushnil(L);
-                        push(L, std::string(kWebResponseSizeExceededMsg));
+                        pushNilErrCallback(L, kWebResponseSizeExceededMsg);
                     }
                     else {
                         pushResponse(L, std::move(c->response));

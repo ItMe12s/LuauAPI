@@ -51,9 +51,7 @@ namespace {
         auto str = check<std::string>(L, 1, "geode.Keybind.fromString");
         auto result = geode::Keybind::fromString(str);
         if (result.isErr()) {
-            lua_pushnil(L);
-            push(L, std::string(result.unwrapErr()));
-            return 2;
+            return pushNilErr(L, result.unwrapErr());
         }
         pushKeybind(L, result.unwrap());
         return 1;

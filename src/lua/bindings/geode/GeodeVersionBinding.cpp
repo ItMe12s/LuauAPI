@@ -14,9 +14,7 @@ namespace {
         auto str = check<std::string>(L, 1, "geode.VersionInfo.parse");
         auto result = geode::VersionInfo::parse(str);
         if (result.isErr()) {
-            lua_pushnil(L);
-            push(L, std::string(result.unwrapErr()));
-            return 2;
+            return pushNilErr(L, result.unwrapErr());
         }
         auto version = result.unwrap();
         lua_createtable(L, 0, 3);
@@ -34,15 +32,11 @@ namespace {
         auto b = check<std::string>(L, 2, "geode.VersionInfo.compare");
         auto ra = geode::VersionInfo::parse(a);
         if (ra.isErr()) {
-            lua_pushnil(L);
-            push(L, std::string(ra.unwrapErr()));
-            return 2;
+            return pushNilErr(L, ra.unwrapErr());
         }
         auto rb = geode::VersionInfo::parse(b);
         if (rb.isErr()) {
-            lua_pushnil(L);
-            push(L, std::string(rb.unwrapErr()));
-            return 2;
+            return pushNilErr(L, rb.unwrapErr());
         }
         auto va = ra.unwrap();
         auto vb = rb.unwrap();
@@ -56,15 +50,11 @@ namespace {
         auto version = check<std::string>(L, 2, "geode.VersionInfo.matches");
         auto rc = geode::ComparableVersionInfo::parse(constraint);
         if (rc.isErr()) {
-            lua_pushnil(L);
-            push(L, std::string(rc.unwrapErr()));
-            return 2;
+            return pushNilErr(L, rc.unwrapErr());
         }
         auto rv = geode::VersionInfo::parse(version);
         if (rv.isErr()) {
-            lua_pushnil(L);
-            push(L, std::string(rv.unwrapErr()));
-            return 2;
+            return pushNilErr(L, rv.unwrapErr());
         }
         push(L, rc.unwrap().compare(rv.unwrap()));
         return 1;

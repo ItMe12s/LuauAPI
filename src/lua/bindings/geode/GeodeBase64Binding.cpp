@@ -36,9 +36,7 @@ namespace {
         auto var = optVariant(L, 2, base64::Base64Variant::Url);
         auto result = base64::decode(std::string_view(data), var);
         if (result.isErr()) {
-            lua_pushnil(L);
-            push(L, std::string(result.unwrapErr()));
-            return 2;
+            return pushNilErr(L, result.unwrapErr());
         }
         auto const& bytes = result.unwrap();
         lua_pushlstring(L, reinterpret_cast<char const*>(bytes.data()), bytes.size());
@@ -50,9 +48,7 @@ namespace {
         auto var = optVariant(L, 2, base64::Base64Variant::Url);
         auto result = base64::decodeString(std::string_view(data), var);
         if (result.isErr()) {
-            lua_pushnil(L);
-            push(L, std::string(result.unwrapErr()));
-            return 2;
+            return pushNilErr(L, result.unwrapErr());
         }
         push(L, result.unwrap());
         return 1;

@@ -55,15 +55,13 @@ namespace luax {
         }
 
         if (requireWritable && !writable) {
-            lua_pushnil(L);
-            push(L, std::string("root is read-only"));
+            pushNilErr(L, "root is read-only");
             return std::nullopt;
         }
 
         auto resolved = resolveInsideRoot(dir, rel);
         if (resolved.isErr()) {
-            lua_pushnil(L);
-            push(L, std::string(resolved.unwrapErr()));
+            pushNilErr(L, resolved.unwrapErr());
             return std::nullopt;
         }
         return SandboxTarget{resolved.unwrap(), writable};

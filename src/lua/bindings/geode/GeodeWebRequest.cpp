@@ -90,8 +90,7 @@ namespace luax::webdetail {
                         +[](lua_State* L, void* raw) {
                             auto& response = *static_cast<Ctx*>(raw)->response;
                             if (!responseDataWithinLimit(response.data().size())) {
-                                lua_pushnil(L);
-                                push(L, std::string(kWebResponseSizeExceededMsg));
+                                pushNilErrCallback(L, kWebResponseSizeExceededMsg);
                                 return;
                             }
                             pushResponseOrError(L, std::move(response));
@@ -385,9 +384,7 @@ namespace luax::webdetail {
     int requestBodyJson(lua_State* L) {
         auto valueResult = toJson(L, 2, 0);
         if (valueResult.isErr()) {
-            lua_pushnil(L);
-            push(L, std::string(valueResult.unwrapErr()));
-            return 2;
+            return pushNilErr(L, valueResult.unwrapErr());
         }
         auto& req = checkRequest(L, 1, "WebRequest:bodyJson");
         if (!applyBodyJson(req, std::move(valueResult.unwrap()))) return pushRequestBodyExceeded(L);

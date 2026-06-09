@@ -184,8 +184,7 @@ namespace luax {
 
     inline void pushResponseOrError(lua_State* L, web::WebResponse response) {
         if (!responseDataWithinLimit(response.data().size())) {
-            lua_pushnil(L);
-            push(L, std::string(kWebResponseSizeExceededMsg));
+            pushNilErrCallback(L, kWebResponseSizeExceededMsg);
             return;
         }
         pushResponse(L, std::move(response));

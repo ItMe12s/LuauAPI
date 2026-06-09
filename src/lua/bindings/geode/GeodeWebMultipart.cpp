@@ -65,9 +65,7 @@ namespace luax::webdetail {
             std::string("application/octet-stream");
         auto result = box->form.file(std::move(name), target->path, std::move(mime));
         if (result.isErr()) {
-            lua_pushnil(L);
-            push(L, std::string(result.unwrapErr()));
-            return 2;
+            return pushNilErr(L, result.unwrapErr());
         }
         if (!requestBodyWithinLimit(box->form.getBody().size())) {
             return pushRequestBodyExceeded(L);

@@ -21,22 +21,16 @@ namespace {
 
         std::error_code ec;
         if (!std::filesystem::is_regular_file(target->path, ec)) {
-            lua_pushnil(L);
-            push(L, std::string("path is not a regular file"));
-            return 2;
+            return pushNilErr(L, "path is not a regular file");
         }
 
         auto contents = geode::utils::file::readString(target->path);
         if (contents.isErr()) {
-            lua_pushnil(L);
-            push(L, std::string(contents.unwrapErr()));
-            return 2;
+            return pushNilErr(L, contents.unwrapErr());
         }
         auto data = std::move(contents.unwrap());
         if (data.size() > kMaxFsReadBytes) {
-            lua_pushnil(L);
-            push(L, std::string("file exceeds maximum read size"));
-            return 2;
+            return pushNilErr(L, "file exceeds maximum read size");
         }
         push(L, data);
         return 1;
@@ -48,26 +42,20 @@ namespace {
 
         auto data = check<std::string>(L, 3, "geode.fs.write");
         if (data.size() > kMaxFsWriteBytes) {
-            lua_pushnil(L);
-            push(L, std::string("data exceeds maximum write size"));
-            return 2;
+            return pushNilErr(L, "data exceeds maximum write size");
         }
 
         auto parent = target->path.parent_path();
         if (!parent.empty()) {
             auto dir = geode::utils::file::createDirectoryAll(parent);
             if (dir.isErr()) {
-                lua_pushnil(L);
-                push(L, std::string(dir.unwrapErr()));
-                return 2;
+                return pushNilErr(L, dir.unwrapErr());
             }
         }
 
         auto wrote = geode::utils::file::writeString(target->path, data);
         if (wrote.isErr()) {
-            lua_pushnil(L);
-            push(L, std::string(wrote.unwrapErr()));
-            return 2;
+            return pushNilErr(L, wrote.unwrapErr());
         }
         push(L, true);
         return 1;
@@ -80,9 +68,7 @@ namespace {
         std::error_code ec;
         bool exists = std::filesystem::exists(target->path, ec);
         if (ec) {
-            lua_pushnil(L);
-            push(L, ec.message());
-            return 2;
+            return pushNilErr(L, ec.message());
         }
         push(L, exists);
         return 1;
@@ -94,9 +80,7 @@ namespace {
 
         auto entries = geode::utils::file::readDirectory(target->path, false);
         if (entries.isErr()) {
-            lua_pushnil(L);
-            push(L, std::string(entries.unwrapErr()));
-            return 2;
+            return pushNilErr(L, entries.unwrapErr());
         }
 
         lua_newtable(L);
@@ -105,16 +89,12 @@ namespace {
         for (auto const& entry : entries.unwrap()) {
             if (static_cast<std::size_t>(index) > kMaxFsListEntries) {
                 lua_pop(L, 1);
-                lua_pushnil(L);
-                push(L, std::string("directory listing exceeds maximum entries"));
-                return 2;
+                return pushNilErr(L, "directory listing exceeds maximum entries");
             }
             auto name = geode::utils::string::pathToString(entry.filename());
             if (totalNameBytes + name.size() > kMaxFsListNameBytes) {
                 lua_pop(L, 1);
-                lua_pushnil(L);
-                push(L, std::string("directory listing exceeds maximum name bytes"));
-                return 2;
+                return pushNilErr(L, "directory listing exceeds maximum name bytes");
             }
             totalNameBytes += name.size();
             push(L, std::move(name));
@@ -129,9 +109,7 @@ namespace {
 
         auto made = geode::utils::file::createDirectoryAll(target->path);
         if (made.isErr()) {
-            lua_pushnil(L);
-            push(L, std::string(made.unwrapErr()));
-            return 2;
+            return pushNilErr(L, made.unwrapErr());
         }
         push(L, true);
         return 1;
@@ -144,9 +122,7 @@ namespace {
         std::error_code ec;
         std::filesystem::remove(target->path, ec);
         if (ec) {
-            lua_pushnil(L);
-            push(L, ec.message());
-            return 2;
+            return pushNilErr(L, ec.message());
         }
         push(L, true);
         return 1;

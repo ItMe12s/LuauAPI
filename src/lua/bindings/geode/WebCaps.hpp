@@ -25,14 +25,10 @@ namespace luax {
     }
 
     inline int pushResponseSizeExceeded(lua_State* L) {
-        lua_pushnil(L);
-        push(L, std::string(kWebResponseSizeExceededMsg));
-        return 2;
+        return pushNilErr(L, kWebResponseSizeExceededMsg);
     }
 
     inline int pushRequestBodyExceeded(lua_State* L) {
-        lua_pushnil(L);
-        push(L, std::string(kWebRequestBodyExceededMsg));
-        return 2;
+        return pushNilErr(L, kWebRequestBodyExceededMsg);
     }
 } // namespace luax

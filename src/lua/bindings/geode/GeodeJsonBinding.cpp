@@ -17,20 +17,14 @@ namespace {
         size_t textLen = 0;
         char const* textData = luaL_checklstring(L, 1, &textLen);
         if (textLen > kMaxJsonParseBytes) {
-            lua_pushnil(L);
-            push(L, std::string("json exceeds maximum size"));
-            return 2;
+            return pushNilErr(L, "json exceeds maximum size");
         }
         auto result = matjson::Value::parse(std::string_view(textData, textLen));
         if (result.isErr()) {
-            lua_pushnil(L);
-            push(L, std::string(result.unwrapErr()));
-            return 2;
+            return pushNilErr(L, result.unwrapErr());
         }
         if (auto pushed = pushJson(L, result.unwrap(), 0); pushed.isErr()) {
-            lua_pushnil(L);
-            push(L, std::string(pushed.unwrapErr()));
-            return 2;
+            return pushNilErr(L, pushed.unwrapErr());
         }
         return 1;
     }

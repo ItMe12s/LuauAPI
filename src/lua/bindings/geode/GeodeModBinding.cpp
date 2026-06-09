@@ -69,9 +69,7 @@ namespace {
             return 1;
         }
         if (auto pushed = pushJson(L, result.unwrap(), 0); pushed.isErr()) {
-            lua_pushnil(L);
-            push(L, std::string(pushed.unwrapErr()));
-            return 2;
+            return pushNilErr(L, pushed.unwrapErr());
         }
         return 1;
     }
@@ -80,15 +78,11 @@ namespace {
         auto key = checkKey(L, 1);
         auto valueResult = toJson(L, 2, 0);
         if (valueResult.isErr()) {
-            lua_pushnil(L);
-            push(L, std::string(valueResult.unwrapErr()));
-            return 2;
+            return pushNilErr(L, valueResult.unwrapErr());
         }
         auto& saved = requireCurrentMod(L)->getSaveContainer();
         if (!saved.isObject()) {
-            lua_pushnil(L);
-            push(L, std::string("save container is not an object"));
-            return 2;
+            return pushNilErr(L, "save container is not an object");
         }
         saved.set(key, std::move(valueResult.unwrap()));
         push(L, true);
@@ -103,9 +97,7 @@ namespace {
             return 1;
         }
         if (auto pushed = pushJson(L, result.unwrap(), 0); pushed.isErr()) {
-            lua_pushnil(L);
-            push(L, std::string(pushed.unwrapErr()));
-            return 2;
+            return pushNilErr(L, pushed.unwrapErr());
         }
         return 1;
     }

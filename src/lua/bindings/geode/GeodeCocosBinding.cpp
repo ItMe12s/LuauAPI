@@ -76,9 +76,7 @@ namespace {
         bool permissive = optBool(L, 2, false);
         auto result = geode::cocos::cc3bFromHexString(hex, permissive);
         if (result.isErr()) {
-            lua_pushnil(L);
-            push(L, std::string(result.unwrapErr()));
-            return 2;
+            return pushNilErr(L, result.unwrapErr());
         }
         push(L, result.unwrap());
         return 1;
@@ -90,9 +88,7 @@ namespace {
         bool permissive = optBool(L, 3, false);
         auto result = geode::cocos::cc4bFromHexString(hex, requireAlpha, permissive);
         if (result.isErr()) {
-            lua_pushnil(L);
-            push(L, std::string(result.unwrapErr()));
-            return 2;
+            return pushNilErr(L, result.unwrapErr());
         }
         push(L, result.unwrap());
         return 1;

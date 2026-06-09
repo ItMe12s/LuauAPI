@@ -62,9 +62,7 @@ namespace luax::webdetail {
     int responseText(lua_State* L) {
         auto result = checkResponse(L, 1, "WebResponse:text").string();
         if (result.isErr()) {
-            lua_pushnil(L);
-            push(L, std::string(result.unwrapErr()));
-            return 2;
+            return pushNilErr(L, result.unwrapErr());
         }
         auto text = std::move(result.unwrap());
         if (!responseDataWithinLimit(text.size())) {
@@ -81,14 +79,10 @@ namespace luax::webdetail {
         }
         auto result = response.json();
         if (result.isErr()) {
-            lua_pushnil(L);
-            push(L, std::string(result.unwrapErr()));
-            return 2;
+            return pushNilErr(L, result.unwrapErr());
         }
         if (auto pushed = pushJson(L, result.unwrap(), 0); pushed.isErr()) {
-            lua_pushnil(L);
-            push(L, std::string(pushed.unwrapErr()));
-            return 2;
+            return pushNilErr(L, pushed.unwrapErr());
         }
         return 1;
     }
@@ -114,16 +108,12 @@ namespace luax::webdetail {
         if (!parent.empty()) {
             auto made = geode::utils::file::createDirectoryAll(parent);
             if (made.isErr()) {
-                lua_pushnil(L);
-                push(L, std::string(made.unwrapErr()));
-                return 2;
+                return pushNilErr(L, made.unwrapErr());
             }
         }
         auto result = response.into(target->path);
         if (result.isErr()) {
-            lua_pushnil(L);
-            push(L, std::string(result.unwrapErr()));
-            return 2;
+            return pushNilErr(L, result.unwrapErr());
         }
         push(L, true);
         return 1;
