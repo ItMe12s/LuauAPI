@@ -21,7 +21,7 @@ namespace {
         }
         auto result = matjson::Value::parse(std::string_view(textData, textLen));
         if (result.isErr()) {
-            return pushNilErr(L, result.unwrapErr());
+            return pushNilErr(L, std::string(result.unwrapErr()));
         }
         if (auto pushed = pushJson(L, result.unwrap(), 0); pushed.isErr()) {
             return pushNilErr(L, pushed.unwrapErr());

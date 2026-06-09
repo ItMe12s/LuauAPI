@@ -145,6 +145,20 @@ namespace luax::detail {
             push(L, value);
         }
     }
+
+    template <class T, class PushFn>
+    inline void pushViaPointer(lua_State* L, T* ptr, PushFn&& pushValue) {
+        if (ptr == nullptr) {
+            lua_pushnil(L);
+            return;
+        }
+        pushValue(L, *ptr);
+    }
+
+    template <class T, class PushFn>
+    inline void pushViaPointer(lua_State* L, T const* ptr, PushFn&& pushValue) {
+        pushViaPointer(L, const_cast<T*>(ptr), std::forward<PushFn>(pushValue));
+    }
 } // namespace luax::detail
 
 namespace luax {
@@ -173,16 +187,16 @@ namespace luax {
 
     template <class F, class S>
     void pushPair(lua_State* L, std::pair<F, S>* pair) {
-        if (pair == nullptr) {
-            lua_pushnil(L);
-            return;
-        }
-        pushPair(L, *pair);
+        detail::pushViaPointer(L, pair, [](lua_State* state, std::pair<F, S> const& value) {
+            pushPair(state, value);
+        });
     }
 
     template <class F, class S>
     void pushPair(lua_State* L, std::pair<F, S> const* pair) {
-        pushPair(L, const_cast<std::pair<F, S>*>(pair));
+        detail::pushViaPointer(L, pair, [](lua_State* state, std::pair<F, S> const& value) {
+            pushPair(state, value);
+        });
     }
 
     template <class T>
@@ -216,16 +230,16 @@ namespace luax {
 
     template <class T>
     void pushPrimitiveVector(lua_State* L, gd::vector<T>* vector) {
-        if (vector == nullptr) {
-            lua_pushnil(L);
-            return;
-        }
-        pushPrimitiveVector(L, *vector);
+        detail::pushViaPointer(L, vector, [](lua_State* state, gd::vector<T> const& value) {
+            pushPrimitiveVector(state, value);
+        });
     }
 
     template <class T>
     void pushPrimitiveVector(lua_State* L, gd::vector<T> const* vector) {
-        pushPrimitiveVector(L, const_cast<gd::vector<T>*>(vector));
+        detail::pushViaPointer(L, vector, [](lua_State* state, gd::vector<T> const& value) {
+            pushPrimitiveVector(state, value);
+        });
     }
 
     template <class T, std::size_t N>
@@ -260,16 +274,16 @@ namespace luax {
 
     template <class T, std::size_t N>
     void pushStdArray(lua_State* L, std::array<T, N>* array) {
-        if (array == nullptr) {
-            lua_pushnil(L);
-            return;
-        }
-        pushStdArray<T, N>(L, *array);
+        detail::pushViaPointer(L, array, [](lua_State* state, std::array<T, N> const& value) {
+            pushStdArray<T, N>(state, value);
+        });
     }
 
     template <class T, std::size_t N>
     void pushStdArray(lua_State* L, std::array<T, N> const* array) {
-        pushStdArray<T, N>(L, const_cast<std::array<T, N>*>(array));
+        detail::pushViaPointer(L, array, [](lua_State* state, std::array<T, N> const& value) {
+            pushStdArray<T, N>(state, value);
+        });
     }
 
     template <class T, std::size_t N, class U>
@@ -415,16 +429,16 @@ namespace luax {
 
     template <class T>
     void pushNestedPrimitiveVectorPointers(lua_State* L, gd::vector<gd::vector<T>*>* outer) {
-        if (outer == nullptr) {
-            lua_pushnil(L);
-            return;
-        }
-        pushNestedPrimitiveVectorPointers<T>(L, *outer);
+        detail::pushViaPointer(L, outer, [](lua_State* state, gd::vector<gd::vector<T>*> const& value) {
+            pushNestedPrimitiveVectorPointers<T>(state, value);
+        });
     }
 
     template <class T>
     void pushNestedPrimitiveVectorPointers(lua_State* L, gd::vector<gd::vector<T>*> const* outer) {
-        pushNestedPrimitiveVectorPointers<T>(L, const_cast<gd::vector<gd::vector<T>*>*>(outer));
+        detail::pushViaPointer(L, outer, [](lua_State* state, gd::vector<gd::vector<T>*> const& value) {
+            pushNestedPrimitiveVectorPointers<T>(state, value);
+        });
     }
 
     namespace detail {
@@ -584,30 +598,30 @@ namespace luax {
 
     template <class K, class V>
     void pushMap(lua_State* L, gd::map<K, V>* map) {
-        if (map == nullptr) {
-            lua_pushnil(L);
-            return;
-        }
-        pushMap(L, *map);
+        detail::pushViaPointer(L, map, [](lua_State* state, gd::map<K, V> const& value) {
+            pushMap(state, value);
+        });
     }
 
     template <class K, class V>
     void pushMap(lua_State* L, gd::map<K, V> const* map) {
-        pushMap(L, const_cast<gd::map<K, V>*>(map));
+        detail::pushViaPointer(L, map, [](lua_State* state, gd::map<K, V> const& value) {
+            pushMap(state, value);
+        });
     }
 
     template <class K, class V>
     void pushUnorderedMap(lua_State* L, gd::unordered_map<K, V>* map) {
-        if (map == nullptr) {
-            lua_pushnil(L);
-            return;
-        }
-        pushUnorderedMap(L, *map);
+        detail::pushViaPointer(L, map, [](lua_State* state, gd::unordered_map<K, V> const& value) {
+            pushUnorderedMap(state, value);
+        });
     }
 
     template <class K, class V>
     void pushUnorderedMap(lua_State* L, gd::unordered_map<K, V> const* map) {
-        pushUnorderedMap(L, const_cast<gd::unordered_map<K, V>*>(map));
+        detail::pushViaPointer(L, map, [](lua_State* state, gd::unordered_map<K, V> const& value) {
+            pushUnorderedMap(state, value);
+        });
     }
 
     template <class T>
@@ -632,30 +646,30 @@ namespace luax {
 
     template <class T>
     void pushSet(lua_State* L, gd::set<T>* set) {
-        if (set == nullptr) {
-            lua_pushnil(L);
-            return;
-        }
-        pushSet(L, *set);
+        detail::pushViaPointer(L, set, [](lua_State* state, gd::set<T> const& value) {
+            pushSet(state, value);
+        });
     }
 
     template <class T>
     void pushSet(lua_State* L, gd::set<T> const* set) {
-        pushSet(L, const_cast<gd::set<T>*>(set));
+        detail::pushViaPointer(L, set, [](lua_State* state, gd::set<T> const& value) {
+            pushSet(state, value);
+        });
     }
 
     template <class T>
     void pushUnorderedSet(lua_State* L, gd::unordered_set<T>* set) {
-        if (set == nullptr) {
-            lua_pushnil(L);
-            return;
-        }
-        pushUnorderedSet(L, *set);
+        detail::pushViaPointer(L, set, [](lua_State* state, gd::unordered_set<T> const& value) {
+            pushUnorderedSet(state, value);
+        });
     }
 
     template <class T>
     void pushUnorderedSet(lua_State* L, gd::unordered_set<T> const* set) {
-        pushUnorderedSet(L, const_cast<gd::unordered_set<T>*>(set));
+        detail::pushViaPointer(L, set, [](lua_State* state, gd::unordered_set<T> const& value) {
+            pushUnorderedSet(state, value);
+        });
     }
 
     namespace detail {
