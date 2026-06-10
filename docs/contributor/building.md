@@ -20,7 +20,7 @@ Versions come from `CMakeLists.txt`.
 
 CMake downloads these during configuration, so you do not install them by hand.
 
-- Luau, pinned to tag `0.723`
+- Luau, pinned to tag `0.724`
 - Geode bindings, pinned through `LUAUAPI_BINDINGS_GIT_TAG` in `CMakeLists.txt`
 - gd-imgui-cocos, pinned through `LUAUAPI_IMGUI_COCOS_GIT_TAG`.
   It pins Dear ImGui through its own CPM setup. Only the LuauAPI mod links it.
