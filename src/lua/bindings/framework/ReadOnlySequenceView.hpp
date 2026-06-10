@@ -1,6 +1,6 @@
 #pragma once
 
-#include "ReadOnlyView.hpp"
+#include "lua/bindings/framework/ReadOnlyView.hpp"
 
 #include <Geode/Geode.hpp>
 #include <cocos2d.h>

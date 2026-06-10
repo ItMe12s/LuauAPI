@@ -1,8 +1,8 @@
-#include "LuaMenuHandler.hpp"
+#include "lua/bindings/framework/LuaMenuHandler.hpp"
 
-#include "Usertype.hpp"
 #include "lua/Config.hpp"
 #include "lua/bindings/framework/LuaTrampolineRegistry.hpp"
+#include "lua/bindings/framework/Usertype.hpp"
 #include "lua/runtime/Runtime.hpp"
 
 namespace luax {

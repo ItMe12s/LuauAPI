@@ -1,9 +1,9 @@
 #pragma once
 
-#include "ReadOnlyVectorView.hpp"
-#include "Stack.hpp"
-#include "Types.hpp"
-#include "Usertype.hpp"
+#include "lua/bindings/framework/ReadOnlyVectorView.hpp"
+#include "lua/bindings/framework/Stack.hpp"
+#include "lua/bindings/framework/Types.hpp"
+#include "lua/bindings/framework/Usertype.hpp"
 
 #include <Geode/Geode.hpp>
 #include <array>

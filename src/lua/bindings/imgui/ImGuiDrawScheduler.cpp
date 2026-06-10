@@ -1,4 +1,4 @@
-#include "ImGuiDrawScheduler.hpp"
+#include "lua/bindings/imgui/ImGuiDrawScheduler.hpp"
 
 #include "lua/Config.hpp"
 #include "lua/bindings/framework/ScheduledCallback.hpp"

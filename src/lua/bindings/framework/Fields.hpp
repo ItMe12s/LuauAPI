@@ -1,6 +1,6 @@
 #pragma once
 
-#include "LuaRef.hpp"
+#include "lua/bindings/framework/LuaRef.hpp"
 
 #include <cocos2d.h>
 #include <lua.h>

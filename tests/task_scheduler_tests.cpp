@@ -1,7 +1,7 @@
+#include "host/lua_test_helpers.hpp"
 #include "lua/bindings/Binding.hpp"
 #include "lua/bindings/task/TaskScheduler.hpp"
 #include "lua/runtime/Runtime.hpp"
-#include "lua_test_helpers.hpp"
 
 namespace luax {
     geode::Result<void> registerTask(lua_State* L);

@@ -1,8 +1,8 @@
+#include "host/lua_test_helpers.hpp"
 #include "lua/Config.hpp"
 #include "lua/bindings/framework/LuaCallback.hpp"
 #include "lua/bindings/framework/Stack.hpp"
 #include "lua/runtime/Runtime.hpp"
-#include "lua_test_helpers.hpp"
 
 #include <Geode/log.hpp>
 #include <catch2/catch_test_macros.hpp>

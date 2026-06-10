@@ -1,9 +1,9 @@
 #pragma once
 
-#include "Usertype.hpp"
 #include "lua/Config.hpp"
 #include "lua/bindings/framework/LuaCallback.hpp"
 #include "lua/bindings/framework/LuaRef.hpp"
+#include "lua/bindings/framework/Usertype.hpp"
 
 #include <cocos2d.h>
 #include <lua.h>

@@ -1,4 +1,4 @@
-#include "CurrentMod.hpp"
+#include "lua/bindings/geode/CurrentMod.hpp"
 
 #include "lua/module/PathSandbox.hpp"
 #include "lua/runtime/Runtime.hpp"

@@ -1,9 +1,9 @@
-#include "LuaDelegate.hpp"
+#include "lua/bindings/framework/LuaDelegate.hpp"
 
-#include "Stack.hpp"
-#include "Usertype.hpp"
 #include "lua/Config.hpp"
 #include "lua/bindings/framework/LuaTrampolineRegistry.hpp"
+#include "lua/bindings/framework/Stack.hpp"
+#include "lua/bindings/framework/Usertype.hpp"
 #include "lua/runtime/Runtime.hpp"
 
 #include <lualib.h>

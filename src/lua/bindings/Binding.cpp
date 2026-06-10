@@ -1,4 +1,4 @@
-#include "Binding.hpp"
+#include "lua/bindings/Binding.hpp"
 
 #include <Geode/Geode.hpp>
 #include <algorithm>

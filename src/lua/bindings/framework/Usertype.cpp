@@ -1,9 +1,9 @@
-#include "Usertype.hpp"
+#include "lua/bindings/framework/Usertype.hpp"
 
-#include "Fields.hpp"
-#include "OpaqueHandle.hpp"
 #include "lua/Config.hpp"
 #include "lua/bindings/framework/BindingHost.hpp"
+#include "lua/bindings/framework/Fields.hpp"
+#include "lua/bindings/framework/OpaqueHandle.hpp"
 
 #include <Geode/Geode.hpp>
 #include <cstring>

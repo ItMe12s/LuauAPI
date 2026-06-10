@@ -1,6 +1,6 @@
 #pragma once
 
-#include "UserdataTags.hpp"
+#include "lua/bindings/framework/UserdataTags.hpp"
 
 #include <Geode/Result.hpp>
 #include <cstdint>

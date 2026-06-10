@@ -1,7 +1,7 @@
 #pragma once
 
-#include "Ref.hpp"
-#include "UserdataTags.hpp"
+#include "lua/bindings/framework/Ref.hpp"
+#include "lua/bindings/framework/UserdataTags.hpp"
 
 #include <Geode/Result.hpp>
 #include <Geode/utils/cocos.hpp>

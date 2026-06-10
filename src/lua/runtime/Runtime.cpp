@@ -1,9 +1,9 @@
-#include "Runtime.hpp"
+#include "lua/runtime/Runtime.hpp"
 
-#include "AllocatorAccounting.hpp"
-#include "BytecodeCacheAccounting.hpp"
-#include "Loadstring.hpp"
 #include "lua/bindings/geode/CurrentMod.hpp"
+#include "lua/runtime/AllocatorAccounting.hpp"
+#include "lua/runtime/BytecodeCacheAccounting.hpp"
+#include "lua/runtime/Loadstring.hpp"
 #if !defined(LUAUAPI_HOST_TESTS)
     #include "lua/bindings/Binding.hpp"
     #include "lua/bindings/framework/Ref.hpp"

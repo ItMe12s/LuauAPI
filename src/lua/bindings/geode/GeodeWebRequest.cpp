@@ -65,12 +65,8 @@ namespace luax::webdetail {
                 case ChainOp::RemoveParam:
                     req.removeParam(check<std::string>(L, 2, desc.context));
                     return;
-                case ChainOp::Method:
-                    req.method(check<std::string>(L, 2, desc.context));
-                    return;
-                case ChainOp::Url:
-                    req.url(check<std::string>(L, 2, desc.context));
-                    return;
+                case ChainOp::Method: req.method(check<std::string>(L, 2, desc.context)); return;
+                case ChainOp::Url: req.url(check<std::string>(L, 2, desc.context)); return;
                 case ChainOp::UserAgent:
                     req.userAgent(check<std::string>(L, 2, desc.context));
                     return;
@@ -85,9 +81,13 @@ namespace luax::webdetail {
                 }
                 case ChainOp::DownloadRange:
                     if (!lua_isnumber(L, 2) || lua_tointeger(L, 2) < 0)
-                        luaL_error(L, "WebRequest:downloadRange expected non-negative integer at arg 2");
+                        luaL_error(
+                            L, "WebRequest:downloadRange expected non-negative integer at arg 2"
+                        );
                     if (!lua_isnumber(L, 3) || lua_tointeger(L, 3) < 0)
-                        luaL_error(L, "WebRequest:downloadRange expected non-negative integer at arg 3");
+                        luaL_error(
+                            L, "WebRequest:downloadRange expected non-negative integer at arg 3"
+                        );
                     {
                         auto start = static_cast<std::uint64_t>(lua_tointeger(L, 2));
                         auto stop = static_cast<std::uint64_t>(lua_tointeger(L, 3));
@@ -111,12 +111,8 @@ namespace luax::webdetail {
                 case ChainOp::CaBundle:
                     req.CABundleContent(check<std::string>(L, 2, desc.context));
                     return;
-                case ChainOp::Proxy:
-                    req.proxyOpts(checkProxyOpts(L, 2, desc.context));
-                    return;
-                case ChainOp::Version:
-                    req.version(checkHttpVersion(L, 2, desc.context));
-                    return;
+                case ChainOp::Proxy: req.proxyOpts(checkProxyOpts(L, 2, desc.context)); return;
+                case ChainOp::Version: req.version(checkHttpVersion(L, 2, desc.context)); return;
             }
         }
 

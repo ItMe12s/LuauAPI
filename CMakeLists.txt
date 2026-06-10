@@ -405,6 +405,7 @@ if(LUAUAPI_BUILD_TESTS)
     )
     target_compile_features(luauapi_tests PRIVATE cxx_std_23)
     target_include_directories(luauapi_tests PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/tests
         ${CMAKE_CURRENT_SOURCE_DIR}/tests/host/include
         ${CMAKE_CURRENT_SOURCE_DIR}/tests/host
         src

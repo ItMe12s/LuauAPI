@@ -1,6 +1,6 @@
-#include "ImGuiHost.hpp"
+#include "lua/bindings/imgui/ImGuiHost.hpp"
 
-#include "ImGuiDrawScheduler.hpp"
+#include "lua/bindings/imgui/ImGuiDrawScheduler.hpp"
 
 #include <imgui-cocos.hpp>
 

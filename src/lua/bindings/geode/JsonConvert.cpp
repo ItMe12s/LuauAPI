@@ -1,4 +1,4 @@
-#include "JsonConvert.hpp"
+#include "lua/bindings/geode/JsonConvert.hpp"
 
 #include "lua/bindings/framework/Stack.hpp"
 

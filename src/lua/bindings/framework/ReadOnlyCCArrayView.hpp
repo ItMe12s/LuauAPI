@@ -1,7 +1,7 @@
 #pragma once
 
-#include "ReadOnlySequenceView.hpp"
-#include "Usertype.hpp"
+#include "lua/bindings/framework/ReadOnlySequenceView.hpp"
+#include "lua/bindings/framework/Usertype.hpp"
 
 #include <Geode/Geode.hpp>
 #include <cocos2d.h>

@@ -1,6 +1,6 @@
-#include "BytecodeCacheKey.hpp"
+#include "lua/module/BytecodeCacheKey.hpp"
 
-#include "PathSandbox.hpp"
+#include "lua/module/PathSandbox.hpp"
 
 #if !defined(LUAUAPI_HOST_TESTS)
     #include <Geode/utils/general.hpp>

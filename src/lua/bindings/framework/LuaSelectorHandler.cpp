@@ -1,8 +1,8 @@
-#include "LuaSelectorHandler.hpp"
+#include "lua/bindings/framework/LuaSelectorHandler.hpp"
 
-#include "OpaqueHandle.hpp"
-#include "Usertype.hpp"
 #include "lua/Config.hpp"
+#include "lua/bindings/framework/OpaqueHandle.hpp"
+#include "lua/bindings/framework/Usertype.hpp"
 #include "lua/runtime/Runtime.hpp"
 
 #define LUAX_SELECTOR_CREATE(HandlerType)                                \

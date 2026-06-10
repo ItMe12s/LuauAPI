@@ -1,11 +1,11 @@
-#include "ImGuiDrawHandleBinding.hpp"
-#include "ImGuiDrawScheduler.hpp"
-#include "ImGuiHost.hpp"
-#include "ImVecConv.hpp"
 #include "lua/Config.hpp"
 #include "lua/bindings/Binding.hpp"
 #include "lua/bindings/framework/Stack.hpp"
 #include "lua/bindings/framework/TableUtil.hpp"
+#include "lua/bindings/imgui/ImGuiDrawHandleBinding.hpp"
+#include "lua/bindings/imgui/ImGuiDrawScheduler.hpp"
+#include "lua/bindings/imgui/ImGuiHost.hpp"
+#include "lua/bindings/imgui/ImVecConv.hpp"
 #include "lua/runtime/Runtime.hpp"
 
 #include <algorithm>

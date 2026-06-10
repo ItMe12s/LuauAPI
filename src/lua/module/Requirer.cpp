@@ -1,8 +1,8 @@
-#include "Requirer.hpp"
+#include "lua/module/Requirer.hpp"
 
-#include "BytecodeCacheKey.hpp"
-#include "PathSandbox.hpp"
-#include "RequirePath.hpp"
+#include "lua/module/BytecodeCacheKey.hpp"
+#include "lua/module/PathSandbox.hpp"
+#include "lua/module/RequirePath.hpp"
 #include "lua/runtime/Runtime.hpp"
 
 #include <Luau/CodeGen.h>

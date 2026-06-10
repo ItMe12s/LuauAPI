@@ -1,4 +1,4 @@
-#include "OpaqueHandle.hpp"
+#include "lua/bindings/framework/OpaqueHandle.hpp"
 
 #include "lua/bindings/Binding.hpp"
 

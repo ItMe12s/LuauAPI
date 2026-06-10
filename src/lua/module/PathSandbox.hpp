@@ -1,7 +1,7 @@
 #pragma once
 
-#include "PathRules.hpp"
 #include "lua/Config.hpp"
+#include "lua/module/PathRules.hpp"
 
 #if defined(LUAUAPI_HOST_TESTS)
     #include <fstream>

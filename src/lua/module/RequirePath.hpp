@@ -1,6 +1,6 @@
 #pragma once
 
-#include "PathRules.hpp"
+#include "lua/module/PathRules.hpp"
 
 #include <filesystem>
 #include <string_view>

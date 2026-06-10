@@ -1,12 +1,12 @@
-#include "ImGuiDrawHandleBinding.hpp"
+#include "lua/bindings/imgui/ImGuiDrawHandleBinding.hpp"
 
-#include "ImGuiDrawScheduler.hpp"
-#include "ImGuiHost.hpp"
 #include "lua/Config.hpp"
 #include "lua/bindings/framework/LuaRef.hpp"
 #include "lua/bindings/framework/ScheduledHandleBinding.hpp"
 #include "lua/bindings/framework/TableUtil.hpp"
 #include "lua/bindings/framework/UserdataTags.hpp"
+#include "lua/bindings/imgui/ImGuiDrawScheduler.hpp"
+#include "lua/bindings/imgui/ImGuiHost.hpp"
 
 #include <cstdint>
 #include <lua.h>

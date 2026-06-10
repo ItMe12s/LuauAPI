@@ -1,4 +1,4 @@
-#include "LuaTrampolineRegistry.hpp"
+#include "lua/bindings/framework/LuaTrampolineRegistry.hpp"
 
 #include "lua/Config.hpp"
 #include "lua/runtime/Runtime.hpp"

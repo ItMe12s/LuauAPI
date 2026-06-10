@@ -1,4 +1,4 @@
-#include "TaskScheduler.hpp"
+#include "lua/bindings/task/TaskScheduler.hpp"
 
 #include "lua/Config.hpp"
 #include "lua/bindings/framework/ScheduledCallback.hpp"

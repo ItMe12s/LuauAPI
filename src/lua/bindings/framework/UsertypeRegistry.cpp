@@ -1,4 +1,4 @@
-#include "Usertype.hpp"
+#include "lua/bindings/framework/Usertype.hpp"
 
 #include <Geode/Geode.hpp>
 #include <fmt/format.h>

@@ -1,9 +1,9 @@
-#include "TaskScheduler.hpp"
 #include "lua/bindings/Binding.hpp"
 #include "lua/bindings/framework/LuaRef.hpp"
 #include "lua/bindings/framework/ScheduledHandleBinding.hpp"
 #include "lua/bindings/framework/TableUtil.hpp"
 #include "lua/bindings/framework/UserdataTags.hpp"
+#include "lua/bindings/task/TaskScheduler.hpp"
 #include "lua/runtime/Runtime.hpp"
 
 #include <Geode/Geode.hpp>
