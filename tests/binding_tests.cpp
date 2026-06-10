@@ -1,5 +1,5 @@
-#include "lua/bindings/Binding.hpp"
-#include "lua/runtime/Runtime.hpp"
+#include "framework/Binding.hpp"
+#include "core/Runtime.hpp"
 
 #include <catch2/catch_test_macros.hpp>
 #include <lua.h>

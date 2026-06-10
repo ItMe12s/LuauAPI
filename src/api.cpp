@@ -1,5 +1,5 @@
-#include "lua/module/PathSandbox.hpp"
-#include "lua/runtime/Runtime.hpp"
+#include "require/PathSandbox.hpp"
+#include "core/Runtime.hpp"
 
 #include <LuauAPI.hpp>
 

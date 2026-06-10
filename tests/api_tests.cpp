@@ -1,4 +1,4 @@
-#include "lua/runtime/Runtime.hpp"
+#include "core/Runtime.hpp"
 
 #include <LuauAPI.hpp>
 #include <catch2/catch_test_macros.hpp>

@@ -1,4 +1,4 @@
-#include "lua/module/PathRules.hpp"
+#include "require/PathRules.hpp"
 
 #include <catch2/catch_test_macros.hpp>
 #include <chrono>

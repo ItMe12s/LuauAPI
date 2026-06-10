@@ -1,5 +1,5 @@
-#include "lua/module/BytecodeCacheKey.hpp"
-#include "lua/runtime/Loadstring.hpp"
+#include "require/BytecodeCacheKey.hpp"
+#include "core/Loadstring.hpp"
 
 #include <Luau/Compiler.h>
 #include <catch2/catch_test_macros.hpp>

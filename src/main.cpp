@@ -1,6 +1,6 @@
 #include "LuauAPI.hpp"
-#include "lua/bindings/imgui/ImGuiHost.hpp"
-#include "lua/runtime/Runtime.hpp"
+#include "bindings/imgui/ImGuiHost.hpp"
+#include "core/Runtime.hpp"
 
 #include <Geode/Geode.hpp>
 #include <Geode/loader/GameEvent.hpp>

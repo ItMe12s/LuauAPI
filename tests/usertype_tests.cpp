@@ -1,6 +1,6 @@
-#include "lua/bindings/framework/Fields.hpp"
-#include "lua/bindings/framework/Usertype.hpp"
-#include "lua/runtime/Runtime.hpp"
+#include "framework/usertype/Fields.hpp"
+#include "framework/usertype/Usertype.hpp"
+#include "core/Runtime.hpp"
 
 #include <RuntimeTypes.hpp>
 #include <catch2/catch_test_macros.hpp>

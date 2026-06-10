@@ -1,6 +1,6 @@
 #include "host/lua_test_helpers.hpp"
-#include "lua/module/PathSandbox.hpp"
-#include "lua/runtime/Runtime.hpp"
+#include "require/PathSandbox.hpp"
+#include "core/Runtime.hpp"
 
 #include <Geode/log.hpp>
 #include <catch2/catch_test_macros.hpp>

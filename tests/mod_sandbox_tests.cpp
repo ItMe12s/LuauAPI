@@ -1,8 +1,8 @@
-#include "lua/bindings/framework/Stack.hpp"
-#include "lua/bindings/geode/CurrentMod.hpp"
-#include "lua/bindings/geode/ModSandbox.hpp"
-#include "lua/module/PathSandbox.hpp"
-#include "lua/runtime/Runtime.hpp"
+#include "framework/stack/Stack.hpp"
+#include "bindings/geode/CurrentMod.hpp"
+#include "bindings/geode/ModSandbox.hpp"
+#include "require/PathSandbox.hpp"
+#include "core/Runtime.hpp"
 
 #include <Geode/loader/Mod.hpp>
 #include <catch2/catch_test_macros.hpp>

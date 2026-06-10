@@ -1,4 +1,4 @@
-#include "lua/runtime/AllocatorAccounting.hpp"
+#include "core/AllocatorAccounting.hpp"
 
 #include <catch2/catch_test_macros.hpp>
 

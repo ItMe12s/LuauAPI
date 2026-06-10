@@ -1,6 +1,6 @@
 #include "host/lua_test_helpers.hpp"
-#include "lua/bindings/imgui/ImGuiDrawScheduler.hpp"
-#include "lua/runtime/Runtime.hpp"
+#include "bindings/imgui/ImGuiDrawScheduler.hpp"
+#include "core/Runtime.hpp"
 
 #include <RuntimeTypes.hpp>
 #include <catch2/catch_test_macros.hpp>

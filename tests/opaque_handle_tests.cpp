@@ -1,7 +1,7 @@
-#include "lua/bindings/framework/OpaqueHandle.hpp"
-#include "lua/bindings/framework/ReadOnlyVectorView.hpp"
-#include "lua/bindings/framework/Usertype.hpp"
-#include "lua/runtime/Runtime.hpp"
+#include "framework/usertype/OpaqueHandle.hpp"
+#include "framework/view/ReadOnlyVectorView.hpp"
+#include "framework/usertype/Usertype.hpp"
+#include "core/Runtime.hpp"
 
 #include <catch2/catch_test_macros.hpp>
 #include <lua.h>

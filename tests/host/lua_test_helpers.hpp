@@ -1,7 +1,7 @@
 #pragma once
 
-#include "lua/bindings/framework/LuaRef.hpp"
-#include "lua/runtime/Runtime.hpp"
+#include "framework/usertype/LuaRef.hpp"
+#include "core/Runtime.hpp"
 
 #include <catch2/catch_test_macros.hpp>
 #include <lua.h>

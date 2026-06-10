@@ -1,5 +1,5 @@
-#include "lua/bindings/geode/CurrentMod.hpp"
-#include "lua/runtime/Runtime.hpp"
+#include "bindings/geode/CurrentMod.hpp"
+#include "core/Runtime.hpp"
 
 #include <Geode/loader/Mod.hpp>
 #include <catch2/catch_test_macros.hpp>
