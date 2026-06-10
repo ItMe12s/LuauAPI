@@ -216,11 +216,11 @@ end)
 
 ## Source
 
-- `src/lua/bindings/geode/GeodeWebBinding.cpp`
-- `src/lua/bindings/geode/GeodeWebApply.cpp`
-- `src/lua/bindings/geode/GeodeWebOptions.cpp`
-- `src/lua/bindings/geode/GeodeWebRequest.cpp`
-- `src/lua/bindings/geode/GeodeWebResponse.cpp`
-- `src/lua/bindings/geode/GeodeWebMultipart.cpp`
-- `src/lua/bindings/geode/GeodeWebListeners.cpp`
+- `src/bindings/geode/web/GeodeWebBinding.cpp`
+- `src/bindings/geode/web/GeodeWebApply.cpp`
+- `src/bindings/geode/web/GeodeWebOptions.cpp`
+- `src/bindings/geode/web/GeodeWebRequest.cpp`
+- `src/bindings/geode/web/GeodeWebResponse.cpp`
+- `src/bindings/geode/web/GeodeWebMultipart.cpp`
+- `src/bindings/geode/web/GeodeWebListeners.cpp`
 - `tools/luau_codegen/extra_bindings/web.dluau`

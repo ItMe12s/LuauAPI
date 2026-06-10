@@ -108,5 +108,5 @@ These baseline pair fields were skipped before pair support. After regen they bi
 - `tools/luau_codegen/convert/type_map.py`
 - `tools/luau_codegen/convert/marshalling.py`
 - `tools/luau_codegen/model/pair_design.py`
-- `src/lua/bindings/framework/ContainerTables.hpp`
+- `src/framework/stack/ContainerTables.hpp`
 - `tools/luau_codegen/emit/audit.py`

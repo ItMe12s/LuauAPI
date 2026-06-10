@@ -124,6 +124,6 @@ See [Limits and errors](../cpp/limits-and-errors.md).
 ## Source
 
 - `tools/luau_codegen/extra_bindings/task.dluau`
-- `src/lua/bindings/task/TaskBinding.cpp`
-- `src/lua/bindings/task/TaskScheduler.cpp`
-- `src/lua/Config.hpp`
+- `src/bindings/task/TaskBinding.cpp`
+- `src/bindings/task/TaskScheduler.cpp`
+- `src/core/Config.hpp`

@@ -76,5 +76,5 @@ These shapes were skipped before nested support. After regen they should bind:
 - `tools/luau_codegen/convert/type_map.py`
 - `tools/luau_codegen/convert/marshalling.py`
 - `tools/luau_codegen/model/nested_containers.py`
-- `src/lua/bindings/framework/ContainerTables.hpp`
+- `src/framework/stack/ContainerTables.hpp`
 - `tools/luau_codegen/emit/audit.py`

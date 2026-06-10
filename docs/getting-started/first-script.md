@@ -65,4 +65,4 @@ They load only when you turn on developer mode in the mod settings. It is off by
 
 - `src/api.cpp`
 - `include/LuauAPI.hpp`
-- `src/lua/runtime/Runtime.cpp`
+- `src/core/Runtime.cpp`

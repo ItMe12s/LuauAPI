@@ -20,14 +20,13 @@ This page names the main parts and traces how a script gets from a file to runni
 - `include/LuauAPI.hpp`: the public header.
 - `src/api.cpp`: the public API implementation.
 - `src/main.cpp`: the mod entry points that drive the runtime lifecycle.
-- `src/lua/Config.hpp`: the limits and deadlines.
-- `src/lua/runtime/`: the runtime and the memory allocator.
-- `src/lua/bindings/`: the binding registry, the framework, task, imgui, and geode bindings.
-- `src/lua/bindings/framework/`: usertypes, the stack, references, and fields.
-- `src/lua/bindings/geode/`: handwritten `geode.*` bindings.
-- `src/lua/bindings/imgui/`: ImGui binding and draw scheduler.
-- `src/lua/module/`: the requirer and the path rules.
-- `src/lua/util/`: small data structures such as the indexed slot map used by the schedulers.
+- `src/core/Config.hpp`: the limits and deadlines.
+- `src/core/`: the runtime, memory allocator, and small utilities such as the indexed slot map.
+- `src/framework/`: the binding registry, usertypes, stack interop, callbacks, views, and scheduling.
+- `src/bindings/geode/`: handwritten `geode.*` bindings (web cluster in `web/`).
+- `src/bindings/imgui/`: ImGui binding and draw scheduler.
+- `src/bindings/task/`: task scheduler bindings.
+- `src/require/`: the requirer and the path rules.
 - `build/luauapi-gen/src/`: generated C++ bindings from codegen.
 - `tools/luau_codegen/`: the Python code generator.
 - `tests/`: the host tests.
@@ -78,6 +77,6 @@ The async API does its file work off thread, then hops to the main thread to run
 
 - `src/main.cpp`
 - `src/api.cpp`
-- `src/lua/runtime/Runtime.cpp`
+- `src/core/Runtime.cpp`
 - `tools/luau_codegen/emit/cxx_templates.py`
-- `src/lua/bindings/imgui/ImGuiDrawScheduler.cpp`
+- `src/bindings/imgui/ImGuiDrawScheduler.cpp`

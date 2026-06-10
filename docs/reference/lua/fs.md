@@ -97,6 +97,6 @@ end
 
 ## Source
 
-- `src/lua/bindings/geode/GeodeFsBinding.cpp`
-- `src/lua/module/PathSandbox.hpp`
+- `src/bindings/geode/GeodeFsBinding.cpp`
+- `src/require/PathSandbox.hpp`
 - `tools/luau_codegen/extra_bindings/fs.dluau`

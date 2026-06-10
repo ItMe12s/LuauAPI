@@ -55,4 +55,4 @@ if node then someMenu:addChild(node) end
 
 ## Source
 
-- `src/lua/bindings/geode/GeodeKeybindBinding.cpp`
+- `src/bindings/geode/GeodeKeybindBinding.cpp`

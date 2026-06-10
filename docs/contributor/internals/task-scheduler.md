@@ -2,7 +2,7 @@
 
 ## Summary
 
-The task scheduler runs `task` callbacks on the game tick. It lives in `src/lua/bindings/task/`.
+The task scheduler runs `task` callbacks on the game tick. It lives in `src/bindings/task/`.
 The binding exposes the `task` and `time` libraries,
 and the scheduler stores the callbacks and fires them when due.
 
@@ -65,7 +65,7 @@ The binding checks capacity before adding and raises an error when full.
 
 ## Source
 
-- `src/lua/bindings/task/TaskBinding.cpp`
-- `src/lua/bindings/task/TaskScheduler.hpp`
-- `src/lua/bindings/task/TaskScheduler.cpp`
-- `src/lua/Config.hpp`
+- `src/bindings/task/TaskBinding.cpp`
+- `src/bindings/task/TaskScheduler.hpp`
+- `src/bindings/task/TaskScheduler.cpp`
+- `src/core/Config.hpp`

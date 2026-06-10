@@ -5,7 +5,7 @@
 `cocos2d::ccCArray*` stores raw `void*` slots with no retain or release.
 Codegen binds it only for audited dispatcher handler queues where the element type and parent ownership are known.
 Policy lives in `tools/luau_codegen/model/cc_c_array.py`.
-Runtime lives in `src/lua/bindings/framework/ReadOnlyCCArrayView.hpp`.
+Runtime lives in `src/framework/view/ReadOnlyCCArrayView.hpp`.
 
 ## Luau shape
 
@@ -45,4 +45,4 @@ The view userdata indexes `1..num` from `ccCArray::arr`, pushes borrowed usertyp
 
 - `tools/luau_codegen/model/cc_c_array.py`
 - `tools/luau_codegen/convert/type_map.py`
-- `src/lua/bindings/framework/ReadOnlyCCArrayView.hpp`
+- `src/framework/view/ReadOnlyCCArrayView.hpp`

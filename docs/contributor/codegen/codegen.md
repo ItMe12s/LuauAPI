@@ -83,7 +83,7 @@ since async, HTTP, and file I/O are handled separately.
 
 ## Handwritten type-stub fields
 
-Some bindings are written by hand in `src/lua/bindings/`.
+Some bindings are written by hand in `src/bindings/` and `src/framework/`.
 Their type signatures still need to be in `types/geode.d.luau`.
 
 Two ways to add them:

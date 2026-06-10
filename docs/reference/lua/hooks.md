@@ -158,4 +158,4 @@ See [Limits and errors](../cpp/limits-and-errors.md).
 - `tools/luau_codegen/extra_bindings/hook.dluau`
 - `tools/luau_codegen/emit/hooks.py`
 - `tools/luau_codegen/emit/cxx_templates.py`
-- `src/lua/Config.hpp`
+- `src/core/Config.hpp`

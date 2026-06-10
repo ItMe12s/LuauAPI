@@ -54,4 +54,4 @@ end
 
 ## Source
 
-- `src/lua/bindings/geode/GeodePermissionBinding.cpp`
+- `src/bindings/geode/GeodePermissionBinding.cpp`

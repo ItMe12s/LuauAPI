@@ -112,6 +112,6 @@ You do not manage retain or release by hand. See the [bindings framework](../../
 
 ## Source
 
-- `src/lua/bindings/framework/Types.hpp`
-- `src/lua/bindings/framework/Fields.cpp`
+- `src/framework/stack/Types.hpp`
+- `src/framework/usertype/Fields.cpp`
 - `tools/luau_codegen/emit/luau_types/`

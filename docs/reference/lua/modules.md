@@ -57,7 +57,7 @@ and runs it on a sandboxed thread. The single returned value is handed back to t
 
 ## Source
 
-- `src/lua/module/Requirer.cpp`
-- `src/lua/module/RequirePath.hpp`
-- `src/lua/module/PathRules.hpp`
-- `src/lua/Config.hpp`
+- `src/require/Requirer.cpp`
+- `src/require/RequirePath.hpp`
+- `src/require/PathRules.hpp`
+- `src/core/Config.hpp`

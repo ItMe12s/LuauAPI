@@ -70,7 +70,7 @@ Supported interfaces include:
   - scroll delegates
   - download callbacks
 
-Generated trampolines live under `build/luauapi-gen/src/lua/bindings/framework/` and regenerate with the normal build.
+Generated trampolines live under `build/luauapi-gen/src/framework/callback/` and regenerate with the normal build.
 See [Codegen](../../contributor/codegen/codegen.md).
 
 ## Limits
@@ -87,7 +87,7 @@ See [Limits and errors](../cpp/limits-and-errors.md).
 
 ## Source
 
-- `src/lua/bindings/framework/LuaDelegate.hpp`
+- `src/framework/callback/LuaDelegate.hpp`
 - `build/luauapi-gen/delegate_specs.py` (generated at build time)
 - `tools/luau_codegen/model/delegate_specs.py` (repo stub, not the runtime source)
 - `tools/luau_codegen/cli/main.py`

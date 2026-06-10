@@ -92,7 +92,7 @@ end)
 
 ## Source
 
-- `src/lua/runtime/Runtime.cpp`
-- `src/lua/bindings/task/TaskBinding.cpp`
-- `src/lua/bindings/geode/GeodeWebBinding.cpp`
-- `src/lua/bindings/imgui/ImGuiBinding.cpp`
+- `src/core/Runtime.cpp`
+- `src/bindings/task/TaskBinding.cpp`
+- `src/bindings/geode/web/GeodeWebBinding.cpp`
+- `src/bindings/imgui/ImGuiBinding.cpp`

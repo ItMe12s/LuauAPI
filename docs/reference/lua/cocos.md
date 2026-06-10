@@ -79,5 +79,5 @@ print(cc.lighten3B(red, 20).r) -- 255
 ## Source
 
 - `build/luauapi-gen/bindings_free_functions.cpp`
-- `src/lua/bindings/geode/GeodeCocosBinding.cpp`
+- `src/bindings/geode/GeodeCocosBinding.cpp`
 - `tools/luau_codegen/emit/luau_types/manual_fields.py`

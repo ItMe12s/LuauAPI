@@ -2,7 +2,7 @@
 
 ## Summary
 
-The ImGui draw scheduler runs `imgui` draw callbacks every frame. It lives in `src/lua/bindings/imgui/`.
+The ImGui draw scheduler runs `imgui` draw callbacks every frame. It lives in `src/bindings/imgui/`.
 gd-imgui-cocos gives one draw callback, and the scheduler lets many script callbacks share it.
 The binding exposes the `imgui` library, the host wires the backend, and the scheduler holds the callbacks and runs them.
 
@@ -56,8 +56,8 @@ The default input mode stays in place, so the game keeps input unless an ImGui w
 
 ## Source
 
-- `src/lua/bindings/imgui/ImGuiBinding.cpp`
-- `src/lua/bindings/imgui/ImGuiDrawScheduler.hpp`
-- `src/lua/bindings/imgui/ImGuiDrawScheduler.cpp`
-- `src/lua/bindings/imgui/ImGuiHost.cpp`
-- `src/lua/Config.hpp`
+- `src/bindings/imgui/ImGuiBinding.cpp`
+- `src/bindings/imgui/ImGuiDrawScheduler.hpp`
+- `src/bindings/imgui/ImGuiDrawScheduler.cpp`
+- `src/bindings/imgui/ImGuiHost.cpp`
+- `src/core/Config.hpp`

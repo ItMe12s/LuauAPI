@@ -104,9 +104,9 @@ See [Limits and errors](../cpp/limits-and-errors.md).
 
 ## Source
 
-- `src/lua/bindings/framework/LuaCallback.hpp`
-- `src/lua/bindings/framework/LuaMenuHandler.hpp`
-- `src/lua/bindings/framework/LuaSelectorHandler.hpp`
-- `src/lua/bindings/framework/LuaTrampolineRegistry.hpp`
+- `src/framework/callback/LuaCallback.hpp`
+- `src/framework/callback/LuaMenuHandler.hpp`
+- `src/framework/callback/LuaSelectorHandler.hpp`
+- `src/framework/callback/LuaTrampolineRegistry.hpp`
 - `tools/luau_codegen/convert/marshalling.py`
 - `tools/luau_codegen/convert/type_map.py`

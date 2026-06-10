@@ -103,6 +103,6 @@ The following standard Luau libraries and globals are available:
 
 ## Source
 
-- `src/lua/runtime/Runtime.cpp`
-- `src/lua/module/Requirer.cpp`
-- `src/lua/Config.hpp`
+- `src/core/Runtime.cpp`
+- `src/require/Requirer.cpp`
+- `src/core/Config.hpp`

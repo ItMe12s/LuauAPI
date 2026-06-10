@@ -3,7 +3,7 @@
 ## Summary
 
 The bindings framework exposes C++ types to Lua.
-It lives in `src/lua/bindings/framework/`, with the registry in `src/lua/bindings/Binding.hpp`.
+It lives in `src/framework/`, with the registry in `src/framework/Binding.hpp`.
 This page explains how to register a binding and how the pieces fit together.
 
 ## The binding registry
@@ -18,7 +18,7 @@ Each binding runs once when the runtime is built.
 
 Most game types come from codegen.
 
-A few libraries are handwritten in C++ under `src/lua/bindings/geode/` and `src/lua/bindings/`:
+A few libraries are handwritten in C++ under `src/bindings/geode/` and `src/framework/`:
 
 | File | Lua Module / Description |
 | --- | --- |
@@ -163,13 +163,13 @@ In practice most game types are generated. See [Codegen](../codegen/codegen.md).
 
 ## Source
 
-- `src/lua/bindings/Binding.hpp`
-- `src/lua/bindings/framework/Usertype.hpp`
-- `src/lua/bindings/framework/UsertypeRegistry.cpp`
-- `src/lua/bindings/framework/Stack.hpp`
-- `src/lua/bindings/framework/LuaRef.hpp`
-- `src/lua/bindings/framework/LuaCallback.hpp`
-- `src/lua/bindings/framework/Ref.hpp`
-- `src/lua/bindings/framework/Types.hpp`
-- `src/lua/bindings/framework/ContainerTables.hpp`
-- `src/lua/bindings/framework/Fields.cpp`
+- `src/framework/Binding.hpp`
+- `src/framework/usertype/Usertype.hpp`
+- `src/framework/usertype/UsertypeRegistry.cpp`
+- `src/framework/stack/Stack.hpp`
+- `src/framework/usertype/LuaRef.hpp`
+- `src/framework/callback/LuaCallback.hpp`
+- `src/framework/usertype/Ref.hpp`
+- `src/framework/stack/Types.hpp`
+- `src/framework/stack/ContainerTables.hpp`
+- `src/framework/usertype/Fields.cpp`

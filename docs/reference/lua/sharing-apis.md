@@ -74,6 +74,6 @@ end)
 
 ## Source
 
-- `src/lua/runtime/Runtime.cpp`
+- `src/core/Runtime.cpp`
 - `src/api.cpp`
-- `src/lua/bindings/task/TaskBinding.cpp`
+- `src/bindings/task/TaskBinding.cpp`

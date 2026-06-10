@@ -2,7 +2,7 @@
 
 ## Summary
 
-The runtime limits and how errors reach the host. The values come from `src/lua/Config.hpp`.
+The runtime limits and how errors reach the host. The values come from `src/core/Config.hpp`.
 
 ## Limits
 
@@ -74,8 +74,8 @@ When an allocation would cross the cap, it fails and Lua reports an out of memor
 
 ## Source
 
-- `src/lua/Config.hpp`
+- `src/core/Config.hpp`
 - `include/RuntimeTypes.hpp`
 - `include/LuauAPI.hpp`
 - `src/api.cpp`
-- `src/lua/runtime/Runtime.cpp`
+- `src/core/Runtime.cpp`

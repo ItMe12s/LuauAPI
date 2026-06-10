@@ -54,6 +54,6 @@ geode.json.dump({ 1, 2, 3 }, 2) -- pretty-printed array, 2-space indent
 
 ## Source
 
-- `src/lua/bindings/geode/GeodeJsonBinding.cpp`
-- `src/lua/bindings/geode/JsonConvert.hpp`
+- `src/bindings/geode/GeodeJsonBinding.cpp`
+- `src/bindings/geode/JsonConvert.hpp`
 - `tools/luau_codegen/extra_bindings/json.dluau`

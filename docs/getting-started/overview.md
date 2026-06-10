@@ -44,5 +44,5 @@ whether a brand new mod or one you already have.
 - `mod.json`
 - `src/main.cpp`
 - `src/api.cpp`
-- `src/lua/runtime/Runtime.cpp`
-- `src/lua/Config.hpp`
+- `src/core/Runtime.cpp`
+- `src/core/Config.hpp`

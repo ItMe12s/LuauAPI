@@ -106,5 +106,5 @@ end)
 
 ## Source
 
-- `src/lua/bindings/geode/GeodeModBinding.cpp`
+- `src/bindings/geode/GeodeModBinding.cpp`
 - `tools/luau_codegen/extra_bindings/mod.dluau`

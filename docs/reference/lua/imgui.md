@@ -113,7 +113,7 @@ Negative sizes also fill the space.
 ## Source
 
 - `tools/luau_codegen/extra_bindings/imgui.dluau`
-- `src/lua/bindings/imgui/ImGuiBinding.cpp`
-- `src/lua/bindings/imgui/ImGuiDrawScheduler.cpp`
-- `src/lua/bindings/imgui/ImGuiHost.cpp`
-- `src/lua/Config.hpp`
+- `src/bindings/imgui/ImGuiBinding.cpp`
+- `src/bindings/imgui/ImGuiDrawScheduler.cpp`
+- `src/bindings/imgui/ImGuiHost.cpp`
+- `src/core/Config.hpp`

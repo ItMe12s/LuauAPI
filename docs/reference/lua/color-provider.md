@@ -62,4 +62,4 @@ print(c.r, c.g, c.b) -- 255 128 0
 
 ## Source
 
-- `src/lua/bindings/geode/GeodeColorProviderBinding.cpp`
+- `src/bindings/geode/GeodeColorProviderBinding.cpp`

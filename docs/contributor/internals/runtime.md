@@ -10,7 +10,7 @@ The `Runtime` class owns the Lua state and everything around it:
 - bindings setup
 - shutdown handling
 
-It lives in `src/lua/runtime/`.
+It lives in `src/core/`.
 
 ## One shared instance
 
@@ -33,7 +33,7 @@ and applies all bindings. After this, `status` reports `Ready`.
 The state uses `boundedAlloc`, a custom allocator.
 It tracks current use in `m_memoryUsage` and caps it at `m_memoryLimit`, which starts at `512 MiB`.
 When an allocation would cross the cap, the allocator returns null and Lua reports an out of memory error.
-The helper logic lives in `src/lua/runtime/AllocatorAccounting.hpp`.
+The helper logic lives in `src/core/AllocatorAccounting.hpp`.
 
 ## Deadlines and budget
 
@@ -82,7 +82,7 @@ On shutdown the runtime runs the hooks, releases Lua owned C++ objects, clears f
 
 ## Source
 
-- `src/lua/runtime/Runtime.hpp`
-- `src/lua/runtime/Runtime.cpp`
-- `src/lua/runtime/AllocatorAccounting.hpp`
-- `src/lua/Config.hpp`
+- `src/core/Runtime.hpp`
+- `src/core/Runtime.cpp`
+- `src/core/AllocatorAccounting.hpp`
+- `src/core/Config.hpp`

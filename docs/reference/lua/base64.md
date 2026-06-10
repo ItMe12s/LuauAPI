@@ -67,4 +67,4 @@ print(back) -- hello
 
 ## Source
 
-- `src/lua/bindings/geode/GeodeBase64Binding.cpp`
+- `src/bindings/geode/GeodeBase64Binding.cpp`

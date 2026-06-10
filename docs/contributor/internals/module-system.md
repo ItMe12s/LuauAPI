@@ -3,7 +3,7 @@
 ## Summary
 
 The module system implements `require`.
-It builds on the Luau require runtime with a custom configuration and lives in `src/lua/module/`.
+It builds on the Luau require runtime with a custom configuration and lives in `src/require/`.
 It keeps all loading inside the resources root.
 
 ## The requirer
@@ -64,9 +64,9 @@ This is the same containment used by the public `runFile` path.
 
 ## Source
 
-- `src/lua/module/Requirer.cpp`
-- `src/lua/module/Requirer.hpp`
-- `src/lua/module/RequirePath.hpp`
-- `src/lua/module/PathRules.hpp`
-- `src/lua/module/PathSandbox.hpp`
-- `src/lua/module/BytecodeCacheKey.hpp`
+- `src/require/Requirer.cpp`
+- `src/require/Requirer.hpp`
+- `src/require/RequirePath.hpp`
+- `src/require/PathRules.hpp`
+- `src/require/PathSandbox.hpp`
+- `src/require/BytecodeCacheKey.hpp`
