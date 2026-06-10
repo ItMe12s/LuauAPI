@@ -17,66 +17,9 @@ include(CTest)
 option(LUAUAPI_BUILD_TESTS "Build LuauAPI host unit tests" OFF)
 option(LUAUAPI_HOST_ONLY "Host-only configure without Geode SDK or configure-time codegen listing" OFF)
 
-set(LUAU_BUILD_CLI   OFF CACHE BOOL "" FORCE)
-set(LUAU_BUILD_TESTS OFF CACHE BOOL "" FORCE)
-set(LUAU_BUILD_WEB   OFF CACHE BOOL "" FORCE)
-set(LUAU_EXTERN_C    OFF CACHE BOOL "" FORCE)
-
-FetchContent_Declare(
-    luau
-    GIT_REPOSITORY https://github.com/luau-lang/luau.git
-    GIT_TAG        0.724
-)
-FetchContent_MakeAvailable(luau)
-
-set(LUAUAPI_LUAU_TARGETS
-    Luau.Common Luau.Ast Luau.Bytecode Luau.Compiler
-    Luau.Config Luau.Analysis Luau.CodeGen Luau.VM Luau.Require)
-set(LUAUAPI_LUAU_LINK_LIBS
-    Luau.VM Luau.Compiler Luau.Ast Luau.Require Luau.CodeGen)
-
-foreach(LUAU_TARGET IN LISTS LUAUAPI_LUAU_TARGETS)
-    if (TARGET ${LUAU_TARGET})
-        get_target_property(LUAU_PUBLIC_INCLUDES ${LUAU_TARGET} INTERFACE_INCLUDE_DIRECTORIES)
-        if (LUAU_PUBLIC_INCLUDES)
-            set_target_properties(${LUAU_TARGET} PROPERTIES
-                INTERFACE_SYSTEM_INCLUDE_DIRECTORIES "${LUAU_PUBLIC_INCLUDES}"
-            )
-        endif()
-    endif()
-endforeach()
-
-set(LUAUAPI_BINDINGS_GIT_TAG "00328ccd2fd3e4b005a54eaaa4d4d91e22ca7df4"
-    CACHE STRING "Pinned bindings commit")
-FetchContent_Declare(
-    geode_bindings
-    GIT_REPOSITORY https://github.com/geode-sdk/bindings.git
-    GIT_TAG        ${LUAUAPI_BINDINGS_GIT_TAG}
-    SOURCE_SUBDIR  _fetch_only_
-)
-FetchContent_MakeAvailable(geode_bindings)
-message(STATUS "LuauAPI geode_bindings: ${LUAUAPI_BINDINGS_GIT_TAG}")
-
-# So basically what happened is that Luau and isocline ship without MSVC iterator-debug ABI.
-# Geode/Cocos use the default debug iterator layout when _ITERATOR_DEBUG_LEVEL is 1.
-# And I'm making sure Luau targets use iterator debug level 0 for STL compatibility.
-if (WIN32)
-    foreach(LUAU_TARGET IN LISTS LUAUAPI_LUAU_TARGETS ITEMS isocline)
-        if (TARGET ${LUAU_TARGET})
-            target_compile_definitions(${LUAU_TARGET} PRIVATE
-                _HAS_ITERATOR_DEBUGGING=0
-                _ITERATOR_DEBUG_LEVEL=0
-            )
-        endif()
-    endforeach()
-endif()
-
-if (TARGET Luau.VM)
-    target_compile_definitions(Luau.VM PUBLIC LUA_UTAG_LIMIT=2048)
-endif()
-if (TARGET Luau.CodeGen)
-    target_compile_definitions(Luau.CodeGen PUBLIC LUA_UTAG_LIMIT=2048)
-endif()
+include(cmake/Helpers.cmake)
+include(cmake/Luau.cmake)
+include(cmake/GeodeBindings.cmake)
 
 if (NOT LUAUAPI_HOST_ONLY)
     if (NOT DEFINED ENV{GEODE_SDK})
@@ -92,18 +35,9 @@ if (NOT LUAUAPI_HOST_ONLY)
     endif()
 
     add_subdirectory($ENV{GEODE_SDK} ${CMAKE_CURRENT_BINARY_DIR}/geode)
-endif()
 
-if (NOT LUAUAPI_HOST_ONLY)
-    set(LUAUAPI_IMGUI_COCOS_GIT_TAG "b93f08ccef778a53ebba09b20c347f6a63980119"
-        CACHE STRING "Pinned gd-imgui-cocos commit")
-    FetchContent_Declare(
-        gd_imgui_cocos
-        GIT_REPOSITORY https://github.com/matcool/gd-imgui-cocos.git
-        GIT_TAG        ${LUAUAPI_IMGUI_COCOS_GIT_TAG}
-    )
-    FetchContent_MakeAvailable(gd_imgui_cocos)
-    message(STATUS "LuauAPI imgui-cocos: ${LUAUAPI_IMGUI_COCOS_GIT_TAG}")
+    include(cmake/ImGuiCocos.cmake)
+    include(cmake/WebSocketDeps.cmake)
 endif()
 
 find_package(Python3 3.11 REQUIRED COMPONENTS Interpreter)
@@ -276,28 +210,6 @@ list(FILTER LUAUAPI_RUNTIME_SOURCES EXCLUDE REGEX "[/\\\\]main\\.cpp$")
 list(LENGTH LUAUAPI_GENERATED_BINDING_SOURCES LUAUAPI_GENERATED_BINDING_COUNT)
 message(STATUS "LuauAPI GD bindings version: ${LUAUAPI_GD_VERSION} (platform ${LUAUAPI_CODEGEN_PLATFORM}, ${LUAUAPI_GENERATED_BINDING_COUNT} generated binding sources)")
 
-function(luauapi_apply_compile_settings TARGET)
-    target_compile_features(${TARGET} PRIVATE cxx_std_23)
-    target_compile_definitions(${TARGET} PRIVATE LUAUAPI_EXPORTING=1)
-
-    if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC" OR CMAKE_CXX_COMPILER MATCHES "clang-cl")
-        target_compile_options(${TARGET} PRIVATE /W4)
-    elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
-        target_compile_options(${TARGET} PRIVATE -Wall -Wextra -Wpedantic -Wno-dollar-in-identifier-extension)
-    endif()
-    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-        target_compile_options(${TARGET} PRIVATE -Wno-gnu-zero-variadic-macro-arguments)
-    endif()
-
-    if(WIN32)
-        if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC" OR CMAKE_CXX_COMPILER MATCHES "clang-cl")
-            target_compile_options(${TARGET} PRIVATE /bigobj)
-        elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-            target_compile_options(${TARGET} PRIVATE -Wa,-mbig-obj)
-        endif()
-    endif()
-endfunction()
-
 add_library(LuauAPI_Runtime OBJECT ${LUAUAPI_RUNTIME_SOURCES})
 luauapi_apply_compile_settings(LuauAPI_Runtime)
 set_target_properties(LuauAPI_Runtime PROPERTIES POSITION_INDEPENDENT_CODE ON)
@@ -314,6 +226,7 @@ target_compile_definitions(LuauAPI_Runtime PUBLIC
 target_link_libraries(LuauAPI_Runtime PUBLIC
     ${LUAUAPI_LUAU_LINK_LIBS}
     GeodeBindings
+    ixwebsocket
 )
 
 add_library(LuauAPI_GeneratedBindings OBJECT ${LUAUAPI_GENERATED_BINDING_SOURCES})
@@ -347,6 +260,7 @@ target_link_libraries(${PROJECT_NAME}
     ${LUAUAPI_LUAU_LINK_LIBS}
     imgui-cocos
     geode-sdk
+    ixwebsocket
 )
 luauapi_apply_compile_settings(${PROJECT_NAME})
 setup_geode_mod(${PROJECT_NAME})

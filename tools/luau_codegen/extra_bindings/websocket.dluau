@@ -1,0 +1,55 @@
+export type WebSocketConnectOptions = {
+    headers: { [string]: string }?,
+    protocols: { string }?,
+    pingIntervalSecs: number?,
+    handshakeTimeoutSecs: number?,
+    autoReconnect: boolean?,
+    certVerification: boolean?,
+    caBundle: string?,
+}
+
+export type WebSocketServeOptions = {
+    host: string?,
+}
+
+export type WebSocketReadyState = "connecting" | "open" | "closing" | "closed"
+
+export type WebSocketConnection = {
+    send: (self: WebSocketConnection, data: string) -> (boolean?, string?),
+    sendBinary: (self: WebSocketConnection, data: string) -> (boolean?, string?),
+    ping: (self: WebSocketConnection, payload: string?) -> (boolean?, string?),
+    close: (self: WebSocketConnection, code: number?, reason: string?) -> (),
+    readyState: (self: WebSocketConnection) -> WebSocketReadyState,
+    url: (self: WebSocketConnection) -> string,
+    onOpen: (self: WebSocketConnection, callback: () -> ()) -> WebSocketConnection,
+    onMessage: (self: WebSocketConnection, callback: (data: string, isBinary: boolean) -> ()) -> WebSocketConnection,
+    onClose: (self: WebSocketConnection, callback: (code: number, reason: string, remote: boolean) -> ()) -> WebSocketConnection,
+    onError: (self: WebSocketConnection, callback: (message: string) -> ()) -> WebSocketConnection,
+}
+
+export type WebSocketPeer = {
+    send: (self: WebSocketPeer, data: string) -> (boolean?, string?),
+    sendBinary: (self: WebSocketPeer, data: string) -> (boolean?, string?),
+    close: (self: WebSocketPeer, code: number?, reason: string?) -> (),
+    remoteAddress: (self: WebSocketPeer) -> string?,
+    id: (self: WebSocketPeer) -> string?,
+}
+
+export type WebSocketServer = {
+    broadcast: (self: WebSocketServer, data: string) -> (boolean?, string?),
+    broadcastBinary: (self: WebSocketServer, data: string) -> (boolean?, string?),
+    clients: (self: WebSocketServer) -> { WebSocketPeer },
+    port: (self: WebSocketServer) -> number,
+    stop: (self: WebSocketServer) -> (),
+    onClientConnect: (self: WebSocketServer, callback: (peer: WebSocketPeer, headers: { [string]: string }) -> ()) -> WebSocketServer,
+    onMessage: (self: WebSocketServer, callback: (peer: WebSocketPeer, data: string, isBinary: boolean) -> ()) -> WebSocketServer,
+    onClientDisconnect: (self: WebSocketServer, callback: (peer: WebSocketPeer, code: number, reason: string) -> ()) -> WebSocketServer,
+    onError: (self: WebSocketServer, callback: (message: string) -> ()) -> WebSocketServer,
+}
+
+export type WebSocketNamespace = {
+    connect: (url: string, options: WebSocketConnectOptions?) -> (WebSocketConnection?, string?),
+    serve: (port: number, options: WebSocketServeOptions?) -> (WebSocketServer?, string?),
+}
+
+declare websocket: WebSocketNamespace

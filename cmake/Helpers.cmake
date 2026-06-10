@@ -1,0 +1,51 @@
+function(luauapi_apply_windows_socket_bootstrap TARGET)
+    if(NOT WIN32 OR NOT TARGET ${TARGET})
+        return()
+    endif()
+    set(LUAUAPI_WINSOCK_BOOTSTRAP "${CMAKE_CURRENT_SOURCE_DIR}/include/WindowsSocketBootstrap.hpp")
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC" OR CMAKE_CXX_COMPILER MATCHES "clang-cl")
+        target_compile_options(${TARGET} PRIVATE
+            "$<$<COMPILE_LANGUAGE:CXX>:/FI\"${LUAUAPI_WINSOCK_BOOTSTRAP}\">")
+    elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+        target_compile_options(${TARGET} PRIVATE
+            "$<$<COMPILE_LANGUAGE:CXX>:SHELL:-include \"${LUAUAPI_WINSOCK_BOOTSTRAP}\">")
+    endif()
+    target_compile_definitions(${TARGET} PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX)
+endfunction()
+
+function(luauapi_force_msvc_idl0)
+    if(NOT WIN32)
+        return()
+    endif()
+    foreach(IDL_TARGET IN LISTS ARGN)
+        if(TARGET ${IDL_TARGET})
+            target_compile_definitions(${IDL_TARGET} PRIVATE
+                _HAS_ITERATOR_DEBUGGING=0
+                _ITERATOR_DEBUG_LEVEL=0
+            )
+        endif()
+    endforeach()
+endfunction()
+
+function(luauapi_apply_compile_settings TARGET)
+    target_compile_features(${TARGET} PRIVATE cxx_std_23)
+    target_compile_definitions(${TARGET} PRIVATE LUAUAPI_EXPORTING=1)
+    luauapi_apply_windows_socket_bootstrap(${TARGET})
+
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC" OR CMAKE_CXX_COMPILER MATCHES "clang-cl")
+        target_compile_options(${TARGET} PRIVATE /W4)
+    elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+        target_compile_options(${TARGET} PRIVATE -Wall -Wextra -Wpedantic -Wno-dollar-in-identifier-extension)
+    endif()
+    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+        target_compile_options(${TARGET} PRIVATE -Wno-gnu-zero-variadic-macro-arguments)
+    endif()
+
+    if(WIN32)
+        if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC" OR CMAKE_CXX_COMPILER MATCHES "clang-cl")
+            target_compile_options(${TARGET} PRIVATE /bigobj)
+        elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+            target_compile_options(${TARGET} PRIVATE -Wa,-mbig-obj)
+        endif()
+    endif()
+endfunction()

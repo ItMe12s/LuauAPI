@@ -29,7 +29,7 @@ namespace luax {
 
             using CopyOut = gd::vector<T*>;
             using BorrowedArgs = std::pair<gd::vector<T*> const&, cocos2d::CCObject*>;
-            using OwnedArgs = gd::vector<T*> const&;
+            using OwnedArgs = gd::vector<T*>;
 
             static constexpr bool kSupportsCopy = true;
             static constexpr bool kSupportsBorrowed = true;

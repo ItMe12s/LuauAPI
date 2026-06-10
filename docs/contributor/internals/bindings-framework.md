@@ -81,8 +81,11 @@ Tag assignments:
   - `kOpaqueHandleUserdataTag` (1)
   - `kTaskHandleUserdataTag` (2)
   - `kImGuiDrawHandleUserdataTag` (3)
+  - `kWsConnectionUserdataTag` (4)
+  - `kWsServerUserdataTag` (5)
+  - `kWsPeerUserdataTag` (6)
 - Dynamic tags:
-  - Begin at `kFirstDynamicUsertypeTag` (4)
+  - Begin at `kFirstDynamicUsertypeTag` (7)
 
 ## Ownership
 

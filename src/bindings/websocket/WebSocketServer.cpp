@@ -1,0 +1,399 @@
+#include "bindings/websocket/WebSocketInternal.hpp"
+#include "framework/stack/Stack.hpp"
+#include "framework/stack/TableUtil.hpp"
+
+#include <Geode/Geode.hpp>
+#include <cstdint>
+#include <lua.h>
+#include <lualib.h>
+#include <map>
+#include <memory>
+#include <string>
+#include <utility>
+
+namespace luax::wsdetail {
+    using namespace luax;
+
+    namespace {
+        constexpr char const* kMethod = "websocket.serve";
+
+        void queueClientConnectEvent(
+            std::weak_ptr<WsServer> weak, std::shared_ptr<WsPeer> peer,
+            std::map<std::string, std::string> headers
+        ) {
+            geode::queueInMainThread(
+                [weak = std::move(weak), peer = std::move(peer), headers = std::move(headers)] {
+                    auto srv = weak.lock();
+                    if (!srv || srv->stopped.load()) return;
+                    struct Ctx {
+                        std::shared_ptr<WsPeer> const* peer;
+                        std::map<std::string, std::string> const* headers;
+                    } ctx{&peer, &headers};
+                    invokeWsCallback(
+                        srv->slot(&WsServer::onClientConnect),
+                        "websocket.onClientConnect",
+                        2,
+                        +[](lua_State* L, void* raw) {
+                            auto* c = static_cast<Ctx*>(raw);
+                            pushWsPeer(L, *c->peer);
+                            lua_createtable(L, 0, static_cast<int>(c->headers->size()));
+                            for (auto const& [name, value] : *c->headers) {
+                                push(L, value);
+                                lua_setfield(L, -2, name.c_str());
+                            }
+                        },
+                        &ctx
+                    );
+                }
+            );
+        }
+
+        void queueClientMessageEvent(
+            std::weak_ptr<WsServer> weak, std::shared_ptr<WsPeer> peer, std::string data, bool binary
+        ) {
+            geode::queueInMainThread(
+                [weak = std::move(weak), peer = std::move(peer), data = std::move(data), binary] {
+                    auto srv = weak.lock();
+                    if (!srv || srv->stopped.load()) return;
+                    struct Ctx {
+                        std::shared_ptr<WsPeer> const* peer;
+                        std::string const* data;
+                        bool binary;
+                    } ctx{&peer, &data, binary};
+                    invokeWsCallback(
+                        srv->slot(&WsServer::onMessage),
+                        "websocket.server.onMessage",
+                        3,
+                        +[](lua_State* L, void* raw) {
+                            auto* c = static_cast<Ctx*>(raw);
+                            pushWsPeer(L, *c->peer);
+                            push(L, *c->data);
+                            push(L, c->binary);
+                        },
+                        &ctx
+                    );
+                }
+            );
+        }
+
+        void queueClientDisconnectEvent(
+            std::weak_ptr<WsServer> weak, std::shared_ptr<WsPeer> peer, std::uint16_t code,
+            std::string reason
+        ) {
+            geode::queueInMainThread(
+                [weak = std::move(weak), peer = std::move(peer), code, reason = std::move(reason)] {
+                    auto srv = weak.lock();
+                    if (!srv || srv->stopped.load()) return;
+                    struct Ctx {
+                        std::shared_ptr<WsPeer> const* peer;
+                        std::uint16_t code;
+                        std::string const* reason;
+                    } ctx{&peer, code, &reason};
+                    invokeWsCallback(
+                        srv->slot(&WsServer::onClientDisconnect),
+                        "websocket.onClientDisconnect",
+                        3,
+                        +[](lua_State* L, void* raw) {
+                            auto* c = static_cast<Ctx*>(raw);
+                            pushWsPeer(L, *c->peer);
+                            push(L, static_cast<int>(c->code));
+                            push(L, *c->reason);
+                        },
+                        &ctx
+                    );
+                }
+            );
+        }
+
+        void queueServerErrorEvent(std::weak_ptr<WsServer> weak, std::string message) {
+            geode::queueInMainThread([weak = std::move(weak), message = std::move(message)] {
+                auto srv = weak.lock();
+                if (!srv || srv->stopped.load()) return;
+                struct Ctx {
+                    std::string const* message;
+                } ctx{&message};
+                invokeWsCallback(
+                    srv->slot(&WsServer::onError),
+                    "websocket.server.onError",
+                    1,
+                    +[](lua_State* L, void* raw) {
+                        push(L, *static_cast<Ctx*>(raw)->message);
+                    },
+                    &ctx
+                );
+            });
+        }
+
+        void handleServerClientMessage(
+            std::weak_ptr<WsServer> const& weak, std::shared_ptr<ix::ConnectionState> const& state,
+            ix::WebSocket& socket, ix::WebSocketMessagePtr const& msg
+        ) {
+            auto srv = weak.lock();
+            if (!srv || srv->stopped.load()) return;
+            auto peer = srv->findPeer(state->getId());
+            if (!peer) return;
+            switch (msg->type) {
+                case ix::WebSocketMessageType::Open: {
+                    std::map<std::string, std::string> headers(
+                        msg->openInfo.headers.begin(), msg->openInfo.headers.end()
+                    );
+                    queueClientConnectEvent(weak, std::move(peer), std::move(headers));
+                    break;
+                }
+                case ix::WebSocketMessageType::Message:
+                    if (msg->str.size() > kMaxWebSocketReceiveBytes) {
+                        queueServerErrorEvent(
+                            weak, "peer " + peer->id + ": " + kWsReceiveSizeExceededMsg
+                        );
+                        socket.close(1009, "message too big");
+                        break;
+                    }
+                    queueClientMessageEvent(weak, std::move(peer), msg->str, msg->binary);
+                    break;
+                case ix::WebSocketMessageType::Close: {
+                    peer->open.store(false);
+                    {
+                        std::lock_guard lock(srv->mutex);
+                        srv->peers.erase(peer->id);
+                    }
+                    queueClientDisconnectEvent(
+                        weak, std::move(peer), msg->closeInfo.code, msg->closeInfo.reason
+                    );
+                    break;
+                }
+                case ix::WebSocketMessageType::Error:
+                    queueServerErrorEvent(weak, "peer " + peer->id + ": " + msg->errorInfo.reason);
+                    break;
+                default: break;
+            }
+        }
+
+        void installServerCallbacks(std::shared_ptr<WsServer> const& srv) {
+            std::weak_ptr<WsServer> weak = srv;
+
+            srv->server->setOnConnectionCallback(
+                [weak](std::weak_ptr<ix::WebSocket> socketWeak, std::shared_ptr<ix::ConnectionState> state) {
+                    auto srv = weak.lock();
+                    if (!srv || srv->stopped.load()) return;
+
+                    auto peer = std::make_shared<WsPeer>();
+                    peer->socket = socketWeak;
+                    peer->id = state->getId();
+                    peer->remoteIp = state->getRemoteIp();
+                    peer->remotePort = state->getRemotePort();
+                    {
+                        std::lock_guard lock(srv->mutex);
+                        srv->peers[peer->id] = peer;
+                    }
+
+                    auto socket = socketWeak.lock();
+                    if (!socket) return;
+                    ix::WebSocket* socketRaw = socket.get();
+                    socket->setOnMessageCallback(
+                        [weak, state = std::move(state), socketRaw](ix::WebSocketMessagePtr const& msg) {
+                            handleServerClientMessage(weak, state, *socketRaw, msg);
+                        }
+                    );
+                }
+            );
+        }
+
+        WsServer& checkRunningServer(lua_State* L) {
+            auto* box = checkWsServer(L, 1);
+            if (!box->server) luaL_error(L, "%s", kWsServerStoppedMsg);
+            return *box->server;
+        }
+
+        int setServerCallback(lua_State* L, std::shared_ptr<LuaCallback> WsServer::* member) {
+            auto& srv = checkRunningServer(L);
+            luaL_checktype(L, 2, LUA_TFUNCTION);
+            srv.setSlot(member, std::make_shared<LuaCallback>(L, 2));
+            lua_pushvalue(L, 1);
+            return 1;
+        }
+
+        int broadcastData(lua_State* L, bool binary) {
+            auto& srv = checkRunningServer(L);
+            auto data = check<std::string>(L, 2, binary ? "broadcastBinary" : "broadcast");
+            if (data.size() > kMaxWebSocketSendBytes) {
+                return pushNilErr(L, kWsSendSizeExceededMsg);
+            }
+            if (srv.stopped.load()) {
+                return pushNilErr(L, kWsServerStoppedMsg);
+            }
+            for (auto const& client : srv.server->getClients()) {
+                if (client->getReadyState() != ix::ReadyState::Open) continue;
+                if (binary) {
+                    client->sendBinary(data);
+                }
+                else {
+                    client->sendText(data);
+                }
+            }
+            push(L, true);
+            return 1;
+        }
+
+        ix::WebSocket* lockOpenPeer(WsPeerBox* box, std::shared_ptr<ix::WebSocket>& keepAlive) {
+            if (!box->peer || !box->peer->open.load()) return nullptr;
+            keepAlive = box->peer->socket.lock();
+            return keepAlive.get();
+        }
+    } // namespace
+
+    int wsServe(lua_State* L) {
+        int port = check<int>(L, 1, kMethod);
+        if (port < 1 || port > 65535) {
+            return pushNilErr(L, "websocket.serve expected port 1..65535");
+        }
+
+        std::string host = "127.0.0.1";
+        if (lua_gettop(L) >= 2 && !lua_isnil(L, 2)) {
+            luaL_checktype(L, 2, LUA_TTABLE);
+            if (auto value = optStringField(L, 2, "host", kMethod)) {
+                host = std::move(*value);
+            }
+        }
+
+        if (compactAndCountLive(activeWsServers()) >= kMaxWebSocketServers) {
+            return pushNilErr(L, "too many websocket servers");
+        }
+
+        ensureWsNetSystem();
+        auto srv = std::make_shared<WsServer>();
+        srv->port = port;
+        srv->server = std::make_unique<ix::WebSocketServer>(
+            port, host, ix::SocketServer::kDefaultTcpBacklog, kMaxWebSocketServerClients
+        );
+        srv->server->disablePerMessageDeflate();
+        installServerCallbacks(srv);
+
+        auto listenResult = srv->server->listen();
+        if (!listenResult.first) {
+            return pushNilErr(L, listenResult.second);
+        }
+        srv->server->start();
+
+        activeWsServers().push_back(srv);
+        ensureWsShutdownHook();
+
+        pushWsServer(L, std::move(srv));
+        return 1;
+    }
+
+    int serverBroadcast(lua_State* L) {
+        return broadcastData(L, false);
+    }
+
+    int serverBroadcastBinary(lua_State* L) {
+        return broadcastData(L, true);
+    }
+
+    int serverClients(lua_State* L) {
+        auto& srv = checkRunningServer(L);
+        std::lock_guard lock(srv.mutex);
+        lua_createtable(L, static_cast<int>(srv.peers.size()), 0);
+        int index = 1;
+        for (auto const& [id, peer] : srv.peers) {
+            pushWsPeer(L, peer);
+            lua_rawseti(L, -2, index++);
+        }
+        return 1;
+    }
+
+    int serverPort(lua_State* L) {
+        auto& srv = checkRunningServer(L);
+        push(L, srv.port);
+        return 1;
+    }
+
+    int serverStop(lua_State* L) {
+        auto& srv = checkRunningServer(L);
+        srv.shutdown();
+        return 0;
+    }
+
+    int serverOnClientConnect(lua_State* L) {
+        return setServerCallback(L, &WsServer::onClientConnect);
+    }
+
+    int serverOnMessage(lua_State* L) {
+        return setServerCallback(L, &WsServer::onMessage);
+    }
+
+    int serverOnClientDisconnect(lua_State* L) {
+        return setServerCallback(L, &WsServer::onClientDisconnect);
+    }
+
+    int serverOnError(lua_State* L) {
+        return setServerCallback(L, &WsServer::onError);
+    }
+
+    int peerSend(lua_State* L) {
+        auto* box = checkWsPeer(L, 1);
+        auto data = check<std::string>(L, 2, "send");
+        if (data.size() > kMaxWebSocketSendBytes) {
+            return pushNilErr(L, kWsSendSizeExceededMsg);
+        }
+        std::shared_ptr<ix::WebSocket> keepAlive;
+        auto* socket = lockOpenPeer(box, keepAlive);
+        if (!socket) return pushNilErr(L, kWsPeerDisconnectedMsg);
+        auto info = socket->sendText(data);
+        if (!info.success) return pushNilErr(L, kWsPeerDisconnectedMsg);
+        push(L, true);
+        return 1;
+    }
+
+    int peerSendBinary(lua_State* L) {
+        auto* box = checkWsPeer(L, 1);
+        auto data = check<std::string>(L, 2, "sendBinary");
+        if (data.size() > kMaxWebSocketSendBytes) {
+            return pushNilErr(L, kWsSendSizeExceededMsg);
+        }
+        std::shared_ptr<ix::WebSocket> keepAlive;
+        auto* socket = lockOpenPeer(box, keepAlive);
+        if (!socket) return pushNilErr(L, kWsPeerDisconnectedMsg);
+        auto info = socket->sendBinary(data);
+        if (!info.success) return pushNilErr(L, kWsPeerDisconnectedMsg);
+        push(L, true);
+        return 1;
+    }
+
+    int peerClose(lua_State* L) {
+        auto* box = checkWsPeer(L, 1);
+        std::uint16_t code = ix::WebSocketCloseConstants::kNormalClosureCode;
+        std::string reason = ix::WebSocketCloseConstants::kNormalClosureMessage;
+        if (lua_gettop(L) >= 2 && !lua_isnil(L, 2)) {
+            int value = check<int>(L, 2, "close");
+            if (value < 1000 || value > 4999) luaL_error(L, "close expected code 1000..4999");
+            code = static_cast<std::uint16_t>(value);
+        }
+        if (lua_gettop(L) >= 3 && !lua_isnil(L, 3)) {
+            reason = check<std::string>(L, 3, "close");
+        }
+        std::shared_ptr<ix::WebSocket> keepAlive;
+        auto* socket = lockOpenPeer(box, keepAlive);
+        if (socket) socket->close(code, reason);
+        return 0;
+    }
+
+    int peerRemoteAddress(lua_State* L) {
+        auto* box = checkWsPeer(L, 1);
+        if (!box->peer) {
+            lua_pushnil(L);
+            return 1;
+        }
+        push(L, box->peer->remoteIp + ":" + std::to_string(box->peer->remotePort));
+        return 1;
+    }
+
+    int peerId(lua_State* L) {
+        auto* box = checkWsPeer(L, 1);
+        if (!box->peer) {
+            lua_pushnil(L);
+            return 1;
+        }
+        push(L, box->peer->id);
+        return 1;
+    }
+} // namespace luax::wsdetail
