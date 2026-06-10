@@ -160,9 +160,8 @@ class CodegenExitCodeTests(unittest.TestCase):
                     os.path.join(
                         out_dir,
                         "src",
-                        "lua",
-                        "bindings",
                         "framework",
+                        "callback",
                         "LuaDelegates.gen.hpp",
                     )
                 )
@@ -172,9 +171,8 @@ class CodegenExitCodeTests(unittest.TestCase):
                     os.path.join(
                         out_dir,
                         "src",
-                        "lua",
-                        "bindings",
                         "framework",
+                        "callback",
                         "LuaDelegates.gen.cpp",
                     )
                 )
@@ -204,7 +202,7 @@ class ListAllOutputsCliTests(unittest.TestCase):
                 with mock.patch.object(
                     cg.emit_plan,
                     "plan_outputs",
-                    return_value=["lua/bindings/bindings_CCObject.cpp"],
+                    return_value=["bindings_CCObject.cpp"],
                 ):
                     with mock.patch.object(
                         cg.emit_types,
@@ -224,10 +222,10 @@ class ListAllOutputsCliTests(unittest.TestCase):
                             )
             self.assertEqual(rc, 0)
             lines = [line for line in buf.getvalue().splitlines() if line]
-            self.assertIn("binding:src/lua/bindings/bindings_CCObject.cpp", lines)
-            self.assertIn("binding:src/lua/bindings/framework/LuaDelegates.gen.hpp", lines)
+            self.assertIn("binding:src/bindings_CCObject.cpp", lines)
+            self.assertIn("binding:src/framework/callback/LuaDelegates.gen.hpp", lines)
             self.assertIn(
-                "binding:src/lua/bindings/framework/Types.generated.hpp",
+                "binding:src/framework/stack/Types.generated.hpp",
                 lines,
             )
             self.assertIn("type:geode.d.luau", lines)

@@ -47,7 +47,7 @@ class F6NumericMarshallingTests(unittest.TestCase):
 
     def test_unsigned_push_does_not_narrow_through_int(self) -> None:
         with open(
-            os.path.join(ROOT, "src", "lua", "bindings", "framework", "Stack.hpp"),
+            os.path.join(ROOT, "src", "framework", "stack", "Stack.hpp"),
             "r",
             encoding="utf-8",
         ) as f:

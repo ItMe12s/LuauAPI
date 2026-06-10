@@ -9,28 +9,28 @@ _REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__f
 _EXTRA_BINDING_SOURCES = {
     "fs": {
         "dluau": "tools/luau_codegen/extra_bindings/fs.dluau",
-        "cpp": "src/lua/bindings/geode/GeodeFsBinding.cpp",
+        "cpp": "src/bindings/geode/GeodeFsBinding.cpp",
         "type_name": "FsNamespace",
         "start_marker": "registerGeodeFs(lua_State* L)",
         "end_marker": 'lua_setfield(L, -2, "fs")',
     },
     "json": {
         "dluau": "tools/luau_codegen/extra_bindings/json.dluau",
-        "cpp": "src/lua/bindings/geode/GeodeJsonBinding.cpp",
+        "cpp": "src/bindings/geode/GeodeJsonBinding.cpp",
         "type_name": "JsonNamespace",
         "start_marker": "registerGeodeJson(lua_State* L)",
         "end_marker": 'lua_setfield(L, -2, "json")',
     },
     "mod": {
         "dluau": "tools/luau_codegen/extra_bindings/mod.dluau",
-        "cpp": "src/lua/bindings/geode/GeodeModBinding.cpp",
+        "cpp": "src/bindings/geode/GeodeModBinding.cpp",
         "type_name": "ModNamespace",
         "start_marker": "registerGeodeMod(lua_State* L)",
         "end_marker": 'lua_setfield(L, -2, "Mod")',
     },
     "web": {
         "dluau": "tools/luau_codegen/extra_bindings/web.dluau",
-        "cpp": "src/lua/bindings/geode/GeodeWebBinding.cpp",
+        "cpp": "src/bindings/geode/web/GeodeWebBinding.cpp",
         "type_name": "WebNamespace",
         "start_marker": "registerGeodeWeb(lua_State* L)",
         "end_marker": "registerConstants(L)",

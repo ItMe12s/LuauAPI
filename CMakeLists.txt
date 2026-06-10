@@ -380,27 +380,27 @@ if(LUAUAPI_BUILD_TESTS)
 
     add_executable(luauapi_tests
         src/api.cpp
-        src/lua/bindings/Binding.cpp
-        src/lua/bindings/framework/BindingHost.cpp
-        src/lua/bindings/framework/Fields.cpp
-        src/lua/bindings/framework/OpaqueHandle.cpp
-        src/lua/bindings/framework/Usertype.cpp
-        src/lua/bindings/framework/UsertypeRegistry.cpp
-        src/lua/bindings/framework/LuaDelegate.cpp
-        src/lua/bindings/framework/LuaTrampolineRegistry.cpp
-        src/lua/bindings/task/TaskBinding.cpp
-        src/lua/bindings/geode/CurrentMod.cpp
-        src/lua/bindings/geode/ModSandbox.cpp
-        src/lua/bindings/geode/GeodeFsBinding.cpp
-        src/lua/bindings/geode/GeodeJsonBinding.cpp
-        src/lua/bindings/geode/JsonConvert.cpp
-        src/lua/bindings/imgui/ImGuiDrawHandleBinding.cpp
-        src/lua/bindings/imgui/ImGuiDrawScheduler.cpp
-        src/lua/bindings/task/TaskScheduler.cpp
-        src/lua/module/BytecodeCacheKey.cpp
-        src/lua/module/Requirer.cpp
-        src/lua/runtime/Loadstring.cpp
-        src/lua/runtime/Runtime.cpp
+        src/framework/Binding.cpp
+        src/framework/BindingHost.cpp
+        src/framework/usertype/Fields.cpp
+        src/framework/usertype/OpaqueHandle.cpp
+        src/framework/usertype/Usertype.cpp
+        src/framework/usertype/UsertypeRegistry.cpp
+        src/framework/callback/LuaDelegate.cpp
+        src/framework/callback/LuaTrampolineRegistry.cpp
+        src/bindings/task/TaskBinding.cpp
+        src/bindings/geode/CurrentMod.cpp
+        src/bindings/geode/ModSandbox.cpp
+        src/bindings/geode/GeodeFsBinding.cpp
+        src/bindings/geode/GeodeJsonBinding.cpp
+        src/bindings/geode/JsonConvert.cpp
+        src/bindings/imgui/ImGuiDrawHandleBinding.cpp
+        src/bindings/imgui/ImGuiDrawScheduler.cpp
+        src/bindings/task/TaskScheduler.cpp
+        src/require/BytecodeCacheKey.cpp
+        src/require/Requirer.cpp
+        src/core/Loadstring.cpp
+        src/core/Runtime.cpp
         ${LUAUAPI_TEST_SOURCES}
     )
     target_compile_features(luauapi_tests PRIVATE cxx_std_23)

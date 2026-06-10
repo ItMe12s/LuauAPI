@@ -11,15 +11,15 @@ from luau_codegen.model.free_fn_sources import FREE_FUNCTION_SOURCES  # type: ig
 
 _REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-_WEB_BINDING = "src/lua/bindings/geode/GeodeWebBinding.cpp"
+_WEB_BINDING = "src/bindings/geode/web/GeodeWebBinding.cpp"
 _WEB_BINDING_SOURCES = (
-    "src/lua/bindings/geode/GeodeWebBinding.cpp",
-    "src/lua/bindings/geode/GeodeWebApply.cpp",
-    "src/lua/bindings/geode/GeodeWebOptions.cpp",
-    "src/lua/bindings/geode/GeodeWebRequest.cpp",
-    "src/lua/bindings/geode/GeodeWebResponse.cpp",
-    "src/lua/bindings/geode/GeodeWebMultipart.cpp",
-    "src/lua/bindings/geode/GeodeWebListeners.cpp",
+    "src/bindings/geode/web/GeodeWebBinding.cpp",
+    "src/bindings/geode/web/GeodeWebApply.cpp",
+    "src/bindings/geode/web/GeodeWebOptions.cpp",
+    "src/bindings/geode/web/GeodeWebRequest.cpp",
+    "src/bindings/geode/web/GeodeWebResponse.cpp",
+    "src/bindings/geode/web/GeodeWebMultipart.cpp",
+    "src/bindings/geode/web/GeodeWebListeners.cpp",
 )
 
 _REQUEST_BODY_APPLY_HELPERS = (
@@ -28,24 +28,24 @@ _REQUEST_BODY_APPLY_HELPERS = (
     "applyBodyJson",
     "applyBodyMultipart",
 )
-_WEB_INTERNAL = "src/lua/bindings/geode/WebInternal.hpp"
-_FS_BINDING = "src/lua/bindings/geode/GeodeFsBinding.cpp"
-_COCOS_BINDING = "src/lua/bindings/geode/GeodeCocosBinding.cpp"
-_TASK_SCHEDULER = "src/lua/bindings/task/TaskScheduler.cpp"
-_TASK_BINDING = "src/lua/bindings/task/TaskBinding.cpp"
-_IMGUI_BINDING = "src/lua/bindings/imgui/ImGuiDrawHandleBinding.cpp"
-_SCHEDULED_HANDLE_BINDING = "src/lua/bindings/framework/ScheduledHandleBinding.hpp"
-_SCHEDULED_CALLBACK = "src/lua/bindings/framework/ScheduledCallback.hpp"
-_SCHEDULED_SLOT_STORE = "src/lua/bindings/framework/ScheduledSlotStore.hpp"
-_LUA_SELECTOR = "src/lua/bindings/framework/LuaSelectorHandler.cpp"
-_LUA_MENU = "src/lua/bindings/framework/LuaMenuHandler.cpp"
-_LUA_DELEGATE = "src/lua/bindings/framework/LuaDelegate.cpp"
-_LUA_CALLBACK = "src/lua/bindings/framework/LuaCallback.hpp"
-_USERTYPE = "src/lua/bindings/framework/Usertype.cpp"
-_JSON_CONVERT = "src/lua/bindings/geode/JsonConvert.cpp"
-_GEODE_MOD = "src/lua/bindings/geode/GeodeModBinding.cpp"
-_GEODE_PERMISSION = "src/lua/bindings/geode/GeodePermissionBinding.cpp"
-_CONFIG_HEADER = "src/lua/Config.hpp"
+_WEB_INTERNAL = "src/bindings/geode/web/WebInternal.hpp"
+_FS_BINDING = "src/bindings/geode/GeodeFsBinding.cpp"
+_COCOS_BINDING = "src/bindings/geode/GeodeCocosBinding.cpp"
+_TASK_SCHEDULER = "src/bindings/task/TaskScheduler.cpp"
+_TASK_BINDING = "src/bindings/task/TaskBinding.cpp"
+_IMGUI_BINDING = "src/bindings/imgui/ImGuiDrawHandleBinding.cpp"
+_SCHEDULED_HANDLE_BINDING = "src/framework/schedule/ScheduledHandleBinding.hpp"
+_SCHEDULED_CALLBACK = "src/framework/schedule/ScheduledCallback.hpp"
+_SCHEDULED_SLOT_STORE = "src/framework/schedule/ScheduledSlotStore.hpp"
+_LUA_SELECTOR = "src/framework/callback/LuaSelectorHandler.cpp"
+_LUA_MENU = "src/framework/callback/LuaMenuHandler.cpp"
+_LUA_DELEGATE = "src/framework/callback/LuaDelegate.cpp"
+_LUA_CALLBACK = "src/framework/callback/LuaCallback.hpp"
+_USERTYPE = "src/framework/usertype/Usertype.cpp"
+_JSON_CONVERT = "src/bindings/geode/JsonConvert.cpp"
+_GEODE_MOD = "src/bindings/geode/GeodeModBinding.cpp"
+_GEODE_PERMISSION = "src/bindings/geode/GeodePermissionBinding.cpp"
+_CONFIG_HEADER = "src/core/Config.hpp"
 
 _COCOS_GENERATED_OWNERS = frozenset(
     {
@@ -260,7 +260,7 @@ class BindingGuardTests(unittest.TestCase):
         )
 
     def test_off_thread_request_intercept_warns_before_skip(self) -> None:
-        source = _read_repo_file("src/lua/bindings/geode/GeodeWebListeners.cpp")
+        source = _read_repo_file("src/bindings/geode/web/GeodeWebListeners.cpp")
         body = _function_body(source, "invokeRequestEvent", ret="bool")
         self.assertIn(
             "!Runtime::isMainThread()",
@@ -279,7 +279,7 @@ class BindingGuardTests(unittest.TestCase):
         )
 
     def test_off_thread_response_listener_is_side_effects_only(self) -> None:
-        source = _read_repo_file("src/lua/bindings/geode/GeodeWebListeners.cpp")
+        source = _read_repo_file("src/bindings/geode/web/GeodeWebListeners.cpp")
         body = _function_body(source, "invokeResponseEvent", ret="bool")
         self.assertIn(
             "queueInMainThread",
@@ -588,7 +588,7 @@ class HandleGcGuardTests(unittest.TestCase):
         task_scheduler = _read_repo_file(_TASK_SCHEDULER)
         self.assertIn("fireProtectedCallback", task_scheduler)
 
-        imgui_scheduler = _read_repo_file("src/lua/bindings/imgui/ImGuiDrawScheduler.cpp")
+        imgui_scheduler = _read_repo_file("src/bindings/imgui/ImGuiDrawScheduler.cpp")
         self.assertIn("fireProtectedCallback", imgui_scheduler)
 
     def test_schedulers_store_slots_via_framework_mixin(self) -> None:
@@ -599,7 +599,7 @@ class HandleGcGuardTests(unittest.TestCase):
         task_scheduler = _read_repo_file(_TASK_SCHEDULER)
         self.assertIn("ScheduledSlotStore", task_scheduler)
 
-        imgui_scheduler = _read_repo_file("src/lua/bindings/imgui/ImGuiDrawScheduler.cpp")
+        imgui_scheduler = _read_repo_file("src/bindings/imgui/ImGuiDrawScheduler.cpp")
         self.assertIn("m_store", imgui_scheduler)
         self.assertIn("compactCancelled", imgui_scheduler)
 

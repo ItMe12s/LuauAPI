@@ -13,7 +13,7 @@ def _emit_common_file(emitted_classes: List[Class], plan: EmitPlan, target_platf
     out = [
         file_preamble(),
         '#include "bindings_internal.hpp"\n',
-        '#include "lua/bindings/framework/UserdataTags.hpp"\n\n',
+        '#include "framework/stack/UserdataTags.hpp"\n\n',
     ]
     for cls in emitted_classes:
         gen_ns = _gen_ns(cls)

@@ -10,7 +10,7 @@ from luau_codegen.model.cocos_value_types import (
     _check_expr,
 )
 
-TYPES_GEN_REL_PATH = "src/lua/bindings/framework/Types.generated.hpp"
+TYPES_GEN_REL_PATH = "src/framework/stack/Types.generated.hpp"
 
 
 def types_gen_rel_path() -> str:

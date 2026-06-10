@@ -104,7 +104,7 @@ class GeneratedSafetyTests(unittest.TestCase):
         text = _emit_common_file(plan.emitted_classes, plan, "win")
 
         self.assertIn("luax::evictMenuHandlersIfFinalRelease(self);", text)
-        self.assertIn('#include "lua/bindings/framework/LuaMenuHandler.hpp"', text)
+        self.assertIn('#include "framework/callback/LuaMenuHandler.hpp"', text)
         self.assertIn("geode::Result<void> installFieldsReleaseHook()", text)
         self.assertIn(
             "if (auto hookResult = installFieldsReleaseHook(); hookResult.isErr())",
@@ -162,7 +162,7 @@ class GeneratedSafetyTests(unittest.TestCase):
         self.assertIn("luax::BindingHost::ResourcesRootScope", text)
         self.assertNotIn("luax::Runtime::getIfInitialized()", text)
         self.assertNotIn("lua/runtime/Runtime.hpp", text)
-        self.assertIn('#include "lua/bindings/framework/BindingHost.hpp"', text)
+        self.assertIn('#include "framework/BindingHost.hpp"', text)
 
     def test_common_bind_registers_shutdown_hooks_via_binding_host(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")
@@ -829,7 +829,7 @@ class GeneratedSafetyTests(unittest.TestCase):
         from luau_codegen.emit.cxx_templates import file_preamble  # type: ignore[import-unresolved]
 
         self.assertIn(
-            '#include "lua/bindings/framework/ContainerTables.hpp"',
+            '#include "framework/stack/ContainerTables.hpp"',
             file_preamble(),
         )
 

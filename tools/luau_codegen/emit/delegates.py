@@ -14,8 +14,8 @@ if TYPE_CHECKING:
     from luau_codegen.model import delegate_specs as delegate_specs_module
 
 DELEGATE_GEN_REL_PATHS: tuple[str, ...] = (
-    "src/lua/bindings/framework/LuaDelegates.gen.hpp",
-    "src/lua/bindings/framework/LuaDelegates.gen.cpp",
+    "src/framework/callback/LuaDelegates.gen.hpp",
+    "src/framework/callback/LuaDelegates.gen.cpp",
 )
 
 
@@ -591,10 +591,10 @@ def emit_gen_hpp(specs: dict[str, DelegateSpec]) -> str:
         )
     return (
         "#pragma once\n\n"
-        '#include "lua/bindings/framework/LuaDelegate.hpp"\n'
-        '#include "lua/bindings/framework/Stack.hpp"\n'
-        '#include "lua/bindings/framework/Types.hpp"\n'
-        '#include "lua/bindings/framework/Usertype.hpp"\n\n'
+        '#include "framework/callback/LuaDelegate.hpp"\n'
+        '#include "framework/stack/Stack.hpp"\n'
+        '#include "framework/stack/Types.hpp"\n'
+        '#include "framework/usertype/Usertype.hpp"\n\n'
         "namespace luax {\n" + "\n\n".join(classes) + "\n}\n"
     )
 
@@ -654,7 +654,7 @@ def emit_override(spec: DelegateSpec, m: DelegateMethod) -> str:
 
 def emit_gen_cpp(specs: dict[str, DelegateSpec]) -> str:
     parts = [
-        '#include "lua/bindings/framework/LuaDelegates.gen.hpp"',
+        '#include "framework/callback/LuaDelegates.gen.hpp"',
         "",
         "namespace luax {",
     ]

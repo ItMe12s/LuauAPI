@@ -11,12 +11,12 @@ from luau_codegen.emit.luau_types.manual_fields import (  # type: ignore[import-
 _REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 _NAMESPACE_SOURCES = {
-    "geode.cocos": "src/lua/bindings/geode/GeodeCocosBinding.cpp",
-    "geode.utils.base64": "src/lua/bindings/geode/GeodeBase64Binding.cpp",
-    "geode.utils.permission": "src/lua/bindings/geode/GeodePermissionBinding.cpp",
-    "geode.ColorProvider": "src/lua/bindings/geode/GeodeColorProviderBinding.cpp",
-    "geode.VersionInfo": "src/lua/bindings/geode/GeodeVersionBinding.cpp",
-    "geode.Keybind": "src/lua/bindings/geode/GeodeKeybindBinding.cpp",
+    "geode.cocos": "src/bindings/geode/GeodeCocosBinding.cpp",
+    "geode.utils.base64": "src/bindings/geode/GeodeBase64Binding.cpp",
+    "geode.utils.permission": "src/bindings/geode/GeodePermissionBinding.cpp",
+    "geode.ColorProvider": "src/bindings/geode/GeodeColorProviderBinding.cpp",
+    "geode.VersionInfo": "src/bindings/geode/GeodeVersionBinding.cpp",
+    "geode.Keybind": "src/bindings/geode/GeodeKeybindBinding.cpp",
 }
 
 _SET_CFUNCTION = re.compile(r'setTableCFunction\(L,\s*[^,]+,\s*"([^"]+)"')
