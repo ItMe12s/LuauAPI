@@ -47,7 +47,7 @@ Runtime limits and error strings. Values come from `src/core/Config.hpp`.
 | --- | --- | --- |
 | `kMaxHookCallbacksGlobal` | `4096` | Total `geode.hook` callbacks |
 | `kMaxHookCallbacksPerTarget` | `64` | Hook callbacks on one target |
-| `kMaxScheduledTasks` | `4096` | Tasks alive at once |
+| `kMaxScheduledTasks` | `4096` | Active (non-cancelled) scheduled tasks at once |
 | `kMaxCallbackTrampolines` | `4096` soft cap | Orphan callback bridges without an anchor |
 
 ### Hooks, callbacks, tasks errors
@@ -65,7 +65,7 @@ Runtime limits and error strings. Values come from `src/core/Config.hpp`.
 
 | Constant | Value | Meaning |
 | --- | --- | --- |
-| `kMaxImGuiDrawCallbacks` | `256` | Active `imgui.onDraw` handles at once |
+| `kMaxImGuiDrawCallbacks` | `256` | Active (non-cancelled) `imgui.onDraw` handles at once |
 
 ### ImGui errors
 

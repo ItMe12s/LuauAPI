@@ -86,12 +86,14 @@ Read shared values through `_G[key]` rather than as a bare global name. See [Sha
 
 The following standard Luau libraries and globals are available:
 
-- `string`
-- `table`
-- `math`
-- `task` (see its own page)
-- `time` (see its own page)
-- `geode` (see its own page)
+- `string` ([Luau string library](https://luau-lang.org/library#string-library))
+- `table` ([Luau table library](https://luau-lang.org/library#table-library))
+- `math` ([Luau math library](https://luau-lang.org/library#math-library))
+- `task` (see [Tasks and time](tasks.md))
+- `time` (see [Tasks and time](tasks.md#time-now-and-time-unix))
+- `geode` (see [Game objects](game-objects.md))
+- `imgui` (see [ImGui](imgui.md))
+- `websocket` (see [WebSocket](websocket.md))
 
 ## Limits
 
@@ -105,6 +107,9 @@ See [Limits and errors](../cpp/limits-and-errors.md) for caps and error strings.
 - [Modules](modules.md)
 - [Sharing APIs between mods](sharing-apis.md)
 - [Tasks and time](tasks.md)
+- [Game objects](game-objects.md)
+- [ImGui](imgui.md)
+- [WebSocket](websocket.md)
 - [Limits and errors](../cpp/limits-and-errors.md)
 
 ## Source

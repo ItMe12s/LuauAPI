@@ -1,4 +1,5 @@
 #include "bindings/task/TaskScheduler.hpp"
+#include "core/Config.hpp"
 #include "core/Runtime.hpp"
 #include "framework/Binding.hpp"
 #include "host/lua_test_helpers.hpp"
@@ -13,6 +14,7 @@ namespace luax {
 #include <lua.h>
 #include <lualib.h>
 #include <thread>
+#include <vector>
 
 namespace {
     struct RuntimeGuard {
@@ -253,6 +255,36 @@ TEST_CASE("TaskScheduler m_index stays valid after deferred compaction") {
     lua_getglobal(L, "deferThird");
     REQUIRE(lua_isnil(L, -1));
     lua_pop(L, 1);
+}
+
+TEST_CASE("TaskScheduler allows add after cancel without compaction") {
+    RuntimeGuard guard;
+    auto* runtime = luax::Runtime::getOrCreate();
+    auto* L = runtime->state();
+
+    auto& scheduler = luax::TaskScheduler::get();
+    std::vector<std::uint64_t> ids;
+    ids.reserve(luax::kMaxScheduledTasks);
+
+    for (std::size_t i = 0; i < luax::kMaxScheduledTasks; ++i) {
+        auto ref = luauapi_test::makeCallback(L, "return");
+        auto id = scheduler.add(std::move(ref), 1000.0, 0.0);
+        REQUIRE(id != 0);
+        ids.push_back(id);
+    }
+    REQUIRE(scheduler.full());
+    REQUIRE(scheduler.activeCount() == luax::kMaxScheduledTasks);
+
+    for (std::uint64_t id : ids) {
+        scheduler.cancel(id);
+    }
+    REQUIRE(scheduler.activeCount() == 0);
+    REQUIRE_FALSE(scheduler.full());
+
+    auto ref = luauapi_test::makeCallback(L, "return");
+    auto newId = scheduler.add(std::move(ref), 0.0, 0.0);
+    REQUIRE(newId != 0);
+    REQUIRE(scheduler.activeCount() == 1);
 }
 
 TEST_CASE(

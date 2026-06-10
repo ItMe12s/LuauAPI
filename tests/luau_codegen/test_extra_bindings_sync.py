@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import glob
 import os
 import re
 import unittest
 
 _REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+_EXTRA_BINDINGS_DIR = os.path.join(_REPO_ROOT, "tools", "luau_codegen", "extra_bindings")
+_TYPE_STUBS_DOC = os.path.join(_REPO_ROOT, "docs", "reference", "lua", "type-stubs.md")
 
 _EXTRA_BINDING_SOURCES = {
     "fs": {
@@ -76,6 +79,18 @@ def _registered_namespace_fields(cpp_source: str, start_marker: str, end_marker:
 
 
 class ExtraBindingsSyncTests(unittest.TestCase):
+    def test_type_stubs_doc_lists_every_extra_binding(self) -> None:
+        doc = _read_repo_file(os.path.relpath(_TYPE_STUBS_DOC, _REPO_ROOT))
+        dluau_files = sorted(
+            os.path.basename(path)
+            for path in glob.glob(os.path.join(_EXTRA_BINDINGS_DIR, "*.dluau"))
+        )
+        missing = [name for name in dluau_files if name not in doc]
+        self.assertFalse(
+            missing,
+            f"type-stubs.md missing extra_bindings entries: {missing}",
+        )
+
     def test_extra_binding_dluau_matches_cpp_registration(self) -> None:
         for binding, spec in _EXTRA_BINDING_SOURCES.items():
             with self.subTest(binding=binding):

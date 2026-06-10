@@ -172,7 +172,9 @@ namespace luax::wsdetail {
             std::weak_ptr<WsServer> weak = srv;
 
             srv->server->setOnConnectionCallback(
-                [weak](std::weak_ptr<ix::WebSocket> socketWeak, std::shared_ptr<ix::ConnectionState> state) {
+                [weak](
+                    std::weak_ptr<ix::WebSocket> socketWeak, std::shared_ptr<ix::ConnectionState> state
+                ) {
                     auto srv = weak.lock();
                     if (!srv || srv->stopped.load()) return;
 
@@ -189,11 +191,11 @@ namespace luax::wsdetail {
                     auto socket = socketWeak.lock();
                     if (!socket) return;
                     ix::WebSocket* socketRaw = socket.get();
-                    socket->setOnMessageCallback(
-                        [weak, state = std::move(state), socketRaw](ix::WebSocketMessagePtr const& msg) {
-                            handleServerClientMessage(weak, state, *socketRaw, msg);
-                        }
-                    );
+                    socket->setOnMessageCallback([weak,
+                                                  state = std::move(state),
+                                                  socketRaw](ix::WebSocketMessagePtr const& msg) {
+                        handleServerClientMessage(weak, state, *socketRaw, msg);
+                    });
                 }
             );
         }

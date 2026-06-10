@@ -44,6 +44,8 @@ The default input mode stays in place, so the game keeps input unless an ImGui w
 ## Limits
 
 Draw callback count and per-callback deadline are capped.
+Capacity is enforced on active (non-cancelled) callbacks, not the internal slot vector size.
+Cancelled callbacks stay in the vector until the next `drawAll` compacts them, but they no longer count toward the cap.
 The binding checks capacity before adding and raises an error when full.
 The ImGui deadline is tighter than the hook budget because draw callbacks run every frame.
 

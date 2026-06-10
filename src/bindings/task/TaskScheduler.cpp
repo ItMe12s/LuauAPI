@@ -131,7 +131,7 @@ namespace luax {
     }
 
     bool TaskScheduler::full() const {
-        return m_timed.size() + m_deferred.size() >= kMaxScheduledTasks;
+        return activeCount() >= kMaxScheduledTasks;
     }
 
     std::size_t TaskScheduler::activeCount() const {

@@ -66,7 +66,7 @@ namespace luax {
         }
 
         bool full(std::size_t maxSlots) const {
-            return m_slots.size() >= maxSlots;
+            return activeCount() >= maxSlots;
         }
 
         std::size_t activeCount() const {

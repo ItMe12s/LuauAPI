@@ -22,6 +22,7 @@ Every file in `tools/luau_codegen/extra_bindings/` is appended to the same outpu
 - `mod.dluau` adds `ModNamespace`
 - `json.dluau` adds `JsonNamespace`
 - `fs.dluau` adds `FsRoot` and `FsNamespace`
+- `websocket.dluau` adds `websocket` and its connection and server types
 
 Files for a global like `task` use `declare`. Files that only add support types use `export type`.
 There is no separate `imgui.d.luau` after a build.
