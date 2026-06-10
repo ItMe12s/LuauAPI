@@ -1,9 +1,9 @@
 #include "framework/callback/LuaMenuHandler.hpp"
 
 #include "core/Config.hpp"
+#include "core/Runtime.hpp"
 #include "framework/callback/LuaTrampolineRegistry.hpp"
 #include "framework/usertype/Usertype.hpp"
-#include "core/Runtime.hpp"
 
 namespace luax {
     LuaMenuHandler* LuaMenuHandler::create(lua_State* L, int fnIndex) {

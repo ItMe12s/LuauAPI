@@ -1,5 +1,5 @@
-#include "framework/usertype/Fields.hpp"
 #include "core/Runtime.hpp"
+#include "framework/usertype/Fields.hpp"
 
 #include <catch2/catch_test_macros.hpp>
 #include <cstdint>

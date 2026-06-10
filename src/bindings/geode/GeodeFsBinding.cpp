@@ -1,8 +1,8 @@
+#include "bindings/geode/ModSandbox.hpp"
 #include "core/Config.hpp"
 #include "framework/Binding.hpp"
 #include "framework/stack/Stack.hpp"
 #include "framework/stack/TableUtil.hpp"
-#include "bindings/geode/ModSandbox.hpp"
 
 #include <Geode/utils/file.hpp>
 #include <Geode/utils/string.hpp>

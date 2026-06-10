@@ -1,10 +1,10 @@
+#include "bindings/task/TaskScheduler.hpp"
+#include "core/Runtime.hpp"
 #include "framework/Binding.hpp"
-#include "framework/usertype/LuaRef.hpp"
 #include "framework/schedule/ScheduledHandleBinding.hpp"
 #include "framework/stack/TableUtil.hpp"
 #include "framework/stack/UserdataTags.hpp"
-#include "bindings/task/TaskScheduler.hpp"
-#include "core/Runtime.hpp"
+#include "framework/usertype/LuaRef.hpp"
 
 #include <Geode/Geode.hpp>
 #include <chrono>

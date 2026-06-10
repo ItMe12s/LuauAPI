@@ -1,10 +1,10 @@
 #include "framework/callback/LuaDelegate.hpp"
 
 #include "core/Config.hpp"
+#include "core/Runtime.hpp"
 #include "framework/callback/LuaTrampolineRegistry.hpp"
 #include "framework/stack/Stack.hpp"
 #include "framework/usertype/Usertype.hpp"
-#include "core/Runtime.hpp"
 
 #include <lualib.h>
 

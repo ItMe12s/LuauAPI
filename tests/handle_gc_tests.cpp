@@ -1,9 +1,9 @@
-#include "host/lua_test_helpers.hpp"
-#include "framework/Binding.hpp"
 #include "bindings/imgui/ImGuiDrawHandleBinding.hpp"
 #include "bindings/imgui/ImGuiDrawScheduler.hpp"
 #include "bindings/task/TaskScheduler.hpp"
 #include "core/Runtime.hpp"
+#include "framework/Binding.hpp"
+#include "host/lua_test_helpers.hpp"
 
 #include <catch2/catch_test_macros.hpp>
 #include <cstdint>

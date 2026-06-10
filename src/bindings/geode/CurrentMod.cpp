@@ -1,7 +1,7 @@
 #include "bindings/geode/CurrentMod.hpp"
 
-#include "require/PathSandbox.hpp"
 #include "core/Runtime.hpp"
+#include "require/PathSandbox.hpp"
 
 #include <Geode/loader/Loader.hpp>
 #include <Geode/loader/Mod.hpp>

@@ -1,8 +1,8 @@
+#include "bindings/geode/JsonConvert.hpp"
 #include "core/Config.hpp"
 #include "framework/Binding.hpp"
 #include "framework/stack/Stack.hpp"
 #include "framework/stack/TableUtil.hpp"
-#include "bindings/geode/JsonConvert.hpp"
 
 #include <lua.h>
 #include <lualib.h>

@@ -1,7 +1,7 @@
-#include "framework/Binding.hpp"
-#include "framework/stack/TableUtil.hpp"
 #include "bindings/geode/web/GeodeWebInternal.hpp"
 #include "bindings/geode/web/WebInternal.hpp"
+#include "framework/Binding.hpp"
+#include "framework/stack/TableUtil.hpp"
 
 #include <Geode/Geode.hpp>
 #include <lua.h>

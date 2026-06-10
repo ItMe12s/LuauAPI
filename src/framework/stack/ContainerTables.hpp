@@ -1,9 +1,9 @@
 #pragma once
 
-#include "framework/view/ReadOnlyVectorView.hpp"
 #include "framework/stack/Stack.hpp"
 #include "framework/stack/Types.hpp"
 #include "framework/usertype/Usertype.hpp"
+#include "framework/view/ReadOnlyVectorView.hpp"
 
 #include <Geode/Geode.hpp>
 #include <array>

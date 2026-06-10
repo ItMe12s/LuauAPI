@@ -1,12 +1,12 @@
 #include "bindings/imgui/ImGuiDrawHandleBinding.hpp"
 
+#include "bindings/imgui/ImGuiDrawScheduler.hpp"
+#include "bindings/imgui/ImGuiHost.hpp"
 #include "core/Config.hpp"
-#include "framework/usertype/LuaRef.hpp"
 #include "framework/schedule/ScheduledHandleBinding.hpp"
 #include "framework/stack/TableUtil.hpp"
 #include "framework/stack/UserdataTags.hpp"
-#include "bindings/imgui/ImGuiDrawScheduler.hpp"
-#include "bindings/imgui/ImGuiHost.hpp"
+#include "framework/usertype/LuaRef.hpp"
 
 #include <cstdint>
 #include <lua.h>

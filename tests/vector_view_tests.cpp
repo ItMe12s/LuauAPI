@@ -1,6 +1,6 @@
-#include "framework/view/ReadOnlyVectorView.hpp"
-#include "framework/usertype/Usertype.hpp"
 #include "core/Runtime.hpp"
+#include "framework/usertype/Usertype.hpp"
+#include "framework/view/ReadOnlyVectorView.hpp"
 
 #include <catch2/catch_test_macros.hpp>
 #include <lua.h>

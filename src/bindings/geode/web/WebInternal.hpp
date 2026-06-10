@@ -1,8 +1,8 @@
 #pragma once
 
-#include "framework/callback/LuaCallback.hpp"
 #include "bindings/geode/web/WebCaps.hpp"
 #include "core/Runtime.hpp"
+#include "framework/callback/LuaCallback.hpp"
 
 #include <Geode/Geode.hpp>
 #include <Geode/utils/web.hpp>

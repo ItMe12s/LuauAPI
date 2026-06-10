@@ -1,7 +1,7 @@
 #pragma once
 
-#include "framework/usertype/Ref.hpp"
 #include "framework/stack/UserdataTags.hpp"
+#include "framework/usertype/Ref.hpp"
 
 #include <Geode/Result.hpp>
 #include <Geode/utils/cocos.hpp>

@@ -1,7 +1,7 @@
 #pragma once
 
-#include "framework/callback/LuaCallback.hpp"
 #include "bindings/geode/web/WebInternal.hpp"
+#include "framework/callback/LuaCallback.hpp"
 
 #include <Geode/utils/web.hpp>
 #include <cstdint>

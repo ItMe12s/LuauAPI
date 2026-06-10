@@ -1,7 +1,7 @@
 #pragma once
 
-#include "framework/usertype/LuaRef.hpp"
 #include "framework/schedule/ScheduledSlotStore.hpp"
+#include "framework/usertype/LuaRef.hpp"
 
 #include <cstddef>
 #include <cstdint>

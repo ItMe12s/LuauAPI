@@ -1,7 +1,7 @@
-#include "framework/stack/Stack.hpp"
-#include "framework/stack/TableUtil.hpp"
 #include "bindings/geode/web/GeodeWebInternal.hpp"
 #include "bindings/geode/web/WebCaps.hpp"
+#include "framework/stack/Stack.hpp"
+#include "framework/stack/TableUtil.hpp"
 
 #include <Geode/utils/web.hpp>
 #include <chrono>

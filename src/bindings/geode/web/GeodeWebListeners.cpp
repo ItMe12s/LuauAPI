@@ -1,10 +1,10 @@
-#include "framework/callback/LuaCallback.hpp"
-#include "framework/stack/Stack.hpp"
-#include "framework/stack/TableUtil.hpp"
 #include "bindings/geode/web/GeodeWebConstants.manifest.hpp"
 #include "bindings/geode/web/GeodeWebInternal.hpp"
 #include "bindings/geode/web/WebCaps.hpp"
 #include "core/Runtime.hpp"
+#include "framework/callback/LuaCallback.hpp"
+#include "framework/stack/Stack.hpp"
+#include "framework/stack/TableUtil.hpp"
 
 #include <Geode/loader/Priority.hpp>
 #include <Geode/utils/web.hpp>

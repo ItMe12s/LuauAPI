@@ -1,8 +1,8 @@
-#include "framework/stack/Stack.hpp"
-#include "bindings/geode/web/GeodeWebInternal.hpp"
 #include "bindings/geode/JsonConvert.hpp"
 #include "bindings/geode/ModSandbox.hpp"
+#include "bindings/geode/web/GeodeWebInternal.hpp"
 #include "bindings/geode/web/WebCaps.hpp"
+#include "framework/stack/Stack.hpp"
 
 #include <Geode/utils/file.hpp>
 #include <Geode/utils/web.hpp>

@@ -1,8 +1,8 @@
 #include "bindings/task/TaskScheduler.hpp"
 
 #include "core/Config.hpp"
-#include "framework/schedule/ScheduledCallback.hpp"
 #include "core/Runtime.hpp"
+#include "framework/schedule/ScheduledCallback.hpp"
 
 #include <Geode/Geode.hpp>
 

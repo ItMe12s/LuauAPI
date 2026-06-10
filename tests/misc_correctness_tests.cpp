@@ -1,12 +1,12 @@
-#include "host/lua_test_helpers.hpp"
+#include "bindings/task/TaskScheduler.hpp"
 #include "core/Config.hpp"
+#include "core/Runtime.hpp"
 #include "framework/Binding.hpp"
 #include "framework/callback/LuaDelegate.hpp"
-#include "framework/usertype/LuaRef.hpp"
 #include "framework/callback/LuaTrampolineRegistry.hpp"
+#include "framework/usertype/LuaRef.hpp"
 #include "framework/usertype/Usertype.hpp"
-#include "bindings/task/TaskScheduler.hpp"
-#include "core/Runtime.hpp"
+#include "host/lua_test_helpers.hpp"
 
 #include <RuntimeTypes.hpp>
 #include <catch2/catch_test_macros.hpp>

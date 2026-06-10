@@ -1,12 +1,12 @@
-#include "core/Config.hpp"
-#include "framework/Binding.hpp"
-#include "framework/stack/Stack.hpp"
-#include "framework/stack/TableUtil.hpp"
 #include "bindings/imgui/ImGuiDrawHandleBinding.hpp"
 #include "bindings/imgui/ImGuiDrawScheduler.hpp"
 #include "bindings/imgui/ImGuiHost.hpp"
 #include "bindings/imgui/ImVecConv.hpp"
+#include "core/Config.hpp"
 #include "core/Runtime.hpp"
+#include "framework/Binding.hpp"
+#include "framework/stack/Stack.hpp"
+#include "framework/stack/TableUtil.hpp"
 
 #include <algorithm>
 #include <cstdint>

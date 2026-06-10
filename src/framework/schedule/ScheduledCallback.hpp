@@ -1,7 +1,7 @@
 #pragma once
 
-#include "framework/usertype/LuaRef.hpp"
 #include "core/Runtime.hpp"
+#include "framework/usertype/LuaRef.hpp"
 
 #include <string_view>
 

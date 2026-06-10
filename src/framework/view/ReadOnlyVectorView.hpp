@@ -1,8 +1,8 @@
 #pragma once
 
 #include "framework/usertype/OpaqueHandle.hpp"
-#include "framework/view/ReadOnlySequenceView.hpp"
 #include "framework/usertype/Usertype.hpp"
+#include "framework/view/ReadOnlySequenceView.hpp"
 
 #include <Geode/Geode.hpp>
 #include <Geode/utils/cocos.hpp>

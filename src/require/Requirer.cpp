@@ -1,9 +1,9 @@
 #include "require/Requirer.hpp"
 
+#include "core/Runtime.hpp"
 #include "require/BytecodeCacheKey.hpp"
 #include "require/PathSandbox.hpp"
 #include "require/RequirePath.hpp"
-#include "core/Runtime.hpp"
 
 #include <Luau/CodeGen.h>
 #include <Luau/Compiler.h>

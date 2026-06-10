@@ -1,8 +1,8 @@
 #include "bindings/imgui/ImGuiDrawScheduler.hpp"
 
 #include "core/Config.hpp"
-#include "framework/schedule/ScheduledCallback.hpp"
 #include "core/Runtime.hpp"
+#include "framework/schedule/ScheduledCallback.hpp"
 
 namespace luax {
     ImGuiDrawScheduler& ImGuiDrawScheduler::get() {

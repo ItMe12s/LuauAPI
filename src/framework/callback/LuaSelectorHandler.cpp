@@ -1,9 +1,9 @@
 #include "framework/callback/LuaSelectorHandler.hpp"
 
 #include "core/Config.hpp"
+#include "core/Runtime.hpp"
 #include "framework/usertype/OpaqueHandle.hpp"
 #include "framework/usertype/Usertype.hpp"
-#include "core/Runtime.hpp"
 
 #define LUAX_SELECTOR_CREATE(HandlerType)                                \
     HandlerType* HandlerType::create(lua_State* L, int fnIndex) {        \

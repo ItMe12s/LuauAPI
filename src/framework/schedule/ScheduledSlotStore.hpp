@@ -1,7 +1,7 @@
 #pragma once
 
-#include "framework/usertype/LuaRef.hpp"
 #include "core/IndexedSlotMap.hpp"
+#include "framework/usertype/LuaRef.hpp"
 
 #include <cstddef>
 #include <cstdint>

@@ -1,11 +1,11 @@
+#include "bindings/geode/CurrentMod.hpp"
+#include "bindings/geode/JsonConvert.hpp"
 #include "core/Config.hpp"
+#include "core/Runtime.hpp"
 #include "framework/Binding.hpp"
 #include "framework/callback/LuaCallback.hpp"
 #include "framework/stack/Stack.hpp"
 #include "framework/stack/TableUtil.hpp"
-#include "bindings/geode/CurrentMod.hpp"
-#include "bindings/geode/JsonConvert.hpp"
-#include "core/Runtime.hpp"
 
 #include <Geode/loader/Mod.hpp>
 #include <Geode/loader/SettingV3.hpp>
