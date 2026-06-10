@@ -145,7 +145,8 @@ geode.hook("geode.gd.MenuLayer:init/0", {
 
 Hooks run on the main thread.
 Callbacks are capped per target and globally, and each runs under a script budget.
-See [Limits and errors](../cpp/limits-and-errors.md).
+
+See [Limits and errors](../cpp/limits-and-errors.md) for caps and error strings.
 
 ## Related
 

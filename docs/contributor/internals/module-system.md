@@ -40,7 +40,7 @@ The path helpers live in `PathRules.hpp`, `PathSandbox.hpp`, and `RequirePath.hp
 4. Compile to bytecode, using the runtime cache.
 5. Create a new thread and sandbox it.
 6. Load the bytecode, and apply codegen if enabled.
-7. Resume the thread under the default deadline.
+7. Resume the thread under the default script deadline.
 8. Require exactly one return value. Reject a yield, and reject a runtime error.
 9. Move the returned value back to the caller.
 
@@ -57,10 +57,17 @@ The path sandbox helpers in `PathSandbox.hpp` read files with a size check
 and resolve a candidate path so it stays inside the root.
 This is the same containment used by the public `runFile` path.
 
+## Limits
+
+Module size and load deadline use the same caps as scripts.
+
+See [Limits and errors](../../reference/cpp/limits-and-errors.md) for caps and error strings.
+
 ## Related
 
 - [Runtime](runtime.md)
 - [Modules reference](../../reference/lua/modules.md)
+- [Limits and errors](../../reference/cpp/limits-and-errors.md)
 
 ## Source
 

@@ -68,7 +68,7 @@ bool codegenEnabled();
 
 `memoryUsage` and `memoryLimit` return current Lua memory use and the cap in bytes, both `0` off the
 main thread or while shutting down. `codegenEnabled` is true when native code generation is on.
-See [Limits and errors](limits-and-errors.md) for the cap value.
+See [Limits and errors](limits-and-errors.md) for caps and error strings.
 
 ## RuntimeStatus
 
@@ -88,8 +88,9 @@ enum class RuntimeStatus {
 
 ## Default deadline
 
-`kDefaultScriptDeadlineMs` is `250`. The run functions use it when you do not pass `deadlineMs`.
+`kDefaultScriptDeadlineMs` is the default when you do not pass `deadlineMs`.
 It is defined in `include/RuntimeTypes.hpp` and exposed through `include/LuauAPI.hpp`.
+See [Limits and errors](limits-and-errors.md) for caps and error strings.
 
 ## Related
 

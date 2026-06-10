@@ -93,7 +93,8 @@ Task and ImGui handles cancel their callback when you call `:cancel()` or when t
 ## Limits
 
 Callbacks run under a script budget, and orphan handler bridges have a soft registry cap.
-See [Limits and errors](../cpp/limits-and-errors.md).
+
+See [Limits and errors](../cpp/limits-and-errors.md) for caps and error strings.
 
 ## Related
 
@@ -101,6 +102,7 @@ See [Limits and errors](../cpp/limits-and-errors.md).
 - [Hooks](hooks.md)
 - [Tasks and time](tasks.md)
 - [Game objects](game-objects.md)
+- [Limits and errors](../cpp/limits-and-errors.md)
 
 ## Source
 

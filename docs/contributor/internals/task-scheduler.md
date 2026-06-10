@@ -53,15 +53,18 @@ Failures are logged once. `disarmTaskTick` removes the node and stops any pendin
 
 ## Limits
 
-The scheduler holds at most `4096` tasks.
+The scheduler has a max task count.
 The binding checks capacity before adding and raises an error when full.
 `task.every` rejects an interval that is not greater than zero.
+
+See [Limits and errors](../../reference/cpp/limits-and-errors.md) for caps and error strings.
 
 ## Related
 
 - [Tasks and time reference](../../reference/lua/tasks.md)
 - [ImGui draw scheduler](imgui-draw-scheduler.md)
 - [Runtime](runtime.md)
+- [Limits and errors](../../reference/cpp/limits-and-errors.md)
 
 ## Source
 

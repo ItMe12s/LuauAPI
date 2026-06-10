@@ -43,7 +43,7 @@ Delegate trampolines use the same retention model as menu handlers:
 - For static calls and void-return methods, delegates go into the orphan registry, cleared on runtime shutdown.
 
 When the anchor's retain count drops to one before `release`, anchored delegates are cleaned up.
-The orphan registry has a soft cap of `4096` (warns once, never drops entries).
+The orphan registry has a soft cap.
 
 ## Delegate return values
 
@@ -76,7 +76,8 @@ See [Codegen](../../contributor/codegen/codegen.md).
 ## Limits
 
 Delegate method invocations run under a script budget, and orphan delegate bridges have a soft registry cap.
-See [Limits and errors](../cpp/limits-and-errors.md).
+
+See [Limits and errors](../cpp/limits-and-errors.md) for caps and error strings.
 
 ## Related
 
@@ -84,6 +85,7 @@ See [Limits and errors](../cpp/limits-and-errors.md).
 - [Game objects](game-objects.md)
 - [Type stubs](type-stubs.md)
 - [Codegen](../../contributor/codegen/codegen.md)
+- [Limits and errors](../cpp/limits-and-errors.md)
 
 ## Source
 

@@ -124,11 +124,10 @@ Methods on a disconnected peer return `nil` and `"websocket peer is disconnected
 
 ## Limits
 
-- 16 concurrent client connections
-- 2 concurrent servers
-- 32 clients per server (excess connections are rejected silently)
-- 8 MB per outgoing message, send returns `nil` and `"websocket message exceeds maximum send size"`
-- 8 MB per incoming message, the connection receives `onError` and closes with code 1009
+Connections, servers, and message sizes are capped.
+Excess server clients are rejected silently.
+
+See [Limits and errors](../cpp/limits-and-errors.md) for caps and error strings.
 
 ## TLS
 

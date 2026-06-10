@@ -116,7 +116,7 @@ The writable roots accepted by `saveTo` are:
 - `"config"`
 - `"persistent"`
 
-Response bodies are capped at 32 MB.
+Response bodies are capped.
 
 These methods return `nil` and an error message when the body exceeds the cap:
 
@@ -126,7 +126,7 @@ These methods return `nil` and an error message when the body exceeds the cap:
 - `:saveTo()`
 
 Async callbacks and response listeners receive `(response?, err?)`.
-An oversized body arrives as `nil` and `"response exceeds maximum size"`.
+An oversized body arrives as `nil` and an error message.
 
 ## MultipartForm
 
@@ -141,7 +141,7 @@ form:fileFrom("config", "config", "data.json", "application/json")
 
 ## Request body caps
 
-The following body sources are capped at 32 MB:
+The following body sources are capped.
 
 - `RequestOptions.body`
 - `RequestOptions.bodyString`
@@ -156,7 +156,7 @@ The following body sources are capped at 32 MB:
 - `MultipartForm:fileFrom`
 - `MultipartForm:getBody()`
 
-Over the limit, the call returns `nil` and `"request body exceeds maximum size"`or raises that error while parsing options.
+Over the limit, the call returns `nil` and an error message, or raises while parsing options.
 
 ## Listeners
 
@@ -207,6 +207,12 @@ web.get("https://api.example.com/data", {
     if data then print(data.version) end
 end)
 ```
+
+## Limits
+
+Request and response bodies are capped.
+
+See [Limits and errors](../cpp/limits-and-errors.md) for caps and error strings.
 
 ## Related
 

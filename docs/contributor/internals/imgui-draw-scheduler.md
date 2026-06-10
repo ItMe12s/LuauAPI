@@ -43,16 +43,18 @@ The default input mode stays in place, so the game keeps input unless an ImGui w
 
 ## Limits
 
-- The scheduler holds at most `256` callbacks (`kMaxImGuiDrawCallbacks`).
-- The binding checks capacity before adding and raises an error when full.
-- Each callback runs under the `kImGuiScriptDeadlineMs` budget of 16 ms,
-  tighter than the hook budget because draw callbacks run every frame.
+Draw callback count and per-callback deadline are capped.
+The binding checks capacity before adding and raises an error when full.
+The ImGui deadline is tighter than the hook budget because draw callbacks run every frame.
+
+See [Limits and errors](../../reference/cpp/limits-and-errors.md) for caps and error strings.
 
 ## Related
 
 - [imgui reference](../../reference/lua/imgui.md)
 - [Task scheduler](task-scheduler.md)
 - [Runtime](runtime.md)
+- [Limits and errors](../../reference/cpp/limits-and-errors.md)
 
 ## Source
 

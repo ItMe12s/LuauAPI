@@ -29,7 +29,7 @@ In these cases, the function returns `nil` and an error message so you can handl
 geode.fs.read(root: FsRoot, path: string) -> (string?, string?)
 ```
 
-Reads a file's contents. Returns the contents, or `nil` and an error message. Reads are capped at 32 MB.
+Reads a file's contents. Returns the contents, or `nil` and an error message.
 
 ## write
 
@@ -38,7 +38,7 @@ geode.fs.write(root: FsRoot, path: string, data: string) -> (boolean?, string?)
 ```
 
 Writes `data` to a file, creating parent directories as needed. Returns `true`, or `nil` and an error message.
-Writing to the read-only `resources` root fails. Writes are capped at 32 MB.
+Writing to the read-only `resources` root fails.
 
 ## exists
 
@@ -57,7 +57,7 @@ geode.fs.list(root: FsRoot, path: string) -> ({ string }?, string?)
 
 Lists the immediate entries of a directory (names, not full paths, not recursive).
 Returns an array table, or `nil` and an error message.
-Listings are capped at 4096 entries and 256 KiB of name bytes.
+Listings are capped.
 
 ## mkdir
 
@@ -77,6 +77,12 @@ geode.fs.remove(root: FsRoot, path: string) -> (boolean?, string?)
 Removes a single file or empty directory (never recursive).
 Returns `true`, or `nil` and an error message. Fails on the read-only `resources` root.
 
+## Limits
+
+Reads, writes, and directory listings are capped.
+
+See [Limits and errors](../cpp/limits-and-errors.md) for caps and error strings.
+
 ## Example
 
 ```lua
@@ -94,6 +100,7 @@ end
 - [json](json.md)
 - [mod](mod.md)
 - [Globals](globals.md)
+- [Limits and errors](../cpp/limits-and-errors.md)
 
 ## Source
 

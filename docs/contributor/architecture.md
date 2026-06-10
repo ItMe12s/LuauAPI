@@ -21,6 +21,7 @@ This page names the main parts and traces how a script gets from a file to runni
 - `src/api.cpp`: the public API implementation.
 - `src/main.cpp`: the mod entry points that drive the runtime lifecycle.
 - `src/core/Config.hpp`: the limits and deadlines.
+   See [Limits and errors](../reference/cpp/limits-and-errors.md) for caps and error strings.
 - `src/core/`: the runtime, memory allocator, and small utilities such as the indexed slot map.
 - `src/framework/`: the binding registry, usertypes, stack interop, callbacks, views, and scheduling.
 - `src/bindings/geode/`: handwritten `geode.*` bindings (web cluster in `web/`).

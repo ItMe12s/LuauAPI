@@ -38,11 +38,13 @@ The rules are strict by design, so loading stays inside the resources root.
 
 Breaking any rule returns an error at load time.
 
-## Size and caching
+## Limits
 
 A module uses the same size limit as a script. Compiled modules share the bytecode cache with scripts.
 The cache key is the path, size, modify time, and content hash.
-Modules load with the default script deadline. See [Limits and errors](../cpp/limits-and-errors.md).
+Modules load with the default script deadline.
+
+See [Limits and errors](../cpp/limits-and-errors.md) for caps and error strings.
 
 ## What happens on load
 
@@ -54,6 +56,7 @@ and runs it on a sandboxed thread. The single returned value is handed back to t
 - [Globals](globals.md)
 - [Sharing APIs between mods](sharing-apis.md)
 - [Module system internals](../../contributor/internals/module-system.md)
+- [Limits and errors](../cpp/limits-and-errors.md)
 
 ## Source
 

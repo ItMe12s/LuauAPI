@@ -106,14 +106,15 @@ using a steady clock, so it suits measuring elapsed time.
 print(time.now(), time.unix())
 ```
 
-## How tasks run and limits
+## Limits
 
 Tasks are driven by the game scheduler and advance each frame by the frame delta.
 Each callback runs on the main thread under the callback budget.
 Scheduling has a maximum task count, and going over raises an error.
 Callback errors are logged rather than thrown.
 One-shot tasks end after they run, repeated tasks stop after an error.
-See [Limits and errors](../cpp/limits-and-errors.md).
+
+See [Limits and errors](../cpp/limits-and-errors.md) for caps and error strings.
 
 ## Related
 

@@ -19,7 +19,6 @@ This page also covers script basics like logging, error handling, and the time b
 - Each run has a time budget in milliseconds. Going over raises an error.
   Avoid long loops and blocking calls. Spread heavy work across frames with `task`.
 - Memory has a hard cap. Once it is reached, allocation fails.
-  See [Limits and errors](../cpp/limits-and-errors.md).
 
 ## print
 
@@ -52,7 +51,7 @@ print(fn())
 ```
 
 `chunkName` is used in diagnostics. If omitted, LuauAPI uses `=loadstring`.
-Sources over 4 MiB are rejected with `nil, "script exceeds maximum size"`.
+Sources over the script size cap return `nil` and an error message.
 If the runtime is not ready, it returns `nil, "luau runtime not ready"`.
 
 `loadstring` is always available, can compile any string, and ignores the `require` sandbox.
@@ -93,6 +92,13 @@ The following standard Luau libraries and globals are available:
 - `task` (see its own page)
 - `time` (see its own page)
 - `geode` (see its own page)
+
+## Limits
+
+Each run has a time budget. Memory has a hard cap.
+`loadstring` rejects sources over the script size cap.
+
+See [Limits and errors](../cpp/limits-and-errors.md) for caps and error strings.
 
 ## Related
 

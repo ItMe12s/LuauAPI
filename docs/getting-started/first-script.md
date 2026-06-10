@@ -44,7 +44,7 @@ LuauAPI owns the runtime, so you do not start it. Check `status()` is `Ready` fi
 
 The file name must be a flat `.luau` resource name inside the resources directory you pass.
 No folders, no `..`, no absolute paths, and it must be within the size limit.
-See [Modules](../reference/lua/modules.md) and [Limits and errors](../reference/cpp/limits-and-errors.md).
+See [Modules](../reference/lua/modules.md) and [Limits and errors](../reference/cpp/limits-and-errors.md) for caps and error strings.
 
 ## Developer mode
 

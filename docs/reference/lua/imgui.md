@@ -98,11 +98,11 @@ Negative sizes also fill the space.
 
 ## Limits
 
-- The most draw callbacks at once is `256`. Going over raises an error.
-- Each draw callback runs with a `16 ms` budget (`kImGuiScriptDeadlineMs`).
-- Widget and window functions only work on the main thread inside an `imgui.onDraw` callback.
-  Calling them elsewhere raises an error.
-- A draw callback that errors is removed so it does not spam the log every frame.
+Widget and window functions only work on the main thread inside an `imgui.onDraw` callback.
+Calling them elsewhere raises an error.
+A draw callback that errors is removed so it does not spam the log every frame.
+
+See [Limits and errors](../cpp/limits-and-errors.md) for caps and error strings.
 
 ## Related
 

@@ -23,7 +23,7 @@ whether a brand new mod or one you already have.
   Script and module names are flat single file names with the `.luau` extension.
   No folders, no `..`, no absolute paths.
 - Deadlines and memory. Each run has a time budget in milliseconds. Going over raises an error.
-  Memory has a hard cap with no soft limit. See [Limits and errors](../reference/cpp/limits-and-errors.md).
+  Memory has a hard cap with no soft limit. See [Limits and errors](../reference/cpp/limits-and-errors.md) for caps and error strings.
 - Errors are logged, not fatal. The host runs scripts in a protected call,
   so an error is caught and written to the log instead of crashing the game.
 

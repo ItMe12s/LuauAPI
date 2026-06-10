@@ -48,6 +48,7 @@ API reference for everything a script or host can call.
   - [fs](docs/reference/lua/fs.md)
   - [json](docs/reference/lua/json.md)
   - [web](docs/reference/lua/web.md)
+  - [websocket](docs/reference/lua/websocket.md)
   - [imgui](docs/reference/lua/imgui.md)
   - [cocos](docs/reference/lua/cocos.md)
   - [base64](docs/reference/lua/base64.md)
@@ -89,10 +90,11 @@ For anyone working on LuauAPI itself.
 
 ## Licenses
 
-- [Luau](https://github.com/luau-lang/luau/blob/master/LICENSE.txt)
-- [Geode SDK](https://github.com/geode-sdk/geode/blob/main/LICENSE.txt)
-- [gd-imgui-cocos](https://github.com/matcool/gd-imgui-cocos/blob/geode/LICENSE)
-- [Dear ImGui](https://github.com/ocornut/imgui/blob/master/LICENSE.txt)
 - [Catch2](https://github.com/catchorg/Catch2/blob/devel/LICENSE.txt)
+- [Dear ImGui](https://github.com/ocornut/imgui/blob/master/LICENSE.txt)
 - [{fmt}](https://github.com/fmtlib/fmt/blob/main/LICENSE)
+- [gd-imgui-cocos](https://github.com/matcool/gd-imgui-cocos/blob/geode/LICENSE)
+- [Geode SDK](https://github.com/geode-sdk/geode/blob/main/LICENSE.txt)
 - [Isocline](https://github.com/daanx/isocline/blob/main/LICENSE)
+- [IXWebSocket](https://github.com/machinezone/IXWebSocket/blob/master/LICENSE.txt)
+- [Luau](https://github.com/luau-lang/luau/blob/master/LICENSE.txt)
