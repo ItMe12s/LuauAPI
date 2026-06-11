@@ -318,6 +318,9 @@ if(LUAUAPI_BUILD_TESTS)
         src/require/Requirer.cpp
         src/core/Loadstring.cpp
         src/core/Runtime.cpp
+        src/render3d/MeshAsset.cpp
+        tests/host/Render3DMathTests.cpp
+        tests/host/GltfParseTests.cpp
         ${LUAUAPI_TEST_SOURCES}
     )
     target_compile_features(luauapi_tests PRIVATE cxx_std_23)
