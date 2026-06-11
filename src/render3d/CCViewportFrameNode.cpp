@@ -1,5 +1,7 @@
 #include "render3d/CCViewportFrameNode.hpp"
 
+#include "render3d/Renderer3D.hpp"
+
 #include <Geode/Geode.hpp>
 #include <algorithm>
 #include <cmath>
@@ -104,6 +106,13 @@ namespace luax::render3d {
             return;
         }
         ensureFramebuffer();
+        if (m_fbo == 0 || m_colorTexture == 0) {
+            return;
+        }
+
+        auto& renderer = Renderer3D::instance();
+        renderer.renderToFramebuffer(m_fbo, m_fboPixelWidth, m_fboPixelHeight, m_camera, m_instances);
+        renderer.drawCompositeQuad(m_colorTexture, size.width, size.height);
     }
 
     bool CCViewportFrameNode::hasGlContext() const {

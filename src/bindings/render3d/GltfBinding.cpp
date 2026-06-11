@@ -4,6 +4,7 @@
 #include "framework/stack/TableUtil.hpp"
 #include "framework/stack/UserdataTags.hpp"
 #include "render3d/MeshAsset.hpp"
+#include "render3d/Renderer3D.hpp"
 
 #include <Geode/Geode.hpp>
 #include <filesystem>
@@ -36,13 +37,15 @@ namespace {
         if (handle == nullptr || handle->id == 0) {
             return;
         }
-        MeshRegistry::instance().release(handle->id);
+        std::uint64_t const id = handle->id;
+        MeshRegistry::instance().release(id);
+        Renderer3D::instance().releaseMeshGpu(id);
         handle->id = 0;
     }
 
     void pushMeshHandle(lua_State* L, std::uint64_t id) {
         auto* handle = static_cast<MeshHandle*>(
-            lua_newuserdatataggedwithmetatable(L, sizeof(MeshHandle), detail::meshAssetTag())
+            lua_newuserdatataggedwithmetatable(L, sizeof(MeshHandle), luax::detail::meshAssetTag())
         );
         handle->id = id;
     }
@@ -124,7 +127,7 @@ namespace {
         }
         lua_pop(L, 1);
 
-        lua_getuserdatametatable(L, detail::meshAssetTag());
+        lua_getuserdatametatable(L, luax::detail::meshAssetTag());
         if (!lua_isnil(L, -1)) {
             lua_pop(L, 1);
             return;
@@ -132,8 +135,8 @@ namespace {
         lua_pop(L, 1);
 
         luaL_getmetatable(L, kMeshMeta);
-        lua_setuserdatametatable(L, detail::meshAssetTag());
-        lua_setuserdatadtor(L, detail::meshAssetTag(), &meshHandleDtor);
+        lua_setuserdatametatable(L, luax::detail::meshAssetTag());
+        lua_setuserdatadtor(L, luax::detail::meshAssetTag(), &meshHandleDtor);
     }
 
     int gltfLoadMesh(lua_State* L) {
