@@ -4,7 +4,7 @@
 #include "framework/stack/TableUtil.hpp"
 #include "framework/stack/UserdataTags.hpp"
 #include "framework/usertype/Usertype.hpp"
-#include "render3d/CCViewportFrameNode.hpp"
+#include "render3d/CCViewportFrame.hpp"
 #include "render3d/MeshAsset.hpp"
 #include "render3d/Transform3D.hpp"
 
@@ -22,17 +22,17 @@ namespace {
         float const width = check<float>(L, 1, "gd3d.ViewportFrame.new");
         float const height = check<float>(L, 2, "gd3d.ViewportFrame.new");
 
-        auto* node = CCViewportFrameNode::create(width, height);
+        auto* node = CCViewportFrame::create(width, height);
         if (node == nullptr) {
             return pushNilErr(L, "failed to create ViewportFrame");
         }
 
-        Usertype<CCViewportFrameNode>::pushOwned(L, node);
+        Usertype<CCViewportFrame>::pushOwned(L, node);
         return 1;
     }
 
     int viewportSetCamera(lua_State* L) {
-        auto* self = Usertype<CCViewportFrameNode>::check(L, 1, "ViewportFrame:setCamera");
+        auto* self = Usertype<CCViewportFrame>::check(L, 1, "ViewportFrame:setCamera");
         auto const* transform = checkTransform(L, 2, "ViewportFrame:setCamera");
         float const fovY = check<float>(L, 3, "ViewportFrame:setCamera");
         float const zNear = check<float>(L, 4, "ViewportFrame:setCamera");
@@ -43,7 +43,7 @@ namespace {
     }
 
     int viewportGetCamera(lua_State* L) {
-        auto const* self = Usertype<CCViewportFrameNode>::check(L, 1, "ViewportFrame:getCamera");
+        auto const* self = Usertype<CCViewportFrame>::check(L, 1, "ViewportFrame:getCamera");
         Camera3D const& camera = self->getCamera3D();
 
         lua_createtable(L, 0, 4);
@@ -59,7 +59,7 @@ namespace {
     }
 
     int viewportAddMesh(lua_State* L) {
-        auto* self = Usertype<CCViewportFrameNode>::check(L, 1, "ViewportFrame:addMesh");
+        auto* self = Usertype<CCViewportFrame>::check(L, 1, "ViewportFrame:addMesh");
         auto const meshId =
             requireMeshId(L, checkMeshHandle(L, 2, "ViewportFrame:addMesh"), "ViewportFrame:addMesh");
         auto const* transform = checkTransform(L, 3, "ViewportFrame:addMesh");
@@ -74,7 +74,7 @@ namespace {
     }
 
     int viewportSetInstanceTransform(lua_State* L) {
-        auto* self = Usertype<CCViewportFrameNode>::check(L, 1, "ViewportFrame:setInstanceTransform");
+        auto* self = Usertype<CCViewportFrame>::check(L, 1, "ViewportFrame:setInstanceTransform");
         int const instanceId = check<int>(L, 2, "ViewportFrame:setInstanceTransform");
         auto const* transform = checkTransform(L, 3, "ViewportFrame:setInstanceTransform");
 
@@ -83,7 +83,7 @@ namespace {
     }
 
     int viewportRemoveInstance(lua_State* L) {
-        auto* self = Usertype<CCViewportFrameNode>::check(L, 1, "ViewportFrame:removeInstance");
+        auto* self = Usertype<CCViewportFrame>::check(L, 1, "ViewportFrame:removeInstance");
         int const instanceId = check<int>(L, 2, "ViewportFrame:removeInstance");
 
         push(L, self->removeInstance(instanceId));
@@ -91,7 +91,7 @@ namespace {
     }
 
     int viewportClearInstances(lua_State* L) {
-        auto* self = Usertype<CCViewportFrameNode>::check(L, 1, "ViewportFrame:clearInstances");
+        auto* self = Usertype<CCViewportFrame>::check(L, 1, "ViewportFrame:clearInstances");
         self->clearInstances();
         return 0;
     }
@@ -101,17 +101,17 @@ namespace luax {
     geode::Result<void> registerViewportFrame(lua_State* L) {
         auto const ccNodeTag = Usertype<cocos2d::CCNode>::tag();
         auto registerResult =
-            Usertype<CCViewportFrameNode>::registerType(L, "ViewportFrame", {ccNodeTag});
+            Usertype<CCViewportFrame>::registerType(L, "ViewportFrame", {ccNodeTag});
         if (registerResult.isErr()) {
             return registerResult;
         }
 
-        Usertype<CCViewportFrameNode>::method(L, "setCamera", &viewportSetCamera);
-        Usertype<CCViewportFrameNode>::method(L, "getCamera", &viewportGetCamera);
-        Usertype<CCViewportFrameNode>::method(L, "addMesh", &viewportAddMesh);
-        Usertype<CCViewportFrameNode>::method(L, "setInstanceTransform", &viewportSetInstanceTransform);
-        Usertype<CCViewportFrameNode>::method(L, "removeInstance", &viewportRemoveInstance);
-        Usertype<CCViewportFrameNode>::method(L, "clearInstances", &viewportClearInstances);
+        Usertype<CCViewportFrame>::method(L, "setCamera", &viewportSetCamera);
+        Usertype<CCViewportFrame>::method(L, "getCamera", &viewportGetCamera);
+        Usertype<CCViewportFrame>::method(L, "addMesh", &viewportAddMesh);
+        Usertype<CCViewportFrame>::method(L, "setInstanceTransform", &viewportSetInstanceTransform);
+        Usertype<CCViewportFrame>::method(L, "removeInstance", &viewportRemoveInstance);
+        Usertype<CCViewportFrame>::method(L, "clearInstances", &viewportClearInstances);
 
         getOrCreateTable(L, "gd3d.ViewportFrame");
         setTableCFunction(L, -1, "new", &viewportNew);

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "render3d/CCViewportFrameNode.hpp"
+#include "render3d/CCViewportFrame.hpp"
 
 #include <cstdint>
 #include <map>

@@ -1,4 +1,4 @@
-#include "render3d/CCViewportFrameNode.hpp"
+#include "render3d/CCViewportFrame.hpp"
 
 #include "render3d/Renderer3D.hpp"
 
@@ -17,8 +17,8 @@ namespace luax::render3d {
         }
     } // namespace
 
-    CCViewportFrameNode* CCViewportFrameNode::create(float width, float height) {
-        auto* node = new CCViewportFrameNode();
+    CCViewportFrame* CCViewportFrame::create(float width, float height) {
+        auto* node = new CCViewportFrame();
         if (node != nullptr && node->initWithSize(width, height)) {
             node->autorelease();
             return node;
@@ -27,13 +27,13 @@ namespace luax::render3d {
         return nullptr;
     }
 
-    CCViewportFrameNode::CCViewportFrameNode() = default;
+    CCViewportFrame::CCViewportFrame() = default;
 
-    CCViewportFrameNode::~CCViewportFrameNode() {
+    CCViewportFrame::~CCViewportFrame() {
         destroyFramebuffer();
     }
 
-    bool CCViewportFrameNode::initWithSize(float width, float height) {
+    bool CCViewportFrame::initWithSize(float width, float height) {
         if (!CCNode::init()) {
             return false;
         }
@@ -43,15 +43,15 @@ namespace luax::render3d {
         return true;
     }
 
-    void CCViewportFrameNode::setCamera3D(Camera3D const& camera) {
+    void CCViewportFrame::setCamera3D(Camera3D const& camera) {
         m_camera = camera;
     }
 
-    Camera3D const& CCViewportFrameNode::getCamera3D() const {
+    Camera3D const& CCViewportFrame::getCamera3D() const {
         return m_camera;
     }
 
-    int CCViewportFrameNode::addInstance(
+    int CCViewportFrame::addInstance(
         std::uint64_t meshId, std::shared_ptr<MeshAsset> mesh, Transform const& transform,
         glm::vec3 color
     ) {
@@ -60,7 +60,7 @@ namespace luax::render3d {
         return id;
     }
 
-    bool CCViewportFrameNode::setInstanceTransform(int instanceId, Transform const& transform) {
+    bool CCViewportFrame::setInstanceTransform(int instanceId, Transform const& transform) {
         auto it = m_instances.find(instanceId);
         if (it == m_instances.end()) {
             return false;
@@ -69,40 +69,40 @@ namespace luax::render3d {
         return true;
     }
 
-    bool CCViewportFrameNode::removeInstance(int instanceId) {
+    bool CCViewportFrame::removeInstance(int instanceId) {
         return m_instances.erase(instanceId) > 0;
     }
 
-    void CCViewportFrameNode::clearInstances() {
+    void CCViewportFrame::clearInstances() {
         m_instances.clear();
     }
 
-    std::map<int, ViewportInstance> const& CCViewportFrameNode::instances() const {
+    std::map<int, ViewportInstance> const& CCViewportFrame::instances() const {
         return m_instances;
     }
 
-    unsigned int CCViewportFrameNode::framebuffer() const {
+    unsigned int CCViewportFrame::framebuffer() const {
         return m_fbo;
     }
 
-    unsigned int CCViewportFrameNode::colorTexture() const {
+    unsigned int CCViewportFrame::colorTexture() const {
         return m_colorTexture;
     }
 
-    int CCViewportFrameNode::framebufferPixelWidth() const {
+    int CCViewportFrame::framebufferPixelWidth() const {
         return m_fboPixelWidth;
     }
 
-    int CCViewportFrameNode::framebufferPixelHeight() const {
+    int CCViewportFrame::framebufferPixelHeight() const {
         return m_fboPixelHeight;
     }
 
-    void CCViewportFrameNode::setContentSize(CCSize const& size) {
+    void CCViewportFrame::setContentSize(CCSize const& size) {
         CCNode::setContentSize(size);
         invalidateFramebuffer();
     }
 
-    void CCViewportFrameNode::draw() {
+    void CCViewportFrame::draw() {
         if (!isVisible()) {
             return;
         }
@@ -121,16 +121,16 @@ namespace luax::render3d {
         renderer.drawCompositeQuad(m_colorTexture, size.width, size.height);
     }
 
-    bool CCViewportFrameNode::hasGlContext() const {
+    bool CCViewportFrame::hasGlContext() const {
         auto* director = CCDirector::sharedDirector();
         return director != nullptr && director->getOpenGLView() != nullptr;
     }
 
-    void CCViewportFrameNode::invalidateFramebuffer() {
+    void CCViewportFrame::invalidateFramebuffer() {
         destroyFramebuffer();
     }
 
-    void CCViewportFrameNode::ensureFramebuffer() {
+    void CCViewportFrame::ensureFramebuffer() {
         if (!hasGlContext()) {
             return;
         }
@@ -170,8 +170,7 @@ namespace luax::render3d {
 
         if (status != GL_FRAMEBUFFER_COMPLETE) {
             geode::log::error(
-                "CCViewportFrameNode: framebuffer incomplete (status={:#x})",
-                static_cast<unsigned>(status)
+                "CCViewportFrame: framebuffer incomplete (status={:#x})", static_cast<unsigned>(status)
             );
             destroyFramebuffer();
             return;
@@ -181,7 +180,7 @@ namespace luax::render3d {
         m_fboPixelHeight = height;
     }
 
-    void CCViewportFrameNode::destroyFramebuffer() {
+    void CCViewportFrame::destroyFramebuffer() {
         if (m_fbo == 0 && m_colorTexture == 0 && m_depthRenderbuffer == 0) {
             m_fboPixelWidth = 0;
             m_fboPixelHeight = 0;

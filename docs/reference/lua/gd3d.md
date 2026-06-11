@@ -178,5 +178,5 @@ See [Limits and errors](../cpp/limits-and-errors.md) for caps and error strings.
 - `src/bindings/render3d/ViewportFrameBinding.cpp`
 - `src/render3d/Transform3D.hpp`
 - `src/render3d/MeshAsset.hpp`
-- `src/render3d/CCViewportFrameNode.hpp`
+- `src/render3d/CCViewportFrame.hpp`
 - `src/render3d/Renderer3D.hpp`

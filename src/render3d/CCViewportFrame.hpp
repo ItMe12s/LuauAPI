@@ -26,9 +26,9 @@ namespace luax::render3d {
         glm::vec3 color{1.0f, 1.0f, 1.0f};
     };
 
-    class CCViewportFrameNode final : public cocos2d::CCNode {
+    class CCViewportFrame final : public cocos2d::CCNode {
     public:
-        static CCViewportFrameNode* create(float width, float height);
+        static CCViewportFrame* create(float width, float height);
 
         void setCamera3D(Camera3D const& camera);
         Camera3D const& getCamera3D() const;
@@ -52,8 +52,8 @@ namespace luax::render3d {
         void setContentSize(cocos2d::CCSize const& size) override;
 
     protected:
-        CCViewportFrameNode();
-        ~CCViewportFrameNode() override;
+        CCViewportFrame();
+        ~CCViewportFrame() override;
 
         bool initWithSize(float width, float height);
 
