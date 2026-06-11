@@ -93,6 +93,7 @@ The following standard Luau libraries and globals are available:
 - `time` (see [Tasks and time](tasks.md#time-now-and-time-unix))
 - `geode` (see [Game objects](game-objects.md))
 - `imgui` (see [ImGui](imgui.md))
+- `gd3d` (see [gd3d](gd3d.md))
 - `websocket` (see [WebSocket](websocket.md))
 
 ## Limits
@@ -109,6 +110,7 @@ See [Limits and errors](../cpp/limits-and-errors.md) for caps and error strings.
 - [Tasks and time](tasks.md)
 - [Game objects](game-objects.md)
 - [ImGui](imgui.md)
+- [gd3d](gd3d.md)
 - [WebSocket](websocket.md)
 - [Limits and errors](../cpp/limits-and-errors.md)
 
