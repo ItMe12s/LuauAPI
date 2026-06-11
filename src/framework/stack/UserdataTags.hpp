@@ -10,7 +10,9 @@ namespace luax::detail {
     constexpr std::uint32_t kWsConnectionUserdataTag = 4;
     constexpr std::uint32_t kWsServerUserdataTag = 5;
     constexpr std::uint32_t kWsPeerUserdataTag = 6;
-    constexpr std::uint32_t kFirstDynamicUsertypeTag = 7;
+    constexpr std::uint32_t kTransformUserdataTag = 7;
+    constexpr std::uint32_t kMeshAssetUserdataTag = 8;
+    constexpr std::uint32_t kFirstDynamicUsertypeTag = 9;
 
     static_assert(
         kFirstDynamicUsertypeTag < LUA_UTAG_LIMIT, "Reserved userdata tags exceed LUA_UTAG_LIMIT"
@@ -20,8 +22,9 @@ namespace luax::detail {
             kTaskHandleUserdataTag < kImGuiDrawHandleUserdataTag &&
             kImGuiDrawHandleUserdataTag < kWsConnectionUserdataTag &&
             kWsConnectionUserdataTag < kWsServerUserdataTag &&
-            kWsServerUserdataTag < kWsPeerUserdataTag &&
-            kWsPeerUserdataTag < kFirstDynamicUsertypeTag,
+            kWsServerUserdataTag < kWsPeerUserdataTag && kWsPeerUserdataTag < kTransformUserdataTag &&
+            kTransformUserdataTag < kMeshAssetUserdataTag &&
+            kMeshAssetUserdataTag < kFirstDynamicUsertypeTag,
         "Reserved userdata tags must be unique and ordered"
     );
 
@@ -47,6 +50,14 @@ namespace luax::detail {
 
     constexpr int wsPeerTag() noexcept {
         return static_cast<int>(kWsPeerUserdataTag);
+    }
+
+    constexpr int transformTag() noexcept {
+        return static_cast<int>(kTransformUserdataTag);
+    }
+
+    constexpr int meshAssetTag() noexcept {
+        return static_cast<int>(kMeshAssetUserdataTag);
     }
 
     constexpr bool isReservedUserdataTag(std::uint32_t tag) noexcept {
