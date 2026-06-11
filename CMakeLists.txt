@@ -19,6 +19,7 @@ option(LUAUAPI_HOST_ONLY "Host-only configure without Geode SDK or configure-tim
 
 include(cmake/Helpers.cmake)
 include(cmake/Luau.cmake)
+include(cmake/Glm.cmake)
 include(cmake/GeodeBindings.cmake)
 
 if (NOT LUAUAPI_HOST_ONLY)
@@ -216,6 +217,7 @@ set_target_properties(LuauAPI_Runtime PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_include_directories(LuauAPI_Runtime PUBLIC
     include
     src
+    vendor
     ${LUAUAPI_GEN_DIR}/src
     $<TARGET_PROPERTY:imgui-cocos,INTERFACE_INCLUDE_DIRECTORIES>
 )
@@ -227,6 +229,7 @@ target_link_libraries(LuauAPI_Runtime PUBLIC
     ${LUAUAPI_LUAU_LINK_LIBS}
     GeodeBindings
     ixwebsocket
+    glm::glm
 )
 
 add_library(LuauAPI_GeneratedBindings OBJECT ${LUAUAPI_GENERATED_BINDING_SOURCES})
@@ -324,11 +327,13 @@ if(LUAUAPI_BUILD_TESTS)
         ${CMAKE_CURRENT_SOURCE_DIR}/tests/host
         src
         include
+        vendor
     )
     target_compile_definitions(luauapi_tests PRIVATE LUAUAPI_HOST_TESTS=1)
     target_link_libraries(luauapi_tests PRIVATE
         Catch2::Catch2WithMain
         fmt::fmt
+        glm::glm
         Luau.VM
         Luau.Compiler
         Luau.CodeGen
