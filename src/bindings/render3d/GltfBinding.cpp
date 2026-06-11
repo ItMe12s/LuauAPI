@@ -1,4 +1,5 @@
 #include "bindings/geode/ModSandbox.hpp"
+#include "bindings/render3d/Gd3dShared.hpp"
 #include "framework/Binding.hpp"
 #include "framework/stack/Stack.hpp"
 #include "framework/stack/TableUtil.hpp"
@@ -14,24 +15,8 @@
 
 namespace {
     using namespace luax;
+    using namespace luax::gd3d;
     using namespace luax::render3d;
-
-    constexpr char const* kMeshMeta = "luax.gd3d.Mesh";
-    constexpr char const* kMeshTypeName = "Mesh";
-
-    struct MeshHandle {
-        std::uint64_t id = 0;
-    };
-
-    void pushVec3(lua_State* L, glm::vec3 const& v) {
-        lua_createtable(L, 0, 3);
-        lua_pushnumber(L, v.x);
-        lua_setfield(L, -2, "x");
-        lua_pushnumber(L, v.y);
-        lua_setfield(L, -2, "y");
-        lua_pushnumber(L, v.z);
-        lua_setfield(L, -2, "z");
-    }
 
     void releaseMeshHandle(MeshHandle* handle) {
         if (handle == nullptr || handle->id == 0) {
@@ -50,16 +35,8 @@ namespace {
         handle->id = id;
     }
 
-    MeshHandle* checkMeshHandle(lua_State* L, int idx, [[maybe_unused]] char const* method) {
-        return static_cast<MeshHandle*>(luaL_checkudata(L, idx, kMeshMeta));
-    }
-
     std::shared_ptr<MeshAsset> requireMesh(lua_State* L, MeshHandle* handle, char const* method) {
-        if (handle == nullptr || handle->id == 0) {
-            luaL_error(L, "%s: mesh handle is invalid", method);
-        }
-
-        auto mesh = MeshRegistry::instance().get(handle->id);
+        auto mesh = MeshRegistry::instance().get(requireMeshId(L, handle, method));
         if (!mesh) {
             luaL_error(L, "%s: mesh handle is invalid", method);
         }

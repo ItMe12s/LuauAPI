@@ -1,49 +1,22 @@
+#include "bindings/render3d/Gd3dShared.hpp"
 #include "framework/Binding.hpp"
 #include "framework/stack/Stack.hpp"
 #include "framework/stack/TableUtil.hpp"
 #include "framework/stack/UserdataTags.hpp"
 #include "framework/usertype/Usertype.hpp"
 #include "render3d/CCViewportFrameNode.hpp"
+#include "render3d/MeshAsset.hpp"
 #include "render3d/Transform3D.hpp"
 
 #include <Geode/Geode.hpp>
 #include <cocos2d.h>
 #include <lua.h>
 #include <lualib.h>
-#include <new>
 
 namespace {
     using namespace luax;
+    using namespace luax::gd3d;
     using namespace luax::render3d;
-
-    constexpr char const* kTransformMeta = "luax.gd3d.Transform";
-    constexpr char const* kMeshMeta = "luax.gd3d.Mesh";
-
-    struct MeshHandle {
-        std::uint64_t id = 0;
-    };
-
-    Transform* checkTransform(lua_State* L, int idx, [[maybe_unused]] char const* method) {
-        return static_cast<Transform*>(luaL_checkudata(L, idx, kTransformMeta));
-    }
-
-    void pushTransform(lua_State* L, Transform const& transform) {
-        auto* storage = static_cast<Transform*>(
-            lua_newuserdatataggedwithmetatable(L, sizeof(Transform), luax::detail::transformTag())
-        );
-        new (storage) Transform(transform);
-    }
-
-    MeshHandle* checkMeshHandle(lua_State* L, int idx, [[maybe_unused]] char const* method) {
-        return static_cast<MeshHandle*>(luaL_checkudata(L, idx, kMeshMeta));
-    }
-
-    std::uint64_t requireMeshId(lua_State* L, MeshHandle* handle, char const* method) {
-        if (handle == nullptr || handle->id == 0) {
-            luaL_error(L, "%s: mesh handle is invalid", method);
-        }
-        return handle->id;
-    }
 
     int viewportNew(lua_State* L) {
         float const width = check<float>(L, 1, "gd3d.ViewportFrame.new");
@@ -91,7 +64,12 @@ namespace {
             requireMeshId(L, checkMeshHandle(L, 2, "ViewportFrame:addMesh"), "ViewportFrame:addMesh");
         auto const* transform = checkTransform(L, 3, "ViewportFrame:addMesh");
 
-        push(L, self->addInstance(meshId, *transform));
+        auto mesh = MeshRegistry::instance().get(meshId);
+        if (mesh == nullptr) {
+            luaL_error(L, "ViewportFrame:addMesh: mesh handle is invalid");
+        }
+
+        push(L, self->addInstance(meshId, std::move(mesh), *transform));
         return 1;
     }
 

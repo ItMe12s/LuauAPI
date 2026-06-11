@@ -37,7 +37,8 @@ namespace luax::render3d {
         if (!CCNode::init()) {
             return false;
         }
-        setAnchorPoint(ccp(0.0f, 0.0f));
+        setAnchorPoint(ccp(0.5f, 0.5f));
+        ignoreAnchorPointForPosition(false);
         setContentSize(CCSizeMake(width, height));
         return true;
     }
@@ -51,10 +52,11 @@ namespace luax::render3d {
     }
 
     int CCViewportFrameNode::addInstance(
-        std::uint64_t meshId, Transform const& transform, glm::vec3 color
+        std::uint64_t meshId, std::shared_ptr<MeshAsset> mesh, Transform const& transform,
+        glm::vec3 color
     ) {
         int const id = m_nextInstanceId++;
-        m_instances.emplace(id, ViewportInstance{meshId, transform, color});
+        m_instances.emplace(id, ViewportInstance{meshId, std::move(mesh), transform, color});
         return id;
     }
 

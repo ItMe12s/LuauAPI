@@ -1,3 +1,4 @@
+#include "bindings/render3d/Gd3dShared.hpp"
 #include "framework/Binding.hpp"
 #include "framework/stack/Stack.hpp"
 #include "framework/stack/TableUtil.hpp"
@@ -8,44 +9,11 @@
 #include <glm/vec3.hpp>
 #include <lua.h>
 #include <lualib.h>
-#include <new>
 
 namespace {
     using namespace luax;
+    using namespace luax::gd3d;
     using Transform = render3d::Transform;
-
-    constexpr char const* kTransformMeta = "luax.gd3d.Transform";
-    constexpr char const* kTransformTypeName = "Transform";
-
-    glm::vec3 checkVec3(lua_State* L, int idx, char const* method) {
-        luaL_checktype(L, idx, LUA_TTABLE);
-        return glm::vec3(
-            fieldNumber(L, idx, "x", method),
-            fieldNumber(L, idx, "y", method),
-            fieldNumber(L, idx, "z", method)
-        );
-    }
-
-    void pushVec3(lua_State* L, glm::vec3 const& v) {
-        lua_createtable(L, 0, 3);
-        lua_pushnumber(L, v.x);
-        lua_setfield(L, -2, "x");
-        lua_pushnumber(L, v.y);
-        lua_setfield(L, -2, "y");
-        lua_pushnumber(L, v.z);
-        lua_setfield(L, -2, "z");
-    }
-
-    void pushTransform(lua_State* L, Transform const& transform) {
-        auto* storage = static_cast<Transform*>(
-            lua_newuserdatataggedwithmetatable(L, sizeof(Transform), detail::transformTag())
-        );
-        new (storage) Transform(transform);
-    }
-
-    Transform* checkTransform(lua_State* L, int idx, [[maybe_unused]] char const* method) {
-        return static_cast<Transform*>(luaL_checkudata(L, idx, kTransformMeta));
-    }
 
     int transformNew(lua_State* L) {
         int const argc = lua_gettop(L);

@@ -81,7 +81,8 @@ The first argument uses the same roots as [fs](fs.md): `"save"`, `"config"`, `"p
 Shipped assets belong under `"resources"`.
 
 Returns a mesh handle, or `nil` and an error message.
-Drop the handle or call `collectgarbage()` to release CPU and GPU data when you are done.
+Mesh data is released when the handle is collected and no viewport instance uses it anymore.
+Viewport instances added with `addMesh` keep the mesh alive on their own, so you do not need to keep the handle around after adding.
 
 Supported content:
 
@@ -103,6 +104,7 @@ gd3d.ViewportFrame.new(width: number, height: number) -> (ViewportFrame?, string
 
 Creates a `CCNode` that renders its 3D scene into an off-screen buffer, then draws that texture over its content rect.
 Set the node size with `setContentSize` or pass width and height to `new`.
+The node uses a centered anchor point (`0.5, 0.5`), so `setPosition` places the middle of the viewport at the given point.
 
 Camera and instances:
 

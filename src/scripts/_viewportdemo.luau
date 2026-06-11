@@ -15,12 +15,16 @@ if not vp then
 end
 
 vp:setID(modId .. "/viewport-demo")
-vp:setCamera(Transform.new({ x = 0, y = 1, z = 4 }, { x = 0, y = 0, z = 0 }), 70, 0.1, 100)
+vp:setCamera(Transform.new({ x = 0, y = 1, z = 3 }, { x = 0, y = 0, z = 0 }), 90, 0.1, 100)
 
 local instanceId = vp:addMesh(mesh, Transform.new())
 local angle = 0
 
-task.every(1 / 60, function()
+local spinTask
+spinTask = task.every(1 / 60, function()
+    if spinTask == nil then
+        return
+    end
     angle += 0.02
     vp:setInstanceTransform(instanceId, Transform.fromEuler(0.4, angle, 0))
 end)

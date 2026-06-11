@@ -43,7 +43,7 @@ namespace luax::render3d {
         bool ensureLambertProgram();
         bool ensureBlitProgram();
         bool ensureBlitGeometry();
-        GpuMesh* ensureGpuMesh(std::uint64_t meshId);
+        GpuMesh* ensureGpuMesh(std::uint64_t meshId, MeshAsset const& meshAsset);
 
         void deleteGpuMesh(GpuMesh& mesh);
         void deleteGpuPrimitive(GpuPrimitive& primitive);

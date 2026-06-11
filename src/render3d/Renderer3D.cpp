@@ -12,9 +12,36 @@
 #include <glm/mat4x4.hpp>
 
 namespace luax::render3d {
-    using cocos2d::ccGLInvalidateStateCache;
+    using cocos2d::ccGLEnableVertexAttribs;
+    using cocos2d::ccGLUseProgram;
 
     namespace {
+        bool glContextAvailable() {
+            auto* director = cocos2d::CCDirector::sharedDirector();
+            return director != nullptr && director->getOpenGLView() != nullptr;
+        }
+
+        int captureAndUnbindVao() {
+#if defined(GL_VERTEX_ARRAY_BINDING)
+            GLint prevVao = 0;
+            glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &prevVao);
+            if (prevVao != 0) {
+                glBindVertexArray(0);
+            }
+            return prevVao;
+#else
+            return 0;
+#endif
+        }
+
+        void restoreVao([[maybe_unused]] int prevVao) {
+#if defined(GL_VERTEX_ARRAY_BINDING)
+            if (prevVao != 0) {
+                glBindVertexArray(static_cast<GLuint>(prevVao));
+            }
+#endif
+        }
+
         char const kLambertVert[] = R"(attribute vec3 aPos;
 attribute vec3 aNormal;
 uniform mat4 uMVP;
@@ -110,6 +137,7 @@ void main() {
                 else {
                     glDisable(GL_BLEND);
                 }
+                cocos2d::ccGLBindTexture2D(static_cast<GLuint>(boundTexture));
                 glBindTexture(GL_TEXTURE_2D, static_cast<GLuint>(boundTexture));
             }
         };
@@ -200,24 +228,25 @@ void main() {
     }
 
     void Renderer3D::destroyGlResources() {
-        for (auto& [meshId, mesh] : m_gpuMeshes) {
-            (void)meshId;
-            deleteGpuMesh(mesh);
+        if (glContextAvailable()) {
+            for (auto& [meshId, mesh] : m_gpuMeshes) {
+                (void)meshId;
+                deleteGpuMesh(mesh);
+            }
+            if (m_blitVbo != 0) {
+                glDeleteBuffers(1, &m_blitVbo);
+            }
+            if (m_blitProgram != 0) {
+                glDeleteProgram(m_blitProgram);
+            }
+            if (m_lambertProgram != 0) {
+                glDeleteProgram(m_lambertProgram);
+            }
         }
         m_gpuMeshes.clear();
-
-        if (m_blitVbo != 0) {
-            glDeleteBuffers(1, &m_blitVbo);
-            m_blitVbo = 0;
-        }
-        if (m_blitProgram != 0) {
-            glDeleteProgram(m_blitProgram);
-            m_blitProgram = 0;
-        }
-        if (m_lambertProgram != 0) {
-            glDeleteProgram(m_lambertProgram);
-            m_lambertProgram = 0;
-        }
+        m_blitVbo = 0;
+        m_blitProgram = 0;
+        m_lambertProgram = 0;
     }
 
     void Renderer3D::releaseMeshGpu(std::uint64_t meshId) {
@@ -225,7 +254,9 @@ void main() {
         if (it == m_gpuMeshes.end()) {
             return;
         }
-        deleteGpuMesh(it->second);
+        if (glContextAvailable()) {
+            deleteGpuMesh(it->second);
+        }
         m_gpuMeshes.erase(it);
     }
 
@@ -270,18 +301,13 @@ void main() {
         return m_blitVbo != 0;
     }
 
-    Renderer3D::GpuMesh* Renderer3D::ensureGpuMesh(std::uint64_t meshId) {
-        auto meshAsset = MeshRegistry::instance().get(meshId);
-        if (meshAsset == nullptr) {
-            return nullptr;
-        }
-
+    Renderer3D::GpuMesh* Renderer3D::ensureGpuMesh(std::uint64_t meshId, MeshAsset const& meshAsset) {
         auto& gpuMesh = m_gpuMeshes[meshId];
         if (!gpuMesh.primitives.empty()) {
             return &gpuMesh;
         }
 
-        auto const& srcPrimitives = meshAsset->primitives();
+        auto const& srcPrimitives = meshAsset.primitives();
         gpuMesh.primitives.resize(srcPrimitives.size());
 
         for (std::size_t i = 0; i < srcPrimitives.size(); ++i) {
@@ -345,23 +371,29 @@ void main() {
 
         int prevFbo = 0;
         int prevViewport[4]{};
+        float prevClearColor[4]{};
         GLboolean depthEnabled = GL_FALSE;
+        GLboolean depthMask = GL_TRUE;
         GLboolean cullEnabled = GL_FALSE;
         GLboolean blendEnabled = GL_FALSE;
 
         glGetIntegerv(GL_FRAMEBUFFER_BINDING, &prevFbo);
         glGetIntegerv(GL_VIEWPORT, prevViewport);
+        glGetFloatv(GL_COLOR_CLEAR_VALUE, prevClearColor);
         glGetBooleanv(GL_DEPTH_TEST, &depthEnabled);
+        glGetBooleanv(GL_DEPTH_WRITEMASK, &depthMask);
         glGetBooleanv(GL_CULL_FACE, &cullEnabled);
         glGetBooleanv(GL_BLEND, &blendEnabled);
+        int const prevVao = captureAndUnbindVao();
 
         glBindFramebuffer(GL_FRAMEBUFFER, fbo);
         glViewport(0, 0, pixelWidth, pixelHeight);
         glEnable(GL_DEPTH_TEST);
+        glDepthMask(GL_TRUE);
         glEnable(GL_CULL_FACE);
         glCullFace(GL_BACK);
         glDisable(GL_BLEND);
-        glClearColor(0.08f, 0.09f, 0.12f, 1.0f);
+        glClearColor(0.08f, 0.09f, 0.12f, 0.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         float const aspect = static_cast<float>(pixelWidth) / static_cast<float>(pixelHeight);
@@ -379,7 +411,10 @@ void main() {
 
         for (auto const& [instanceId, instance] : instances) {
             (void)instanceId;
-            GpuMesh* gpuMesh = ensureGpuMesh(instance.meshId);
+            if (instance.mesh == nullptr) {
+                continue;
+            }
+            GpuMesh* gpuMesh = ensureGpuMesh(instance.meshId, *instance.mesh);
             if (gpuMesh == nullptr) {
                 continue;
             }
@@ -414,9 +449,11 @@ void main() {
 
         glBindFramebuffer(GL_FRAMEBUFFER, static_cast<GLuint>(prevFbo));
         glViewport(prevViewport[0], prevViewport[1], prevViewport[2], prevViewport[3]);
+        glClearColor(prevClearColor[0], prevClearColor[1], prevClearColor[2], prevClearColor[3]);
         if (depthEnabled == GL_FALSE) {
             glDisable(GL_DEPTH_TEST);
         }
+        glDepthMask(depthMask);
         if (cullEnabled == GL_FALSE) {
             glDisable(GL_CULL_FACE);
         }
@@ -428,8 +465,9 @@ void main() {
         }
         glBindBuffer(GL_ARRAY_BUFFER, 0);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-        glUseProgram(0);
-        ccGLInvalidateStateCache();
+        restoreVao(prevVao);
+        ccGLUseProgram(0);
+        ccGLEnableVertexAttribs(cocos2d::kCCVertexAttribFlag_None);
     }
 
     void Renderer3D::drawCompositeQuad(unsigned int colorTexture, float width, float height) {
@@ -440,8 +478,10 @@ void main() {
             return;
         }
 
+        glActiveTexture(GL_TEXTURE0);
         DrawStateSnapshot prevState{};
         prevState.capture();
+        int const prevVao = captureAndUnbindVao();
 
         struct BlitVertex {
             float x;
@@ -451,10 +491,10 @@ void main() {
         };
 
         std::array<BlitVertex, 4> const quad = {{
-            {0.0f, 0.0f, 0.0f, 1.0f},
-            {width, 0.0f, 1.0f, 1.0f},
-            {0.0f, height, 0.0f, 0.0f},
-            {width, height, 1.0f, 0.0f},
+            {0.0f, 0.0f, 0.0f, 0.0f},
+            {width, 0.0f, 1.0f, 0.0f},
+            {0.0f, height, 0.0f, 1.0f},
+            {width, height, 1.0f, 1.0f},
         }};
 
         glBindBuffer(GL_ARRAY_BUFFER, m_blitVbo);
@@ -497,9 +537,10 @@ void main() {
         glDisableVertexAttribArray(0);
         glDisableVertexAttribArray(1);
         glBindBuffer(GL_ARRAY_BUFFER, 0);
-        glUseProgram(0);
+        restoreVao(prevVao);
         prevState.restore();
-        ccGLInvalidateStateCache();
+        ccGLUseProgram(0);
+        ccGLEnableVertexAttribs(cocos2d::kCCVertexAttribFlag_None);
 
         CC_INCREMENT_GL_DRAWS(1);
     }

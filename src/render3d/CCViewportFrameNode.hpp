@@ -6,8 +6,11 @@
 #include <cstdint>
 #include <glm/vec3.hpp>
 #include <map>
+#include <memory>
 
 namespace luax::render3d {
+
+    class MeshAsset;
 
     struct Camera3D {
         Transform transform{};
@@ -18,6 +21,7 @@ namespace luax::render3d {
 
     struct ViewportInstance {
         std::uint64_t meshId = 0;
+        std::shared_ptr<MeshAsset> mesh{};
         Transform transform{};
         glm::vec3 color{1.0f, 1.0f, 1.0f};
     };
@@ -30,7 +34,7 @@ namespace luax::render3d {
         Camera3D const& getCamera3D() const;
 
         int addInstance(
-            std::uint64_t meshId, Transform const& transform,
+            std::uint64_t meshId, std::shared_ptr<MeshAsset> mesh, Transform const& transform,
             glm::vec3 color = glm::vec3(1.0f, 1.0f, 1.0f)
         );
         bool setInstanceTransform(int instanceId, Transform const& transform);
