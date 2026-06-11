@@ -43,7 +43,7 @@ namespace {
         new (storage) Transform(transform);
     }
 
-    Transform* checkTransform(lua_State* L, int idx, char const* method) {
+    Transform* checkTransform(lua_State* L, int idx, [[maybe_unused]] char const* method) {
         return static_cast<Transform*>(luaL_checkudata(L, idx, kTransformMeta));
     }
 

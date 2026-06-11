@@ -1,0 +1,106 @@
+#pragma once
+
+#include <cstdint>
+#include <filesystem>
+#include <glm/vec3.hpp>
+#include <memory>
+#include <optional>
+#include <span>
+#include <string>
+#include <unordered_map>
+#include <vector>
+
+namespace luax::render3d {
+
+    template <class T>
+    class LoadResult {
+    public:
+        static LoadResult ok(T value) {
+            LoadResult result;
+            result.m_value = std::move(value);
+            return result;
+        }
+
+        static LoadResult err(std::string message) {
+            LoadResult result;
+            result.m_error = std::move(message);
+            return result;
+        }
+
+        bool isOk() const {
+            return m_value.has_value();
+        }
+
+        bool isErr() const {
+            return !isOk();
+        }
+
+        T& unwrap() {
+            return *m_value;
+        }
+
+        T const& unwrap() const {
+            return *m_value;
+        }
+
+        std::string const& unwrapErr() const {
+            return m_error;
+        }
+
+    private:
+        std::optional<T> m_value;
+        std::string m_error;
+    };
+
+    struct MeshPrimitive {
+        std::vector<glm::vec3> positions;
+        std::vector<glm::vec3> normals;
+        std::vector<std::uint32_t> indices;
+    };
+
+    struct BoundingBox {
+        glm::vec3 min{0.0f};
+        glm::vec3 max{0.0f};
+        bool empty = true;
+    };
+
+    class MeshAsset {
+    public:
+        static LoadResult<std::shared_ptr<MeshAsset>> loadFromFile(std::filesystem::path const& path);
+
+        static LoadResult<std::shared_ptr<MeshAsset>> loadFromBytes(
+            std::span<std::uint8_t const> bytes, std::filesystem::path const& assetPath,
+            std::filesystem::path const& sandboxRoot
+        );
+
+        std::size_t vertexCount() const;
+        std::size_t primitiveCount() const;
+        BoundingBox const& boundingBox() const;
+        std::vector<MeshPrimitive> const& primitives() const;
+
+    private:
+        MeshAsset() = default;
+
+        void addPrimitive(MeshPrimitive primitive);
+
+        std::vector<MeshPrimitive> m_primitives;
+        BoundingBox m_bounds;
+        std::size_t m_vertexCount = 0;
+    };
+
+    class MeshRegistry {
+    public:
+        static MeshRegistry& instance();
+
+        std::uint64_t registerMesh(std::shared_ptr<MeshAsset> mesh);
+        void release(std::uint64_t id);
+        std::shared_ptr<MeshAsset> get(std::uint64_t id) const;
+
+    private:
+        MeshRegistry() = default;
+
+        std::uint64_t m_nextId = 1;
+        std::unordered_map<std::uint64_t, std::shared_ptr<MeshAsset>> m_meshes;
+    };
+
+} // namespace luax::render3d
