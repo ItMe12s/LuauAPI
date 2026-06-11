@@ -1,3 +1,7 @@
+#if defined(_MSC_VER) && !defined(_CRT_SECURE_NO_WARNINGS)
+    #define _CRT_SECURE_NO_WARNINGS
+#endif
+
 #include "render3d/MeshAsset.hpp"
 
 #include "core/Config.hpp"
@@ -11,10 +15,6 @@
 #include <optional>
 #include <string>
 #include <vector>
-
-#if defined(_MSC_VER)
-    #define _CRT_SECURE_NO_WARNINGS
-#endif
 
 #define CGLTF_IMPLEMENTATION
 #include <cgltf.h>
@@ -327,15 +327,34 @@ namespace luax::render3d {
     }
 
     LoadResult<std::shared_ptr<MeshAsset>> MeshAsset::loadFromFile(std::filesystem::path const& path) {
-        auto contents = readScriptFile(path);
-        if (contents.isErr()) {
-            return LoadResult<std::shared_ptr<MeshAsset>>::err(contents.unwrapErr());
+        std::error_code ec;
+        auto const fileSize = std::filesystem::file_size(path, ec);
+        if (ec) {
+            return LoadResult<std::shared_ptr<MeshAsset>>::err(
+                "glTF file cannot be read: " + filesystemPathString(path)
+            );
         }
 
-        auto const& data = contents.unwrap();
-        std::vector<std::uint8_t> bytes(data.begin(), data.end());
-        auto sandboxRoot = path.parent_path();
-        return loadFromBytes(bytes, path, sandboxRoot);
+        if (fileSize > kMaxFsReadBytes) {
+            return LoadResult<std::shared_ptr<MeshAsset>>::err("glTF file exceeds maximum read size");
+        }
+
+        std::ifstream input(path, std::ios::binary);
+        if (!input.good()) {
+            return LoadResult<std::shared_ptr<MeshAsset>>::err(
+                "glTF file cannot be opened: " + filesystemPathString(path)
+            );
+        }
+
+        std::vector<std::uint8_t> bytes(static_cast<std::size_t>(fileSize));
+        input.read(reinterpret_cast<char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
+        if (input.gcount() != static_cast<std::streamsize>(bytes.size())) {
+            return LoadResult<std::shared_ptr<MeshAsset>>::err(
+                "glTF file cannot be read: " + filesystemPathString(path)
+            );
+        }
+
+        return loadFromBytes(bytes, path, path.parent_path());
     }
 
     LoadResult<std::shared_ptr<MeshAsset>> MeshAsset::loadFromBytes(

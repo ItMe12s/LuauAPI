@@ -47,7 +47,7 @@ namespace {
         handle->id = id;
     }
 
-    MeshHandle* checkMeshHandle(lua_State* L, int idx, char const* method) {
+    MeshHandle* checkMeshHandle(lua_State* L, int idx, [[maybe_unused]] char const* method) {
         return static_cast<MeshHandle*>(luaL_checkudata(L, idx, kMeshMeta));
     }
 
