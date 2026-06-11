@@ -10,6 +10,8 @@
 #include <unordered_map>
 #include <vector>
 
+struct cgltf_data;
+
 namespace luax::render3d {
 
     template <class T>
@@ -82,6 +84,7 @@ namespace luax::render3d {
         MeshAsset() = default;
 
         void addPrimitive(MeshPrimitive primitive);
+        static std::optional<std::string> extractSceneMeshes(::cgltf_data const* data, MeshAsset& asset);
 
         std::vector<MeshPrimitive> m_primitives;
         BoundingBox m_bounds;

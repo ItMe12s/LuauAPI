@@ -12,6 +12,10 @@
 #include <string>
 #include <vector>
 
+#if defined(_MSC_VER)
+    #define _CRT_SECURE_NO_WARNINGS
+#endif
+
 #define CGLTF_IMPLEMENTATION
 #include <cgltf.h>
 
@@ -285,8 +289,11 @@ namespace {
         meshPrimitive.indices = std::move(indicesResult.unwrap());
         return LoadResult<MeshPrimitive>::ok(std::move(meshPrimitive));
     }
+} // namespace
 
-    std::optional<std::string> extractSceneMeshes(cgltf_data const* data, MeshAsset& asset) {
+namespace luax::render3d {
+
+    std::optional<std::string> MeshAsset::extractSceneMeshes(::cgltf_data const* data, MeshAsset& asset) {
         bool foundMesh = false;
 
         for (cgltf_size nodeIndex = 0; nodeIndex < data->nodes_count; ++nodeIndex) {
@@ -318,9 +325,6 @@ namespace {
 
         return std::nullopt;
     }
-} // namespace
-
-namespace luax::render3d {
 
     LoadResult<std::shared_ptr<MeshAsset>> MeshAsset::loadFromFile(std::filesystem::path const& path) {
         auto contents = readScriptFile(path);
@@ -358,7 +362,7 @@ namespace luax::render3d {
         options.file.release = sandboxFileRelease;
         options.file.user_data = &fileContext;
 
-        cgltf_data* data = nullptr;
+        ::cgltf_data* data = nullptr;
         cgltf_result parseResult =
             cgltf_parse(&options, bytes.data(), static_cast<cgltf_size>(bytes.size()), &data);
         if (parseResult != cgltf_result_success) {
@@ -377,8 +381,8 @@ namespace luax::render3d {
             return LoadResult<std::shared_ptr<MeshAsset>>::err(std::move(message));
         }
 
-        auto mesh = std::make_shared<MeshAsset>();
-        auto extractError = extractSceneMeshes(data, *mesh);
+        auto mesh = std::shared_ptr<MeshAsset>(new MeshAsset());
+        auto extractError = MeshAsset::extractSceneMeshes(data, *mesh);
         cgltf_free(data);
 
         if (extractError.has_value()) {
