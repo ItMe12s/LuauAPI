@@ -73,6 +73,47 @@ void main() {
             float nz;
         };
 
+        struct DrawStateSnapshot {
+            GLboolean depthEnabled = GL_FALSE;
+            GLboolean cullEnabled = GL_FALSE;
+            GLboolean blendEnabled = GL_FALSE;
+            GLint blendSrc = GL_ONE;
+            GLint blendDst = GL_ZERO;
+            int boundTexture = 0;
+
+            void capture() {
+                glGetBooleanv(GL_DEPTH_TEST, &depthEnabled);
+                glGetBooleanv(GL_CULL_FACE, &cullEnabled);
+                glGetBooleanv(GL_BLEND, &blendEnabled);
+                glGetIntegerv(GL_BLEND_SRC, &blendSrc);
+                glGetIntegerv(GL_BLEND_DST, &blendDst);
+                glGetIntegerv(GL_TEXTURE_BINDING_2D, &boundTexture);
+            }
+
+            void restore() const {
+                if (depthEnabled == GL_TRUE) {
+                    glEnable(GL_DEPTH_TEST);
+                }
+                else {
+                    glDisable(GL_DEPTH_TEST);
+                }
+                if (cullEnabled == GL_TRUE) {
+                    glEnable(GL_CULL_FACE);
+                }
+                else {
+                    glDisable(GL_CULL_FACE);
+                }
+                if (blendEnabled == GL_TRUE) {
+                    glEnable(GL_BLEND);
+                    glBlendFunc(static_cast<GLenum>(blendSrc), static_cast<GLenum>(blendDst));
+                }
+                else {
+                    glDisable(GL_BLEND);
+                }
+                glBindTexture(GL_TEXTURE_2D, static_cast<GLuint>(boundTexture));
+            }
+        };
+
         unsigned int compileShader(unsigned int type, char const* source) {
             unsigned int const shader = glCreateShader(type);
             char const* src = source;
@@ -399,6 +440,9 @@ void main() {
             return;
         }
 
+        DrawStateSnapshot prevState{};
+        prevState.capture();
+
         struct BlitVertex {
             float x;
             float y;
@@ -453,8 +497,8 @@ void main() {
         glDisableVertexAttribArray(0);
         glDisableVertexAttribArray(1);
         glBindBuffer(GL_ARRAY_BUFFER, 0);
-        glBindTexture(GL_TEXTURE_2D, 0);
         glUseProgram(0);
+        prevState.restore();
         ccGLInvalidateStateCache();
 
         CC_INCREMENT_GL_DRAWS(1);

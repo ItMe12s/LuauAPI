@@ -101,6 +101,10 @@ namespace luax::render3d {
     }
 
     void CCViewportFrameNode::draw() {
+        if (!isVisible()) {
+            return;
+        }
+
         CCSize const& size = getContentSize();
         if (size.width <= 0.0f || size.height <= 0.0f) {
             return;
