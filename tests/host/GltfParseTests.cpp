@@ -37,4 +37,19 @@ TEST_CASE("MeshAsset parses resources/test_donut.glb") {
         REQUIRE_FALSE(primitive.indices.empty());
         REQUIRE(primitive.indices.size() % 3 == 0);
     }
+
+    REQUIRE(mesh->materialCount() == 1);
+    auto const& materials = mesh->materials();
+    REQUIRE(materials.size() == 1);
+    REQUIRE(materials[0].imageIndex == 0);
+
+    auto const& images = mesh->images();
+    REQUIRE(images.size() == 1);
+    REQUIRE(images[0].width > 0);
+    REQUIRE(images[0].height > 0);
+    REQUIRE(images[0].rgba.size() ==
+            static_cast<std::size_t>(images[0].width) * static_cast<std::size_t>(images[0].height) * 4);
+
+    REQUIRE(primitives[0].materialIndex == 0);
+    REQUIRE(primitives[0].texcoords.size() == primitives[0].positions.size());
 }

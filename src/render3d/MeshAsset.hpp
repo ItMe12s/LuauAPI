@@ -2,7 +2,9 @@
 
 #include <cstdint>
 #include <filesystem>
+#include <glm/vec2.hpp>
 #include <glm/vec3.hpp>
+#include <glm/vec4.hpp>
 #include <memory>
 #include <optional>
 #include <span>
@@ -11,6 +13,8 @@
 #include <vector>
 
 struct cgltf_data;
+struct cgltf_image;
+struct cgltf_options;
 
 namespace luax::render3d {
 
@@ -54,10 +58,23 @@ namespace luax::render3d {
         std::string m_error;
     };
 
+    struct ImageData {
+        int width = 0;
+        int height = 0;
+        std::vector<std::uint8_t> rgba;
+    };
+
+    struct MaterialData {
+        glm::vec4 baseColorFactor{1.0f, 1.0f, 1.0f, 1.0f};
+        int imageIndex = -1;
+    };
+
     struct MeshPrimitive {
         std::vector<glm::vec3> positions;
         std::vector<glm::vec3> normals;
+        std::vector<glm::vec2> texcoords;
         std::vector<std::uint32_t> indices;
+        int materialIndex = -1;
     };
 
     struct BoundingBox {
@@ -79,14 +96,28 @@ namespace luax::render3d {
         std::size_t primitiveCount() const;
         BoundingBox const& boundingBox() const;
         std::vector<MeshPrimitive> const& primitives() const;
+        std::vector<MaterialData> const& materials() const;
+        std::size_t materialCount() const;
+        std::vector<ImageData> const& images() const;
 
     private:
         MeshAsset() = default;
 
         void addPrimitive(MeshPrimitive primitive);
+        static std::optional<std::string> extractMaterials(
+            ::cgltf_data const* data, MeshAsset& asset, ::cgltf_options const& options,
+            std::filesystem::path const& assetPath, std::filesystem::path const& sandboxRoot
+        );
+        static LoadResult<int> resolveImageIndex(
+            ::cgltf_image const* image, std::filesystem::path const& assetPath,
+            std::filesystem::path const& sandboxRoot, MeshAsset& asset,
+            std::unordered_map<::cgltf_image const*, int>& imageIndices
+        );
         static std::optional<std::string> extractSceneMeshes(::cgltf_data const* data, MeshAsset& asset);
 
         std::vector<MeshPrimitive> m_primitives;
+        std::vector<MaterialData> m_materials;
+        std::vector<ImageData> m_images;
         BoundingBox m_bounds;
         std::size_t m_vertexCount = 0;
     };

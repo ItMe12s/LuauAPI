@@ -319,6 +319,7 @@ if(LUAUAPI_BUILD_TESTS)
         src/core/Loadstring.cpp
         src/core/Runtime.cpp
         src/render3d/MeshAsset.cpp
+        src/render3d/ImageDecode.cpp
         tests/host/Render3DMathTests.cpp
         tests/host/GltfParseTests.cpp
         ${LUAUAPI_TEST_SOURCES}
