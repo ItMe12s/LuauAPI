@@ -6,7 +6,7 @@
 
 <p align="center">
   A shared Luau runtime for Geode mods<br>
-  with many built-in libraries and tools.
+  with many awesome features and tools.
 </p>
 
 <p align="center">
@@ -15,10 +15,17 @@
   extend, or contribute to the project.
 </p>
 
-**Heads up: LuauAPI is still early, so expect things to change.**
+**Heads up: LuauAPI is still in beta, so expect things to change.**
 
-**You are assumed to have basic modding knowledge. [Learn Geode SDK here](https://docs.geode-sdk.org).**
-**And some knowledge on Lua/Luau scripting!!!**
+## Before you start
+
+You are expected to already have:
+
+- Basic Geode modding knowledge. [Learn Geode SDK here](https://docs.geode-sdk.org).
+- A working knowledge of Lua or Luau scripting.
+- Experience using VS Code.
+
+*Optionally, you can learn these along the way.*
 
 ## Getting started
 
