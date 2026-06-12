@@ -32,6 +32,14 @@ namespace luax::render3d {
         return static_cast<CCViewportFrame*>(node.data());
     }
 
+    unsigned int TextureAsset::viewportColorTexture() const {
+        auto* viewport = viewportSource();
+        if (viewport == nullptr) {
+            return 0;
+        }
+        return viewport->colorTexture();
+    }
+
 #else
 
     void TextureAsset::setViewportSourceNode(cocos2d::CCNode* node) {
@@ -40,6 +48,10 @@ namespace luax::render3d {
 
     CCViewportFrame* TextureAsset::viewportSource() const {
         return nullptr;
+    }
+
+    unsigned int TextureAsset::viewportColorTexture() const {
+        return 0;
     }
 
 #endif

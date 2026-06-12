@@ -18,6 +18,7 @@ namespace luax::render3d {
         ImageData cpu;
 
         CCViewportFrame* viewportSource() const;
+        unsigned int viewportColorTexture() const;
 
     private:
         friend class CCViewportFrame;

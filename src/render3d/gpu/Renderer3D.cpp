@@ -3,6 +3,8 @@
 #include "render3d/assets/MeshAsset.hpp"
 #include "render3d/assets/TextureAsset.hpp"
 #include "render3d/gpu/GlUtil.hpp"
+#include "render3d/gpu/ShaderSources.hpp"
+#include "render3d/gpu/VertexLayout.hpp"
 #include "render3d/types/Frustum.hpp"
 
 #include <Geode/Geode.hpp>
@@ -20,165 +22,8 @@ namespace luax::render3d {
     using cocos2d::ccGLUseProgram;
 
     namespace {
-        char const kLambertVert[] = R"(attribute vec3 aPos;
-attribute vec3 aNormal;
-attribute vec2 aTexCoord;
-uniform mat4 uMVP;
-uniform mat4 uNormalMat;
-uniform vec3 uTint;
-varying vec3 vNormal;
-varying vec2 vTexCoord;
-varying vec3 vTint;
-
-void main() {
-    vNormal = mat3(uNormalMat) * aNormal;
-    vTexCoord = aTexCoord;
-    vTint = uTint;
-    gl_Position = uMVP * vec4(aPos, 1.0);
-}
-)";
-
-        char const kLambertInstVert[] = R"(attribute vec3 aPos;
-attribute vec3 aNormal;
-attribute vec2 aTexCoord;
-attribute vec4 aModel0;
-attribute vec4 aModel1;
-attribute vec4 aModel2;
-attribute vec4 aModel3;
-attribute vec3 aTint;
-uniform mat4 uViewProj;
-varying vec3 vNormal;
-varying vec2 vTexCoord;
-varying vec3 vTint;
-
-void main() {
-    mat4 model = mat4(aModel0, aModel1, aModel2, aModel3);
-    vNormal = mat3(model) * aNormal;
-    vTexCoord = aTexCoord;
-    vTint = aTint;
-    gl_Position = uViewProj * model * vec4(aPos, 1.0);
-}
-)";
-
-        char const kLambertFrag[] = R"(#ifdef GL_ES
-precision mediump float;
-#endif
-varying vec3 vNormal;
-varying vec2 vTexCoord;
-varying vec3 vTint;
-uniform vec3 uLightDir;
-uniform vec3 uLightColor;
-uniform float uAmbient;
-uniform vec4 uBaseColor;
-uniform sampler2D uTexture;
-uniform float uUseTexture;
-uniform float uAlphaCutoff;
-
-void main() {
-    vec4 texel = uUseTexture > 0.5 ? texture2D(uTexture, vTexCoord) : vec4(1.0);
-    vec3 albedo = uUseTexture > 0.5 ? texel.rgb : uBaseColor.rgb;
-    albedo *= vTint;
-    float alpha = uBaseColor.a * (uUseTexture > 0.5 ? texel.a : 1.0);
-    if (alpha < uAlphaCutoff) {
-        discard;
-    }
-    vec3 n = normalize(vNormal);
-    float diff = max(dot(n, normalize(uLightDir)), 0.0);
-    vec3 lighting = vec3(uAmbient) + uLightColor * diff;
-    gl_FragColor = vec4(albedo * lighting, alpha);
-}
-)";
-
-        char const kBlitVert[] = R"(attribute vec2 aPos;
-attribute vec2 aTexCoord;
-uniform mat4 uMVP;
-varying vec2 vTexCoord;
-
-void main() {
-    gl_Position = uMVP * vec4(aPos, 0.0, 1.0);
-    vTexCoord = aTexCoord;
-}
-)";
-
-        char const kBlitFrag[] = R"(#ifdef GL_ES
-precision mediump float;
-#endif
-uniform sampler2D uTexture;
-varying vec2 vTexCoord;
-
-void main() {
-    gl_FragColor = texture2D(uTexture, vTexCoord);
-}
-)";
-
-        char const kDebugLineVert[] = R"(attribute vec3 aPos;
-uniform mat4 uMVP;
-void main() {
-    gl_Position = uMVP * vec4(aPos, 1.0);
-}
-)";
-
-        char const kDebugLineFrag[] = R"(#ifdef GL_ES
-precision mediump float;
-#endif
-uniform vec3 uColor;
-void main() {
-    gl_FragColor = vec4(uColor, 1.0);
-}
-)";
-
-        struct InterleavedVertex {
-            float px;
-            float py;
-            float pz;
-            float nx;
-            float ny;
-            float nz;
-            float u;
-            float v;
-        };
-
-        struct GpuInstanceData {
-            glm::mat4 model{1.0f};
-            glm::vec4 tint{1.0f, 1.0f, 1.0f, 0.0f};
-        };
-
         float shaderAlphaCutoff(int alphaMode, float alphaCutoff) {
             return alphaMode == 1 ? alphaCutoff : 0.0f;
-        }
-
-        void resetInstanceAttribs() {
-#if defined(GLEW_VERSION)
-            for (unsigned int location = 3; location <= 7; ++location) {
-                glVertexAttribDivisor(location, 0);
-                glDisableVertexAttribArray(location);
-            }
-#endif
-        }
-
-        void setupInstanceAttribs(unsigned int instanceVbo) {
-#if defined(GLEW_VERSION)
-            int const stride = static_cast<int>(sizeof(GpuInstanceData));
-            glBindBuffer(GL_ARRAY_BUFFER, instanceVbo);
-            for (unsigned int column = 0; column < 4; ++column) {
-                unsigned int const location = 3 + column;
-                glEnableVertexAttribArray(location);
-                glVertexAttribPointer(
-                    location,
-                    4,
-                    GL_FLOAT,
-                    GL_FALSE,
-                    stride,
-                    reinterpret_cast<void*>(column * sizeof(glm::vec4))
-                );
-                glVertexAttribDivisor(location, 1);
-            }
-            glEnableVertexAttribArray(7);
-            glVertexAttribPointer(
-                7, 3, GL_FLOAT, GL_FALSE, stride, reinterpret_cast<void*>(offsetof(GpuInstanceData, tint))
-            );
-            glVertexAttribDivisor(7, 1);
-#endif
         }
 
         glm::vec3 normalizedLightDirection(glm::vec3 const& direction) {
@@ -188,47 +33,6 @@ void main() {
             }
             return glm::normalize(direction);
         }
-
-        int const kInterleavedVertexStride = static_cast<int>(sizeof(InterleavedVertex));
-
-        void setupInterleavedVertexAttribs() {
-            glEnableVertexAttribArray(0);
-            glEnableVertexAttribArray(1);
-            glEnableVertexAttribArray(2);
-            glVertexAttribPointer(
-                0, 3, GL_FLOAT, GL_FALSE, kInterleavedVertexStride, reinterpret_cast<void*>(0)
-            );
-            glVertexAttribPointer(
-                1,
-                3,
-                GL_FLOAT,
-                GL_FALSE,
-                kInterleavedVertexStride,
-                reinterpret_cast<void*>(3 * sizeof(float))
-            );
-            glVertexAttribPointer(
-                2,
-                2,
-                GL_FLOAT,
-                GL_FALSE,
-                kInterleavedVertexStride,
-                reinterpret_cast<void*>(6 * sizeof(float))
-            );
-        }
-
-        void uploadGpuPrimitiveVertexLayout(unsigned int& vao, unsigned int vbo, unsigned int ibo) {
-            vao = genVao();
-            if (vao == 0) {
-                return;
-            }
-
-            bindVao(vao);
-            glBindBuffer(GL_ARRAY_BUFFER, vbo);
-            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
-            setupInterleavedVertexAttribs();
-            bindVao(0);
-        }
-
     } // namespace
 
     Renderer3D& Renderer3D::instance() {
@@ -334,9 +138,9 @@ void main() {
     }
 
     unsigned int Renderer3D::ensureGpuTexture(std::uint64_t textureId, TextureAsset const& textureAsset) {
-        auto* viewport = textureAsset.viewportSource();
-        if (viewport != nullptr) {
-            return viewport->colorTexture();
+        unsigned int const viewportTexture = textureAsset.viewportColorTexture();
+        if (viewportTexture != 0) {
+            return viewportTexture;
         }
 
         auto const existing = m_gpuTextures.find(textureId);
@@ -378,7 +182,10 @@ void main() {
         }
 
         m_lambertProgram = buildProgram(
-            kLambertVert, kLambertFrag, "lambert", {{0, "aPos"}, {1, "aNormal"}, {2, "aTexCoord"}}
+            shader_sources::kLambertVert,
+            shader_sources::kLambertFrag,
+            "lambert",
+            {{0, "aPos"}, {1, "aNormal"}, {2, "aTexCoord"}}
         );
         if (m_lambertProgram == 0) {
             return false;
@@ -403,8 +210,8 @@ void main() {
         }
 
         m_lambertInstProgram = buildProgram(
-            kLambertInstVert,
-            kLambertFrag,
+            shader_sources::kLambertInstVert,
+            shader_sources::kLambertFrag,
             "lambert-inst",
             {{0, "aPos"},
              {1, "aNormal"},
@@ -443,7 +250,12 @@ void main() {
             return true;
         }
 
-        m_blitProgram = buildProgram(kBlitVert, kBlitFrag, "blit", {{0, "aPos"}, {1, "aTexCoord"}});
+        m_blitProgram = buildProgram(
+            shader_sources::kBlitVert,
+            shader_sources::kBlitFrag,
+            "blit",
+            {{0, "aPos"}, {1, "aTexCoord"}}
+        );
         if (m_blitProgram == 0) {
             return false;
         }
@@ -466,8 +278,9 @@ void main() {
             return true;
         }
 
-        m_debugLineProgram =
-            buildProgram(kDebugLineVert, kDebugLineFrag, "debug-line", {{0, "aPos"}});
+        m_debugLineProgram = buildProgram(
+            shader_sources::kDebugLineVert, shader_sources::kDebugLineFrag, "debug-line", {{0, "aPos"}}
+        );
         if (m_debugLineProgram == 0) {
             return false;
         }
