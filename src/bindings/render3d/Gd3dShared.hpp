@@ -2,12 +2,14 @@
 
 #include "framework/stack/Stack.hpp"
 #include "framework/stack/UserdataTags.hpp"
+#include "render3d/Material.hpp"
 #include "render3d/Transform3D.hpp"
 
 #include <cstdint>
 #include <glm/vec3.hpp>
 #include <lua.h>
 #include <lualib.h>
+#include <memory>
 #include <new>
 
 namespace luax::gd3d {
@@ -15,9 +17,15 @@ namespace luax::gd3d {
     inline constexpr char const* kTransformTypeName = "Transform";
     inline constexpr char const* kMeshMeta = "luax.gd3d.Mesh";
     inline constexpr char const* kMeshTypeName = "Mesh";
+    inline constexpr char const* kMaterialMeta = "luax.gd3d.Material";
+    inline constexpr char const* kMaterialTypeName = "Material";
 
     struct MeshHandle {
         std::uint64_t id = 0;
+    };
+
+    struct MaterialBox {
+        std::shared_ptr<render3d::Material> material;
     };
 
     inline glm::vec3 checkVec3(lua_State* L, int idx, char const* method) {
@@ -59,5 +67,26 @@ namespace luax::gd3d {
             luaL_error(L, "%s: mesh handle is invalid", method);
         }
         return handle->id;
+    }
+
+    inline void pushMaterial(lua_State* L, std::shared_ptr<render3d::Material> material) {
+        auto* box = static_cast<MaterialBox*>(
+            lua_newuserdatataggedwithmetatable(L, sizeof(MaterialBox), detail::materialTag())
+        );
+        new (box) MaterialBox{std::move(material)};
+    }
+
+    inline MaterialBox* checkMaterialBox(lua_State* L, int idx, [[maybe_unused]] char const* method) {
+        return static_cast<MaterialBox*>(luaL_checkudata(L, idx, kMaterialMeta));
+    }
+
+    inline std::shared_ptr<render3d::Material> const& requireMaterial(
+        lua_State* L, int idx, char const* method
+    ) {
+        auto* box = checkMaterialBox(L, idx, method);
+        if (!box->material) {
+            luaL_error(L, "%s: material handle is invalid", method);
+        }
+        return box->material;
     }
 } // namespace luax::gd3d
