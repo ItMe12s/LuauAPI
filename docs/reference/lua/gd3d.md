@@ -74,6 +74,10 @@ type ViewportFrame = CCNode & {
     clearInstances: (self: ViewportFrame) -> (),
     setCompositeEnabled: (self: ViewportFrame, enabled: boolean) -> (),
     texture: (self: ViewportFrame) -> Texture,
+    addDebugLine: (self: ViewportFrame, from: Vec3, to: Vec3, color: Vec3) -> number,
+    removeDebugLine: (self: ViewportFrame, id: number) -> boolean,
+    clearDebugLines: (self: ViewportFrame) -> (),
+    setDebugBounds: (self: ViewportFrame, enabled: boolean) -> (),
 }
 ```
 
@@ -290,6 +294,10 @@ viewport:removeInstance(id: number) -> boolean
 viewport:clearInstances() -> ()
 viewport:setCompositeEnabled(enabled: boolean) -> ()
 viewport:texture() -> Texture
+viewport:addDebugLine(from: Vec3, to: Vec3, color: Vec3) -> number
+viewport:removeDebugLine(id: number) -> boolean
+viewport:clearDebugLines() -> ()
+viewport:setDebugBounds(enabled: boolean) -> ()
 ```
 
 `addMesh` returns an instance id you pass to the other instance methods.
@@ -327,6 +335,22 @@ Repeated calls return handles for the same underlying render target until all pr
 Pass the texture to `gd3d.Material.new{ texture = ... }` to sample another viewport or mesh in the same scene.
 Texture content reflects the previous render of that viewport within the same frame, depending on node draw order.
 Resizing the viewport recreates the framebuffer and its OpenGL texture.
+
+Debug drawing overlays line segments on top of the 3D scene after opaque and blend passes.
+
+```lua
+viewport:addDebugLine(from: Vec3, to: Vec3, color: Vec3) -> number
+viewport:removeDebugLine(id: number) -> boolean
+viewport:clearDebugLines() -> ()
+viewport:setDebugBounds(enabled: boolean) -> ()
+```
+
+`addDebugLine` stores a world-space segment with an RGB color and returns a line id for later removal.
+`removeDebugLine` returns `false` when the id is unknown.
+`clearDebugLines` removes all user-added lines.
+`setDebugBounds(true)` draws a green wireframe box around each instance mesh bounding box (transformed by the instance pose).
+Debug lines respect the depth buffer (occluded by geometry) but do not write depth.
+Wireframe mesh mode is not supported (platform-inconsistent `glPolygonMode`).
 
 ### Rendering model
 

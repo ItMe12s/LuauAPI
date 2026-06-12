@@ -54,6 +54,10 @@ declare class Gd3dViewportFrame extends CCNode
     function clearInstances(self)
     function setCompositeEnabled(self, enabled: boolean)
     function texture(self): Gd3dTexture
+    function addDebugLine(self, from: Gd3dVec3, to: Gd3dVec3, color: Gd3dVec3): number
+    function removeDebugLine(self, id: number): boolean
+    function clearDebugLines(self)
+    function setDebugBounds(self, enabled: boolean)
 end
 
 export type Gd3dNamespace = {

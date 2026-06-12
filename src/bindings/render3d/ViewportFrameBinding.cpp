@@ -315,6 +315,36 @@ namespace {
         pushTextureHandle(L, self->ensureViewportTextureId());
         return 1;
     }
+
+    int viewportAddDebugLine(lua_State* L) {
+        auto* self = Usertype<CCViewportFrame>::check(L, 1, "ViewportFrame:addDebugLine");
+        auto const from = checkVec3(L, 2, "ViewportFrame:addDebugLine");
+        auto const to = checkVec3(L, 3, "ViewportFrame:addDebugLine");
+        auto const color = checkVec3(L, 4, "ViewportFrame:addDebugLine");
+
+        push(L, self->addDebugLine(from, to, color));
+        return 1;
+    }
+
+    int viewportRemoveDebugLine(lua_State* L) {
+        auto* self = Usertype<CCViewportFrame>::check(L, 1, "ViewportFrame:removeDebugLine");
+        int const lineId = check<int>(L, 2, "ViewportFrame:removeDebugLine");
+
+        push(L, self->removeDebugLine(lineId));
+        return 1;
+    }
+
+    int viewportClearDebugLines(lua_State* L) {
+        auto* self = Usertype<CCViewportFrame>::check(L, 1, "ViewportFrame:clearDebugLines");
+        self->clearDebugLines();
+        return 0;
+    }
+
+    int viewportSetDebugBounds(lua_State* L) {
+        auto* self = Usertype<CCViewportFrame>::check(L, 1, "ViewportFrame:setDebugBounds");
+        self->setDebugBounds(check<bool>(L, 2, "ViewportFrame:setDebugBounds"));
+        return 0;
+    }
 } // namespace
 
 namespace luax {
@@ -352,6 +382,10 @@ namespace luax {
         Usertype<CCViewportFrame>::method(L, "clearInstances", &viewportClearInstances);
         Usertype<CCViewportFrame>::method(L, "setCompositeEnabled", &viewportSetCompositeEnabled);
         Usertype<CCViewportFrame>::method(L, "texture", &viewportTexture);
+        Usertype<CCViewportFrame>::method(L, "addDebugLine", &viewportAddDebugLine);
+        Usertype<CCViewportFrame>::method(L, "removeDebugLine", &viewportRemoveDebugLine);
+        Usertype<CCViewportFrame>::method(L, "clearDebugLines", &viewportClearDebugLines);
+        Usertype<CCViewportFrame>::method(L, "setDebugBounds", &viewportSetDebugBounds);
 
         getOrCreateTable(L, "gd3d.ViewportFrame");
         setTableCFunction(L, -1, "new", &viewportNew);

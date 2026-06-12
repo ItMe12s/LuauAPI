@@ -29,7 +29,7 @@ Plus, you get fewer crashes and clear, easy-to-understand error logging.
 ## Upcoming
 
 - Custom UI builder, framework, pre-made assets
-- More 3D functionality and support
+- More advanced 3D functionality and support
 - Sprite and rig animator
 - The remaining 0.01% of bindings and m_Fields
 - Other quality of life features

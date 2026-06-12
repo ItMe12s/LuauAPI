@@ -38,6 +38,12 @@ namespace luax::render3d {
         std::map<int, std::shared_ptr<Material>> primitiveOverrides{};
     };
 
+    struct DebugLine {
+        glm::vec3 from{};
+        glm::vec3 to{};
+        glm::vec3 color{1.0f, 1.0f, 1.0f};
+    };
+
     class CCViewportFrame final : public cocos2d::CCNode {
     public:
         static CCViewportFrame* create(float width, float height);
@@ -71,6 +77,13 @@ namespace luax::render3d {
         void setCompositeEnabled(bool enabled);
         bool compositeEnabled() const;
 
+        int addDebugLine(glm::vec3 from, glm::vec3 to, glm::vec3 color);
+        bool removeDebugLine(int lineId);
+        void clearDebugLines();
+        void setDebugBounds(bool enabled);
+        bool debugBounds() const;
+        std::map<int, DebugLine> const& debugLines() const;
+
         std::uint64_t ensureViewportTextureId();
 
         void draw() override;
@@ -101,6 +114,10 @@ namespace luax::render3d {
 
         bool m_compositeEnabled = true;
         std::uint64_t m_viewportTextureId = 0;
+
+        std::map<int, DebugLine> m_debugLines{};
+        int m_nextDebugLineId = 1;
+        bool m_debugBounds = false;
     };
 
 } // namespace luax::render3d

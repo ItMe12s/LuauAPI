@@ -17,7 +17,8 @@ namespace luax::render3d {
 
         void renderToFramebuffer(
             unsigned int fbo, int pixelWidth, int pixelHeight, Camera3D const& camera,
-            std::map<int, ViewportInstance> const& instances, RenderSettings const& settings
+            std::map<int, ViewportInstance> const& instances, RenderSettings const& settings,
+            std::map<int, DebugLine> const& debugLines, bool debugBounds
         );
 
         void drawCompositeQuad(unsigned int colorTexture, float width, float height);
@@ -51,6 +52,13 @@ namespace luax::render3d {
         bool ensureBlitProgram();
         bool ensureBlitGeometry();
         bool ensureInstanceVbo();
+        bool ensureDebugLineProgram();
+        bool ensureDebugLineVbo();
+        void drawDebugOverlay(
+            glm::mat4 const& projection, glm::mat4 const& view,
+            std::map<int, DebugLine> const& debugLines, bool debugBounds,
+            std::map<int, ViewportInstance> const& instances
+        );
         GpuMesh* ensureGpuMesh(std::uint64_t meshId, MeshAsset const& meshAsset);
         unsigned int ensureGpuTexture(std::uint64_t textureId, TextureAsset const& textureAsset);
 
@@ -85,6 +93,11 @@ namespace luax::render3d {
         int m_blitLocMvp = -1;
         int m_blitLocTexture = -1;
         unsigned int m_blitVbo = 0;
+
+        unsigned int m_debugLineProgram = 0;
+        int m_debugLineLocMvp = -1;
+        int m_debugLineLocColor = -1;
+        unsigned int m_debugLineVbo = 0;
 
         std::unordered_map<std::uint64_t, GpuMesh> m_gpuMeshes;
         std::unordered_map<std::uint64_t, unsigned int> m_gpuTextures;

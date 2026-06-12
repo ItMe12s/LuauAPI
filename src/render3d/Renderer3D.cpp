@@ -112,6 +112,22 @@ void main() {
 }
 )";
 
+        char const kDebugLineVert[] = R"(attribute vec3 aPos;
+uniform mat4 uMVP;
+void main() {
+    gl_Position = uMVP * vec4(aPos, 1.0);
+}
+)";
+
+        char const kDebugLineFrag[] = R"(#ifdef GL_ES
+precision mediump float;
+#endif
+uniform vec3 uColor;
+void main() {
+    gl_FragColor = vec4(uColor, 1.0);
+}
+)";
+
         struct InterleavedVertex {
             float px;
             float py;
@@ -280,6 +296,12 @@ void main() {
             if (m_instanceVbo != 0) {
                 glDeleteBuffers(1, &m_instanceVbo);
             }
+            if (m_debugLineVbo != 0) {
+                glDeleteBuffers(1, &m_debugLineVbo);
+            }
+            if (m_debugLineProgram != 0) {
+                glDeleteProgram(m_debugLineProgram);
+            }
         }
         m_gpuMeshes.clear();
         m_gpuTextures.clear();
@@ -288,6 +310,8 @@ void main() {
         m_lambertProgram = 0;
         m_lambertInstProgram = 0;
         m_instanceVbo = 0;
+        m_debugLineVbo = 0;
+        m_debugLineProgram = 0;
     }
 
     void Renderer3D::releaseMeshGpu(std::uint64_t meshId) {
@@ -440,6 +464,154 @@ void main() {
         return m_blitVbo != 0;
     }
 
+    bool Renderer3D::ensureDebugLineProgram() {
+        if (m_debugLineProgram != 0) {
+            return true;
+        }
+
+        m_debugLineProgram =
+            buildProgram(kDebugLineVert, kDebugLineFrag, "debug-line", {{0, "aPos"}});
+        if (m_debugLineProgram == 0) {
+            return false;
+        }
+
+        m_debugLineLocMvp = glGetUniformLocation(m_debugLineProgram, "uMVP");
+        m_debugLineLocColor = glGetUniformLocation(m_debugLineProgram, "uColor");
+        return true;
+    }
+
+    bool Renderer3D::ensureDebugLineVbo() {
+        if (m_debugLineVbo != 0) {
+            return true;
+        }
+        glGenBuffers(1, &m_debugLineVbo);
+        return m_debugLineVbo != 0;
+    }
+
+    void Renderer3D::drawDebugOverlay(
+        glm::mat4 const& projection, glm::mat4 const& view,
+        std::map<int, DebugLine> const& debugLines, bool debugBounds,
+        std::map<int, ViewportInstance> const& instances
+    ) {
+        if (!ensureDebugLineProgram() || !ensureDebugLineVbo()) {
+            return;
+        }
+
+        struct LineSegment {
+            glm::vec3 from{};
+            glm::vec3 to{};
+            glm::vec3 color{1.0f, 1.0f, 1.0f};
+        };
+
+        std::vector<LineSegment> segments;
+        segments.reserve(debugLines.size() + instances.size() * 12);
+
+        for (auto const& [lineId, line] : debugLines) {
+            (void)lineId;
+            segments.push_back(LineSegment{line.from, line.to, line.color});
+        }
+
+        if (debugBounds) {
+            glm::vec3 const boundsColor{0.0f, 1.0f, 0.0f};
+            for (auto const& [instanceId, instance] : instances) {
+                (void)instanceId;
+                if (instance.mesh == nullptr) {
+                    continue;
+                }
+                BoundingBox const& bounds = instance.mesh->boundingBox();
+                if (bounds.empty) {
+                    continue;
+                }
+
+                glm::mat4 const model = instance.transform.toMat4();
+                glm::vec3 const corners[8] = {
+                    glm::vec3(model * glm::vec4(bounds.min.x, bounds.min.y, bounds.min.z, 1.0f)),
+                    glm::vec3(model * glm::vec4(bounds.max.x, bounds.min.y, bounds.min.z, 1.0f)),
+                    glm::vec3(model * glm::vec4(bounds.max.x, bounds.max.y, bounds.min.z, 1.0f)),
+                    glm::vec3(model * glm::vec4(bounds.min.x, bounds.max.y, bounds.min.z, 1.0f)),
+                    glm::vec3(model * glm::vec4(bounds.min.x, bounds.min.y, bounds.max.z, 1.0f)),
+                    glm::vec3(model * glm::vec4(bounds.max.x, bounds.min.y, bounds.max.z, 1.0f)),
+                    glm::vec3(model * glm::vec4(bounds.max.x, bounds.max.y, bounds.max.z, 1.0f)),
+                    glm::vec3(model * glm::vec4(bounds.min.x, bounds.max.y, bounds.max.z, 1.0f)),
+                };
+
+                auto addEdge = [&](int a, int b) {
+                    segments.push_back(LineSegment{corners[a], corners[b], boundsColor});
+                };
+
+                addEdge(0, 1);
+                addEdge(1, 2);
+                addEdge(2, 3);
+                addEdge(3, 0);
+                addEdge(4, 5);
+                addEdge(5, 6);
+                addEdge(6, 7);
+                addEdge(7, 4);
+                addEdge(0, 4);
+                addEdge(1, 5);
+                addEdge(2, 6);
+                addEdge(3, 7);
+            }
+        }
+
+        if (segments.empty()) {
+            return;
+        }
+
+        std::sort(segments.begin(), segments.end(), [](LineSegment const& a, LineSegment const& b) {
+            if (a.color.x != b.color.x) {
+                return a.color.x < b.color.x;
+            }
+            if (a.color.y != b.color.y) {
+                return a.color.y < b.color.y;
+            }
+            return a.color.z < b.color.z;
+        });
+
+        glm::mat4 const viewProj = projection * view;
+        glUseProgram(m_debugLineProgram);
+        glUniformMatrix4fv(m_debugLineLocMvp, 1, GL_FALSE, glm::value_ptr(viewProj));
+        glDisable(GL_CULL_FACE);
+        glDepthMask(GL_FALSE);
+
+        glBindBuffer(GL_ARRAY_BUFFER, m_debugLineVbo);
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(
+            0, 3, GL_FLOAT, GL_FALSE, static_cast<GLsizei>(sizeof(glm::vec3)), nullptr
+        );
+
+        std::size_t runStart = 0;
+        while (runStart < segments.size()) {
+            glm::vec3 const runColor = segments[runStart].color;
+            std::size_t runEnd = runStart + 1;
+            while (runEnd < segments.size() && segments[runEnd].color == runColor) {
+                ++runEnd;
+            }
+
+            std::vector<glm::vec3> vertices;
+            vertices.reserve((runEnd - runStart) * 2);
+            for (std::size_t i = runStart; i < runEnd; ++i) {
+                vertices.push_back(segments[i].from);
+                vertices.push_back(segments[i].to);
+            }
+
+            glBufferData(
+                GL_ARRAY_BUFFER,
+                static_cast<GLsizeiptr>(vertices.size() * sizeof(glm::vec3)),
+                vertices.data(),
+                GL_DYNAMIC_DRAW
+            );
+            glUniform3fv(m_debugLineLocColor, 1, glm::value_ptr(runColor));
+            glDrawArrays(GL_LINES, 0, static_cast<GLsizei>(vertices.size()));
+
+            runStart = runEnd;
+        }
+
+        glDisableVertexAttribArray(0);
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+        glDepthMask(GL_TRUE);
+    }
+
     Renderer3D::GpuMesh* Renderer3D::ensureGpuMesh(std::uint64_t meshId, MeshAsset const& meshAsset) {
         auto& gpuMesh = m_gpuMeshes[meshId];
         if (!gpuMesh.primitives.empty()) {
@@ -536,7 +708,8 @@ void main() {
 
     void Renderer3D::renderToFramebuffer(
         unsigned int fbo, int pixelWidth, int pixelHeight, Camera3D const& camera,
-        std::map<int, ViewportInstance> const& instances, RenderSettings const& settings
+        std::map<int, ViewportInstance> const& instances, RenderSettings const& settings,
+        std::map<int, DebugLine> const& debugLines, bool debugBounds
     ) {
         if (fbo == 0 || pixelWidth <= 0 || pixelHeight <= 0) {
             return;
@@ -960,6 +1133,10 @@ void main() {
             glDepthMask(GL_FALSE);
             drawBlendItems(blendItems);
             glDepthMask(GL_TRUE);
+        }
+
+        if (!debugLines.empty() || debugBounds) {
+            drawDebugOverlay(projection, view, debugLines, debugBounds, instances);
         }
 
         if (useVao) {

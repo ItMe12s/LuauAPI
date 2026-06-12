@@ -148,6 +148,32 @@ namespace luax::render3d {
         return m_compositeEnabled;
     }
 
+    int CCViewportFrame::addDebugLine(glm::vec3 from, glm::vec3 to, glm::vec3 color) {
+        int const id = m_nextDebugLineId++;
+        m_debugLines.emplace(id, DebugLine{from, to, color});
+        return id;
+    }
+
+    bool CCViewportFrame::removeDebugLine(int lineId) {
+        return m_debugLines.erase(lineId) > 0;
+    }
+
+    void CCViewportFrame::clearDebugLines() {
+        m_debugLines.clear();
+    }
+
+    void CCViewportFrame::setDebugBounds(bool enabled) {
+        m_debugBounds = enabled;
+    }
+
+    bool CCViewportFrame::debugBounds() const {
+        return m_debugBounds;
+    }
+
+    std::map<int, DebugLine> const& CCViewportFrame::debugLines() const {
+        return m_debugLines;
+    }
+
     std::uint64_t CCViewportFrame::ensureViewportTextureId() {
         if (m_viewportTextureId != 0) {
             if (TextureRegistry::instance().get(m_viewportTextureId) != nullptr) {
@@ -183,7 +209,7 @@ namespace luax::render3d {
 
         auto& renderer = Renderer3D::instance();
         renderer.renderToFramebuffer(
-            m_fbo, m_fboPixelWidth, m_fboPixelHeight, m_camera, m_instances, m_settings
+            m_fbo, m_fboPixelWidth, m_fboPixelHeight, m_camera, m_instances, m_settings, m_debugLines, m_debugBounds
         );
         if (m_compositeEnabled) {
             renderer.drawCompositeQuad(m_colorTexture, size.width, size.height);
