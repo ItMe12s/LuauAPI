@@ -37,8 +37,10 @@ CTest discovers the cases at build time. The files are:
 | `tests/fields_tests.cpp` | `m_fields` and release eviction |
 | `tests/geode_fs_path_tests.cpp` | Geode filesystem binding path resolution |
 | `tests/handle_gc_tests.cpp` | Task and ImGui draw handle `__gc` cancellation |
-| `tests/host/GltfParseTests.cpp` | glTF CPU parse of `resources/test_donut.glb` |
-| `tests/host/Render3DMathTests.cpp` | 3D transform compose, inverse, and lerp |
+| `tests/host/GltfParseTests.cpp` | glTF parse, materials, alpha flags |
+| `tests/host/ProceduralMeshTests.cpp` | Procedural mesh build and validation |
+| `tests/host/FrustumTests.cpp` | Frustum culling math |
+| `tests/host/Render3DMathTests.cpp` | Transform math and helpers |
 | `tests/imgui_scheduler_tests.cpp` | ImGui draw scheduler registration |
 | `tests/indexed_slot_map_tests.cpp` | Indexed slot map used by the schedulers |
 | `tests/loadstring_tests.cpp` | `loadstring` compile and runtime behavior |
@@ -74,9 +76,8 @@ The `luauapi_tests` target links only:
 
 Which keeps the tests fast and host only.
 
-The host test binary also compiles a slice of the 3D loader (`MeshAsset`, `GltfIo`, `ImageDecode`)
-for parse and math coverage. It does not link OpenGL, cocos2d, or the gd3d Lua bindings.
-Viewport rendering is validated in-game only.
+The host test binary compiles part of the 3D stack for parse and math coverage.
+It does not link OpenGL, cocos2d, or gd3d Lua bindings. Viewport rendering is tested in-game only.
 
 ## The Python codegen tests
 

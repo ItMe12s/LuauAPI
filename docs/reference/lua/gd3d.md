@@ -5,7 +5,7 @@
 `gd3d` provides lightweight 3D rendering inside the cocos2d scene graph.
 Load glTF meshes, place them in a `ViewportFrame` node, and attach that node like any other `CCNode`.
 
-The namespace has five parts:
+The namespace has six parts:
 
 - `gd3d.Transform` for position and rotation
 - `gd3d.gltf` for loading mesh assets
@@ -111,8 +111,8 @@ transform:eulerAngles() -> Vec3
 transform * otherTransform -> Transform
 ```
 
-Transforms are immutable. `withPosition` and `withRotation` return new values without mutating the receiver.
-`eulerAngles` returns pitch, yaw, and roll in radians (same convention as `fromEuler`).
+Transforms are immutable. `withPosition` and `withRotation` return new values.
+`eulerAngles` returns pitch, yaw, and roll in radians.
 
 ## glTF loading
 
@@ -123,16 +123,14 @@ gd3d.gltf.loadMeshFromBytes(bytes: buffer | string) -> (Mesh?, string?)
 
 `loadMesh` loads a glTF 2.0 file (`.glb` or `.gltf`) from a mod sandbox root.
 `loadMeshFromBytes` loads glTF data already in memory. Pass a Luau `buffer` or raw `string`.
-Use GLB with embedded buffers and images only, external URI references are not resolved
-and fail with the loader's usual buffer or image errors.
+Use GLB with embedded buffers and images only.
+External URI references fail with the loader's usual buffer or image errors.
 The same 32 MiB read cap as `loadMesh` applies.
 The first argument uses the same roots as [fs](fs.md): `"save"`, `"config"`, `"persistent"`, or `"resources"`.
 Shipped assets belong under `"resources"`.
 
 Returns a mesh handle, or `nil` and an error message.
-Mesh data is released when the handle is collected and no viewport instance uses it anymore.
-Viewport instances added with `addMesh` keep the mesh alive on their own,
-so you do not need to keep the handle around after adding.
+`addMesh` keeps the mesh alive. You do not need to keep the handle after adding.
 
 Supported content:
 
@@ -140,6 +138,7 @@ Supported content:
 - Triangle primitives only
 - Node world transforms baked into vertex positions and normals
 - glTF materials: `pbr_metallic_roughness.base_color_factor`
+- glTF material flags: `alphaMode` (`OPAQUE`, `MASK`, `BLEND`), `alphaCutoff`, `doubleSided`
 - Base color textures (PNG or JPEG), embedded in GLB or referenced inside the sandbox root
 - `TEXCOORD_0` on primitives that use a base color texture
 
@@ -149,15 +148,14 @@ Not supported:
 - meshopt compression
 - Sparse accessors
 - Metallic/roughness maps, normal maps, emissive textures
-- Alpha blending (`alphaMode` blend)
 - KHR texture extensions (BasisU, WebP, and similar)
+- Multisample anti-aliasing (MSAA)
 
 Primitives with a textured material must include `TEXCOORD_0`, loading fails otherwise.
 
-The loader walks every glTF node that has a mesh and merges them into one asset.
-Node transforms are baked into vertex positions and normals.
-It does not preserve the scene hierarchy, skeletal animation, morph targets, or glTF cameras and lights.
-Loading the same file again creates a new mesh handle and uploads GPU data again.
+All mesh nodes merge into one asset. Node transforms bake into vertices and normals.
+No scene hierarchy, animation, morph targets, or glTF cameras and lights.
+Reloading creates a new handle and uploads GPU data again.
 
 Mesh methods:
 
@@ -191,18 +189,17 @@ gd3d.mesh.new(data: {
 
 Builds a mesh from CPU-side geometry without a glTF file.
 Returns the same `Mesh` handle type as `gd3d.gltf.loadMesh`,
-so it works with `viewport:addMesh`, materials,and the rest of the gd3d pipeline.
+so it works with `viewport:addMesh`, materials, and the rest of the gd3d pipeline.
 
 `positions` is required and must contain at least one vertex (maximum 200,000).
-`indices` is required and must list triangle corners as **1-based** vertex indices (Luau convention).
-Each group of three entries forms one triangle, the count must be a multiple of three.
+`indices` is required. Use 1-based vertex indices (Luau convention).
+Each group of three entries is one triangle. The count must be a multiple of three.
 
-When `normals` is omitted, flat normals are computed by accumulating face normals per vertex and normalizing.
-When provided, `normals` must have the same length as `positions`.
-When provided, `uvs` must have the same length as `positions`.
+If `normals` is omitted, flat normals are computed from face normals.
+`normals` and `uvs`, when provided, must match `positions` length.
 
-The resulting mesh has one primitive with no embedded materials (`materialCount()` is `0`),
-assign a runtime material with `viewport:addMesh` or `viewport:setInstanceMaterial`.
+The mesh has one primitive and no embedded materials (`materialCount()` is `0`).
+Set a material with `viewport:addMesh` or `viewport:setInstanceMaterial`.
 
 ## Texture loading
 
@@ -244,20 +241,17 @@ material:baseColor() -> { r: number, g: number, b: number, a: number }
 material:hasTexture() -> boolean
 ```
 
-`hasTexture` is `true` when the material has a standalone texture from `gd3d.texture.load`,
-a viewport render target from `viewport:texture()`, or a glTF base color texture from `mesh:getMaterial`.
+`hasTexture` is `true` for a loaded image, viewport render target, or glTF base color texture.
 
 ### Instance override
 
-Each viewport instance draws with glTF materials by default, every primitive uses its own `materialIndex` from the file.
-Pass an optional fourth argument to `addMesh`, or call `setInstanceMaterial`,
-to replace all primitives in that instance with one material.
-Pass `nil` to `setInstanceMaterial` to clear the override and restore per-primitive glTF materials.
-Use `setInstancePrimitiveMaterial` to override a single primitive by index (0-based, matching `mesh:primitiveCount()`).
-Per-primitive overrides take priority over the instance-wide override.
-Pass `nil` to clear a per-primitive override.
-`setInstanceColor` multiplies the final shaded color (material albedo times lighting) by a per-instance RGB tint.
-Default tint is white `{ x = 1, y = 1, z = 1 }`.
+By default each primitive uses its glTF `materialIndex`.
+Pass a fourth argument to `addMesh`, or call `setInstanceMaterial`, to replace all primitives with one material.
+Pass `nil` to clear that override.
+
+`setInstancePrimitiveMaterial` overrides one primitive (0-based index).
+Per-primitive overrides beat the instance-wide override.
+`setInstanceColor` tints the shaded result. Default is white `{ x = 1, y = 1, z = 1 }`.
 
 ## ViewportFrame
 
@@ -300,73 +294,37 @@ viewport:clearDebugLines() -> ()
 viewport:setDebugBounds(enabled: boolean) -> ()
 ```
 
-`addMesh` returns an instance id you pass to the other instance methods.
-The optional `material` argument sets an instance-wide material override at creation time.
-`setInstanceMaterial`, `setInstancePrimitiveMaterial`, `setInstanceColor`, `setInstanceTransform`, and `removeInstance` return `false` when the id is unknown.
+`addMesh` returns an instance id. The optional `material` sets an instance-wide override.
+Setter methods return `false` for an unknown id. Readback methods return `nil`.
 
-Readback methods return `nil` for an unknown id.
-`getInstanceMaterial` returns the instance-wide override set by `addMesh` or `setInstanceMaterial`,
-or `nil` when no override is active (glTF per-primitive materials are not returned).
-`getInstancePrimitiveMaterial` returns the per-primitive override for that index, or `nil` when none is set.
-`getInstanceIds` returns all instance ids in ascending order.
-`instanceCount` is the number of active instances.
+The camera transform is the camera world pose. The renderer uses its inverse for the view matrix.
 
-The camera transform is the camera's world pose.
-The renderer uses its inverse for the view matrix and a vertical field-of-view perspective projection.
+Background color clears the off-screen buffer. Default is transparent `{ r = 0, g = 0, b = 0, a = 0 }`.
+Alpha below 1 lets the 2D scene show through.
 
-Background color clears the off-screen buffer before drawing instances.
-Use `{ r, g, b, a }` for RGBA, or a `Vec3` `{ x, y, z }` for opaque RGB.
-Default is fully transparent `{ r = 0, g = 0, b = 0, a = 0 }`.
-When alpha is less than 1, the 2D scene behind the viewport shows through.
+`setLight` sets direction, color, and intensity. Zero-length direction errors.
+`setAmbient` clamps to `[0, 4]`. Defaults: direction `{ x = 0.35, y = 0.85, z = 0.4 }`, white light, intensity `1`, ambient `0.15`.
 
-Lighting uses a fixed Lambert shader with one directional light plus ambient fill.
-`setLight` sets the light direction (normalized at render time), RGB color, and intensity multiplier.
-Omit `color` for white `{ x = 1, y = 1, z = 1 }` and `intensity` for `1`.
-A zero-length direction raises an error.
-`setAmbient` clamps its argument to the range `[0, 4]`.
-`getLight` returns the current direction, color, intensity, and ambient values.
-Defaults match the built-in look: direction `{ x = 0.35, y = 0.85, z = 0.4 }`, white light, intensity `1`, ambient `0.15`.
+`setCompositeEnabled(false)` skips compositing into the 2D scene. The 3D pass still runs so `texture()` works.
 
-`setCompositeEnabled(false)` skips drawing the viewport texture into the 2D scene graph.
-The off-screen 3D pass still runs so `texture()` stays valid for use as a material texture elsewhere.
+`texture()` returns a `Texture` for the color buffer. Use it in `gd3d.Material.new{ texture = ... }`.
+Content is from the previous render in the same frame. Resizing recreates the framebuffer.
 
-`texture()` returns a `Texture` handle for the viewport color buffer.
-Repeated calls return handles for the same underlying render target until all prior handles are collected.
-Pass the texture to `gd3d.Material.new{ texture = ... }` to sample another viewport or mesh in the same scene.
-Texture content reflects the previous render of that viewport within the same frame, depending on node draw order.
-Resizing the viewport recreates the framebuffer and its OpenGL texture.
-
-Debug drawing overlays line segments on top of the 3D scene after opaque and blend passes.
-
-```lua
-viewport:addDebugLine(from: Vec3, to: Vec3, color: Vec3) -> number
-viewport:removeDebugLine(id: number) -> boolean
-viewport:clearDebugLines() -> ()
-viewport:setDebugBounds(enabled: boolean) -> ()
-```
-
-`addDebugLine` stores a world-space segment with an RGB color and returns a line id for later removal.
-`removeDebugLine` returns `false` when the id is unknown.
-`clearDebugLines` removes all user-added lines.
-`setDebugBounds(true)` draws a green wireframe box around each instance mesh bounding box (transformed by the instance pose).
-Debug lines respect the depth buffer (occluded by geometry) but do not write depth.
-Wireframe mesh mode is not supported (platform-inconsistent `glPolygonMode`).
+`addDebugLine` draws a world-space line and returns an id. `setDebugBounds(true)` draws green boxes around instance bounds.
+Debug lines read depth but do not write it. Full mesh wireframe is not supported.
 
 ### Rendering model
 
-Drawing needs an active OpenGL context from the game.
-If the context is not ready yet, framebuffer setup and draw calls are skipped until it is.
+Drawing needs an active OpenGL context. If it is not ready, framebuffer setup and draws are skipped.
 
-The viewport renders into an off-screen buffer sized in pixels using the cocos content scale factor,
-then blits that texture into the scene graph.
+The viewport renders to an off-screen framebuffer at the cocos content scale.
+Opaque and mask draws run first. Blend draws run second, sorted back to front.
+`doubleSided` disables culling. Off-screen instances are frustum culled.
+Opaque draws are sorted by texture and mesh. VAOs and GPU instancing are used when supported.
 
-Shading is a fixed Lambert pass with configurable light direction, color, intensity, and ambient level.
-There is no alpha blending. Instances draw opaque.
+Reloading a mesh uploads fresh GPU data.
 
-Reloading a mesh file or creating a new handle uploads fresh GPU data even when the path is the same.
-
-See [Examples](../../getting-started/examples.md).
-See [src/scripts/_viewportdemo.luau](../../../src/scripts/_viewportdemo.luau) for a longer demo with color cycling.
+See [Examples](../../getting-started/examples.md) and [src/scripts/_viewportdemo.luau](../../../src/scripts/_viewportdemo.luau).
 
 ## Limits
 
