@@ -35,8 +35,8 @@ namespace luax::render3d {
         glGetBooleanv(GL_DEPTH_WRITEMASK, &depthMask);
         glGetBooleanv(GL_CULL_FACE, &cullEnabled);
         glGetBooleanv(GL_BLEND, &blendEnabled);
-        glGetIntegerv(GL_BLEND_SRC, &blendSrc);
-        glGetIntegerv(GL_BLEND_DST, &blendDst);
+        glGetIntegerv(GL_BLEND_SRC_RGB, &blendSrc);
+        glGetIntegerv(GL_BLEND_DST_RGB, &blendDst);
         glGetIntegerv(GL_TEXTURE_BINDING_2D, &boundTexture);
     }
 

@@ -12,7 +12,7 @@
 	"developer": "imes",
 	"early-load": true,
 	"load-priority": "first",
-	"description": "Shared Luau runtime API for Geode mods.",
+	"description": "Make Geode mods in Luau :3",
 	"tags": [
 		"universal",
 		"utility",
