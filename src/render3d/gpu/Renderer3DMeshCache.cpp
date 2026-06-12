@@ -1,0 +1,216 @@
+#include "render3d/gpu/Renderer3DMeshCache.hpp"
+
+#include "render3d/assets/MeshAsset.hpp"
+#include "render3d/assets/TextureAsset.hpp"
+#include "render3d/gpu/GlUtil.hpp"
+#include "render3d/gpu/VertexLayout.hpp"
+
+#include <glm/glm.hpp>
+
+namespace luax::render3d {
+
+    void Renderer3DMeshCache::deleteGpuPrimitive(GpuPrimitive& primitive) {
+        deleteVao(primitive.vao);
+        if (primitive.vbo != 0) {
+            glDeleteBuffers(1, &primitive.vbo);
+        }
+        if (primitive.ibo != 0) {
+            glDeleteBuffers(1, &primitive.ibo);
+        }
+        primitive = {};
+    }
+
+    void Renderer3DMeshCache::deleteGpuMesh(GpuMesh& mesh) {
+        for (auto& primitive : mesh.primitives) {
+            deleteGpuPrimitive(primitive);
+        }
+        mesh.primitives.clear();
+        if (glContextAvailable()) {
+            for (unsigned int texture : mesh.textures) {
+                if (texture != 0) {
+                    glDeleteTextures(1, &texture);
+                }
+            }
+        }
+        mesh.textures.clear();
+    }
+
+    void Renderer3DMeshCache::destroyAllGpuResources() {
+        if (!glContextAvailable()) {
+            return;
+        }
+        for (auto& [meshId, mesh] : m_gpuMeshes) {
+            (void)meshId;
+            deleteGpuMesh(mesh);
+        }
+        for (auto& [textureId, texture] : m_gpuTextures) {
+            (void)textureId;
+            if (texture != 0) {
+                glDeleteTextures(1, &texture);
+            }
+        }
+    }
+
+    void Renderer3DMeshCache::clear() {
+        m_gpuMeshes.clear();
+        m_gpuTextures.clear();
+    }
+
+    void Renderer3DMeshCache::releaseMeshGpu(std::uint64_t meshId) {
+        auto it = m_gpuMeshes.find(meshId);
+        if (it == m_gpuMeshes.end()) {
+            return;
+        }
+        if (glContextAvailable()) {
+            deleteGpuMesh(it->second);
+        }
+        m_gpuMeshes.erase(it);
+    }
+
+    void Renderer3DMeshCache::releaseTextureGpu(std::uint64_t textureId) {
+        auto it = m_gpuTextures.find(textureId);
+        if (it == m_gpuTextures.end()) {
+            return;
+        }
+        if (glContextAvailable() && it->second != 0) {
+            glDeleteTextures(1, &it->second);
+        }
+        m_gpuTextures.erase(it);
+    }
+
+    unsigned int Renderer3DMeshCache::ensureGpuTexture(
+        std::uint64_t textureId, TextureAsset const& textureAsset
+    ) {
+        unsigned int const viewportTexture = textureAsset.viewportColorTexture();
+        if (viewportTexture != 0) {
+            return viewportTexture;
+        }
+
+        auto const existing = m_gpuTextures.find(textureId);
+        if (existing != m_gpuTextures.end() && existing->second != 0) {
+            return existing->second;
+        }
+
+        auto const& image = textureAsset.cpu;
+        if (image.width <= 0 || image.height <= 0 || image.rgba.empty()) {
+            return 0;
+        }
+
+        unsigned int texture = 0;
+        glGenTextures(1, &texture);
+        glBindTexture(GL_TEXTURE_2D, texture);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        glTexImage2D(
+            GL_TEXTURE_2D,
+            0,
+            GL_RGBA,
+            image.width,
+            image.height,
+            0,
+            GL_RGBA,
+            GL_UNSIGNED_BYTE,
+            image.rgba.data()
+        );
+        glBindTexture(GL_TEXTURE_2D, 0);
+        m_gpuTextures[textureId] = texture;
+        return texture;
+    }
+
+    GpuMesh* Renderer3DMeshCache::ensureGpuMesh(std::uint64_t meshId, MeshAsset const& meshAsset) {
+        auto& gpuMesh = m_gpuMeshes[meshId];
+        if (!gpuMesh.primitives.empty()) {
+            return &gpuMesh;
+        }
+
+        auto const& srcPrimitives = meshAsset.primitives();
+        gpuMesh.primitives.resize(srcPrimitives.size());
+
+        for (std::size_t i = 0; i < srcPrimitives.size(); ++i) {
+            auto const& src = srcPrimitives[i];
+            auto& gpu = gpuMesh.primitives[i];
+
+            if (src.positions.empty() || src.indices.empty()) {
+                continue;
+            }
+
+            std::vector<InterleavedVertex> vertices;
+            vertices.reserve(src.positions.size());
+            for (std::size_t v = 0; v < src.positions.size(); ++v) {
+                glm::vec3 const& pos = src.positions[v];
+                glm::vec3 normal{0.0f, 1.0f, 0.0f};
+                if (v < src.normals.size()) {
+                    normal = src.normals[v];
+                }
+                glm::vec2 uv{0.0f, 0.0f};
+                if (v < src.texcoords.size()) {
+                    uv = src.texcoords[v];
+                }
+                vertices.push_back(
+                    InterleavedVertex{pos.x, pos.y, pos.z, normal.x, normal.y, normal.z, uv.x, uv.y}
+                );
+            }
+
+            glGenBuffers(1, &gpu.vbo);
+            glGenBuffers(1, &gpu.ibo);
+
+            glBindBuffer(GL_ARRAY_BUFFER, gpu.vbo);
+            glBufferData(
+                GL_ARRAY_BUFFER,
+                static_cast<GLsizeiptr>(vertices.size() * sizeof(InterleavedVertex)),
+                vertices.data(),
+                GL_STATIC_DRAW
+            );
+
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, gpu.ibo);
+            glBufferData(
+                GL_ELEMENT_ARRAY_BUFFER,
+                static_cast<GLsizeiptr>(src.indices.size() * sizeof(std::uint32_t)),
+                src.indices.data(),
+                GL_STATIC_DRAW
+            );
+
+            gpu.indexCount = static_cast<unsigned int>(src.indices.size());
+            gpu.materialIndex = src.materialIndex;
+            uploadGpuPrimitiveVertexLayout(gpu.vao, gpu.vbo, gpu.ibo);
+        }
+
+        auto const& images = meshAsset.images();
+        gpuMesh.textures.resize(images.size());
+        for (std::size_t i = 0; i < images.size(); ++i) {
+            auto const& image = images[i];
+            if (image.width <= 0 || image.height <= 0 || image.rgba.empty()) {
+                gpuMesh.textures[i] = 0;
+                continue;
+            }
+
+            unsigned int texture = 0;
+            glGenTextures(1, &texture);
+            glBindTexture(GL_TEXTURE_2D, texture);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+            glTexImage2D(
+                GL_TEXTURE_2D,
+                0,
+                GL_RGBA,
+                image.width,
+                image.height,
+                0,
+                GL_RGBA,
+                GL_UNSIGNED_BYTE,
+                image.rgba.data()
+            );
+            gpuMesh.textures[i] = texture;
+        }
+
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+        glBindTexture(GL_TEXTURE_2D, 0);
+        return &gpuMesh;
+    }
+
+} // namespace luax::render3d

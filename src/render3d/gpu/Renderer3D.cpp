@@ -3,7 +3,7 @@
 #include "render3d/assets/MeshAsset.hpp"
 #include "render3d/assets/TextureAsset.hpp"
 #include "render3d/gpu/GlUtil.hpp"
-#include "render3d/gpu/ShaderSources.hpp"
+#include "render3d/gpu/Renderer3DResourceLifetime.hpp"
 #include "render3d/gpu/VertexLayout.hpp"
 #include "render3d/types/Frustum.hpp"
 
@@ -44,258 +44,16 @@ namespace luax::render3d {
         destroyGlResources();
     }
 
-    void Renderer3D::deleteGpuPrimitive(GpuPrimitive& primitive) {
-        deleteVao(primitive.vao);
-        if (primitive.vbo != 0) {
-            glDeleteBuffers(1, &primitive.vbo);
-        }
-        if (primitive.ibo != 0) {
-            glDeleteBuffers(1, &primitive.ibo);
-        }
-        primitive = {};
-    }
-
-    void Renderer3D::deleteGpuMesh(GpuMesh& mesh) {
-        for (auto& primitive : mesh.primitives) {
-            deleteGpuPrimitive(primitive);
-        }
-        mesh.primitives.clear();
-        if (glContextAvailable()) {
-            for (unsigned int texture : mesh.textures) {
-                if (texture != 0) {
-                    glDeleteTextures(1, &texture);
-                }
-            }
-        }
-        mesh.textures.clear();
-    }
-
     void Renderer3D::destroyGlResources() {
-        if (glContextAvailable()) {
-            for (auto& [meshId, mesh] : m_gpuMeshes) {
-                (void)meshId;
-                deleteGpuMesh(mesh);
-            }
-            for (auto& [textureId, texture] : m_gpuTextures) {
-                (void)textureId;
-                if (texture != 0) {
-                    glDeleteTextures(1, &texture);
-                }
-            }
-            if (m_blitVbo != 0) {
-                glDeleteBuffers(1, &m_blitVbo);
-            }
-            if (m_blitProgram != 0) {
-                glDeleteProgram(m_blitProgram);
-            }
-            if (m_lambertProgram != 0) {
-                glDeleteProgram(m_lambertProgram);
-            }
-            if (m_lambertInstProgram != 0) {
-                glDeleteProgram(m_lambertInstProgram);
-            }
-            if (m_instanceVbo != 0) {
-                glDeleteBuffers(1, &m_instanceVbo);
-            }
-            if (m_debugLineVbo != 0) {
-                glDeleteBuffers(1, &m_debugLineVbo);
-            }
-            if (m_debugLineProgram != 0) {
-                glDeleteProgram(m_debugLineProgram);
-            }
-        }
-        m_gpuMeshes.clear();
-        m_gpuTextures.clear();
-        m_blitVbo = 0;
-        m_blitProgram = 0;
-        m_lambertProgram = 0;
-        m_lambertInstProgram = 0;
-        m_instanceVbo = 0;
-        m_debugLineVbo = 0;
-        m_debugLineProgram = 0;
+        destroyRenderer3DGlResources(m_programs, m_meshCache);
     }
 
     void Renderer3D::releaseMeshGpu(std::uint64_t meshId) {
-        auto it = m_gpuMeshes.find(meshId);
-        if (it == m_gpuMeshes.end()) {
-            return;
-        }
-        if (glContextAvailable()) {
-            deleteGpuMesh(it->second);
-        }
-        m_gpuMeshes.erase(it);
+        m_meshCache.releaseMeshGpu(meshId);
     }
 
     void Renderer3D::releaseTextureGpu(std::uint64_t textureId) {
-        auto it = m_gpuTextures.find(textureId);
-        if (it == m_gpuTextures.end()) {
-            return;
-        }
-        if (glContextAvailable() && it->second != 0) {
-            glDeleteTextures(1, &it->second);
-        }
-        m_gpuTextures.erase(it);
-    }
-
-    unsigned int Renderer3D::ensureGpuTexture(std::uint64_t textureId, TextureAsset const& textureAsset) {
-        unsigned int const viewportTexture = textureAsset.viewportColorTexture();
-        if (viewportTexture != 0) {
-            return viewportTexture;
-        }
-
-        auto const existing = m_gpuTextures.find(textureId);
-        if (existing != m_gpuTextures.end() && existing->second != 0) {
-            return existing->second;
-        }
-
-        auto const& image = textureAsset.cpu;
-        if (image.width <= 0 || image.height <= 0 || image.rgba.empty()) {
-            return 0;
-        }
-
-        unsigned int texture = 0;
-        glGenTextures(1, &texture);
-        glBindTexture(GL_TEXTURE_2D, texture);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-        glTexImage2D(
-            GL_TEXTURE_2D,
-            0,
-            GL_RGBA,
-            image.width,
-            image.height,
-            0,
-            GL_RGBA,
-            GL_UNSIGNED_BYTE,
-            image.rgba.data()
-        );
-        glBindTexture(GL_TEXTURE_2D, 0);
-        m_gpuTextures[textureId] = texture;
-        return texture;
-    }
-
-    bool Renderer3D::ensureLambertProgram() {
-        if (m_lambertProgram != 0) {
-            return true;
-        }
-
-        m_lambertProgram = buildProgram(
-            shader_sources::kLambertVert,
-            shader_sources::kLambertFrag,
-            "lambert",
-            {{0, "aPos"}, {1, "aNormal"}, {2, "aTexCoord"}}
-        );
-        if (m_lambertProgram == 0) {
-            return false;
-        }
-
-        m_lambertLocMvp = glGetUniformLocation(m_lambertProgram, "uMVP");
-        m_lambertLocNormalMat = glGetUniformLocation(m_lambertProgram, "uNormalMat");
-        m_lambertLocLightDir = glGetUniformLocation(m_lambertProgram, "uLightDir");
-        m_lambertLocLightColor = glGetUniformLocation(m_lambertProgram, "uLightColor");
-        m_lambertLocAmbient = glGetUniformLocation(m_lambertProgram, "uAmbient");
-        m_lambertLocBaseColor = glGetUniformLocation(m_lambertProgram, "uBaseColor");
-        m_lambertLocTexture = glGetUniformLocation(m_lambertProgram, "uTexture");
-        m_lambertLocUseTexture = glGetUniformLocation(m_lambertProgram, "uUseTexture");
-        m_lambertLocAlphaCutoff = glGetUniformLocation(m_lambertProgram, "uAlphaCutoff");
-        m_lambertLocTint = glGetUniformLocation(m_lambertProgram, "uTint");
-        return true;
-    }
-
-    bool Renderer3D::ensureLambertInstProgram() {
-        if (m_lambertInstProgram != 0) {
-            return true;
-        }
-
-        m_lambertInstProgram = buildProgram(
-            shader_sources::kLambertInstVert,
-            shader_sources::kLambertFrag,
-            "lambert-inst",
-            {{0, "aPos"},
-             {1, "aNormal"},
-             {2, "aTexCoord"},
-             {3, "aModel0"},
-             {4, "aModel1"},
-             {5, "aModel2"},
-             {6, "aModel3"},
-             {7, "aTint"}}
-        );
-        if (m_lambertInstProgram == 0) {
-            return false;
-        }
-
-        m_lambertInstLocViewProj = glGetUniformLocation(m_lambertInstProgram, "uViewProj");
-        m_lambertInstLocLightDir = glGetUniformLocation(m_lambertInstProgram, "uLightDir");
-        m_lambertInstLocLightColor = glGetUniformLocation(m_lambertInstProgram, "uLightColor");
-        m_lambertInstLocAmbient = glGetUniformLocation(m_lambertInstProgram, "uAmbient");
-        m_lambertInstLocBaseColor = glGetUniformLocation(m_lambertInstProgram, "uBaseColor");
-        m_lambertInstLocTexture = glGetUniformLocation(m_lambertInstProgram, "uTexture");
-        m_lambertInstLocUseTexture = glGetUniformLocation(m_lambertInstProgram, "uUseTexture");
-        m_lambertInstLocAlphaCutoff = glGetUniformLocation(m_lambertInstProgram, "uAlphaCutoff");
-        return true;
-    }
-
-    bool Renderer3D::ensureInstanceVbo() {
-        if (m_instanceVbo != 0) {
-            return true;
-        }
-        glGenBuffers(1, &m_instanceVbo);
-        return m_instanceVbo != 0;
-    }
-
-    bool Renderer3D::ensureBlitProgram() {
-        if (m_blitProgram != 0) {
-            return true;
-        }
-
-        m_blitProgram = buildProgram(
-            shader_sources::kBlitVert,
-            shader_sources::kBlitFrag,
-            "blit",
-            {{0, "aPos"}, {1, "aTexCoord"}}
-        );
-        if (m_blitProgram == 0) {
-            return false;
-        }
-
-        m_blitLocMvp = glGetUniformLocation(m_blitProgram, "uMVP");
-        m_blitLocTexture = glGetUniformLocation(m_blitProgram, "uTexture");
-        return true;
-    }
-
-    bool Renderer3D::ensureBlitGeometry() {
-        if (m_blitVbo != 0) {
-            return true;
-        }
-        glGenBuffers(1, &m_blitVbo);
-        return m_blitVbo != 0;
-    }
-
-    bool Renderer3D::ensureDebugLineProgram() {
-        if (m_debugLineProgram != 0) {
-            return true;
-        }
-
-        m_debugLineProgram = buildProgram(
-            shader_sources::kDebugLineVert, shader_sources::kDebugLineFrag, "debug-line", {{0, "aPos"}}
-        );
-        if (m_debugLineProgram == 0) {
-            return false;
-        }
-
-        m_debugLineLocMvp = glGetUniformLocation(m_debugLineProgram, "uMVP");
-        m_debugLineLocColor = glGetUniformLocation(m_debugLineProgram, "uColor");
-        return true;
-    }
-
-    bool Renderer3D::ensureDebugLineVbo() {
-        if (m_debugLineVbo != 0) {
-            return true;
-        }
-        glGenBuffers(1, &m_debugLineVbo);
-        return m_debugLineVbo != 0;
+        m_meshCache.releaseTextureGpu(textureId);
     }
 
     void Renderer3D::drawDebugOverlay(
@@ -303,7 +61,7 @@ namespace luax::render3d {
         std::map<int, DebugLine> const& debugLines, bool debugBounds,
         std::map<int, ViewportInstance> const& instances
     ) {
-        if (!ensureDebugLineProgram() || !ensureDebugLineVbo()) {
+        if (!m_programs.ensureDebugLineProgram() || !m_programs.ensureDebugLineVbo()) {
             return;
         }
 
@@ -381,12 +139,12 @@ namespace luax::render3d {
         bindVao(0);
 
         glm::mat4 const viewProj = projection * view;
-        glUseProgram(m_debugLineProgram);
-        glUniformMatrix4fv(m_debugLineLocMvp, 1, GL_FALSE, glm::value_ptr(viewProj));
+        glUseProgram(m_programs.debugLineProgram);
+        glUniformMatrix4fv(m_programs.debugLineLocMvp, 1, GL_FALSE, glm::value_ptr(viewProj));
         glDisable(GL_CULL_FACE);
         glDepthMask(GL_FALSE);
 
-        glBindBuffer(GL_ARRAY_BUFFER, m_debugLineVbo);
+        glBindBuffer(GL_ARRAY_BUFFER, m_programs.debugLineVbo);
         glEnableVertexAttribArray(0);
         glVertexAttribPointer(
             0, 3, GL_FLOAT, GL_FALSE, static_cast<GLsizei>(sizeof(glm::vec3)), nullptr
@@ -413,7 +171,7 @@ namespace luax::render3d {
                 vertices.data(),
                 GL_DYNAMIC_DRAW
             );
-            glUniform3fv(m_debugLineLocColor, 1, glm::value_ptr(runColor));
+            glUniform3fv(m_programs.debugLineLocColor, 1, glm::value_ptr(runColor));
             glDrawArrays(GL_LINES, 0, static_cast<GLsizei>(vertices.size()));
 
             runStart = runEnd;
@@ -424,100 +182,6 @@ namespace luax::render3d {
         glDepthMask(GL_TRUE);
     }
 
-    Renderer3D::GpuMesh* Renderer3D::ensureGpuMesh(std::uint64_t meshId, MeshAsset const& meshAsset) {
-        auto& gpuMesh = m_gpuMeshes[meshId];
-        if (!gpuMesh.primitives.empty()) {
-            return &gpuMesh;
-        }
-
-        auto const& srcPrimitives = meshAsset.primitives();
-        gpuMesh.primitives.resize(srcPrimitives.size());
-
-        for (std::size_t i = 0; i < srcPrimitives.size(); ++i) {
-            auto const& src = srcPrimitives[i];
-            auto& gpu = gpuMesh.primitives[i];
-
-            if (src.positions.empty() || src.indices.empty()) {
-                continue;
-            }
-
-            std::vector<InterleavedVertex> vertices;
-            vertices.reserve(src.positions.size());
-            for (std::size_t v = 0; v < src.positions.size(); ++v) {
-                glm::vec3 const& pos = src.positions[v];
-                glm::vec3 normal{0.0f, 1.0f, 0.0f};
-                if (v < src.normals.size()) {
-                    normal = src.normals[v];
-                }
-                glm::vec2 uv{0.0f, 0.0f};
-                if (v < src.texcoords.size()) {
-                    uv = src.texcoords[v];
-                }
-                vertices.push_back(
-                    InterleavedVertex{pos.x, pos.y, pos.z, normal.x, normal.y, normal.z, uv.x, uv.y}
-                );
-            }
-
-            glGenBuffers(1, &gpu.vbo);
-            glGenBuffers(1, &gpu.ibo);
-
-            glBindBuffer(GL_ARRAY_BUFFER, gpu.vbo);
-            glBufferData(
-                GL_ARRAY_BUFFER,
-                static_cast<GLsizeiptr>(vertices.size() * sizeof(InterleavedVertex)),
-                vertices.data(),
-                GL_STATIC_DRAW
-            );
-
-            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, gpu.ibo);
-            glBufferData(
-                GL_ELEMENT_ARRAY_BUFFER,
-                static_cast<GLsizeiptr>(src.indices.size() * sizeof(std::uint32_t)),
-                src.indices.data(),
-                GL_STATIC_DRAW
-            );
-
-            gpu.indexCount = static_cast<unsigned int>(src.indices.size());
-            gpu.materialIndex = src.materialIndex;
-            uploadGpuPrimitiveVertexLayout(gpu.vao, gpu.vbo, gpu.ibo);
-        }
-
-        auto const& images = meshAsset.images();
-        gpuMesh.textures.resize(images.size());
-        for (std::size_t i = 0; i < images.size(); ++i) {
-            auto const& image = images[i];
-            if (image.width <= 0 || image.height <= 0 || image.rgba.empty()) {
-                gpuMesh.textures[i] = 0;
-                continue;
-            }
-
-            unsigned int texture = 0;
-            glGenTextures(1, &texture);
-            glBindTexture(GL_TEXTURE_2D, texture);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-            glTexImage2D(
-                GL_TEXTURE_2D,
-                0,
-                GL_RGBA,
-                image.width,
-                image.height,
-                0,
-                GL_RGBA,
-                GL_UNSIGNED_BYTE,
-                image.rgba.data()
-            );
-            gpuMesh.textures[i] = texture;
-        }
-
-        glBindBuffer(GL_ARRAY_BUFFER, 0);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-        glBindTexture(GL_TEXTURE_2D, 0);
-        return &gpuMesh;
-    }
-
     void Renderer3D::renderToFramebuffer(
         unsigned int fbo, int pixelWidth, int pixelHeight, Camera3D const& camera,
         std::map<int, ViewportInstance> const& instances, RenderSettings const& settings,
@@ -526,7 +190,7 @@ namespace luax::render3d {
         if (fbo == 0 || pixelWidth <= 0 || pixelHeight <= 0) {
             return;
         }
-        if (!ensureLambertProgram()) {
+        if (!m_programs.ensureLambertProgram()) {
             return;
         }
 
@@ -586,7 +250,7 @@ namespace luax::render3d {
         auto resolveBoundTexture = [&](DrawItem const& item) -> unsigned int {
             unsigned int resolved = 0;
             if (item.textureId != 0 && item.textureAsset != nullptr) {
-                resolved = ensureGpuTexture(item.textureId, *item.textureAsset);
+                resolved = m_meshCache.ensureGpuTexture(item.textureId, *item.textureAsset);
             }
             else if (
                 item.imageIndex >= 0 && item.texSource != nullptr &&
@@ -610,7 +274,7 @@ namespace luax::render3d {
             if (instance.mesh == nullptr) {
                 continue;
             }
-            GpuMesh* gpuMesh = ensureGpuMesh(instance.meshId, *instance.mesh);
+            GpuMesh* gpuMesh = m_meshCache.ensureGpuMesh(instance.meshId, *instance.mesh);
             if (gpuMesh == nullptr) {
                 continue;
             }
@@ -658,8 +322,9 @@ namespace luax::render3d {
                         item.imageIndex = -1;
                     }
                     else if (item.imageIndex >= 0 && overrideMat.sourceMesh != nullptr) {
-                        item.texSource =
-                            ensureGpuMesh(overrideMat.sourceMeshId, *overrideMat.sourceMesh);
+                        item.texSource = m_meshCache.ensureGpuMesh(
+                            overrideMat.sourceMeshId, *overrideMat.sourceMesh
+                        );
                         if (item.texSource == nullptr) {
                             item.imageIndex = -1;
                         }
@@ -718,12 +383,12 @@ namespace luax::render3d {
         };
 
         auto drawSingleItem = [&](DrawItem const& item, DrawPassState& state) {
-            if (state.activeProgram != m_lambertProgram) {
-                glUseProgram(m_lambertProgram);
-                state.activeProgram = m_lambertProgram;
-                glUniform3fv(m_lambertLocLightDir, 1, glm::value_ptr(lightDir));
-                glUniform3fv(m_lambertLocLightColor, 1, glm::value_ptr(lightColor));
-                glUniform1f(m_lambertLocAmbient, settings.ambient);
+            if (state.activeProgram != m_programs.lambertProgram) {
+                glUseProgram(m_programs.lambertProgram);
+                state.activeProgram = m_programs.lambertProgram;
+                glUniform3fv(m_programs.lambertLocLightDir, 1, glm::value_ptr(lightDir));
+                glUniform3fv(m_programs.lambertLocLightColor, 1, glm::value_ptr(lightColor));
+                glUniform1f(m_programs.lambertLocAmbient, settings.ambient);
                 state.invalidateUniformCache();
             }
 
@@ -740,9 +405,9 @@ namespace luax::render3d {
 
             glm::mat4 const mvp = projection * view * item.model;
             glm::mat4 const normalMat = item.model;
-            glUniformMatrix4fv(m_lambertLocMvp, 1, GL_FALSE, glm::value_ptr(mvp));
-            glUniformMatrix4fv(m_lambertLocNormalMat, 1, GL_FALSE, glm::value_ptr(normalMat));
-            glUniform3fv(m_lambertLocTint, 1, glm::value_ptr(item.tint));
+            glUniformMatrix4fv(m_programs.lambertLocMvp, 1, GL_FALSE, glm::value_ptr(mvp));
+            glUniformMatrix4fv(m_programs.lambertLocNormalMat, 1, GL_FALSE, glm::value_ptr(normalMat));
+            glUniform3fv(m_programs.lambertLocTint, 1, glm::value_ptr(item.tint));
 
             unsigned int const boundTexture = item.boundTexture;
             bool const useTexture = boundTexture != 0;
@@ -750,22 +415,22 @@ namespace luax::render3d {
             float const shaderCutoff = shaderAlphaCutoff(item.alphaMode, item.alphaCutoff);
 
             if (item.baseColor != state.lastBaseColor) {
-                glUniform4fv(m_lambertLocBaseColor, 1, glm::value_ptr(item.baseColor));
+                glUniform4fv(m_programs.lambertLocBaseColor, 1, glm::value_ptr(item.baseColor));
                 state.lastBaseColor = item.baseColor;
             }
             if (useTextureUniform != state.lastUseTexture) {
-                glUniform1f(m_lambertLocUseTexture, useTextureUniform);
+                glUniform1f(m_programs.lambertLocUseTexture, useTextureUniform);
                 state.lastUseTexture = useTextureUniform;
             }
             if (shaderCutoff != state.lastAlphaCutoff) {
-                glUniform1f(m_lambertLocAlphaCutoff, shaderCutoff);
+                glUniform1f(m_programs.lambertLocAlphaCutoff, shaderCutoff);
                 state.lastAlphaCutoff = shaderCutoff;
             }
             if (useTexture && boundTexture != state.lastBoundTexture) {
                 glActiveTexture(GL_TEXTURE0);
                 glBindTexture(GL_TEXTURE_2D, boundTexture);
                 if (!state.textureUnitSet) {
-                    glUniform1i(m_lambertLocTexture, 0);
+                    glUniform1i(m_programs.lambertLocTexture, 0);
                     state.textureUnitSet = true;
                 }
                 state.lastBoundTexture = boundTexture;
@@ -808,12 +473,12 @@ namespace luax::render3d {
             DrawItem const& first = *begin;
             std::size_t const count = static_cast<std::size_t>(end - begin);
 
-            if (state.activeProgram != m_lambertInstProgram) {
-                glUseProgram(m_lambertInstProgram);
-                state.activeProgram = m_lambertInstProgram;
-                glUniform3fv(m_lambertInstLocLightDir, 1, glm::value_ptr(lightDir));
-                glUniform3fv(m_lambertInstLocLightColor, 1, glm::value_ptr(lightColor));
-                glUniform1f(m_lambertInstLocAmbient, settings.ambient);
+            if (state.activeProgram != m_programs.lambertInstProgram) {
+                glUseProgram(m_programs.lambertInstProgram);
+                state.activeProgram = m_programs.lambertInstProgram;
+                glUniform3fv(m_programs.lambertInstLocLightDir, 1, glm::value_ptr(lightDir));
+                glUniform3fv(m_programs.lambertInstLocLightColor, 1, glm::value_ptr(lightColor));
+                glUniform1f(m_programs.lambertInstLocAmbient, settings.ambient);
                 state.invalidateUniformCache();
             }
 
@@ -829,7 +494,9 @@ namespace luax::render3d {
             }
 
             glm::mat4 const viewProj = projection * view;
-            glUniformMatrix4fv(m_lambertInstLocViewProj, 1, GL_FALSE, glm::value_ptr(viewProj));
+            glUniformMatrix4fv(
+                m_programs.lambertInstLocViewProj, 1, GL_FALSE, glm::value_ptr(viewProj)
+            );
 
             unsigned int const boundTexture = first.boundTexture;
             bool const useTexture = boundTexture != 0;
@@ -837,22 +504,22 @@ namespace luax::render3d {
             float const shaderCutoff = shaderAlphaCutoff(first.alphaMode, first.alphaCutoff);
 
             if (first.baseColor != state.lastBaseColor) {
-                glUniform4fv(m_lambertInstLocBaseColor, 1, glm::value_ptr(first.baseColor));
+                glUniform4fv(m_programs.lambertInstLocBaseColor, 1, glm::value_ptr(first.baseColor));
                 state.lastBaseColor = first.baseColor;
             }
             if (useTextureUniform != state.lastUseTexture) {
-                glUniform1f(m_lambertInstLocUseTexture, useTextureUniform);
+                glUniform1f(m_programs.lambertInstLocUseTexture, useTextureUniform);
                 state.lastUseTexture = useTextureUniform;
             }
             if (shaderCutoff != state.lastAlphaCutoff) {
-                glUniform1f(m_lambertInstLocAlphaCutoff, shaderCutoff);
+                glUniform1f(m_programs.lambertInstLocAlphaCutoff, shaderCutoff);
                 state.lastAlphaCutoff = shaderCutoff;
             }
             if (useTexture && boundTexture != state.lastBoundTexture) {
                 glActiveTexture(GL_TEXTURE0);
                 glBindTexture(GL_TEXTURE_2D, boundTexture);
                 if (!state.textureUnitSet) {
-                    glUniform1i(m_lambertInstLocTexture, 0);
+                    glUniform1i(m_programs.lambertInstLocTexture, 0);
                     state.textureUnitSet = true;
                 }
                 state.lastBoundTexture = boundTexture;
@@ -864,7 +531,7 @@ namespace luax::render3d {
                 instanceData.push_back(GpuInstanceData{it->model, glm::vec4(it->tint, 0.0f)});
             }
 
-            glBindBuffer(GL_ARRAY_BUFFER, m_instanceVbo);
+            glBindBuffer(GL_ARRAY_BUFFER, m_programs.instanceVbo);
             glBufferData(
                 GL_ARRAY_BUFFER,
                 static_cast<GLsizeiptr>(instanceData.size() * sizeof(GpuInstanceData)),
@@ -878,7 +545,7 @@ namespace luax::render3d {
                 state.lastVbo = ~0u;
                 state.lastIbo = ~0u;
             }
-            setupInstanceAttribs(m_instanceVbo);
+            setupInstanceAttribs(m_programs.instanceVbo);
 #if defined(GLEW_VERSION)
             glDrawElementsInstanced(
                 GL_TRIANGLES,
@@ -901,7 +568,7 @@ namespace luax::render3d {
 
         auto drawOpaqueItems = [&](std::vector<DrawItem> const& items, DrawPassState& state) {
             bool const canInstance = useVao && instancingSupported() &&
-                ensureLambertInstProgram() && ensureInstanceVbo();
+                m_programs.ensureLambertInstProgram() && m_programs.ensureInstanceVbo();
 
             if (!canInstance) {
                 for (auto const& item : items) {
@@ -988,7 +655,7 @@ namespace luax::render3d {
         if (colorTexture == 0 || width <= 0.0f || height <= 0.0f) {
             return;
         }
-        if (!ensureBlitProgram() || !ensureBlitGeometry()) {
+        if (!m_programs.ensureBlitProgram() || !m_programs.ensureBlitGeometry()) {
             return;
         }
 
@@ -1011,7 +678,7 @@ namespace luax::render3d {
             {width, height, 1.0f, 1.0f},
         }};
 
-        glBindBuffer(GL_ARRAY_BUFFER, m_blitVbo);
+        glBindBuffer(GL_ARRAY_BUFFER, m_programs.blitVbo);
         glBufferData(
             GL_ARRAY_BUFFER,
             static_cast<GLsizeiptr>(quad.size() * sizeof(BlitVertex)),
@@ -1026,9 +693,9 @@ namespace luax::render3d {
         kmGLGetMatrix(KM_GL_MODELVIEW, &matrixMV);
         kmMat4Multiply(&matrixMVP, &matrixP, &matrixMV);
 
-        glUseProgram(m_blitProgram);
-        glUniformMatrix4fv(m_blitLocMvp, 1, GL_FALSE, matrixMVP.mat);
-        glUniform1i(m_blitLocTexture, 0);
+        glUseProgram(m_programs.blitProgram);
+        glUniformMatrix4fv(m_programs.blitLocMvp, 1, GL_FALSE, matrixMVP.mat);
+        glUniform1i(m_programs.blitLocTexture, 0);
 
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, colorTexture);
