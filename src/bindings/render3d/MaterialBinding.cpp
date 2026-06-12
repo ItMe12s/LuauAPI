@@ -4,6 +4,7 @@
 #include "framework/stack/TableUtil.hpp"
 #include "framework/stack/UserdataTags.hpp"
 #include "render3d/Material.hpp"
+#include "render3d/TextureAsset.hpp"
 
 #include <Geode/Geode.hpp>
 #include <lua.h>
@@ -32,7 +33,9 @@ namespace {
 
     int materialHasTexture(lua_State* L) {
         auto const& material = requireMaterial(L, 1, "Material:hasTexture");
-        push(L, material->imageIndex >= 0 && material->sourceMesh != nullptr);
+        bool const hasStandaloneTexture = material->textureId != 0 && material->texture != nullptr;
+        bool const hasGltfTexture = material->imageIndex >= 0 && material->sourceMesh != nullptr;
+        push(L, hasStandaloneTexture || hasGltfTexture);
         return 1;
     }
 
@@ -47,6 +50,20 @@ namespace {
 
         auto material = std::make_shared<render3d::Material>();
         material->baseColorFactor = color;
+
+        lua_getfield(L, 1, "texture");
+        if (!lua_isnil(L, -1)) {
+            auto* texHandle = checkTextureHandle(L, lua_gettop(L), "gd3d.Material.new");
+            std::uint64_t const texId = requireTextureId(L, texHandle, "gd3d.Material.new");
+            auto texAsset = render3d::TextureRegistry::instance().get(texId);
+            if (!texAsset) {
+                luaL_error(L, "gd3d.Material.new: texture handle is invalid");
+            }
+            material->textureId = texId;
+            material->texture = texAsset;
+        }
+        lua_pop(L, 1);
+
         pushMaterial(L, std::move(material));
         return 1;
     }

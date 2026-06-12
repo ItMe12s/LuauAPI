@@ -5,11 +5,12 @@
 `gd3d` provides lightweight 3D rendering inside the cocos2d scene graph.
 Load glTF meshes, place them in a `ViewportFrame` node, and attach that node like any other `CCNode`.
 
-The namespace has four parts:
+The namespace has five parts:
 
 - `gd3d.Transform` for position and rotation
 - `gd3d.gltf` for loading mesh assets
-- `gd3d.Material` for solid-color or glTF-derived materials
+- `gd3d.texture` for loading standalone image textures
+- `gd3d.Material` for solid-color, textured, or glTF-derived materials
 - `gd3d.ViewportFrame` for the render target node
 
 Vec3 values are plain tables `{ x, y, z }`.
@@ -34,6 +35,11 @@ type Transform = {
 type Material = {
     baseColor: (self: Material) -> { r: number, g: number, b: number, a: number },
     hasTexture: (self: Material) -> boolean,
+}
+
+type Texture = {
+    width: (self: Texture) -> number,
+    height: (self: Texture) -> number,
 }
 
 type Mesh = {
@@ -160,13 +166,36 @@ When the mesh has no geometry, `empty` is `true` and `min` and `max` are zero.
 Valid range is `0` to `materialCount() - 1`. It returns `nil` when the index is out of range.
 Materials from a mesh keep the mesh data alive and may include a base color texture from the glTF file.
 
+## Texture loading
+
+```lua
+gd3d.texture.load(root: FsRoot, path: string) -> (Texture?, string?)
+```
+
+Loads a PNG or JPEG image from a mod sandbox root.
+The first argument uses the same roots as [fs](fs.md).
+Returns a texture handle, or `nil` and an error message.
+Texture data is released when the handle is collected and no material references it anymore.
+Materials that reference a texture keep it alive on their own.
+
+Texture methods:
+
+```lua
+texture:width() -> number
+texture:height() -> number
+```
+
 ## Material
 
 ```lua
-gd3d.Material.new({ color: Vec3 | { r: number, g: number, b: number, a: number? } }) -> Material
+gd3d.Material.new({
+    color: Vec3 | { r: number, g: number, b: number, a: number? },
+    texture: Texture?,
+}) -> Material
 ```
 
-Creates a solid-color material with no texture.
+Creates a material with a solid base color.
+Pass an optional `texture` field to sample an image loaded with `gd3d.texture.load`.
 Use `{ r, g, b, a }` for RGBA, or a `Vec3` `{ x, y, z }` for opaque RGB.
 
 Instance methods:
@@ -176,7 +205,8 @@ material:baseColor() -> { r: number, g: number, b: number, a: number }
 material:hasTexture() -> boolean
 ```
 
-`hasTexture` is `true` for materials returned by `mesh:getMaterial` when the glTF material references a base color texture.
+`hasTexture` is `true` when the material has a standalone texture from `gd3d.texture.load`,
+or when it was returned by `mesh:getMaterial` with a glTF base color texture.
 
 ### Instance override
 
@@ -286,11 +316,13 @@ See [Limits and errors](../cpp/limits-and-errors.md).
 - `src/bindings/render3d/Gd3dShared.hpp`
 - `src/bindings/render3d/TransformBinding.cpp`
 - `src/bindings/render3d/GltfBinding.cpp`
+- `src/bindings/render3d/TextureBinding.cpp`
 - `src/bindings/render3d/MaterialBinding.cpp`
 - `src/bindings/render3d/ViewportFrameBinding.cpp`
 - `src/render3d/Transform3D.hpp`
 - `src/render3d/Material.hpp`
 - `src/render3d/MeshAsset.hpp`
+- `src/render3d/TextureAsset.hpp`
 - `src/render3d/GltfIo.hpp`
 - `src/render3d/ImageDecode.hpp`
 - `src/render3d/GlUtil.hpp`

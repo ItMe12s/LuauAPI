@@ -9,6 +9,8 @@
 
 namespace luax::render3d {
 
+    struct TextureAsset;
+
     class Renderer3D {
     public:
         static Renderer3D& instance();
@@ -21,6 +23,7 @@ namespace luax::render3d {
         void drawCompositeQuad(unsigned int colorTexture, float width, float height);
 
         void releaseMeshGpu(std::uint64_t meshId);
+        void releaseTextureGpu(std::uint64_t textureId);
         void destroyGlResources();
 
     private:
@@ -46,6 +49,7 @@ namespace luax::render3d {
         bool ensureBlitProgram();
         bool ensureBlitGeometry();
         GpuMesh* ensureGpuMesh(std::uint64_t meshId, MeshAsset const& meshAsset);
+        unsigned int ensureGpuTexture(std::uint64_t textureId, TextureAsset const& textureAsset);
 
         void deleteGpuMesh(GpuMesh& mesh);
         void deleteGpuPrimitive(GpuPrimitive& primitive);
@@ -68,6 +72,7 @@ namespace luax::render3d {
         unsigned int m_blitVbo = 0;
 
         std::unordered_map<std::uint64_t, GpuMesh> m_gpuMeshes;
+        std::unordered_map<std::uint64_t, unsigned int> m_gpuTextures;
     };
 
 } // namespace luax::render3d

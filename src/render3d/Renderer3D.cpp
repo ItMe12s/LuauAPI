@@ -2,6 +2,7 @@
 
 #include "render3d/GlUtil.hpp"
 #include "render3d/MeshAsset.hpp"
+#include "render3d/TextureAsset.hpp"
 
 #include <Geode/Geode.hpp>
 #include <algorithm>
@@ -144,6 +145,12 @@ void main() {
                 (void)meshId;
                 deleteGpuMesh(mesh);
             }
+            for (auto& [textureId, texture] : m_gpuTextures) {
+                (void)textureId;
+                if (texture != 0) {
+                    glDeleteTextures(1, &texture);
+                }
+            }
             if (m_blitVbo != 0) {
                 glDeleteBuffers(1, &m_blitVbo);
             }
@@ -155,6 +162,7 @@ void main() {
             }
         }
         m_gpuMeshes.clear();
+        m_gpuTextures.clear();
         m_blitVbo = 0;
         m_blitProgram = 0;
         m_lambertProgram = 0;
@@ -169,6 +177,51 @@ void main() {
             deleteGpuMesh(it->second);
         }
         m_gpuMeshes.erase(it);
+    }
+
+    void Renderer3D::releaseTextureGpu(std::uint64_t textureId) {
+        auto it = m_gpuTextures.find(textureId);
+        if (it == m_gpuTextures.end()) {
+            return;
+        }
+        if (glContextAvailable() && it->second != 0) {
+            glDeleteTextures(1, &it->second);
+        }
+        m_gpuTextures.erase(it);
+    }
+
+    unsigned int Renderer3D::ensureGpuTexture(std::uint64_t textureId, TextureAsset const& textureAsset) {
+        auto const existing = m_gpuTextures.find(textureId);
+        if (existing != m_gpuTextures.end() && existing->second != 0) {
+            return existing->second;
+        }
+
+        auto const& image = textureAsset.cpu;
+        if (image.width <= 0 || image.height <= 0 || image.rgba.empty()) {
+            return 0;
+        }
+
+        unsigned int texture = 0;
+        glGenTextures(1, &texture);
+        glBindTexture(GL_TEXTURE_2D, texture);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        glTexImage2D(
+            GL_TEXTURE_2D,
+            0,
+            GL_RGBA,
+            image.width,
+            image.height,
+            0,
+            GL_RGBA,
+            GL_UNSIGNED_BYTE,
+            image.rgba.data()
+        );
+        glBindTexture(GL_TEXTURE_2D, 0);
+        m_gpuTextures[textureId] = texture;
+        return texture;
     }
 
     bool Renderer3D::ensureLambertProgram() {
@@ -366,6 +419,8 @@ void main() {
         struct DrawItem {
             GpuPrimitive const* prim = nullptr;
             GpuMesh const* texSource = nullptr;
+            TextureAsset const* textureAsset = nullptr;
+            std::uint64_t textureId = 0;
             int imageIndex = -1;
             glm::vec4 baseColor{1.0f, 1.0f, 1.0f, 1.0f};
             glm::vec3 tint{1.0f, 1.0f, 1.0f};
@@ -412,11 +467,18 @@ void main() {
 
                 auto applyRuntimeMaterial = [&](Material const& overrideMat) {
                     item.baseColor = overrideMat.baseColorFactor;
-                    item.imageIndex = overrideMat.imageIndex;
                     item.alphaMode = overrideMat.alphaMode;
                     item.alphaCutoff = overrideMat.alphaCutoff;
                     item.doubleSided = overrideMat.doubleSided;
-                    if (item.imageIndex >= 0 && overrideMat.sourceMesh != nullptr) {
+                    item.textureId = 0;
+                    item.textureAsset = nullptr;
+                    item.imageIndex = overrideMat.imageIndex;
+                    if (overrideMat.textureId != 0 && overrideMat.texture != nullptr) {
+                        item.textureId = overrideMat.textureId;
+                        item.textureAsset = overrideMat.texture.get();
+                        item.imageIndex = -1;
+                    }
+                    else if (item.imageIndex >= 0 && overrideMat.sourceMesh != nullptr) {
                         item.texSource =
                             ensureGpuMesh(overrideMat.sourceMeshId, *overrideMat.sourceMesh);
                         if (item.texSource == nullptr) {
@@ -476,9 +538,18 @@ void main() {
                 glUniformMatrix4fv(m_lambertLocNormalMat, 1, GL_FALSE, glm::value_ptr(normalMat));
                 glUniform3fv(m_lambertLocTint, 1, glm::value_ptr(item.tint));
 
-                bool const useTexture = item.imageIndex >= 0 && item.texSource != nullptr &&
-                    static_cast<std::size_t>(item.imageIndex) < item.texSource->textures.size() &&
-                    item.texSource->textures[static_cast<std::size_t>(item.imageIndex)] != 0;
+                unsigned int boundTexture = 0;
+                if (item.textureId != 0 && item.textureAsset != nullptr) {
+                    boundTexture = ensureGpuTexture(item.textureId, *item.textureAsset);
+                }
+                else if (
+                    item.imageIndex >= 0 && item.texSource != nullptr &&
+                    static_cast<std::size_t>(item.imageIndex) < item.texSource->textures.size()
+                ) {
+                    boundTexture =
+                        item.texSource->textures[static_cast<std::size_t>(item.imageIndex)];
+                }
+                bool const useTexture = boundTexture != 0;
 
                 glUniform4fv(m_lambertLocBaseColor, 1, glm::value_ptr(item.baseColor));
                 glUniform1f(m_lambertLocUseTexture, useTexture ? 1.0f : 0.0f);
@@ -486,10 +557,7 @@ void main() {
                 glUniform1f(m_lambertLocAlphaCutoff, shaderCutoff);
                 if (useTexture) {
                     glActiveTexture(GL_TEXTURE0);
-                    glBindTexture(
-                        GL_TEXTURE_2D,
-                        item.texSource->textures[static_cast<std::size_t>(item.imageIndex)]
-                    );
+                    glBindTexture(GL_TEXTURE_2D, boundTexture);
                     glUniform1i(m_lambertLocTexture, 0);
                 }
 
