@@ -92,7 +92,8 @@ Shipped assets belong under `"resources"`.
 
 Returns a mesh handle, or `nil` and an error message.
 Mesh data is released when the handle is collected and no viewport instance uses it anymore.
-Viewport instances added with `addMesh` keep the mesh alive on their own, so you do not need to keep the handle around after adding.
+Viewport instances added with `addMesh` keep the mesh alive on their own,
+so you do not need to keep the handle around after adding.
 
 Supported content:
 
@@ -121,7 +122,8 @@ mesh:materialCount() -> number
 mesh:getMaterial(index: number) -> Material?
 ```
 
-`getMaterial` returns `nil` when the index is out of range.
+`getMaterial` uses 0-based indices, matching glTF material indices.
+Valid range is `0` to `materialCount() - 1`. It returns `nil` when the index is out of range.
 Materials from a mesh keep the mesh data alive and may include a base color texture from the glTF file.
 
 ## Material

@@ -13,8 +13,6 @@
 #include <vector>
 
 struct cgltf_data;
-struct cgltf_image;
-struct cgltf_options;
 
 namespace luax::render3d {
 
@@ -105,13 +103,8 @@ namespace luax::render3d {
 
         void addPrimitive(MeshPrimitive primitive);
         static std::optional<std::string> extractMaterials(
-            ::cgltf_data const* data, MeshAsset& asset, ::cgltf_options const& options,
-            std::filesystem::path const& assetPath, std::filesystem::path const& sandboxRoot
-        );
-        static LoadResult<int> resolveImageIndex(
-            ::cgltf_image const* image, std::filesystem::path const& assetPath,
-            std::filesystem::path const& sandboxRoot, MeshAsset& asset,
-            std::unordered_map<::cgltf_image const*, int>& imageIndices
+            ::cgltf_data const* data, MeshAsset& asset, std::filesystem::path const& assetPath,
+            std::filesystem::path const& sandboxRoot
         );
         static std::optional<std::string> extractSceneMeshes(::cgltf_data const* data, MeshAsset& asset);
 

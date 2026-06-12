@@ -1,15 +1,11 @@
-#if defined(_MSC_VER) && !defined(_CRT_SECURE_NO_WARNINGS)
-    #define _CRT_SECURE_NO_WARNINGS
-#endif
-
 #include "render3d/MeshAsset.hpp"
 
 #include "core/Config.hpp"
+#include "render3d/GltfIo.hpp"
 #include "render3d/ImageDecode.hpp"
-#include "require/PathRules.hpp"
 #include "require/PathSandbox.hpp"
 
-#include <cstring>
+#include <cgltf.h>
 #include <fstream>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/mat4x4.hpp>
@@ -17,19 +13,12 @@
 #include <glm/vec3.hpp>
 #include <optional>
 #include <string>
+#include <unordered_map>
 #include <vector>
-
-#define CGLTF_IMPLEMENTATION
-#include <cgltf.h>
 
 namespace {
     using namespace luax;
     using namespace luax::render3d;
-
-    struct SandboxFileContext {
-        std::filesystem::path sandboxRoot;
-        std::string lastError;
-    };
 
     char const* cgltfResultMessage(cgltf_result result) {
         switch (result) {
@@ -52,126 +41,37 @@ namespace {
             accessor->buffer_view->has_meshopt_compression;
     }
 
-    LoadResult<std::filesystem::path> canonicalSandboxRoot(std::filesystem::path const& root) {
-        if (root.empty()) {
-            return LoadResult<std::filesystem::path>::err("sandbox root is empty");
-        }
+    template <class VecT>
+    LoadResult<std::vector<VecT>> unpackVecAttribute(cgltf_accessor const* accessor, char const* label) {
+        constexpr std::size_t kComponents = static_cast<std::size_t>(VecT::length());
+        constexpr cgltf_type kExpectedType = kComponents == 2 ? cgltf_type_vec2 : cgltf_type_vec3;
+        char const* const kTypeName = kComponents == 2 ? "vec2" : "vec3";
 
-        std::error_code ec;
-        auto canonical = std::filesystem::weakly_canonical(root, ec);
-        if (ec) {
-            return LoadResult<std::filesystem::path>::err(
-                "sandbox root cannot be resolved: " + ec.message()
-            );
-        }
-
-        return LoadResult<std::filesystem::path>::ok(canonical);
-    }
-
-    cgltf_result sandboxFileRead(
-        cgltf_memory_options const* memory, cgltf_file_options const* file, char const* path,
-        cgltf_size* size, void** data
-    ) {
-        void* (*memoryAlloc)(void*, cgltf_size) =
-            memory->alloc_func != nullptr ? memory->alloc_func : &cgltf_default_alloc;
-
-        auto* context = static_cast<SandboxFileContext*>(file->user_data);
-        if (context == nullptr) {
-            return cgltf_result_invalid_options;
-        }
-
-        std::error_code ec;
-        auto resolved = std::filesystem::weakly_canonical(std::filesystem::path(path), ec);
-        if (ec) {
-            context->lastError = "buffer path cannot be resolved: " + ec.message();
-            return cgltf_result_io_error;
-        }
-
-        if (!pathInsideRootValue(resolved, context->sandboxRoot)) {
-            context->lastError = "buffer path escapes sandbox root";
-            return cgltf_result_io_error;
-        }
-
-        if (!std::filesystem::is_regular_file(resolved, ec)) {
-            context->lastError = "buffer file not found: " + filesystemPathString(resolved);
-            return cgltf_result_file_not_found;
-        }
-
-        auto fileSize = std::filesystem::file_size(resolved, ec);
-        if (ec) {
-            context->lastError = "buffer file cannot be read: " + filesystemPathString(resolved);
-            return cgltf_result_io_error;
-        }
-
-        if (fileSize > kMaxFsReadBytes) {
-            context->lastError = "buffer file exceeds maximum read size";
-            return cgltf_result_io_error;
-        }
-
-        std::ifstream input(resolved, std::ios::binary);
-        if (!input.good()) {
-            context->lastError = "buffer file cannot be opened: " + filesystemPathString(resolved);
-            return cgltf_result_io_error;
-        }
-
-        auto* buffer = static_cast<std::uint8_t*>(memoryAlloc(memory->user_data, fileSize));
-        if (buffer == nullptr) {
-            return cgltf_result_out_of_memory;
-        }
-
-        input.read(reinterpret_cast<char*>(buffer), static_cast<std::streamsize>(fileSize));
-        if (!input.good()) {
-            void (*memoryFree)(void*, void*) =
-                memory->free_func != nullptr ? memory->free_func : &cgltf_default_free;
-            memoryFree(memory->user_data, buffer);
-            context->lastError = "buffer file cannot be read: " + filesystemPathString(resolved);
-            return cgltf_result_io_error;
-        }
-
-        *size = fileSize;
-        *data = buffer;
-        return cgltf_result_success;
-    }
-
-    void sandboxFileRelease(
-        cgltf_memory_options const* memory, cgltf_file_options const* file, void* data
-    ) {
-        void (*memoryFree)(void*, void*) =
-            memory->free_func != nullptr ? memory->free_func : &cgltf_default_free;
-        memoryFree(memory->user_data, data);
-        (void)file;
-    }
-
-    LoadResult<std::vector<glm::vec3>> unpackVec3Attribute(
-        cgltf_accessor const* accessor, char const* label
-    ) {
         if (accessor == nullptr) {
-            return LoadResult<std::vector<glm::vec3>>::err(
-                std::string(label) + " accessor is missing"
-            );
+            return LoadResult<std::vector<VecT>>::err(std::string(label) + " accessor is missing");
         }
 
         if (accessor->is_sparse) {
-            return LoadResult<std::vector<glm::vec3>>::err(
+            return LoadResult<std::vector<VecT>>::err(
                 std::string(label) + " sparse accessors are not supported"
             );
         }
 
         if (accessorUsesMeshopt(accessor)) {
-            return LoadResult<std::vector<glm::vec3>>::err(
+            return LoadResult<std::vector<VecT>>::err(
                 std::string(label) + " meshopt-compressed accessors are not supported"
             );
         }
 
-        if (accessor->type != cgltf_type_vec3) {
-            return LoadResult<std::vector<glm::vec3>>::err(
-                std::string(label) + " accessor must be vec3"
+        if (accessor->type != kExpectedType) {
+            return LoadResult<std::vector<VecT>>::err(
+                std::string(label) + " accessor must be " + kTypeName
             );
         }
 
         cgltf_size const floatCount = cgltf_accessor_unpack_floats(accessor, nullptr, 0);
-        if (floatCount == 0 || floatCount % 3 != 0) {
-            return LoadResult<std::vector<glm::vec3>>::err(
+        if (floatCount == 0 || floatCount % kComponents != 0) {
+            return LoadResult<std::vector<VecT>>::err(
                 std::string(label) + " accessor has no vertices"
             );
         }
@@ -179,220 +79,14 @@ namespace {
         std::vector<float> floats(floatCount);
         cgltf_accessor_unpack_floats(accessor, floats.data(), floatCount);
 
-        std::vector<glm::vec3> values(floatCount / 3);
+        std::vector<VecT> values(floatCount / kComponents);
         for (std::size_t i = 0; i < values.size(); ++i) {
-            values[i] = glm::vec3(floats[i * 3], floats[i * 3 + 1], floats[i * 3 + 2]);
-        }
-
-        return LoadResult<std::vector<glm::vec3>>::ok(std::move(values));
-    }
-
-    LoadResult<std::vector<glm::vec2>> unpackVec2Attribute(
-        cgltf_accessor const* accessor, char const* label
-    ) {
-        if (accessor == nullptr) {
-            return LoadResult<std::vector<glm::vec2>>::err(
-                std::string(label) + " accessor is missing"
-            );
-        }
-
-        if (accessor->is_sparse) {
-            return LoadResult<std::vector<glm::vec2>>::err(
-                std::string(label) + " sparse accessors are not supported"
-            );
-        }
-
-        if (accessorUsesMeshopt(accessor)) {
-            return LoadResult<std::vector<glm::vec2>>::err(
-                std::string(label) + " meshopt-compressed accessors are not supported"
-            );
-        }
-
-        if (accessor->type != cgltf_type_vec2) {
-            return LoadResult<std::vector<glm::vec2>>::err(
-                std::string(label) + " accessor must be vec2"
-            );
-        }
-
-        cgltf_size const floatCount = cgltf_accessor_unpack_floats(accessor, nullptr, 0);
-        if (floatCount == 0 || floatCount % 2 != 0) {
-            return LoadResult<std::vector<glm::vec2>>::err(
-                std::string(label) + " accessor has no vertices"
-            );
-        }
-
-        std::vector<float> floats(floatCount);
-        cgltf_accessor_unpack_floats(accessor, floats.data(), floatCount);
-
-        std::vector<glm::vec2> values(floatCount / 2);
-        for (std::size_t i = 0; i < values.size(); ++i) {
-            values[i] = glm::vec2(floats[i * 2], floats[i * 2 + 1]);
-        }
-
-        return LoadResult<std::vector<glm::vec2>>::ok(std::move(values));
-    }
-
-    int base64Value(char ch) {
-        if (ch >= 'A' && ch <= 'Z') {
-            return ch - 'A';
-        }
-        if (ch >= 'a' && ch <= 'z') {
-            return ch - 'a' + 26;
-        }
-        if (ch >= '0' && ch <= '9') {
-            return ch - '0' + 52;
-        }
-        if (ch == '+') {
-            return 62;
-        }
-        if (ch == '/') {
-            return 63;
-        }
-        return -1;
-    }
-
-    LoadResult<std::vector<std::uint8_t>> decodeBase64ToBytes(char const* base64) {
-        if (base64 == nullptr) {
-            return LoadResult<std::vector<std::uint8_t>>::err("base64 data is missing");
-        }
-
-        std::vector<std::uint8_t> bytes;
-        bytes.reserve(std::strlen(base64) * 3 / 4);
-
-        unsigned int buffer = 0;
-        unsigned int bufferBits = 0;
-
-        for (char const* cursor = base64; *cursor != '\0'; ++cursor) {
-            char const ch = *cursor;
-            if (ch == '=' || ch == '\n' || ch == '\r' || ch == ' ' || ch == '\t') {
-                continue;
-            }
-
-            int const value = base64Value(ch);
-            if (value < 0) {
-                return LoadResult<std::vector<std::uint8_t>>::err("invalid base64 image data");
-            }
-
-            buffer = (buffer << 6) | static_cast<unsigned int>(value);
-            bufferBits += 6;
-            if (bufferBits >= 8) {
-                bufferBits -= 8;
-                bytes.push_back(static_cast<std::uint8_t>(buffer >> bufferBits));
+            for (std::size_t c = 0; c < kComponents; ++c) {
+                values[i][static_cast<int>(c)] = floats[i * kComponents + c];
             }
         }
 
-        if (bytes.empty()) {
-            return LoadResult<std::vector<std::uint8_t>>::err("base64 image data is empty");
-        }
-
-        if (bytes.size() > kMaxFsReadBytes) {
-            return LoadResult<std::vector<std::uint8_t>>::err(
-                "base64 image data exceeds maximum read size"
-            );
-        }
-
-        return LoadResult<std::vector<std::uint8_t>>::ok(std::move(bytes));
-    }
-
-    LoadResult<std::vector<std::uint8_t>> readSandboxImageFile(
-        std::filesystem::path const& path, std::filesystem::path const& sandboxRoot
-    ) {
-        std::error_code ec;
-        auto resolved = std::filesystem::weakly_canonical(path, ec);
-        if (ec) {
-            return LoadResult<std::vector<std::uint8_t>>::err(
-                "image path cannot be resolved: " + ec.message()
-            );
-        }
-
-        if (!pathInsideRootValue(resolved, sandboxRoot)) {
-            return LoadResult<std::vector<std::uint8_t>>::err("image path escapes sandbox root");
-        }
-
-        if (!std::filesystem::is_regular_file(resolved, ec)) {
-            return LoadResult<std::vector<std::uint8_t>>::err(
-                "image file not found: " + filesystemPathString(resolved)
-            );
-        }
-
-        auto fileSize = std::filesystem::file_size(resolved, ec);
-        if (ec) {
-            return LoadResult<std::vector<std::uint8_t>>::err(
-                "image file cannot be read: " + filesystemPathString(resolved)
-            );
-        }
-
-        if (fileSize > kMaxFsReadBytes) {
-            return LoadResult<std::vector<std::uint8_t>>::err("image file exceeds maximum read size");
-        }
-
-        std::ifstream input(resolved, std::ios::binary);
-        if (!input.good()) {
-            return LoadResult<std::vector<std::uint8_t>>::err(
-                "image file cannot be opened: " + filesystemPathString(resolved)
-            );
-        }
-
-        std::vector<std::uint8_t> bytes(static_cast<std::size_t>(fileSize));
-        input.read(reinterpret_cast<char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
-        if (!input.good()) {
-            return LoadResult<std::vector<std::uint8_t>>::err(
-                "image file cannot be read: " + filesystemPathString(resolved)
-            );
-        }
-
-        return LoadResult<std::vector<std::uint8_t>>::ok(std::move(bytes));
-    }
-
-    LoadResult<std::vector<std::uint8_t>> readImageEncodedBytes(
-        cgltf_image const* image, std::filesystem::path const& assetPath,
-        std::filesystem::path const& sandboxRoot
-    ) {
-        if (image == nullptr) {
-            return LoadResult<std::vector<std::uint8_t>>::err("image is missing");
-        }
-
-        if (image->buffer_view != nullptr) {
-            cgltf_buffer_view const* view = image->buffer_view;
-            if (view->buffer == nullptr || view->buffer->data == nullptr) {
-                return LoadResult<std::vector<std::uint8_t>>::err(
-                    "embedded image buffer has no data"
-                );
-            }
-
-            if (view->offset > view->buffer->size || view->size > view->buffer->size - view->offset) {
-                return LoadResult<std::vector<std::uint8_t>>::err(
-                    "embedded image buffer view is out of range"
-                );
-            }
-
-            if (view->size > kMaxFsReadBytes) {
-                return LoadResult<std::vector<std::uint8_t>>::err(
-                    "embedded image exceeds maximum read size"
-                );
-            }
-
-            auto const* data = static_cast<std::uint8_t const*>(view->buffer->data) + view->offset;
-            std::vector<std::uint8_t> bytes(static_cast<std::size_t>(view->size));
-            std::memcpy(bytes.data(), data, static_cast<std::size_t>(view->size));
-            return LoadResult<std::vector<std::uint8_t>>::ok(std::move(bytes));
-        }
-
-        if (image->uri == nullptr || image->uri[0] == '\0') {
-            return LoadResult<std::vector<std::uint8_t>>::err("image has no uri or buffer_view");
-        }
-
-        if (std::strncmp(image->uri, "data:", 5) == 0) {
-            char const* comma = std::strchr(image->uri, ',');
-            if (comma == nullptr || comma - image->uri < 7 ||
-                std::strncmp(comma - 7, ";base64", 7) != 0) {
-                return LoadResult<std::vector<std::uint8_t>>::err("unsupported image data uri");
-            }
-
-            return decodeBase64ToBytes(comma + 1);
-        }
-
-        return readSandboxImageFile(assetPath.parent_path() / image->uri, sandboxRoot);
+        return LoadResult<std::vector<VecT>>::ok(std::move(values));
     }
 
     LoadResult<std::vector<std::uint32_t>> unpackIndices(cgltf_primitive const& primitive) {
@@ -453,7 +147,7 @@ namespace {
 
         auto const* positionAccessor =
             cgltf_find_accessor(&primitive, cgltf_attribute_type_position, 0);
-        auto positionsResult = unpackVec3Attribute(positionAccessor, "position");
+        auto positionsResult = unpackVecAttribute<glm::vec3>(positionAccessor, "position");
         if (positionsResult.isErr()) {
             return LoadResult<MeshPrimitive>::err(positionsResult.unwrapErr());
         }
@@ -469,7 +163,7 @@ namespace {
         std::vector<glm::vec3> normals;
         auto const* normalAccessor = cgltf_find_accessor(&primitive, cgltf_attribute_type_normal, 0);
         if (normalAccessor != nullptr) {
-            auto normalsResult = unpackVec3Attribute(normalAccessor, "normal");
+            auto normalsResult = unpackVecAttribute<glm::vec3>(normalAccessor, "normal");
             if (normalsResult.isErr()) {
                 return LoadResult<MeshPrimitive>::err(normalsResult.unwrapErr());
             }
@@ -498,7 +192,7 @@ namespace {
         auto const* texcoordAccessor =
             cgltf_find_accessor(&primitive, cgltf_attribute_type_texcoord, 0);
         if (texcoordAccessor != nullptr) {
-            auto texcoordsResult = unpackVec2Attribute(texcoordAccessor, "texcoord");
+            auto texcoordsResult = unpackVecAttribute<glm::vec2>(texcoordAccessor, "texcoord");
             if (texcoordsResult.isErr()) {
                 return LoadResult<MeshPrimitive>::err(texcoordsResult.unwrapErr());
             }
@@ -531,14 +225,11 @@ namespace {
         meshPrimitive.materialIndex = materialIndex;
         return LoadResult<MeshPrimitive>::ok(std::move(meshPrimitive));
     }
-} // namespace
 
-namespace luax::render3d {
-
-    LoadResult<int> MeshAsset::resolveImageIndex(
-        ::cgltf_image const* image, std::filesystem::path const& assetPath,
-        std::filesystem::path const& sandboxRoot, MeshAsset& asset,
-        std::unordered_map<::cgltf_image const*, int>& imageIndices
+    LoadResult<int> resolveImageIndex(
+        cgltf_image const* image, std::filesystem::path const& assetPath,
+        std::filesystem::path const& sandboxRoot, std::vector<ImageData>& images,
+        std::unordered_map<cgltf_image const*, int>& imageIndices
     ) {
         auto const existing = imageIndices.find(image);
         if (existing != imageIndices.end()) {
@@ -555,24 +246,19 @@ namespace luax::render3d {
             return LoadResult<int>::err(decodeResult.unwrapErr());
         }
 
-        int const index = static_cast<int>(asset.m_images.size());
-        asset.m_images.push_back(std::move(decodeResult.unwrap()));
+        int const index = static_cast<int>(images.size());
+        images.push_back(std::move(decodeResult.unwrap()));
         imageIndices.emplace(image, index);
         return LoadResult<int>::ok(index);
     }
+} // namespace
+
+namespace luax::render3d {
 
     std::optional<std::string> MeshAsset::extractMaterials(
-        ::cgltf_data const* data, MeshAsset& asset, ::cgltf_options const& options,
-        std::filesystem::path const& assetPath, std::filesystem::path const& sandboxRoot
+        ::cgltf_data const* data, MeshAsset& asset, std::filesystem::path const& assetPath,
+        std::filesystem::path const& sandboxRoot
     ) {
-        (void)options;
-
-        auto rootResult = canonicalSandboxRoot(sandboxRoot);
-        if (rootResult.isErr()) {
-            return rootResult.unwrapErr();
-        }
-
-        std::filesystem::path const& resolvedRoot = rootResult.unwrap();
         std::unordered_map<cgltf_image const*, int> imageIndices;
         asset.m_materials.clear();
         asset.m_images.clear();
@@ -602,8 +288,8 @@ namespace luax::render3d {
                         return "base color texture has no image";
                     }
 
-                    auto imageIndexResult = MeshAsset::resolveImageIndex(
-                        texture->image, assetPath, resolvedRoot, asset, imageIndices
+                    auto imageIndexResult = resolveImageIndex(
+                        texture->image, assetPath, sandboxRoot, asset.m_images, imageIndices
                     );
                     if (imageIndexResult.isErr()) {
                         return imageIndexResult.unwrapErr();
@@ -713,9 +399,7 @@ namespace luax::render3d {
         SandboxFileContext fileContext{rootResult.unwrap(), {}};
 
         cgltf_options options{};
-        options.file.read = sandboxFileRead;
-        options.file.release = sandboxFileRelease;
-        options.file.user_data = &fileContext;
+        configureSandboxFileIo(options, fileContext);
 
         ::cgltf_data* data = nullptr;
         cgltf_result parseResult =
@@ -737,8 +421,7 @@ namespace luax::render3d {
         }
 
         auto mesh = std::shared_ptr<MeshAsset>(new MeshAsset());
-        auto materialError =
-            MeshAsset::extractMaterials(data, *mesh, options, assetPath, rootResult.unwrap());
+        auto materialError = MeshAsset::extractMaterials(data, *mesh, assetPath, rootResult.unwrap());
         if (materialError.has_value()) {
             cgltf_free(data);
             return LoadResult<std::shared_ptr<MeshAsset>>::err(*materialError);

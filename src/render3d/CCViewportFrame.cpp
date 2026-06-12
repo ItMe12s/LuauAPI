@@ -1,5 +1,6 @@
 #include "render3d/CCViewportFrame.hpp"
 
+#include "render3d/GlUtil.hpp"
 #include "render3d/Renderer3D.hpp"
 
 #include <Geode/Geode.hpp>
@@ -140,8 +141,7 @@ namespace luax::render3d {
     }
 
     bool CCViewportFrame::hasGlContext() const {
-        auto* director = CCDirector::sharedDirector();
-        return director != nullptr && director->getOpenGLView() != nullptr;
+        return glContextAvailable();
     }
 
     void CCViewportFrame::invalidateFramebuffer() {
