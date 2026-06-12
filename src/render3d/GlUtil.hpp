@@ -10,6 +10,8 @@ namespace luax::render3d {
 
     bool vaoSupported();
 
+    bool instancingSupported();
+
     int captureAndUnbindVao();
     void restoreVao(int prevVao);
 

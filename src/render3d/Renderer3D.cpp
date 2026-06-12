@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstddef>
 #include <cstring>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -25,13 +26,38 @@ attribute vec3 aNormal;
 attribute vec2 aTexCoord;
 uniform mat4 uMVP;
 uniform mat4 uNormalMat;
+uniform vec3 uTint;
 varying vec3 vNormal;
 varying vec2 vTexCoord;
+varying vec3 vTint;
 
 void main() {
     vNormal = mat3(uNormalMat) * aNormal;
     vTexCoord = aTexCoord;
+    vTint = uTint;
     gl_Position = uMVP * vec4(aPos, 1.0);
+}
+)";
+
+        char const kLambertInstVert[] = R"(attribute vec3 aPos;
+attribute vec3 aNormal;
+attribute vec2 aTexCoord;
+attribute vec4 aModel0;
+attribute vec4 aModel1;
+attribute vec4 aModel2;
+attribute vec4 aModel3;
+attribute vec3 aTint;
+uniform mat4 uViewProj;
+varying vec3 vNormal;
+varying vec2 vTexCoord;
+varying vec3 vTint;
+
+void main() {
+    mat4 model = mat4(aModel0, aModel1, aModel2, aModel3);
+    vNormal = mat3(model) * aNormal;
+    vTexCoord = aTexCoord;
+    vTint = aTint;
+    gl_Position = uViewProj * model * vec4(aPos, 1.0);
 }
 )";
 
@@ -40,6 +66,7 @@ precision mediump float;
 #endif
 varying vec3 vNormal;
 varying vec2 vTexCoord;
+varying vec3 vTint;
 uniform vec3 uLightDir;
 uniform vec3 uLightColor;
 uniform float uAmbient;
@@ -47,12 +74,11 @@ uniform vec4 uBaseColor;
 uniform sampler2D uTexture;
 uniform float uUseTexture;
 uniform float uAlphaCutoff;
-uniform vec3 uTint;
 
 void main() {
     vec4 texel = uUseTexture > 0.5 ? texture2D(uTexture, vTexCoord) : vec4(1.0);
     vec3 albedo = uUseTexture > 0.5 ? texel.rgb : uBaseColor.rgb;
-    albedo *= uTint;
+    albedo *= vTint;
     float alpha = uBaseColor.a * (uUseTexture > 0.5 ? texel.a : 1.0);
     if (alpha < uAlphaCutoff) {
         discard;
@@ -96,6 +122,49 @@ void main() {
             float u;
             float v;
         };
+
+        struct GpuInstanceData {
+            glm::mat4 model{1.0f};
+            glm::vec4 tint{1.0f, 1.0f, 1.0f, 0.0f};
+        };
+
+        float shaderAlphaCutoff(int alphaMode, float alphaCutoff) {
+            return alphaMode == 1 ? alphaCutoff : 0.0f;
+        }
+
+        void resetInstanceAttribs() {
+#if defined(GLEW_VERSION)
+            for (unsigned int location = 3; location <= 7; ++location) {
+                glVertexAttribDivisor(location, 0);
+                glDisableVertexAttribArray(location);
+            }
+#endif
+        }
+
+        void setupInstanceAttribs(unsigned int instanceVbo) {
+#if defined(GLEW_VERSION)
+            int const stride = static_cast<int>(sizeof(GpuInstanceData));
+            glBindBuffer(GL_ARRAY_BUFFER, instanceVbo);
+            for (unsigned int column = 0; column < 4; ++column) {
+                unsigned int const location = 3 + column;
+                glEnableVertexAttribArray(location);
+                glVertexAttribPointer(
+                    location,
+                    4,
+                    GL_FLOAT,
+                    GL_FALSE,
+                    stride,
+                    reinterpret_cast<void*>(column * sizeof(glm::vec4))
+                );
+                glVertexAttribDivisor(location, 1);
+            }
+            glEnableVertexAttribArray(7);
+            glVertexAttribPointer(
+                7, 3, GL_FLOAT, GL_FALSE, stride, reinterpret_cast<void*>(offsetof(GpuInstanceData, tint))
+            );
+            glVertexAttribDivisor(7, 1);
+#endif
+        }
 
         glm::vec3 normalizedLightDirection(glm::vec3 const& direction) {
             glm::vec3 const fallback{0.35f, 0.85f, 0.4f};
@@ -205,12 +274,20 @@ void main() {
             if (m_lambertProgram != 0) {
                 glDeleteProgram(m_lambertProgram);
             }
+            if (m_lambertInstProgram != 0) {
+                glDeleteProgram(m_lambertInstProgram);
+            }
+            if (m_instanceVbo != 0) {
+                glDeleteBuffers(1, &m_instanceVbo);
+            }
         }
         m_gpuMeshes.clear();
         m_gpuTextures.clear();
         m_blitVbo = 0;
         m_blitProgram = 0;
         m_lambertProgram = 0;
+        m_lambertInstProgram = 0;
+        m_instanceVbo = 0;
     }
 
     void Renderer3D::releaseMeshGpu(std::uint64_t meshId) {
@@ -297,6 +374,47 @@ void main() {
         m_lambertLocAlphaCutoff = glGetUniformLocation(m_lambertProgram, "uAlphaCutoff");
         m_lambertLocTint = glGetUniformLocation(m_lambertProgram, "uTint");
         return true;
+    }
+
+    bool Renderer3D::ensureLambertInstProgram() {
+        if (m_lambertInstProgram != 0) {
+            return true;
+        }
+
+        m_lambertInstProgram = buildProgram(
+            kLambertInstVert,
+            kLambertFrag,
+            "lambert-inst",
+            {{0, "aPos"},
+             {1, "aNormal"},
+             {2, "aTexCoord"},
+             {3, "aModel0"},
+             {4, "aModel1"},
+             {5, "aModel2"},
+             {6, "aModel3"},
+             {7, "aTint"}}
+        );
+        if (m_lambertInstProgram == 0) {
+            return false;
+        }
+
+        m_lambertInstLocViewProj = glGetUniformLocation(m_lambertInstProgram, "uViewProj");
+        m_lambertInstLocLightDir = glGetUniformLocation(m_lambertInstProgram, "uLightDir");
+        m_lambertInstLocLightColor = glGetUniformLocation(m_lambertInstProgram, "uLightColor");
+        m_lambertInstLocAmbient = glGetUniformLocation(m_lambertInstProgram, "uAmbient");
+        m_lambertInstLocBaseColor = glGetUniformLocation(m_lambertInstProgram, "uBaseColor");
+        m_lambertInstLocTexture = glGetUniformLocation(m_lambertInstProgram, "uTexture");
+        m_lambertInstLocUseTexture = glGetUniformLocation(m_lambertInstProgram, "uUseTexture");
+        m_lambertInstLocAlphaCutoff = glGetUniformLocation(m_lambertInstProgram, "uAlphaCutoff");
+        return true;
+    }
+
+    bool Renderer3D::ensureInstanceVbo() {
+        if (m_instanceVbo != 0) {
+            return true;
+        }
+        glGenBuffers(1, &m_instanceVbo);
+        return m_instanceVbo != 0;
     }
 
     bool Renderer3D::ensureBlitProgram() {
@@ -592,7 +710,7 @@ void main() {
             }
         }
 
-        auto drawItems = [&](std::vector<DrawItem> const& items) {
+        struct DrawPassState {
             bool cullEnabled = true;
             unsigned int lastBoundTexture = ~0u;
             unsigned int lastVao = ~0u;
@@ -602,78 +720,219 @@ void main() {
             float lastUseTexture = -1.0f;
             float lastAlphaCutoff = -1.0f;
             bool textureUnitSet = false;
+            unsigned int activeProgram = 0;
+        };
 
-            for (auto const& item : items) {
-                bool const wantCull = !item.doubleSided;
-                if (wantCull != cullEnabled) {
-                    if (wantCull) {
-                        glEnable(GL_CULL_FACE);
-                    }
-                    else {
-                        glDisable(GL_CULL_FACE);
-                    }
-                    cullEnabled = wantCull;
-                }
+        auto drawSingleItem = [&](DrawItem const& item, DrawPassState& state) {
+            if (state.activeProgram != m_lambertProgram) {
+                glUseProgram(m_lambertProgram);
+                state.activeProgram = m_lambertProgram;
+                glUniform3fv(m_lambertLocLightDir, 1, glm::value_ptr(lightDir));
+                glUniform3fv(m_lambertLocLightColor, 1, glm::value_ptr(lightColor));
+                glUniform1f(m_lambertLocAmbient, settings.ambient);
+                state.textureUnitSet = false;
+            }
 
-                glm::mat4 const mvp = projection * view * item.model;
-                glm::mat4 const normalMat = item.model;
-                glUniformMatrix4fv(m_lambertLocMvp, 1, GL_FALSE, glm::value_ptr(mvp));
-                glUniformMatrix4fv(m_lambertLocNormalMat, 1, GL_FALSE, glm::value_ptr(normalMat));
-                glUniform3fv(m_lambertLocTint, 1, glm::value_ptr(item.tint));
-
-                unsigned int const boundTexture = item.boundTexture;
-                bool const useTexture = boundTexture != 0;
-                float const useTextureUniform = useTexture ? 1.0f : 0.0f;
-                float const shaderCutoff = item.alphaMode == 1 ? item.alphaCutoff : 0.0f;
-
-                if (item.baseColor != lastBaseColor) {
-                    glUniform4fv(m_lambertLocBaseColor, 1, glm::value_ptr(item.baseColor));
-                    lastBaseColor = item.baseColor;
-                }
-                if (useTextureUniform != lastUseTexture) {
-                    glUniform1f(m_lambertLocUseTexture, useTextureUniform);
-                    lastUseTexture = useTextureUniform;
-                }
-                if (shaderCutoff != lastAlphaCutoff) {
-                    glUniform1f(m_lambertLocAlphaCutoff, shaderCutoff);
-                    lastAlphaCutoff = shaderCutoff;
-                }
-                if (useTexture && boundTexture != lastBoundTexture) {
-                    glActiveTexture(GL_TEXTURE0);
-                    glBindTexture(GL_TEXTURE_2D, boundTexture);
-                    if (!textureUnitSet) {
-                        glUniform1i(m_lambertLocTexture, 0);
-                        textureUnitSet = true;
-                    }
-                    lastBoundTexture = boundTexture;
-                }
-
-                if (useVao && item.prim->vao != 0) {
-                    if (item.prim->vao != lastVao) {
-                        glBindVertexArray(item.prim->vao);
-                        lastVao = item.prim->vao;
-                        lastVbo = ~0u;
-                        lastIbo = ~0u;
-                    }
+            bool const wantCull = !item.doubleSided;
+            if (wantCull != state.cullEnabled) {
+                if (wantCull) {
+                    glEnable(GL_CULL_FACE);
                 }
                 else {
-                    bool const vboChanged = item.prim->vbo != lastVbo;
-                    if (vboChanged) {
-                        glBindBuffer(GL_ARRAY_BUFFER, item.prim->vbo);
-                        lastVbo = item.prim->vbo;
-                    }
-                    if (item.prim->ibo != lastIbo) {
-                        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, item.prim->ibo);
-                        lastIbo = item.prim->ibo;
-                    }
-                    if (vboChanged) {
-                        setupInterleavedVertexAttribs();
-                    }
-                    lastVao = ~0u;
+                    glDisable(GL_CULL_FACE);
                 }
-                glDrawElements(
-                    GL_TRIANGLES, static_cast<GLsizei>(item.prim->indexCount), GL_UNSIGNED_INT, nullptr
-                );
+                state.cullEnabled = wantCull;
+            }
+
+            glm::mat4 const mvp = projection * view * item.model;
+            glm::mat4 const normalMat = item.model;
+            glUniformMatrix4fv(m_lambertLocMvp, 1, GL_FALSE, glm::value_ptr(mvp));
+            glUniformMatrix4fv(m_lambertLocNormalMat, 1, GL_FALSE, glm::value_ptr(normalMat));
+            glUniform3fv(m_lambertLocTint, 1, glm::value_ptr(item.tint));
+
+            unsigned int const boundTexture = item.boundTexture;
+            bool const useTexture = boundTexture != 0;
+            float const useTextureUniform = useTexture ? 1.0f : 0.0f;
+            float const shaderCutoff = shaderAlphaCutoff(item.alphaMode, item.alphaCutoff);
+
+            if (item.baseColor != state.lastBaseColor) {
+                glUniform4fv(m_lambertLocBaseColor, 1, glm::value_ptr(item.baseColor));
+                state.lastBaseColor = item.baseColor;
+            }
+            if (useTextureUniform != state.lastUseTexture) {
+                glUniform1f(m_lambertLocUseTexture, useTextureUniform);
+                state.lastUseTexture = useTextureUniform;
+            }
+            if (shaderCutoff != state.lastAlphaCutoff) {
+                glUniform1f(m_lambertLocAlphaCutoff, shaderCutoff);
+                state.lastAlphaCutoff = shaderCutoff;
+            }
+            if (useTexture && boundTexture != state.lastBoundTexture) {
+                glActiveTexture(GL_TEXTURE0);
+                glBindTexture(GL_TEXTURE_2D, boundTexture);
+                if (!state.textureUnitSet) {
+                    glUniform1i(m_lambertLocTexture, 0);
+                    state.textureUnitSet = true;
+                }
+                state.lastBoundTexture = boundTexture;
+            }
+
+            if (useVao && item.prim->vao != 0) {
+                if (item.prim->vao != state.lastVao) {
+                    glBindVertexArray(item.prim->vao);
+                    state.lastVao = item.prim->vao;
+                    state.lastVbo = ~0u;
+                    state.lastIbo = ~0u;
+                }
+            }
+            else {
+                bool const vboChanged = item.prim->vbo != state.lastVbo;
+                if (vboChanged) {
+                    glBindBuffer(GL_ARRAY_BUFFER, item.prim->vbo);
+                    state.lastVbo = item.prim->vbo;
+                }
+                if (item.prim->ibo != state.lastIbo) {
+                    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, item.prim->ibo);
+                    state.lastIbo = item.prim->ibo;
+                }
+                if (vboChanged) {
+                    setupInterleavedVertexAttribs();
+                }
+                state.lastVao = ~0u;
+            }
+            glDrawElements(
+                GL_TRIANGLES, static_cast<GLsizei>(item.prim->indexCount), GL_UNSIGNED_INT, nullptr
+            );
+        };
+
+        auto drawInstancedRun = [&](DrawItem const* begin, DrawItem const* end, DrawPassState& state) {
+            DrawItem const& first = *begin;
+            std::size_t const count = static_cast<std::size_t>(end - begin);
+
+            if (state.activeProgram != m_lambertInstProgram) {
+                glUseProgram(m_lambertInstProgram);
+                state.activeProgram = m_lambertInstProgram;
+                glUniform3fv(m_lambertInstLocLightDir, 1, glm::value_ptr(lightDir));
+                glUniform3fv(m_lambertInstLocLightColor, 1, glm::value_ptr(lightColor));
+                glUniform1f(m_lambertInstLocAmbient, settings.ambient);
+                state.textureUnitSet = false;
+            }
+
+            bool const wantCull = !first.doubleSided;
+            if (wantCull != state.cullEnabled) {
+                if (wantCull) {
+                    glEnable(GL_CULL_FACE);
+                }
+                else {
+                    glDisable(GL_CULL_FACE);
+                }
+                state.cullEnabled = wantCull;
+            }
+
+            glm::mat4 const viewProj = projection * view;
+            glUniformMatrix4fv(m_lambertInstLocViewProj, 1, GL_FALSE, glm::value_ptr(viewProj));
+
+            unsigned int const boundTexture = first.boundTexture;
+            bool const useTexture = boundTexture != 0;
+            float const useTextureUniform = useTexture ? 1.0f : 0.0f;
+            float const shaderCutoff = shaderAlphaCutoff(first.alphaMode, first.alphaCutoff);
+
+            if (first.baseColor != state.lastBaseColor) {
+                glUniform4fv(m_lambertInstLocBaseColor, 1, glm::value_ptr(first.baseColor));
+                state.lastBaseColor = first.baseColor;
+            }
+            if (useTextureUniform != state.lastUseTexture) {
+                glUniform1f(m_lambertInstLocUseTexture, useTextureUniform);
+                state.lastUseTexture = useTextureUniform;
+            }
+            if (shaderCutoff != state.lastAlphaCutoff) {
+                glUniform1f(m_lambertInstLocAlphaCutoff, shaderCutoff);
+                state.lastAlphaCutoff = shaderCutoff;
+            }
+            if (useTexture && boundTexture != state.lastBoundTexture) {
+                glActiveTexture(GL_TEXTURE0);
+                glBindTexture(GL_TEXTURE_2D, boundTexture);
+                if (!state.textureUnitSet) {
+                    glUniform1i(m_lambertInstLocTexture, 0);
+                    state.textureUnitSet = true;
+                }
+                state.lastBoundTexture = boundTexture;
+            }
+
+            std::vector<GpuInstanceData> instanceData;
+            instanceData.reserve(count);
+            for (DrawItem const* it = begin; it != end; ++it) {
+                instanceData.push_back(GpuInstanceData{it->model, glm::vec4(it->tint, 0.0f)});
+            }
+
+            glBindBuffer(GL_ARRAY_BUFFER, m_instanceVbo);
+            glBufferData(
+                GL_ARRAY_BUFFER,
+                static_cast<GLsizeiptr>(instanceData.size() * sizeof(GpuInstanceData)),
+                instanceData.data(),
+                GL_DYNAMIC_DRAW
+            );
+
+            if (first.prim->vao != state.lastVao) {
+                glBindVertexArray(first.prim->vao);
+                state.lastVao = first.prim->vao;
+                state.lastVbo = ~0u;
+                state.lastIbo = ~0u;
+            }
+            setupInstanceAttribs(m_instanceVbo);
+#if defined(GLEW_VERSION)
+            glDrawElementsInstanced(
+                GL_TRIANGLES,
+                static_cast<GLsizei>(first.prim->indexCount),
+                GL_UNSIGNED_INT,
+                nullptr,
+                static_cast<GLsizei>(count)
+            );
+#endif
+            resetInstanceAttribs();
+        };
+
+        auto sameInstancedBatch = [](DrawItem const& a, DrawItem const& b) {
+            return a.prim == b.prim && a.boundTexture == b.boundTexture &&
+                a.baseColor == b.baseColor &&
+                shaderAlphaCutoff(a.alphaMode, a.alphaCutoff) ==
+                shaderAlphaCutoff(b.alphaMode, b.alphaCutoff) &&
+                a.doubleSided == b.doubleSided;
+        };
+
+        auto drawOpaqueItems = [&](std::vector<DrawItem> const& items) {
+            DrawPassState state{};
+
+            bool const canInstance = useVao && instancingSupported() &&
+                ensureLambertInstProgram() && ensureInstanceVbo();
+
+            if (!canInstance) {
+                for (auto const& item : items) {
+                    drawSingleItem(item, state);
+                }
+                return;
+            }
+
+            for (std::size_t i = 0; i < items.size();) {
+                std::size_t j = i + 1;
+                while (j < items.size() && sameInstancedBatch(items[i], items[j])) {
+                    ++j;
+                }
+                if (j - i >= 2) {
+                    drawInstancedRun(&items[i], &items[j], state);
+                    i = j;
+                }
+                else {
+                    drawSingleItem(items[i], state);
+                    ++i;
+                }
+            }
+        };
+
+        auto drawBlendItems = [&](std::vector<DrawItem> const& items) {
+            DrawPassState state{};
+            for (auto const& item : items) {
+                drawSingleItem(item, state);
             }
         };
 
@@ -687,7 +946,7 @@ void main() {
             return a.prim->vbo < b.prim->vbo;
         });
 
-        drawItems(opaqueItems);
+        drawOpaqueItems(opaqueItems);
 
         if (!blendItems.empty()) {
             std::sort(blendItems.begin(), blendItems.end(), [](DrawItem const& a, DrawItem const& b) {
@@ -699,7 +958,7 @@ void main() {
             glEnable(GL_BLEND);
             glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
             glDepthMask(GL_FALSE);
-            drawItems(blendItems);
+            drawBlendItems(blendItems);
             glDepthMask(GL_TRUE);
         }
 

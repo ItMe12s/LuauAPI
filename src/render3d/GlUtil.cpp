@@ -19,6 +19,14 @@ namespace luax::render3d {
 #endif
     }
 
+    bool instancingSupported() {
+#if defined(GLEW_VERSION)
+        return glDrawElementsInstanced != nullptr && glVertexAttribDivisor != nullptr;
+#else
+        return false;
+#endif
+    }
+
     int captureAndUnbindVao() {
 #if defined(GL_VERTEX_ARRAY_BINDING)
         GLint prevVao = 0;

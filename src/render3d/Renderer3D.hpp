@@ -47,8 +47,10 @@ namespace luax::render3d {
         };
 
         bool ensureLambertProgram();
+        bool ensureLambertInstProgram();
         bool ensureBlitProgram();
         bool ensureBlitGeometry();
+        bool ensureInstanceVbo();
         GpuMesh* ensureGpuMesh(std::uint64_t meshId, MeshAsset const& meshAsset);
         unsigned int ensureGpuTexture(std::uint64_t textureId, TextureAsset const& textureAsset);
 
@@ -66,6 +68,18 @@ namespace luax::render3d {
         int m_lambertLocUseTexture = -1;
         int m_lambertLocAlphaCutoff = -1;
         int m_lambertLocTint = -1;
+
+        unsigned int m_lambertInstProgram = 0;
+        int m_lambertInstLocViewProj = -1;
+        int m_lambertInstLocLightDir = -1;
+        int m_lambertInstLocLightColor = -1;
+        int m_lambertInstLocAmbient = -1;
+        int m_lambertInstLocBaseColor = -1;
+        int m_lambertInstLocTexture = -1;
+        int m_lambertInstLocUseTexture = -1;
+        int m_lambertInstLocAlphaCutoff = -1;
+
+        unsigned int m_instanceVbo = 0;
 
         unsigned int m_blitProgram = 0;
         int m_blitLocMvp = -1;
