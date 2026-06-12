@@ -73,6 +73,7 @@ export type Gd3dNamespace = {
     },
     gltf: {
         loadMesh: (root: FsRoot, path: string) -> (Gd3dMesh?, string?),
+        loadMeshFromBytes: (bytes: buffer | string) -> (Gd3dMesh?, string?),
     },
     mesh: {
         new: (data: {

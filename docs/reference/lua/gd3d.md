@@ -114,9 +114,14 @@ Transforms are immutable. `withPosition` and `withRotation` return new values wi
 
 ```lua
 gd3d.gltf.loadMesh(root: FsRoot, path: string) -> (Mesh?, string?)
+gd3d.gltf.loadMeshFromBytes(bytes: buffer | string) -> (Mesh?, string?)
 ```
 
-Loads a glTF 2.0 file (`.glb` or `.gltf`) from a mod sandbox root.
+`loadMesh` loads a glTF 2.0 file (`.glb` or `.gltf`) from a mod sandbox root.
+`loadMeshFromBytes` loads glTF data already in memory. Pass a Luau `buffer` or raw `string`.
+Use GLB with embedded buffers and images only, external URI references are not resolved
+and fail with the loader's usual buffer or image errors.
+The same 32 MiB read cap as `loadMesh` applies.
 The first argument uses the same roots as [fs](fs.md): `"save"`, `"config"`, `"persistent"`, or `"resources"`.
 Shipped assets belong under `"resources"`.
 

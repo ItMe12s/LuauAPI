@@ -209,7 +209,7 @@ namespace luax::render3d {
 
     LoadResult<std::filesystem::path> canonicalSandboxRoot(std::filesystem::path const& root) {
         if (root.empty()) {
-            return LoadResult<std::filesystem::path>::err("sandbox root is empty");
+            return LoadResult<std::filesystem::path>::ok(std::filesystem::path{});
         }
 
         std::error_code ec;
