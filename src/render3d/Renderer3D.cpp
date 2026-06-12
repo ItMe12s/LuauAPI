@@ -44,12 +44,15 @@ namespace luax::render3d {
 
         char const kLambertVert[] = R"(attribute vec3 aPos;
 attribute vec3 aNormal;
+attribute vec2 aTexCoord;
 uniform mat4 uMVP;
 uniform mat4 uNormalMat;
 varying vec3 vNormal;
+varying vec2 vTexCoord;
 
 void main() {
     vNormal = mat3(uNormalMat) * aNormal;
+    vTexCoord = aTexCoord;
     gl_Position = uMVP * vec4(aPos, 1.0);
 }
 )";
@@ -58,14 +61,20 @@ void main() {
 precision mediump float;
 #endif
 varying vec3 vNormal;
+varying vec2 vTexCoord;
 uniform vec3 uLightDir;
-uniform vec3 uColor;
+uniform vec4 uBaseColor;
+uniform sampler2D uTexture;
+uniform float uUseTexture;
+uniform vec3 uTint;
 
 void main() {
+    vec3 albedo = uUseTexture > 0.5 ? texture2D(uTexture, vTexCoord).rgb : uBaseColor.rgb;
+    albedo *= uTint;
     vec3 n = normalize(vNormal);
     float diff = max(dot(n, normalize(uLightDir)), 0.0);
     float lit = 0.15 + diff * 0.85;
-    gl_FragColor = vec4(uColor * lit, 1.0);
+    gl_FragColor = vec4(albedo * lit, uBaseColor.a);
 }
 )";
 
@@ -98,6 +107,8 @@ void main() {
             float nx;
             float ny;
             float nz;
+            float u;
+            float v;
         };
 
         struct DrawStateSnapshot {
@@ -225,6 +236,14 @@ void main() {
             deleteGpuPrimitive(primitive);
         }
         mesh.primitives.clear();
+        if (glContextAvailable()) {
+            for (unsigned int texture : mesh.textures) {
+                if (texture != 0) {
+                    glDeleteTextures(1, &texture);
+                }
+            }
+        }
+        mesh.textures.clear();
     }
 
     void Renderer3D::destroyGlResources() {
@@ -265,8 +284,9 @@ void main() {
             return true;
         }
 
-        m_lambertProgram =
-            buildProgram(kLambertVert, kLambertFrag, "lambert", {{0, "aPos"}, {1, "aNormal"}});
+        m_lambertProgram = buildProgram(
+            kLambertVert, kLambertFrag, "lambert", {{0, "aPos"}, {1, "aNormal"}, {2, "aTexCoord"}}
+        );
         if (m_lambertProgram == 0) {
             return false;
         }
@@ -274,7 +294,10 @@ void main() {
         m_lambertLocMvp = glGetUniformLocation(m_lambertProgram, "uMVP");
         m_lambertLocNormalMat = glGetUniformLocation(m_lambertProgram, "uNormalMat");
         m_lambertLocLightDir = glGetUniformLocation(m_lambertProgram, "uLightDir");
-        m_lambertLocColor = glGetUniformLocation(m_lambertProgram, "uColor");
+        m_lambertLocBaseColor = glGetUniformLocation(m_lambertProgram, "uBaseColor");
+        m_lambertLocTexture = glGetUniformLocation(m_lambertProgram, "uTexture");
+        m_lambertLocUseTexture = glGetUniformLocation(m_lambertProgram, "uUseTexture");
+        m_lambertLocTint = glGetUniformLocation(m_lambertProgram, "uTint");
         return true;
     }
 
@@ -326,8 +349,12 @@ void main() {
                 if (v < src.normals.size()) {
                     normal = src.normals[v];
                 }
+                glm::vec2 uv{0.0f, 0.0f};
+                if (v < src.texcoords.size()) {
+                    uv = src.texcoords[v];
+                }
                 vertices.push_back(
-                    InterleavedVertex{pos.x, pos.y, pos.z, normal.x, normal.y, normal.z}
+                    InterleavedVertex{pos.x, pos.y, pos.z, normal.x, normal.y, normal.z, uv.x, uv.y}
                 );
             }
 
@@ -351,10 +378,42 @@ void main() {
             );
 
             gpu.indexCount = static_cast<unsigned int>(src.indices.size());
+            gpu.materialIndex = src.materialIndex;
+        }
+
+        auto const& images = meshAsset.images();
+        gpuMesh.textures.resize(images.size());
+        for (std::size_t i = 0; i < images.size(); ++i) {
+            auto const& image = images[i];
+            if (image.width <= 0 || image.height <= 0 || image.rgba.empty()) {
+                gpuMesh.textures[i] = 0;
+                continue;
+            }
+
+            unsigned int texture = 0;
+            glGenTextures(1, &texture);
+            glBindTexture(GL_TEXTURE_2D, texture);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+            glTexImage2D(
+                GL_TEXTURE_2D,
+                0,
+                GL_RGBA,
+                image.width,
+                image.height,
+                0,
+                GL_RGBA,
+                GL_UNSIGNED_BYTE,
+                image.rgba.data()
+            );
+            gpuMesh.textures[i] = texture;
         }
 
         glBindBuffer(GL_ARRAY_BUFFER, 0);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+        glBindTexture(GL_TEXTURE_2D, 0);
         return &gpuMesh;
     }
 
@@ -376,6 +435,8 @@ void main() {
         GLboolean depthMask = GL_TRUE;
         GLboolean cullEnabled = GL_FALSE;
         GLboolean blendEnabled = GL_FALSE;
+        DrawStateSnapshot prevState{};
+        prevState.capture();
 
         glGetIntegerv(GL_FRAMEBUFFER_BINDING, &prevFbo);
         glGetIntegerv(GL_VIEWPORT, prevViewport);
@@ -408,6 +469,7 @@ void main() {
         int const stride = static_cast<int>(sizeof(InterleavedVertex));
         glEnableVertexAttribArray(0);
         glEnableVertexAttribArray(1);
+        glEnableVertexAttribArray(2);
 
         for (auto const& [instanceId, instance] : instances) {
             (void)instanceId;
@@ -422,14 +484,39 @@ void main() {
             glm::mat4 const model = instance.transform.toMat4();
             glm::mat4 const mvp = projection * view * model;
             glm::mat4 const normalMat = model;
+            auto const& materials = instance.mesh->materials();
 
             glUniformMatrix4fv(m_lambertLocMvp, 1, GL_FALSE, glm::value_ptr(mvp));
             glUniformMatrix4fv(m_lambertLocNormalMat, 1, GL_FALSE, glm::value_ptr(normalMat));
-            glUniform3fv(m_lambertLocColor, 1, glm::value_ptr(instance.color));
+            glUniform3fv(m_lambertLocTint, 1, glm::value_ptr(instance.color));
 
             for (auto const& primitive : gpuMesh->primitives) {
                 if (primitive.vbo == 0 || primitive.ibo == 0 || primitive.indexCount == 0) {
                     continue;
+                }
+
+                glm::vec4 baseColor{1.0f, 1.0f, 1.0f, 1.0f};
+                int imageIndex = -1;
+                if (primitive.materialIndex >= 0 &&
+                    static_cast<std::size_t>(primitive.materialIndex) < materials.size()) {
+                    auto const& material =
+                        materials[static_cast<std::size_t>(primitive.materialIndex)];
+                    baseColor = material.baseColorFactor;
+                    imageIndex = material.imageIndex;
+                }
+
+                bool const useTexture = imageIndex >= 0 &&
+                    static_cast<std::size_t>(imageIndex) < gpuMesh->textures.size() &&
+                    gpuMesh->textures[static_cast<std::size_t>(imageIndex)] != 0;
+
+                glUniform4fv(m_lambertLocBaseColor, 1, glm::value_ptr(baseColor));
+                glUniform1f(m_lambertLocUseTexture, useTexture ? 1.0f : 0.0f);
+                if (useTexture) {
+                    glActiveTexture(GL_TEXTURE0);
+                    glBindTexture(
+                        GL_TEXTURE_2D, gpuMesh->textures[static_cast<std::size_t>(imageIndex)]
+                    );
+                    glUniform1i(m_lambertLocTexture, 0);
                 }
 
                 glBindBuffer(GL_ARRAY_BUFFER, primitive.vbo);
@@ -437,6 +524,9 @@ void main() {
                 glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, stride, reinterpret_cast<void*>(0));
                 glVertexAttribPointer(
                     1, 3, GL_FLOAT, GL_FALSE, stride, reinterpret_cast<void*>(3 * sizeof(float))
+                );
+                glVertexAttribPointer(
+                    2, 2, GL_FLOAT, GL_FALSE, stride, reinterpret_cast<void*>(6 * sizeof(float))
                 );
                 glDrawElements(
                     GL_TRIANGLES, static_cast<GLsizei>(primitive.indexCount), GL_UNSIGNED_INT, nullptr
@@ -446,6 +536,7 @@ void main() {
 
         glDisableVertexAttribArray(0);
         glDisableVertexAttribArray(1);
+        glDisableVertexAttribArray(2);
 
         glBindFramebuffer(GL_FRAMEBUFFER, static_cast<GLuint>(prevFbo));
         glViewport(prevViewport[0], prevViewport[1], prevViewport[2], prevViewport[3]);
@@ -466,6 +557,7 @@ void main() {
         glBindBuffer(GL_ARRAY_BUFFER, 0);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
         restoreVao(prevVao);
+        prevState.restore();
         ccGLUseProgram(0);
         ccGLEnableVertexAttribs(cocos2d::kCCVertexAttribFlag_None);
     }

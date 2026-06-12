@@ -34,10 +34,12 @@ namespace luax::render3d {
             unsigned int vbo = 0;
             unsigned int ibo = 0;
             unsigned int indexCount = 0;
+            int materialIndex = -1;
         };
 
         struct GpuMesh {
             std::vector<GpuPrimitive> primitives;
+            std::vector<unsigned int> textures;
         };
 
         bool ensureLambertProgram();
@@ -52,7 +54,10 @@ namespace luax::render3d {
         int m_lambertLocMvp = -1;
         int m_lambertLocNormalMat = -1;
         int m_lambertLocLightDir = -1;
-        int m_lambertLocColor = -1;
+        int m_lambertLocBaseColor = -1;
+        int m_lambertLocTexture = -1;
+        int m_lambertLocUseTexture = -1;
+        int m_lambertLocTint = -1;
 
         unsigned int m_blitProgram = 0;
         int m_blitLocMvp = -1;
