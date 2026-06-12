@@ -51,6 +51,14 @@ namespace luax::render3d {
         return m_camera;
     }
 
+    void CCViewportFrame::setRenderSettings(RenderSettings const& settings) {
+        m_settings = settings;
+    }
+
+    RenderSettings const& CCViewportFrame::renderSettings() const {
+        return m_settings;
+    }
+
     int CCViewportFrame::addInstance(
         std::uint64_t meshId, std::shared_ptr<MeshAsset> mesh, Transform const& transform,
         glm::vec3 color
@@ -135,7 +143,9 @@ namespace luax::render3d {
         }
 
         auto& renderer = Renderer3D::instance();
-        renderer.renderToFramebuffer(m_fbo, m_fboPixelWidth, m_fboPixelHeight, m_camera, m_instances);
+        renderer.renderToFramebuffer(
+            m_fbo, m_fboPixelWidth, m_fboPixelHeight, m_camera, m_instances, m_settings
+        );
         renderer.drawCompositeQuad(m_colorTexture, size.width, size.height);
     }
 

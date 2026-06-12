@@ -299,6 +299,15 @@ namespace luax::render3d {
                 }
             }
 
+            switch (material.alpha_mode) {
+                case cgltf_alpha_mode_opaque: materialData.alphaMode = 0; break;
+                case cgltf_alpha_mode_mask: materialData.alphaMode = 1; break;
+                case cgltf_alpha_mode_blend: materialData.alphaMode = 2; break;
+                default: materialData.alphaMode = 0; break;
+            }
+            materialData.alphaCutoff = material.alpha_cutoff;
+            materialData.doubleSided = material.double_sided != 0;
+
             asset.m_materials.push_back(materialData);
         }
 

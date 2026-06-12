@@ -38,6 +38,8 @@ precision mediump float;
 varying vec3 vNormal;
 varying vec2 vTexCoord;
 uniform vec3 uLightDir;
+uniform vec3 uLightColor;
+uniform float uAmbient;
 uniform vec4 uBaseColor;
 uniform sampler2D uTexture;
 uniform float uUseTexture;
@@ -48,8 +50,8 @@ void main() {
     albedo *= uTint;
     vec3 n = normalize(vNormal);
     float diff = max(dot(n, normalize(uLightDir)), 0.0);
-    float lit = 0.15 + diff * 0.85;
-    gl_FragColor = vec4(albedo * lit, uBaseColor.a);
+    vec3 lighting = vec3(uAmbient) + uLightColor * diff;
+    gl_FragColor = vec4(albedo * lighting, uBaseColor.a);
 }
 )";
 
@@ -85,6 +87,14 @@ void main() {
             float u;
             float v;
         };
+
+        glm::vec3 normalizedLightDirection(glm::vec3 const& direction) {
+            glm::vec3 const fallback{0.35f, 0.85f, 0.4f};
+            if (glm::dot(direction, direction) <= 0.0f) {
+                return glm::normalize(fallback);
+            }
+            return glm::normalize(direction);
+        }
 
     } // namespace
 
@@ -170,6 +180,8 @@ void main() {
         m_lambertLocMvp = glGetUniformLocation(m_lambertProgram, "uMVP");
         m_lambertLocNormalMat = glGetUniformLocation(m_lambertProgram, "uNormalMat");
         m_lambertLocLightDir = glGetUniformLocation(m_lambertProgram, "uLightDir");
+        m_lambertLocLightColor = glGetUniformLocation(m_lambertProgram, "uLightColor");
+        m_lambertLocAmbient = glGetUniformLocation(m_lambertProgram, "uAmbient");
         m_lambertLocBaseColor = glGetUniformLocation(m_lambertProgram, "uBaseColor");
         m_lambertLocTexture = glGetUniformLocation(m_lambertProgram, "uTexture");
         m_lambertLocUseTexture = glGetUniformLocation(m_lambertProgram, "uUseTexture");
@@ -295,7 +307,7 @@ void main() {
 
     void Renderer3D::renderToFramebuffer(
         unsigned int fbo, int pixelWidth, int pixelHeight, Camera3D const& camera,
-        std::map<int, ViewportInstance> const& instances
+        std::map<int, ViewportInstance> const& instances, RenderSettings const& settings
     ) {
         if (fbo == 0 || pixelWidth <= 0 || pixelHeight <= 0) {
             return;
@@ -322,17 +334,22 @@ void main() {
         glEnable(GL_CULL_FACE);
         glCullFace(GL_BACK);
         glDisable(GL_BLEND);
-        glClearColor(0.08f, 0.09f, 0.12f, 0.0f);
+        glClearColor(
+            settings.clearColor.r, settings.clearColor.g, settings.clearColor.b, settings.clearColor.a
+        );
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         float const aspect = static_cast<float>(pixelWidth) / static_cast<float>(pixelHeight);
         glm::mat4 const projection =
             glm::perspective(glm::radians(camera.fovYDegrees), aspect, camera.zNear, camera.zFar);
         glm::mat4 const view = camera.transform.inverse().toMat4();
-        glm::vec3 const lightDir = glm::normalize(glm::vec3(0.35f, 0.85f, 0.4f));
+        glm::vec3 const lightDir = normalizedLightDirection(settings.lightDirection);
+        glm::vec3 const lightColor = settings.lightColor * settings.lightIntensity;
 
         glUseProgram(m_lambertProgram);
         glUniform3fv(m_lambertLocLightDir, 1, glm::value_ptr(lightDir));
+        glUniform3fv(m_lambertLocLightColor, 1, glm::value_ptr(lightColor));
+        glUniform1f(m_lambertLocAmbient, settings.ambient);
 
         int const stride = static_cast<int>(sizeof(InterleavedVertex));
         glEnableVertexAttribArray(0);

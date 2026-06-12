@@ -15,7 +15,7 @@ namespace luax::render3d {
 
         void renderToFramebuffer(
             unsigned int fbo, int pixelWidth, int pixelHeight, Camera3D const& camera,
-            std::map<int, ViewportInstance> const& instances
+            std::map<int, ViewportInstance> const& instances, RenderSettings const& settings
         );
 
         void drawCompositeQuad(unsigned int colorTexture, float width, float height);
@@ -54,6 +54,8 @@ namespace luax::render3d {
         int m_lambertLocMvp = -1;
         int m_lambertLocNormalMat = -1;
         int m_lambertLocLightDir = -1;
+        int m_lambertLocLightColor = -1;
+        int m_lambertLocAmbient = -1;
         int m_lambertLocBaseColor = -1;
         int m_lambertLocTexture = -1;
         int m_lambertLocUseTexture = -1;

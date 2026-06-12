@@ -6,6 +6,7 @@
 #include <cocos2d.h>
 #include <cstdint>
 #include <glm/vec3.hpp>
+#include <glm/vec4.hpp>
 #include <map>
 #include <memory>
 
@@ -18,6 +19,14 @@ namespace luax::render3d {
         float fovYDegrees = 70.0f;
         float zNear = 0.1f;
         float zFar = 100.0f;
+    };
+
+    struct RenderSettings {
+        glm::vec4 clearColor{0.0f, 0.0f, 0.0f, 0.0f};
+        glm::vec3 lightDirection{0.35f, 0.85f, 0.4f};
+        glm::vec3 lightColor{1.0f, 1.0f, 1.0f};
+        float lightIntensity = 1.0f;
+        float ambient = 0.15f;
     };
 
     struct ViewportInstance {
@@ -34,6 +43,9 @@ namespace luax::render3d {
 
         void setCamera3D(Camera3D const& camera);
         Camera3D const& getCamera3D() const;
+
+        void setRenderSettings(RenderSettings const& settings);
+        RenderSettings const& renderSettings() const;
 
         int addInstance(
             std::uint64_t meshId, std::shared_ptr<MeshAsset> mesh, Transform const& transform,
@@ -68,6 +80,7 @@ namespace luax::render3d {
         void invalidateFramebuffer();
 
         Camera3D m_camera{};
+        RenderSettings m_settings{};
         std::map<int, ViewportInstance> m_instances{};
         int m_nextInstanceId = 1;
 

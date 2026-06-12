@@ -65,6 +65,9 @@ namespace luax::render3d {
     struct MaterialData {
         glm::vec4 baseColorFactor{1.0f, 1.0f, 1.0f, 1.0f};
         int imageIndex = -1;
+        int alphaMode = 0;
+        float alphaCutoff = 0.5f;
+        bool doubleSided = false;
     };
 
     struct MeshPrimitive {
