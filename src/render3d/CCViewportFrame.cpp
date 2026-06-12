@@ -69,6 +69,24 @@ namespace luax::render3d {
         return true;
     }
 
+    bool CCViewportFrame::setInstanceMaterial(int instanceId, std::shared_ptr<Material> material) {
+        auto it = m_instances.find(instanceId);
+        if (it == m_instances.end()) {
+            return false;
+        }
+        it->second.materialOverride = std::move(material);
+        return true;
+    }
+
+    bool CCViewportFrame::setInstanceColor(int instanceId, glm::vec3 color) {
+        auto it = m_instances.find(instanceId);
+        if (it == m_instances.end()) {
+            return false;
+        }
+        it->second.color = color;
+        return true;
+    }
+
     bool CCViewportFrame::removeInstance(int instanceId) {
         return m_instances.erase(instanceId) > 0;
     }

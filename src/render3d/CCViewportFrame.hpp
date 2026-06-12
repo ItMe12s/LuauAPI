@@ -1,5 +1,6 @@
 #pragma once
 
+#include "render3d/Material.hpp"
 #include "render3d/Transform3D.hpp"
 
 #include <cocos2d.h>
@@ -24,6 +25,7 @@ namespace luax::render3d {
         std::shared_ptr<MeshAsset> mesh{};
         Transform transform{};
         glm::vec3 color{1.0f, 1.0f, 1.0f};
+        std::shared_ptr<Material> materialOverride{};
     };
 
     class CCViewportFrame final : public cocos2d::CCNode {
@@ -38,6 +40,8 @@ namespace luax::render3d {
             glm::vec3 color = glm::vec3(1.0f, 1.0f, 1.0f)
         );
         bool setInstanceTransform(int instanceId, Transform const& transform);
+        bool setInstanceMaterial(int instanceId, std::shared_ptr<Material> material);
+        bool setInstanceColor(int instanceId, glm::vec3 color);
         bool removeInstance(int instanceId);
         void clearInstances();
 

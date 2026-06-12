@@ -497,24 +497,40 @@ void main() {
 
                 glm::vec4 baseColor{1.0f, 1.0f, 1.0f, 1.0f};
                 int imageIndex = -1;
-                if (primitive.materialIndex >= 0 &&
-                    static_cast<std::size_t>(primitive.materialIndex) < materials.size()) {
+                GpuMesh const* textureSource = gpuMesh;
+
+                if (instance.materialOverride != nullptr) {
+                    Material const& overrideMat = *instance.materialOverride;
+                    baseColor = overrideMat.baseColorFactor;
+                    imageIndex = overrideMat.imageIndex;
+                    if (imageIndex >= 0 && overrideMat.sourceMesh != nullptr) {
+                        textureSource =
+                            ensureGpuMesh(overrideMat.sourceMeshId, *overrideMat.sourceMesh);
+                        if (textureSource == nullptr) {
+                            imageIndex = -1;
+                        }
+                    }
+                }
+                else if (
+                    primitive.materialIndex >= 0 &&
+                    static_cast<std::size_t>(primitive.materialIndex) < materials.size()
+                ) {
                     auto const& material =
                         materials[static_cast<std::size_t>(primitive.materialIndex)];
                     baseColor = material.baseColorFactor;
                     imageIndex = material.imageIndex;
                 }
 
-                bool const useTexture = imageIndex >= 0 &&
-                    static_cast<std::size_t>(imageIndex) < gpuMesh->textures.size() &&
-                    gpuMesh->textures[static_cast<std::size_t>(imageIndex)] != 0;
+                bool const useTexture = imageIndex >= 0 && textureSource != nullptr &&
+                    static_cast<std::size_t>(imageIndex) < textureSource->textures.size() &&
+                    textureSource->textures[static_cast<std::size_t>(imageIndex)] != 0;
 
                 glUniform4fv(m_lambertLocBaseColor, 1, glm::value_ptr(baseColor));
                 glUniform1f(m_lambertLocUseTexture, useTexture ? 1.0f : 0.0f);
                 if (useTexture) {
                     glActiveTexture(GL_TEXTURE0);
                     glBindTexture(
-                        GL_TEXTURE_2D, gpuMesh->textures[static_cast<std::size_t>(imageIndex)]
+                        GL_TEXTURE_2D, textureSource->textures[static_cast<std::size_t>(imageIndex)]
                     );
                     glUniform1i(m_lambertLocTexture, 0);
                 }
