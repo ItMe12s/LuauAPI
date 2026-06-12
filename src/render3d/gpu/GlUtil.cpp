@@ -1,4 +1,4 @@
-#include "render3d/GlUtil.hpp"
+#include "render3d/gpu/GlUtil.hpp"
 
 #include <Geode/Geode.hpp>
 

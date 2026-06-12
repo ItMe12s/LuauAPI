@@ -5,9 +5,9 @@
 #include "framework/stack/Stack.hpp"
 #include "framework/stack/TableUtil.hpp"
 #include "framework/stack/UserdataTags.hpp"
-#include "render3d/Material.hpp"
-#include "render3d/MeshAsset.hpp"
-#include "render3d/Renderer3D.hpp"
+#include "render3d/types/Material.hpp"
+#include "render3d/assets/MeshAsset.hpp"
+#include "render3d/gpu/Renderer3D.hpp"
 
 #include <Geode/Geode.hpp>
 #include <cstddef>

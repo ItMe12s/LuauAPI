@@ -1,4 +1,4 @@
-#include "render3d/ImageDecode.hpp"
+#include "render3d/assets/ImageDecode.hpp"
 
 #include "core/Config.hpp"
 

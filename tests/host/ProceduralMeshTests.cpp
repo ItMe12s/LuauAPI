@@ -1,4 +1,4 @@
-#include "render3d/MeshAsset.hpp"
+#include "render3d/assets/MeshAsset.hpp"
 
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>

@@ -2,7 +2,7 @@
     #define _CRT_SECURE_NO_WARNINGS
 #endif
 
-#include "render3d/GltfIo.hpp"
+#include "render3d/assets/GltfIo.hpp"
 
 #include "core/Config.hpp"
 #include "require/PathRules.hpp"

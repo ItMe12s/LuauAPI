@@ -85,7 +85,7 @@ The async API does its file work off thread, then hops to the main thread to run
 - `src/main.cpp`
 - `src/api.cpp`
 - `src/core/Runtime.cpp`
-- `src/render3d/CCViewportFrame.cpp`
-- `src/render3d/Renderer3D.cpp`
+- `src/render3d/viewport/CCViewportFrame.cpp`
+- `src/render3d/gpu/Renderer3D.cpp`
 - `tools/luau_codegen/emit/cxx_templates.py`
 - `src/bindings/imgui/ImGuiDrawScheduler.cpp`

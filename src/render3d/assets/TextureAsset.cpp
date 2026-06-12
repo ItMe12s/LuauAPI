@@ -1,7 +1,7 @@
-#include "render3d/TextureAsset.hpp"
+#include "render3d/assets/TextureAsset.hpp"
 
 #if !defined(LUAUAPI_HOST_TESTS)
-    #include "render3d/CCViewportFrame.hpp"
+    #include "render3d/viewport/CCViewportFrame.hpp"
 
     #include <Geode/utils/cocos.hpp>
 #endif

@@ -1,10 +1,9 @@
-#include "render3d/Renderer3D.hpp"
+#include "render3d/gpu/Renderer3D.hpp"
 
-#include "render3d/CCViewportFrame.hpp"
-#include "render3d/Frustum.hpp"
-#include "render3d/GlUtil.hpp"
-#include "render3d/MeshAsset.hpp"
-#include "render3d/TextureAsset.hpp"
+#include "render3d/assets/MeshAsset.hpp"
+#include "render3d/assets/TextureAsset.hpp"
+#include "render3d/gpu/GlUtil.hpp"
+#include "render3d/types/Frustum.hpp"
 
 #include <Geode/Geode.hpp>
 #include <algorithm>

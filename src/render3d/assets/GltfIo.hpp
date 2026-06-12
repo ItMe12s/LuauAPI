@@ -1,6 +1,6 @@
 #pragma once
 
-#include "render3d/MeshAsset.hpp"
+#include "render3d/assets/MeshAsset.hpp"
 
 #include <cstdint>
 #include <filesystem>

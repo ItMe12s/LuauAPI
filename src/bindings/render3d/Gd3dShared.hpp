@@ -2,8 +2,8 @@
 
 #include "framework/stack/Stack.hpp"
 #include "framework/stack/UserdataTags.hpp"
-#include "render3d/Material.hpp"
-#include "render3d/Transform3D.hpp"
+#include "render3d/types/Material.hpp"
+#include "render3d/types/Transform3D.hpp"
 
 #include <cstdint>
 #include <glm/vec3.hpp>

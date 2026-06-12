@@ -1,8 +1,8 @@
-#include "render3d/CCViewportFrame.hpp"
+#include "render3d/viewport/CCViewportFrame.hpp"
 
-#include "render3d/GlUtil.hpp"
-#include "render3d/Renderer3D.hpp"
-#include "render3d/TextureAsset.hpp"
+#include "render3d/assets/TextureAsset.hpp"
+#include "render3d/gpu/GlUtil.hpp"
+#include "render3d/gpu/Renderer3D.hpp"
 
 #include <Geode/Geode.hpp>
 #include <algorithm>

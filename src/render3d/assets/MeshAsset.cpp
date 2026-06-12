@@ -1,8 +1,8 @@
-#include "render3d/MeshAsset.hpp"
+#include "render3d/assets/MeshAsset.hpp"
 
 #include "core/Config.hpp"
-#include "render3d/GltfIo.hpp"
-#include "render3d/ImageDecode.hpp"
+#include "render3d/assets/GltfIo.hpp"
+#include "render3d/assets/ImageDecode.hpp"
 #include "require/PathSandbox.hpp"
 
 #include <cgltf.h>

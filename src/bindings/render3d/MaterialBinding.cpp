@@ -3,8 +3,8 @@
 #include "framework/stack/Stack.hpp"
 #include "framework/stack/TableUtil.hpp"
 #include "framework/stack/UserdataTags.hpp"
-#include "render3d/Material.hpp"
-#include "render3d/TextureAsset.hpp"
+#include "render3d/types/Material.hpp"
+#include "render3d/assets/TextureAsset.hpp"
 
 #include <Geode/Geode.hpp>
 #include <lua.h>

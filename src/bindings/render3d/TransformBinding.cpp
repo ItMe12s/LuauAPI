@@ -3,7 +3,7 @@
 #include "framework/stack/Stack.hpp"
 #include "framework/stack/TableUtil.hpp"
 #include "framework/stack/UserdataTags.hpp"
-#include "render3d/Transform3D.hpp"
+#include "render3d/types/Transform3D.hpp"
 
 #include <Geode/Geode.hpp>
 #include <glm/vec3.hpp>

@@ -318,10 +318,10 @@ if(LUAUAPI_BUILD_TESTS)
         src/require/Requirer.cpp
         src/core/Loadstring.cpp
         src/core/Runtime.cpp
-        src/render3d/MeshAsset.cpp
-        src/render3d/TextureAsset.cpp
-        src/render3d/GltfIo.cpp
-        src/render3d/ImageDecode.cpp
+        src/render3d/assets/MeshAsset.cpp
+        src/render3d/assets/TextureAsset.cpp
+        src/render3d/assets/GltfIo.cpp
+        src/render3d/assets/ImageDecode.cpp
         tests/host/Render3DMathTests.cpp
         tests/host/GltfParseTests.cpp
         tests/host/ProceduralMeshTests.cpp

@@ -18,10 +18,10 @@ Plus, you get fewer crashes and clear, easy-to-understand error logging.
 - Fully cross-platform
 - Write fully functional Geode mods in Luau (2)
 - Luau LSP autocompletion support (3)
-- Create your own API mod in Luau
+- Create your own API mods in Luau
 - In-game developer tools (enable via developer mode)
 - JIT and JIT-less support
-- 3D rendering and viewports through `gd3d`
+- Easy-to-use 3D APIs and viewports through `gd3d`
 - Rich built-in libraries, including `task`, `loadstring`, and more
 
 ---
