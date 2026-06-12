@@ -15,6 +15,10 @@ namespace luax::render3d {
     int captureAndUnbindVao();
     void restoreVao(int prevVao);
 
+    unsigned int genVao();
+    void bindVao(unsigned int vao);
+    void deleteVao(unsigned int vao);
+
     struct DrawStateSnapshot {
         GLboolean depthEnabled = GL_FALSE;
         GLboolean depthMask = GL_TRUE;

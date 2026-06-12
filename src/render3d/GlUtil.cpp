@@ -48,6 +48,35 @@ namespace luax::render3d {
 #endif
     }
 
+    unsigned int genVao() {
+#if defined(GL_VERTEX_ARRAY_BINDING)
+        if (!vaoSupported()) {
+            return 0;
+        }
+        GLuint vao = 0;
+        glGenVertexArrays(1, &vao);
+        return vao;
+#else
+        return 0;
+#endif
+    }
+
+    void bindVao([[maybe_unused]] unsigned int vao) {
+#if defined(GL_VERTEX_ARRAY_BINDING)
+        if (vaoSupported()) {
+            glBindVertexArray(vao);
+        }
+#endif
+    }
+
+    void deleteVao([[maybe_unused]] unsigned int vao) {
+#if defined(GL_VERTEX_ARRAY_BINDING)
+        if (vao != 0 && vaoSupported()) {
+            glDeleteVertexArrays(1, &vao);
+        }
+#endif
+    }
+
     void DrawStateSnapshot::capture() {
         glGetBooleanv(GL_DEPTH_TEST, &depthEnabled);
         glGetBooleanv(GL_DEPTH_WRITEMASK, &depthMask);
