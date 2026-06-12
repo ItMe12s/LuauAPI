@@ -1,6 +1,7 @@
 #include "render3d/Renderer3D.hpp"
 
 #include "render3d/CCViewportFrame.hpp"
+#include "render3d/Frustum.hpp"
 #include "render3d/GlUtil.hpp"
 #include "render3d/MeshAsset.hpp"
 #include "render3d/TextureAsset.hpp"
@@ -454,6 +455,7 @@ void main() {
         glm::mat4 const projection =
             glm::perspective(glm::radians(camera.fovYDegrees), aspect, camera.zNear, camera.zFar);
         glm::mat4 const view = camera.transform.inverse().toMat4();
+        Frustum const frustum = Frustum::fromViewProj(projection * view);
         glm::vec3 const lightDir = normalizedLightDirection(settings.lightDirection);
         glm::vec3 const lightColor = settings.lightColor * settings.lightIntensity;
 
@@ -509,6 +511,16 @@ void main() {
             }
 
             glm::mat4 const model = instance.transform.toMat4();
+            BoundingBox const& bounds = instance.mesh->boundingBox();
+            if (!bounds.empty) {
+                glm::vec3 const center = (bounds.min + bounds.max) * 0.5f;
+                float const radius = glm::length(bounds.max - bounds.min) * 0.5f;
+                glm::vec3 const worldCenter = glm::vec3(model * glm::vec4(center, 1.0f));
+                if (!frustum.intersectsSphere(worldCenter, radius)) {
+                    continue;
+                }
+            }
+
             glm::vec4 const viewPos = view * model * glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
             float const viewDepth = viewPos.z;
             auto const& materials = instance.mesh->materials();
