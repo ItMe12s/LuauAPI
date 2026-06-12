@@ -9,6 +9,7 @@
 #include "render3d/Transform3D.hpp"
 
 #include <Geode/Geode.hpp>
+#include <algorithm>
 #include <cocos2d.h>
 #include <lua.h>
 #include <lualib.h>
@@ -55,6 +56,83 @@ namespace {
         lua_setfield(L, -2, "near");
         push(L, camera.zFar);
         lua_setfield(L, -2, "far");
+        return 1;
+    }
+
+    int viewportSetBackgroundColor(lua_State* L) {
+        auto* self = Usertype<CCViewportFrame>::check(L, 1, "ViewportFrame:setBackgroundColor");
+        auto const color = parseColor(L, 2, "ViewportFrame:setBackgroundColor");
+
+        auto settings = self->renderSettings();
+        settings.clearColor = color;
+        self->setRenderSettings(settings);
+        return 0;
+    }
+
+    int viewportGetBackgroundColor(lua_State* L) {
+        auto const* self = Usertype<CCViewportFrame>::check(L, 1, "ViewportFrame:getBackgroundColor");
+        auto const& color = self->renderSettings().clearColor;
+
+        lua_createtable(L, 0, 4);
+        push(L, color.r);
+        lua_setfield(L, -2, "r");
+        push(L, color.g);
+        lua_setfield(L, -2, "g");
+        push(L, color.b);
+        lua_setfield(L, -2, "b");
+        push(L, color.a);
+        lua_setfield(L, -2, "a");
+        return 1;
+    }
+
+    int viewportSetLight(lua_State* L) {
+        auto* self = Usertype<CCViewportFrame>::check(L, 1, "ViewportFrame:setLight");
+        auto const direction = checkVec3(L, 2, "ViewportFrame:setLight");
+        if (direction.x == 0.0f && direction.y == 0.0f && direction.z == 0.0f) {
+            luaL_error(L, "ViewportFrame:setLight: direction must be non-zero");
+        }
+
+        glm::vec3 color{1.0f, 1.0f, 1.0f};
+        if (!lua_isnoneornil(L, 3)) {
+            color = checkVec3(L, 3, "ViewportFrame:setLight");
+        }
+
+        float intensity = 1.0f;
+        if (!lua_isnoneornil(L, 4)) {
+            intensity = check<float>(L, 4, "ViewportFrame:setLight");
+        }
+
+        auto settings = self->renderSettings();
+        settings.lightDirection = direction;
+        settings.lightColor = color;
+        settings.lightIntensity = intensity;
+        self->setRenderSettings(settings);
+        return 0;
+    }
+
+    int viewportSetAmbient(lua_State* L) {
+        auto* self = Usertype<CCViewportFrame>::check(L, 1, "ViewportFrame:setAmbient");
+        float const ambient = std::clamp(check<float>(L, 2, "ViewportFrame:setAmbient"), 0.0f, 4.0f);
+
+        auto settings = self->renderSettings();
+        settings.ambient = ambient;
+        self->setRenderSettings(settings);
+        return 0;
+    }
+
+    int viewportGetLight(lua_State* L) {
+        auto const* self = Usertype<CCViewportFrame>::check(L, 1, "ViewportFrame:getLight");
+        RenderSettings const& settings = self->renderSettings();
+
+        lua_createtable(L, 0, 4);
+        pushVec3(L, settings.lightDirection);
+        lua_setfield(L, -2, "direction");
+        pushVec3(L, settings.lightColor);
+        lua_setfield(L, -2, "color");
+        push(L, settings.lightIntensity);
+        lua_setfield(L, -2, "intensity");
+        push(L, settings.ambient);
+        lua_setfield(L, -2, "ambient");
         return 1;
     }
 
@@ -134,6 +212,11 @@ namespace luax {
 
         Usertype<CCViewportFrame>::method(L, "setCamera", &viewportSetCamera);
         Usertype<CCViewportFrame>::method(L, "getCamera", &viewportGetCamera);
+        Usertype<CCViewportFrame>::method(L, "setBackgroundColor", &viewportSetBackgroundColor);
+        Usertype<CCViewportFrame>::method(L, "getBackgroundColor", &viewportGetBackgroundColor);
+        Usertype<CCViewportFrame>::method(L, "setLight", &viewportSetLight);
+        Usertype<CCViewportFrame>::method(L, "setAmbient", &viewportSetAmbient);
+        Usertype<CCViewportFrame>::method(L, "getLight", &viewportGetLight);
         Usertype<CCViewportFrame>::method(L, "addMesh", &viewportAddMesh);
         Usertype<CCViewportFrame>::method(L, "setInstanceMaterial", &viewportSetInstanceMaterial);
         Usertype<CCViewportFrame>::method(L, "setInstanceColor", &viewportSetInstanceColor);

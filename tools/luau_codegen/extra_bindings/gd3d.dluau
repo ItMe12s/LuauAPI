@@ -26,6 +26,11 @@ end
 declare class Gd3dViewportFrame extends CCNode
     function setCamera(self, transform: Gd3dTransform, fovDeg: number, near: number, far: number)
     function getCamera(self): { transform: Gd3dTransform, fovY: number, near: number, far: number }
+    function setBackgroundColor(self, color: Gd3dVec3 | { r: number, g: number, b: number, a: number? })
+    function getBackgroundColor(self): { r: number, g: number, b: number, a: number }
+    function setLight(self, direction: Gd3dVec3, color: Gd3dVec3?, intensity: number?)
+    function setAmbient(self, ambient: number)
+    function getLight(self): { direction: Gd3dVec3, color: Gd3dVec3, intensity: number, ambient: number }
     function addMesh(self, mesh: Gd3dMesh, transform: Gd3dTransform, material: Gd3dMaterial?): number
     function setInstanceMaterial(self, id: number, material: Gd3dMaterial?): boolean
     function setInstanceColor(self, id: number, color: Gd3dVec3): boolean

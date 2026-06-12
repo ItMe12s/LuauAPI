@@ -44,6 +44,11 @@ type Mesh = {
 type ViewportFrame = CCNode & {
     setCamera: (self: ViewportFrame, transform: Transform, fovDeg: number, near: number, far: number) -> (),
     getCamera: (self: ViewportFrame) -> { transform: Transform, fovY: number, near: number, far: number },
+    setBackgroundColor: (self: ViewportFrame, color: Vec3 | { r: number, g: number, b: number, a: number? }) -> (),
+    getBackgroundColor: (self: ViewportFrame) -> { r: number, g: number, b: number, a: number },
+    setLight: (self: ViewportFrame, direction: Vec3, color: Vec3?, intensity: number?) -> (),
+    setAmbient: (self: ViewportFrame, ambient: number) -> (),
+    getLight: (self: ViewportFrame) -> { direction: Vec3, color: Vec3, intensity: number, ambient: number },
     addMesh: (self: ViewportFrame, mesh: Mesh, transform: Transform, material: Material?) -> number,
     setInstanceMaterial: (self: ViewportFrame, id: number, material: Material?) -> boolean,
     setInstanceColor: (self: ViewportFrame, id: number, color: Vec3) -> boolean,
@@ -181,6 +186,11 @@ Camera and instances:
 ```lua
 viewport:setCamera(transform: Transform, fovDeg: number, near: number, far: number) -> ()
 viewport:getCamera() -> { transform: Transform, fovY: number, near: number, far: number }
+viewport:setBackgroundColor(color: Vec3 | { r: number, g: number, b: number, a: number? }) -> ()
+viewport:getBackgroundColor() -> { r: number, g: number, b: number, a: number }
+viewport:setLight(direction: Vec3, color: Vec3?, intensity: number?) -> ()
+viewport:setAmbient(ambient: number) -> ()
+viewport:getLight() -> { direction: Vec3, color: Vec3, intensity: number, ambient: number }
 viewport:addMesh(mesh: Mesh, transform: Transform, material: Material?) -> number
 viewport:setInstanceMaterial(id: number, material: Material?) -> boolean
 viewport:setInstanceColor(id: number, color: Vec3) -> boolean
@@ -196,6 +206,19 @@ The optional `material` argument sets an instance-wide material override at crea
 The camera transform is the camera's world pose.
 The renderer uses its inverse for the view matrix and a vertical field-of-view perspective projection.
 
+Background color clears the off-screen buffer before drawing instances.
+Use `{ r, g, b, a }` for RGBA, or a `Vec3` `{ x, y, z }` for opaque RGB.
+Default is fully transparent `{ r = 0, g = 0, b = 0, a = 0 }`.
+When alpha is less than 1, the 2D scene behind the viewport shows through.
+
+Lighting uses a fixed Lambert shader with one directional light plus ambient fill.
+`setLight` sets the light direction (normalized at render time), RGB color, and intensity multiplier.
+Omit `color` for white `{ x = 1, y = 1, z = 1 }` and `intensity` for `1`.
+A zero-length direction raises an error.
+`setAmbient` clamps its argument to the range `[0, 4]`.
+`getLight` returns the current direction, color, intensity, and ambient values.
+Defaults match the built-in look: direction `{ x = 0.35, y = 0.85, z = 0.4 }`, white light, intensity `1`, ambient `0.15`.
+
 ### Rendering model
 
 Drawing needs an active OpenGL context from the game.
@@ -204,7 +227,7 @@ If the context is not ready yet, framebuffer setup and draw calls are skipped un
 The viewport renders into an off-screen buffer sized in pixels using the cocos content scale factor,
 then blits that texture into the scene graph.
 
-Shading is a fixed Lambert pass with one light direction and no user controls for lights or shaders.
+Shading is a fixed Lambert pass with configurable light direction, color, intensity, and ambient level.
 There is no alpha blending. Instances draw opaque.
 
 Reloading a mesh file or creating a new handle uploads fresh GPU data even when the path is the same.

@@ -7,6 +7,7 @@
 
 #include <cstdint>
 #include <glm/vec3.hpp>
+#include <glm/vec4.hpp>
 #include <lua.h>
 #include <lualib.h>
 #include <memory>
@@ -45,6 +46,28 @@ namespace luax::gd3d {
         lua_setfield(L, -2, "y");
         lua_pushnumber(L, v.z);
         lua_setfield(L, -2, "z");
+    }
+
+    inline glm::vec4 parseColor(lua_State* L, int idx, char const* method) {
+        luaL_checktype(L, idx, LUA_TTABLE);
+        lua_getfield(L, idx, "r");
+        if (!lua_isnil(L, -1)) {
+            float const r = static_cast<float>(luaL_checknumber(L, -1));
+            lua_pop(L, 1);
+            float const g = fieldNumber(L, idx, "g", method);
+            float const b = fieldNumber(L, idx, "b", method);
+            lua_getfield(L, idx, "a");
+            float const a = lua_isnil(L, -1) ? 1.0f : static_cast<float>(luaL_checknumber(L, -1));
+            lua_pop(L, 1);
+            return glm::vec4(r, g, b, a);
+        }
+        lua_pop(L, 1);
+        return glm::vec4(
+            fieldNumber(L, idx, "x", method),
+            fieldNumber(L, idx, "y", method),
+            fieldNumber(L, idx, "z", method),
+            1.0f
+        );
     }
 
     inline void pushTransform(lua_State* L, render3d::Transform const& transform) {
