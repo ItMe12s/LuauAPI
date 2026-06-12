@@ -93,6 +93,26 @@ namespace {
         return 1;
     }
 
+    int transformWithPosition(lua_State* L) {
+        auto const* self = checkTransform(L, 1, "Transform:withPosition");
+        auto const pos = checkVec3(L, 2, "Transform:withPosition");
+        pushTransform(L, self->withPosition(pos));
+        return 1;
+    }
+
+    int transformWithRotation(lua_State* L) {
+        auto const* self = checkTransform(L, 1, "Transform:withRotation");
+        auto const* rot = checkTransform(L, 2, "Transform:withRotation");
+        pushTransform(L, self->withRotationOf(*rot));
+        return 1;
+    }
+
+    int transformEulerAngles(lua_State* L) {
+        auto const* self = checkTransform(L, 1, "Transform:eulerAngles");
+        pushVec3(L, self->eulerAngles());
+        return 1;
+    }
+
     void registerTransformMetatable(lua_State* L) {
         luaL_Reg const methods[] = {
             {"inverse", transformInverse},
@@ -101,6 +121,9 @@ namespace {
             {"lookVector", transformLookVector},
             {"rightVector", transformRightVector},
             {"upVector", transformUpVector},
+            {"withPosition", transformWithPosition},
+            {"withRotation", transformWithRotation},
+            {"eulerAngles", transformEulerAngles},
             {"__mul", transformMul},
             {nullptr, nullptr},
         };

@@ -103,6 +103,40 @@ TEST_CASE("Transform lerp hits endpoints and midpoint") {
     REQUIRE(mid.position.z == Approx(0.5f).margin(1e-4f));
 }
 
+TEST_CASE("Transform eulerAngles round-trips fromEuler") {
+    float const pitch = 0.3f;
+    float const yaw = -0.8f;
+    float const roll = 0.1f;
+    Transform const t = Transform::fromEuler(pitch, yaw, roll);
+    glm::vec3 const angles = t.eulerAngles();
+
+    REQUIRE(angles.x == Approx(pitch).margin(1e-4f));
+    REQUIRE(angles.y == Approx(yaw).margin(1e-4f));
+    REQUIRE(angles.z == Approx(roll).margin(1e-4f));
+}
+
+TEST_CASE("Transform withPosition preserves rotation") {
+    Transform t = Transform::fromEuler(0.4f, 1.2f, -0.6f);
+    t.position = glm::vec3(1.0f, 2.0f, 3.0f);
+    glm::vec3 const newPos{5.0f, -1.0f, 0.25f};
+    Transform const moved = t.withPosition(newPos);
+
+    REQUIRE(vec3Near(moved.position, newPos));
+    REQUIRE(quatNear(moved.rotation, t.rotation));
+    REQUIRE(vec3Near(moved.rightVector(), t.rightVector()));
+    REQUIRE(vec3Near(moved.upVector(), t.upVector()));
+    REQUIRE(vec3Near(moved.lookVector(), t.lookVector()));
+}
+
+TEST_CASE("Transform withRotationOf preserves position") {
+    Transform const t = Transform::fromLookAt(glm::vec3(1.0f, 2.0f, 3.0f), glm::vec3(0.0f, 0.0f, 0.0f));
+    Transform const rot = Transform::fromEuler(0.5f, -1.0f, 0.2f);
+    Transform const updated = t.withRotationOf(rot);
+
+    REQUIRE(vec3Near(updated.position, t.position));
+    REQUIRE(quatNear(updated.rotation, rot.rotation));
+}
+
 TEST_CASE("Transform toMat4 matches compose with point") {
     Transform parent = Transform::fromEuler(0.2f, 0.5f, -0.3f);
     parent.position = glm::vec3(3.0f, 1.0f, -2.0f);

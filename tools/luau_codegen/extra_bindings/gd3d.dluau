@@ -7,6 +7,9 @@ declare class Gd3dTransform
     function lookVector(self): Gd3dVec3
     function rightVector(self): Gd3dVec3
     function upVector(self): Gd3dVec3
+    function withPosition(self, pos: Gd3dVec3): Gd3dTransform
+    function withRotation(self, rot: Gd3dTransform): Gd3dTransform
+    function eulerAngles(self): Gd3dVec3
     function __mul(self, other: Gd3dTransform): Gd3dTransform
 end
 

@@ -26,6 +26,9 @@ type Transform = {
     lookVector: (self: Transform) -> Vec3,
     rightVector: (self: Transform) -> Vec3,
     upVector: (self: Transform) -> Vec3,
+    withPosition: (self: Transform, pos: Vec3) -> Transform,
+    withRotation: (self: Transform, rot: Transform) -> Transform,
+    eulerAngles: (self: Transform) -> Vec3,
 }
 
 type Material = {
@@ -89,8 +92,14 @@ transform:position() -> Vec3
 transform:lookVector() -> Vec3
 transform:rightVector() -> Vec3
 transform:upVector() -> Vec3
+transform:withPosition(pos: Vec3) -> Transform
+transform:withRotation(rot: Transform) -> Transform
+transform:eulerAngles() -> Vec3
 transform * otherTransform -> Transform
 ```
+
+Transforms are immutable. `withPosition` and `withRotation` return new values without mutating the receiver.
+`eulerAngles` returns pitch, yaw, and roll in radians (same convention as `fromEuler`).
 
 ## glTF loading
 

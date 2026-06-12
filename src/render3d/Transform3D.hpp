@@ -1,7 +1,9 @@
 #pragma once
 
+#define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
+#include <glm/gtx/euler_angles.hpp>
 
 namespace luax::render3d {
 
@@ -81,6 +83,18 @@ namespace luax::render3d {
 
         glm::vec3 lookVector() const {
             return detail::rotateVec(rotation, glm::vec3(0.0f, 0.0f, -1.0f));
+        }
+
+        Transform withPosition(glm::vec3 const& pos) const {
+            return Transform{pos, rotation};
+        }
+
+        Transform withRotationOf(Transform const& other) const {
+            return Transform{position, other.rotation};
+        }
+
+        glm::vec3 eulerAngles() const {
+            return glm::eulerAngles(rotation);
         }
     };
 
