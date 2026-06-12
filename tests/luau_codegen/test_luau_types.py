@@ -564,9 +564,11 @@ class LuauTypeEmissionTests(unittest.TestCase):
         )
         root = Root(classes=[ease, interval, finite, ccobject, gm])
         out = types_text(emit_luau_types(root))
-        for m in re.finditer(r"declare class (\w+) extends (\w+)", out):
+        marker = "-- Custom definitions from tools/luau_codegen/extra_bindings/"
+        generated = out.split(marker, 1)[0]
+        for m in re.finditer(r"declare class (\w+) extends (\w+)", generated):
             derived, base = m.group(1), m.group(2)
-            base_pos = out.find(f"declare class {base}")
+            base_pos = generated.find(f"declare class {base}")
             self.assertGreaterEqual(base_pos, 0, f"base {base} of {derived} not declared")
             self.assertLess(
                 base_pos,

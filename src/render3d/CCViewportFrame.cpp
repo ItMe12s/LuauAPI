@@ -8,7 +8,6 @@
 #include <cmath>
 
 namespace luax::render3d {
-    using cocos2d::CCDirector;
     using cocos2d::CCNode;
     using cocos2d::CCSize;
 
@@ -153,7 +152,7 @@ namespace luax::render3d {
             return;
         }
 
-        float const scale = CC_CONTENT_SCALE_FACTOR();
+        float const scale = cocos2d::CCDirector::sharedDirector()->getContentScaleFactor();
         int const width = pixelDimension(getContentSize().width, scale);
         int const height = pixelDimension(getContentSize().height, scale);
         if (m_fbo != 0 && width == m_fboPixelWidth && height == m_fboPixelHeight) {
