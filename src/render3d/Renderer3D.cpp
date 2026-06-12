@@ -472,6 +472,7 @@ void main() {
             TextureAsset const* textureAsset = nullptr;
             std::uint64_t textureId = 0;
             int imageIndex = -1;
+            unsigned int boundTexture = 0;
             glm::vec4 baseColor{1.0f, 1.0f, 1.0f, 1.0f};
             glm::vec3 tint{1.0f, 1.0f, 1.0f};
             glm::mat4 model{1.0f};
@@ -479,6 +480,17 @@ void main() {
             int alphaMode = 0;
             float alphaCutoff = 0.5f;
             bool doubleSided = false;
+        };
+
+        auto resolveBoundTexture = [&](DrawItem const& item) -> unsigned int {
+            if (item.textureId != 0 && item.textureAsset != nullptr) {
+                return ensureGpuTexture(item.textureId, *item.textureAsset);
+            }
+            if (item.imageIndex >= 0 && item.texSource != nullptr &&
+                static_cast<std::size_t>(item.imageIndex) < item.texSource->textures.size()) {
+                return item.texSource->textures[static_cast<std::size_t>(item.imageIndex)];
+            }
+            return 0;
         };
 
         std::vector<DrawItem> opaqueItems;
@@ -570,6 +582,15 @@ void main() {
 
         auto drawItems = [&](std::vector<DrawItem> const& items) {
             bool cullEnabled = true;
+            unsigned int lastBoundTexture = ~0u;
+            unsigned int lastVao = ~0u;
+            unsigned int lastVbo = ~0u;
+            unsigned int lastIbo = ~0u;
+            glm::vec4 lastBaseColor{-1.0f, -1.0f, -1.0f, -1.0f};
+            float lastUseTexture = -1.0f;
+            float lastAlphaCutoff = -1.0f;
+            bool textureUnitSet = false;
+
             for (auto const& item : items) {
                 bool const wantCull = !item.doubleSided;
                 if (wantCull != cullEnabled) {
@@ -588,36 +609,55 @@ void main() {
                 glUniformMatrix4fv(m_lambertLocNormalMat, 1, GL_FALSE, glm::value_ptr(normalMat));
                 glUniform3fv(m_lambertLocTint, 1, glm::value_ptr(item.tint));
 
-                unsigned int boundTexture = 0;
-                if (item.textureId != 0 && item.textureAsset != nullptr) {
-                    boundTexture = ensureGpuTexture(item.textureId, *item.textureAsset);
-                }
-                else if (
-                    item.imageIndex >= 0 && item.texSource != nullptr &&
-                    static_cast<std::size_t>(item.imageIndex) < item.texSource->textures.size()
-                ) {
-                    boundTexture =
-                        item.texSource->textures[static_cast<std::size_t>(item.imageIndex)];
-                }
+                unsigned int const boundTexture = item.boundTexture;
                 bool const useTexture = boundTexture != 0;
-
-                glUniform4fv(m_lambertLocBaseColor, 1, glm::value_ptr(item.baseColor));
-                glUniform1f(m_lambertLocUseTexture, useTexture ? 1.0f : 0.0f);
+                float const useTextureUniform = useTexture ? 1.0f : 0.0f;
                 float const shaderCutoff = item.alphaMode == 1 ? item.alphaCutoff : 0.0f;
-                glUniform1f(m_lambertLocAlphaCutoff, shaderCutoff);
-                if (useTexture) {
+
+                if (item.baseColor != lastBaseColor) {
+                    glUniform4fv(m_lambertLocBaseColor, 1, glm::value_ptr(item.baseColor));
+                    lastBaseColor = item.baseColor;
+                }
+                if (useTextureUniform != lastUseTexture) {
+                    glUniform1f(m_lambertLocUseTexture, useTextureUniform);
+                    lastUseTexture = useTextureUniform;
+                }
+                if (shaderCutoff != lastAlphaCutoff) {
+                    glUniform1f(m_lambertLocAlphaCutoff, shaderCutoff);
+                    lastAlphaCutoff = shaderCutoff;
+                }
+                if (useTexture && boundTexture != lastBoundTexture) {
                     glActiveTexture(GL_TEXTURE0);
                     glBindTexture(GL_TEXTURE_2D, boundTexture);
-                    glUniform1i(m_lambertLocTexture, 0);
+                    if (!textureUnitSet) {
+                        glUniform1i(m_lambertLocTexture, 0);
+                        textureUnitSet = true;
+                    }
+                    lastBoundTexture = boundTexture;
                 }
 
                 if (useVao && item.prim->vao != 0) {
-                    glBindVertexArray(item.prim->vao);
+                    if (item.prim->vao != lastVao) {
+                        glBindVertexArray(item.prim->vao);
+                        lastVao = item.prim->vao;
+                        lastVbo = ~0u;
+                        lastIbo = ~0u;
+                    }
                 }
                 else {
-                    glBindBuffer(GL_ARRAY_BUFFER, item.prim->vbo);
-                    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, item.prim->ibo);
-                    setupInterleavedVertexAttribs();
+                    bool const vboChanged = item.prim->vbo != lastVbo;
+                    if (vboChanged) {
+                        glBindBuffer(GL_ARRAY_BUFFER, item.prim->vbo);
+                        lastVbo = item.prim->vbo;
+                    }
+                    if (item.prim->ibo != lastIbo) {
+                        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, item.prim->ibo);
+                        lastIbo = item.prim->ibo;
+                    }
+                    if (vboChanged) {
+                        setupInterleavedVertexAttribs();
+                    }
+                    lastVao = ~0u;
                 }
                 glDrawElements(
                     GL_TRIANGLES, static_cast<GLsizei>(item.prim->indexCount), GL_UNSIGNED_INT, nullptr
@@ -625,12 +665,25 @@ void main() {
             }
         };
 
+        for (auto& item : opaqueItems) {
+            item.boundTexture = resolveBoundTexture(item);
+        }
+        std::sort(opaqueItems.begin(), opaqueItems.end(), [](DrawItem const& a, DrawItem const& b) {
+            if (a.boundTexture != b.boundTexture) {
+                return a.boundTexture < b.boundTexture;
+            }
+            return a.prim->vbo < b.prim->vbo;
+        });
+
         drawItems(opaqueItems);
 
         if (!blendItems.empty()) {
             std::sort(blendItems.begin(), blendItems.end(), [](DrawItem const& a, DrawItem const& b) {
                 return a.viewDepth < b.viewDepth;
             });
+            for (auto& item : blendItems) {
+                item.boundTexture = resolveBoundTexture(item);
+            }
             glEnable(GL_BLEND);
             glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
             glDepthMask(GL_FALSE);
