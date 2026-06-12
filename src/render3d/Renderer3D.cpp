@@ -596,8 +596,6 @@ void main() {
         prevState.restore();
         ccGLUseProgram(0);
         ccGLEnableVertexAttribs(cocos2d::kCCVertexAttribFlag_None);
-
-        CC_INCREMENT_GL_DRAWS(1);
     }
 
 } // namespace luax::render3d

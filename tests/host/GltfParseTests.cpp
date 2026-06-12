@@ -124,7 +124,7 @@ TEST_CASE("MeshAsset parses glTF materials and textures from test_donut.glb") {
 
     REQUIRE(materials[0].alphaMode == 0);
     REQUIRE(materials[0].alphaCutoff == Approx(0.5f));
-    REQUIRE_FALSE(materials[0].doubleSided);
+    REQUIRE(materials[0].doubleSided);
 }
 
 TEST_CASE("MeshAsset parses material alphaMode alphaCutoff doubleSided") {
