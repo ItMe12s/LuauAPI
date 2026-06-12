@@ -59,6 +59,7 @@ namespace luax::render3d {
         int m_lambertLocBaseColor = -1;
         int m_lambertLocTexture = -1;
         int m_lambertLocUseTexture = -1;
+        int m_lambertLocAlphaCutoff = -1;
         int m_lambertLocTint = -1;
 
         unsigned int m_blitProgram = 0;

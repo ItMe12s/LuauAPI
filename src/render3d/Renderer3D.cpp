@@ -43,15 +43,21 @@ uniform float uAmbient;
 uniform vec4 uBaseColor;
 uniform sampler2D uTexture;
 uniform float uUseTexture;
+uniform float uAlphaCutoff;
 uniform vec3 uTint;
 
 void main() {
-    vec3 albedo = uUseTexture > 0.5 ? texture2D(uTexture, vTexCoord).rgb : uBaseColor.rgb;
+    vec4 texel = uUseTexture > 0.5 ? texture2D(uTexture, vTexCoord) : vec4(1.0);
+    vec3 albedo = uUseTexture > 0.5 ? texel.rgb : uBaseColor.rgb;
     albedo *= uTint;
+    float alpha = uBaseColor.a * (uUseTexture > 0.5 ? texel.a : 1.0);
+    if (alpha < uAlphaCutoff) {
+        discard;
+    }
     vec3 n = normalize(vNormal);
     float diff = max(dot(n, normalize(uLightDir)), 0.0);
     vec3 lighting = vec3(uAmbient) + uLightColor * diff;
-    gl_FragColor = vec4(albedo * lighting, uBaseColor.a);
+    gl_FragColor = vec4(albedo * lighting, alpha);
 }
 )";
 
@@ -185,6 +191,7 @@ void main() {
         m_lambertLocBaseColor = glGetUniformLocation(m_lambertProgram, "uBaseColor");
         m_lambertLocTexture = glGetUniformLocation(m_lambertProgram, "uTexture");
         m_lambertLocUseTexture = glGetUniformLocation(m_lambertProgram, "uUseTexture");
+        m_lambertLocAlphaCutoff = glGetUniformLocation(m_lambertProgram, "uAlphaCutoff");
         m_lambertLocTint = glGetUniformLocation(m_lambertProgram, "uTint");
         return true;
     }
@@ -356,6 +363,24 @@ void main() {
         glEnableVertexAttribArray(1);
         glEnableVertexAttribArray(2);
 
+        struct DrawItem {
+            GpuPrimitive const* prim = nullptr;
+            GpuMesh const* texSource = nullptr;
+            int imageIndex = -1;
+            glm::vec4 baseColor{1.0f, 1.0f, 1.0f, 1.0f};
+            glm::vec3 tint{1.0f, 1.0f, 1.0f};
+            glm::mat4 model{1.0f};
+            float viewDepth = 0.0f;
+            int alphaMode = 0;
+            float alphaCutoff = 0.5f;
+            bool doubleSided = false;
+        };
+
+        std::vector<DrawItem> opaqueItems;
+        std::vector<DrawItem> blendItems;
+        opaqueItems.reserve(instances.size() * 4);
+        blendItems.reserve(instances.size());
+
         for (auto const& [instanceId, instance] : instances) {
             (void)instanceId;
             if (instance.mesh == nullptr) {
@@ -367,32 +392,34 @@ void main() {
             }
 
             glm::mat4 const model = instance.transform.toMat4();
-            glm::mat4 const mvp = projection * view * model;
-            glm::mat4 const normalMat = model;
+            glm::vec4 const viewPos = view * model * glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
+            float const viewDepth = viewPos.z;
             auto const& materials = instance.mesh->materials();
-
-            glUniformMatrix4fv(m_lambertLocMvp, 1, GL_FALSE, glm::value_ptr(mvp));
-            glUniformMatrix4fv(m_lambertLocNormalMat, 1, GL_FALSE, glm::value_ptr(normalMat));
-            glUniform3fv(m_lambertLocTint, 1, glm::value_ptr(instance.color));
 
             for (auto const& primitive : gpuMesh->primitives) {
                 if (primitive.vbo == 0 || primitive.ibo == 0 || primitive.indexCount == 0) {
                     continue;
                 }
 
-                glm::vec4 baseColor{1.0f, 1.0f, 1.0f, 1.0f};
-                int imageIndex = -1;
-                GpuMesh const* textureSource = gpuMesh;
+                DrawItem item{};
+                item.prim = &primitive;
+                item.tint = instance.color;
+                item.model = model;
+                item.viewDepth = viewDepth;
+                item.texSource = gpuMesh;
 
                 if (instance.materialOverride != nullptr) {
                     Material const& overrideMat = *instance.materialOverride;
-                    baseColor = overrideMat.baseColorFactor;
-                    imageIndex = overrideMat.imageIndex;
-                    if (imageIndex >= 0 && overrideMat.sourceMesh != nullptr) {
-                        textureSource =
+                    item.baseColor = overrideMat.baseColorFactor;
+                    item.imageIndex = overrideMat.imageIndex;
+                    item.alphaMode = overrideMat.alphaMode;
+                    item.alphaCutoff = overrideMat.alphaCutoff;
+                    item.doubleSided = overrideMat.doubleSided;
+                    if (item.imageIndex >= 0 && overrideMat.sourceMesh != nullptr) {
+                        item.texSource =
                             ensureGpuMesh(overrideMat.sourceMeshId, *overrideMat.sourceMesh);
-                        if (textureSource == nullptr) {
-                            imageIndex = -1;
+                        if (item.texSource == nullptr) {
+                            item.imageIndex = -1;
                         }
                     }
                 }
@@ -402,26 +429,61 @@ void main() {
                 ) {
                     auto const& material =
                         materials[static_cast<std::size_t>(primitive.materialIndex)];
-                    baseColor = material.baseColorFactor;
-                    imageIndex = material.imageIndex;
+                    item.baseColor = material.baseColorFactor;
+                    item.imageIndex = material.imageIndex;
+                    item.alphaMode = material.alphaMode;
+                    item.alphaCutoff = material.alphaCutoff;
+                    item.doubleSided = material.doubleSided;
                 }
 
-                bool const useTexture = imageIndex >= 0 && textureSource != nullptr &&
-                    static_cast<std::size_t>(imageIndex) < textureSource->textures.size() &&
-                    textureSource->textures[static_cast<std::size_t>(imageIndex)] != 0;
+                if (item.alphaMode == 2) {
+                    blendItems.push_back(item);
+                }
+                else {
+                    opaqueItems.push_back(item);
+                }
+            }
+        }
 
-                glUniform4fv(m_lambertLocBaseColor, 1, glm::value_ptr(baseColor));
+        auto drawItems = [&](std::vector<DrawItem> const& items) {
+            bool cullEnabled = true;
+            for (auto const& item : items) {
+                bool const wantCull = !item.doubleSided;
+                if (wantCull != cullEnabled) {
+                    if (wantCull) {
+                        glEnable(GL_CULL_FACE);
+                    }
+                    else {
+                        glDisable(GL_CULL_FACE);
+                    }
+                    cullEnabled = wantCull;
+                }
+
+                glm::mat4 const mvp = projection * view * item.model;
+                glm::mat4 const normalMat = item.model;
+                glUniformMatrix4fv(m_lambertLocMvp, 1, GL_FALSE, glm::value_ptr(mvp));
+                glUniformMatrix4fv(m_lambertLocNormalMat, 1, GL_FALSE, glm::value_ptr(normalMat));
+                glUniform3fv(m_lambertLocTint, 1, glm::value_ptr(item.tint));
+
+                bool const useTexture = item.imageIndex >= 0 && item.texSource != nullptr &&
+                    static_cast<std::size_t>(item.imageIndex) < item.texSource->textures.size() &&
+                    item.texSource->textures[static_cast<std::size_t>(item.imageIndex)] != 0;
+
+                glUniform4fv(m_lambertLocBaseColor, 1, glm::value_ptr(item.baseColor));
                 glUniform1f(m_lambertLocUseTexture, useTexture ? 1.0f : 0.0f);
+                float const shaderCutoff = item.alphaMode == 1 ? item.alphaCutoff : 0.0f;
+                glUniform1f(m_lambertLocAlphaCutoff, shaderCutoff);
                 if (useTexture) {
                     glActiveTexture(GL_TEXTURE0);
                     glBindTexture(
-                        GL_TEXTURE_2D, textureSource->textures[static_cast<std::size_t>(imageIndex)]
+                        GL_TEXTURE_2D,
+                        item.texSource->textures[static_cast<std::size_t>(item.imageIndex)]
                     );
                     glUniform1i(m_lambertLocTexture, 0);
                 }
 
-                glBindBuffer(GL_ARRAY_BUFFER, primitive.vbo);
-                glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, primitive.ibo);
+                glBindBuffer(GL_ARRAY_BUFFER, item.prim->vbo);
+                glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, item.prim->ibo);
                 glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, stride, reinterpret_cast<void*>(0));
                 glVertexAttribPointer(
                     1, 3, GL_FLOAT, GL_FALSE, stride, reinterpret_cast<void*>(3 * sizeof(float))
@@ -430,9 +492,22 @@ void main() {
                     2, 2, GL_FLOAT, GL_FALSE, stride, reinterpret_cast<void*>(6 * sizeof(float))
                 );
                 glDrawElements(
-                    GL_TRIANGLES, static_cast<GLsizei>(primitive.indexCount), GL_UNSIGNED_INT, nullptr
+                    GL_TRIANGLES, static_cast<GLsizei>(item.prim->indexCount), GL_UNSIGNED_INT, nullptr
                 );
             }
+        };
+
+        drawItems(opaqueItems);
+
+        if (!blendItems.empty()) {
+            std::sort(blendItems.begin(), blendItems.end(), [](DrawItem const& a, DrawItem const& b) {
+                return a.viewDepth < b.viewDepth;
+            });
+            glEnable(GL_BLEND);
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+            glDepthMask(GL_FALSE);
+            drawItems(blendItems);
+            glDepthMask(GL_TRUE);
         }
 
         glDisableVertexAttribArray(0);

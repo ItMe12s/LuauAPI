@@ -13,6 +13,9 @@ namespace luax::render3d {
         std::shared_ptr<MeshAsset> sourceMesh{};
         std::uint64_t sourceMeshId = 0;
         int imageIndex = -1;
+        int alphaMode = 0;
+        float alphaCutoff = 0.5f;
+        bool doubleSided = false;
     };
 
 } // namespace luax::render3d

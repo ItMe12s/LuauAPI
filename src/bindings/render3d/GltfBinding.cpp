@@ -94,6 +94,9 @@ namespace {
         auto material = std::make_shared<Material>();
         material->baseColorFactor = data.baseColorFactor;
         material->imageIndex = data.imageIndex;
+        material->alphaMode = data.alphaMode;
+        material->alphaCutoff = data.alphaCutoff;
+        material->doubleSided = data.doubleSided;
         material->sourceMesh = mesh;
         material->sourceMeshId = requireMeshId(L, handle, "Mesh:getMaterial");
         pushMaterial(L, std::move(material));
