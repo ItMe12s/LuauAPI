@@ -68,6 +68,11 @@ namespace luax::render3d {
         int framebufferPixelWidth() const;
         int framebufferPixelHeight() const;
 
+        void setCompositeEnabled(bool enabled);
+        bool compositeEnabled() const;
+
+        std::uint64_t ensureViewportTextureId();
+
         void draw() override;
         void setContentSize(cocos2d::CCSize const& size) override;
 
@@ -93,6 +98,9 @@ namespace luax::render3d {
         unsigned int m_depthRenderbuffer = 0;
         int m_fboPixelWidth = 0;
         int m_fboPixelHeight = 0;
+
+        bool m_compositeEnabled = true;
+        std::uint64_t m_viewportTextureId = 0;
     };
 
 } // namespace luax::render3d

@@ -71,6 +71,8 @@ type ViewportFrame = CCNode & {
     instanceCount: (self: ViewportFrame) -> number,
     removeInstance: (self: ViewportFrame, id: number) -> boolean,
     clearInstances: (self: ViewportFrame) -> (),
+    setCompositeEnabled: (self: ViewportFrame, enabled: boolean) -> (),
+    texture: (self: ViewportFrame) -> Texture,
 }
 ```
 
@@ -177,6 +179,7 @@ The first argument uses the same roots as [fs](fs.md).
 Returns a texture handle, or `nil` and an error message.
 Texture data is released when the handle is collected and no material references it anymore.
 Materials that reference a texture keep it alive on their own.
+Viewport render targets from `viewport:texture()` are also `Texture` handles with the same methods.
 
 Texture methods:
 
@@ -206,7 +209,7 @@ material:hasTexture() -> boolean
 ```
 
 `hasTexture` is `true` when the material has a standalone texture from `gd3d.texture.load`,
-or when it was returned by `mesh:getMaterial` with a glTF base color texture.
+a viewport render target from `viewport:texture()`, or a glTF base color texture from `mesh:getMaterial`.
 
 ### Instance override
 
@@ -253,6 +256,8 @@ viewport:getInstanceIds() -> { number }
 viewport:instanceCount() -> number
 viewport:removeInstance(id: number) -> boolean
 viewport:clearInstances() -> ()
+viewport:setCompositeEnabled(enabled: boolean) -> ()
+viewport:texture() -> Texture
 ```
 
 `addMesh` returns an instance id you pass to the other instance methods.
@@ -281,6 +286,15 @@ A zero-length direction raises an error.
 `setAmbient` clamps its argument to the range `[0, 4]`.
 `getLight` returns the current direction, color, intensity, and ambient values.
 Defaults match the built-in look: direction `{ x = 0.35, y = 0.85, z = 0.4 }`, white light, intensity `1`, ambient `0.15`.
+
+`setCompositeEnabled(false)` skips drawing the viewport texture into the 2D scene graph.
+The off-screen 3D pass still runs so `texture()` stays valid for use as a material texture elsewhere.
+
+`texture()` returns a `Texture` handle for the viewport color buffer.
+Repeated calls return handles for the same underlying render target until all prior handles are collected.
+Pass the texture to `gd3d.Material.new{ texture = ... }` to sample another viewport or mesh in the same scene.
+Texture content reflects the previous render of that viewport within the same frame, depending on node draw order.
+Resizing the viewport recreates the framebuffer and its OpenGL texture.
 
 ### Rendering model
 

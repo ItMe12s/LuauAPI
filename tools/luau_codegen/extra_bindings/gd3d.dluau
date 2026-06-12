@@ -52,6 +52,8 @@ declare class Gd3dViewportFrame extends CCNode
     function instanceCount(self): number
     function removeInstance(self, id: number): boolean
     function clearInstances(self)
+    function setCompositeEnabled(self, enabled: boolean)
+    function texture(self): Gd3dTexture
 end
 
 export type Gd3dNamespace = {

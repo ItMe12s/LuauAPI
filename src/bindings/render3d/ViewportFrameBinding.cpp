@@ -303,6 +303,18 @@ namespace {
         push(L, static_cast<int>(self->instances().size()));
         return 1;
     }
+
+    int viewportSetCompositeEnabled(lua_State* L) {
+        auto* self = Usertype<CCViewportFrame>::check(L, 1, "ViewportFrame:setCompositeEnabled");
+        self->setCompositeEnabled(check<bool>(L, 2, "ViewportFrame:setCompositeEnabled"));
+        return 0;
+    }
+
+    int viewportTexture(lua_State* L) {
+        auto* self = Usertype<CCViewportFrame>::check(L, 1, "ViewportFrame:texture");
+        pushTextureHandle(L, self->ensureViewportTextureId());
+        return 1;
+    }
 } // namespace
 
 namespace luax {
@@ -338,6 +350,8 @@ namespace luax {
         Usertype<CCViewportFrame>::method(L, "instanceCount", &viewportInstanceCount);
         Usertype<CCViewportFrame>::method(L, "removeInstance", &viewportRemoveInstance);
         Usertype<CCViewportFrame>::method(L, "clearInstances", &viewportClearInstances);
+        Usertype<CCViewportFrame>::method(L, "setCompositeEnabled", &viewportSetCompositeEnabled);
+        Usertype<CCViewportFrame>::method(L, "texture", &viewportTexture);
 
         getOrCreateTable(L, "gd3d.ViewportFrame");
         setTableCFunction(L, -1, "new", &viewportNew);

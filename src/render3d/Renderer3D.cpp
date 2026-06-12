@@ -1,5 +1,6 @@
 #include "render3d/Renderer3D.hpp"
 
+#include "render3d/CCViewportFrame.hpp"
 #include "render3d/GlUtil.hpp"
 #include "render3d/MeshAsset.hpp"
 #include "render3d/TextureAsset.hpp"
@@ -191,6 +192,11 @@ void main() {
     }
 
     unsigned int Renderer3D::ensureGpuTexture(std::uint64_t textureId, TextureAsset const& textureAsset) {
+        auto* viewport = textureAsset.viewportSource();
+        if (viewport != nullptr) {
+            return viewport->colorTexture();
+        }
+
         auto const existing = m_gpuTextures.find(textureId);
         if (existing != m_gpuTextures.end() && existing->second != 0) {
             return existing->second;

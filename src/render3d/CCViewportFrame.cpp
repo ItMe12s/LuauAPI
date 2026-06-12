@@ -2,6 +2,7 @@
 
 #include "render3d/GlUtil.hpp"
 #include "render3d/Renderer3D.hpp"
+#include "render3d/TextureAsset.hpp"
 
 #include <Geode/Geode.hpp>
 #include <algorithm>
@@ -139,6 +140,28 @@ namespace luax::render3d {
         return m_fboPixelHeight;
     }
 
+    void CCViewportFrame::setCompositeEnabled(bool enabled) {
+        m_compositeEnabled = enabled;
+    }
+
+    bool CCViewportFrame::compositeEnabled() const {
+        return m_compositeEnabled;
+    }
+
+    std::uint64_t CCViewportFrame::ensureViewportTextureId() {
+        if (m_viewportTextureId != 0) {
+            if (TextureRegistry::instance().get(m_viewportTextureId) != nullptr) {
+                return m_viewportTextureId;
+            }
+            m_viewportTextureId = 0;
+        }
+
+        auto asset = std::make_shared<TextureAsset>();
+        asset->setViewportSourceNode(this);
+        m_viewportTextureId = TextureRegistry::instance().registerTexture(asset);
+        return m_viewportTextureId;
+    }
+
     void CCViewportFrame::setContentSize(CCSize const& size) {
         CCNode::setContentSize(size);
         invalidateFramebuffer();
@@ -162,7 +185,9 @@ namespace luax::render3d {
         renderer.renderToFramebuffer(
             m_fbo, m_fboPixelWidth, m_fboPixelHeight, m_camera, m_instances, m_settings
         );
-        renderer.drawCompositeQuad(m_colorTexture, size.width, size.height);
+        if (m_compositeEnabled) {
+            renderer.drawCompositeQuad(m_colorTexture, size.width, size.height);
+        }
     }
 
     bool CCViewportFrame::hasGlContext() const {

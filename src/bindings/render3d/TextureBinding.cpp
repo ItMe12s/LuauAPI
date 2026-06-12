@@ -5,6 +5,7 @@
 #include "framework/stack/Stack.hpp"
 #include "framework/stack/TableUtil.hpp"
 #include "framework/stack/UserdataTags.hpp"
+#include "render3d/CCViewportFrame.hpp"
 #include "render3d/ImageDecode.hpp"
 #include "render3d/Renderer3D.hpp"
 #include "render3d/TextureAsset.hpp"
@@ -38,6 +39,11 @@ namespace {
         if (!texture) {
             luaL_error(L, "Texture:width: texture handle is invalid");
         }
+        auto* viewport = texture->viewportSource();
+        if (viewport != nullptr) {
+            push(L, viewport->framebufferPixelWidth());
+            return 1;
+        }
         push(L, texture->cpu.width);
         return 1;
     }
@@ -47,6 +53,11 @@ namespace {
         auto texture = TextureRegistry::instance().get(requireTextureId(L, handle, "Texture:height"));
         if (!texture) {
             luaL_error(L, "Texture:height: texture handle is invalid");
+        }
+        auto* viewport = texture->viewportSource();
+        if (viewport != nullptr) {
+            push(L, viewport->framebufferPixelHeight());
+            return 1;
         }
         push(L, texture->cpu.height);
         return 1;

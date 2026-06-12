@@ -6,10 +6,26 @@
 #include <memory>
 #include <unordered_map>
 
+namespace cocos2d {
+    class CCNode;
+}
+
 namespace luax::render3d {
+
+    class CCViewportFrame;
 
     struct TextureAsset {
         ImageData cpu;
+
+        CCViewportFrame* viewportSource() const;
+
+    private:
+        friend class CCViewportFrame;
+
+        void setViewportSourceNode(cocos2d::CCNode* node);
+
+        struct ViewportBinding;
+        std::shared_ptr<ViewportBinding> m_viewportBinding;
     };
 
     class TextureRegistry {
