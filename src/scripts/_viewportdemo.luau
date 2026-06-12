@@ -18,16 +18,21 @@ vp:setID(modId .. "/viewport-demo")
 vp:setCamera(Transform.new({ x = 0, y = 1, z = 3 }, { x = 0, y = 0, z = 0 }), 90, 0.1, 100)
 
 local instanceId = vp:addMesh(mesh, Transform.new())
-vp:setInstanceColor(instanceId, { x = 1, y = 0.85, z = 0.7 })
 local angle = 0
+local colorPhase = 2 * math.pi / 3
 
 local spinTask
-spinTask = task.every(1 / 60, function()
+spinTask = task.every(1 / 120, function()
     if spinTask == nil then
         return
     end
-    angle += 0.02
+    angle += 0.01
     vp:setInstanceTransform(instanceId, Transform.fromEuler(0.4, angle, 0))
+    vp:setInstanceColor(instanceId, {
+        x = 0.6 + 0.4 * math.cos(angle),
+        y = 0.6 + 0.4 * math.cos(angle + colorPhase),
+        z = 0.6 + 0.4 * math.cos(angle + 2 * colorPhase),
+    })
 end)
 
 geode.hook("geode.gd.MenuLayer:init/0", {
