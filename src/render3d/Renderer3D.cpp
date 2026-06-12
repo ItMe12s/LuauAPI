@@ -104,6 +104,46 @@ void main() {
             return glm::normalize(direction);
         }
 
+        int const kInterleavedVertexStride = static_cast<int>(sizeof(InterleavedVertex));
+
+        void setupInterleavedVertexAttribs() {
+            glEnableVertexAttribArray(0);
+            glEnableVertexAttribArray(1);
+            glEnableVertexAttribArray(2);
+            glVertexAttribPointer(
+                0, 3, GL_FLOAT, GL_FALSE, kInterleavedVertexStride, reinterpret_cast<void*>(0)
+            );
+            glVertexAttribPointer(
+                1,
+                3,
+                GL_FLOAT,
+                GL_FALSE,
+                kInterleavedVertexStride,
+                reinterpret_cast<void*>(3 * sizeof(float))
+            );
+            glVertexAttribPointer(
+                2,
+                2,
+                GL_FLOAT,
+                GL_FALSE,
+                kInterleavedVertexStride,
+                reinterpret_cast<void*>(6 * sizeof(float))
+            );
+        }
+
+        void uploadGpuPrimitiveVertexLayout(unsigned int& vao, unsigned int vbo, unsigned int ibo) {
+            if (!vaoSupported()) {
+                return;
+            }
+
+            glGenVertexArrays(1, &vao);
+            glBindVertexArray(vao);
+            glBindBuffer(GL_ARRAY_BUFFER, vbo);
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
+            setupInterleavedVertexAttribs();
+            glBindVertexArray(0);
+        }
+
     } // namespace
 
     Renderer3D& Renderer3D::instance() {
@@ -116,6 +156,9 @@ void main() {
     }
 
     void Renderer3D::deleteGpuPrimitive(GpuPrimitive& primitive) {
+        if (primitive.vao != 0) {
+            glDeleteVertexArrays(1, &primitive.vao);
+        }
         if (primitive.vbo != 0) {
             glDeleteBuffers(1, &primitive.vbo);
         }
@@ -333,6 +376,7 @@ void main() {
 
             gpu.indexCount = static_cast<unsigned int>(src.indices.size());
             gpu.materialIndex = src.materialIndex;
+            uploadGpuPrimitiveVertexLayout(gpu.vao, gpu.vbo, gpu.ibo);
         }
 
         auto const& images = meshAsset.images();
@@ -392,6 +436,7 @@ void main() {
         glGetIntegerv(GL_VIEWPORT, prevViewport);
         glGetFloatv(GL_COLOR_CLEAR_VALUE, prevClearColor);
         int const prevVao = captureAndUnbindVao();
+        bool const useVao = vaoSupported();
 
         glBindFramebuffer(GL_FRAMEBUFFER, fbo);
         glViewport(0, 0, pixelWidth, pixelHeight);
@@ -417,10 +462,9 @@ void main() {
         glUniform3fv(m_lambertLocLightColor, 1, glm::value_ptr(lightColor));
         glUniform1f(m_lambertLocAmbient, settings.ambient);
 
-        int const stride = static_cast<int>(sizeof(InterleavedVertex));
-        glEnableVertexAttribArray(0);
-        glEnableVertexAttribArray(1);
-        glEnableVertexAttribArray(2);
+        if (!useVao) {
+            setupInterleavedVertexAttribs();
+        }
 
         struct DrawItem {
             GpuPrimitive const* prim = nullptr;
@@ -567,15 +611,14 @@ void main() {
                     glUniform1i(m_lambertLocTexture, 0);
                 }
 
-                glBindBuffer(GL_ARRAY_BUFFER, item.prim->vbo);
-                glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, item.prim->ibo);
-                glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, stride, reinterpret_cast<void*>(0));
-                glVertexAttribPointer(
-                    1, 3, GL_FLOAT, GL_FALSE, stride, reinterpret_cast<void*>(3 * sizeof(float))
-                );
-                glVertexAttribPointer(
-                    2, 2, GL_FLOAT, GL_FALSE, stride, reinterpret_cast<void*>(6 * sizeof(float))
-                );
+                if (useVao && item.prim->vao != 0) {
+                    glBindVertexArray(item.prim->vao);
+                }
+                else {
+                    glBindBuffer(GL_ARRAY_BUFFER, item.prim->vbo);
+                    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, item.prim->ibo);
+                    setupInterleavedVertexAttribs();
+                }
                 glDrawElements(
                     GL_TRIANGLES, static_cast<GLsizei>(item.prim->indexCount), GL_UNSIGNED_INT, nullptr
                 );
@@ -595,9 +638,14 @@ void main() {
             glDepthMask(GL_TRUE);
         }
 
-        glDisableVertexAttribArray(0);
-        glDisableVertexAttribArray(1);
-        glDisableVertexAttribArray(2);
+        if (useVao) {
+            glBindVertexArray(0);
+        }
+        else {
+            glDisableVertexAttribArray(0);
+            glDisableVertexAttribArray(1);
+            glDisableVertexAttribArray(2);
+        }
 
         glBindFramebuffer(GL_FRAMEBUFFER, static_cast<GLuint>(prevFbo));
         glViewport(prevViewport[0], prevViewport[1], prevViewport[2], prevViewport[3]);

@@ -8,6 +8,8 @@ namespace luax::render3d {
 
     bool glContextAvailable();
 
+    bool vaoSupported();
+
     int captureAndUnbindVao();
     void restoreVao(int prevVao);
 

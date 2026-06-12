@@ -9,6 +9,16 @@ namespace luax::render3d {
         return director != nullptr && director->getOpenGLView() != nullptr;
     }
 
+    bool vaoSupported() {
+#if !defined(GL_VERTEX_ARRAY_BINDING)
+        return false;
+#elif defined(GLEW_VERSION)
+        return glGenVertexArrays != nullptr && glBindVertexArray != nullptr;
+#else
+        return true;
+#endif
+    }
+
     int captureAndUnbindVao() {
 #if defined(GL_VERTEX_ARRAY_BINDING)
         GLint prevVao = 0;

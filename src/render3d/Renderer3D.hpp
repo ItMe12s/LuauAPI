@@ -34,6 +34,7 @@ namespace luax::render3d {
         Renderer3D& operator=(Renderer3D const&) = delete;
 
         struct GpuPrimitive {
+            unsigned int vao = 0;
             unsigned int vbo = 0;
             unsigned int ibo = 0;
             unsigned int indexCount = 0;
