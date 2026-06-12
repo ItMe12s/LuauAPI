@@ -51,11 +51,13 @@ type ViewportFrame = CCNode & {
     getLight: (self: ViewportFrame) -> { direction: Vec3, color: Vec3, intensity: number, ambient: number },
     addMesh: (self: ViewportFrame, mesh: Mesh, transform: Transform, material: Material?) -> number,
     setInstanceMaterial: (self: ViewportFrame, id: number, material: Material?) -> boolean,
+    setInstancePrimitiveMaterial: (self: ViewportFrame, id: number, primitiveIndex: number, material: Material?) -> boolean,
     setInstanceColor: (self: ViewportFrame, id: number, color: Vec3) -> boolean,
     setInstanceTransform: (self: ViewportFrame, id: number, transform: Transform) -> boolean,
     getInstanceTransform: (self: ViewportFrame, id: number) -> Transform?,
     getInstanceColor: (self: ViewportFrame, id: number) -> Vec3?,
     getInstanceMaterial: (self: ViewportFrame, id: number) -> Material?,
+    getInstancePrimitiveMaterial: (self: ViewportFrame, id: number, primitiveIndex: number) -> Material?,
     getInstanceIds: (self: ViewportFrame) -> { number },
     instanceCount: (self: ViewportFrame) -> number,
     removeInstance: (self: ViewportFrame, id: number) -> boolean,
@@ -173,6 +175,9 @@ Each viewport instance draws with glTF materials by default, every primitive use
 Pass an optional fourth argument to `addMesh`, or call `setInstanceMaterial`,
 to replace all primitives in that instance with one material.
 Pass `nil` to `setInstanceMaterial` to clear the override and restore per-primitive glTF materials.
+Use `setInstancePrimitiveMaterial` to override a single primitive by index (0-based, matching `mesh:primitiveCount()`).
+Per-primitive overrides take priority over the instance-wide override.
+Pass `nil` to clear a per-primitive override.
 `setInstanceColor` multiplies the final shaded color (material albedo times lighting) by a per-instance RGB tint.
 Default tint is white `{ x = 1, y = 1, z = 1 }`.
 
@@ -198,11 +203,13 @@ viewport:setAmbient(ambient: number) -> ()
 viewport:getLight() -> { direction: Vec3, color: Vec3, intensity: number, ambient: number }
 viewport:addMesh(mesh: Mesh, transform: Transform, material: Material?) -> number
 viewport:setInstanceMaterial(id: number, material: Material?) -> boolean
+viewport:setInstancePrimitiveMaterial(id: number, primitiveIndex: number, material: Material?) -> boolean
 viewport:setInstanceColor(id: number, color: Vec3) -> boolean
 viewport:setInstanceTransform(id: number, transform: Transform) -> boolean
 viewport:getInstanceTransform(id: number) -> Transform?
 viewport:getInstanceColor(id: number) -> Vec3?
 viewport:getInstanceMaterial(id: number) -> Material?
+viewport:getInstancePrimitiveMaterial(id: number, primitiveIndex: number) -> Material?
 viewport:getInstanceIds() -> { number }
 viewport:instanceCount() -> number
 viewport:removeInstance(id: number) -> boolean
@@ -211,11 +218,12 @@ viewport:clearInstances() -> ()
 
 `addMesh` returns an instance id you pass to the other instance methods.
 The optional `material` argument sets an instance-wide material override at creation time.
-`setInstanceMaterial`, `setInstanceColor`, `setInstanceTransform`, and `removeInstance` return `false` when the id is unknown.
+`setInstanceMaterial`, `setInstancePrimitiveMaterial`, `setInstanceColor`, `setInstanceTransform`, and `removeInstance` return `false` when the id is unknown.
 
 Readback methods return `nil` for an unknown id.
 `getInstanceMaterial` returns the instance-wide override set by `addMesh` or `setInstanceMaterial`,
 or `nil` when no override is active (glTF per-primitive materials are not returned).
+`getInstancePrimitiveMaterial` returns the per-primitive override for that index, or `nil` when none is set.
 `getInstanceIds` returns all instance ids in ascending order.
 `instanceCount` is the number of active instances.
 

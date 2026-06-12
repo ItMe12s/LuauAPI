@@ -35,6 +35,7 @@ namespace luax::render3d {
         Transform transform{};
         glm::vec3 color{1.0f, 1.0f, 1.0f};
         std::shared_ptr<Material> materialOverride{};
+        std::map<int, std::shared_ptr<Material>> primitiveOverrides{};
     };
 
     class CCViewportFrame final : public cocos2d::CCNode {
@@ -53,6 +54,9 @@ namespace luax::render3d {
         );
         bool setInstanceTransform(int instanceId, Transform const& transform);
         bool setInstanceMaterial(int instanceId, std::shared_ptr<Material> material);
+        bool setInstancePrimitiveMaterial(
+            int instanceId, int primitiveIndex, std::shared_ptr<Material> material
+        );
         bool setInstanceColor(int instanceId, glm::vec3 color);
         bool removeInstance(int instanceId);
         void clearInstances();

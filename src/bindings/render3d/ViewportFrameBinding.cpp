@@ -168,6 +168,21 @@ namespace {
         return 1;
     }
 
+    int viewportSetInstancePrimitiveMaterial(lua_State* L) {
+        auto* self =
+            Usertype<CCViewportFrame>::check(L, 1, "ViewportFrame:setInstancePrimitiveMaterial");
+        int const instanceId = check<int>(L, 2, "ViewportFrame:setInstancePrimitiveMaterial");
+        int const primitiveIndex = check<int>(L, 3, "ViewportFrame:setInstancePrimitiveMaterial");
+
+        std::shared_ptr<Material> material{};
+        if (!lua_isnoneornil(L, 4)) {
+            material = requireMaterial(L, 4, "ViewportFrame:setInstancePrimitiveMaterial");
+        }
+
+        push(L, self->setInstancePrimitiveMaterial(instanceId, primitiveIndex, std::move(material)));
+        return 1;
+    }
+
     int viewportSetInstanceColor(lua_State* L) {
         auto* self = Usertype<CCViewportFrame>::check(L, 1, "ViewportFrame:setInstanceColor");
         int const instanceId = check<int>(L, 2, "ViewportFrame:setInstanceColor");
@@ -247,6 +262,29 @@ namespace {
         return 1;
     }
 
+    int viewportGetInstancePrimitiveMaterial(lua_State* L) {
+        auto const* self =
+            Usertype<CCViewportFrame>::check(L, 1, "ViewportFrame:getInstancePrimitiveMaterial");
+        int const instanceId = check<int>(L, 2, "ViewportFrame:getInstancePrimitiveMaterial");
+        int const primitiveIndex = check<int>(L, 3, "ViewportFrame:getInstancePrimitiveMaterial");
+
+        auto const& instances = self->instances();
+        auto const it = instances.find(instanceId);
+        if (it == instances.end()) {
+            lua_pushnil(L);
+            return 1;
+        }
+
+        auto const primIt = it->second.primitiveOverrides.find(primitiveIndex);
+        if (primIt == it->second.primitiveOverrides.end() || !primIt->second) {
+            lua_pushnil(L);
+            return 1;
+        }
+
+        pushMaterial(L, primIt->second);
+        return 1;
+    }
+
     int viewportGetInstanceIds(lua_State* L) {
         auto const* self = Usertype<CCViewportFrame>::check(L, 1, "ViewportFrame:getInstanceIds");
         auto const& instances = self->instances();
@@ -285,11 +323,17 @@ namespace luax {
         Usertype<CCViewportFrame>::method(L, "getLight", &viewportGetLight);
         Usertype<CCViewportFrame>::method(L, "addMesh", &viewportAddMesh);
         Usertype<CCViewportFrame>::method(L, "setInstanceMaterial", &viewportSetInstanceMaterial);
+        Usertype<CCViewportFrame>::method(
+            L, "setInstancePrimitiveMaterial", &viewportSetInstancePrimitiveMaterial
+        );
         Usertype<CCViewportFrame>::method(L, "setInstanceColor", &viewportSetInstanceColor);
         Usertype<CCViewportFrame>::method(L, "setInstanceTransform", &viewportSetInstanceTransform);
         Usertype<CCViewportFrame>::method(L, "getInstanceTransform", &viewportGetInstanceTransform);
         Usertype<CCViewportFrame>::method(L, "getInstanceColor", &viewportGetInstanceColor);
         Usertype<CCViewportFrame>::method(L, "getInstanceMaterial", &viewportGetInstanceMaterial);
+        Usertype<CCViewportFrame>::method(
+            L, "getInstancePrimitiveMaterial", &viewportGetInstancePrimitiveMaterial
+        );
         Usertype<CCViewportFrame>::method(L, "getInstanceIds", &viewportGetInstanceIds);
         Usertype<CCViewportFrame>::method(L, "instanceCount", &viewportInstanceCount);
         Usertype<CCViewportFrame>::method(L, "removeInstance", &viewportRemoveInstance);

@@ -33,11 +33,13 @@ declare class Gd3dViewportFrame extends CCNode
     function getLight(self): { direction: Gd3dVec3, color: Gd3dVec3, intensity: number, ambient: number }
     function addMesh(self, mesh: Gd3dMesh, transform: Gd3dTransform, material: Gd3dMaterial?): number
     function setInstanceMaterial(self, id: number, material: Gd3dMaterial?): boolean
+    function setInstancePrimitiveMaterial(self, id: number, primitiveIndex: number, material: Gd3dMaterial?): boolean
     function setInstanceColor(self, id: number, color: Gd3dVec3): boolean
     function setInstanceTransform(self, id: number, transform: Gd3dTransform): boolean
     function getInstanceTransform(self, id: number): Gd3dTransform?
     function getInstanceColor(self, id: number): Gd3dVec3?
     function getInstanceMaterial(self, id: number): Gd3dMaterial?
+    function getInstancePrimitiveMaterial(self, id: number, primitiveIndex: number): Gd3dMaterial?
     function getInstanceIds(self): { number }
     function instanceCount(self): number
     function removeInstance(self, id: number): boolean

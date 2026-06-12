@@ -396,7 +396,9 @@ void main() {
             float const viewDepth = viewPos.z;
             auto const& materials = instance.mesh->materials();
 
-            for (auto const& primitive : gpuMesh->primitives) {
+            for (std::size_t primitiveIndex = 0; primitiveIndex < gpuMesh->primitives.size();
+                 ++primitiveIndex) {
+                auto const& primitive = gpuMesh->primitives[primitiveIndex];
                 if (primitive.vbo == 0 || primitive.ibo == 0 || primitive.indexCount == 0) {
                     continue;
                 }
@@ -408,8 +410,7 @@ void main() {
                 item.viewDepth = viewDepth;
                 item.texSource = gpuMesh;
 
-                if (instance.materialOverride != nullptr) {
-                    Material const& overrideMat = *instance.materialOverride;
+                auto applyRuntimeMaterial = [&](Material const& overrideMat) {
                     item.baseColor = overrideMat.baseColorFactor;
                     item.imageIndex = overrideMat.imageIndex;
                     item.alphaMode = overrideMat.alphaMode;
@@ -422,6 +423,16 @@ void main() {
                             item.imageIndex = -1;
                         }
                     }
+                };
+
+                auto const primOverrideIt =
+                    instance.primitiveOverrides.find(static_cast<int>(primitiveIndex));
+                if (primOverrideIt != instance.primitiveOverrides.end() &&
+                    primOverrideIt->second != nullptr) {
+                    applyRuntimeMaterial(*primOverrideIt->second);
+                }
+                else if (instance.materialOverride != nullptr) {
+                    applyRuntimeMaterial(*instance.materialOverride);
                 }
                 else if (
                     primitive.materialIndex >= 0 &&
