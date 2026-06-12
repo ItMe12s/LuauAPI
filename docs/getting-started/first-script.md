@@ -12,7 +12,7 @@ Create a `.luau` file in your mod resources, for example `Bootstrap.luau`.
 print("Hello from Luau")
 ```
 
-`print` writes to the Geode log, and each argument is separated by a tab.
+See [Globals](../reference/lua/globals.md) for `print` behavior.
 
 ## Step 2: run it from C++
 
@@ -43,13 +43,15 @@ LuauAPI owns the runtime, so you do not start it. Check `status()` is `Ready` fi
 ## The rules
 
 The file name must be a flat `.luau` resource name inside the resources directory you pass.
-No folders, no `..`, no absolute paths, and it must be within the size limit.
-See [Modules](../reference/lua/modules.md) and [Limits and errors](../reference/cpp/limits-and-errors.md) for caps and error strings.
+No folders, no `..`, no absolute paths,
+and it must be within the [script size limit](../reference/cpp/limits-and-errors.md).
+See [Modules](../reference/lua/modules.md) for require rules.
 
 ## Developer mode
 
 LuauAPI ships built-in developer tools, such as a script executor.
-They load only when you turn on developer mode in the mod settings. It is off by default.
+They load only when developer mode is on in mod settings.
+See [Installation Settings](installation.md).
 
 ## Next
 

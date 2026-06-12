@@ -34,7 +34,7 @@ The state uses `boundedAlloc`, a custom allocator.
 It tracks current use in `m_memoryUsage` and caps it at `m_memoryLimit`.
 When an allocation would cross the cap, the allocator returns null and Lua reports an out of memory error.
 
-See [Limits and errors](../../reference/cpp/limits-and-errors.md) for caps and error strings.
+See [Limits and errors](../../reference/cpp/limits-and-errors.md).
 The helper logic lives in `src/core/AllocatorAccounting.hpp`.
 
 ## Deadlines and budget
@@ -50,10 +50,9 @@ A panic callback handles fatal Lua errors.
 The cache is a least recently used list with an index map.
 Before insert, `trimBytecodeCacheForInsert` evicts using one combined check over entry and byte caps plus runtime memory usage.
 
-See [Limits and errors](../../reference/cpp/limits-and-errors.md) for caps and error strings.
+See [Limits and errors](../../reference/cpp/limits-and-errors.md).
 
-The cache key is built in the module layer from the path, size, modify time, and content hash.
-See [Module system](module-system.md).
+The cache key is built in the module layer. See [Module system](module-system.md).
 
 ## Running code
 
@@ -83,7 +82,6 @@ On shutdown the runtime runs the hooks, releases Lua owned C++ objects, clears f
 - [Architecture](../architecture.md)
 - [Bindings framework](bindings-framework.md)
 - [Module system](module-system.md)
-- [Limits and errors](../../reference/cpp/limits-and-errors.md)
 
 ## Source
 

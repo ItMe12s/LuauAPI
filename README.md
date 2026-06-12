@@ -5,8 +5,8 @@
 </p>
 
 <p align="center">
-  A shared Luau runtime for Geode mods.<br>
-  LuauAPI lets mods run Luau scripts and call into Geometry Dash through generated bindings.<br>
+  A shared Luau runtime for Geode mods<br>
+  with many built-in libraries and tools.
 </p>
 
 <p align="center">
@@ -23,6 +23,7 @@
 ## Getting started
 
 For mod authors building a Geode mod using Luau scripting.
+Runnable samples: [Examples](docs/getting-started/examples.md).
 
 - [Overview](docs/getting-started/overview.md)
 - [Installation](docs/getting-started/installation.md)
@@ -51,6 +52,7 @@ API reference for everything a script or host can call.
   - [websocket](docs/reference/lua/websocket.md)
   - [imgui](docs/reference/lua/imgui.md)
   - [cocos](docs/reference/lua/cocos.md)
+  - [gd3d](docs/reference/lua/gd3d.md)
   - [base64](docs/reference/lua/base64.md)
   - [permission](docs/reference/lua/permission.md)
   - [ColorProvider](docs/reference/lua/color-provider.md)
@@ -91,10 +93,13 @@ For anyone working on LuauAPI itself.
 ## Licenses
 
 - [Catch2](https://github.com/catchorg/Catch2/blob/devel/LICENSE.txt)
+- [cgltf](https://github.com/jkuhlmann/cgltf/blob/master/LICENSE)
 - [Dear ImGui](https://github.com/ocornut/imgui/blob/master/LICENSE.txt)
 - [{fmt}](https://github.com/fmtlib/fmt/blob/main/LICENSE)
 - [gd-imgui-cocos](https://github.com/matcool/gd-imgui-cocos/blob/geode/LICENSE)
 - [Geode SDK](https://github.com/geode-sdk/geode/blob/main/LICENSE.txt)
+- [GLM](https://github.com/g-truc/glm/blob/master/copying.txt)
 - [Isocline](https://github.com/daanx/isocline/blob/main/LICENSE)
 - [IXWebSocket](https://github.com/machinezone/IXWebSocket/blob/master/LICENSE.txt)
 - [Luau](https://github.com/luau-lang/luau/blob/master/LICENSE.txt)
+- [stb](https://github.com/nothings/stb/blob/master/LICENSE)

@@ -75,9 +75,9 @@ See [Codegen](../../contributor/codegen/codegen.md).
 
 ## Limits
 
-Delegate method invocations run under a script budget, and orphan delegate bridges have a soft registry cap.
+Delegate calls run under a script budget with a soft orphan-registry cap.
 
-See [Limits and errors](../cpp/limits-and-errors.md) for caps and error strings.
+See [Limits and errors](../cpp/limits-and-errors.md).
 
 ## Related
 
@@ -85,7 +85,7 @@ See [Limits and errors](../cpp/limits-and-errors.md) for caps and error strings.
 - [Game objects](game-objects.md)
 - [Type stubs](type-stubs.md)
 - [Codegen](../../contributor/codegen/codegen.md)
-- [Limits and errors](../cpp/limits-and-errors.md)
+- [Globals](globals.md)
 
 ## Source
 

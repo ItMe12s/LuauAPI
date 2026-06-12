@@ -13,11 +13,12 @@ It includes a higher-level SDK that helps you start simple, iterate faster, and 
 ## Features
 
 - Write fully functional Geode mods in Luau (2)
-- Create your own API mod in Luau
 - Luau LSP autocompletion (3)
-- JIT and JIT-less support
-- Rich built-in libraries, including `task`, `loadstring`, and more
+- Create your own API mod in Luau
 - In-game developer tools (enable via developer mode)
+- JIT and JIT-less support
+- 3D rendering and viewports through `gd3d`
+- Rich built-in libraries, including `task`, `loadstring`, and more
 
 ---
 

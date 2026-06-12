@@ -79,6 +79,7 @@ See [Type stubs](type-stubs.md). For class behavior, read the upstream [Geode UI
 
 - [Game objects](game-objects.md)
 - [Type stubs](type-stubs.md)
+- [gd3d](gd3d.md)
 
 ## Source
 

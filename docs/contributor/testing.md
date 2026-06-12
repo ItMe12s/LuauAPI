@@ -37,6 +37,8 @@ CTest discovers the cases at build time. The files are:
 | `tests/fields_tests.cpp` | `m_fields` and release eviction |
 | `tests/geode_fs_path_tests.cpp` | Geode filesystem binding path resolution |
 | `tests/handle_gc_tests.cpp` | Task and ImGui draw handle `__gc` cancellation |
+| `tests/host/GltfParseTests.cpp` | glTF CPU parse of `resources/test_donut.glb` |
+| `tests/host/Render3DMathTests.cpp` | 3D transform compose, inverse, and lerp |
 | `tests/imgui_scheduler_tests.cpp` | ImGui draw scheduler registration |
 | `tests/indexed_slot_map_tests.cpp` | Indexed slot map used by the schedulers |
 | `tests/loadstring_tests.cpp` | `loadstring` compile and runtime behavior |
@@ -71,6 +73,10 @@ The `luauapi_tests` target links only:
 - Luau libraries
 
 Which keeps the tests fast and host only.
+
+The host test binary also compiles a slice of the 3D loader (`MeshAsset`, `GltfIo`, `ImageDecode`)
+for parse and math coverage. It does not link OpenGL, cocos2d, or the gd3d Lua bindings.
+Viewport rendering is validated in-game only.
 
 ## The Python codegen tests
 

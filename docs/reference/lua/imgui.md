@@ -13,23 +13,7 @@ The runtime runs it every frame. Build windows and widgets inside the callback.
 ImGui is immediate mode and saves no widget state, so widgets return their value each frame.
 Store values in your script if you want to keep them.
 
-```lua
-local state = { enabled = false, speed = 1.0 }
-
-local handle = imgui.onDraw(function()
-    imgui.window("LuauAPI demo", function()
-        imgui.text("Hello from Luau")
-        if imgui.button("Click me") then
-            print("clicked")
-        end
-        state.enabled = imgui.checkbox("Enable", state.enabled)
-        state.speed = imgui.sliderFloat("Speed", state.speed, 0, 10)
-    end)
-end)
-
--- later
-handle:cancel()
-```
+See [Examples](../../getting-started/examples.md).
 
 ## Types
 
@@ -98,17 +82,15 @@ Negative sizes also fill the space.
 
 ## Limits
 
-Widget and window functions only work on the main thread inside an `imgui.onDraw` callback.
-Calling them elsewhere raises an error.
-A draw callback that errors is removed so it does not spam the log every frame.
+Widget calls must run inside an `imgui.onDraw` callback on the main thread.
 
-See [Limits and errors](../cpp/limits-and-errors.md) for caps and error strings.
+See [Limits and errors](../cpp/limits-and-errors.md).
 
 ## Related
 
 - [UI and layouts](ui.md)
 - [ImGui draw scheduler](../../contributor/internals/imgui-draw-scheduler.md)
-- [Limits and errors](../cpp/limits-and-errors.md)
+- [Globals](globals.md)
 
 ## Source
 

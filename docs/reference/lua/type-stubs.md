@@ -5,7 +5,7 @@
 The build generates Luau type stubs for the game bindings.
 They give autocomplete and type checks in your editor.
 This page describes the stub file and the overload policy.
-For setup steps, see [Editor setup](../../getting-started/editor-setup.md).
+For download, placement, and LSP setup, see [Editor setup](../../getting-started/editor-setup.md).
 
 ## What the stubs are
 
@@ -22,6 +22,7 @@ Every file in `tools/luau_codegen/extra_bindings/` is appended to the same outpu
 - `mod.dluau` adds `ModNamespace`
 - `json.dluau` adds `JsonNamespace`
 - `fs.dluau` adds `FsRoot` and `FsNamespace`
+- `gd3d.dluau` adds `gd3d`, Transform, Mesh, Material, and ViewportFrame types
 - `websocket.dluau` adds `websocket` and its connection and server types
 
 Files for a global like `task` use `declare`. Files that only add support types use `export type`.
@@ -33,12 +34,10 @@ Methods and factories with several overloads are emitted as one widened signatur
 Leading arguments are typed where every overload agrees, then the rest fall back to `...any`.
 The runtime still selects an overload by argument count, so a matching call type checks and dispatches correctly.
 
-## Getting and regenerating the stub
+## Regenerating the stub
 
-`geode.d.luau` ships on the GitHub release tab next to the `.geode` mod, like a normal Geode SDK mod.
-API users download it from there. The stub is also written during the build by the `luauapi_codegen` target,
-so building refreshes it for development. After a rebuild you only reload the editor,
-since the `definitionFiles` entry is a fixed single path. See [Codegen](../../contributor/codegen/codegen.md).
+Building LuauAPI runs the `luauapi_codegen` target and refreshes `types/geode.d.luau`.
+See [Codegen](../../contributor/codegen/codegen.md) and [Editor setup](../../getting-started/editor-setup.md).
 
 ## Related
 

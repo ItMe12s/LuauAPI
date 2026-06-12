@@ -16,12 +16,7 @@ A path that escapes the root (for example with `..`) or an absolute path is reje
 
 An unknown root raises a Lua error.
 
-- Recoverable failures include:
-  - Missing file
-  - Escaped path
-  - Attempt to write to a read-only root
-
-In these cases, the function returns `nil` and an error message so you can handle them without `pcall`.
+Recoverable failures return `nil` and an error string. See [Globals](globals.md) Error shapes.
 
 ## read
 
@@ -81,7 +76,7 @@ Returns `true`, or `nil` and an error message. Fails on the read-only `resources
 
 Reads, writes, and directory listings are capped.
 
-See [Limits and errors](../cpp/limits-and-errors.md) for caps and error strings.
+See [Limits and errors](../cpp/limits-and-errors.md).
 
 ## Example
 
@@ -100,7 +95,6 @@ end
 - [json](json.md)
 - [mod](mod.md)
 - [Globals](globals.md)
-- [Limits and errors](../cpp/limits-and-errors.md)
 
 ## Source
 

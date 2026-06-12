@@ -40,7 +40,7 @@ local v = geode.VersionInfo
 local parts = v.parse("v1.2.3")
 print(parts.major, parts.minor, parts.patch) -- 1 2 3
 
-print(v.compare("v1.0.0", "v1.2.0")) -- -1
+print(v.compare("v1.0.0", "v1.2.0"))   -- -1
 print(v.matches(">=v1.2.0", "v1.3.0")) -- true
 ```
 

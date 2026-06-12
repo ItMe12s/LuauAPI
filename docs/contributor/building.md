@@ -26,6 +26,15 @@ CMake downloads these during configuration, so you do not install them by hand.
   It pins Dear ImGui through its own CPM setup. Only the LuauAPI mod links it.
   Other mods use the `imgui` Lua API instead.
 - Catch2 `v3.15.0`, fetched only when tests are on
+- GLM `1.0.3`, used by the 3D math and glTF loader
+
+Vendored headers in `vendor/` are not fetched by CMake:
+
+- `cgltf.h` for glTF parsing. Define `CGLTF_IMPLEMENTATION` in one translation unit only (`GltfIo.cpp`).
+- `stb_image.h` for PNG and JPEG decode. Define `STB_IMAGE_IMPLEMENTATION` in one translation unit only (`ImageDecode.cpp`).
+
+The `gd3d` stack is always built into the mod. There is no CMake option to disable it.
+OpenGL comes from Geode and cocos2d, not from a standalone `find_package(OpenGL)` call.
 
 To bump bindings for a new Geometry Dash version, update `mod.json`
 and the `LUAUAPI_BINDINGS_GIT_TAG` cache variable to a matching commit from the Geode bindings repo.
@@ -49,9 +58,7 @@ For platform builds, use the Geode CLI or the CI workflow in `.github/workflows/
 
 ## Code generation
 
-The build runs the `luauapi_codegen` target before it compiles the main library.
-It reads Broma binding files and writes generated C++ plus `types/geode.d.luau`.
-Do not edit generated files by hand. Change the generator or its inputs, then rebuild.
+The build runs the `luauapi_codegen` target before the main library.
 See [Codegen](codegen/codegen.md).
 
 ## Supported platforms

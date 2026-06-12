@@ -53,20 +53,16 @@ Failures are logged once. `disarmTaskTick` removes the node and stops any pendin
 
 ## Limits
 
-The scheduler has a max task count.
-Capacity is enforced on active (non-cancelled) tasks, not the internal slot vector size.
-Cancelled tasks stay in the vector until the next `advance` compacts them, but they no longer count toward the cap.
-The binding checks capacity before adding and raises an error when full.
+Task count and callback budget caps are in limits-and-errors.
 `task.every` rejects an interval that is not greater than zero.
 
-See [Limits and errors](../../reference/cpp/limits-and-errors.md) for caps and error strings.
+See [Limits and errors](../../reference/cpp/limits-and-errors.md).
 
 ## Related
 
 - [Tasks and time reference](../../reference/lua/tasks.md)
 - [ImGui draw scheduler](imgui-draw-scheduler.md)
 - [Runtime](runtime.md)
-- [Limits and errors](../../reference/cpp/limits-and-errors.md)
 
 ## Source
 

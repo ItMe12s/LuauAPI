@@ -115,12 +115,25 @@ Not supported:
 
 Primitives with a textured material must include `TEXCOORD_0`, loading fails otherwise.
 
+The loader walks every glTF node that has a mesh and merges them into one asset.
+Node transforms are baked into vertex positions and normals.
+It does not preserve the scene hierarchy, skeletal animation, morph targets, or glTF cameras and lights.
+Loading the same file again creates a new mesh handle and uploads GPU data again.
+
 Mesh methods:
 
 ```lua
+mesh:vertexCount() -> number
+mesh:primitiveCount() -> number
+mesh:boundingBox() -> { min: Vec3, max: Vec3, empty: boolean }
 mesh:materialCount() -> number
 mesh:getMaterial(index: number) -> Material?
 ```
+
+`vertexCount` is the total vertex count across all primitives.
+`primitiveCount` is the number of triangle groups in the file.
+`boundingBox` returns world-space bounds after node transforms are baked.
+When the mesh has no geometry, `empty` is `true` and `min` and `max` are zero.
 
 `getMaterial` uses 0-based indices, matching glTF material indices.
 Valid range is `0` to `materialCount() - 1`. It returns `nil` when the index is out of range.
@@ -178,51 +191,32 @@ viewport:clearInstances() -> ()
 
 `addMesh` returns an instance id you pass to the other instance methods.
 The optional `material` argument sets an instance-wide material override at creation time.
-`setInstanceTransform` and `removeInstance` return `false` when the id is unknown.
+`setInstanceMaterial`, `setInstanceColor`, `setInstanceTransform`, and `removeInstance` return `false` when the id is unknown.
 
 The camera transform is the camera's world pose.
 The renderer uses its inverse for the view matrix and a vertical field-of-view perspective projection.
 
-## Example
+### Rendering model
 
-Load the sample donut mesh, spin it in a viewport, and attach the viewport to the menu layer.
-See [src/scripts/_viewportdemo.luau](../../../src/scripts/_viewportdemo.luau) for the full script.
+Drawing needs an active OpenGL context from the game.
+If the context is not ready yet, framebuffer setup and draw calls are skipped until it is.
 
-```lua
-local Transform = gd3d.Transform
+The viewport renders into an off-screen buffer sized in pixels using the cocos content scale factor,
+then blits that texture into the scene graph.
 
-local mesh, err = gd3d.gltf.loadMesh("resources", "test_donut.glb")
-if not mesh then
-    print(err)
-    return
-end
+Shading is a fixed Lambert pass with one light direction and no user controls for lights or shaders.
+There is no alpha blending. Instances draw opaque.
 
-local vp = gd3d.ViewportFrame.new(300, 300)
-vp:setCamera(Transform.new({ x = 0, y = 1, z = 4 }, { x = 0, y = 0, z = 0 }), 70, 0.1, 100)
+Reloading a mesh file or creating a new handle uploads fresh GPU data even when the path is the same.
 
-local id = vp:addMesh(mesh, Transform.new())
-vp:setInstanceColor(id, { x = 1, y = 0.85, z = 0.7 })
-local angle = 0
-
-task.every(1 / 60, function()
-    angle += 0.02
-    vp:setInstanceTransform(id, Transform.fromEuler(0.4, angle, 0))
-end)
-
--- ViewportFrame is a CCNode. Parent it under any layer or popup.
-local menu = geode.gd.MenuLayer.get()
-if menu then
-    vp:setPosition({ x = 200, y = 200 })
-    menu:addChild(vp)
-end
-```
+See [Examples](../../getting-started/examples.md).
+See [src/scripts/_viewportdemo.luau](../../../src/scripts/_viewportdemo.luau) for a longer demo with color cycling.
 
 ## Limits
 
-Mesh files use the same read cap as [fs](fs.md) (`32 MiB`).
-External glTF buffer files must stay inside the sandbox root.
+Mesh files use the filesystem read cap.
 
-See [Limits and errors](../cpp/limits-and-errors.md) for caps and error strings.
+See [Limits and errors](../cpp/limits-and-errors.md).
 
 ## Related
 
@@ -230,15 +224,19 @@ See [Limits and errors](../cpp/limits-and-errors.md) for caps and error strings.
 - [Game objects](game-objects.md)
 - [UI and layouts](ui.md)
 - [Tasks and time](tasks.md)
-- [Limits and errors](../cpp/limits-and-errors.md)
 
 ## Source
 
+- `src/bindings/render3d/Gd3dShared.hpp`
 - `src/bindings/render3d/TransformBinding.cpp`
 - `src/bindings/render3d/GltfBinding.cpp`
 - `src/bindings/render3d/MaterialBinding.cpp`
 - `src/bindings/render3d/ViewportFrameBinding.cpp`
 - `src/render3d/Transform3D.hpp`
+- `src/render3d/Material.hpp`
 - `src/render3d/MeshAsset.hpp`
+- `src/render3d/GltfIo.hpp`
+- `src/render3d/ImageDecode.hpp`
+- `src/render3d/GlUtil.hpp`
 - `src/render3d/CCViewportFrame.hpp`
 - `src/render3d/Renderer3D.hpp`

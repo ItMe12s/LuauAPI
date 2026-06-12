@@ -9,16 +9,19 @@ The globally available functions and values in every script are:
 - `require`
 - `_G`
 
-This page also covers script basics like logging, error handling, and the time budget.
+This page covers signatures for those globals plus error shapes.
 
 ## Script basics
 
-- Your script runs on the main thread.
-- Errors are caught and written to the log. They do not crash the game.
-  The host can read the last error after a run.
-- Each run has a time budget in milliseconds. Going over raises an error.
-  Avoid long loops and blocking calls. Spread heavy work across frames with `task`.
-- Memory has a hard cap. Once it is reached, allocation fails.
+Runtime rules for scripts live in [Getting started Key concepts](../../getting-started/overview.md).
+Caps and error strings live in [Limits and errors](../cpp/limits-and-errors.md).
+
+## Error shapes
+
+Some APIs return `nil` and an error string instead of throwing.
+Examples include `loadstring`, `fs` reads, `json` parse, `keybind.fromString`, and `websocket.serve`.
+Other APIs raise on failure, such as `json.dump` and invalid hook targets.
+Check each function's signature for which shape it uses.
 
 ## print
 
@@ -65,12 +68,8 @@ require(path: string) -> any
 ```
 
 Loads a sibling Luau module and returns its single value.
-The module system is flat and sandboxed.
 See [Modules](modules.md) for the full rules.
-
-```lua
-local Helper = require("./Helper")
-```
+See [Examples](../../getting-started/examples.md).
 
 ## _G
 
@@ -84,35 +83,20 @@ Read shared values through `_G[key]` rather than as a bare global name. See [Sha
 
 ## Other globals
 
-The following standard Luau libraries and globals are available:
-
-- `string` ([Luau string library](https://luau-lang.org/library#string-library))
-- `table` ([Luau table library](https://luau-lang.org/library#table-library))
-- `math` ([Luau math library](https://luau-lang.org/library#math-library))
-- `task` (see [Tasks and time](tasks.md))
-- `time` (see [Tasks and time](tasks.md#time-now-and-time-unix))
-- `geode` (see [Game objects](game-objects.md))
-- `imgui` (see [ImGui](imgui.md))
-- `gd3d` (see [gd3d](gd3d.md))
-- `websocket` (see [WebSocket](websocket.md))
+Standard Luau libraries and LuauAPI namespaces (`task`, `geode`, `imgui`, `gd3d`, and others) are listed in [Type stubs](type-stubs.md).
 
 ## Limits
 
-Each run has a time budget. Memory has a hard cap.
 `loadstring` rejects sources over the script size cap.
 
-See [Limits and errors](../cpp/limits-and-errors.md) for caps and error strings.
+See [Limits and errors](../cpp/limits-and-errors.md).
 
 ## Related
 
 - [Modules](modules.md)
 - [Sharing APIs between mods](sharing-apis.md)
-- [Tasks and time](tasks.md)
-- [Game objects](game-objects.md)
-- [ImGui](imgui.md)
-- [gd3d](gd3d.md)
-- [WebSocket](websocket.md)
-- [Limits and errors](../cpp/limits-and-errors.md)
+- [Type stubs](type-stubs.md)
+- [Getting started overview](../../getting-started/overview.md)
 
 ## Source
 

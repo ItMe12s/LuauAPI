@@ -41,7 +41,7 @@ websocket.serve(port: number, options: WebSocketServeOptions?) -> (WebSocketServ
 
 `connect` starts the socket immediately and returns the connection.
 Events arrive on the next frame at the earliest, so attaching callbacks right after `connect` never misses events.
-`serve` binds and starts listening, or returns `nil` and an error message (for example when the port is taken).
+`serve` binds and starts listening, or returns `nil` and an error message. See [Globals](globals.md) Error shapes.
 
 ## WebSocketConnection
 
@@ -125,9 +125,8 @@ Methods on a disconnected peer return `nil` and `"websocket peer is disconnected
 ## Limits
 
 Connections, servers, and message sizes are capped.
-Excess server clients are rejected silently.
 
-See [Limits and errors](../cpp/limits-and-errors.md) for caps and error strings.
+See [Limits and errors](../cpp/limits-and-errors.md).
 
 ## TLS
 
@@ -145,7 +144,7 @@ Nothing closes them when an individual script run returns, so keep a reference f
 
 - [web](web.md)
 - [tasks](tasks.md)
-- [Limits and errors](../cpp/limits-and-errors.md)
+- [Globals](globals.md)
 
 ## Source
 

@@ -16,15 +16,7 @@ It sits next to the `.geode` mod file. No build is needed.
 If you build LuauAPI from source instead, the stub is written to `types/` after a build.
 See [Building from source](../contributor/building.md).
 
-The stub file includes:
-
-- All bound classes
-- Factories
-- Enum aliases
-- The `geode` namespace
-- The `task` and `time` APIs
-- `loadstring`
-- The ImGui APIs
+For what the stub contains, see [Type stubs](../reference/lua/type-stubs.md).
 
 ## Step 3: place the stub
 

@@ -24,7 +24,9 @@ Then add a dependency on `imes.luauapi` in your `mod.json` and declare your scri
     },
     "resources": {
         "files": [
-            "mod/*.luau"
+            "mod/*.luau",
+            "assets/*.glb",
+            "assets/*.gltf"
         ]
     }
 }
@@ -32,6 +34,8 @@ Then add a dependency on `imes.luauapi` in your `mod.json` and declare your scri
 
 Put your `.luau` files under the resources path you declare.
 They get packed with your mod and load from your mod resources directory at runtime.
+Ship 3D assets the same way. Pack `.glb` or `.gltf` files under `"resources"` and load them with `gd3d.gltf.loadMesh`.
+See [gd3d](../reference/lua/gd3d.md).
 
 ## Settings
 

@@ -22,20 +22,18 @@ It keeps all loading inside the resources root.
 
 ## Path rules
 
-The path helpers live in `PathRules.hpp`, `PathSandbox.hpp`, and `RequirePath.hpp`.
+Path helpers live in `PathRules.hpp`, `PathSandbox.hpp`, and `RequirePath.hpp`.
+User-facing require rules are in [Modules reference](../../reference/lua/modules.md).
 
-- `validateResourcePath()` checks flat resource names and the `.luau` extension policy.
-- `resolveInsideRoot()` canonicalizes a relative path and enforces root containment.
-- A flat resource path is a single file name with no folders. `.` and `..` are rejected.
-- A relative path that starts with `..` is treated as an escape and rejected.
-- The extension must be `.luau`. A missing extension is filled in, any other extension is rejected.
+- `validateResourcePath()` checks flat names and the `.luau` extension policy.
+- `resolveInsideRoot()` canonicalizes a path and enforces root containment.
 
 ## Loading a module
 
 `load` runs these steps:
 
 1. Resolve the module path inside the root, or raise an error.
-2. Check the file size against the script size limit.
+2. Check the file size against the [script size limit](../../reference/cpp/limits-and-errors.md).
 3. Read the file.
 4. Compile to bytecode, using the runtime cache.
 5. Create a new thread and sandbox it.
@@ -59,15 +57,14 @@ This is the same containment used by the public `runFile` path.
 
 ## Limits
 
-Module size and load deadline use the same caps as scripts.
+Module size and load deadline match script caps.
 
-See [Limits and errors](../../reference/cpp/limits-and-errors.md) for caps and error strings.
+See [Limits and errors](../../reference/cpp/limits-and-errors.md).
 
 ## Related
 
 - [Runtime](runtime.md)
 - [Modules reference](../../reference/lua/modules.md)
-- [Limits and errors](../../reference/cpp/limits-and-errors.md)
 
 ## Source
 

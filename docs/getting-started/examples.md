@@ -82,6 +82,54 @@ imgui.onDraw(function()
 end)
 ```
 
+## Spin a 3D mesh in a viewport
+
+Pack a `.glb` or `.gltf` file in your mod resources, load it, and parent a `ViewportFrame` under the menu when it opens.
+See [gd3d](../reference/lua/gd3d.md) and [src/scripts/_viewportdemo.luau](../../src/scripts/_viewportdemo.luau) for a longer demo.
+
+```lua
+local Transform = gd3d.Transform
+local cc2d = geode.cocos2d
+local modId = geode.Mod.getID()
+
+local mesh, err = gd3d.gltf.loadMesh("resources", "model.glb")
+if not mesh then
+    print(err)
+    return
+end
+
+local vp = gd3d.ViewportFrame.new(200, 200)
+if not vp then
+    print("failed to create ViewportFrame")
+    return
+end
+
+vp:setID(modId .. "/spinning-mesh")
+vp:setCamera(Transform.new({ x = 0, y = 1, z = 3 }, { x = 0, y = 0, z = 0 }), 90, 0.1, 100)
+
+local id = vp:addMesh(mesh, Transform.new())
+local angle = 0
+
+task.every(1 / 60, function()
+    angle += 0.02
+    vp:setInstanceTransform(id, Transform.fromEuler(0.4, angle, 0))
+end)
+
+geode.hook("geode.gd.MenuLayer:init/0", {
+    after = function(self, result)
+        local director = cc2d.CCDirector.sharedDirector()
+        if not director then
+            return result
+        end
+
+        local winSize = director:getWinSize()
+        vp:setPosition({ x = winSize.width / 2, y = winSize.height / 2 })
+        self:addChild(vp)
+        return result
+    end,
+})
+```
+
 ## Related
 
 - [Globals](../reference/lua/globals.md)
@@ -89,6 +137,7 @@ end)
 - [Tasks and time](../reference/lua/tasks.md)
 - [web](../reference/lua/web.md)
 - [imgui](../reference/lua/imgui.md)
+- [gd3d](../reference/lua/gd3d.md)
 
 ## Source
 

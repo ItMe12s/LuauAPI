@@ -80,16 +80,7 @@ Cancels a scheduled task. You can also call `handle:cancel()`.
 Keep the handle while you expect the callback to run.
 Dropping it cancels the task when Lua collects the handle userdata.
 
-```lua
-local ticks = 0
-local handle
-handle = task.every(0.5, function()
-    ticks += 1
-    if ticks >= 5 then
-        handle:cancel() -- same as task.cancel(handle)
-    end
-end)
-```
+See [Examples](../../getting-started/examples.md).
 
 ## time.now and time.unix
 
@@ -108,19 +99,14 @@ print(time.now(), time.unix())
 
 ## Limits
 
-Tasks are driven by the game scheduler and advance each frame by the frame delta.
-Each callback runs on the main thread under the callback budget.
-Scheduling has a maximum task count, and going over raises an error.
-Callback errors are logged rather than thrown.
-One-shot tasks end after they run, repeated tasks stop after an error.
+Tasks use the game scheduler and share the main-thread callback budget.
 
-See [Limits and errors](../cpp/limits-and-errors.md) for caps and error strings.
+See [Limits and errors](../cpp/limits-and-errors.md).
 
 ## Related
 
 - [Globals](globals.md)
 - [Sharing APIs between mods](sharing-apis.md)
-- [Limits and errors](../cpp/limits-and-errors.md)
 
 ## Source
 

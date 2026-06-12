@@ -8,21 +8,7 @@ The system is flat and sandboxed, so you can only load sibling files inside the 
 ## How to use it
 
 A module file returns one value, and the caller receives that value.
-
-```lua
--- Helper.luau
-local M = {}
-function M.add(a, b)
-    return a + b
-end
-return M
-```
-
-```lua
--- main script
-local Helper = require("./Helper")
-print(Helper.add(1, 2))
-```
+See [Examples](../../getting-started/examples.md).
 
 ## The rules
 
@@ -40,23 +26,20 @@ Breaking any rule returns an error at load time.
 
 ## Limits
 
-A module uses the same size limit as a script. Compiled modules share the bytecode cache with scripts.
-The cache key is the path, size, modify time, and content hash.
-Modules load with the default script deadline.
+Modules share the script size limit and default deadline with entry scripts.
 
-See [Limits and errors](../cpp/limits-and-errors.md) for caps and error strings.
+See [Limits and errors](../cpp/limits-and-errors.md).
 
 ## What happens on load
 
-The runtime resolves the path inside the root, reads the file, compiles it to bytecode,
-and runs it on a sandboxed thread. The single returned value is handed back to the caller.
+The runtime resolves the path, reads the file, compiles bytecode, runs it on a sandboxed thread, and returns the single value.
+For the full load pipeline, see [Module system internals](../../contributor/internals/module-system.md).
 
 ## Related
 
 - [Globals](globals.md)
 - [Sharing APIs between mods](sharing-apis.md)
 - [Module system internals](../../contributor/internals/module-system.md)
-- [Limits and errors](../cpp/limits-and-errors.md)
 
 ## Source
 

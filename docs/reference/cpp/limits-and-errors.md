@@ -2,7 +2,8 @@
 
 ## Summary
 
-Runtime limits and error strings. Values come from `src/core/Config.hpp`.
+Runtime limits and error strings. Values come from `src/core/Config.hpp` unless noted.
+This page is the canonical list of caps, deadlines, and error strings for LuauAPI.
 
 ## Compilation and Bytecode
 
@@ -178,29 +179,50 @@ Runtime limits and error strings. Values come from `src/core/Config.hpp`.
 
 ---
 
+## gd3d and glTF
+
+| Constant | Value | Meaning |
+| --- | --- | --- |
+| `kMaxFsReadBytes` | `32 MiB` | Max glTF file and buffer read size. Same as the filesystem read cap above. |
+| Max texture dimension | `8192` | Max decoded PNG or JPEG side (`STBI_MAX_DIMENSIONS` in `ImageDecode.cpp`) |
+
+### gd3d and glTF errors
+
+| Message | When | Return shape |
+| --- | --- | --- |
+| `path is not a regular file` | `loadMesh` target is not a file | `nil, err` |
+| `glTF file exceeds maximum read size` | File over read cap | `nil, err` |
+| `glTF file cannot be read: ...` | Open or read failure | `nil, err` |
+| `glTF file cannot be opened: ...` | Open failure | `nil, err` |
+| `glTF data is empty` | Empty buffer | `nil, err` |
+| `glTF data exceeds maximum read size` | In-memory data over cap | `nil, err` |
+| `failed to parse glTF: ...` | cgltf parse failure | `nil, err` |
+| `failed to load glTF buffers: ...` | Buffer load failure | `nil, err` |
+| `glTF file contains no mesh primitives` | No geometry | `nil, err` |
+| `only triangle primitives are supported` | Non-triangle primitive | `nil, err` |
+| `Draco compressed primitives are not supported` | Draco extension | `nil, err` |
+| `sparse accessors are not supported` | Sparse accessor | `nil, err` |
+| `meshopt-compressed accessors are not supported` | meshopt compression | `nil, err` |
+| `textures require TEXCOORD_0` | Textured material without UVs | `nil, err` |
+| `KHR texture extensions are not supported` | BasisU, WebP, and similar | `nil, err` |
+| `failed to create ViewportFrame` | Viewport node creation failed | `nil, err` |
+| `%s: mesh handle is invalid` | Stale or bad mesh userdata | Lua error |
+| `ViewportFrame:addMesh: mesh handle is invalid` | Mesh released before add | Lua error |
+| `%s: material handle is invalid` | Stale or bad material userdata | Lua error |
+| `gd3d.Material.new: expected color field` | Missing color in constructor table | Lua error |
+
+Sandbox path errors from [fs](../lua/fs.md) also apply to `loadMesh` roots and paths.
+
+---
+
 ## How errors reach you
 
 The run functions return `geode::Result<void>`. On failure they return `Err` with a message.
 
-Common cases:
+Common cases include off-main-thread calls, shutdown, bad paths, oversized scripts, script errors, and deadline overruns.
 
-- The function was called off the main thread.
-- The runtime is shutting down or not ready.
-- The path is empty, absolute, or not a flat `.luau` name.
-- The script or file is larger than the size limit.
-- The script raised an error or hit its deadline.
-
-You can also read the last runtime error with `lastError`. It is empty off the main thread or while shutting down.
-
-```cpp
-namespace lua = imes::luauapi;
-
-if (result.isErr()) {
-    log::error("{}", result.unwrapErr());
-    auto last = lua::lastError();
-    if (!last.empty()) log::error("lastError: {}", last);
-}
-```
+Read the message from `Result` and optionally `lastError()`.
+See [Your first script](../../getting-started/first-script.md) and [Integration guide](integration-guide.md).
 
 ## Deadlines and interrupts
 
@@ -219,6 +241,7 @@ When an allocation would cross the cap, it fails and Lua reports an out of memor
 - [Integration guide](integration-guide.md)
 - [Getting started overview](../../getting-started/overview.md)
 - [imgui](../lua/imgui.md)
+- [gd3d](../lua/gd3d.md)
 
 ## Source
 

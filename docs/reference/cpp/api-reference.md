@@ -23,8 +23,10 @@ geode::Result<void> runScript(
 ```
 
 `runFile` reads and runs a `.luau` file.
-`relativePath` must be a flat `.luau` name inside `resourcesRoot`, not absolute or with folders, and within the size limit.
-`runScript` runs inline source, and `chunkName` names the chunk in logs and errors. Both return `Ok` or `Err` with a message.
+`relativePath` must be a flat `.luau` name inside `resourcesRoot`.
+See [Limits and errors](limits-and-errors.md) for path and size rules.
+`runScript` runs inline source. `chunkName` names the chunk in logs and errors.
+Both return `Ok` or `Err` with a message.
 
 ## Async run functions
 
@@ -43,8 +45,7 @@ arc::Future<geode::Result<void>> runScriptAsync(
 );
 ```
 
-These resolve the path and read the file on the calling thread, then run the script on the main thread, and return a future.
-If the main thread work is cancelled, they return an error.
+These read on the calling thread, run the script on the main thread, and return a future.
 
 ## Status functions
 
@@ -66,9 +67,9 @@ std::size_t memoryLimit();
 bool codegenEnabled();
 ```
 
-`memoryUsage` and `memoryLimit` return current Lua memory use and the cap in bytes, both `0` off the
-main thread or while shutting down. `codegenEnabled` is true when native code generation is on.
-See [Limits and errors](limits-and-errors.md) for caps and error strings.
+`memoryUsage` and `memoryLimit` return current Lua memory use and the cap in bytes.
+Both return `0` off the main thread or while shutting down.
+`codegenEnabled` is true when native code generation is on.
 
 ## RuntimeStatus
 
@@ -86,16 +87,16 @@ enum class RuntimeStatus {
 - `InitFailed`: startup failed.
 - `Panicked`: an unrecoverable Lua panic. The runtime will not run scripts again.
 
-## Default deadline
+## Defaults and caps
 
-`kDefaultScriptDeadlineMs` is the default when you do not pass `deadlineMs`.
-It is defined in `include/RuntimeTypes.hpp` and exposed through `include/LuauAPI.hpp`.
-See [Limits and errors](limits-and-errors.md) for caps and error strings.
+`kDefaultScriptDeadlineMs`, memory caps, and script size limits are defined in `include/RuntimeTypes.hpp` and `src/core/Config.hpp`.
+
+See [Limits and errors](limits-and-errors.md).
 
 ## Related
 
 - [Integration guide](integration-guide.md)
-- [Limits and errors](limits-and-errors.md)
+- [Your first script](../../getting-started/first-script.md)
 
 ## Source
 

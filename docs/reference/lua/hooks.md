@@ -16,14 +16,7 @@ geode.hook(target: string, callback: HookCallbackTable) -> HookHandle
 Registers a callback on a target function. You must pass exactly two arguments.
 An unknown target raises an error. The hook is enabled when you register it.
 
-```lua
-local handle = geode.hook("geode.gd.MenuLayer:init/0", {
-    after = function(self, result)
-        print("MenuLayer opened")
-        return result
-    end,
-})
-```
+See [Examples](../../getting-started/examples.md).
 
 ## Target id
 
@@ -143,16 +136,15 @@ geode.hook("geode.gd.MenuLayer:init/0", {
 
 ## Limits
 
-Hooks run on the main thread.
-Callbacks are capped per target and globally, and each runs under a script budget.
+Hooks run on the main thread with per-target and global callback caps.
 
-See [Limits and errors](../cpp/limits-and-errors.md) for caps and error strings.
+See [Limits and errors](../cpp/limits-and-errors.md).
 
 ## Related
 
 - [Callbacks](callbacks.md)
 - [Game objects](game-objects.md)
-- [Limits and errors](../cpp/limits-and-errors.md)
+- [Globals](globals.md)
 
 ## Source
 

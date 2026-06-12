@@ -44,7 +44,7 @@ export type Gd3dNamespace = {
         new: (opts: { color: Gd3dVec3 | { r: number, g: number, b: number, a: number? } }) -> Gd3dMaterial,
     },
     gltf: {
-        loadMesh: (root: string, path: string) -> (Gd3dMesh?, string?),
+        loadMesh: (root: FsRoot, path: string) -> (Gd3dMesh?, string?),
     },
     ViewportFrame: {
         new: (width: number, height: number) -> (Gd3dViewportFrame?, string?),

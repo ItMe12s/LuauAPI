@@ -9,7 +9,8 @@
 | `key` | number | a key code |
 | `modifiers` | number | a bit mask of held modifier keys |
 
-`fromString` returns `nil` and an error message on a bad string, so you can handle it without `pcall`.
+`fromString` returns `nil` and an error message on a bad string.
+See [Globals](globals.md) Error shapes.
 
 ## fromString
 

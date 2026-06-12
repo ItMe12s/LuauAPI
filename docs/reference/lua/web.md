@@ -6,6 +6,7 @@
 Requests run on Geode's web worker and call Lua completion and progress callbacks on the main thread.
 This binding does not expose `openLinkUnsafe` or any `*Sync` request method.
 File writes are sandboxed to mod roots.
+See [Examples](../../getting-started/examples.md).
 
 ## Types
 
@@ -156,7 +157,8 @@ The following body sources are capped.
 - `MultipartForm:fileFrom`
 - `MultipartForm:getBody()`
 
-Over the limit, the call returns `nil` and an error message, or raises while parsing options.
+Over the [request and response body caps](../cpp/limits-and-errors.md),
+the call returns `nil` and an error message, or raises while parsing options.
 
 ## Listeners
 
@@ -192,33 +194,17 @@ Response callbacks receive `(response?, err?)` or `(modID, response?, err?)`
 
 `HttpVersion`, `ProxyType`, `Error`, and `HttpAuth` mirror Geode `utils/web.hpp` constants.
 
-## Example
-
-```lua
-local web = geode.utils.web
-
-web.get("https://api.example.com/data", {
-    headers = { Accept = "application/json" },
-    timeout = 30,
-}, function(response, err)
-    if err then return print(err) end
-    if not response:ok() then return print(response:errorMessage()) end
-    local data = response:json()
-    if data then print(data.version) end
-end)
-```
-
 ## Limits
 
 Request and response bodies are capped.
 
-See [Limits and errors](../cpp/limits-and-errors.md) for caps and error strings.
+See [Limits and errors](../cpp/limits-and-errors.md).
 
 ## Related
 
 - [json](json.md)
 - [fs](fs.md)
-- [Limits and errors](../cpp/limits-and-errors.md)
+- [Globals](globals.md)
 
 ## Source
 

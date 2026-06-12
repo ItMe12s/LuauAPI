@@ -6,7 +6,8 @@
 using the same JSON model as `geode.Mod.getSavedValue` and `setSavedValue`.
 
 JSON types map to Lua as boolean, number, string, `nil` (null), array table, and object table.
-Past the depth limit, tuple APIs return `nil` and an error message, and `dump` raises a Lua error.
+Past depth and size limits, tuple APIs return `nil` and an error message, and `dump` raises.
+See [Globals](globals.md) Error shapes.
 Unsupported Luau types serialize as JSON `null`.
 
 ## parse
@@ -49,14 +50,13 @@ geode.json.dump({ 1, 2, 3 }, 2) -- pretty-printed array, 2-space indent
 
 Nesting depth and parse size are capped.
 
-See [Limits and errors](../cpp/limits-and-errors.md) for caps and error strings.
+See [Limits and errors](../cpp/limits-and-errors.md).
 
 ## Related
 
 - [mod](mod.md)
 - [fs](fs.md)
 - [Globals](globals.md)
-- [Limits and errors](../cpp/limits-and-errors.md)
 
 ## Source
 

@@ -13,6 +13,7 @@ This page names the main parts and traces how a script gets from a file to runni
 - Module system. Implements sandboxed `require`. See [Module system](internals/module-system.md).
 - Task scheduler. Drives `task` callbacks on the game tick. See [Task scheduler](internals/task-scheduler.md).
 - ImGui draw scheduler. Drives `imgui.onDraw` callbacks each frame. See [ImGui draw scheduler](internals/imgui-draw-scheduler.md).
+- 3D rendering. Loads glTF meshes and draws them through `gd3d.ViewportFrame` nodes. See [gd3d](../reference/lua/gd3d.md).
 - Codegen. Generates the game bindings and the type stubs. See [Codegen](codegen/codegen.md).
 
 ## Source layout
@@ -20,13 +21,14 @@ This page names the main parts and traces how a script gets from a file to runni
 - `include/LuauAPI.hpp`: the public header.
 - `src/api.cpp`: the public API implementation.
 - `src/main.cpp`: the mod entry points that drive the runtime lifecycle.
-- `src/core/Config.hpp`: the limits and deadlines.
-   See [Limits and errors](../reference/cpp/limits-and-errors.md) for caps and error strings.
+- `src/core/Config.hpp`: the limits and deadlines. See [Limits and errors](../reference/cpp/limits-and-errors.md).
 - `src/core/`: the runtime, memory allocator, and small utilities such as the indexed slot map.
 - `src/framework/`: the binding registry, usertypes, stack interop, callbacks, views, and scheduling.
 - `src/bindings/geode/`: handwritten `geode.*` bindings (web cluster in `web/`).
 - `src/bindings/imgui/`: ImGui binding and draw scheduler.
 - `src/bindings/task/`: task scheduler bindings.
+- `src/bindings/render3d/`: handwritten `gd3d` bindings.
+- `src/render3d/`: glTF loading, GPU rendering, and the `CCViewportFrame` node.
 - `src/require/`: the requirer and the path rules.
 - `build/luauapi-gen/src/`: generated C++ bindings from codegen.
 - `tools/luau_codegen/`: the Python code generator.
@@ -51,16 +53,19 @@ For `runFile`:
 
 ## How a hook runs
 
-A script registers a callback with `geode.hook`.
-The generated hook function for that game method is installed.
-When the game calls the method, the generated function runs the `before` callbacks,
-then the original unless skipped, then the `after` callbacks.
+A script registers with `geode.hook`. Generated hook code runs before callbacks, the original, then after callbacks.
+See [Hooks](../reference/lua/hooks.md) and [Codegen](codegen/codegen.md).
 
 ## How ImGui draw runs
 
-A script registers a callback with `imgui.onDraw`. `ImGuiDrawScheduler` stores it
-and runs it each frame inside an ImGui frame, within the ImGui deadline.
+A script registers with `imgui.onDraw`. The draw scheduler runs callbacks each frame inside an ImGui frame.
 See [ImGui draw scheduler](internals/imgui-draw-scheduler.md).
+
+## How a ViewportFrame draws
+
+Scripts load meshes, add them to `gd3d.ViewportFrame`, and parent the node in the scene graph.
+Each frame the node renders off-screen and blits into its content rect.
+See [gd3d](../reference/lua/gd3d.md) Rendering model.
 
 ## Threading
 
@@ -72,6 +77,7 @@ The async API does its file work off thread, then hops to the main thread to run
 - [Runtime](internals/runtime.md)
 - [Bindings framework](internals/bindings-framework.md)
 - [Codegen](codegen/codegen.md)
+- [gd3d](../reference/lua/gd3d.md)
 - [API reference](../reference/cpp/api-reference.md)
 
 ## Source
@@ -79,5 +85,7 @@ The async API does its file work off thread, then hops to the main thread to run
 - `src/main.cpp`
 - `src/api.cpp`
 - `src/core/Runtime.cpp`
+- `src/render3d/CCViewportFrame.cpp`
+- `src/render3d/Renderer3D.cpp`
 - `tools/luau_codegen/emit/cxx_templates.py`
 - `src/bindings/imgui/ImGuiDrawScheduler.cpp`
