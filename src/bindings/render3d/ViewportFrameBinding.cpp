@@ -199,6 +199,72 @@ namespace {
         self->clearInstances();
         return 0;
     }
+
+    int viewportGetInstanceTransform(lua_State* L) {
+        auto const* self =
+            Usertype<CCViewportFrame>::check(L, 1, "ViewportFrame:getInstanceTransform");
+        int const instanceId = check<int>(L, 2, "ViewportFrame:getInstanceTransform");
+
+        auto const& instances = self->instances();
+        auto const it = instances.find(instanceId);
+        if (it == instances.end()) {
+            lua_pushnil(L);
+            return 1;
+        }
+
+        pushTransform(L, it->second.transform);
+        return 1;
+    }
+
+    int viewportGetInstanceColor(lua_State* L) {
+        auto const* self = Usertype<CCViewportFrame>::check(L, 1, "ViewportFrame:getInstanceColor");
+        int const instanceId = check<int>(L, 2, "ViewportFrame:getInstanceColor");
+
+        auto const& instances = self->instances();
+        auto const it = instances.find(instanceId);
+        if (it == instances.end()) {
+            lua_pushnil(L);
+            return 1;
+        }
+
+        pushVec3(L, it->second.color);
+        return 1;
+    }
+
+    int viewportGetInstanceMaterial(lua_State* L) {
+        auto const* self =
+            Usertype<CCViewportFrame>::check(L, 1, "ViewportFrame:getInstanceMaterial");
+        int const instanceId = check<int>(L, 2, "ViewportFrame:getInstanceMaterial");
+
+        auto const& instances = self->instances();
+        auto const it = instances.find(instanceId);
+        if (it == instances.end() || !it->second.materialOverride) {
+            lua_pushnil(L);
+            return 1;
+        }
+
+        pushMaterial(L, it->second.materialOverride);
+        return 1;
+    }
+
+    int viewportGetInstanceIds(lua_State* L) {
+        auto const* self = Usertype<CCViewportFrame>::check(L, 1, "ViewportFrame:getInstanceIds");
+        auto const& instances = self->instances();
+
+        lua_createtable(L, static_cast<int>(instances.size()), 0);
+        int arrayIndex = 1;
+        for (auto const& [id, _] : instances) {
+            push(L, id);
+            lua_rawseti(L, -2, arrayIndex++);
+        }
+        return 1;
+    }
+
+    int viewportInstanceCount(lua_State* L) {
+        auto const* self = Usertype<CCViewportFrame>::check(L, 1, "ViewportFrame:instanceCount");
+        push(L, static_cast<int>(self->instances().size()));
+        return 1;
+    }
 } // namespace
 
 namespace luax {
@@ -221,6 +287,11 @@ namespace luax {
         Usertype<CCViewportFrame>::method(L, "setInstanceMaterial", &viewportSetInstanceMaterial);
         Usertype<CCViewportFrame>::method(L, "setInstanceColor", &viewportSetInstanceColor);
         Usertype<CCViewportFrame>::method(L, "setInstanceTransform", &viewportSetInstanceTransform);
+        Usertype<CCViewportFrame>::method(L, "getInstanceTransform", &viewportGetInstanceTransform);
+        Usertype<CCViewportFrame>::method(L, "getInstanceColor", &viewportGetInstanceColor);
+        Usertype<CCViewportFrame>::method(L, "getInstanceMaterial", &viewportGetInstanceMaterial);
+        Usertype<CCViewportFrame>::method(L, "getInstanceIds", &viewportGetInstanceIds);
+        Usertype<CCViewportFrame>::method(L, "instanceCount", &viewportInstanceCount);
         Usertype<CCViewportFrame>::method(L, "removeInstance", &viewportRemoveInstance);
         Usertype<CCViewportFrame>::method(L, "clearInstances", &viewportClearInstances);
 

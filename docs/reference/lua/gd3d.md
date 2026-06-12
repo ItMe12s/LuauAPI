@@ -53,6 +53,11 @@ type ViewportFrame = CCNode & {
     setInstanceMaterial: (self: ViewportFrame, id: number, material: Material?) -> boolean,
     setInstanceColor: (self: ViewportFrame, id: number, color: Vec3) -> boolean,
     setInstanceTransform: (self: ViewportFrame, id: number, transform: Transform) -> boolean,
+    getInstanceTransform: (self: ViewportFrame, id: number) -> Transform?,
+    getInstanceColor: (self: ViewportFrame, id: number) -> Vec3?,
+    getInstanceMaterial: (self: ViewportFrame, id: number) -> Material?,
+    getInstanceIds: (self: ViewportFrame) -> { number },
+    instanceCount: (self: ViewportFrame) -> number,
     removeInstance: (self: ViewportFrame, id: number) -> boolean,
     clearInstances: (self: ViewportFrame) -> (),
 }
@@ -195,6 +200,11 @@ viewport:addMesh(mesh: Mesh, transform: Transform, material: Material?) -> numbe
 viewport:setInstanceMaterial(id: number, material: Material?) -> boolean
 viewport:setInstanceColor(id: number, color: Vec3) -> boolean
 viewport:setInstanceTransform(id: number, transform: Transform) -> boolean
+viewport:getInstanceTransform(id: number) -> Transform?
+viewport:getInstanceColor(id: number) -> Vec3?
+viewport:getInstanceMaterial(id: number) -> Material?
+viewport:getInstanceIds() -> { number }
+viewport:instanceCount() -> number
 viewport:removeInstance(id: number) -> boolean
 viewport:clearInstances() -> ()
 ```
@@ -202,6 +212,12 @@ viewport:clearInstances() -> ()
 `addMesh` returns an instance id you pass to the other instance methods.
 The optional `material` argument sets an instance-wide material override at creation time.
 `setInstanceMaterial`, `setInstanceColor`, `setInstanceTransform`, and `removeInstance` return `false` when the id is unknown.
+
+Readback methods return `nil` for an unknown id.
+`getInstanceMaterial` returns the instance-wide override set by `addMesh` or `setInstanceMaterial`,
+or `nil` when no override is active (glTF per-primitive materials are not returned).
+`getInstanceIds` returns all instance ids in ascending order.
+`instanceCount` is the number of active instances.
 
 The camera transform is the camera's world pose.
 The renderer uses its inverse for the view matrix and a vertical field-of-view perspective projection.
