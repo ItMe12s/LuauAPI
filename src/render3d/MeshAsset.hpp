@@ -84,6 +84,8 @@ namespace luax::render3d {
         bool empty = true;
     };
 
+    constexpr std::size_t kMaxProceduralMeshVertices = 200'000;
+
     class MeshAsset {
     public:
         static LoadResult<std::shared_ptr<MeshAsset>> loadFromFile(std::filesystem::path const& path);
@@ -91,6 +93,11 @@ namespace luax::render3d {
         static LoadResult<std::shared_ptr<MeshAsset>> loadFromBytes(
             std::span<std::uint8_t const> bytes, std::filesystem::path const& assetPath,
             std::filesystem::path const& sandboxRoot
+        );
+
+        static LoadResult<std::shared_ptr<MeshAsset>> fromBuffers(
+            std::vector<glm::vec3> positions, std::vector<glm::vec3> normals,
+            std::vector<glm::vec2> uvs, std::vector<std::uint32_t> indices
         );
 
         std::size_t vertexCount() const;

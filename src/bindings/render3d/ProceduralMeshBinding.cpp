@@ -1,0 +1,363 @@
+#include "bindings/render3d/Gd3dShared.hpp"
+#include "framework/Binding.hpp"
+#include "framework/stack/Stack.hpp"
+#include "framework/stack/TableUtil.hpp"
+#include "framework/stack/UserdataTags.hpp"
+#include "render3d/Material.hpp"
+#include "render3d/MeshAsset.hpp"
+#include "render3d/Renderer3D.hpp"
+
+#include <Geode/Geode.hpp>
+#include <glm/vec2.hpp>
+#include <glm/vec3.hpp>
+#include <lua.h>
+#include <lualib.h>
+#include <memory>
+#include <string>
+#include <vector>
+
+namespace {
+    using namespace luax;
+    using namespace luax::gd3d;
+    using namespace luax::render3d;
+
+    void releaseMeshHandle(MeshHandle* handle) {
+        if (handle == nullptr || handle->id == 0) {
+            return;
+        }
+        std::uint64_t const id = handle->id;
+        MeshRegistry::instance().release(id);
+        Renderer3D::instance().releaseMeshGpu(id);
+        handle->id = 0;
+    }
+
+    void pushMeshHandle(lua_State* L, std::uint64_t id) {
+        auto* handle = static_cast<MeshHandle*>(
+            lua_newuserdatataggedwithmetatable(L, sizeof(MeshHandle), luax::detail::meshAssetTag())
+        );
+        handle->id = id;
+    }
+
+    std::shared_ptr<MeshAsset> requireMesh(lua_State* L, MeshHandle* handle, char const* method) {
+        auto mesh = MeshRegistry::instance().get(requireMeshId(L, handle, method));
+        if (!mesh) {
+            luaL_error(L, "%s: mesh handle is invalid", method);
+        }
+        return mesh;
+    }
+
+    int meshVertexCount(lua_State* L) {
+        auto* handle = checkMeshHandle(L, 1, "Mesh:vertexCount");
+        auto mesh = requireMesh(L, handle, "Mesh:vertexCount");
+        push(L, static_cast<long long>(mesh->vertexCount()));
+        return 1;
+    }
+
+    int meshPrimitiveCount(lua_State* L) {
+        auto* handle = checkMeshHandle(L, 1, "Mesh:primitiveCount");
+        auto mesh = requireMesh(L, handle, "Mesh:primitiveCount");
+        push(L, static_cast<long long>(mesh->primitiveCount()));
+        return 1;
+    }
+
+    int meshBoundingBox(lua_State* L) {
+        auto* handle = checkMeshHandle(L, 1, "Mesh:boundingBox");
+        auto mesh = requireMesh(L, handle, "Mesh:boundingBox");
+        auto const& bounds = mesh->boundingBox();
+
+        lua_createtable(L, 0, 3);
+        pushVec3(L, bounds.min);
+        lua_setfield(L, -2, "min");
+        pushVec3(L, bounds.max);
+        lua_setfield(L, -2, "max");
+        push(L, bounds.empty);
+        lua_setfield(L, -2, "empty");
+        return 1;
+    }
+
+    int meshMaterialCount(lua_State* L) {
+        auto* handle = checkMeshHandle(L, 1, "Mesh:materialCount");
+        auto mesh = requireMesh(L, handle, "Mesh:materialCount");
+        push(L, static_cast<long long>(mesh->materialCount()));
+        return 1;
+    }
+
+    int meshGetMaterial(lua_State* L) {
+        auto* handle = checkMeshHandle(L, 1, "Mesh:getMaterial");
+        auto mesh = requireMesh(L, handle, "Mesh:getMaterial");
+        int const index = check<int>(L, 2, "Mesh:getMaterial");
+        if (index < 0 || static_cast<std::size_t>(index) >= mesh->materialCount()) {
+            lua_pushnil(L);
+            return 1;
+        }
+
+        auto const& data = mesh->materials()[static_cast<std::size_t>(index)];
+        auto material = std::make_shared<Material>();
+        material->baseColorFactor = data.baseColorFactor;
+        material->imageIndex = data.imageIndex;
+        material->alphaMode = data.alphaMode;
+        material->alphaCutoff = data.alphaCutoff;
+        material->doubleSided = data.doubleSided;
+        material->sourceMesh = mesh;
+        material->sourceMeshId = requireMeshId(L, handle, "Mesh:getMaterial");
+        pushMaterial(L, std::move(material));
+        return 1;
+    }
+
+    int meshGc(lua_State* L) {
+        releaseMeshHandle(checkMeshHandle(L, 1, "Mesh.__gc"));
+        return 0;
+    }
+
+    void meshHandleDtor(lua_State* L, void* ud) {
+        (void)L;
+        releaseMeshHandle(static_cast<MeshHandle*>(ud));
+    }
+
+    void registerMeshHandleMetatable(lua_State* L) {
+        luaL_Reg const methods[] = {
+            {"vertexCount", meshVertexCount},
+            {"primitiveCount", meshPrimitiveCount},
+            {"boundingBox", meshBoundingBox},
+            {"materialCount", meshMaterialCount},
+            {"getMaterial", meshGetMaterial},
+            {"__gc", meshGc},
+            {nullptr, nullptr},
+        };
+
+        if (luaL_newmetatable(L, kMeshMeta)) {
+            for (luaL_Reg const* reg = methods; reg->name != nullptr; ++reg) {
+                setTableCFunction(L, -1, reg->name, reg->func);
+            }
+            lua_pushvalue(L, -1);
+            lua_setfield(L, -2, "__index");
+            lua_pushstring(L, "locked");
+            lua_setfield(L, -2, "__metatable");
+            lua_pushstring(L, kMeshTypeName);
+            lua_setfield(L, -2, "__type");
+        }
+        lua_pop(L, 1);
+
+        lua_getuserdatametatable(L, luax::detail::meshAssetTag());
+        if (!lua_isnil(L, -1)) {
+            lua_pop(L, 1);
+            return;
+        }
+        lua_pop(L, 1);
+
+        luaL_getmetatable(L, kMeshMeta);
+        lua_setuserdatametatable(L, luax::detail::meshAssetTag());
+        lua_setuserdatadtor(L, luax::detail::meshAssetTag(), &meshHandleDtor);
+    }
+
+    bool readVec3Array(
+        lua_State* L, int tableIdx, char const* field, char const* method,
+        std::vector<glm::vec3>& out, std::string& err
+    ) {
+        lua_getfield(L, tableIdx, field);
+        if (!lua_istable(L, -1)) {
+            err = std::string(method) + ": " + field + " must be a table";
+            lua_pop(L, 1);
+            return false;
+        }
+
+        int const len = lua_objlen(L, -1);
+        if (len <= 0) {
+            err = std::string(method) + ": " + field + " is empty";
+            lua_pop(L, 1);
+            return false;
+        }
+
+        out.clear();
+        out.reserve(static_cast<std::size_t>(len));
+        for (int i = 1; i <= len; ++i) {
+            lua_rawgeti(L, -1, i);
+            if (!lua_istable(L, -1)) {
+                err = std::string(method) + ": " + field + " entries must be Vec3 tables";
+                lua_pop(L, 2);
+                return false;
+            }
+
+            out.push_back(checkVec3(L, -1, method));
+            lua_pop(L, 1);
+        }
+
+        lua_pop(L, 1);
+        return true;
+    }
+
+    bool readOptionalVec3Array(
+        lua_State* L, int tableIdx, char const* field, char const* method,
+        std::vector<glm::vec3>& out, std::string& err
+    ) {
+        lua_getfield(L, tableIdx, field);
+        if (lua_isnil(L, -1)) {
+            lua_pop(L, 1);
+            out.clear();
+            return true;
+        }
+
+        if (!lua_istable(L, -1)) {
+            err = std::string(method) + ": " + field + " must be a table when provided";
+            lua_pop(L, 1);
+            return false;
+        }
+
+        int const len = lua_objlen(L, -1);
+        out.clear();
+        out.reserve(static_cast<std::size_t>(len));
+        for (int i = 1; i <= len; ++i) {
+            lua_rawgeti(L, -1, i);
+            if (!lua_istable(L, -1)) {
+                err = std::string(method) + ": " + field + " entries must be Vec3 tables";
+                lua_pop(L, 2);
+                return false;
+            }
+
+            out.push_back(checkVec3(L, -1, method));
+            lua_pop(L, 1);
+        }
+
+        lua_pop(L, 1);
+        return true;
+    }
+
+    bool readVec2Array(
+        lua_State* L, int tableIdx, char const* field, char const* method,
+        std::vector<glm::vec2>& out, std::string& err
+    ) {
+        lua_getfield(L, tableIdx, field);
+        if (lua_isnil(L, -1)) {
+            lua_pop(L, 1);
+            out.clear();
+            return true;
+        }
+
+        if (!lua_istable(L, -1)) {
+            err = std::string(method) + ": " + field + " must be a table when provided";
+            lua_pop(L, 1);
+            return false;
+        }
+
+        int const len = lua_objlen(L, -1);
+        out.clear();
+        out.reserve(static_cast<std::size_t>(len));
+        for (int i = 1; i <= len; ++i) {
+            lua_rawgeti(L, -1, i);
+            if (!lua_istable(L, -1)) {
+                err = std::string(method) + ": " + field + " entries must be { x, y } tables";
+                lua_pop(L, 2);
+                return false;
+            }
+
+            out.emplace_back(fieldNumber(L, -1, "x", method), fieldNumber(L, -1, "y", method));
+            lua_pop(L, 1);
+        }
+
+        lua_pop(L, 1);
+        return true;
+    }
+
+    bool readIndexArray(
+        lua_State* L, int tableIdx, char const* field, char const* method,
+        std::vector<std::uint32_t>& out, std::string& err
+    ) {
+        lua_getfield(L, tableIdx, field);
+        if (!lua_istable(L, -1)) {
+            err = std::string(method) + ": " + field + " must be a table";
+            lua_pop(L, 1);
+            return false;
+        }
+
+        int const len = lua_objlen(L, -1);
+        if (len <= 0) {
+            err = std::string(method) + ": " + field + " is empty";
+            lua_pop(L, 1);
+            return false;
+        }
+
+        out.clear();
+        out.reserve(static_cast<std::size_t>(len));
+        for (int i = 1; i <= len; ++i) {
+            lua_rawgeti(L, -1, i);
+            if (!lua_isnumber(L, -1)) {
+                err = std::string(method) + ": " + field + " entries must be numbers";
+                lua_pop(L, 2);
+                return false;
+            }
+
+            double const raw = lua_tonumber(L, -1);
+            if (raw < 1.0 || raw > static_cast<double>(kMaxProceduralMeshVertices) ||
+                static_cast<double>(static_cast<std::uint32_t>(raw)) != raw) {
+                err =
+                    std::string(method) + ": " + field + " entries must be 1-based integer indices";
+                lua_pop(L, 2);
+                return false;
+            }
+
+            out.push_back(static_cast<std::uint32_t>(static_cast<int>(raw) - 1));
+            lua_pop(L, 1);
+        }
+
+        lua_pop(L, 1);
+        return true;
+    }
+
+    int meshNew(lua_State* L) {
+        char const* method = "gd3d.mesh.new";
+        luaL_checktype(L, 1, LUA_TTABLE);
+
+        std::vector<glm::vec3> positions;
+        std::vector<glm::vec3> normals;
+        std::vector<glm::vec2> uvs;
+        std::vector<std::uint32_t> indices;
+        std::string err;
+
+        if (!readVec3Array(L, 1, "positions", method, positions, err)) {
+            return pushNilErr(L, err);
+        }
+
+        if (positions.size() > kMaxProceduralMeshVertices) {
+            return pushNilErr(L, "positions exceed maximum vertex count");
+        }
+
+        if (!readIndexArray(L, 1, "indices", method, indices, err)) {
+            return pushNilErr(L, err);
+        }
+
+        if (!readOptionalVec3Array(L, 1, "normals", method, normals, err)) {
+            return pushNilErr(L, err);
+        }
+
+        if (!readVec2Array(L, 1, "uvs", method, uvs, err)) {
+            return pushNilErr(L, err);
+        }
+
+        auto result = MeshAsset::fromBuffers(
+            std::move(positions), std::move(normals), std::move(uvs), std::move(indices)
+        );
+        if (result.isErr()) {
+            return pushNilErr(L, result.unwrapErr());
+        }
+
+        auto const id = MeshRegistry::instance().registerMesh(result.unwrap());
+        pushMeshHandle(L, id);
+        return 1;
+    }
+} // namespace
+
+namespace luax {
+    geode::Result<void> registerProceduralMesh(lua_State* L) {
+        registerMeshHandleMetatable(L);
+
+        getOrCreateTable(L, "gd3d.mesh");
+        setTableCFunction(L, -1, "new", &meshNew);
+        lua_pop(L, 1);
+
+        return geode::Ok();
+    }
+} // namespace luax
+
+#if !defined(LUAUAPI_HOST_TESTS)
+LUAX_BINDING(gd3d_procedural_mesh_lib, registerProceduralMesh)
+#endif

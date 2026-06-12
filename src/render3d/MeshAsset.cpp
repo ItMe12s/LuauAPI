@@ -251,6 +251,40 @@ namespace {
         imageIndices.emplace(image, index);
         return LoadResult<int>::ok(index);
     }
+
+    void computeFlatNormals(
+        std::vector<glm::vec3> const& positions, std::vector<std::uint32_t> const& indices,
+        std::vector<glm::vec3>& outNormals
+    ) {
+        outNormals.assign(positions.size(), glm::vec3(0.0f));
+
+        for (std::size_t i = 0; i + 2 < indices.size(); i += 3) {
+            std::uint32_t const i0 = indices[i];
+            std::uint32_t const i1 = indices[i + 1];
+            std::uint32_t const i2 = indices[i + 2];
+            glm::vec3 const edge1 = positions[i1] - positions[i0];
+            glm::vec3 const edge2 = positions[i2] - positions[i0];
+            glm::vec3 faceNormal = glm::cross(edge1, edge2);
+            float const len = glm::length(faceNormal);
+            if (len > 0.0f) {
+                faceNormal /= len;
+            }
+
+            outNormals[i0] += faceNormal;
+            outNormals[i1] += faceNormal;
+            outNormals[i2] += faceNormal;
+        }
+
+        for (auto& normal : outNormals) {
+            float const len = glm::length(normal);
+            if (len > 0.0f) {
+                normal /= len;
+            }
+            else {
+                normal = glm::vec3(0.0f, 1.0f, 0.0f);
+            }
+        }
+    }
 } // namespace
 
 namespace luax::render3d {
@@ -443,6 +477,60 @@ namespace luax::render3d {
             return LoadResult<std::shared_ptr<MeshAsset>>::err(*extractError);
         }
 
+        return LoadResult<std::shared_ptr<MeshAsset>>::ok(std::move(mesh));
+    }
+
+    LoadResult<std::shared_ptr<MeshAsset>> MeshAsset::fromBuffers(
+        std::vector<glm::vec3> positions, std::vector<glm::vec3> normals,
+        std::vector<glm::vec2> uvs, std::vector<std::uint32_t> indices
+    ) {
+        if (positions.empty()) {
+            return LoadResult<std::shared_ptr<MeshAsset>>::err("positions are empty");
+        }
+
+        if (positions.size() > kMaxProceduralMeshVertices) {
+            return LoadResult<std::shared_ptr<MeshAsset>>::err(
+                "positions exceed maximum vertex count"
+            );
+        }
+
+        if (indices.empty() || indices.size() % 3 != 0) {
+            return LoadResult<std::shared_ptr<MeshAsset>>::err(
+                "indices must contain a multiple of three triangle indices"
+            );
+        }
+
+        if (!normals.empty() && normals.size() != positions.size()) {
+            return LoadResult<std::shared_ptr<MeshAsset>>::err(
+                "normals length must match positions or be omitted"
+            );
+        }
+
+        if (!uvs.empty() && uvs.size() != positions.size()) {
+            return LoadResult<std::shared_ptr<MeshAsset>>::err(
+                "uvs length must match positions or be omitted"
+            );
+        }
+
+        for (auto const index : indices) {
+            if (index >= positions.size()) {
+                return LoadResult<std::shared_ptr<MeshAsset>>::err("index out of range");
+            }
+        }
+
+        if (normals.empty()) {
+            computeFlatNormals(positions, indices, normals);
+        }
+
+        MeshPrimitive primitive;
+        primitive.positions = std::move(positions);
+        primitive.normals = std::move(normals);
+        primitive.texcoords = std::move(uvs);
+        primitive.indices = std::move(indices);
+        primitive.materialIndex = -1;
+
+        auto mesh = std::shared_ptr<MeshAsset>(new MeshAsset());
+        mesh->addPrimitive(std::move(primitive));
         return LoadResult<std::shared_ptr<MeshAsset>>::ok(std::move(mesh));
     }
 

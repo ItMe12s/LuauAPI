@@ -74,6 +74,14 @@ export type Gd3dNamespace = {
     gltf: {
         loadMesh: (root: FsRoot, path: string) -> (Gd3dMesh?, string?),
     },
+    mesh: {
+        new: (data: {
+            positions: { Gd3dVec3 },
+            indices: { number },
+            normals: { Gd3dVec3 }?,
+            uvs: { { x: number, y: number } }?,
+        }) -> (Gd3dMesh?, string?),
+    },
     ViewportFrame: {
         new: (width: number, height: number) -> (Gd3dViewportFrame?, string?),
     },

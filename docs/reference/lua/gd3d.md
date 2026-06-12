@@ -9,6 +9,7 @@ The namespace has five parts:
 
 - `gd3d.Transform` for position and rotation
 - `gd3d.gltf` for loading mesh assets
+- `gd3d.mesh` for building meshes from vertex data
 - `gd3d.texture` for loading standalone image textures
 - `gd3d.Material` for solid-color, textured, or glTF-derived materials
 - `gd3d.ViewportFrame` for the render target node
@@ -167,6 +168,32 @@ When the mesh has no geometry, `empty` is `true` and `min` and `max` are zero.
 `getMaterial` uses 0-based indices, matching glTF material indices.
 Valid range is `0` to `materialCount() - 1`. It returns `nil` when the index is out of range.
 Materials from a mesh keep the mesh data alive and may include a base color texture from the glTF file.
+
+## Procedural meshes
+
+```lua
+gd3d.mesh.new(data: {
+    positions: { Vec3 },
+    indices: { number },
+    normals: { Vec3 }?,
+    uvs: { { x: number, y: number } }?,
+}) -> (Mesh?, string?)
+```
+
+Builds a mesh from CPU-side geometry without a glTF file.
+Returns the same `Mesh` handle type as `gd3d.gltf.loadMesh`,
+so it works with `viewport:addMesh`, materials,and the rest of the gd3d pipeline.
+
+`positions` is required and must contain at least one vertex (maximum 200,000).
+`indices` is required and must list triangle corners as **1-based** vertex indices (Luau convention).
+Each group of three entries forms one triangle, the count must be a multiple of three.
+
+When `normals` is omitted, flat normals are computed by accumulating face normals per vertex and normalizing.
+When provided, `normals` must have the same length as `positions`.
+When provided, `uvs` must have the same length as `positions`.
+
+The resulting mesh has one primitive with no embedded materials (`materialCount()` is `0`),
+assign a runtime material with `viewport:addMesh` or `viewport:setInstanceMaterial`.
 
 ## Texture loading
 
@@ -330,6 +357,7 @@ See [Limits and errors](../cpp/limits-and-errors.md).
 - `src/bindings/render3d/Gd3dShared.hpp`
 - `src/bindings/render3d/TransformBinding.cpp`
 - `src/bindings/render3d/GltfBinding.cpp`
+- `src/bindings/render3d/ProceduralMeshBinding.cpp`
 - `src/bindings/render3d/TextureBinding.cpp`
 - `src/bindings/render3d/MaterialBinding.cpp`
 - `src/bindings/render3d/ViewportFrameBinding.cpp`

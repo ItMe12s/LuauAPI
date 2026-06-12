@@ -324,6 +324,7 @@ if(LUAUAPI_BUILD_TESTS)
         src/render3d/ImageDecode.cpp
         tests/host/Render3DMathTests.cpp
         tests/host/GltfParseTests.cpp
+        tests/host/ProceduralMeshTests.cpp
         ${LUAUAPI_TEST_SOURCES}
     )
     target_compile_features(luauapi_tests PRIVATE cxx_std_23)
