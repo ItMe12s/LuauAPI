@@ -4,6 +4,7 @@
 #include "framework/stack/Stack.hpp"
 #include "framework/stack/TableUtil.hpp"
 #include "framework/stack/UserdataTags.hpp"
+#include "render3d/Material.hpp"
 #include "render3d/MeshAsset.hpp"
 #include "render3d/Renderer3D.hpp"
 
@@ -12,6 +13,7 @@
 #include <glm/vec3.hpp>
 #include <lua.h>
 #include <lualib.h>
+#include <memory>
 
 namespace {
     using namespace luax;
@@ -72,6 +74,32 @@ namespace {
         return 1;
     }
 
+    int meshMaterialCount(lua_State* L) {
+        auto* handle = checkMeshHandle(L, 1, "Mesh:materialCount");
+        auto mesh = requireMesh(L, handle, "Mesh:materialCount");
+        push(L, static_cast<long long>(mesh->materialCount()));
+        return 1;
+    }
+
+    int meshGetMaterial(lua_State* L) {
+        auto* handle = checkMeshHandle(L, 1, "Mesh:getMaterial");
+        auto mesh = requireMesh(L, handle, "Mesh:getMaterial");
+        long long const index = check<long long>(L, 2, "Mesh:getMaterial");
+        if (index < 0 || static_cast<std::size_t>(index) >= mesh->materialCount()) {
+            lua_pushnil(L);
+            return 1;
+        }
+
+        auto const& data = mesh->materials()[static_cast<std::size_t>(index)];
+        auto material = std::make_shared<Material>();
+        material->baseColorFactor = data.baseColorFactor;
+        material->imageIndex = data.imageIndex;
+        material->sourceMesh = mesh;
+        material->sourceMeshId = requireMeshId(L, handle, "Mesh:getMaterial");
+        pushMaterial(L, std::move(material));
+        return 1;
+    }
+
     int meshGc(lua_State* L) {
         releaseMeshHandle(checkMeshHandle(L, 1, "Mesh.__gc"));
         return 0;
@@ -87,6 +115,8 @@ namespace {
             {"vertexCount", meshVertexCount},
             {"primitiveCount", meshPrimitiveCount},
             {"boundingBox", meshBoundingBox},
+            {"materialCount", meshMaterialCount},
+            {"getMaterial", meshGetMaterial},
             {"__gc", meshGc},
             {nullptr, nullptr},
         };

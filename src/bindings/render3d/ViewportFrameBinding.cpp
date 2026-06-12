@@ -69,7 +69,33 @@ namespace {
             luaL_error(L, "ViewportFrame:addMesh: mesh handle is invalid");
         }
 
-        push(L, self->addInstance(meshId, std::move(mesh), *transform));
+        int const instanceId = self->addInstance(meshId, std::move(mesh), *transform);
+        if (!lua_isnoneornil(L, 4)) {
+            self->setInstanceMaterial(instanceId, requireMaterial(L, 4, "ViewportFrame:addMesh"));
+        }
+        push(L, instanceId);
+        return 1;
+    }
+
+    int viewportSetInstanceMaterial(lua_State* L) {
+        auto* self = Usertype<CCViewportFrame>::check(L, 1, "ViewportFrame:setInstanceMaterial");
+        int const instanceId = check<int>(L, 2, "ViewportFrame:setInstanceMaterial");
+
+        std::shared_ptr<Material> material{};
+        if (!lua_isnoneornil(L, 3)) {
+            material = requireMaterial(L, 3, "ViewportFrame:setInstanceMaterial");
+        }
+
+        push(L, self->setInstanceMaterial(instanceId, std::move(material)));
+        return 1;
+    }
+
+    int viewportSetInstanceColor(lua_State* L) {
+        auto* self = Usertype<CCViewportFrame>::check(L, 1, "ViewportFrame:setInstanceColor");
+        int const instanceId = check<int>(L, 2, "ViewportFrame:setInstanceColor");
+        auto const color = checkVec3(L, 3, "ViewportFrame:setInstanceColor");
+
+        push(L, self->setInstanceColor(instanceId, color));
         return 1;
     }
 
@@ -109,6 +135,8 @@ namespace luax {
         Usertype<CCViewportFrame>::method(L, "setCamera", &viewportSetCamera);
         Usertype<CCViewportFrame>::method(L, "getCamera", &viewportGetCamera);
         Usertype<CCViewportFrame>::method(L, "addMesh", &viewportAddMesh);
+        Usertype<CCViewportFrame>::method(L, "setInstanceMaterial", &viewportSetInstanceMaterial);
+        Usertype<CCViewportFrame>::method(L, "setInstanceColor", &viewportSetInstanceColor);
         Usertype<CCViewportFrame>::method(L, "setInstanceTransform", &viewportSetInstanceTransform);
         Usertype<CCViewportFrame>::method(L, "removeInstance", &viewportRemoveInstance);
         Usertype<CCViewportFrame>::method(L, "clearInstances", &viewportClearInstances);
