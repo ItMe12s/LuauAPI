@@ -84,7 +84,7 @@ namespace {
     int meshGetMaterial(lua_State* L) {
         auto* handle = checkMeshHandle(L, 1, "Mesh:getMaterial");
         auto mesh = requireMesh(L, handle, "Mesh:getMaterial");
-        long long const index = check<long long>(L, 2, "Mesh:getMaterial");
+        int const index = check<int>(L, 2, "Mesh:getMaterial");
         if (index < 0 || static_cast<std::size_t>(index) >= mesh->materialCount()) {
             lua_pushnil(L);
             return 1;

@@ -38,7 +38,20 @@ TEST_CASE("MeshAsset parses resources/test_donut.glb") {
         REQUIRE(primitive.indices.size() % 3 == 0);
     }
 
+}
+
+TEST_CASE("MeshAsset parses glTF materials and textures from test_donut.glb") {
+    auto const path = repoRoot() / "resources" / "test_donut.glb";
+    INFO(path);
+
+    REQUIRE(std::filesystem::exists(path));
+
+    auto result = luax::render3d::MeshAsset::loadFromFile(path);
+    REQUIRE(result.isOk());
+
+    auto const mesh = result.unwrap();
     REQUIRE(mesh->materialCount() == 1);
+
     auto const& materials = mesh->materials();
     REQUIRE(materials.size() == 1);
     REQUIRE(materials[0].imageIndex == 0);
@@ -50,6 +63,18 @@ TEST_CASE("MeshAsset parses resources/test_donut.glb") {
     REQUIRE(images[0].rgba.size() ==
             static_cast<std::size_t>(images[0].width) * static_cast<std::size_t>(images[0].height) * 4);
 
+    bool hasNonZeroPixel = false;
+    for (auto const byte : images[0].rgba) {
+        if (byte != 0) {
+            hasNonZeroPixel = true;
+            break;
+        }
+    }
+    REQUIRE(hasNonZeroPixel);
+
+    auto const& primitives = mesh->primitives();
+    REQUIRE(primitives.size() >= 1);
     REQUIRE(primitives[0].materialIndex == 0);
     REQUIRE(primitives[0].texcoords.size() == primitives[0].positions.size());
+    REQUIRE_FALSE(primitives[0].texcoords.empty());
 }

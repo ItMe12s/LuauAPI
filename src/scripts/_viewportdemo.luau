@@ -18,6 +18,7 @@ vp:setID(modId .. "/viewport-demo")
 vp:setCamera(Transform.new({ x = 0, y = 1, z = 3 }, { x = 0, y = 0, z = 0 }), 90, 0.1, 100)
 
 local instanceId = vp:addMesh(mesh, Transform.new())
+vp:setInstanceColor(instanceId, { x = 1, y = 0.85, z = 0.7 })
 local angle = 0
 
 local spinTask

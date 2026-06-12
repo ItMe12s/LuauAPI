@@ -5,10 +5,11 @@
 `gd3d` provides lightweight 3D rendering inside the cocos2d scene graph.
 Load glTF meshes, place them in a `ViewportFrame` node, and attach that node like any other `CCNode`.
 
-The namespace has three parts:
+The namespace has four parts:
 
 - `gd3d.Transform` for position and rotation
 - `gd3d.gltf` for loading mesh assets
+- `gd3d.Material` for solid-color or glTF-derived materials
 - `gd3d.ViewportFrame` for the render target node
 
 Vec3 values are plain tables `{ x, y, z }`.
@@ -27,16 +28,25 @@ type Transform = {
     upVector: (self: Transform) -> Vec3,
 }
 
+type Material = {
+    baseColor: (self: Material) -> { r: number, g: number, b: number, a: number },
+    hasTexture: (self: Material) -> boolean,
+}
+
 type Mesh = {
     vertexCount: (self: Mesh) -> number,
     primitiveCount: (self: Mesh) -> number,
     boundingBox: (self: Mesh) -> { min: Vec3, max: Vec3, empty: boolean },
+    materialCount: (self: Mesh) -> number,
+    getMaterial: (self: Mesh, index: number) -> Material?,
 }
 
 type ViewportFrame = CCNode & {
     setCamera: (self: ViewportFrame, transform: Transform, fovDeg: number, near: number, far: number) -> (),
     getCamera: (self: ViewportFrame) -> { transform: Transform, fovY: number, near: number, far: number },
-    addMesh: (self: ViewportFrame, mesh: Mesh, transform: Transform) -> number,
+    addMesh: (self: ViewportFrame, mesh: Mesh, transform: Transform, material: Material?) -> number,
+    setInstanceMaterial: (self: ViewportFrame, id: number, material: Material?) -> boolean,
+    setInstanceColor: (self: ViewportFrame, id: number, color: Vec3) -> boolean,
     setInstanceTransform: (self: ViewportFrame, id: number, transform: Transform) -> boolean,
     removeInstance: (self: ViewportFrame, id: number) -> boolean,
     clearInstances: (self: ViewportFrame) -> (),
@@ -89,12 +99,57 @@ Supported content:
 - Embedded and external buffers inside the sandbox root
 - Triangle primitives only
 - Node world transforms baked into vertex positions and normals
+- glTF materials: `pbr_metallic_roughness.base_color_factor`
+- Base color textures (PNG or JPEG), embedded in GLB or referenced inside the sandbox root
+- `TEXCOORD_0` on primitives that use a base color texture
 
 Not supported:
 
 - Draco compression
 - meshopt compression
 - Sparse accessors
+- Metallic/roughness maps, normal maps, emissive textures
+- Alpha blending (`alphaMode` blend)
+- KHR texture extensions (BasisU, WebP, and similar)
+
+Primitives with a textured material must include `TEXCOORD_0`, loading fails otherwise.
+
+Mesh methods:
+
+```lua
+mesh:materialCount() -> number
+mesh:getMaterial(index: number) -> Material?
+```
+
+`getMaterial` returns `nil` when the index is out of range.
+Materials from a mesh keep the mesh data alive and may include a base color texture from the glTF file.
+
+## Material
+
+```lua
+gd3d.Material.new({ color: Vec3 | { r: number, g: number, b: number, a: number? } }) -> Material
+```
+
+Creates a solid-color material with no texture.
+Use `{ r, g, b, a }` for RGBA, or a `Vec3` `{ x, y, z }` for opaque RGB.
+
+Instance methods:
+
+```lua
+material:baseColor() -> { r: number, g: number, b: number, a: number }
+material:hasTexture() -> boolean
+```
+
+`hasTexture` is `true` for materials returned by `mesh:getMaterial` when the glTF material references a base color texture.
+
+### Instance override
+
+Each viewport instance draws with glTF materials by default, every primitive uses its own `materialIndex` from the file.
+Pass an optional fourth argument to `addMesh`, or call `setInstanceMaterial`,
+to replace all primitives in that instance with one material.
+Pass `nil` to `setInstanceMaterial` to clear the override and restore per-primitive glTF materials.
+`setInstanceColor` multiplies the final shaded color (material albedo times lighting) by a per-instance RGB tint.
+Default tint is white `{ x = 1, y = 1, z = 1 }`.
 
 ## ViewportFrame
 
@@ -111,13 +166,16 @@ Camera and instances:
 ```lua
 viewport:setCamera(transform: Transform, fovDeg: number, near: number, far: number) -> ()
 viewport:getCamera() -> { transform: Transform, fovY: number, near: number, far: number }
-viewport:addMesh(mesh: Mesh, transform: Transform) -> number
+viewport:addMesh(mesh: Mesh, transform: Transform, material: Material?) -> number
+viewport:setInstanceMaterial(id: number, material: Material?) -> boolean
+viewport:setInstanceColor(id: number, color: Vec3) -> boolean
 viewport:setInstanceTransform(id: number, transform: Transform) -> boolean
 viewport:removeInstance(id: number) -> boolean
 viewport:clearInstances() -> ()
 ```
 
-`addMesh` returns an instance id you pass to `setInstanceTransform` and `removeInstance`.
+`addMesh` returns an instance id you pass to the other instance methods.
+The optional `material` argument sets an instance-wide material override at creation time.
 `setInstanceTransform` and `removeInstance` return `false` when the id is unknown.
 
 The camera transform is the camera's world pose.
@@ -141,6 +199,7 @@ local vp = gd3d.ViewportFrame.new(300, 300)
 vp:setCamera(Transform.new({ x = 0, y = 1, z = 4 }, { x = 0, y = 0, z = 0 }), 70, 0.1, 100)
 
 local id = vp:addMesh(mesh, Transform.new())
+vp:setInstanceColor(id, { x = 1, y = 0.85, z = 0.7 })
 local angle = 0
 
 task.every(1 / 60, function()
@@ -175,6 +234,7 @@ See [Limits and errors](../cpp/limits-and-errors.md) for caps and error strings.
 
 - `src/bindings/render3d/TransformBinding.cpp`
 - `src/bindings/render3d/GltfBinding.cpp`
+- `src/bindings/render3d/MaterialBinding.cpp`
 - `src/bindings/render3d/ViewportFrameBinding.cpp`
 - `src/render3d/Transform3D.hpp`
 - `src/render3d/MeshAsset.hpp`
