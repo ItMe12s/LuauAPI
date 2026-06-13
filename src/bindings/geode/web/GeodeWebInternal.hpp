@@ -13,8 +13,6 @@
 #include <string_view>
 
 namespace luax::webdetail {
-    void logWebCallbackFailure(char const* context);
-
     int optPriority(lua_State* L, int idx);
     void applyOptions(lua_State* L, web::WebRequest& req, int idx, char const* method);
 

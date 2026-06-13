@@ -238,7 +238,7 @@ namespace luax::webdetail {
                         },
                         &ctx
                     )) {
-                    logWebCallbackFailure("geode.utils.web request");
+                    logCallbackFailure("geode.utils.web request");
                 }
             }
         );

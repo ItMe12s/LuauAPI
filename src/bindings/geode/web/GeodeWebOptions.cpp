@@ -34,10 +34,6 @@ namespace luax::webdetail {
         return check<int>(L, idx, "geode.utils.web listener");
     }
 
-    void logWebCallbackFailure(char const* context) {
-        geode::log::warn("[lua:{}] callback failed", context);
-    }
-
     std::uint64_t checkNonNegativeInteger(lua_State* L, int idx, char const* method) {
         if (!lua_isnumber(L, idx))
             luaL_error(L, "%s expected non-negative integer at arg %d", method, idx);
@@ -136,7 +132,7 @@ namespace luax::webdetail {
                         },
                         &ctx
                     )) {
-                    logWebCallbackFailure("geode.utils.web.onProgress");
+                    logCallbackFailure("geode.utils.web.onProgress");
                 }
             });
         });

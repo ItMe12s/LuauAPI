@@ -59,7 +59,7 @@ namespace luax::webdetail {
                 &ctx
             );
             if (!ok) {
-                logWebCallbackFailure(context);
+                logCallbackFailure(context);
             }
             return ok && ctx.stop;
         }
@@ -101,7 +101,7 @@ namespace luax::webdetail {
                 &ctx
             );
             if (!ok) {
-                logWebCallbackFailure(context);
+                logCallbackFailure(context);
             }
             return ok && ctx.stop;
         }

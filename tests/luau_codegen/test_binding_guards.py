@@ -601,7 +601,7 @@ class CallbackFailureLoggingGuardTests(unittest.TestCase):
 
     def test_web_binding_logs_invoke_failures(self) -> None:
         source = _web_binding_source()
-        self.assertIn("logWebCallbackFailure", source)
+        self.assertIn("logCallbackFailure", source)
         cases = (
             ("setProgressCallback", "void"),
             ("startRequest", "std::shared_ptr<WebTask>"),
@@ -612,7 +612,7 @@ class CallbackFailureLoggingGuardTests(unittest.TestCase):
             with self.subTest(fn=fn):
                 body = _function_body(source, fn, ret=ret)
                 self.assertIn(
-                    "logWebCallbackFailure",
+                    "logCallbackFailure",
                     body,
                     f"{fn} must log ignored LuaCallback::invoke failures",
                 )
