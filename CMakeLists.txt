@@ -14,7 +14,7 @@ project(LuauAPI)
 include(FetchContent)
 include(CTest)
 
-option(LUAUAPI_BUILD_TESTS "Build LuauAPI host unit tests" ON)
+option(LUAUAPI_BUILD_TESTS "Build LuauAPI host unit tests" OFF)
 option(LUAUAPI_HOST_ONLY "Host-only configure without Geode SDK or configure-time codegen listing" OFF)
 
 include(cmake/Helpers.cmake)
@@ -325,6 +325,7 @@ if(LUAUAPI_BUILD_TESTS)
         src/render3d/gpu/SceneDrawList.cpp
         tests/host/Render3DMathTests.cpp
         tests/host/GltfParseTests.cpp
+        tests/host/ImageDecodeTests.cpp
         tests/host/ProceduralMeshTests.cpp
         tests/host/FrustumTests.cpp
         tests/host/SceneDrawListTests.cpp
