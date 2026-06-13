@@ -56,6 +56,20 @@ CTest discovers the cases at build time. The files are:
 | `tests/task_scheduler_tests.cpp` | Task scheduler binding behavior |
 | `tests/usertype_tests.cpp` | Usertype registration, tag limits, and dispatch |
 | `tests/vector_view_tests.cpp` | Readonly vector view lifetime |
+| `tests/web_binding_tests.cpp` | Geode web binding smoke, caps, sandbox, mock async |
+| `tests/web_shutdown_tests.cpp` | Web task/listener shutdown and runtime reset |
+| `tests/websocket_bounds_tests.cpp` | WebSocket scheme, port, payload, and cap guards |
+
+### Web and network host tests
+
+`tests/web_binding_tests.cpp` tests the Geode web bindings using the in-memory host stub in `tests/host/Geode/utils/web.hpp`.
+Requests stay within the process, `TaskHolder::spawn` completes futures right away on the main thread.
+
+Deferred from host coverage (documented here, not CI gaps to chase blindly):
+
+- Live HTTP, TLS, and proxy behavior
+- Web listener event injection
+- WebSocket loopback runtime tests (`tests/websocket_runtime_tests.cpp`, planned separately)
 
 ## No game libraries in tests
 

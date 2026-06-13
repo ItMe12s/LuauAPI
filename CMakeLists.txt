@@ -319,6 +319,13 @@ if(LUAUAPI_BUILD_TESTS)
         src/bindings/geode/ModSandbox.cpp
         src/bindings/geode/GeodeFsBinding.cpp
         src/bindings/geode/GeodeSmallBindings.cpp
+        src/bindings/geode/web/GeodeWebBinding.cpp
+        src/bindings/geode/web/GeodeWebApply.cpp
+        src/bindings/geode/web/GeodeWebOptions.cpp
+        src/bindings/geode/web/GeodeWebRequest.cpp
+        src/bindings/geode/web/GeodeWebResponse.cpp
+        src/bindings/geode/web/GeodeWebMultipart.cpp
+        src/bindings/geode/web/GeodeWebListeners.cpp
         src/bindings/geode/JsonConvert.cpp
         src/bindings/imgui/ImGuiDrawHandleBinding.cpp
         src/bindings/imgui/ImGuiDrawScheduler.cpp

@@ -205,6 +205,7 @@ namespace geode::utils::web {
         }
 
         WebResponse makeDefaultResponse();
+        WebResponse makeResponseWithBody(ByteVector data);
     } // namespace test
 
     class WebResponse final {
@@ -295,6 +296,7 @@ namespace geode::utils::web {
     private:
         friend class WebRequest;
         friend WebResponse test::makeDefaultResponse();
+        friend WebResponse test::makeResponseWithBody(ByteVector data);
 
         bool m_hasInfo = true;
         bool m_errored = false;
@@ -314,6 +316,15 @@ namespace geode::utils::web {
         response.m_code = 200;
         response.m_data = {'O', 'K'};
         response.m_headers["content-type"] = {"text/plain"};
+        return response;
+    }
+
+    inline WebResponse test::makeResponseWithBody(ByteVector data) {
+        WebResponse response;
+        response.m_hasInfo = true;
+        response.m_code = 200;
+        response.m_data = std::move(data);
+        response.m_headers["content-type"] = {"application/octet-stream"};
         return response;
     }
 
@@ -731,16 +742,18 @@ namespace geode::utils::web {
 
         template <class EventTag, class Cb>
         geode::ListenerHandle listenEvent(Cb&& cb, int /*priority*/) {
+            using Handler = std::decay_t<Cb>;
+            auto handler = std::make_shared<Handler>(std::forward<Cb>(cb));
             auto entry = std::make_shared<typename EventRegistry<EventTag>::Entry>();
-            entry->disconnect = [cb = std::forward<Cb>(cb)]() mutable {
-                cb = {};
+            entry->disconnect = [handler]() mutable {
+                handler.reset();
             };
             EventRegistry<EventTag>::entries().push_back(entry);
             return geode::ListenerHandle([weak = std::weak_ptr<typename EventRegistry<EventTag>::Entry>(entry)]() {
                 if (auto locked = weak.lock()) {
                     if (locked->disconnect) {
                         locked->disconnect();
-                        locked->disconnect = {};
+                        locked->disconnect = nullptr;
                     }
                 }
             });

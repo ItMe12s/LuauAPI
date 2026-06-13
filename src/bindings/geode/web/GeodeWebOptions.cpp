@@ -5,6 +5,7 @@
 #include "framework/stack/Stack.hpp"
 #include "framework/stack/TableUtil.hpp"
 
+#include <Geode/loader/Priority.hpp>
 #include <Geode/utils/web.hpp>
 #include <cstdint>
 #include <lua.h>
