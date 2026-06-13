@@ -1,7 +1,6 @@
 #pragma once
 
 #include <Geode/utils/main_thread.hpp>
-
 #include <functional>
 #include <optional>
 #include <string>
@@ -70,30 +69,27 @@ namespace geode::async {
             m_cancelled = false;
             m_pending = true;
 
-            if (m_cancelled) {
-                m_pending = false;
-                return;
-            }
-
             Ret result = std::forward<F>(future).resolve();
             if (m_cancelled) {
                 m_pending = false;
                 return;
             }
 
-            geode::queueInMainThread([this, cb = std::forward<Cb>(cb), result = std::move(result)]() mutable {
-                if (m_cancelled) {
+            geode::queueInMainThread(
+                [this, cb = std::forward<Cb>(cb), result = std::move(result)]() mutable {
+                    if (m_cancelled) {
+                        m_pending = false;
+                        return;
+                    }
+                    if constexpr (std::is_void_v<Ret>) {
+                        cb();
+                    }
+                    else {
+                        cb(std::move(result));
+                    }
                     m_pending = false;
-                    return;
                 }
-                if constexpr (std::is_void_v<Ret>) {
-                    cb();
-                }
-                else {
-                    cb(std::move(result));
-                }
-                m_pending = false;
-            });
+            );
         }
 
         void cancel() {

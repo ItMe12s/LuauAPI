@@ -453,8 +453,7 @@ class WebSocketGuardTests(unittest.TestCase):
         for rel_path, fn in (
             (_WEBSOCKET_CONNECTION, "sendData"),
             (_WEBSOCKET_SERVER, "broadcastData"),
-            (_WEBSOCKET_SERVER, "peerSend"),
-            (_WEBSOCKET_SERVER, "peerSendBinary"),
+            (_WEBSOCKET_SERVER, "peerSendData"),
         ):
             with self.subTest(fn=fn):
                 source = _read_repo_file(rel_path)
@@ -463,6 +462,17 @@ class WebSocketGuardTests(unittest.TestCase):
                     "kMaxWebSocketSendBytes",
                     body,
                     f"{fn} must enforce kMaxWebSocketSendBytes",
+                )
+
+    def test_websocket_peer_send_delegates_to_peer_send_data(self) -> None:
+        source = _read_repo_file(_WEBSOCKET_SERVER)
+        for fn in ("peerSend", "peerSendBinary"):
+            with self.subTest(fn=fn):
+                body = _function_body(source, fn)
+                self.assertIn(
+                    "peerSendData",
+                    body,
+                    f"{fn} must delegate to peerSendData for size enforcement",
                 )
 
     def test_websocket_message_callbacks_enforce_receive_cap(self) -> None:

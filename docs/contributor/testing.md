@@ -61,15 +61,10 @@ CTest discovers the cases at build time. The files are:
 | `tests/websocket_bounds_tests.cpp` | WebSocket scheme, port, payload, and cap guards |
 | `tests/websocket_runtime_tests.cpp` | WebSocket loopback echo/binary, callbacks, close codes, send bounds |
 
-### Web and network host tests
+Host web tests use the in-memory stub in `tests/host/Geode/utils/web.hpp` (no network egress).
+Host websocket runtime tests drain `queueInMainThread` on the test main thread between polls.
 
-`tests/web_binding_tests.cpp` tests the Geode web bindings using the in-memory host stub in `tests/host/Geode/utils/web.hpp`.
-Requests stay within the process, `TaskHolder::spawn` completes futures right away on the main thread.
-
-`tests/websocket_runtime_tests.cpp` uses real loopback traffic through ixwebsocket.
-Off-thread websocket callbacks queue through the host `queueInMainThread` stub and are drained on the test main thread between polls.
-
-Deferred from host coverage (documented here, not CI gaps to chase blindly):
+Deferred from host coverage:
 
 - Live HTTP, TLS, and proxy behavior
 - Web listener event injection

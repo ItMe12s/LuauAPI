@@ -13,7 +13,6 @@
 #include <filesystem>
 #include <fstream>
 #include <lua.h>
-#include <lualib.h>
 #include <optional>
 #include <string>
 #include <thread>
@@ -143,6 +142,24 @@ namespace {
 
     std::string oversizedStringCall(std::size_t size) {
         return "__test_sized_string(" + std::to_string(size) + ")";
+    }
+
+    std::optional<std::string> runWebScriptWithoutMod(std::string const& source) {
+        WebBindingGuard guard;
+        auto dir = std::filesystem::temp_directory_path() /
+            ("luauapi_web_no_mod_" +
+             std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
+        REQUIRE(std::filesystem::create_directories(dir));
+
+        auto* runtime = Runtime::getOrCreate();
+        runtime->setResourcesRoot(dir);
+        auto* L = runtime->state();
+        registerBinding({"geode_web", &registerGeodeWeb, 0});
+        REQUIRE(applyAllBindings(L) == std::nullopt);
+
+        auto result = runScriptReturnsString(L, source);
+        std::filesystem::remove_all(dir);
+        return result;
     }
 } // namespace
 
@@ -362,21 +379,7 @@ TEST_CASE("MultipartForm fileFrom rejects sandbox escape") {
 }
 
 TEST_CASE("geode.utils.web get without current mod errors before send") {
-    WebBindingGuard guard;
-    auto dir = std::filesystem::temp_directory_path() /
-        ("luauapi_web_no_mod_" +
-         std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
-    REQUIRE(std::filesystem::create_directories(dir));
-
-    auto* runtime = Runtime::getOrCreate();
-    runtime->setResourcesRoot(dir);
-    auto* L = runtime->state();
-    registerBinding({"geode_web", &registerGeodeWeb, 0});
-    REQUIRE(applyAllBindings(L) == std::nullopt);
-
-    auto err = runScriptReturnsString(
-        L,
-        R"(
+    auto err = runWebScriptWithoutMod(R"(
         local ok, pcallErr = pcall(function()
             geode.utils.web.get("http://example.test", function() end)
         end)
@@ -384,30 +387,13 @@ TEST_CASE("geode.utils.web get without current mod errors before send") {
             return "expected pcall failure"
         end
         return pcallErr
-    )"
-    );
+    )");
     REQUIRE(err.has_value());
     REQUIRE(err->find("current mod is unavailable") != std::string::npos);
-
-    std::filesystem::remove_all(dir);
 }
 
 TEST_CASE("geode.utils.web fetch without current mod errors before send") {
-    WebBindingGuard guard;
-    auto dir = std::filesystem::temp_directory_path() /
-        ("luauapi_web_fetch_no_mod_" +
-         std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
-    REQUIRE(std::filesystem::create_directories(dir));
-
-    auto* runtime = Runtime::getOrCreate();
-    runtime->setResourcesRoot(dir);
-    auto* L = runtime->state();
-    registerBinding({"geode_web", &registerGeodeWeb, 0});
-    REQUIRE(applyAllBindings(L) == std::nullopt);
-
-    auto err = runScriptReturnsString(
-        L,
-        R"(
+    auto err = runWebScriptWithoutMod(R"(
         local ok, pcallErr = pcall(function()
             geode.utils.web.fetch("http://example.test", {}, function() end)
         end)
@@ -415,12 +401,9 @@ TEST_CASE("geode.utils.web fetch without current mod errors before send") {
             return "expected pcall failure"
         end
         return pcallErr
-    )"
-    );
+    )");
     REQUIRE(err.has_value());
     REQUIRE(err->find("current mod is unavailable") != std::string::npos);
-
-    std::filesystem::remove_all(dir);
 }
 
 TEST_CASE("geode.utils.web.openLinkInBrowser validates url argument") {

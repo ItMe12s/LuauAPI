@@ -96,7 +96,7 @@ namespace {
         return value;
     }
 
-    std::string serverOnlySetupScript(int port) {
+    std::string wsTestStateInit() {
         return R"(
         _ws_test = {
             opened = false,
@@ -108,10 +108,17 @@ namespace {
             closeReason = nil,
             closeRemote = nil,
             disconnectCode = nil,
+            disconnectReason = nil,
             pingOk = nil,
             pingErr = nil,
+            peer = nil,
         }
+    )";
+    }
 
+    std::string serverOnlySetupScript(int port) {
+        return wsTestStateInit() +
+            R"(
         local port = )" +
             std::to_string(port) +
             R"(
@@ -130,25 +137,12 @@ namespace {
     }
 
     std::string oversizeLocalDecl() {
-        return "local oversize = " + std::to_string(kMaxWebSocketSendBytes + 1) + " + 1\n";
+        return "local oversize = " + std::to_string(kMaxWebSocketSendBytes + 1) + "\n";
     }
 
     std::string echoSetupScript(int port) {
-        return R"(
-        _ws_test = {
-            opened = false,
-            message = nil,
-            binary = nil,
-            clientCount = 0,
-            peerId = nil,
-            closeCode = nil,
-            closeReason = nil,
-            closeRemote = nil,
-            disconnectCode = nil,
-            pingOk = nil,
-            pingErr = nil,
-        }
-
+        return wsTestStateInit() +
+            R"(
         local port = )" +
             std::to_string(port) +
             R"(

@@ -72,7 +72,7 @@ export type WebResponse = {
     code: (self: WebResponse) -> number,
     text: (self: WebResponse) -> (string?, string?),
     json: (self: WebResponse) -> (any?, string?),
-    bytes: (self: WebResponse) -> string,
+    bytes: (self: WebResponse) -> (string?, string?),
     saveTo: (self: WebResponse, root: FsRoot, path: string) -> (boolean?, string?),
     headers: (self: WebResponse) -> { string },
     header: (self: WebResponse, name: string) -> string?,
