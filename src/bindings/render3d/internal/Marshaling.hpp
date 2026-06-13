@@ -33,6 +33,18 @@ namespace luax::gd3d {
         lua_setfield(L, -2, "z");
     }
 
+    inline void pushColor(lua_State* L, glm::vec4 const& color) {
+        lua_createtable(L, 0, 4);
+        luax::push(L, color.r);
+        lua_setfield(L, -2, "r");
+        luax::push(L, color.g);
+        lua_setfield(L, -2, "g");
+        luax::push(L, color.b);
+        lua_setfield(L, -2, "b");
+        luax::push(L, color.a);
+        lua_setfield(L, -2, "a");
+    }
+
     inline glm::vec4 parseColor(lua_State* L, int idx, char const* method) {
         luaL_checktype(L, idx, LUA_TTABLE);
         lua_getfield(L, idx, "r");

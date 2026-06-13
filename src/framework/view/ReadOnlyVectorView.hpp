@@ -115,6 +115,7 @@ namespace luax {
         }
     } // namespace detail
 
+    // CCObject views: elements are Usertype-borrowed nodes, T must inherit CCObject.
     template <class T>
     void pushReadOnlyVectorView(lua_State* L, gd::vector<T*> const& vector, cocos2d::CCObject* owner) {
         static_assert(
@@ -163,6 +164,8 @@ namespace luax {
         return out;
     }
 
+    // Opaque views: elements are arbitrary T* via tagged opaque handles (no CCObject requirement).
+    // Borrowed opaque views still pin storage to a live CCObject owner (GdVectorBackingPolicy).
     template <class T>
     void pushReadOnlyOpaqueVectorView(
         lua_State* L, gd::vector<T*> const& vector, cocos2d::CCObject* owner

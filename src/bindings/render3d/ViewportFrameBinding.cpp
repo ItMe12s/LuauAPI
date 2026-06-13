@@ -71,17 +71,7 @@ namespace {
 
     int viewportGetBackgroundColor(lua_State* L) {
         auto const* self = Usertype<CCViewportFrame>::check(L, 1, "ViewportFrame:getBackgroundColor");
-        auto const& color = self->renderSettings().clearColor;
-
-        lua_createtable(L, 0, 4);
-        push(L, color.r);
-        lua_setfield(L, -2, "r");
-        push(L, color.g);
-        lua_setfield(L, -2, "g");
-        push(L, color.b);
-        lua_setfield(L, -2, "b");
-        push(L, color.a);
-        lua_setfield(L, -2, "a");
+        pushColor(L, self->renderSettings().clearColor);
         return 1;
     }
 

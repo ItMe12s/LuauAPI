@@ -18,17 +18,7 @@ namespace {
 
     int materialBaseColor(lua_State* L) {
         auto const& material = requireMaterial(L, 1, "Material:baseColor");
-        auto const& color = material->baseColorFactor;
-
-        lua_createtable(L, 0, 4);
-        push(L, color.r);
-        lua_setfield(L, -2, "r");
-        push(L, color.g);
-        lua_setfield(L, -2, "g");
-        push(L, color.b);
-        lua_setfield(L, -2, "b");
-        push(L, color.a);
-        lua_setfield(L, -2, "a");
+        pushColor(L, material->baseColorFactor);
         return 1;
     }
 

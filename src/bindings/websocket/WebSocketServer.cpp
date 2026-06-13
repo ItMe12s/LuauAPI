@@ -241,6 +241,21 @@ namespace luax::wsdetail {
             keepAlive = box->peer->socket.lock();
             return keepAlive.get();
         }
+
+        int peerSendData(lua_State* L, bool binary) {
+            auto* box = checkWsPeer(L, 1);
+            auto data = check<std::string>(L, 2, binary ? "sendBinary" : "send");
+            if (data.size() > kMaxWebSocketSendBytes) {
+                return pushNilErr(L, kWsSendSizeExceededMsg);
+            }
+            std::shared_ptr<ix::WebSocket> keepAlive;
+            auto* socket = lockOpenPeer(box, keepAlive);
+            if (!socket) return pushNilErr(L, kWsPeerDisconnectedMsg);
+            auto info = binary ? socket->sendBinary(data) : socket->sendText(data);
+            if (!info.success) return pushNilErr(L, kWsPeerDisconnectedMsg);
+            push(L, true);
+            return 1;
+        }
     } // namespace
 
     int wsServe(lua_State* L) {
@@ -332,33 +347,11 @@ namespace luax::wsdetail {
     }
 
     int peerSend(lua_State* L) {
-        auto* box = checkWsPeer(L, 1);
-        auto data = check<std::string>(L, 2, "send");
-        if (data.size() > kMaxWebSocketSendBytes) {
-            return pushNilErr(L, kWsSendSizeExceededMsg);
-        }
-        std::shared_ptr<ix::WebSocket> keepAlive;
-        auto* socket = lockOpenPeer(box, keepAlive);
-        if (!socket) return pushNilErr(L, kWsPeerDisconnectedMsg);
-        auto info = socket->sendText(data);
-        if (!info.success) return pushNilErr(L, kWsPeerDisconnectedMsg);
-        push(L, true);
-        return 1;
+        return peerSendData(L, false);
     }
 
     int peerSendBinary(lua_State* L) {
-        auto* box = checkWsPeer(L, 1);
-        auto data = check<std::string>(L, 2, "sendBinary");
-        if (data.size() > kMaxWebSocketSendBytes) {
-            return pushNilErr(L, kWsSendSizeExceededMsg);
-        }
-        std::shared_ptr<ix::WebSocket> keepAlive;
-        auto* socket = lockOpenPeer(box, keepAlive);
-        if (!socket) return pushNilErr(L, kWsPeerDisconnectedMsg);
-        auto info = socket->sendBinary(data);
-        if (!info.success) return pushNilErr(L, kWsPeerDisconnectedMsg);
-        push(L, true);
-        return 1;
+        return peerSendData(L, true);
     }
 
     int peerClose(lua_State* L) {
