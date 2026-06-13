@@ -4,6 +4,7 @@
 
 `geode.utils.web` exposes Geode async web requests to Lua.
 Requests run on the web worker. Callbacks run on the main thread.
+See Threading below for intercept and listener rules.
 This binding does not expose `openLinkUnsafe` or any `*Sync` request method.
 File writes stay inside mod sandbox roots.
 See [Examples](../../getting-started/examples.md).
@@ -247,13 +248,8 @@ geode.utils.web.onResponseFor(modID: string, callback: (response: WebResponse?, 
 geode.utils.web.onResponseById(requestID: number, callback: (response: WebResponse?, err: string?) -> boolean?, priority: number?) -> WebListenerHandle
 ```
 
-Return `true` from an intercept callback to stop other listeners on the main thread.
-Intercept runs right away so Lua can change the request.
-Off the main thread, Lua is skipped and you get a one-time warning.
-
-Response listeners on the web worker run later on the main thread.
-Their return value cannot stop other listeners.
-On the main thread, `true` still stops the next listeners.
+Return `true` to stop other listeners on the main thread.
+See Threading below for off-thread behavior.
 
 Each registrar takes an optional `priority` (higher runs first).
 `onResponse*` callbacks receive `(response?, err?)`, or `(modID, response?, err?)` for the global listener.
@@ -265,6 +261,28 @@ end)
 
 handle:disconnect()
 ```
+
+## Threading
+
+HTTP work runs on Geode's web worker. Lua callbacks run on the main thread.
+
+Web callbacks share the hook callback budget (50 ms). See [Limits and errors](../cpp/limits-and-errors.md).
+Use [tasks](tasks.md) to schedule work around callbacks.
+
+Request intercept:
+
+- `onRequestIntercept*` runs on the main thread so Lua can change the request before send.
+- Off the main thread, intercept is skipped. Geode logs a one-time warning.
+
+Response listeners:
+
+- `onResponse*` may fire on the web worker. Lua runs later on the main thread.
+- Off the main thread, listeners are side effects only. They cannot stop other listeners.
+- On the main thread, return `true` to stop the next listeners.
+
+Progress:
+
+- `:onProgress` runs on the main thread. Worker events are queued first.
 
 ## HttpVersion
 
@@ -334,8 +352,7 @@ HTTP auth scheme constants from Geode `utils/web.hpp`.
 
 ## Limits
 
-Request and response bodies are capped.
-These body sources count toward the request cap:
+Request and response bodies are capped. These body sources count toward the request cap:
 
 - `RequestOptions.body`, `bodyString`, `bodyJson`, `bodyMultipart`
 - `WebRequest:body`, `bodyString`, `bodyJson`, `bodyMultipart`

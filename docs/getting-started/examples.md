@@ -64,6 +64,52 @@ geode.utils.web.get("https://api.example.com/data", function(response, err)
 end)
 ```
 
+## WebSocket client
+
+WebSocket I/O runs on background threads and delivers events to Lua on the main thread.
+Register callbacks right after `connect` so you do not miss early events.
+
+```lua
+local ws = websocket.connect("wss://echo.websocket.org")
+ws:onOpen(function()
+    ws:send("hello")
+end):onMessage(function(data, isBinary)
+    print("received:", data)
+end):onClose(function(code, reason, remote)
+    print("closed:", code, reason)
+end):onError(function(message)
+    print("error:", message)
+end)
+```
+
+## WebSocket server
+
+`websocket.serve` starts a local server. It binds to loopback (`127.0.0.1`) by default.
+Only pass `host = "0.0.0.0"` when you intend to expose the port on your LAN.
+
+```lua
+local server, err = websocket.serve(7777)
+if not server then
+    print(err)
+    return
+end
+
+server:onClientConnect(function(peer)
+    peer:send("welcome")
+end):onMessage(function(peer, data)
+    print("from client:", data)
+end)
+```
+
+Pair with a client on the same machine:
+
+```lua
+local ws = websocket.connect("ws://127.0.0.1:7777")
+ws:onMessage(function(data)
+    print("from server:", data)
+end)
+```
+
 ## Draw a debug overlay
 
 `imgui.onDraw` runs every frame. Build windows and widgets inside the callback.
@@ -136,6 +182,7 @@ geode.hook("geode.gd.MenuLayer:init/0", {
 - [Hooks](../reference/lua/hooks.md)
 - [Tasks and time](../reference/lua/tasks.md)
 - [web](../reference/lua/web.md)
+- [websocket](../reference/lua/websocket.md)
 - [imgui](../reference/lua/imgui.md)
 - [gd3d](../reference/lua/gd3d.md)
 
@@ -144,4 +191,5 @@ geode.hook("geode.gd.MenuLayer:init/0", {
 - `src/core/Runtime.cpp`
 - `src/bindings/task/TaskBinding.cpp`
 - `src/bindings/geode/web/GeodeWebBinding.cpp`
+- `src/bindings/websocket/WebSocketBinding.cpp`
 - `src/bindings/imgui/ImGuiBinding.cpp`
