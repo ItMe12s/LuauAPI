@@ -142,8 +142,6 @@ TEST_CASE("registerGd3d under host omits non-host gd3d APIs") {
     auto L = makeLuaState();
     registerGd3dBindings(L.get());
 
-    REQUIRE(gd3dFieldIsNil(L.get(), "mesh"));
-    REQUIRE(gd3dFieldIsNil(L.get(), "gltf"));
     REQUIRE(gd3dFieldIsNil(L.get(), "texture"));
     REQUIRE(gd3dFieldIsNil(L.get(), "Material"));
     REQUIRE(gd3dFieldIsNil(L.get(), "ViewportFrame"));

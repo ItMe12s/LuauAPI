@@ -276,6 +276,7 @@ endif()
 endif()
 
 if(LUAUAPI_BUILD_TESTS)
+    include(cmake/WebSocketDeps.cmake)
     enable_testing()
 
     FetchContent_Declare(
@@ -308,6 +309,12 @@ if(LUAUAPI_BUILD_TESTS)
         src/bindings/task/TaskBinding.cpp
         src/bindings/render3d/Gd3dRegister.cpp
         src/bindings/render3d/TransformBinding.cpp
+        src/bindings/render3d/ProceduralMeshBinding.cpp
+        src/bindings/render3d/GltfBinding.cpp
+        src/bindings/render3d/internal/MeshHandleBinding.cpp
+        src/bindings/websocket/WebSocketBinding.cpp
+        src/bindings/websocket/WebSocketConnection.cpp
+        src/bindings/websocket/WebSocketServer.cpp
         src/bindings/geode/CurrentMod.cpp
         src/bindings/geode/ModSandbox.cpp
         src/bindings/geode/GeodeFsBinding.cpp
@@ -330,6 +337,7 @@ if(LUAUAPI_BUILD_TESTS)
         tests/host/ImageDecodeTests.cpp
         tests/host/ProceduralMeshTests.cpp
         tests/host/Gd3dTransformBindingTests.cpp
+        tests/host/Gd3dMeshBindingTests.cpp
         tests/host/FrustumTests.cpp
         tests/host/SceneDrawListTests.cpp
         ${LUAUAPI_TEST_SOURCES}
@@ -352,7 +360,14 @@ if(LUAUAPI_BUILD_TESTS)
         Luau.Compiler
         Luau.CodeGen
         Luau.Require
+        ixwebsocket
+        mbedtls
+        mbedx509
+        mbedcrypto
     )
+    if(WIN32)
+        target_link_libraries(luauapi_tests PRIVATE ws2_32)
+    endif()
 
     list(APPEND CMAKE_MODULE_PATH ${catch2_SOURCE_DIR}/extras)
     include(Catch)

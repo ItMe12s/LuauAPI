@@ -17,7 +17,17 @@ namespace luax {
             return result;
         }
 
-#if !defined(LUAUAPI_HOST_TESTS)
+#if defined(LUAUAPI_HOST_TESTS)
+        result = registerGltf(L);
+        if (result.isErr()) {
+            return result;
+        }
+
+        result = registerProceduralMesh(L);
+        if (result.isErr()) {
+            return result;
+        }
+#else
         result = registerMaterial(L);
         if (result.isErr()) {
             return result;

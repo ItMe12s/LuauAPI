@@ -5,8 +5,10 @@
 #include "framework/stack/TableUtil.hpp"
 #include "framework/stack/UserdataTags.hpp"
 #include "render3d/assets/MeshAsset.hpp"
-#include "render3d/gpu/Renderer3D.hpp"
 #include "render3d/types/Material.hpp"
+#if !defined(LUAUAPI_HOST_TESTS)
+    #include "render3d/gpu/Renderer3D.hpp"
+#endif
 
 #include <lua.h>
 #include <lualib.h>
@@ -23,7 +25,9 @@ namespace {
         }
         std::uint64_t const id = handle->id;
         MeshRegistry::instance().release(id);
+#if !defined(LUAUAPI_HOST_TESTS)
         Renderer3D::instance().releaseMeshGpu(id);
+#endif
         handle->id = 0;
     }
 
