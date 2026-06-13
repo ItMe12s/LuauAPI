@@ -27,11 +27,6 @@ namespace luax::render3d {
 
         unsigned int instanceVbo = 0;
 
-        unsigned int blitProgram = 0;
-        int blitLocMvp = -1;
-        int blitLocTexture = -1;
-        unsigned int blitVbo = 0;
-
         unsigned int debugLineProgram = 0;
         int debugLineLocMvp = -1;
         int debugLineLocColor = -1;
@@ -39,8 +34,6 @@ namespace luax::render3d {
 
         bool ensureLambertProgram();
         bool ensureLambertInstProgram();
-        bool ensureBlitProgram();
-        bool ensureBlitGeometry();
         bool ensureInstanceVbo();
         bool ensureDebugLineProgram();
         bool ensureDebugLineVbo();

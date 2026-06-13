@@ -64,7 +64,7 @@ See [ImGui draw scheduler](internals/imgui-draw-scheduler.md).
 ## How a ViewportFrame draws
 
 Scripts load meshes, add them to `gd3d.ViewportFrame`, and parent the node in the scene graph.
-Each frame the node renders off-screen and blits into its content rect.
+Each frame the node renders off-screen and composites via a cocos textured quad into its content rect.
 See [gd3d](../reference/lua/gd3d.md) Rendering model.
 
 ## Threading

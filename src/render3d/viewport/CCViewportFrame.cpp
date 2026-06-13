@@ -4,6 +4,7 @@
 #include "render3d/gpu/GlUtil.hpp"
 #include "render3d/gpu/Renderer3D.hpp"
 #include "render3d/gpu/Texture2D.hpp"
+#include "render3d/gpu/ViewportComposite.hpp"
 
 #include <Geode/Geode.hpp>
 #include <algorithm>
@@ -213,7 +214,7 @@ namespace luax::render3d {
             m_fbo, m_fboPixelWidth, m_fboPixelHeight, m_camera, m_instances, m_settings, m_debugLines, m_debugBounds
         );
         if (m_compositeEnabled) {
-            renderer.drawCompositeQuad(m_colorTexture, size.width, size.height);
+            drawViewportComposite(m_colorTexture, size.width, size.height);
         }
     }
 

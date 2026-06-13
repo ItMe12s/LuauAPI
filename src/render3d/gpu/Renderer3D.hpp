@@ -22,8 +22,6 @@ namespace luax::render3d {
             std::map<int, DebugLine> const& debugLines, bool debugBounds
         );
 
-        void drawCompositeQuad(unsigned int colorTexture, float width, float height);
-
         void releaseMeshGpu(std::uint64_t meshId);
         void releaseTextureGpu(std::uint64_t textureId);
         void destroyGlResources();

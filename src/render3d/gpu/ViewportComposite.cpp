@@ -1,4 +1,4 @@
-#include "render3d/gpu/Renderer3DBlit.hpp"
+#include "render3d/gpu/ViewportComposite.hpp"
 
 #include "render3d/gpu/GlUtil.hpp"
 
@@ -17,7 +17,7 @@ namespace luax::render3d {
     using cocos2d::tex2;
     using cocos2d::vertex2;
 
-    void drawCompositeQuad(unsigned int colorTexture, float width, float height) {
+    void drawViewportComposite(unsigned int colorTexture, float width, float height) {
         if (colorTexture == 0 || width <= 0.0f || height <= 0.0f) {
             return;
         }

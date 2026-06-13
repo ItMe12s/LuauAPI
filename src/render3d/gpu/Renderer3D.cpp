@@ -1,7 +1,6 @@
 #include "render3d/gpu/Renderer3D.hpp"
 
 #include "render3d/gpu/GlUtil.hpp"
-#include "render3d/gpu/Renderer3DBlit.hpp"
 #include "render3d/gpu/Renderer3DDebugOverlay.hpp"
 #include "render3d/gpu/Renderer3DResourceLifetime.hpp"
 #include "render3d/gpu/Renderer3DScenePass.hpp"
@@ -47,12 +46,10 @@ namespace luax::render3d {
             return;
         }
 
-        int prevFbo = 0;
         float prevClearColor[4]{};
         DrawStateSnapshot prevState{};
         prevState.capture();
 
-        glGetIntegerv(GL_FRAMEBUFFER_BINDING, &prevFbo);
         glGetFloatv(GL_COLOR_CLEAR_VALUE, prevClearColor);
         int const prevVao = captureAndUnbindVao();
         bool const useVao = vaoSupported();
@@ -94,7 +91,6 @@ namespace luax::render3d {
             glDisableVertexAttribArray(2);
         }
 
-        glBindFramebuffer(GL_FRAMEBUFFER, static_cast<GLuint>(prevFbo));
         glClearColor(prevClearColor[0], prevClearColor[1], prevClearColor[2], prevClearColor[3]);
         glBindBuffer(GL_ARRAY_BUFFER, 0);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
@@ -102,10 +98,6 @@ namespace luax::render3d {
         prevState.restore();
         ccGLUseProgram(0);
         ccGLEnableVertexAttribs(cocos2d::kCCVertexAttribFlag_None);
-    }
-
-    void Renderer3D::drawCompositeQuad(unsigned int colorTexture, float width, float height) {
-        luax::render3d::drawCompositeQuad(colorTexture, width, height);
     }
 
 } // namespace luax::render3d

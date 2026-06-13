@@ -9,12 +9,6 @@ namespace luax::render3d {
         if (!glContextAvailable()) {
             return;
         }
-        if (blitVbo != 0) {
-            glDeleteBuffers(1, &blitVbo);
-        }
-        if (blitProgram != 0) {
-            glDeleteProgram(blitProgram);
-        }
         if (lambertProgram != 0) {
             glDeleteProgram(lambertProgram);
         }
@@ -56,11 +50,6 @@ namespace luax::render3d {
         lambertInstLocAlphaCutoff = -1;
 
         instanceVbo = 0;
-
-        blitProgram = 0;
-        blitLocMvp = -1;
-        blitLocTexture = -1;
-        blitVbo = 0;
 
         debugLineProgram = 0;
         debugLineLocMvp = -1;
@@ -135,34 +124,6 @@ namespace luax::render3d {
         }
         glGenBuffers(1, &instanceVbo);
         return instanceVbo != 0;
-    }
-
-    bool Renderer3DPrograms::ensureBlitProgram() {
-        if (blitProgram != 0) {
-            return true;
-        }
-
-        blitProgram = buildProgram(
-            shader_sources::kBlitVert,
-            shader_sources::kBlitFrag,
-            "blit",
-            {{0, "aPos"}, {1, "aTexCoord"}}
-        );
-        if (blitProgram == 0) {
-            return false;
-        }
-
-        blitLocMvp = glGetUniformLocation(blitProgram, "uMVP");
-        blitLocTexture = glGetUniformLocation(blitProgram, "uTexture");
-        return true;
-    }
-
-    bool Renderer3DPrograms::ensureBlitGeometry() {
-        if (blitVbo != 0) {
-            return true;
-        }
-        glGenBuffers(1, &blitVbo);
-        return blitVbo != 0;
     }
 
     bool Renderer3DPrograms::ensureDebugLineProgram() {

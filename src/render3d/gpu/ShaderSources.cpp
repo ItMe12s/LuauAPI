@@ -71,28 +71,6 @@ void main() {
 }
 )";
 
-    char const kBlitVert[] = R"(attribute vec2 aPos;
-attribute vec2 aTexCoord;
-uniform mat4 uMVP;
-varying vec2 vTexCoord;
-
-void main() {
-    gl_Position = uMVP * vec4(aPos, 0.0, 1.0);
-    vTexCoord = aTexCoord;
-}
-)";
-
-    char const kBlitFrag[] = R"(#ifdef GL_ES
-precision mediump float;
-#endif
-uniform sampler2D uTexture;
-varying vec2 vTexCoord;
-
-void main() {
-    gl_FragColor = texture2D(uTexture, vTexCoord);
-}
-)";
-
     char const kDebugLineVert[] = R"(attribute vec3 aPos;
 uniform mat4 uMVP;
 void main() {
