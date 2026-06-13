@@ -2,6 +2,7 @@
 #include "bindings/geode/web/WebInternal.hpp"
 #include "framework/Binding.hpp"
 #include "framework/stack/TableUtil.hpp"
+#include "framework/stack/TaggedMetatable.hpp"
 
 #include <Geode/Geode.hpp>
 #include <lua.h>
@@ -9,23 +10,6 @@
 
 namespace luax::webdetail {
     using namespace luax;
-
-    namespace {
-        void registerMethods(lua_State* L, char const* meta, luaL_Reg const* methods, lua_CFunction gc) {
-            if (luaL_newmetatable(L, meta)) {
-                for (luaL_Reg const* reg = methods; reg->name != nullptr; ++reg) {
-                    setTableCFunction(L, -1, reg->name, reg->func);
-                }
-                lua_pushcfunction(L, gc, "__gc");
-                lua_setfield(L, -2, "__gc");
-                lua_pushvalue(L, -1);
-                lua_setfield(L, -2, "__index");
-                lua_pushstring(L, "locked");
-                lua_setfield(L, -2, "__metatable");
-            }
-            lua_pop(L, 1);
-        }
-    } // namespace
 
     void registerMetatables(lua_State* L) {
         luaL_Reg requestMethods[] = {
@@ -67,7 +51,7 @@ namespace luax::webdetail {
             {"getProgress", requestGetProgress},
             {nullptr, nullptr},
         };
-        registerMethods(L, kRequestMeta, requestMethods, &requestGc);
+        registerTaggedMetatable(L, kRequestMeta, std::nullopt, requestMethods, &requestGc);
 
         luaL_Reg responseMethods[] = {
             {"info", responseInfo},
@@ -90,7 +74,7 @@ namespace luax::webdetail {
             {"timings", responseTimings},
             {nullptr, nullptr},
         };
-        registerMethods(L, kResponseMeta, responseMethods, &responseGc);
+        registerTaggedMetatable(L, kResponseMeta, std::nullopt, responseMethods, &responseGc);
 
         luaL_Reg multipartMethods[] = {
             {"param", multipartParam},
@@ -101,20 +85,20 @@ namespace luax::webdetail {
             {"getBody", multipartGetBody},
             {nullptr, nullptr},
         };
-        registerMethods(L, kMultipartMeta, multipartMethods, &multipartGc);
+        registerTaggedMetatable(L, kMultipartMeta, std::nullopt, multipartMethods, &multipartGc);
 
         luaL_Reg handleMethods[] = {
             {"cancel", handleCancel},
             {"id", handleId},
             {nullptr, nullptr},
         };
-        registerMethods(L, kHandleMeta, handleMethods, &handleGc);
+        registerTaggedMetatable(L, kHandleMeta, std::nullopt, handleMethods, &handleGc);
 
         luaL_Reg listenerMethods[] = {
             {"disconnect", listenerDisconnect},
             {nullptr, nullptr},
         };
-        registerMethods(L, kListenerMeta, listenerMethods, &listenerGc);
+        registerTaggedMetatable(L, kListenerMeta, std::nullopt, listenerMethods, &listenerGc);
     }
 } // namespace luax::webdetail
 

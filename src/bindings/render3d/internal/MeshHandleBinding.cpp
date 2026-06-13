@@ -3,6 +3,7 @@
 #include "bindings/render3d/internal/Marshaling.hpp"
 #include "framework/stack/Stack.hpp"
 #include "framework/stack/TableUtil.hpp"
+#include "framework/stack/TaggedMetatable.hpp"
 #include "framework/stack/UserdataTags.hpp"
 #include "render3d/assets/MeshAsset.hpp"
 #include "render3d/types/Material.hpp"
@@ -127,28 +128,8 @@ namespace luax::gd3d {
             {nullptr, nullptr},
         };
 
-        if (luaL_newmetatable(L, kMeshMeta)) {
-            for (luaL_Reg const* reg = methods; reg->name != nullptr; ++reg) {
-                setTableCFunction(L, -1, reg->name, reg->func);
-            }
-            lua_pushvalue(L, -1);
-            lua_setfield(L, -2, "__index");
-            lua_pushstring(L, "locked");
-            lua_setfield(L, -2, "__metatable");
-            lua_pushstring(L, kMeshTypeName);
-            lua_setfield(L, -2, "__type");
-        }
-        lua_pop(L, 1);
-
-        lua_getuserdatametatable(L, luax::detail::meshAssetTag());
-        if (!lua_isnil(L, -1)) {
-            lua_pop(L, 1);
-            return;
-        }
-        lua_pop(L, 1);
-
-        luaL_getmetatable(L, kMeshMeta);
-        lua_setuserdatametatable(L, luax::detail::meshAssetTag());
-        lua_setuserdatadtor(L, luax::detail::meshAssetTag(), &meshHandleDtor);
+        registerTaggedMetatable(
+            L, kMeshMeta, luax::detail::meshAssetTag(), methods, std::nullopt, &meshHandleDtor, kMeshTypeName
+        );
     }
 } // namespace luax::gd3d

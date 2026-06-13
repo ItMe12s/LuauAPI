@@ -1,5 +1,7 @@
 #pragma once
 
+#include "framework/stack/TaggedMetatable.hpp"
+
 #include <concepts>
 #include <cstdint>
 #include <lua.h>
@@ -57,30 +59,13 @@ namespace luax {
         }
 
         static void registerMetatable(lua_State* L) {
-            if (luaL_newmetatable(L, Traits::kMeta)) {
-                lua_pushcfunction(L, &luaCancel, "cancel");
-                lua_setfield(L, -2, "cancel");
-                lua_pushcfunction(L, &luaGc, "__gc");
-                lua_setfield(L, -2, "__gc");
-                lua_pushvalue(L, -1);
-                lua_setfield(L, -2, "__index");
-                lua_pushstring(L, "locked");
-                lua_setfield(L, -2, "__metatable");
-                lua_pushstring(L, Traits::kTypeName);
-                lua_setfield(L, -2, "__type");
-            }
-            lua_pop(L, 1);
-
-            lua_getuserdatametatable(L, Traits::userdataTag());
-            if (!lua_isnil(L, -1)) {
-                lua_pop(L, 1);
-                return;
-            }
-            lua_pop(L, 1);
-
-            luaL_getmetatable(L, Traits::kMeta);
-            lua_setuserdatametatable(L, Traits::userdataTag());
-            lua_setuserdatadtor(L, Traits::userdataTag(), &dtor);
+            luaL_Reg const methods[] = {
+                {"cancel", &luaCancel},
+                {nullptr, nullptr},
+            };
+            registerTaggedMetatable(
+                L, Traits::kMeta, Traits::userdataTag(), methods, &luaGc, &dtor, Traits::kTypeName
+            );
         }
     };
 } // namespace luax

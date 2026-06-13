@@ -128,6 +128,25 @@ for reading numeric and boolean table fields and writing integers as strings to 
 Maps with a pair key use an entry list. See [Pair containers](../codegen/pair-containers.md).
 Field setters call `assignMap`, `assignSet`, or `assignPrimitiveVector` instead of assigning whole containers.
 
+## Tagged userdata metatables
+
+Handwritten bindings that expose tagged or untagged userdata share `registerTaggedMetatable` in
+`src/framework/stack/TaggedMetatable.hpp`.
+
+The helper registers a named metatable from a `luaL_Reg` method table, sets `__index`,
+
+locks `__metatable`, and optionally adds:
+
+- `__type` for Luau type names
+- metatable `__gc` (Geode web userdata uses untagged userdata with this path)
+- userdata tag linkage via `lua_setuserdatametatable`
+- tag destructors via `lua_setuserdatadtor`
+
+Pass `std::nullopt` for `tag` when userdata is plain `lua_newuserdata` without a reserved tag.
+Some handles (for example texture and mesh) also expose `__gc` in the method table in addition to a tag destructor.
+
+`ScheduledHandleBinding` uses the same helper for task and imgui draw handles.
+
 ## References and callback bridge
 
 `LuaRef` wraps a Lua registry reference with RAII.
@@ -180,6 +199,7 @@ In practice most game types are generated. See [Codegen](../codegen/codegen.md).
 - `src/framework/usertype/Usertype.hpp`
 - `src/framework/usertype/UsertypeRegistry.cpp`
 - `src/framework/stack/Stack.hpp`
+- `src/framework/stack/TaggedMetatable.hpp`
 - `src/framework/usertype/LuaRef.hpp`
 - `src/framework/callback/LuaCallback.hpp`
 - `src/framework/usertype/Ref.hpp`

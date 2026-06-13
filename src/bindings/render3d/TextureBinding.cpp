@@ -3,6 +3,7 @@
 #include "core/Config.hpp"
 #include "framework/stack/Stack.hpp"
 #include "framework/stack/TableUtil.hpp"
+#include "framework/stack/TaggedMetatable.hpp"
 #include "framework/stack/UserdataTags.hpp"
 #include "render3d/assets/ImageDecode.hpp"
 #include "render3d/assets/TextureAsset.hpp"
@@ -80,29 +81,9 @@ namespace {
             {nullptr, nullptr},
         };
 
-        if (luaL_newmetatable(L, kTextureMeta)) {
-            for (luaL_Reg const* reg = methods; reg->name != nullptr; ++reg) {
-                setTableCFunction(L, -1, reg->name, reg->func);
-            }
-            lua_pushvalue(L, -1);
-            lua_setfield(L, -2, "__index");
-            lua_pushstring(L, "locked");
-            lua_setfield(L, -2, "__metatable");
-            lua_pushstring(L, kTextureTypeName);
-            lua_setfield(L, -2, "__type");
-        }
-        lua_pop(L, 1);
-
-        lua_getuserdatametatable(L, luax::detail::textureTag());
-        if (!lua_isnil(L, -1)) {
-            lua_pop(L, 1);
-            return;
-        }
-        lua_pop(L, 1);
-
-        luaL_getmetatable(L, kTextureMeta);
-        lua_setuserdatametatable(L, luax::detail::textureTag());
-        lua_setuserdatadtor(L, luax::detail::textureTag(), &textureHandleDtor);
+        registerTaggedMetatable(
+            L, kTextureMeta, luax::detail::textureTag(), methods, std::nullopt, &textureHandleDtor, kTextureTypeName
+        );
     }
 
     int textureLoad(lua_State* L) {

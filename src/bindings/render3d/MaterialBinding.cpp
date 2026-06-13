@@ -2,6 +2,7 @@
 #include "bindings/render3d/internal/Marshaling.hpp"
 #include "framework/stack/Stack.hpp"
 #include "framework/stack/TableUtil.hpp"
+#include "framework/stack/TaggedMetatable.hpp"
 #include "framework/stack/UserdataTags.hpp"
 #include "render3d/assets/TextureAsset.hpp"
 #include "render3d/types/Material.hpp"
@@ -79,29 +80,9 @@ namespace {
             {nullptr, nullptr},
         };
 
-        if (luaL_newmetatable(L, kMaterialMeta)) {
-            for (luaL_Reg const* reg = methods; reg->name != nullptr; ++reg) {
-                setTableCFunction(L, -1, reg->name, reg->func);
-            }
-            lua_pushvalue(L, -1);
-            lua_setfield(L, -2, "__index");
-            lua_pushstring(L, "locked");
-            lua_setfield(L, -2, "__metatable");
-            lua_pushstring(L, kMaterialTypeName);
-            lua_setfield(L, -2, "__type");
-        }
-        lua_pop(L, 1);
-
-        lua_getuserdatametatable(L, detail::materialTag());
-        if (!lua_isnil(L, -1)) {
-            lua_pop(L, 1);
-            return;
-        }
-        lua_pop(L, 1);
-
-        luaL_getmetatable(L, kMaterialMeta);
-        lua_setuserdatametatable(L, detail::materialTag());
-        lua_setuserdatadtor(L, detail::materialTag(), &materialHandleDtor);
+        registerTaggedMetatable(
+            L, kMaterialMeta, detail::materialTag(), methods, std::nullopt, &materialHandleDtor, kMaterialTypeName
+        );
     }
 } // namespace
 

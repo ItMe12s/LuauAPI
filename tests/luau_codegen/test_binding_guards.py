@@ -666,8 +666,7 @@ class HandleGcGuardTests(unittest.TestCase):
         source = _read_repo_file(_SCHEDULED_HANDLE_BINDING)
         self.assertIn("Scheduler::get().cancel", source)
         self.assertIn("lua_newuserdatataggedwithmetatable", source)
-        self.assertIn("lua_setuserdatadtor", source)
-        self.assertIn("lua_setuserdatametatable", source)
+        self.assertIn("registerTaggedMetatable", source)
 
     def test_task_handle_metatable_registers_gc_cancellation(self) -> None:
         source = _read_repo_file(_TASK_BINDING)
