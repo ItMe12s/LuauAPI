@@ -37,6 +37,7 @@ Runnable samples: [Examples](docs/getting-started/examples.md).
 - [Editor setup](docs/getting-started/editor-setup.md)
 - [Your first script](docs/getting-started/first-script.md)
 - [Examples](docs/getting-started/examples.md)
+- [Mod guidelines](docs/mod_guidelines.md)
 
 ## Reference
 
