@@ -2,19 +2,21 @@
 
 #include "require/PathRules.hpp"
 
+#include <Geode/utils/string.hpp>
+#include <array>
 #include <filesystem>
 #include <string_view>
 
 namespace luax {
     inline bool canRequireFromChunk(std::string_view requirerChunkname) {
-        return !requirerChunkname.empty() && requirerChunkname.front() == '@';
+        return geode::utils::string::startsWith(requirerChunkname, "@");
     }
 
     inline bool isRequireChildNameAllowed(std::string_view name) {
         if (name.empty() || name == "..") {
             return false;
         }
-        if (name.find('/') != std::string_view::npos || name.find('\\') != std::string_view::npos) {
+        if (geode::utils::string::containsAny(name, std::array<std::string, 2>{"/", "\\"})) {
             return false;
         }
         return isValidResourcePathValue(std::filesystem::path(name), false);

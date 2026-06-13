@@ -77,15 +77,16 @@ geode.Mod.getVersion() -> string
 `getID` returns the mod id, for example `my.mod.id`.
 Use it as the prefix when you call `:setID()` on nodes you create. See [Game objects](game-objects.md).
 
-## getResourcesDir, getSaveDir, getConfigDir
+## getResourcesDir, getSaveDir, getConfigDir, getPersistentDir
 
 ```lua
 geode.Mod.getResourcesDir() -> string
 geode.Mod.getSaveDir() -> string
 geode.Mod.getConfigDir() -> string
+geode.Mod.getPersistentDir() -> string
 ```
 
-Return the paths to the mod resources, save, and config folders. Script files live in resources.
+Return the paths to the mod resources, save, config, and persistent folders. Script files live in resources.
 
 ## Limits
 

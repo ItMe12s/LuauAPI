@@ -332,9 +332,7 @@ Better when it grows:
 
 ```lua
 local something: Thing? = notsure.new()
-if not something then
-    return
-end
+if not something then return end
 ```
 
 ### `other-nice-codebase-bro`
@@ -392,6 +390,48 @@ local function doThing()
     return value
 end
 ```
+
+### `other-node-placement`
+
+Place nodes by node id and layout, not by hardcoded coordinates or child index.
+
+Other mods add and reorder nodes in shared menus like `MenuLayer`, so fixed positions overlap their buttons.
+Find an anchor like `bottom-menu`, check it exists, then add to it. Prefix your own node ids with `modid/`.
+For nodes that survive scene changes, use cocos `OverlayManager` instead of re-adding from a layer hook.
+
+Bad:
+
+```lua
+geode.hook("geode.gd.MenuLayer:init/0", {
+    after = function(self, result)
+        local label = geode.cocos2d.CCLabelBMFont.create("hi", "bigFont.fnt"); if not label then return end
+        local director = geode.cocos2d.CCDirector.sharedDirector(); if not director then return end
+        local size = director:getWinSize()
+        label:setPosition({ x = size.width / 2, y = size.height / 2 })
+        self:addChild(label)
+        return result
+    end,
+})
+```
+
+Good:
+
+```lua
+geode.hook("geode.gd.MenuLayer:init/0", {
+    after = function(self, result)
+        local menu = self:getChildByID("bottom-menu")
+        if not menu then return result end
+
+        local button = makeButton() -- Bring your own button function here
+        button:setID(geode.Mod.getID() .. "/open-button")
+        menu:addChild(button)
+        menu:updateLayout()
+        return result
+    end,
+})
+```
+
+See [Game objects](reference/lua/game-objects.md) and [hooks](reference/lua/hooks.md).
 
 ### `other-remake`
 

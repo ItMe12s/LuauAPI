@@ -4,8 +4,8 @@
 #include "require/PathRules.hpp"
 #include "require/PathSandbox.hpp"
 
+#include <Geode/utils/file.hpp>
 #include <cstring>
-#include <fstream>
 
 #define CGLTF_IMPLEMENTATION
 #include <cgltf.h>
@@ -54,9 +54,15 @@ namespace {
             return cgltf_result_io_error;
         }
 
-        std::ifstream input(resolved, std::ios::binary);
-        if (!input.good()) {
-            context->lastError = "buffer file cannot be opened: " + filesystemPathString(resolved);
+        auto bytesResult = geode::utils::file::readBinary(resolved);
+        if (bytesResult.isErr()) {
+            context->lastError = "buffer file cannot be read: " + filesystemPathString(resolved);
+            return cgltf_result_io_error;
+        }
+
+        auto const& bytes = bytesResult.unwrap();
+        if (bytes.size() != static_cast<std::size_t>(fileSize)) {
+            context->lastError = "buffer file cannot be read: " + filesystemPathString(resolved);
             return cgltf_result_io_error;
         }
 
@@ -65,14 +71,7 @@ namespace {
             return cgltf_result_out_of_memory;
         }
 
-        input.read(reinterpret_cast<char*>(buffer), static_cast<std::streamsize>(fileSize));
-        if (!input.good()) {
-            void (*memoryFree)(void*, void*) =
-                memory->free_func != nullptr ? memory->free_func : &cgltf_default_free;
-            memoryFree(memory->user_data, buffer);
-            context->lastError = "buffer file cannot be read: " + filesystemPathString(resolved);
-            return cgltf_result_io_error;
-        }
+        std::memcpy(buffer, bytes.data(), bytes.size());
 
         *size = fileSize;
         *data = buffer;
@@ -182,19 +181,16 @@ namespace {
             return LoadResult<std::vector<std::uint8_t>>::err("image file exceeds maximum read size");
         }
 
-        std::ifstream input(resolved, std::ios::binary);
-        if (!input.good()) {
-            return LoadResult<std::vector<std::uint8_t>>::err(
-                "image file cannot be opened: " + filesystemPathString(resolved)
-            );
-        }
-
-        std::vector<std::uint8_t> bytes(static_cast<std::size_t>(fileSize));
-        input.read(reinterpret_cast<char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
-        if (!input.good()) {
+        auto bytesResult = geode::utils::file::readBinary(resolved);
+        if (bytesResult.isErr()) {
             return LoadResult<std::vector<std::uint8_t>>::err(
                 "image file cannot be read: " + filesystemPathString(resolved)
             );
+        }
+
+        auto bytes = std::move(bytesResult.unwrap());
+        if (bytes.size() > kMaxFsReadBytes) {
+            return LoadResult<std::vector<std::uint8_t>>::err("image file exceeds maximum read size");
         }
 
         return LoadResult<std::vector<std::uint8_t>>::ok(std::move(bytes));

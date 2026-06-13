@@ -13,7 +13,6 @@
 #include <lua.h>
 #include <lualib.h>
 #include <memory>
-#include <span>
 
 namespace {
     using namespace luax;
@@ -89,15 +88,12 @@ namespace {
             return 2;
         }
 
-        auto contents = readSandboxTextFile(target->path);
+        auto contents = readSandboxBinaryFile(target->path);
         if (contents.isErr()) {
             return pushNilErr(L, contents.unwrapErr());
         }
-        auto const& data = contents.unwrap();
+        auto const& bytes = contents.unwrap();
 
-        auto const bytes = std::span<std::uint8_t const>(
-            reinterpret_cast<std::uint8_t const*>(data.data()), data.size()
-        );
         auto result = decodeImageRgba8(bytes);
         if (result.isErr()) {
             return pushNilErr(L, result.unwrapErr());

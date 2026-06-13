@@ -15,6 +15,7 @@
     #include "framework/stack/Types.hpp"
     #include "framework/usertype/Usertype.hpp"
 
+    #include <Geode/Geode.hpp>
     #include <Geode/utils/ColorProvider.hpp>
     #include <Geode/utils/Keyboard.hpp>
     #include <Geode/utils/VersionInfo.hpp>
@@ -185,19 +186,22 @@ namespace {
         luaL_checktype(L, 2, LUA_TFUNCTION);
         auto cb = std::make_shared<luax::LuaCallback>(L, 2);
         permission::requestPermission(perm, [cb](bool granted) {
-            bool g = granted;
-            if (!cb->invoke(
-                    1,
-                    0,
-                    "geode.utils.permission.requestPermission",
-                    kHookScriptDeadlineMs,
-                    +[](lua_State* L, void* raw) {
-                        lua_pushboolean(L, *static_cast<bool*>(raw));
-                    },
-                    &g
-                )) {
-                logCallbackFailure("geode.utils.permission.requestPermission");
-            }
+            geode::queueInMainThread([cb, granted] {
+                if (!cb || !cb->valid()) return;
+                bool g = granted;
+                if (!cb->invoke(
+                        1,
+                        0,
+                        "geode.utils.permission.requestPermission",
+                        kHookScriptDeadlineMs,
+                        +[](lua_State* L, void* raw) {
+                            lua_pushboolean(L, *static_cast<bool*>(raw));
+                        },
+                        &g
+                    )) {
+                    logCallbackFailure("geode.utils.permission.requestPermission");
+                }
+            });
         });
         return 0;
     }

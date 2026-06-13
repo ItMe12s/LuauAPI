@@ -5,8 +5,8 @@
 #include "render3d/assets/ImageDecode.hpp"
 #include "require/PathSandbox.hpp"
 
+#include <Geode/utils/file.hpp>
 #include <cgltf.h>
-#include <fstream>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/mat4x4.hpp>
 #include <glm/vec2.hpp>
@@ -404,19 +404,16 @@ namespace luax::render3d {
             return LoadResult<std::shared_ptr<MeshAsset>>::err("glTF file exceeds maximum read size");
         }
 
-        std::ifstream input(path, std::ios::binary);
-        if (!input.good()) {
-            return LoadResult<std::shared_ptr<MeshAsset>>::err(
-                "glTF file cannot be opened: " + filesystemPathString(path)
-            );
-        }
-
-        std::vector<std::uint8_t> bytes(static_cast<std::size_t>(fileSize));
-        input.read(reinterpret_cast<char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
-        if (input.gcount() != static_cast<std::streamsize>(bytes.size())) {
+        auto bytesResult = geode::utils::file::readBinary(path);
+        if (bytesResult.isErr()) {
             return LoadResult<std::shared_ptr<MeshAsset>>::err(
                 "glTF file cannot be read: " + filesystemPathString(path)
             );
+        }
+
+        auto bytes = std::move(bytesResult.unwrap());
+        if (bytes.size() > kMaxFsReadBytes) {
+            return LoadResult<std::shared_ptr<MeshAsset>>::err("glTF file exceeds maximum read size");
         }
 
         return loadFromBytes(bytes, path, path.parent_path());

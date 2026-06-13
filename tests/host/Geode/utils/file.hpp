@@ -17,6 +17,16 @@ namespace geode::utils::file {
         return geode::Ok(std::string((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>()));
     }
 
+    inline geode::Result<std::vector<std::uint8_t>> readBinary(std::filesystem::path const& path) {
+        std::ifstream in(path, std::ios::binary);
+        if (!in.good()) {
+            return geode::Err("read failed");
+        }
+        return geode::Ok(std::vector<std::uint8_t>(
+            (std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>()
+        ));
+    }
+
     inline geode::Result<void> writeString(std::filesystem::path const& path, std::string const& data) {
         std::ofstream out(path, std::ios::binary | std::ios::trunc);
         if (!out.good()) {

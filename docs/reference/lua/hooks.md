@@ -134,6 +134,17 @@ geode.hook("geode.gd.MenuLayer:init/0", {
 })
 ```
 
+## Prefer the right tool
+
+A hook is a sharp tool. Reach for a built-in API first when one exists.
+
+- Per frame work: do not hook `CCScheduler::update`. Use [Tasks](tasks.md) (`task.every`) or a node's `schedule` selector.
+- Nodes that survive scene changes: do not re-add them from each layer's `init`. Use `OverlayManager`.
+- Reading another mod's effect: check for the node or value it produces instead of hooking.
+
+Hooking hot functions to do work an existing API already covers is a common Index rejection reason.
+See the [Geode SDK guidelines tips](https://docs.geode-sdk.org/mods/guidelines-tips/).
+
 ## Limits
 
 Hooks run on the main thread with per-target and global callback caps.

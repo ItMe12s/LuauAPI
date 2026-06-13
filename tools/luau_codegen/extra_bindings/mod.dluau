@@ -11,4 +11,5 @@ export type ModNamespace = {
     getResourcesDir: () -> string,
     getSaveDir: () -> string,
     getConfigDir: () -> string,
+    getPersistentDir: () -> string,
 }

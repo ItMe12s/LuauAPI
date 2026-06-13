@@ -201,6 +201,11 @@ namespace {
         return 1;
     }
 
+    int modGetPersistentDir(lua_State* L) {
+        push(L, geode::utils::string::pathToString(requireCurrentMod(L)->getPersistentDir()));
+        return 1;
+    }
+
     geode::Result<void> registerGeodeMod(lua_State* L) {
         luax::getOrCreateTable(L, "geode");
         lua_newtable(L);
@@ -216,6 +221,7 @@ namespace {
         setTableCFunction(L, -1, "getResourcesDir", &modGetResourcesDir);
         setTableCFunction(L, -1, "getSaveDir", &modGetSaveDir);
         setTableCFunction(L, -1, "getConfigDir", &modGetConfigDir);
+        setTableCFunction(L, -1, "getPersistentDir", &modGetPersistentDir);
         lua_setfield(L, -2, "Mod");
         lua_pop(L, 1);
         return geode::Ok();

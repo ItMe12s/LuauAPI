@@ -18,6 +18,13 @@ An unknown root raises a Lua error.
 
 Recoverable failures return `nil` and an error string. See [Globals](globals.md) Error shapes.
 
+### Symlinks
+
+The sandbox blocks `..` and absolute paths and resolves the path inside the root.
+It does not block symlinks. A symlink already inside a root can still point outside it.
+LuauAPI never creates symlinks, so this only matters if something else placed one.
+The sandbox is not a defense against a hostile local filesystem.
+
 ## read
 
 ```lua

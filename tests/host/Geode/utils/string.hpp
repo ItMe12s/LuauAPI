@@ -37,4 +37,17 @@ namespace geode::utils::string {
         auto text = path.u8string();
         return std::string(reinterpret_cast<char const*>(text.data()), text.size());
     }
+
+    inline bool startsWith(std::string_view str, std::string_view prefix) {
+        return str.rfind(prefix, 0) == 0;
+    }
+
+    inline bool containsAny(std::string_view str, std::span<std::string const> subs) {
+        for (auto const& sub : subs) {
+            if (str.find(sub) != std::string_view::npos) {
+                return true;
+            }
+        }
+        return false;
+    }
 }

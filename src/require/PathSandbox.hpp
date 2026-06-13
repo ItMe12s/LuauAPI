@@ -4,6 +4,7 @@
 #include "require/PathRules.hpp"
 
 #if defined(LUAUAPI_HOST_TESTS)
+    #include <Geode/utils/string.hpp>
     #include <fstream>
     #include <optional>
     #include <vector>
@@ -231,7 +232,7 @@ namespace luax {
         }
 
         std::string text(rawChunkName);
-        if (!text.empty() && text.front() == '@') {
+        if (geode::utils::string::startsWith(text, "@")) {
             text.erase(text.begin());
         }
 

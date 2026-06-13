@@ -3,6 +3,9 @@
 #include "framework/stack/TableUtil.hpp"
 
 #include <Geode/Geode.hpp>
+#include <Geode/utils/general.hpp>
+#include <Geode/utils/string.hpp>
+#include <array>
 #include <cstdint>
 #include <lua.h>
 #include <lualib.h>
@@ -378,7 +381,13 @@ namespace luax::wsdetail {
             lua_pushnil(L);
             return 1;
         }
-        push(L, box->peer->remoteIp + ":" + std::to_string(box->peer->remotePort));
+        push(
+            L,
+            geode::utils::string::join(
+                std::array{box->peer->remoteIp, geode::utils::numToString(box->peer->remotePort)},
+                ":"
+            )
+        );
         return 1;
     }
 

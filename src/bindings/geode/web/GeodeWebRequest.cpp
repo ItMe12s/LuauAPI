@@ -6,6 +6,7 @@
 #include "framework/stack/Stack.hpp"
 #include "framework/stack/TableUtil.hpp"
 
+#include <Geode/Geode.hpp>
 #include <Geode/utils/web.hpp>
 #include <chrono>
 #include <cstdint>
@@ -220,26 +221,29 @@ namespace luax::webdetail {
             "LuauAPI web request", std::move(future), [cb, task](web::WebResponse response) mutable {
                 task->done = true;
                 if (!cb || !cb->valid()) return;
-                struct Ctx {
-                    web::WebResponse* response;
-                } ctx{&response};
-                if (!cb->invoke(
-                        2,
-                        0,
-                        "geode.utils.web request",
-                        kHookScriptDeadlineMs,
-                        +[](lua_State* L, void* raw) {
-                            auto& response = *static_cast<Ctx*>(raw)->response;
-                            if (!responseDataWithinLimit(response.data().size())) {
-                                pushNilErrCallback(L, kWebResponseSizeExceededMsg);
-                                return;
-                            }
-                            pushResponseOrError(L, std::move(response));
-                        },
-                        &ctx
-                    )) {
-                    logCallbackFailure("geode.utils.web request");
-                }
+                geode::queueInMainThread([cb, response = std::move(response)]() mutable {
+                    if (!cb || !cb->valid()) return;
+                    struct Ctx {
+                        web::WebResponse* response;
+                    } ctx{&response};
+                    if (!cb->invoke(
+                            2,
+                            0,
+                            "geode.utils.web request",
+                            kHookScriptDeadlineMs,
+                            +[](lua_State* L, void* raw) {
+                                auto& response = *static_cast<Ctx*>(raw)->response;
+                                if (!responseDataWithinLimit(response.data().size())) {
+                                    pushNilErrCallback(L, kWebResponseSizeExceededMsg);
+                                    return;
+                                }
+                                pushResponseOrError(L, std::move(response));
+                            },
+                            &ctx
+                        )) {
+                        logCallbackFailure("geode.utils.web request");
+                    }
+                });
             }
         );
         return task;

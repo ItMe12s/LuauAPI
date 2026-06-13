@@ -7,12 +7,29 @@
 
 #include <Geode/loader/Mod.hpp>
 #include <Geode/utils/file.hpp>
+#include <cstdint>
 #include <filesystem>
 #include <lua.h>
 #include <lualib.h>
 #include <string>
+#include <vector>
 
 namespace {
+    geode::Result<void> validateSandboxRegularFile(std::filesystem::path const& path) {
+        std::error_code ec;
+        if (!std::filesystem::is_regular_file(path, ec)) {
+            return geode::Err("path is not a regular file");
+        }
+        return geode::Ok();
+    }
+
+    geode::Result<void> validateSandboxReadSize(std::size_t size) {
+        if (size > luax::kMaxFsReadBytes) {
+            return geode::Err("file exceeds maximum read size");
+        }
+        return geode::Ok();
+    }
+
     bool rootDir(lua_State* L, std::string const& name, std::filesystem::path& out, bool& writable) {
         auto* mod = luax::requireCurrentMod(L);
         if (name == "save") {
@@ -71,9 +88,9 @@ namespace luax {
     }
 
     geode::Result<std::string> readSandboxTextFile(std::filesystem::path const& path) {
-        std::error_code ec;
-        if (!std::filesystem::is_regular_file(path, ec)) {
-            return geode::Err("path is not a regular file");
+        auto valid = validateSandboxRegularFile(path);
+        if (valid.isErr()) {
+            return geode::Err(valid.unwrapErr());
         }
 
         auto contents = geode::utils::file::readString(path);
@@ -81,8 +98,27 @@ namespace luax {
             return geode::Err(contents.unwrapErr());
         }
         auto data = std::move(contents.unwrap());
-        if (data.size() > kMaxFsReadBytes) {
-            return geode::Err("file exceeds maximum read size");
+        auto sizeCheck = validateSandboxReadSize(data.size());
+        if (sizeCheck.isErr()) {
+            return geode::Err(sizeCheck.unwrapErr());
+        }
+        return geode::Ok(std::move(data));
+    }
+
+    geode::Result<std::vector<std::uint8_t>> readSandboxBinaryFile(std::filesystem::path const& path) {
+        auto valid = validateSandboxRegularFile(path);
+        if (valid.isErr()) {
+            return geode::Err(valid.unwrapErr());
+        }
+
+        auto contents = geode::utils::file::readBinary(path);
+        if (contents.isErr()) {
+            return geode::Err(contents.unwrapErr());
+        }
+        auto data = std::move(contents.unwrap());
+        auto sizeCheck = validateSandboxReadSize(data.size());
+        if (sizeCheck.isErr()) {
+            return geode::Err(sizeCheck.unwrapErr());
         }
         return geode::Ok(std::move(data));
     }
