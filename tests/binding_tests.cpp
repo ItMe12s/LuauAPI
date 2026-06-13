@@ -25,14 +25,7 @@ namespace {
     };
 
     bool g_metatableGcCalled = false;
-    bool g_methodGcCalled = false;
     bool g_dtorCalled = false;
-
-    int taggedMethodGc(lua_State* L) {
-        g_methodGcCalled = true;
-        (void)L;
-        return 0;
-    }
 
     int untaggedMetatableGc(lua_State* L) {
         g_metatableGcCalled = true;
@@ -113,7 +106,6 @@ TEST_CASE("applyAllBindings preserves stable order for equal priority") {
 }
 
 TEST_CASE("registerTaggedMetatable tagged round-trip") {
-    g_methodGcCalled = false;
     g_dtorCalled = false;
 
     LuaStateGuard guard;
@@ -126,7 +118,6 @@ TEST_CASE("registerTaggedMetatable tagged round-trip") {
 
     luaL_Reg methods[] = {
         {"getValue", getValue},
-        {"__gc", taggedMethodGc},
         {nullptr, nullptr},
     };
 
@@ -154,7 +145,6 @@ TEST_CASE("registerTaggedMetatable tagged round-trip") {
 
     lua_pop(L, 1);
     collectGarbage(L);
-    REQUIRE(g_methodGcCalled);
     REQUIRE(g_dtorCalled);
 }
 

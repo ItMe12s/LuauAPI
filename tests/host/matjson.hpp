@@ -109,9 +109,23 @@ namespace matjson {
                 case Type::Null: return "null";
                 case Type::Bool: return asBool().unwrapOr(false) ? "true" : "false";
                 case Type::Number: return std::to_string(asDouble().unwrapOr(0.0));
-                case Type::String: return asString().unwrapOr(std::string());
+                case Type::String: return "\"" + asString().unwrapOr(std::string()) + "\"";
                 case Type::Array: return "[]";
-                case Type::Object: return "{}";
+                case Type::Object: {
+                    auto const& items = std::get<std::vector<std::pair<std::string, Value>>>(m_data);
+                    if (items.empty()) {
+                        return "{}";
+                    }
+                    std::string out = "{";
+                    for (std::size_t i = 0; i < items.size(); ++i) {
+                        if (i != 0) {
+                            out += ",";
+                        }
+                        out += "\"" + items[i].first + "\":" + items[i].second.dump(NO_INDENTATION);
+                    }
+                    out += "}";
+                    return out;
+                }
             }
             return "null";
         }

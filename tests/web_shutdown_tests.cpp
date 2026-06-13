@@ -35,8 +35,11 @@ TEST_CASE("runtime reset clears global web state") {
     WebGuard guard;
     Runtime::getOrCreate();
 
-    activeTasks().track(std::make_shared<WebTask>(1));
-    activeListeners().track(std::make_shared<WebListenerState>());
+    auto task = std::make_shared<WebTask>(1);
+    auto listener = std::make_shared<WebListenerState>();
+
+    activeTasks().track(task);
+    activeListeners().track(listener);
     ensureShutdownHook();
 
     REQUIRE(countLiveTasks() >= 1);

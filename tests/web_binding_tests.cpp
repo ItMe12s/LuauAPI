@@ -1,4 +1,5 @@
 #include "bindings/geode/CurrentMod.hpp"
+#include "bindings/geode/web/WebCaps.hpp"
 #include "bindings/geode/web/WebInternal.hpp"
 #include "core/Config.hpp"
 #include "core/Runtime.hpp"
@@ -13,8 +14,10 @@
 #include <filesystem>
 #include <fstream>
 #include <lua.h>
+#include <matjson.hpp>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <thread>
 
 namespace luax {
@@ -24,11 +27,19 @@ namespace luax {
 namespace {
     using namespace luax;
 
-    int testSizedString(lua_State* L) {
-        auto size = static_cast<std::size_t>(luaL_checkinteger(L, 1));
-        std::string value(size, 'x');
+    std::size_t multipartEncodedOverhead(std::string_view fieldName, std::size_t valueSize = 0) {
+        geode::utils::web::MultipartForm form;
+        form.param(std::string(fieldName), std::string(valueSize, 'a'));
+        return form.getBody().size() - valueSize;
+    }
+
+    std::size_t maxMultipartFirstFieldValueSize() {
+        return kMaxWebRequestBytes - multipartEncodedOverhead("first");
+    }
+
+    void setLuaGlobalString(lua_State* L, char const* name, std::string const& value) {
         lua_pushlstring(L, value.data(), value.size());
-        return 1;
+        lua_setglobal(L, name);
     }
 
     struct WebBindingGuard {
@@ -77,8 +88,6 @@ namespace {
         void registerWebBindings(lua_State* state) {
             registerBinding({"geode_web", &registerGeodeWeb, 0});
             REQUIRE(applyAllBindings(state) == std::nullopt);
-            lua_pushcfunction(state, testSizedString, "testSizedString");
-            lua_setglobal(state, "__test_sized_string");
         }
     };
 
@@ -138,10 +147,6 @@ namespace {
                 return geode::utils::web::test::makeResponseWithBody(std::move(body));
             }
         );
-    }
-
-    std::string oversizedStringCall(std::size_t size) {
-        return "__test_sized_string(" + std::to_string(size) + ")";
     }
 
     std::optional<std::string> runWebScriptWithoutMod(std::string const& source) {
@@ -206,18 +211,43 @@ TEST_CASE("geode.utils.web mock get completes on main thread") {
     ));
 }
 
+TEST_CASE("web request body cap helpers enforce kMaxWebRequestBytes") {
+    REQUIRE(requestBodyWithinLimit(kMaxWebRequestBytes));
+    REQUIRE_FALSE(requestBodyWithinLimit(kMaxWebRequestBytes + 1));
+    REQUIRE(std::string(kWebRequestBodyExceededMsg) == "request body exceeds maximum size");
+
+    matjson::Value within = matjson::Value::object();
+    within.set("data", matjson::Value(std::string(kMaxWebRequestBytes - 11, 'x')));
+    REQUIRE(requestJsonBodyWithinLimit(within));
+
+    matjson::Value over = matjson::Value::object();
+    over.set("data", matjson::Value(std::string(kMaxWebRequestBytes - 10, 'x')));
+    REQUIRE_FALSE(requestJsonBodyWithinLimit(over));
+}
+
+TEST_CASE("multipart cumulative encoded body enforces kMaxWebRequestBytes") {
+    using geode::utils::web::MultipartForm;
+
+    auto const firstSize = maxMultipartFirstFieldValueSize();
+    MultipartForm form;
+    form.param("first", std::string(firstSize, 'a'));
+    REQUIRE(requestBodyWithinLimit(form.getBody().size()));
+
+    form.param("second", std::string(1, 'b'));
+    REQUIRE_FALSE(requestBodyWithinLimit(form.getBody().size()));
+}
+
 TEST_CASE("WebRequest bodyString rejects oversized payload") {
     WebBindingGuard guard;
     ModFixture fixture;
 
+    setLuaGlobalString(fixture.L, "__test_payload", std::string(kMaxWebRequestBytes + 1, 'x'));
+
     REQUIRE(runScriptReturnsBool(
         fixture.L,
-        std::string(R"(
+        R"(
         local req = geode.utils.web.newRequest()
-        local body = )") +
-            oversizedStringCall(kMaxWebRequestBytes + 1) +
-            R"(
-        local result, err = req:bodyString(body)
+        local result, err = req:bodyString(__test_payload)
         return result == nil and err == "request body exceeds maximum size"
     )"
     ));
@@ -227,13 +257,13 @@ TEST_CASE("WebRequest bodyJson rejects oversized payload") {
     WebBindingGuard guard;
     ModFixture fixture;
 
+    setLuaGlobalString(fixture.L, "__test_payload", std::string(kMaxWebRequestBytes + 1, 'x'));
+
     REQUIRE(runScriptReturnsBool(
         fixture.L,
-        std::string(R"(
+        R"(
         local req = geode.utils.web.newRequest()
-        local payload = { data = )") +
-            oversizedStringCall(kMaxWebRequestBytes + 1) +
-            R"( }
+        local payload = { data = __test_payload }
         local result, err = req:bodyJson(payload)
         return result == nil and err == "request body exceeds maximum size"
     )"
@@ -244,23 +274,18 @@ TEST_CASE("MultipartForm rejects cumulative body overflow") {
     WebBindingGuard guard;
     ModFixture fixture;
 
-    auto const firstSize = kMaxWebRequestBytes - 100;
-    auto const secondSize = 200;
+    auto const firstSize = maxMultipartFirstFieldValueSize();
+    setLuaGlobalString(fixture.L, "__test_first", std::string(firstSize, 'x'));
+    setLuaGlobalString(fixture.L, "__test_second", std::string(1, 'y'));
 
     REQUIRE(runScriptReturnsBool(
         fixture.L,
-        std::string(R"(
+        R"(
         local form = geode.utils.web.multipart()
-        local first = )") +
-            oversizedStringCall(firstSize) +
-            R"(
-        local second = )" +
-            oversizedStringCall(secondSize) +
-            R"(
-        if form:param("first", first) ~= form then
+        if form:param("first", __test_first) ~= form then
             return false
         end
-        local result, err = form:param("second", second)
+        local result, err = form:param("second", __test_second)
         return result == nil and err == "request body exceeds maximum size"
     )"
     ));
