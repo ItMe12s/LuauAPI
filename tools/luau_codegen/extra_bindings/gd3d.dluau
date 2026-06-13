@@ -60,36 +60,48 @@ declare class Gd3dViewportFrame extends CCNode
     function setDebugBounds(self, enabled: boolean)
 end
 
+export type Gd3dTransformNamespace = {
+    new: (position: Gd3dVec3?, lookAt: Gd3dVec3?) -> Gd3dTransform,
+    fromEuler: (pitch: number, yaw: number, roll: number) -> Gd3dTransform,
+    fromAxisAngle: (axis: Gd3dVec3, angleRadians: number) -> Gd3dTransform,
+}
+
+export type Gd3dMaterialNamespace = {
+    new: (opts: {
+        color: Gd3dVec3 | { r: number, g: number, b: number, a: number? },
+        texture: Gd3dTexture?,
+    }) -> Gd3dMaterial,
+}
+
+export type Gd3dTextureNamespace = {
+    load: (root: FsRoot, path: string) -> (Gd3dTexture?, string?),
+}
+
+export type Gd3dGltfNamespace = {
+    loadMesh: (root: FsRoot, path: string) -> (Gd3dMesh?, string?),
+    loadMeshFromBytes: (bytes: buffer | string) -> (Gd3dMesh?, string?),
+}
+
+export type Gd3dMeshNamespace = {
+    new: (data: {
+        positions: { Gd3dVec3 },
+        indices: { number },
+        normals: { Gd3dVec3 }?,
+        uvs: { { x: number, y: number } }?,
+    }) -> (Gd3dMesh?, string?),
+}
+
+export type Gd3dViewportFrameNamespace = {
+    new: (width: number, height: number) -> (Gd3dViewportFrame?, string?),
+}
+
 export type Gd3dNamespace = {
-    Transform: {
-        new: (position: Gd3dVec3?, lookAt: Gd3dVec3?) -> Gd3dTransform,
-        fromEuler: (pitch: number, yaw: number, roll: number) -> Gd3dTransform,
-        fromAxisAngle: (axis: Gd3dVec3, angleRadians: number) -> Gd3dTransform,
-    },
-    Material: {
-        new: (opts: {
-            color: Gd3dVec3 | { r: number, g: number, b: number, a: number? },
-            texture: Gd3dTexture?,
-        }) -> Gd3dMaterial,
-    },
-    texture: {
-        load: (root: FsRoot, path: string) -> (Gd3dTexture?, string?),
-    },
-    gltf: {
-        loadMesh: (root: FsRoot, path: string) -> (Gd3dMesh?, string?),
-        loadMeshFromBytes: (bytes: buffer | string) -> (Gd3dMesh?, string?),
-    },
-    mesh: {
-        new: (data: {
-            positions: { Gd3dVec3 },
-            indices: { number },
-            normals: { Gd3dVec3 }?,
-            uvs: { { x: number, y: number } }?,
-        }) -> (Gd3dMesh?, string?),
-    },
-    ViewportFrame: {
-        new: (width: number, height: number) -> (Gd3dViewportFrame?, string?),
-    },
+    Transform: Gd3dTransformNamespace,
+    Material: Gd3dMaterialNamespace,
+    texture: Gd3dTextureNamespace,
+    gltf: Gd3dGltfNamespace,
+    mesh: Gd3dMeshNamespace,
+    ViewportFrame: Gd3dViewportFrameNamespace,
 }
 
 declare gd3d: Gd3dNamespace

@@ -306,6 +306,8 @@ if(LUAUAPI_BUILD_TESTS)
         src/framework/callback/LuaDelegate.cpp
         src/framework/callback/LuaTrampolineRegistry.cpp
         src/bindings/task/TaskBinding.cpp
+        src/bindings/render3d/Gd3dRegister.cpp
+        src/bindings/render3d/TransformBinding.cpp
         src/bindings/geode/CurrentMod.cpp
         src/bindings/geode/ModSandbox.cpp
         src/bindings/geode/GeodeFsBinding.cpp
@@ -327,6 +329,7 @@ if(LUAUAPI_BUILD_TESTS)
         tests/host/GltfParseTests.cpp
         tests/host/ImageDecodeTests.cpp
         tests/host/ProceduralMeshTests.cpp
+        tests/host/Gd3dTransformBindingTests.cpp
         tests/host/FrustumTests.cpp
         tests/host/SceneDrawListTests.cpp
         ${LUAUAPI_TEST_SOURCES}
