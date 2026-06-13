@@ -1,10 +1,13 @@
 #include "bindings/geode/ModSandbox.hpp"
 
 #include "bindings/geode/CurrentMod.hpp"
+#include "core/Config.hpp"
 #include "framework/stack/Stack.hpp"
 #include "require/PathSandbox.hpp"
 
 #include <Geode/loader/Mod.hpp>
+#include <Geode/utils/file.hpp>
+#include <filesystem>
 #include <lua.h>
 #include <lualib.h>
 #include <string>
@@ -65,5 +68,22 @@ namespace luax {
             return std::nullopt;
         }
         return SandboxTarget{resolved.unwrap(), writable};
+    }
+
+    geode::Result<std::string> readSandboxTextFile(std::filesystem::path const& path) {
+        std::error_code ec;
+        if (!std::filesystem::is_regular_file(path, ec)) {
+            return geode::Err("path is not a regular file");
+        }
+
+        auto contents = geode::utils::file::readString(path);
+        if (contents.isErr()) {
+            return geode::Err(contents.unwrapErr());
+        }
+        auto data = std::move(contents.unwrap());
+        if (data.size() > kMaxFsReadBytes) {
+            return geode::Err("file exceeds maximum read size");
+        }
+        return geode::Ok(std::move(data));
     }
 } // namespace luax

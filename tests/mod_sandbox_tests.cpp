@@ -1,5 +1,6 @@
 #include "bindings/geode/CurrentMod.hpp"
 #include "bindings/geode/ModSandbox.hpp"
+#include "core/Config.hpp"
 #include "core/Runtime.hpp"
 #include "framework/stack/Stack.hpp"
 #include "require/PathSandbox.hpp"
@@ -8,6 +9,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include <chrono>
 #include <filesystem>
+#include <fstream>
 #include <lua.h>
 #include <lualib.h>
 #include <string_view>
@@ -77,6 +79,12 @@ namespace {
         auto resolved = luax::resolveInsideRoot(root, relative);
         REQUIRE(resolved.isOk());
         return resolved.unwrap();
+    }
+
+    void writeFileContents(std::filesystem::path const& path, std::string const& data) {
+        std::ofstream out(path, std::ios::binary);
+        REQUIRE(out.good());
+        out << data;
     }
 } // namespace
 
@@ -240,6 +248,53 @@ TEST_CASE("resolveSandboxTarget rejects empty relative paths") {
 
     std::filesystem::remove_all(dir);
     geode::Mod::destroy(mod);
+}
+
+TEST_CASE("readSandboxTextFile reads a regular file within size limits") {
+    auto dir = makeTempDir();
+    auto file = dir / "note.txt";
+    writeFileContents(file, "hello sandbox");
+
+    auto result = luax::readSandboxTextFile(file);
+    REQUIRE(result.isOk());
+    REQUIRE(result.unwrap() == "hello sandbox");
+
+    std::filesystem::remove_all(dir);
+}
+
+TEST_CASE("readSandboxTextFile rejects directories") {
+    auto dir = makeTempDir();
+    auto nested = dir / "nested";
+    REQUIRE(std::filesystem::create_directories(nested));
+
+    auto result = luax::readSandboxTextFile(nested);
+    REQUIRE(result.isErr());
+    REQUIRE(result.unwrapErr() == "path is not a regular file");
+
+    std::filesystem::remove_all(dir);
+}
+
+TEST_CASE("readSandboxTextFile rejects files above kMaxFsReadBytes") {
+    auto dir = makeTempDir();
+    auto file = dir / "oversized.bin";
+    writeFileContents(file, std::string(luax::kMaxFsReadBytes + 1, 'x'));
+
+    auto result = luax::readSandboxTextFile(file);
+    REQUIRE(result.isErr());
+    REQUIRE(result.unwrapErr() == "file exceeds maximum read size");
+
+    std::filesystem::remove_all(dir);
+}
+
+TEST_CASE("readSandboxTextFile propagates read failures") {
+    auto dir = makeTempDir();
+    auto missing = dir / "missing.txt";
+
+    auto result = luax::readSandboxTextFile(missing);
+    REQUIRE(result.isErr());
+    REQUIRE(result.unwrapErr() == "path is not a regular file");
+
+    std::filesystem::remove_all(dir);
 }
 
 TEST_CASE("resolveSandboxTarget errors on unknown root") {

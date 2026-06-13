@@ -1,6 +1,5 @@
 #include "bindings/geode/ModSandbox.hpp"
 #include "bindings/render3d/internal/Handles.hpp"
-#include "core/Config.hpp"
 #include "framework/stack/Stack.hpp"
 #include "framework/stack/TableUtil.hpp"
 #include "framework/stack/TaggedMetatable.hpp"
@@ -11,8 +10,6 @@
 #include "render3d/viewport/CCViewportFrame.hpp"
 
 #include <Geode/Geode.hpp>
-#include <Geode/utils/file.hpp>
-#include <filesystem>
 #include <lua.h>
 #include <lualib.h>
 #include <memory>
@@ -92,19 +89,11 @@ namespace {
             return 2;
         }
 
-        std::error_code ec;
-        if (!std::filesystem::is_regular_file(target->path, ec)) {
-            return pushNilErr(L, "path is not a regular file");
-        }
-
-        auto contents = geode::utils::file::readString(target->path);
+        auto contents = readSandboxTextFile(target->path);
         if (contents.isErr()) {
             return pushNilErr(L, contents.unwrapErr());
         }
         auto const& data = contents.unwrap();
-        if (data.size() > kMaxFsReadBytes) {
-            return pushNilErr(L, "file exceeds maximum read size");
-        }
 
         auto const bytes = std::span<std::uint8_t const>(
             reinterpret_cast<std::uint8_t const*>(data.data()), data.size()

@@ -19,20 +19,11 @@ namespace {
         auto target = resolveSandboxTarget(L, 1, 2, "geode.fs.read");
         if (!target) return 2;
 
-        std::error_code ec;
-        if (!std::filesystem::is_regular_file(target->path, ec)) {
-            return pushNilErr(L, "path is not a regular file");
-        }
-
-        auto contents = geode::utils::file::readString(target->path);
+        auto contents = readSandboxTextFile(target->path);
         if (contents.isErr()) {
             return pushNilErr(L, contents.unwrapErr());
         }
-        auto data = std::move(contents.unwrap());
-        if (data.size() > kMaxFsReadBytes) {
-            return pushNilErr(L, "file exceeds maximum read size");
-        }
-        push(L, data);
+        push(L, contents.unwrap());
         return 1;
     }
 
