@@ -48,13 +48,11 @@ namespace luax::render3d {
         }
 
         int prevFbo = 0;
-        int prevViewport[4]{};
         float prevClearColor[4]{};
         DrawStateSnapshot prevState{};
         prevState.capture();
 
         glGetIntegerv(GL_FRAMEBUFFER_BINDING, &prevFbo);
-        glGetIntegerv(GL_VIEWPORT, prevViewport);
         glGetFloatv(GL_COLOR_CLEAR_VALUE, prevClearColor);
         int const prevVao = captureAndUnbindVao();
         bool const useVao = vaoSupported();
@@ -97,7 +95,6 @@ namespace luax::render3d {
         }
 
         glBindFramebuffer(GL_FRAMEBUFFER, static_cast<GLuint>(prevFbo));
-        glViewport(prevViewport[0], prevViewport[1], prevViewport[2], prevViewport[3]);
         glClearColor(prevClearColor[0], prevClearColor[1], prevClearColor[2], prevClearColor[3]);
         glBindBuffer(GL_ARRAY_BUFFER, 0);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
@@ -108,7 +105,7 @@ namespace luax::render3d {
     }
 
     void Renderer3D::drawCompositeQuad(unsigned int colorTexture, float width, float height) {
-        luax::render3d::drawCompositeQuad(m_programs, colorTexture, width, height);
+        luax::render3d::drawCompositeQuad(colorTexture, width, height);
     }
 
 } // namespace luax::render3d

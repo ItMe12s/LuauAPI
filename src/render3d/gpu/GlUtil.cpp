@@ -82,12 +82,25 @@ namespace luax::render3d {
         glGetBooleanv(GL_DEPTH_WRITEMASK, &depthMask);
         glGetBooleanv(GL_CULL_FACE, &cullEnabled);
         glGetBooleanv(GL_BLEND, &blendEnabled);
+        glGetBooleanv(GL_SCISSOR_TEST, &scissorEnabled);
         glGetIntegerv(GL_BLEND_SRC_RGB, &blendSrc);
         glGetIntegerv(GL_BLEND_DST_RGB, &blendDst);
         glGetIntegerv(GL_TEXTURE_BINDING_2D, &boundTexture);
+        glGetIntegerv(GL_FRAMEBUFFER_BINDING, &framebufferBinding);
+        glGetIntegerv(GL_VIEWPORT, viewport);
+        glGetIntegerv(GL_SCISSOR_BOX, scissorBox);
     }
 
     void DrawStateSnapshot::restore() const {
+        glBindFramebuffer(GL_FRAMEBUFFER, static_cast<GLuint>(framebufferBinding));
+        glViewport(viewport[0], viewport[1], viewport[2], viewport[3]);
+        if (scissorEnabled == GL_TRUE) {
+            glEnable(GL_SCISSOR_TEST);
+            glScissor(scissorBox[0], scissorBox[1], scissorBox[2], scissorBox[3]);
+        }
+        else {
+            glDisable(GL_SCISSOR_TEST);
+        }
         if (depthEnabled == GL_TRUE) {
             glEnable(GL_DEPTH_TEST);
         }

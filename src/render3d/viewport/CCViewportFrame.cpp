@@ -237,6 +237,9 @@ namespace luax::render3d {
             return;
         }
 
+        GLint prevFbo = 0;
+        glGetIntegerv(GL_FRAMEBUFFER_BINDING, &prevFbo);
+
         destroyFramebuffer();
 
         glGenFramebuffers(1, &m_fbo);
@@ -245,7 +248,8 @@ namespace luax::render3d {
         m_colorTexture =
             uploadRgbaTexture2D(width, height, nullptr, TextureWrapMode::ClampToEdge, true);
         if (m_colorTexture == 0) {
-            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+            glBindFramebuffer(GL_FRAMEBUFFER, static_cast<GLuint>(prevFbo));
+            glBindTexture(GL_TEXTURE_2D, 0);
             destroyFramebuffer();
             return;
         }
@@ -259,7 +263,7 @@ namespace luax::render3d {
         );
 
         GLenum const status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glBindFramebuffer(GL_FRAMEBUFFER, static_cast<GLuint>(prevFbo));
         glBindTexture(GL_TEXTURE_2D, 0);
         glBindRenderbuffer(GL_RENDERBUFFER, 0);
 

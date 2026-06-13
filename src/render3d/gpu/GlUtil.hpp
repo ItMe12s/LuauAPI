@@ -24,9 +24,13 @@ namespace luax::render3d {
         GLboolean depthMask = GL_TRUE;
         GLboolean cullEnabled = GL_FALSE;
         GLboolean blendEnabled = GL_FALSE;
+        GLboolean scissorEnabled = GL_FALSE;
         GLint blendSrc = GL_ONE;
         GLint blendDst = GL_ZERO;
         int boundTexture = 0;
+        int framebufferBinding = 0;
+        int viewport[4]{0, 0, 0, 0};
+        int scissorBox[4]{0, 0, 0, 0};
 
         void capture();
         void restore() const;
