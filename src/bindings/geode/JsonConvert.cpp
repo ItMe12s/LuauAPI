@@ -32,7 +32,6 @@ namespace luax {
                 break;
             }
             case matjson::Type::Array: {
-                lua_checkstack(L, 4);
                 lua_newtable(L);
                 int index = 1;
                 for (auto const& item : value) {
@@ -44,7 +43,6 @@ namespace luax {
                 break;
             }
             case matjson::Type::Object: {
-                lua_checkstack(L, 4);
                 lua_newtable(L);
                 for (auto const& item : value) {
                     auto key = item.getKey();
