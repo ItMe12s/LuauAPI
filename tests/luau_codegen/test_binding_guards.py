@@ -450,6 +450,10 @@ class WebSocketGuardTests(unittest.TestCase):
         )
 
     def test_websocket_send_methods_enforce_size_cap(self) -> None:
+        internal = _read_repo_file(_WEBSOCKET_INTERNAL)
+        self.assertIn("kMaxWebSocketSendBytes", internal)
+        self.assertIn("wsSendWithinLimit", internal)
+
         for rel_path, fn in (
             (_WEBSOCKET_CONNECTION, "sendData"),
             (_WEBSOCKET_SERVER, "broadcastData"),
@@ -459,9 +463,9 @@ class WebSocketGuardTests(unittest.TestCase):
                 source = _read_repo_file(rel_path)
                 body = _function_body(source, fn)
                 self.assertIn(
-                    "kMaxWebSocketSendBytes",
+                    "wsSendWithinLimit",
                     body,
-                    f"{fn} must enforce kMaxWebSocketSendBytes",
+                    f"{fn} must enforce send size via wsSendWithinLimit",
                 )
 
     def test_websocket_peer_send_delegates_to_peer_send_data(self) -> None:
