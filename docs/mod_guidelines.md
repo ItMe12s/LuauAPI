@@ -13,13 +13,15 @@ Severe cases can still lead to real Geode Index rejection, delisting, or bans.
 
 These rules are not magic law. Context matters.
 A tiny joke mod and a large renderer mod do not need the same review depth.
+
 Index moderators still have final say.
 
-The goal is simple.
-Do not crash the game.
-Do not harm other mods.
-Do not abuse shared runtime state.
-Do not ship code that looks like malware.
+The goal is simple:
+
+- Do not crash the game.
+- Do not harm other mods.
+- Do not abuse shared runtime state.
+- Do not ship code that looks like malware.
 
 ## Rejection rules
 
@@ -53,8 +55,7 @@ local position = transform:position()
 
 Hooks and callbacks must return required values.
 
-A missing return can corrupt the call path.
-Some failures can crash outside normal Lua errors and may escape the Geode crash handler.
+A missing return can corrupt the call path. Some failures can crash outside normal Lua errors and may escape the Geode crash handler.
 
 Bad:
 
@@ -112,6 +113,7 @@ end)
 Respect `_G`. Do not add bare globals. Do not use names like `_VAR` or `_SOMETHING`.
 
 All mods share one runtime and one global table. Bare globals collide with other mods.
+
 Names that start with `_` also look reserved for Lua internals.
 
 Bad:
@@ -136,8 +138,7 @@ See [Sharing APIs between mods](reference/lua/sharing-apis.md).
 
 Do not abuse the 3D renderer without meaningful user value.
 
-A Luau mod should not turn a menu into a benchmark.
-If it lags mid range devices like an iPhone 15 or RTX 3050, it is not ready.
+A Luau mod should not turn a menu into a benchmark. If it lags mid range devices like an iPhone 15 or RTX 3050, it is not ready.
 
 Bad:
 
@@ -162,6 +163,7 @@ See [gd3d](reference/lua/gd3d.md) and [Limits and errors](reference/cpp/limits-a
 Optimize code that burns script budgets.
 
 Hooks, tasks, callbacks, web handlers, and draw callbacks run under time limits.
+
 If your mod keeps hitting those limits, the code needs work.
 
 Bad:
@@ -193,8 +195,7 @@ See [Limits and errors](reference/cpp/limits-and-errors.md).
 
 Do not leak handles, nodes, callbacks, or long lived references.
 
-The garbage collector can only clean unreachable values.
-If you keep old objects in tables forever, the leak is yours.
+The garbage collector can only clean unreachable values. If you keep old objects in tables forever, the leak is yours.
 
 Bad:
 
@@ -295,13 +296,11 @@ end
 
 ## Other rules
 
-A mod found breaking these rules may still be approved.
-You should expect review feedback. Repeated abuse can become a rejection.
+A mod found breaking these rules may still be approved. You should expect review feedback. Repeated abuse can become a rejection.
 
 ### `other-semicolons`
 
-Semicolons are fine for a tiny guard clause.
-They are not fine as a way to hide many statements on one line.
+Semicolons are fine for a tiny guard clause. They are not fine as a way to hide many statements on one line.
 
 Bad:
 
@@ -357,8 +356,8 @@ Renderer.start()
 
 Use any readable Lua style. Keep it consistent.
 
-Lua has no single official style guide.
-The community often follows patterns from LuaRocks, Olivine Labs, and StyLua.
+Lua has no single official style guide. The community often follows patterns from LuaRocks, Olivine Labs, and StyLua.
+
 Mixing styles like a blender makes review slower.
 
 Bad:
@@ -384,8 +383,7 @@ end
 
 Do not remake an existing Index mod in Luau with the same purpose and no meaningful changes.
 
-Users do not need the same mod twice.
-Contribute to the original mod, ask permission, or add something meaningfully new.
+Users do not need the same mod twice. Contribute to the original mod, ask permission, or add something meaningfully new.
 
 Bad:
 
