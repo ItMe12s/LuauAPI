@@ -30,6 +30,9 @@ _REQUEST_BODY_APPLY_HELPERS = (
 )
 _WEB_INTERNAL = "src/bindings/geode/web/WebInternal.hpp"
 _FS_BINDING = "src/bindings/geode/GeodeFsBinding.cpp"
+_WEBSOCKET_CONNECTION = "src/bindings/websocket/WebSocketConnection.cpp"
+_WEBSOCKET_SERVER = "src/bindings/websocket/WebSocketServer.cpp"
+_WEBSOCKET_INTERNAL = "src/bindings/websocket/WebSocketInternal.hpp"
 _COCOS_BINDING = "src/bindings/geode/GeodeCocosBinding.cpp"
 _TASK_SCHEDULER = "src/bindings/task/TaskScheduler.cpp"
 _TASK_BINDING = "src/bindings/task/TaskBinding.cpp"
@@ -408,6 +411,104 @@ class BindingGuardTests(unittest.TestCase):
         self.assertIn("queueInMainThread", production)
         self.assertIn("scheduleArmRetry", production)
         self.assertIn("s_armPending = false", production)
+
+
+class WebSocketGuardTests(unittest.TestCase):
+    def test_websocket_constants_are_declared(self) -> None:
+        config = _read_repo_file(_CONFIG_HEADER)
+        for name in (
+            "kMaxWebSocketConnections",
+            "kMaxWebSocketServers",
+            "kMaxWebSocketServerClients",
+            "kMaxWebSocketSendBytes",
+            "kMaxWebSocketReceiveBytes",
+        ):
+            with self.subTest(name=name):
+                self.assertIn(name, config)
+
+    def test_ws_connect_enforces_connection_cap(self) -> None:
+        source = _read_repo_file(_WEBSOCKET_CONNECTION)
+        body = _function_body(source, "wsConnect")
+        self.assertIn(
+            "kMaxWebSocketConnections",
+            body,
+            "wsConnect must enforce kMaxWebSocketConnections",
+        )
+
+    def test_ws_serve_enforces_server_cap_and_client_limit(self) -> None:
+        source = _read_repo_file(_WEBSOCKET_SERVER)
+        body = _function_body(source, "wsServe")
+        self.assertIn(
+            "kMaxWebSocketServers",
+            body,
+            "wsServe must enforce kMaxWebSocketServers",
+        )
+        self.assertIn(
+            "kMaxWebSocketServerClients",
+            body,
+            "wsServe must pass kMaxWebSocketServerClients to server construction",
+        )
+
+    def test_websocket_send_methods_enforce_size_cap(self) -> None:
+        for rel_path, fn in (
+            (_WEBSOCKET_CONNECTION, "sendData"),
+            (_WEBSOCKET_SERVER, "broadcastData"),
+            (_WEBSOCKET_SERVER, "peerSend"),
+            (_WEBSOCKET_SERVER, "peerSendBinary"),
+        ):
+            with self.subTest(fn=fn):
+                source = _read_repo_file(rel_path)
+                body = _function_body(source, fn)
+                self.assertIn(
+                    "kMaxWebSocketSendBytes",
+                    body,
+                    f"{fn} must enforce kMaxWebSocketSendBytes",
+                )
+
+    def test_websocket_message_callbacks_enforce_receive_cap(self) -> None:
+        conn_source = _read_repo_file(_WEBSOCKET_CONNECTION)
+        conn_body = _function_body(conn_source, "installMessageCallback", ret="void")
+        self.assertIn(
+            "kMaxWebSocketReceiveBytes",
+            conn_body,
+            "client message callback must enforce kMaxWebSocketReceiveBytes",
+        )
+
+        server_source = _read_repo_file(_WEBSOCKET_SERVER)
+        server_body = _function_body(server_source, "handleServerClientMessage", ret="void")
+        self.assertIn(
+            "kMaxWebSocketReceiveBytes",
+            server_body,
+            "server message callback must enforce kMaxWebSocketReceiveBytes",
+        )
+
+    def test_websocket_callbacks_queue_to_main_thread(self) -> None:
+        for rel_path, fn in (
+            (_WEBSOCKET_CONNECTION, "queueOpenEvent"),
+            (_WEBSOCKET_CONNECTION, "queueMessageEvent"),
+            (_WEBSOCKET_CONNECTION, "queueCloseEvent"),
+            (_WEBSOCKET_CONNECTION, "queueErrorEvent"),
+            (_WEBSOCKET_SERVER, "queueClientConnectEvent"),
+            (_WEBSOCKET_SERVER, "queueClientMessageEvent"),
+            (_WEBSOCKET_SERVER, "queueClientDisconnectEvent"),
+            (_WEBSOCKET_SERVER, "queueServerErrorEvent"),
+        ):
+            with self.subTest(fn=fn):
+                source = _read_repo_file(rel_path)
+                body = _function_body(source, fn, ret="void")
+                self.assertIn(
+                    "queueInMainThread",
+                    body,
+                    f"{fn} must defer websocket callbacks to the main thread",
+                )
+
+    def test_websocket_shutdown_hook_clears_state(self) -> None:
+        source = _read_repo_file(_WEBSOCKET_INTERNAL)
+        self.assertIn("clearWsState", source)
+        self.assertIn("registerShutdownHook(&clearWsState)", source)
+        body = _inline_function_body(source, "inline void clearWsState()")
+        self.assertIn("activeWsConnections().clear()", body)
+        self.assertIn("activeWsServers().clear()", body)
 
 
 class ManualFieldsBindingGuardTests(unittest.TestCase):

@@ -176,6 +176,71 @@ TEST_CASE("resolveSandboxTarget rejects path escapes") {
     geode::Mod::destroy(mod);
 }
 
+TEST_CASE("resolveSandboxTarget errors when no current mod matches runtime resources root") {
+    RuntimeGuard guard;
+    auto dir = makeTempDir();
+
+    auto* runtime = luax::Runtime::getOrCreate();
+    runtime->setResourcesRoot(dir);
+    auto* L = runtime->state();
+
+    ResolveArgs args{"save", "file.txt", false};
+    int results = 0;
+    REQUIRE_FALSE(callResolve(L, args, results));
+    REQUIRE(results == 1);
+    REQUIRE(lua_isstring(L, 1));
+    REQUIRE(std::string(lua_tostring(L, 1)) == "current mod is unavailable");
+    lua_pop(L, results);
+
+    std::filesystem::remove_all(dir);
+}
+
+TEST_CASE("resolveSandboxTarget rejects absolute relative paths") {
+    RuntimeGuard guard;
+    auto dir = makeTempDir();
+    auto* mod = geode::Mod::create(dir);
+
+    auto* runtime = luax::Runtime::getOrCreate();
+    runtime->setResourcesRoot(dir);
+    auto* L = runtime->state();
+    REQUIRE(std::filesystem::create_directories(mod->getSaveDir()));
+
+    ResolveArgs args{"save", "/absolute/path.txt", false};
+    int results = 0;
+    REQUIRE(callResolve(L, args, results));
+    REQUIRE(results == 2);
+    REQUIRE(lua_isnil(L, 1));
+    REQUIRE(lua_isstring(L, 2));
+    REQUIRE(std::string(lua_tostring(L, 2)) == "path must be relative");
+    lua_pop(L, results);
+
+    std::filesystem::remove_all(dir);
+    geode::Mod::destroy(mod);
+}
+
+TEST_CASE("resolveSandboxTarget rejects empty relative paths") {
+    RuntimeGuard guard;
+    auto dir = makeTempDir();
+    auto* mod = geode::Mod::create(dir);
+
+    auto* runtime = luax::Runtime::getOrCreate();
+    runtime->setResourcesRoot(dir);
+    auto* L = runtime->state();
+    REQUIRE(std::filesystem::create_directories(mod->getSaveDir()));
+
+    ResolveArgs args{"save", "", false};
+    int results = 0;
+    REQUIRE(callResolve(L, args, results));
+    REQUIRE(results == 2);
+    REQUIRE(lua_isnil(L, 1));
+    REQUIRE(lua_isstring(L, 2));
+    REQUIRE(std::string(lua_tostring(L, 2)) == "path is empty");
+    lua_pop(L, results);
+
+    std::filesystem::remove_all(dir);
+    geode::Mod::destroy(mod);
+}
+
 TEST_CASE("resolveSandboxTarget errors on unknown root") {
     RuntimeGuard guard;
     auto dir = makeTempDir();

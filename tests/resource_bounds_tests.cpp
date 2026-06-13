@@ -1,4 +1,5 @@
 #include "bindings/geode/CurrentMod.hpp"
+#include "core/Config.hpp"
 #include "core/Runtime.hpp"
 #include "framework/Binding.hpp"
 
@@ -244,6 +245,92 @@ TEST_CASE("geode.json.parse rejects oversized input") {
     std::string err(lua_tostring(L, -1));
     REQUIRE(err.find("maximum size") != std::string::npos);
     lua_pop(L, 2);
+}
+
+TEST_CASE("geode.fs.read rejects file size above kMaxFsReadBytes") {
+    RuntimeGuard guard;
+    auto dir = makeTempDir();
+    auto* mod = geode::Mod::create(dir);
+
+    auto* runtime = luax::Runtime::getOrCreate();
+    runtime->setResourcesRoot(dir);
+    auto* L = runtime->state();
+    registerResourceBindings(L);
+
+    auto saveDir = dir / "save";
+    REQUIRE(std::filesystem::create_directories(saveDir));
+    writeFileContents(saveDir / "oversized.bin", std::string(luax::kMaxFsReadBytes + 1, 'x'));
+
+    REQUIRE(callFsRead(L, "oversized.bin") == 0);
+    REQUIRE(lua_isnil(L, -2));
+    REQUIRE(lua_isstring(L, -1));
+    std::string err(lua_tostring(L, -1));
+    REQUIRE(err.find("maximum read size") != std::string::npos);
+    lua_pop(L, 2);
+
+    std::filesystem::remove_all(dir);
+    geode::Mod::destroy(mod);
+}
+
+TEST_CASE("geode.fs.read cap applies to save and config roots") {
+    RuntimeGuard guard;
+    auto dir = makeTempDir();
+    auto* mod = geode::Mod::create(dir);
+
+    auto* runtime = luax::Runtime::getOrCreate();
+    runtime->setResourcesRoot(dir);
+    auto* L = runtime->state();
+    registerResourceBindings(L);
+
+    auto oversized = std::string(luax::kMaxFsReadBytes + 1, 'y');
+    for (auto const* root : {"save", "config"}) {
+        auto rootDir = dir / root;
+        REQUIRE(std::filesystem::create_directories(rootDir));
+        writeFileContents(rootDir / "oversized.bin", oversized);
+
+        lua_settop(L, 0);
+        lua_getglobal(L, "geode");
+        lua_getfield(L, -1, "fs");
+        lua_getfield(L, -1, "read");
+        lua_remove(L, 1);
+        lua_remove(L, 1);
+        lua_pushlstring(L, root, std::char_traits<char>::length(root));
+        lua_pushlstring(L, "oversized.bin", 13);
+        REQUIRE(lua_pcall(L, 2, 2, 0) == 0);
+        REQUIRE(lua_isnil(L, -2));
+        REQUIRE(lua_isstring(L, -1));
+        std::string err(lua_tostring(L, -1));
+        REQUIRE(err.find("maximum read size") != std::string::npos);
+        lua_pop(L, 2);
+    }
+
+    std::filesystem::remove_all(dir);
+    geode::Mod::destroy(mod);
+}
+
+TEST_CASE("geode.fs.write rejects payload size above kMaxFsWriteBytes") {
+    RuntimeGuard guard;
+    auto dir = makeTempDir();
+    auto* mod = geode::Mod::create(dir);
+
+    auto* runtime = luax::Runtime::getOrCreate();
+    runtime->setResourcesRoot(dir);
+    auto* L = runtime->state();
+    registerResourceBindings(L);
+
+    REQUIRE(std::filesystem::create_directories(dir / "save"));
+
+    auto oversized = std::string(luax::kMaxFsWriteBytes + 1, 'z');
+    REQUIRE(callFs(L, "write", "save", "oversized.bin", oversized) == 0);
+    REQUIRE(lua_gettop(L) == 2);
+    REQUIRE(lua_isnil(L, 1));
+    REQUIRE(lua_isstring(L, 2));
+    std::string err(lua_tostring(L, 2));
+    REQUIRE(err.find("maximum write size") != std::string::npos);
+    REQUIRE_FALSE(std::filesystem::exists(dir / "save" / "oversized.bin"));
+
+    std::filesystem::remove_all(dir);
+    geode::Mod::destroy(mod);
 }
 
 TEST_CASE("geode.fs.write stores a file inside the writable save root") {
