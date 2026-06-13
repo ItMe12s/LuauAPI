@@ -56,4 +56,4 @@ if node then someMenu:addChild(node) end
 
 ## Source
 
-- `src/bindings/geode/GeodeKeybindBinding.cpp`
+- `src/bindings/geode/GeodeSmallBindings.cpp`

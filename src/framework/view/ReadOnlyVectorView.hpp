@@ -164,7 +164,8 @@ namespace luax {
         return out;
     }
 
-    // Opaque views: elements are arbitrary T* via tagged opaque handles (no CCObject requirement).
+    // Opaque views: elements use tagged opaque handles instead of Usertype borrowing.
+    // Codegen may route CCObject-derived pointer vectors here (e.g. std::vector in map values).
     // Borrowed opaque views still pin storage to a live CCObject owner (GdVectorBackingPolicy).
     template <class T>
     void pushReadOnlyOpaqueVectorView(

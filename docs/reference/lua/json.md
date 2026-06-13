@@ -60,6 +60,6 @@ See [Limits and errors](../cpp/limits-and-errors.md).
 
 ## Source
 
-- `src/bindings/geode/GeodeJsonBinding.cpp`
+- `src/bindings/geode/GeodeSmallBindings.cpp`
 - `src/bindings/geode/JsonConvert.hpp`
 - `tools/luau_codegen/extra_bindings/json.dluau`

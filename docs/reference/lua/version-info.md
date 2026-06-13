@@ -51,4 +51,4 @@ print(v.matches(">=v1.2.0", "v1.3.0")) -- true
 
 ## Source
 
-- `src/bindings/geode/GeodeVersionBinding.cpp`
+- `src/bindings/geode/GeodeSmallBindings.cpp`

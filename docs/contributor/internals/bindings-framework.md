@@ -23,14 +23,9 @@ A few libraries are handwritten in C++ under `src/bindings/geode/` and `src/fram
 | File | Lua Module / Description |
 | --- | --- |
 | `GeodeFsBinding.cpp` | `geode.fs` |
-| `GeodeJsonBinding.cpp` | `geode.json` |
 | `GeodeModBinding.cpp` | `geode.Mod` |
-| `GeodeBase64Binding.cpp` | `geode.utils.base64` |
-| `GeodePermissionBinding.cpp` | `geode.utils.permission` |
+| `GeodeSmallBindings.cpp` | `geode.json`, `geode.utils.base64`, `geode.utils.permission`, `geode.ColorProvider`, `geode.Keybind`, `geode.VersionInfo` |
 | `GeodeCocosBinding.cpp` | Handwritten `geode.cocos` helpers |
-| `GeodeColorProviderBinding.cpp` | `geode.ColorProvider` |
-| `GeodeKeybindBinding.cpp` | `geode.Keybind` |
-| `GeodeVersionBinding.cpp` | `geode.VersionInfo` |
 | `task/TaskBinding.cpp` | `task` and `time` |
 | `imgui/ImGuiBinding.cpp` | `imgui` |
 | `render3d/Gd3dRegister.cpp` | `gd3d` entry (`registerGd3d`) |

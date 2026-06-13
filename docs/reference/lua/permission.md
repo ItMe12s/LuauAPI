@@ -54,4 +54,4 @@ end
 
 ## Source
 
-- `src/bindings/geode/GeodePermissionBinding.cpp`
+- `src/bindings/geode/GeodeSmallBindings.cpp`
