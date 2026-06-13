@@ -36,7 +36,7 @@
 	"settings": {
 		"title-enable-developer-mode": {
 			"type": "title",
-			"name": "Developer Mode (Read Description)"
+			"name": "Developer Mode (Read Descriptions)"
 		},
 		"enable-developer-mode": {
 			"type": "bool",

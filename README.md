@@ -39,6 +39,8 @@ Runnable samples: [Examples](docs/getting-started/examples.md).
 - [Examples](docs/getting-started/examples.md)
 - [Mod guidelines](docs/mod_guidelines.md)
 
+Join the [Discord](https://discord.gg/E8f6D6XqbW) for help!
+
 ## Reference
 
 API reference for everything a script or host can call.
@@ -98,8 +100,6 @@ For anyone working on LuauAPI itself.
 - [About](about.md)
 - [Changelog](changelog.md)
 - [Support](support.md)
-
-Community: [Discord](https://discord.gg/E8f6D6XqbW)
 
 ## Licenses
 

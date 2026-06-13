@@ -16,7 +16,6 @@ LuauAPI ships with the mod id `imes.luauapi`.
 It loads early with first priority, so the runtime is ready for other mods as soon as the game starts.
 
 Requires Geode **5.7.1** or newer (see `mod.json` `"geode"` field).
-Community help: [Discord](https://discord.gg/E8f6D6XqbW).
 
 ## Depend on it
 

@@ -3,8 +3,7 @@
 **Build Geode mods in Luau!**
 
 LuauAPI is an ambitious scripting ecosystem for Geode,
-making Luau a first-class way to create mods, APIs, tools,
-and reusable systems without requiring every creator to work directly in C++. (1)
+so you can create mods, tools, and reusable systems in Luau without needing to write C++. (1)
 
 It includes a higher-level SDK that helps you start simple and iterate faster, without all the C++ shenanigans.
 Plus, you get fewer crashes and clear, easy-to-understand error logging.
@@ -32,6 +31,7 @@ Plus, you get fewer crashes and clear, easy-to-understand error logging.
 - More advanced 3D functionality and support
 - Sprite and rig animator with keyframes
 - The remaining 0.01% of bindings and m_Fields
+- Argon support
 - Other quality of life features
 
 ---
