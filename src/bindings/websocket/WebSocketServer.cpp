@@ -257,7 +257,7 @@ namespace luax::wsdetail {
             }
         }
 
-        if (compactAndCountLive(activeWsServers()) >= kMaxWebSocketServers) {
+        if (activeWsServers().compactAndCountLive() >= kMaxWebSocketServers) {
             return pushNilErr(L, "too many websocket servers");
         }
 
@@ -276,7 +276,7 @@ namespace luax::wsdetail {
         }
         srv->server->start();
 
-        activeWsServers().push_back(srv);
+        activeWsServers().track(srv);
         ensureWsShutdownHook();
 
         pushWsServer(L, std::move(srv));

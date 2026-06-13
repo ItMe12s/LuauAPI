@@ -505,10 +505,20 @@ class WebSocketGuardTests(unittest.TestCase):
     def test_websocket_shutdown_hook_clears_state(self) -> None:
         source = _read_repo_file(_WEBSOCKET_INTERNAL)
         self.assertIn("clearWsState", source)
-        self.assertIn("registerShutdownHook(&clearWsState)", source)
+        self.assertIn("WeakHandlePool", source)
+        self.assertIn("ensureShutdownHook(wsShutdownHookRegistered()", source)
         body = _inline_function_body(source, "inline void clearWsState()")
-        self.assertIn("activeWsConnections().clear()", body)
-        self.assertIn("activeWsServers().clear()", body)
+        self.assertIn("activeWsConnections().clearAll", body)
+        self.assertIn("activeWsServers().clearAll", body)
+
+    def test_web_shutdown_hook_clears_state(self) -> None:
+        source = _read_repo_file(_WEB_INTERNAL)
+        self.assertIn("clearWebState", source)
+        self.assertIn("WeakHandlePool", source)
+        self.assertIn("ensureShutdownHook(webShutdownHookRegistered()", source)
+        body = _inline_function_body(source, "inline void clearWebState()")
+        self.assertIn("activeTasks().clearAll", body)
+        self.assertIn("activeListeners().clearAll", body)
 
 
 class ManualFieldsBindingGuardTests(unittest.TestCase):

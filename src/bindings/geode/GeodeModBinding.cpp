@@ -1,9 +1,9 @@
 #include "bindings/geode/CurrentMod.hpp"
 #include "bindings/geode/JsonConvert.hpp"
 #include "core/Config.hpp"
-#include "core/Runtime.hpp"
 #include "framework/Binding.hpp"
 #include "framework/callback/LuaCallback.hpp"
+#include "framework/lifecycle/ShutdownHook.hpp"
 #include "framework/stack/Stack.hpp"
 #include "framework/stack/TableUtil.hpp"
 
@@ -40,11 +40,7 @@ namespace {
     }
 
     void ensureSettingShutdownHook() {
-        if (s_settingShutdownHookRegistered) return;
-        auto* rt = Runtime::getIfInitialized();
-        if (!rt) return;
-        rt->registerShutdownHook(&clearSettingListeners);
-        s_settingShutdownHookRegistered = true;
+        ensureShutdownHook(s_settingShutdownHookRegistered, &clearSettingListeners);
     }
 
     void pushSettingValue(lua_State* L, std::shared_ptr<geode::SettingV3> const& setting) {

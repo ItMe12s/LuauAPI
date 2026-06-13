@@ -210,7 +210,7 @@ namespace luax::webdetail {
         luaL_checktype(L, callbackIdx, LUA_TFUNCTION);
         auto cb = std::make_shared<LuaCallback>(L, callbackIdx);
         auto task = std::make_shared<WebTask>(req.getID());
-        activeTasks().push_back(task);
+        activeTasks().track(task);
         compactWeakState();
         ensureShutdownHook();
 

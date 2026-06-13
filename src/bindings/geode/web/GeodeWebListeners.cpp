@@ -129,7 +129,7 @@ namespace luax::webdetail {
         }
 
         void rememberListener(std::shared_ptr<WebListenerState> const& state) {
-            activeListeners().push_back(state);
+            activeListeners().track(state);
             compactWeakState();
             ensureShutdownHook();
         }

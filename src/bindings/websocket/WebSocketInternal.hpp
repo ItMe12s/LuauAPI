@@ -1,12 +1,12 @@
 #pragma once
 
 #include "core/Config.hpp"
-#include "core/Runtime.hpp"
 #include "framework/callback/LuaCallback.hpp"
+#include "framework/lifecycle/ShutdownHook.hpp"
+#include "framework/lifecycle/WeakHandlePool.hpp"
 #include "framework/stack/UserdataTags.hpp"
 
 #include <Geode/loader/Log.hpp>
-#include <algorithm>
 #include <atomic>
 #include <cstddef>
 #include <ixwebsocket/IXNetSystem.h>
@@ -137,13 +137,13 @@ namespace luax {
         std::shared_ptr<WsPeer> peer;
     };
 
-    inline std::vector<std::weak_ptr<WsConnection>>& activeWsConnections() {
-        static std::vector<std::weak_ptr<WsConnection>> connections;
+    inline WeakHandlePool<WsConnection>& activeWsConnections() {
+        static WeakHandlePool<WsConnection> connections;
         return connections;
     }
 
-    inline std::vector<std::weak_ptr<WsServer>>& activeWsServers() {
-        static std::vector<std::weak_ptr<WsServer>> servers;
+    inline WeakHandlePool<WsServer>& activeWsServers() {
+        static WeakHandlePool<WsServer> servers;
         return servers;
     }
 
@@ -153,27 +153,17 @@ namespace luax {
     }
 
     inline void clearWsState() {
-        for (auto& weak : activeWsConnections()) {
-            if (auto conn = weak.lock()) {
-                conn->shutdown();
-            }
-        }
-        activeWsConnections().clear();
-        for (auto& weak : activeWsServers()) {
-            if (auto server = weak.lock()) {
-                server->shutdown();
-            }
-        }
-        activeWsServers().clear();
+        activeWsConnections().clearAll([](WsConnection& conn) {
+            conn.shutdown();
+        });
+        activeWsServers().clearAll([](WsServer& server) {
+            server.shutdown();
+        });
         wsShutdownHookRegistered() = false;
     }
 
     inline void ensureWsShutdownHook() {
-        if (wsShutdownHookRegistered()) return;
-        auto* rt = Runtime::getIfInitialized();
-        if (!rt) return;
-        rt->registerShutdownHook(&clearWsState);
-        wsShutdownHookRegistered() = true;
+        ensureShutdownHook(wsShutdownHookRegistered(), &clearWsState);
     }
 
     inline void ensureWsNetSystem() {
@@ -181,21 +171,6 @@ namespace luax {
             return ix::initNetSystem();
         }();
         (void)initialized;
-    }
-
-    template <class T>
-    inline std::size_t compactAndCountLive(std::vector<std::weak_ptr<T>>& items) {
-        items.erase(
-            std::remove_if(
-                items.begin(),
-                items.end(),
-                [](auto const& weak) {
-                    return weak.expired();
-                }
-            ),
-            items.end()
-        );
-        return items.size();
     }
 
     inline void invokeWsCallback(

@@ -98,11 +98,11 @@ namespace {
     }
 
     std::size_t countLiveConnections() {
-        return compactAndCountLive(activeWsConnections());
+        return activeWsConnections().compactAndCountLive();
     }
 
     std::size_t countLiveServers() {
-        return compactAndCountLive(activeWsServers());
+        return activeWsServers().compactAndCountLive();
     }
 } // namespace
 

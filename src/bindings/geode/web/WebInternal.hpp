@@ -1,18 +1,17 @@
 #pragma once
 
 #include "bindings/geode/web/WebCaps.hpp"
-#include "core/Runtime.hpp"
 #include "framework/callback/LuaCallback.hpp"
+#include "framework/lifecycle/ShutdownHook.hpp"
+#include "framework/lifecycle/WeakHandlePool.hpp"
 
 #include <Geode/Geode.hpp>
 #include <Geode/utils/web.hpp>
-#include <algorithm>
 #include <cstddef>
 #include <lua.h>
 #include <lualib.h>
 #include <memory>
 #include <new>
-#include <vector>
 
 namespace luax {
     namespace web = geode::utils::web;
@@ -77,13 +76,13 @@ namespace luax {
         std::shared_ptr<WebListenerState> state;
     };
 
-    inline std::vector<std::weak_ptr<WebTask>>& activeTasks() {
-        static std::vector<std::weak_ptr<WebTask>> tasks;
+    inline WeakHandlePool<WebTask>& activeTasks() {
+        static WeakHandlePool<WebTask> tasks;
         return tasks;
     }
 
-    inline std::vector<std::weak_ptr<WebListenerState>>& activeListeners() {
-        static std::vector<std::weak_ptr<WebListenerState>> listeners;
+    inline WeakHandlePool<WebListenerState>& activeListeners() {
+        static WeakHandlePool<WebListenerState> listeners;
         return listeners;
     }
 
@@ -93,52 +92,22 @@ namespace luax {
     }
 
     inline void clearWebState() {
-        for (auto& weak : activeTasks()) {
-            if (auto task = weak.lock()) {
-                task->cancel();
-            }
-        }
-        activeTasks().clear();
-        for (auto& weak : activeListeners()) {
-            if (auto listener = weak.lock()) {
-                listener->disconnect();
-            }
-        }
-        activeListeners().clear();
+        activeTasks().clearAll([](WebTask& task) {
+            task.cancel();
+        });
+        activeListeners().clearAll([](WebListenerState& listener) {
+            listener.disconnect();
+        });
         webShutdownHookRegistered() = false;
     }
 
     inline void ensureShutdownHook() {
-        if (webShutdownHookRegistered()) return;
-        auto* rt = Runtime::getIfInitialized();
-        if (!rt) return;
-        rt->registerShutdownHook(&clearWebState);
-        webShutdownHookRegistered() = true;
+        ensureShutdownHook(webShutdownHookRegistered(), &clearWebState);
     }
 
     inline void compactWeakState() {
-        auto& tasks = activeTasks();
-        tasks.erase(
-            std::remove_if(
-                tasks.begin(),
-                tasks.end(),
-                [](auto const& weak) {
-                    return weak.expired();
-                }
-            ),
-            tasks.end()
-        );
-        auto& listeners = activeListeners();
-        listeners.erase(
-            std::remove_if(
-                listeners.begin(),
-                listeners.end(),
-                [](auto const& weak) {
-                    return weak.expired();
-                }
-            ),
-            listeners.end()
-        );
+        activeTasks().compact();
+        activeListeners().compact();
     }
 
     inline WebRequestBox* checkRequestBox(lua_State* L, int idx, [[maybe_unused]] char const* method) {

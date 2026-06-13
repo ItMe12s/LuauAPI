@@ -236,7 +236,7 @@ namespace luax::wsdetail {
         if (!url.starts_with("ws://") && !url.starts_with("wss://")) {
             return pushNilErr(L, "websocket url must start with ws:// or wss://");
         }
-        if (compactAndCountLive(activeWsConnections()) >= kMaxWebSocketConnections) {
+        if (activeWsConnections().compactAndCountLive() >= kMaxWebSocketConnections) {
             return pushNilErr(L, "too many websocket connections");
         }
 
@@ -246,7 +246,7 @@ namespace luax::wsdetail {
         applyConnectOptions(L, *conn, 2);
         installMessageCallback(conn);
 
-        activeWsConnections().push_back(conn);
+        activeWsConnections().track(conn);
         ensureWsShutdownHook();
         conn->socket.start();
 
