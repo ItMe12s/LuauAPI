@@ -1,4 +1,5 @@
 #include "render3d/assets/MeshAsset.hpp"
+#include "render3d/gpu/GpuTypes.hpp"
 #include "render3d/gpu/SceneDrawList.hpp"
 #include "render3d/types/Frustum.hpp"
 

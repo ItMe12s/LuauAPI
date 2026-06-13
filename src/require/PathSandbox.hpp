@@ -93,7 +93,6 @@ namespace luax {
         return path.generic_string();
     }
 
-    // Platform-safe path text for real filesystem paths.
     inline std::string filesystemPathString(std::filesystem::path const& path) {
 #if defined(LUAUAPI_HOST_TESTS)
         auto text = path.u8string();

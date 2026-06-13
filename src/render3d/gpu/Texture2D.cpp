@@ -1,8 +1,7 @@
 #include "render3d/gpu/Texture2D.hpp"
 
 #include "render3d/assets/MeshAsset.hpp"
-
-#include <cocos2d.h>
+#include "render3d/gpu/GlUtil.hpp"
 
 namespace luax::render3d {
 

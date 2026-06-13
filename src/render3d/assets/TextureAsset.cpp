@@ -4,8 +4,8 @@
     #include "render3d/viewport/CCViewportFrame.hpp"
 
     #include <Geode/utils/cocos.hpp>
+    #include <cocos2d.h>
 #endif
-#include <cocos2d.h>
 
 namespace luax::render3d {
 

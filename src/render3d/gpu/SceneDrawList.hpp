@@ -1,6 +1,6 @@
 #pragma once
 
-#include "render3d/gpu/Renderer3DMeshCache.hpp"
+#include "render3d/gpu/GpuTypes.hpp"
 #include "render3d/types/SceneTypes.hpp"
 
 #include <cstdint>
@@ -12,6 +12,7 @@
 namespace luax::render3d {
 
     struct Frustum;
+    class MeshAsset;
     struct TextureAsset;
 
     struct SceneDrawItem {

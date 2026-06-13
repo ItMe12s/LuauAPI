@@ -61,7 +61,6 @@ namespace luax {
         ) override;
         static std::string compileSource(std::string_view source);
 
-        // Only outermost guard sets script budget/deadline.
         class ScriptBudgetGuard final {
         public:
             ScriptBudgetGuard(Runtime& runtime, int deadlineMs);

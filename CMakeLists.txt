@@ -14,7 +14,7 @@ project(LuauAPI)
 include(FetchContent)
 include(CTest)
 
-option(LUAUAPI_BUILD_TESTS "Build LuauAPI host unit tests" OFF)
+option(LUAUAPI_BUILD_TESTS "Build LuauAPI host unit tests" ON)
 option(LUAUAPI_HOST_ONLY "Host-only configure without Geode SDK or configure-time codegen listing" OFF)
 
 include(cmake/Helpers.cmake)

@@ -33,10 +33,16 @@ A few libraries are handwritten in C++ under `src/bindings/geode/` and `src/fram
 | `GeodeVersionBinding.cpp` | `geode.VersionInfo` |
 | `task/TaskBinding.cpp` | `task` and `time` |
 | `imgui/ImGuiBinding.cpp` | `imgui` |
+| `render3d/Gd3dRegister.cpp` | `gd3d` entry (`registerGd3d`) |
 | `render3d/TransformBinding.cpp` | `gd3d.Transform` |
-| `render3d/GltfBinding.cpp` | `gd3d.gltf` and mesh handles |
+| `render3d/GltfBinding.cpp` | `gd3d.gltf` |
+| `render3d/ProceduralMeshBinding.cpp` | `gd3d.mesh` |
+| `render3d/TextureBinding.cpp` | `gd3d.texture` |
 | `render3d/MaterialBinding.cpp` | `gd3d.Material` |
 | `render3d/ViewportFrameBinding.cpp` | `gd3d.ViewportFrame` |
+| `render3d/internal/MeshHandleBinding.cpp` | shared `Mesh` userdata metatable |
+| `render3d/internal/Marshaling.hpp` | vec3/color parsers |
+| `render3d/internal/Handles.hpp` | mesh/material/texture handle types |
 
 The web binding is split across several translation units:
 

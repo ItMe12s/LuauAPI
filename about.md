@@ -22,7 +22,7 @@ Plus, you get fewer crashes and clear, easy-to-understand error logging.
 - In-game developer tools (enable via developer mode)
 - JIT and JIT-less support
 - Easy-to-use 3D APIs and viewports through `gd3d`
-- Rich built-in libraries, including `task`, `loadstring`, and more
+- Rich built-in libraries, including `task`, `loadstring`, `websocket`, and more
 
 ---
 
@@ -30,7 +30,7 @@ Plus, you get fewer crashes and clear, easy-to-understand error logging.
 
 - Custom UI builder, framework, pre-made assets
 - More advanced 3D functionality and support
-- Sprite and rig animator
+- Sprite and rig animator with keyframes
 - The remaining 0.01% of bindings and m_Fields
 - Other quality of life features
 

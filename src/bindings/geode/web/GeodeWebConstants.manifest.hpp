@@ -1,8 +1,5 @@
 #pragma once
 
-// X-macro manifests for geode.utils.web constant tables registered in registerConstants.
-// Expand with LUAX_WEB_INT_ENUM_ENTRY / LUAX_WEB_LONG_ENUM_ENTRY.
-
 #define LUAX_WEB_INT_ENUM_ENTRY(Enum, name) {#name, static_cast<int>(Enum::name)},
 
 #define LUAX_WEB_HTTP_VERSION(X)                   \
