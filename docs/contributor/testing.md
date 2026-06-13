@@ -37,10 +37,14 @@ CTest discovers the cases at build time. The files are:
 | `tests/fields_tests.cpp` | `m_fields` and release eviction |
 | `tests/geode_fs_path_tests.cpp` | Geode filesystem binding path resolution |
 | `tests/handle_gc_tests.cpp` | Task and ImGui draw handle `__gc` cancellation |
-| `tests/host/GltfParseTests.cpp` | glTF parse, materials, alpha flags |
-| `tests/host/ProceduralMeshTests.cpp` | Procedural mesh build and validation |
 | `tests/host/FrustumTests.cpp` | Frustum culling math |
+| `tests/host/Gd3dMeshBindingTests.cpp` | Procedural mesh Lua binding and handle lifetime |
+| `tests/host/Gd3dTransformBindingTests.cpp` | `gd3d.Transform` constructors and methods |
+| `tests/host/GltfParseTests.cpp` | glTF parse, materials, alpha flags |
+| `tests/host/ImageDecodeTests.cpp` | PNG and JPEG decode limits |
+| `tests/host/ProceduralMeshTests.cpp` | Procedural mesh build and validation |
 | `tests/host/Render3DMathTests.cpp` | Transform math and helpers |
+| `tests/host/SceneDrawListTests.cpp` | Scene draw list sorting and batching |
 | `tests/imgui_scheduler_tests.cpp` | ImGui draw scheduler registration |
 | `tests/indexed_slot_map_tests.cpp` | Indexed slot map used by the schedulers |
 | `tests/loadstring_tests.cpp` | `loadstring` compile and runtime behavior |
@@ -88,8 +92,25 @@ The `luauapi_tests` target links only:
 
 Which keeps the tests fast and host only.
 
-The host test binary compiles part of the 3D stack for parse and math coverage.
-It does not link OpenGL, cocos2d, or gd3d Lua bindings. Viewport rendering is tested in-game only.
+The host test binary compiles part of the 3D stack for parse, math, and binding coverage.
+It links gd3d transform, mesh, and glTF binding translation units, but not OpenGL, cocos2d, or `gd3d.ViewportFrame`.
+Viewport rendering and GPU framebuffer setup are tested in-game only.
+
+## CI
+
+GitHub Actions workflow `.github/workflows/multi-platform.yml` runs:
+
+| Job | Platform | What it runs |
+| --- | --- | --- |
+| `windows-tests` | Windows | Builds `luauapi_tests`, runs CTest (Catch2 host suite) |
+| `macos-tests` | macOS | Same as Windows |
+| `linux-codegen-tests` | Linux | Python codegen tests only (`luauapi_codegen_tests`) |
+| `build` matrix | Windows, macOS, iOS, Android32, Android64 | Full mod build via Geode SDK |
+| `package` | Ubuntu | Combines matrix artifacts |
+
+The host test target links IXWebSocket and mbedTLS for websocket runtime tests.
+Windows also links `ws2_32`.
+See `CMakeLists.txt` for the full link list.
 
 ## The Python codegen tests
 

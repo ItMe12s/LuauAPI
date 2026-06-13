@@ -5,6 +5,27 @@
 A few small scripts that show the common things a script does. Each one is complete and runnable on its own.
 For full signatures, see the [Lua reference](../reference/lua/globals.md).
 
+## Load a module with require
+
+Entry scripts and modules share one flat resources root.
+A module file returns exactly one value.
+
+```lua
+-- Math.luau
+local M = {}
+function M.add(a, b)
+    return a + b
+end
+return M
+```
+
+```lua
+local Math = require("Math")
+print(Math.add(2, 3))
+```
+
+See [Modules](../reference/lua/modules.md) for path rules.
+
 ## Log and return a module
 
 A file run with `runFile` does not need to return anything. A file loaded with `require` must return exactly one value.
@@ -44,6 +65,63 @@ handle = task.every(0.5, function()
     if ticks >= 5 then
         handle:cancel()
     end
+end)
+```
+
+## Save data with fs, json, and Mod
+
+Use sandbox roots instead of raw filesystem paths.
+
+```lua
+local raw, err = geode.fs.read("save", "stats.json")
+local stats = raw and geode.json.parse(raw) or { wins = 0 }
+
+stats.wins += 1
+geode.Mod.setSavedValue("highScore", stats.wins)
+
+local ok, writeErr = geode.fs.write("save", "stats.json", geode.json.dump(stats))
+if not ok then
+    print(writeErr)
+end
+```
+
+## Share an API on _G
+
+Publish once from the provider mod. Consumers index `_G` by mod id.
+
+```lua
+-- provider mod
+_G["my.mod.id"] = {
+    version = 1,
+    greet = function(name) print("hi", name) end,
+}
+```
+
+```lua
+-- consumer mod
+local api = _G["my.mod.id"]
+if api then
+    api.greet("world")
+end
+```
+
+See [Sharing APIs between mods](../reference/lua/sharing-apis.md) for load-order polling with `task`.
+
+## task.spawn, defer, and delay
+
+`task.spawn` runs immediately. `task.defer` runs on the next tick. `task.delay` runs once after a delay.
+
+```lua
+task.spawn(function()
+    print("runs now")
+end)
+
+task.defer(function()
+    print("runs next tick")
+end)
+
+task.delay(1.0, function()
+    print("runs after one second")
 end)
 ```
 
@@ -179,6 +257,8 @@ geode.hook("geode.gd.MenuLayer:init/0", {
 ## Related
 
 - [Globals](../reference/lua/globals.md)
+- [Modules](../reference/lua/modules.md)
+- [Sharing APIs between mods](../reference/lua/sharing-apis.md)
 - [Hooks](../reference/lua/hooks.md)
 - [Tasks and time](../reference/lua/tasks.md)
 - [web](../reference/lua/web.md)

@@ -3,7 +3,20 @@
 ## Summary
 
 The public C++ API in `imes::luauapi`. Signatures match `include/LuauAPI.hpp`.
-All functions must be called on the main thread.
+Sync run functions and status queries must run on the main thread.
+Async run functions prepare on the calling thread and execute on the main thread.
+
+## Threading
+
+| API | Caller thread | Notes |
+| --- | --- | --- |
+| `runFile`, `runScript` | Main only | Full path validation, read, compile, and run |
+| `runFileAsync`, `runScriptAsync` | Any (not shutting down) | Path validation and file read on caller, script runs on main |
+| `isReady`, `status`, `lastError` | Main only | Off main thread or during shutdown return safe defaults |
+| `memoryUsage`, `memoryLimit`, `codegenEnabled` | Main only | Return zeros or false off main thread |
+
+Preparation errors (bad path, oversized file, shutdown) return `Err` on the caller thread for async calls and do not update `lastError()`.
+Execution errors populate both the async `Result` and `lastError()`.
 
 ## Run functions
 
@@ -45,7 +58,9 @@ arc::Future<geode::Result<void>> runScriptAsync(
 );
 ```
 
-These read on the calling thread, run the script on the main thread, and return a future.
+These prepare on the calling thread, hop to the main thread to run the script, and return a future.
+Preparation and execution errors follow the rule in Threading above.
+If main-thread dispatch is cancelled, the future resolves with `"luau main-thread execution cancelled"`.
 
 ## Status functions
 

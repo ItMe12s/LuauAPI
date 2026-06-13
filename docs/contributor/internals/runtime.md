@@ -77,6 +77,9 @@ After a restart, an old reference sees a generation mismatch and reports itself 
 `registerShutdownHook` adds a cleanup callback.
 On shutdown the runtime runs the hooks, releases Lua owned C++ objects, clears field tables, and closes the Lua state.
 
+Subsystems register hooks through `ensureShutdownHook` in `src/framework/lifecycle/ShutdownHook.hpp`.
+WebSocket uses this to close live connections and servers. See [Bindings framework](bindings-framework.md) Shutdown hooks.
+
 ## Related
 
 - [Architecture](../architecture.md)
@@ -89,3 +92,4 @@ On shutdown the runtime runs the hooks, releases Lua owned C++ objects, clears f
 - `src/core/Runtime.cpp`
 - `src/core/AllocatorAccounting.hpp`
 - `src/core/Config.hpp`
+- `src/framework/lifecycle/ShutdownHook.hpp`

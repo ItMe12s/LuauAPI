@@ -6,6 +6,9 @@ The `task` library schedules callbacks and the `time` library reads clocks.
 Tasks run on the game tick, so they freeze when the game pauses.
 Types match `tools/luau_codegen/extra_bindings/task.dluau`.
 
+`loadstring` is a global, not part of `task`.
+See [Globals](globals.md).
+
 ## Types
 
 ```lua

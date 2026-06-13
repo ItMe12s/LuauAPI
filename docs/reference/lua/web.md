@@ -76,7 +76,7 @@ Userdata types:
 - `WebListenerHandle`
 
 Timings are in milliseconds.
-Setting `certVerification` to false disables TLS verification for that request.
+See Security for `certVerification` and TLS behavior.
 
 ## Functions
 
@@ -373,9 +373,6 @@ File I/O stays inside mod sandbox roots:
 - `:saveTo` on `WebResponse`
 - `:fileFrom` on `MultipartForm`
 
-Users choose which mods to install.
-Luau scripts have the same network access as the host mod native code.
-
 TLS:
 
 - Setting `certVerification` to false disables certificate verification for that request.
@@ -393,6 +390,7 @@ For WebSocket LAN exposure with `host = "0.0.0.0"`, see [websocket](websocket.md
 
 ## Related
 
+- [geode.utils](utils.md)
 - [websocket](websocket.md)
 - [json](json.md)
 - [fs](fs.md)

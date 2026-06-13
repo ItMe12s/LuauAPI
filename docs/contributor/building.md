@@ -72,6 +72,29 @@ and configure-time codegen listing, for host-only tooling without `GEODE_SDK`.
 Tests are off by default. Turn them on with `-DLUAUAPI_BUILD_TESTS=ON`, build, then run CTest.
 See [Testing](testing.md).
 
+## Format check
+
+Before pushing C++ changes, run the format script from the repo root:
+
+```powershell
+scripts/ci/format.ps1 -Check
+```
+
+Pass `-Target clang`, `-Target python`, or omit `-Target` for both.
+Drop `-Check` to rewrite files in place.
+
+## CI
+
+Continuous integration is defined in `.github/workflows/multi-platform.yml`:
+
+- **Windows Tests** and **macOS Tests** configure with `-DLUAUAPI_BUILD_TESTS=ON`, build `luauapi_tests`, and run CTest.
+- **Linux Codegen Tests** run the Python suite under `tests/luau_codegen/`.
+- The **build** matrix produces the mod for Windows, macOS, iOS, and Android ABIs.
+- **Package builds** combines matrix artifacts for release.
+
+Host tests link IXWebSocket and mbedTLS for websocket coverage.
+See [Testing](testing.md) for the full host test list and link dependencies.
+
 ## Related
 
 - [Installation](../getting-started/installation.md)

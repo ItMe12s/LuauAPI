@@ -6,11 +6,17 @@ How to build a Geode mod that uses LuauAPI.
 Install the mod, declare a dependency, and pack your `.luau` files as resources.
 No build steps are needed for this path.
 
+LuauAPI is in beta. APIs and limits may change between releases.
+
 ## Install the mod
 
-Install LuauAPI from the Geode index in-game, or grab the `.geode` file from the GitHub release tab.
+Install LuauAPI from the Geode in-game mod index,
+or download the `.geode` file from [GitHub releases](https://github.com/ItMe12s/LuauAPI/releases).
 LuauAPI ships with the mod id `imes.luauapi`.
 It loads early with first priority, so the runtime is ready for other mods as soon as the game starts.
+
+Requires Geode **5.7.1** or newer (see `mod.json` `"geode"` field).
+Community help: [Discord](https://discord.gg/E8f6D6XqbW).
 
 ## Depend on it
 
@@ -36,6 +42,12 @@ Put your `.luau` files under the resources path you declare.
 They get packed with your mod and load from your mod resources directory at runtime.
 Ship 3D assets the same way. Pack `.glb` or `.gltf` files under `"resources"` and load them with `gd3d.gltf.loadMesh`.
 See [gd3d](../reference/lua/gd3d.md).
+
+## Run from C++
+
+Most mods only need the dependency above.
+If your mod already has C++ entry points, call `imes::luauapi::runFile` or `runScript` on the main thread with your resources directory.
+See [Your first script](first-script.md) and the [C++ integration guide](../reference/cpp/integration-guide.md).
 
 ## Settings
 

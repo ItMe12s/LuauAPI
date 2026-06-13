@@ -141,6 +141,31 @@ This page is the canonical list of caps, deadlines, and error strings for LuauAP
 
 ---
 
+## C++ run API
+
+Errors from `runFile`, `runScript`, and their async variants.
+
+| Message | When | Return shape |
+| --- | --- | --- |
+| `luau api must be called on the main thread` | Sync run off main thread | C++ `Err` |
+| `luau runtime shutting down` | Run while shutting down | C++ `Err` |
+| `luau runtime not ready` | Runtime failed init | C++ `Err` |
+| `luau main-thread execution cancelled` | Async dispatch cancelled | C++ `Err` on future |
+| `resources root is empty` | Empty resources root | C++ `Err` |
+| `resources root cannot be resolved: ...` | Root path invalid | C++ `Err` |
+| `resources root is not a directory: ...` | Root is not a directory | C++ `Err` |
+| `relative path must be a flat .luau resource name` | Bad `runFile` relative path | C++ `Err` |
+| `script path escapes resources root` | Resolved path outside root | C++ `Err` |
+| `script file not found: ...` | Missing script file | C++ `Err` |
+| `script cannot be read: ...` | Read failure | C++ `Err` |
+| `script exceeds maximum size` | Inline or read source over cap | C++ `Err` |
+| (Luau traceback) | Script runtime error or deadline | C++ `Err` and `lastError()` |
+
+Preparation errors do not update `lastError()`.
+Execution errors update both `Result` and `lastError()`.
+
+---
+
 ## Web limits
 
 | Constant | Value | Meaning |
@@ -148,7 +173,7 @@ This page is the canonical list of caps, deadlines, and error strings for LuauAP
 | `kMaxWebResponseBytes` | `32 MiB` | Max HTTP response body in Lua |
 | `kMaxWebRequestBytes` | `32 MiB` | Max HTTP request or multipart body |
 
-### Web limit serrors
+### Web limits errors
 
 | Message | When | Return shape |
 | --- | --- | --- |
@@ -175,7 +200,14 @@ This page is the canonical list of caps, deadlines, and error strings for LuauAP
 | `too many websocket servers` | Server cap hit | `nil, err` on `serve` |
 | `websocket message exceeds maximum send size` | Send over cap | `nil, err` on send methods |
 | `websocket message exceeds maximum receive size` | Receive over cap | `onError` callback, close code 1009 |
+| `websocket connection is closed` | Method on closed connection | Lua error or `nil, err` |
+| `websocket peer is disconnected` | Method on disconnected peer | `nil, err` |
+| `websocket server is stopped` | Method on stopped server | Lua error or `nil, err` |
+| `websocket url must start with ws:// or wss://` | Bad client URL scheme | `nil, err` on `connect` |
+| `websocket.serve expected port 1..65535` | Port out of range | `nil, err` on `serve` |
 | (none) | Server client cap hit | Extra clients rejected silently |
+
+Lifecycle error strings are defined in `src/bindings/websocket/WebSocketInternal.hpp`.
 
 ---
 
@@ -184,6 +216,7 @@ This page is the canonical list of caps, deadlines, and error strings for LuauAP
 | Constant | Value | Meaning |
 | --- | --- | --- |
 | `kMaxFsReadBytes` | `32 MiB` | Max glTF file and buffer read size. Same as the filesystem read cap above. |
+| `kMaxProceduralMeshVertices` | `200000` | Max vertices in `gd3d.mesh.new` |
 | Max texture dimension | `8192` | Max decoded PNG or JPEG side (`STBI_MAX_DIMENSIONS` in `ImageDecode.cpp`) |
 
 ### gd3d and glTF errors
@@ -210,6 +243,10 @@ This page is the canonical list of caps, deadlines, and error strings for LuauAP
 | `ViewportFrame:addMesh: mesh handle is invalid` | Mesh released before add | Lua error |
 | `%s: material handle is invalid` | Stale or bad material userdata | Lua error |
 | `gd3d.Material.new: expected color field` | Missing color in constructor table | Lua error |
+| `positions exceed maximum vertex count` | Procedural mesh over vertex cap | `nil, err` on `gd3d.mesh.new` |
+| `encoded image exceeds maximum read size` | Image file over read cap | `nil, err` on texture or glTF image load |
+| `failed to decode image: ...` | stb decode failure | `nil, err` |
+| `decoded image exceeds maximum size` | Decoded pixel buffer over cap | `nil, err` |
 
 Sandbox path errors from [fs](../lua/fs.md) also apply to `loadMesh` roots and paths.
 
@@ -246,6 +283,10 @@ When an allocation would cross the cap, it fails and Lua reports an out of memor
 ## Source
 
 - `src/core/Config.hpp`
+- `src/bindings/geode/web/WebCaps.hpp`
+- `src/bindings/websocket/WebSocketInternal.hpp`
+- `src/render3d/assets/MeshAsset.hpp`
+- `src/render3d/assets/ImageDecode.cpp`
 - `include/RuntimeTypes.hpp`
 - `include/LuauAPI.hpp`
 - `src/api.cpp`

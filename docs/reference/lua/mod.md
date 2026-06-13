@@ -87,6 +87,13 @@ geode.Mod.getConfigDir() -> string
 
 Return the paths to the mod resources, save, and config folders. Script files live in resources.
 
+## Limits
+
+Saved values and settings use the JSON model.
+Depth and parse size limits match [json](json.md).
+Saved values over the cap fail with `json exceeds maximum size` or `json exceeds maximum depth`.
+See [Limits and errors](../cpp/limits-and-errors.md) for the full table.
+
 ## Example
 
 ```lua

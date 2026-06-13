@@ -24,7 +24,8 @@ A few libraries are handwritten in C++ under `src/bindings/geode/` and `src/fram
 | --- | --- |
 | `GeodeFsBinding.cpp` | `geode.fs` |
 | `GeodeModBinding.cpp` | `geode.Mod` |
-| `GeodeSmallBindings.cpp` | `geode.json`, `geode.utils.base64`, `geode.utils.permission`, `geode.ColorProvider`, `geode.Keybind`, `geode.VersionInfo` |
+| `GeodeSmallBindings.cpp` | `geode.json`, `geode.utils.base64`, `geode.utils.permission`, `geode.ColorProvider`,`geode.Keybind`, `geode.VersionInfo` (see host-test split below) |
+| `GeodeWebBinding.cpp` and siblings under `web/` | `geode.utils.web` |
 | `GeodeCocosBinding.cpp` | Handwritten `geode.cocos` helpers |
 | `task/TaskBinding.cpp` | `task` and `time` |
 | `imgui/ImGuiBinding.cpp` | `imgui` |
@@ -101,8 +102,54 @@ Tag assignments:
   - `kWsConnectionUserdataTag` (4)
   - `kWsServerUserdataTag` (5)
   - `kWsPeerUserdataTag` (6)
+  - `kTransformUserdataTag` (7)
+  - `kMeshAssetUserdataTag` (8)
+  - `kMaterialUserdataTag` (9)
+  - `kTextureUserdataTag` (10)
 - Dynamic tags:
-  - Begin at `kFirstDynamicUsertypeTag` (7)
+  - Begin at `kFirstDynamicUsertypeTag` (11)
+
+Codegen usertypes take the next free dynamic tag at registration time.
+
+## Handle pools
+
+`WeakHandlePool` in `src/framework/lifecycle/WeakHandlePool.hpp` tracks live handles
+for subsystems that need runtime shutdown cleanup.
+
+- `track` stores a `shared_ptr` or `weak_ptr`.
+- `compactAndCountLive` drops expired weak entries and returns the live count.
+- `clearAll` locks each live entry and runs a caller-supplied shutdown callback, then clears the pool.
+
+WebSocket connections and servers use this pool.
+On runtime shutdown, `clearWsState` shuts down every live socket and clears the pools.
+
+## Mod sandbox
+
+`ModSandbox.hpp` resolves mod-owned filesystem paths for bindings that read or write user files.
+
+- `resolveSandboxTarget(L, rootIdx, pathIdx, method, requireWritable)` maps a root name
+  (`save`, `config`, `persistent`, or `resources`) and a relative path to a canonical path inside that directory.
+- `readSandboxTextFile(path)` reads a regular file with the filesystem read cap.
+
+Used by `geode.fs`, `geode.utils.web` (`WebResponse:saveTo`, `MultipartForm:fileFrom`), and `gd3d` asset loaders.
+
+This is separate from `PathSandbox.hpp` in `src/require/`, which serves the public C++ `runFile` path and the `require` loader. Both enforce root containment, but mod sandbox roots come from the current mod directories while require paths stay inside the resources root passed at run time.
+
+## Shutdown hooks
+
+`ShutdownHook.hpp` provides `ensureShutdownHook(registered, clearFn)`.
+Subsystems call it once to register a runtime shutdown callback through `Runtime::registerShutdownHook`.
+WebSocket registers `clearWsState` this way so open connections and servers close before the Lua state is torn down.
+
+## Host-test binding split
+
+When `LUAUAPI_HOST_TESTS` is defined, several bindings compile a reduced surface so tests avoid Geode-only APIs:
+
+- `GeodeSmallBindings.cpp` registers only `geode.json`.
+  Base64, permission, `ColorProvider`, `Keybind`, and `VersionInfo` are omitted.
+- `GeodeWebBinding.cpp`, websocket entry registration,
+  and several gd3d viewport or GPU paths are wrapped in `#if !defined(LUAUAPI_HOST_TESTS)`.
+- Host tests use stubs under `tests/host/` for web async behavior.
 
 ## Ownership
 
@@ -213,3 +260,8 @@ In practice most game types are generated. See [Codegen](../codegen/codegen.md).
 - `src/framework/stack/Types.hpp`
 - `src/framework/stack/ContainerTables.hpp`
 - `src/framework/usertype/Fields.cpp`
+- `src/framework/lifecycle/WeakHandlePool.hpp`
+- `src/framework/lifecycle/ShutdownHook.hpp`
+- `src/bindings/geode/ModSandbox.hpp`
+- `src/require/PathSandbox.hpp`
+- `src/framework/stack/UserdataTags.hpp`

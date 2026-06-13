@@ -89,9 +89,7 @@ server:onClientDisconnect(callback: (peer: WebSocketPeer, code: number, reason: 
 server:onError(callback: (message: string) -> ()) -> WebSocketServer
 ```
 
-The server binds to loopback by default.
-Passing `host = "0.0.0.0"` exposes the server on the local network.
-Only do this intentionally, anything on the LAN can then connect.
+The server binds to loopback by default. See Security for `host = "0.0.0.0"` LAN exposure.
 
 Peer-to-peer setups run `serve` on one peer and `connect` on the other:
 
@@ -124,16 +122,29 @@ Methods on a disconnected peer return `nil` and `"websocket peer is disconnected
 
 ## Limits
 
-Connections, servers, and message sizes are capped.
+Caps apply: 16 client connections, 2 servers, 32 clients per server, and 8 MiB per message.
+Closed connections, stopped servers, and disconnected peers return lifecycle errors such as `websocket connection is closed`.
+See [Limits and errors](../cpp/limits-and-errors.md) for the full cap table and error strings.
 
-See [Limits and errors](../cpp/limits-and-errors.md).
+## Security
 
-## TLS
+WebSocket traffic is not sandboxed.
+Scripts can open outbound client connections to any `ws://` or `wss://` URL the host stack allows.
+There is no URL or host allowlist.
 
-`wss://` certificate verification is on by default.
-On platforms without a usable system certificate store for mbedTLS, pass a PEM bundle via `caBundle`.
-Setting `certVerification = false` disables verification for that connection,
-an intentional escape hatch for self-signed development servers. The server side does not support TLS.
+The local server binds to loopback (`127.0.0.1`) by default.
+Passing `host = "0.0.0.0"` listens on all interfaces, so anything on the LAN can connect.
+Only do this intentionally.
+
+TLS on the client:
+
+- `certVerification` defaults to `true` for `wss://`.
+- Setting `certVerification = false` disables certificate verification for that connection.
+- Use this only for trusted dev servers, for example self-signed certificates.
+- On platforms without a usable system certificate store for mbedTLS, pass a PEM bundle via `caBundle`.
+- The server side does not support TLS.
+
+For HTTP request caps and TLS options on `geode.utils.web`, see [web](web.md) Security.
 
 ## Lifecycle
 

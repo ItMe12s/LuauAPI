@@ -14,7 +14,7 @@ Per-platform plan:
 
 - In `emit/plan.py`, the function `collect_platform_plan(root, platform)` runs `group_supported()` for a specific platform.
 - A method is included if it is callable on that platform, meaning it has a real address (or is marked `link` / `inline`),
-    its arguments and return type can be marshalled, and it is not denied.
+  its arguments and return type can be marshalled, and it is not denied.
 
 Intersection platforms:
 
@@ -26,7 +26,7 @@ Forced intersection:
 - `collect_plan()` calls `_apply_intersection()`.
 - A method is kept only if it is supported on every intersection platform.
 - If a method is supported on some but not all platforms,
-    it is dropped with the reason `intersection-missing-platform:<platforms>`.
+  it is dropped with the reason `intersection-missing-platform:<platforms>`.
 - This rule applies to hooks, fields, and namespace free functions as well.
 - Classes with no members left after intersection become type-only stubs or are skipped entirely.
 

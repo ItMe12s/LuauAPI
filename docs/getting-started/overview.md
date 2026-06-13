@@ -20,8 +20,7 @@ whether a brand new mod or one you already have.
 - One runtime, one main thread. The runtime is created once and reused.
   Almost every entry point must run on the main thread, and the runtime checks this on each call.
 - Resources root and flat paths. Scripts load from a resources directory the host passes.
-  Script and module names are flat single file names with the `.luau` extension.
-  No folders, no `..`, no absolute paths.
+  Names are flat `.luau` file names. See [Modules](../reference/lua/modules.md) for path rules.
 - Deadlines and memory. Each run has a time budget in milliseconds. Going over raises an error.
   Memory has a hard cap with no soft limit.
   See [Limits and errors](../reference/cpp/limits-and-errors.md).

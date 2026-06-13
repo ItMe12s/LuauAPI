@@ -22,6 +22,7 @@ Vec3 values are plain tables `{ x, y, z }`.
 type Vec3 = { x: number, y: number, z: number }
 
 type Transform = {
+    __mul: (self: Transform, other: Transform) -> Transform,
     inverse: (self: Transform) -> Transform,
     lerp: (self: Transform, goal: Transform, alpha: number) -> Transform,
     position: (self: Transform) -> Vec3,
@@ -328,9 +329,14 @@ See [Examples](../../getting-started/examples.md) and [src/scripts/_viewportdemo
 
 ## Limits
 
-Mesh files use the filesystem read cap.
+Mesh files use the filesystem read cap. Procedural meshes cap at 200000 vertices.
+PNG and JPEG decode caps at 8192 px per side.
+The viewport framebuffer is the off-screen render target, sized at content size times cocos scale.
 
-See [Limits and errors](../cpp/limits-and-errors.md).
+There is no hard cap on mesh instances per viewport.
+Performance depends on GPU memory and draw cost.
+
+See [Limits and errors](../cpp/limits-and-errors.md) for cap values, glTF, and procedural mesh error strings.
 
 ## Related
 

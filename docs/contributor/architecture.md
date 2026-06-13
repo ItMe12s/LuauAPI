@@ -12,7 +12,9 @@ This page names the main parts and traces how a script gets from a file to runni
 - Bindings framework. Exposes C++ types to Lua. See [Bindings framework](internals/bindings-framework.md).
 - Module system. Implements sandboxed `require`. See [Module system](internals/module-system.md).
 - Task scheduler. Drives `task` callbacks on the game tick. See [Task scheduler](internals/task-scheduler.md).
-- ImGui draw scheduler. Drives `imgui.onDraw` callbacks each frame. See [ImGui draw scheduler](internals/imgui-draw-scheduler.md).
+- ImGui draw scheduler. Drives `imgui.onDraw` callbacks each frame.
+  See [ImGui draw scheduler](internals/imgui-draw-scheduler.md).
+- WebSocket. Client and local server bindings backed by IXWebSocket. See [websocket](../reference/lua/websocket.md).
 - 3D rendering. Loads glTF meshes and draws them through `gd3d.ViewportFrame` nodes. See [gd3d](../reference/lua/gd3d.md).
 - Codegen. Generates the game bindings and the type stubs. See [Codegen](codegen/codegen.md).
 
@@ -23,8 +25,10 @@ This page names the main parts and traces how a script gets from a file to runni
 - `src/main.cpp`: the mod entry points that drive the runtime lifecycle.
 - `src/core/Config.hpp`: the limits and deadlines. See [Limits and errors](../reference/cpp/limits-and-errors.md).
 - `src/core/`: the runtime, memory allocator, and small utilities such as the indexed slot map.
-- `src/framework/`: the binding registry, usertypes, stack interop, callbacks, views, and scheduling.
+- `src/framework/`: the binding registry, usertypes, stack interop, callbacks, views, scheduling,
+  and lifecycle helpers (`lifecycle/` for handle pools and shutdown hooks).
 - `src/bindings/geode/`: handwritten `geode.*` bindings (web cluster in `web/`).
+- `src/bindings/websocket/`: WebSocket client, server, and peer bindings.
 - `src/bindings/imgui/`: ImGui binding and draw scheduler.
 - `src/bindings/task/`: task scheduler bindings.
 - `src/bindings/render3d/`: handwritten `gd3d` bindings.

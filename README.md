@@ -51,6 +51,7 @@ API reference for everything a script or host can call.
   - [fs](docs/reference/lua/fs.md)
   - [Game objects](docs/reference/lua/game-objects.md)
   - [gd3d](docs/reference/lua/gd3d.md)
+  - [geode.utils](docs/reference/lua/utils.md)
   - [Globals](docs/reference/lua/globals.md)
   - [Hooks](docs/reference/lua/hooks.md)
   - [imgui](docs/reference/lua/imgui.md)
@@ -96,6 +97,8 @@ For anyone working on LuauAPI itself.
 - [About](about.md)
 - [Changelog](changelog.md)
 - [Support](support.md)
+
+Community: [Discord](https://discord.gg/E8f6D6XqbW)
 
 ## Licenses
 
