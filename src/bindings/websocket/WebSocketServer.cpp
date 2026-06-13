@@ -217,8 +217,8 @@ namespace luax::wsdetail {
         int broadcastData(lua_State* L, bool binary) {
             auto& srv = checkRunningServer(L);
             auto data = check<std::string>(L, 2, binary ? "broadcastBinary" : "broadcast");
-            if (data.size() > kMaxWebSocketSendBytes) {
-                return pushNilErr(L, kWsSendSizeExceededMsg);
+            if (!wsSendWithinLimit(data.size())) {
+                return pushWsSendSizeExceeded(L);
             }
             if (srv.stopped.load()) {
                 return pushNilErr(L, kWsServerStoppedMsg);
@@ -245,8 +245,8 @@ namespace luax::wsdetail {
         int peerSendData(lua_State* L, bool binary) {
             auto* box = checkWsPeer(L, 1);
             auto data = check<std::string>(L, 2, binary ? "sendBinary" : "send");
-            if (data.size() > kMaxWebSocketSendBytes) {
-                return pushNilErr(L, kWsSendSizeExceededMsg);
+            if (!wsSendWithinLimit(data.size())) {
+                return pushWsSendSizeExceeded(L);
             }
             std::shared_ptr<ix::WebSocket> keepAlive;
             auto* socket = lockOpenPeer(box, keepAlive);

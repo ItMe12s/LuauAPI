@@ -39,6 +39,9 @@ A few libraries are handwritten in C++ under `src/bindings/geode/` and `src/fram
 | `render3d/internal/Marshaling.hpp` | vec3/color parsers |
 | `render3d/internal/Handles.hpp` | mesh/material/texture handle types |
 
+The `gd3d` Lua module lives in `src/bindings/render3d/`.
+Rendering and asset code lives in `src/render3d/`.
+
 The web binding is split across several translation units:
 
 | File | Role |
@@ -50,6 +53,15 @@ The web binding is split across several translation units:
 | `GeodeWebResponse.cpp` | `WebResponse` accessors |
 | `GeodeWebMultipart.cpp` | `MultipartForm` builders |
 | `GeodeWebListeners.cpp` | Request intercept and response listeners |
+
+The websocket binding lives under `src/bindings/websocket/`:
+
+| File | Role |
+| --- | --- |
+| `WebSocketBinding.cpp` | Entry registration and userdata metatables |
+| `WebSocketConnection.cpp` | `WebSocketConnection` client methods and callbacks |
+| `WebSocketServer.cpp` | `WebSocketServer` and `WebSocketPeer` methods, broadcast, and `serve` |
+| `WebSocketInternal.hpp` | Shared types, limits, and marshaling helpers |
 
 Generated free functions in `bindings_free_functions.cpp` cover the rest of `geode.cocos`.
 Luau types for these bindings come from `tools/luau_codegen/emit/luau_types/` or `extra_bindings/`.

@@ -4,6 +4,7 @@
 #include "framework/callback/LuaCallback.hpp"
 #include "framework/lifecycle/ShutdownHook.hpp"
 #include "framework/lifecycle/WeakHandlePool.hpp"
+#include "framework/stack/Stack.hpp"
 #include "framework/stack/UserdataTags.hpp"
 
 #include <Geode/loader/Log.hpp>
@@ -30,6 +31,15 @@ namespace luax {
     inline constexpr char kWsSendSizeExceededMsg[] = "websocket message exceeds maximum send size";
     inline constexpr char kWsReceiveSizeExceededMsg[] =
         "websocket message exceeds maximum receive size";
+
+    inline bool wsSendWithinLimit(std::size_t size) {
+        return size <= kMaxWebSocketSendBytes;
+    }
+
+    inline int pushWsSendSizeExceeded(lua_State* L) {
+        return pushNilErr(L, kWsSendSizeExceededMsg);
+    }
+
     inline constexpr char kWsConnectionClosedMsg[] = "websocket connection is closed";
     inline constexpr char kWsPeerDisconnectedMsg[] = "websocket peer is disconnected";
     inline constexpr char kWsServerStoppedMsg[] = "websocket server is stopped";

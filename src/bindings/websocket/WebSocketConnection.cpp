@@ -216,8 +216,8 @@ namespace luax::wsdetail {
         int sendData(lua_State* L, bool binary) {
             auto& conn = checkOpenConnection(L);
             auto data = check<std::string>(L, 2, binary ? "sendBinary" : "send");
-            if (data.size() > kMaxWebSocketSendBytes) {
-                return pushNilErr(L, kWsSendSizeExceededMsg);
+            if (!wsSendWithinLimit(data.size())) {
+                return pushWsSendSizeExceeded(L);
             }
             if (conn.stopped.load()) {
                 return pushNilErr(L, kWsConnectionClosedMsg);

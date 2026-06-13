@@ -362,6 +362,35 @@ Over the cap, the call returns `nil` and an error, or raises while parsing optio
 
 See [Limits and errors](../cpp/limits-and-errors.md).
 
+## Security
+
+HTTP requests are not sandboxed.
+Any script can call any URL or host the Geode web stack supports.
+There is no URL or host allowlist.
+
+File I/O stays inside mod sandbox roots:
+
+- `:saveTo` on `WebResponse`
+- `:fileFrom` on `MultipartForm`
+
+Users choose which mods to install.
+Luau scripts have the same network access as the host mod native code.
+
+TLS:
+
+- Setting `certVerification` to false disables certificate verification for that request.
+- Use this only for trusted dev servers, for example self-signed certificates.
+
+Listeners:
+
+- `onRequestIntercept` and `onResponse` see traffic from every loaded mod.
+- Callbacks get the mod id as the first argument.
+- `onRequestInterceptFor`, `onResponseFor`, and the `ById` variants filter to one mod or request.
+- Any mod can still register a global listener.
+- Do not put secrets in URLs, headers, or bodies when other mods may be loaded.
+
+For WebSocket LAN exposure with `host = "0.0.0.0"`, see [websocket](websocket.md).
+
 ## Related
 
 - [websocket](websocket.md)
