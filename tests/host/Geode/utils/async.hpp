@@ -29,4 +29,18 @@ namespace geode::async {
     MainThreadAwaiter<T, std::decay_t<Fn>> waitForMainThread(Fn&& fn) {
         return {std::forward<Fn>(fn), {}};
     }
+
+    template <typename Ret = void>
+    class TaskHolder {
+    public:
+        TaskHolder() = default;
+        TaskHolder(TaskHolder const&) = delete;
+        TaskHolder& operator=(TaskHolder const&) = delete;
+        TaskHolder(TaskHolder&&) noexcept = default;
+        TaskHolder& operator=(TaskHolder&&) noexcept = default;
+
+        ~TaskHolder() { cancel(); }
+
+        void cancel() {}
+    };
 }

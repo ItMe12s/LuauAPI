@@ -3,7 +3,6 @@
 #include "bindings/geode/web/WebInternal.hpp"
 #include "framework/callback/LuaCallback.hpp"
 
-#include <Geode/utils/web.hpp>
 #include <cstdint>
 #include <functional>
 #include <lua.h>
