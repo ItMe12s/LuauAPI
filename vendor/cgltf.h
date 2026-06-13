@@ -1,3 +1,6 @@
+// Added Windows/Clang-safe I/O and string copy functions for LuauAPI (C++23).
+// Control + F for "// LuauAPI patch"
+
 /**
  * cgltf - a single-file glTF 2.0 parser written in C99.
  *
@@ -1021,6 +1024,26 @@ static void cgltf_default_free(void* user, void* ptr)
 	CGLTF_FREE(ptr);
 }
 
+// LuauAPI patch: Windows/Clang-safe I/O and string copies
+#if defined(_WIN32) && !defined(__CYGWIN__)
+static FILE* cgltf_fopen_read_binary(char const* path)
+{
+	FILE* file = NULL;
+	return fopen_s(&file, path, "rb") == 0 ? file : NULL;
+}
+#else
+static FILE* cgltf_fopen_read_binary(char const* path)
+{
+	return fopen(path, "rb");
+}
+#endif
+
+static void cgltf_copy_string(char* dest, char const* src, size_t count)
+{
+	memcpy(dest, src, count);
+	dest[count] = '\0';
+}
+
 static void* cgltf_calloc(cgltf_options* options, size_t element_size, cgltf_size count)
 {
 	if (SIZE_MAX / element_size < count)
@@ -1042,7 +1065,8 @@ static cgltf_result cgltf_default_file_read(const struct cgltf_memory_options* m
 	void* (*memory_alloc)(void*, cgltf_size) = memory_options->alloc_func ? memory_options->alloc_func : &cgltf_default_alloc;
 	void (*memory_free)(void*, void*) = memory_options->free_func ? memory_options->free_func : &cgltf_default_free;
 
-	FILE* file = fopen(path, "rb");
+	// LuauAPI patch
+	FILE* file = cgltf_fopen_read_binary(path);
 	if (!file)
 	{
 		return cgltf_result_file_not_found;
@@ -1054,8 +1078,9 @@ static cgltf_result cgltf_default_file_read(const struct cgltf_memory_options* m
 	{
 		fseek(file, 0, SEEK_END);
 
-#ifdef _MSC_VER
-		__int64 length = _ftelli64(file);
+		// LuauAPI patch
+#if defined(_MSC_VER) || defined(_WIN32)
+		long long length = _ftelli64(file);
 #else
 		long length = ftell(file);
 #endif
@@ -1281,12 +1306,14 @@ static void cgltf_combine_paths(char* path, const char* base, const char* uri)
 	{
 		size_t prefix = slash - base + 1;
 
-		strncpy(path, base, prefix);
-		strcpy(path + prefix, uri);
+		// LuauAPI patch
+		memcpy(path, base, prefix);
+		memcpy(path + prefix, uri, strlen(uri) + 1);
 	}
 	else
 	{
-		strcpy(path, uri);
+		// LuauAPI patch
+		memcpy(path, uri, strlen(uri) + 1);
 	}
 }
 
@@ -1816,13 +1843,13 @@ cgltf_result cgltf_copy_extras_json(const cgltf_data* data, const cgltf_extras* 
 
 	if (*dest_size + 1 < json_size)
 	{
-		strncpy(dest, data->json + extras->start_offset, *dest_size - 1);
-		dest[*dest_size - 1] = 0;
+		// LuauAPI patch
+		cgltf_copy_string(dest, data->json + extras->start_offset, *dest_size - 1);
 	}
 	else
 	{
-		strncpy(dest, data->json + extras->start_offset, json_size);
-		dest[json_size] = 0;
+		// LuauAPI patch
+		cgltf_copy_string(dest, data->json + extras->start_offset, json_size);
 	}
 
 	return cgltf_result_success;
@@ -2713,8 +2740,8 @@ static int cgltf_json_to_int(jsmntok_t const* tok, const uint8_t* json_chunk)
 	CGLTF_CHECK_TOKTYPE(*tok, JSMN_PRIMITIVE);
 	char tmp[128];
 	int size = (size_t)(tok->end - tok->start) < sizeof(tmp) ? (int)(tok->end - tok->start) : (int)(sizeof(tmp) - 1);
-	strncpy(tmp, (const char*)json_chunk + tok->start, size);
-	tmp[size] = 0;
+	// LuauAPI patch
+	cgltf_copy_string(tmp, (const char*)json_chunk + tok->start, size);
 	return CGLTF_ATOI(tmp);
 }
 
@@ -2723,8 +2750,8 @@ static cgltf_size cgltf_json_to_size(jsmntok_t const* tok, const uint8_t* json_c
 	CGLTF_CHECK_TOKTYPE_RET(*tok, JSMN_PRIMITIVE, 0);
 	char tmp[128];
 	int size = (size_t)(tok->end - tok->start) < sizeof(tmp) ? (int)(tok->end - tok->start) : (int)(sizeof(tmp) - 1);
-	strncpy(tmp, (const char*)json_chunk + tok->start, size);
-	tmp[size] = 0;
+	// LuauAPI patch
+	cgltf_copy_string(tmp, (const char*)json_chunk + tok->start, size);
 	long long res = CGLTF_ATOLL(tmp);
 	return res < 0 ? 0 : (cgltf_size)res;
 }
@@ -2734,8 +2761,8 @@ static cgltf_float cgltf_json_to_float(jsmntok_t const* tok, const uint8_t* json
 	CGLTF_CHECK_TOKTYPE(*tok, JSMN_PRIMITIVE);
 	char tmp[128];
 	int size = (size_t)(tok->end - tok->start) < sizeof(tmp) ? (int)(tok->end - tok->start) : (int)(sizeof(tmp) - 1);
-	strncpy(tmp, (const char*)json_chunk + tok->start, size);
-	tmp[size] = 0;
+	// LuauAPI patch
+	cgltf_copy_string(tmp, (const char*)json_chunk + tok->start, size);
 	return (cgltf_float)CGLTF_ATOF(tmp);
 }
 
@@ -2813,8 +2840,8 @@ static int cgltf_parse_json_string(cgltf_options* options, jsmntok_t const* toke
 	{
 		return CGLTF_ERROR_NOMEM;
 	}
-	strncpy(result, (const char*)json_chunk + tokens[i].start, size);
-	result[size] = 0;
+	// LuauAPI patch
+	cgltf_copy_string(result, (const char*)json_chunk + tokens[i].start, size);
 	*out_string = result;
 	return i + 1;
 }
@@ -2971,8 +2998,8 @@ static int cgltf_parse_json_extras(cgltf_options* options, jsmntok_t const* toke
 	{
 		return CGLTF_ERROR_NOMEM;
 	}
-	strncpy(out_extras->data, (const char*)json_chunk + start, size);
-	out_extras->data[size] = '\0';
+	// LuauAPI patch
+	cgltf_copy_string(out_extras->data, (const char*)json_chunk + start, size);
 
 	i = cgltf_skip_json(tokens, i);
 	return i;
@@ -2993,8 +3020,8 @@ static int cgltf_parse_json_unprocessed_extension(cgltf_options* options, jsmnto
 	{
 		return CGLTF_ERROR_NOMEM;
 	}
-	strncpy(out_extension->name, (const char*)json_chunk + tokens[i].start, name_length);
-	out_extension->name[name_length] = 0;
+	// LuauAPI patch
+	cgltf_copy_string(out_extension->name, (const char*)json_chunk + tokens[i].start, name_length);
 	i++;
 
 	size_t start = tokens[i].start;
@@ -3004,8 +3031,8 @@ static int cgltf_parse_json_unprocessed_extension(cgltf_options* options, jsmnto
 	{
 		return CGLTF_ERROR_NOMEM;
 	}
-	strncpy(out_extension->data, (const char*)json_chunk + start, size);
-	out_extension->data[size] = '\0';
+	// LuauAPI patch
+	cgltf_copy_string(out_extension->data, (const char*)json_chunk + start, size);
 
 	i = cgltf_skip_json(tokens, i);
 

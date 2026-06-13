@@ -34,8 +34,8 @@ Runnable samples: [Examples](docs/getting-started/examples.md).
 
 - [Overview](docs/getting-started/overview.md)
 - [Installation](docs/getting-started/installation.md)
-- [Your first script](docs/getting-started/first-script.md)
 - [Editor setup](docs/getting-started/editor-setup.md)
+- [Your first script](docs/getting-started/first-script.md)
 - [Examples](docs/getting-started/examples.md)
 
 ## Reference
@@ -43,29 +43,29 @@ Runnable samples: [Examples](docs/getting-started/examples.md).
 API reference for everything a script or host can call.
 
 - Lua
+  - [base64](docs/reference/lua/base64.md)
+  - [Callbacks](docs/reference/lua/callbacks.md)
+  - [cocos](docs/reference/lua/cocos.md)
+  - [ColorProvider](docs/reference/lua/color-provider.md)
+  - [Delegates](docs/reference/lua/delegates.md)
+  - [fs](docs/reference/lua/fs.md)
+  - [Game objects](docs/reference/lua/game-objects.md)
+  - [gd3d](docs/reference/lua/gd3d.md)
   - [Globals](docs/reference/lua/globals.md)
   - [Hooks](docs/reference/lua/hooks.md)
-  - [Tasks and time](docs/reference/lua/tasks.md)
-  - [Modules](docs/reference/lua/modules.md)
-  - [Game objects](docs/reference/lua/game-objects.md)
-  - [UI and layouts](docs/reference/lua/ui.md)
-  - [Sharing APIs between mods](docs/reference/lua/sharing-apis.md)
-  - [Callbacks](docs/reference/lua/callbacks.md)
-  - [Delegates](docs/reference/lua/delegates.md)
-  - [mod](docs/reference/lua/mod.md)
-  - [fs](docs/reference/lua/fs.md)
+  - [imgui](docs/reference/lua/imgui.md)
   - [json](docs/reference/lua/json.md)
+  - [Keybind](docs/reference/lua/keybind.md)
+  - [mod](docs/reference/lua/mod.md)
+  - [Modules](docs/reference/lua/modules.md)
+  - [permission](docs/reference/lua/permission.md)
+  - [Sharing APIs between mods](docs/reference/lua/sharing-apis.md)
+  - [Tasks and time](docs/reference/lua/tasks.md)
+  - [Type stubs](docs/reference/lua/type-stubs.md)
+  - [UI and layouts](docs/reference/lua/ui.md)
+  - [VersionInfo](docs/reference/lua/version-info.md)
   - [web](docs/reference/lua/web.md)
   - [websocket](docs/reference/lua/websocket.md)
-  - [imgui](docs/reference/lua/imgui.md)
-  - [cocos](docs/reference/lua/cocos.md)
-  - [gd3d](docs/reference/lua/gd3d.md)
-  - [base64](docs/reference/lua/base64.md)
-  - [permission](docs/reference/lua/permission.md)
-  - [ColorProvider](docs/reference/lua/color-provider.md)
-  - [VersionInfo](docs/reference/lua/version-info.md)
-  - [Keybind](docs/reference/lua/keybind.md)
-  - [Type stubs](docs/reference/lua/type-stubs.md)
 - C++
   - [API reference](docs/reference/cpp/api-reference.md)
   - [Integration guide](docs/reference/cpp/integration-guide.md)
@@ -79,23 +79,23 @@ For anyone working on LuauAPI itself.
 - [Building from source](docs/contributor/building.md)
 - [Testing](docs/contributor/testing.md)
 - Internals
-  - [Runtime](docs/contributor/internals/runtime.md)
   - [Bindings framework](docs/contributor/internals/bindings-framework.md)
-  - [Module system](docs/contributor/internals/module-system.md)
-  - [Task scheduler](docs/contributor/internals/task-scheduler.md)
   - [ImGui draw scheduler](docs/contributor/internals/imgui-draw-scheduler.md)
+  - [Module system](docs/contributor/internals/module-system.md)
+  - [Runtime](docs/contributor/internals/runtime.md)
+  - [Task scheduler](docs/contributor/internals/task-scheduler.md)
 - Codegen
-  - [Codegen](docs/contributor/codegen/codegen.md)
-  - [Platform parity](docs/contributor/codegen/platform-parity.md)
   - [ccCArray fields](docs/contributor/codegen/cc-c-array.md)
+  - [Codegen](docs/contributor/codegen/codegen.md)
   - [Nested containers](docs/contributor/codegen/nested-containers.md)
   - [Pair containers](docs/contributor/codegen/pair-containers.md)
+  - [Platform parity](docs/contributor/codegen/platform-parity.md)
 
 ## Project
 
 - [About](about.md)
-- [Support](support.md)
 - [Changelog](changelog.md)
+- [Support](support.md)
 
 ## Licenses
 

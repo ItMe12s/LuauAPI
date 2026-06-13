@@ -56,7 +56,7 @@ def _collect_extra_dluau() -> str:
     if not parts:
         return ""
     body = "\n\n".join(parts)
-    return "\n\n-- Custom definitions from tools/luau_codegen/extra_bindings/\n" + body + "\n"
+    return "\n\n-- Custom definitions from tools/luau_codegen/extra_bindings/\n\n" + body + "\n"
 
 
 def _header(label: str) -> List[str]:
