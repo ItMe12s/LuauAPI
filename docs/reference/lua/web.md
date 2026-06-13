@@ -2,15 +2,46 @@
 
 ## Summary
 
-`geode.utils.web` exposes Geode's async web request system to Lua.
-Requests run on Geode's web worker and call Lua completion and progress callbacks on the main thread.
+`geode.utils.web` exposes Geode async web requests to Lua.
+Requests run on the web worker. Callbacks run on the main thread.
 This binding does not expose `openLinkUnsafe` or any `*Sync` request method.
-File writes are sandboxed to mod roots.
+File writes stay inside mod sandbox roots.
 See [Examples](../../getting-started/examples.md).
 
 ## Types
 
 ```lua
+type ProxyOpts = {
+    address: string,
+    port: number?,
+    type: number?, -- ProxyType
+    auth: number?, -- HttpAuth
+    username: string?,
+    password: string?,
+    tunneling: boolean?,
+    certVerification: boolean?,
+}
+
+type RequestTimings = {
+    queueWait: number,
+    nameLookup: number,
+    connect: number,
+    tlsHandshake: number,
+    requestSend: number,
+    firstByte: number,
+    download: number,
+    total: number,
+}
+
+type WebProgress = {
+    downloaded: number,
+    downloadTotal: number,
+    downloadProgress: number?,
+    uploaded: number,
+    uploadTotal: number,
+    uploadProgress: number?,
+}
+
 type RequestOptions = {
     url: string?,
     method: string?,
@@ -26,7 +57,7 @@ type RequestOptions = {
     ignoreContentLength: boolean?,
     caBundle: string?,
     proxy: ProxyOpts?,
-    version: number?,
+    version: number?, -- HttpVersion
     body: string?,
     bodyString: string?,
     bodyJson: any?,
@@ -35,12 +66,6 @@ type RequestOptions = {
 }
 ```
 
-Table types:
-
-- `ProxyOpts`
-- `WebProgress`
-- `RequestTimings`
-
 Userdata types:
 
 - `WebRequest`
@@ -48,9 +73,9 @@ Userdata types:
 - `WebHandle`
 - `MultipartForm`
 - `WebListenerHandle`
-  
-Timings are milliseconds.
-Setting `certVerification` to false disables TLS verification for that request, an intentional escape hatch.
+
+Timings are in milliseconds.
+Setting `certVerification` to false disables TLS verification for that request.
 
 ## Functions
 
@@ -62,28 +87,69 @@ geode.utils.web.get(url: string, options: RequestOptions?, callback: (response: 
 geode.utils.web.post(url: string, options: RequestOptions?, callback: (response: WebResponse?, err: string?) -> ()) -> WebHandle
 geode.utils.web.put(url: string, options: RequestOptions?, callback: (response: WebResponse?, err: string?) -> ()) -> WebHandle
 geode.utils.web.patch(url: string, options: RequestOptions?, callback: (response: WebResponse?, err: string?) -> ()) -> WebHandle
-geode.utils.web.fetch(urlOrOptions, optionsOrCallback, callback?) -> WebHandle
+geode.utils.web.fetch(url: string, callback: (response: WebResponse?, err: string?) -> ()) -> WebHandle
+geode.utils.web.fetch(url: string, options: RequestOptions, callback: (response: WebResponse?, err: string?) -> ()) -> WebHandle
+geode.utils.web.fetch(options: RequestOptions, callback: (response: WebResponse?, err: string?) -> ()) -> WebHandle
 ```
 
 The shortcut request functions also accept `callback` as the second argument when no options are needed.
+See [Globals](globals.md) Error shapes.
+
+`fetch` has three forms:
+
+1. `fetch(url, callback)` - GET to `url`.
+2. `fetch(url, options, callback)` - apply `options`, then send. `method` defaults to `GET`.
+3. `fetch(options, callback)` - read `url` from `options` (required). `method` defaults to `GET`.
 
 ## WebRequest
 
-`WebRequest` is a chainable builder that supports:
+```lua
+request:header(name: string, value: string) -> WebRequest
+request:removeHeader(name: string) -> WebRequest
+request:param(name: string, value: string) -> WebRequest
+request:removeParam(name: string) -> WebRequest
+request:method(method: string) -> WebRequest
+request:url(url: string) -> WebRequest
+request:userAgent(name: string) -> WebRequest
+request:acceptEncoding(encoding: string) -> WebRequest
+request:timeout(seconds: number) -> WebRequest
+request:downloadRange(start: number, stop: number) -> WebRequest
+request:certVerification(enabled: boolean) -> WebRequest
+request:transferBody(enabled: boolean) -> WebRequest
+request:followRedirects(enabled: boolean) -> WebRequest
+request:ignoreContentLength(enabled: boolean) -> WebRequest
+request:caBundle(content: string) -> WebRequest
+request:proxy(opts: ProxyOpts) -> WebRequest
+request:version(version: number) -> WebRequest
+request:body(data: string) -> (WebRequest?, string?)
+request:bodyString(data: string) -> (WebRequest?, string?)
+request:bodyJson(value: any) -> (WebRequest?, string?)
+request:bodyMultipart(form: MultipartForm) -> (WebRequest?, string?)
+request:onProgress(callback: (progress: WebProgress) -> ()) -> WebRequest
+request:send(method: string, url: string, callback: (response: WebResponse?, err: string?) -> ()) -> WebHandle
+request:send(method: string, url: string, options: RequestOptions, callback: (response: WebResponse?, err: string?) -> ()) -> WebHandle
+request:get(url: string, callback: (response: WebResponse?, err: string?) -> ()) -> WebHandle
+request:get(url: string, options: RequestOptions, callback: (response: WebResponse?, err: string?) -> ()) -> WebHandle
+request:post(url: string, callback: (response: WebResponse?, err: string?) -> ()) -> WebHandle
+request:post(url: string, options: RequestOptions, callback: (response: WebResponse?, err: string?) -> ()) -> WebHandle
+request:put(url: string, callback: (response: WebResponse?, err: string?) -> ()) -> WebHandle
+request:put(url: string, options: RequestOptions, callback: (response: WebResponse?, err: string?) -> ()) -> WebHandle
+request:patch(url: string, callback: (response: WebResponse?, err: string?) -> ()) -> WebHandle
+request:patch(url: string, options: RequestOptions, callback: (response: WebResponse?, err: string?) -> ()) -> WebHandle
+request:getID() -> number
+request:getMethod() -> string
+request:getUrl() -> string
+request:getHeaders() -> { [string]: { string } }
+request:getUrlParams() -> { [string]: string }
+request:getBody() -> string?
+request:getTimeout() -> number?
+request:getVersion() -> number
+request:getProgress() -> WebProgress
+```
 
-- headers
-- query parameters
-- proxy options
-- timeouts
-- range requests
-- body data
-- JSON bodies
-- multipart bodies
-- progress callbacks
-- request introspection
-
+`WebRequest` is a chainable builder.
 Send methods are async and return a `WebHandle`.
-Dropping the handle or calling `:cancel()` cancels a still-pending request.
+Drop the handle or call `:cancel()` to cancel a pending request.
 
 ```lua
 local req = geode.utils.web.newRequest()
@@ -97,11 +163,17 @@ req:header("Accept", "application/json")
 ## WebResponse
 
 ```lua
+response:info() -> boolean
 response:ok() -> boolean
+response:redirected() -> boolean
+response:badClient() -> boolean
+response:badServer() -> boolean
+response:error() -> boolean
+response:cancelled() -> boolean
 response:code() -> number
 response:text() -> (string?, string?)
 response:json() -> (any?, string?)
-response:bytes() -> string
+response:bytes() -> (string?, string?)
 response:saveTo(root: FsRoot, path: string) -> (boolean?, string?)
 response:headers() -> { string }
 response:header(name: string) -> string?
@@ -111,25 +183,43 @@ response:verboseLogs() -> string
 response:timings() -> RequestTimings
 ```
 
-The writable roots accepted by `saveTo` are:
+Status checks:
 
-- `"save"`
-- `"config"`
-- `"persistent"`
+- `:info()` - 1xx response.
+- `:ok()` - 2xx response.
+- `:redirected()` - followed a redirect.
+- `:badClient()` - 4xx response.
+- `:badServer()` - 5xx response.
+- `:error()` - network or transfer error.
+- `:cancelled()` - request was cancelled.
 
+`saveTo` accepts `"save"`, `"config"`, and `"persistent"`.
 Response bodies are capped.
-
-These methods return `nil` and an error message when the body exceeds the cap:
-
-- `:text()`
-- `:bytes()`
-- `:json()`
-- `:saveTo()`
-
+`:text()`, `:bytes()`, `:json()`, and `:saveTo()` return `nil` and an error when the body is too large.
 Async callbacks and response listeners receive `(response?, err?)`.
-An oversized body arrives as `nil` and an error message.
+
+## WebHandle
+
+```lua
+handle:cancel() -> boolean
+handle:id() -> number?
+```
+
+`:cancel()` returns true if the request was still pending.
+`:id()` returns the Geode request id, or `nil` if there is no active task.
 
 ## MultipartForm
+
+```lua
+form:param(name: string, value: string) -> (MultipartForm?, string?)
+form:file(name: string, data: string, filename: string, mime: string?) -> (MultipartForm?, string?)
+form:fileFrom(name: string, root: FsRoot, path: string, mime: string?) -> (MultipartForm?, string?)
+form:getBoundary() -> string
+form:getHeader() -> string
+form:getBody() -> (string?, string?)
+```
+
+`fileFrom` uses sandbox roots only. Raw paths are not allowed.
 
 ```lua
 local form = geode.utils.web.multipart()
@@ -138,29 +228,35 @@ form:file("upload", bytes, "upload.bin", "application/octet-stream")
 form:fileFrom("config", "config", "data.json", "application/json")
 ```
 
-`fileFrom` uses sandbox roots. Raw filesystem paths are not exposed.
+## WebListenerHandle
 
-## Request body caps
+```lua
+handle:disconnect() -> ()
+```
 
-The following body sources are capped.
-
-- `RequestOptions.body`
-- `RequestOptions.bodyString`
-- `RequestOptions.bodyJson`
-- `RequestOptions.bodyMultipart`
-- `WebRequest:body`
-- `WebRequest:bodyString`
-- `WebRequest:bodyJson`
-- `WebRequest:bodyMultipart`
-- `MultipartForm:param`
-- `MultipartForm:file`
-- `MultipartForm:fileFrom`
-- `MultipartForm:getBody()`
-
-Over the [request and response body caps](../cpp/limits-and-errors.md),
-the call returns `nil` and an error message, or raises while parsing options.
+Disconnects a listener registered by `onRequestIntercept`, `onResponse`, or the `For` / `ById` variants.
 
 ## Listeners
+
+```lua
+geode.utils.web.onRequestIntercept(callback: (modID: string, request: WebRequest) -> boolean?, priority: number?) -> WebListenerHandle
+geode.utils.web.onRequestInterceptFor(modID: string, callback: (request: WebRequest) -> boolean?, priority: number?) -> WebListenerHandle
+geode.utils.web.onRequestInterceptById(requestID: number, callback: (request: WebRequest) -> boolean?, priority: number?) -> WebListenerHandle
+geode.utils.web.onResponse(callback: (modID: string, response: WebResponse?, err: string?) -> boolean?, priority: number?) -> WebListenerHandle
+geode.utils.web.onResponseFor(modID: string, callback: (response: WebResponse?, err: string?) -> boolean?, priority: number?) -> WebListenerHandle
+geode.utils.web.onResponseById(requestID: number, callback: (response: WebResponse?, err: string?) -> boolean?, priority: number?) -> WebListenerHandle
+```
+
+Return `true` from an intercept callback to stop other listeners on the main thread.
+Intercept runs right away so Lua can change the request.
+Off the main thread, Lua is skipped and you get a one-time warning.
+
+Response listeners on the web worker run later on the main thread.
+Their return value cannot stop other listeners.
+On the main thread, `true` still stops the next listeners.
+
+Each registrar takes an optional `priority` (higher runs first).
+`onResponse*` callbacks receive `(response?, err?)`, or `(modID, response?, err?)` for the global listener.
 
 ```lua
 local handle = geode.utils.web.onRequestIntercept(function(modID, request)
@@ -170,40 +266,91 @@ end)
 handle:disconnect()
 ```
 
-Request intercept callbacks may return `true` to stop propagation when Geode fires the event on the main thread.
-Intercept handlers run right away so Lua can tweak the request as it happens.
-If the event fires off the main thread, Lua is skipped, the event continues, and you see a one-time warning.
+## HttpVersion
 
-A response listener that would run on the web worker is delayed until the main thread.
-Its return value cannot stop other listeners, so use these mainly for side effects.
-When Geode fires the response event on the main thread, returning `true` still stops the next listeners.
+```lua
+geode.utils.web.HttpVersion -> {
+    DEFAULT: number,
+    VERSION_1_0: number,
+    VERSION_1_1: number,
+    VERSION_2_0: number,
+    VERSION_2TLS: number,
+    VERSION_2_PRIOR_KNOWLEDGE: number,
+    VERSION_3: number,
+    VERSION_3ONLY: number,
+}
+```
 
-Available listeners:
+HTTP version constants from Geode `utils/web.hpp`.
 
-- `onRequestIntercept`
-- `onRequestInterceptFor`
-- `onRequestInterceptById`
-- `onResponse`
-- `onResponseFor`
-- `onResponseById`
+## ProxyType
 
-Each accepts an optional `priority` argument.
-Response callbacks receive `(response?, err?)` or `(modID, response?, err?)`
+```lua
+geode.utils.web.ProxyType -> {
+    HTTP: number,
+    HTTPS: number,
+    HTTPS2: number,
+    SOCKS4: number,
+    SOCKS4A: number,
+    SOCKS5: number,
+    SOCKS5H: number,
+}
+```
 
-## Constants
+Proxy type constants from Geode `utils/web.hpp`.
 
-`HttpVersion`, `ProxyType`, `Error`, and `HttpAuth` mirror Geode `utils/web.hpp` constants.
+## Error
+
+```lua
+geode.utils.web.Error -> {
+    CURL_INITIALIZATION_ERROR: number,
+    REQUEST_CANCELLED: number,
+    QUEUE_FULL: number,
+    CHANNEL_CLOSED: number,
+}
+```
+
+Web worker error constants from Geode `utils/web.hpp`.
+
+## HttpAuth
+
+```lua
+geode.utils.web.HttpAuth -> {
+    BASIC: number,
+    DIGEST: number,
+    DIGEST_IE: number,
+    BEARER: number,
+    NEGOTIATE: number,
+    NTLM: number,
+    NTLM_WB: number,
+    ANY: number,
+    ANYSAFE: number,
+    ONLY: number,
+    AWS_SIGV4: number,
+}
+```
+
+HTTP auth scheme constants from Geode `utils/web.hpp`.
 
 ## Limits
 
 Request and response bodies are capped.
+These body sources count toward the request cap:
+
+- `RequestOptions.body`, `bodyString`, `bodyJson`, `bodyMultipart`
+- `WebRequest:body`, `bodyString`, `bodyJson`, `bodyMultipart`
+- `MultipartForm:param`, `file`, `fileFrom`, `getBody()`
+
+Over the cap, the call returns `nil` and an error, or raises while parsing options.
 
 See [Limits and errors](../cpp/limits-and-errors.md).
 
 ## Related
 
+- [websocket](websocket.md)
 - [json](json.md)
 - [fs](fs.md)
+- [tasks](tasks.md)
 - [Globals](globals.md)
 
 ## Source
