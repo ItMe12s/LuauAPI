@@ -173,9 +173,12 @@ TEST_CASE("registerTaggedMetatable untagged round-trip with metatable gc") {
     lua_getfield(L, -1, "__metatable");
     REQUIRE(lua_isstring(L, -1));
     REQUIRE(std::string(lua_tostring(L, -1)) == "locked");
-    lua_pop(L, 3);
-
     lua_pop(L, 1);
-    collectGarbage(L);
+
+    lua_getfield(L, -1, "__gc");
+    REQUIRE(lua_isfunction(L, -1));
+    lua_pushvalue(L, -3);
+    REQUIRE(lua_pcall(L, 1, 0, 0) == 0);
     REQUIRE(g_metatableGcCalled);
+    lua_pop(L, 2);
 }
