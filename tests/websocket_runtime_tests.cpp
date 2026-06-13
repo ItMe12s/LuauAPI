@@ -10,6 +10,7 @@
 #include <chrono>
 #include <cstdint>
 #include <functional>
+#include <lua.h>
 #include <string>
 #include <thread>
 
@@ -96,6 +97,16 @@ namespace {
         return value;
     }
 
+    bool evalBool(lua_State* L, std::string const& expression) {
+        return runScriptReturnsBool(L, "return " + expression);
+    }
+
+    void collectGarbage(lua_State* L) {
+        lua_gc(L, LUA_GCSTOP, 0);
+        lua_gc(L, LUA_GCCOLLECT, 0);
+        lua_gc(L, LUA_GCRESTART, 0);
+    }
+
     std::string wsTestStateInit() {
         return R"(
         _ws_test = {
@@ -152,15 +163,8 @@ namespace {
     )";
     }
 
-    std::string connectClientTextEchoScript(int port) {
+    std::string connectClientTextEchoCallbacksScript() {
         return R"(
-        _ws_client = websocket.connect(")" +
-            connectUrl(port) +
-            R"(")
-        if not _ws_client then
-            return false
-        end
-
         _ws_client:onOpen(function()
             _ws_test.opened = true
             _ws_client:send("hello")
@@ -168,19 +172,11 @@ namespace {
             _ws_test.message = data
             _ws_test.binary = isBinary
         end)
-        return true
     )";
     }
 
-    std::string connectClientBinaryEchoScript(int port) {
+    std::string connectClientBinaryEchoCallbacksScript() {
         return R"(
-        _ws_client = websocket.connect(")" +
-            connectUrl(port) +
-            R"(")
-        if not _ws_client then
-            return false
-        end
-
         _ws_client:onOpen(function()
             _ws_test.opened = true
             _ws_client:sendBinary(string.char(1, 2, 3))
@@ -188,36 +184,20 @@ namespace {
             _ws_test.message = data
             _ws_test.binary = isBinary
         end)
-        return true
     )";
     }
 
-    std::string connectClientWelcomeScript(int port) {
+    std::string connectClientWelcomeCallbacksScript() {
         return R"(
-        _ws_client = websocket.connect(")" +
-            connectUrl(port) +
-            R"(")
-        if not _ws_client then
-            return false
-        end
-
         _ws_client:onMessage(function(data, isBinary)
             _ws_test.message = data
             _ws_test.binary = isBinary
         end)
-        return true
     )";
     }
 
-    std::string connectClientCloseScript(int port) {
+    std::string connectClientCloseCallbacksScript() {
         return R"(
-        _ws_client = websocket.connect(")" +
-            connectUrl(port) +
-            R"(")
-        if not _ws_client then
-            return false
-        end
-
         _ws_client:onOpen(function()
             _ws_test.opened = true
         end):onClose(function(code, reason, remote)
@@ -225,61 +205,35 @@ namespace {
             _ws_test.closeReason = reason
             _ws_test.closeRemote = remote
         end)
-        return true
     )";
     }
 
-    std::string connectClientPingScript(int port) {
+    std::string connectClientPingCallbacksScript() {
         return R"(
-        _ws_client = websocket.connect(")" +
-            connectUrl(port) +
-            R"(")
-        if not _ws_client then
-            return false
-        end
-
         _ws_client:onOpen(function()
             _ws_test.opened = true
             local ok, err = _ws_client:ping("probe")
             _ws_test.pingOk = ok
             _ws_test.pingErr = err
         end)
-        return true
     )";
     }
 
-    std::string gcSurvivalSetupScript(int port) {
+    std::string gcSurvivalServerCallbacksScript() {
         return R"(
-        local port = )" +
-            std::to_string(port) +
-            R"(
-        local server = websocket.serve(port)
-        if not server then
-            return false
-        end
+        _ws_server:onClientConnect(function() end)
+        _ws_server:onMessage(function() end)
+        _ws_server:onClientDisconnect(function() end)
+        _ws_server:onError(function() end)
+    )";
+    }
 
-        server:onClientConnect(function() end)
-            :onMessage(function() end)
-            :onClientDisconnect(function() end)
-            :onError(function() end)
-
-        local client = websocket.connect("ws://127.0.0.1:)" +
-            std::to_string(port) +
-            R"(")
-        if not client then
-            return false
-        end
-
-        client:onOpen(function() end)
-            :onMessage(function() end)
-            :onClose(function() end)
-            :onError(function() end)
-
-        client = nil
-        server = nil
-        collectgarbage("collect")
-        collectgarbage("collect")
-        return true
+    std::string gcSurvivalClientCallbacksScript() {
+        return R"(
+        _ws_client:onOpen(function() end)
+        _ws_client:onMessage(function() end)
+        _ws_client:onClose(function() end)
+        _ws_client:onError(function() end)
     )";
     }
 
@@ -295,10 +249,11 @@ TEST_CASE("websocket loopback text echo round-trip") {
 
     REQUIRE(runScriptReturnsBool(fixture.L, serverOnlySetupScript(port)));
     REQUIRE(runScript(fixture.L, serverEchoCallbacksScript()));
-    REQUIRE(runScriptReturnsBool(fixture.L, connectClientTextEchoScript(port)));
+    REQUIRE(runScriptReturnsBool(fixture.L, connectClientScript(port)));
+    REQUIRE(runScript(fixture.L, connectClientTextEchoCallbacksScript()));
 
     REQUIRE(waitUntil([&] {
-        return runScriptReturnsBool(
+        return evalBool(
             fixture.L,
             "_ws_test.opened == true and _ws_test.message == 'hello' and _ws_test.binary == false"
         );
@@ -312,10 +267,11 @@ TEST_CASE("websocket loopback binary round-trip") {
 
     REQUIRE(runScriptReturnsBool(fixture.L, serverOnlySetupScript(port)));
     REQUIRE(runScript(fixture.L, serverEchoCallbacksScript()));
-    REQUIRE(runScriptReturnsBool(fixture.L, connectClientBinaryEchoScript(port)));
+    REQUIRE(runScriptReturnsBool(fixture.L, connectClientScript(port)));
+    REQUIRE(runScript(fixture.L, connectClientBinaryEchoCallbacksScript()));
 
     REQUIRE(waitUntil([&] {
-        return runScriptReturnsBool(
+        return evalBool(
             fixture.L,
             "_ws_test.opened == true and _ws_test.message == string.char(1, 2, 3) and "
             "_ws_test.binary == true"
@@ -328,7 +284,12 @@ TEST_CASE("websocket callback registration survives garbage collection") {
     WsRuntimeFixture fixture;
     int const port = nextPort();
 
-    REQUIRE(runScriptReturnsBool(fixture.L, gcSurvivalSetupScript(port)));
+    REQUIRE(runScriptReturnsBool(fixture.L, serverOnlySetupScript(port)));
+    REQUIRE(runScript(fixture.L, gcSurvivalServerCallbacksScript()));
+    REQUIRE(runScriptReturnsBool(fixture.L, connectClientScript(port)));
+    REQUIRE(runScript(fixture.L, gcSurvivalClientCallbacksScript()));
+    collectGarbage(fixture.L);
+    collectGarbage(fixture.L);
 }
 
 TEST_CASE("websocket server peer connect send and clients") {
@@ -355,10 +316,11 @@ TEST_CASE("websocket server peer connect send and clients") {
     )"
     ));
 
-    REQUIRE(runScriptReturnsBool(fixture.L, connectClientWelcomeScript(port)));
+    REQUIRE(runScriptReturnsBool(fixture.L, connectClientScript(port)));
+    REQUIRE(runScript(fixture.L, connectClientWelcomeCallbacksScript()));
 
     REQUIRE(waitUntil([&] {
-        return runScriptReturnsBool(
+        return evalBool(
             fixture.L,
             "_ws_test.clientCount == 1 and type(_ws_test.peerId) == 'string' and "
             "_ws_test.message == 'welcome' and _ws_test.binary == false"
@@ -429,7 +391,7 @@ TEST_CASE("websocket peer send rejects oversized payload") {
     REQUIRE(runScriptReturnsBool(fixture.L, connectClientScript(port)));
 
     REQUIRE(waitUntil([&] {
-        return runScriptReturnsBool(fixture.L, "_ws_test.opened == true");
+        return evalBool(fixture.L, "_ws_test.opened == true");
     }));
 
     REQUIRE(runScriptReturnsBool(
@@ -459,10 +421,11 @@ TEST_CASE("websocket close and disconnect populate callback codes") {
     )"
     ));
 
-    REQUIRE(runScriptReturnsBool(fixture.L, connectClientCloseScript(port)));
+    REQUIRE(runScriptReturnsBool(fixture.L, connectClientScript(port)));
+    REQUIRE(runScript(fixture.L, connectClientCloseCallbacksScript()));
 
     REQUIRE(waitUntil([&] {
-        return runScriptReturnsBool(fixture.L, "_ws_test.opened == true");
+        return evalBool(fixture.L, "_ws_test.opened == true");
     }));
 
     REQUIRE(runScript(
@@ -473,7 +436,7 @@ TEST_CASE("websocket close and disconnect populate callback codes") {
     ));
 
     REQUIRE(waitUntil([&] {
-        return runScriptReturnsBool(
+        return evalBool(
             fixture.L,
             "_ws_test.closeCode == 1000 and _ws_test.closeReason == 'bye' and "
             "type(_ws_test.closeRemote) == 'boolean' and _ws_test.disconnectCode == 1000"
@@ -488,10 +451,11 @@ TEST_CASE("websocket ping returns boolean error shape") {
 
     REQUIRE(runScriptReturnsBool(fixture.L, serverOnlySetupScript(port)));
     REQUIRE(runScript(fixture.L, serverEchoCallbacksScript()));
-    REQUIRE(runScriptReturnsBool(fixture.L, connectClientPingScript(port)));
+    REQUIRE(runScriptReturnsBool(fixture.L, connectClientScript(port)));
+    REQUIRE(runScript(fixture.L, connectClientPingCallbacksScript()));
 
     REQUIRE(waitUntil([&] {
-        return runScriptReturnsBool(
+        return evalBool(
             fixture.L,
             "_ws_test.opened == true and _ws_test.pingOk == true and _ws_test.pingErr == nil"
         );
