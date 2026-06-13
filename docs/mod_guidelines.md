@@ -60,23 +60,27 @@ A missing return can corrupt the call path. Some failures can crash outside norm
 Bad:
 
 ```lua
-geode.hook.after("SomeClass::mustReturnBool", function(self)
-    if self:isHidden() then
-        return false
-    end
-end)
+geode.hook("geode.gd.GameManager:getIntGameVariable/1", {
+    after = function(self, key, value)
+        if key == "0040" then
+            return 1
+        end
+    end,
+})
 ```
 
 Good:
 
 ```lua
-geode.hook.after("SomeClass::mustReturnBool", function(self)
-    if self:isHidden() then
-        return false
-    end
+geode.hook("geode.gd.GameManager:getIntGameVariable/1", {
+    after = function(self, key, value)
+        if key == "0040" then
+            return 1
+        end
 
-    return true
-end)
+        return value
+    end,
+})
 ```
 
 ### `reject-web-loadstring`
@@ -88,8 +92,13 @@ This is an exploit chain for remote code execution. Use data formats like JSON f
 Bad:
 
 ```lua
-geode.utils.web.get("https://example.com/update.luau", function(response)
-    local fn = loadstring(response:text())
+geode.utils.web.get("https://example.com/update.luau", function(response, err)
+    if not response then
+        return
+    end
+
+    local text = response:text()
+    local fn = loadstring(text)
     fn()
 end)
 ```
@@ -103,7 +112,12 @@ geode.utils.web.get("https://example.com/config.json", function(response, err)
         return
     end
 
-    local config = geode.json.parse(response:text())
+    local config, parseErr = response:json()
+    if not config then
+        print(parseErr)
+        return
+    end
+
     print(config.name)
 end)
 ```

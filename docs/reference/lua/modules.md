@@ -15,6 +15,8 @@ See [Examples](../../getting-started/examples.md).
 The rules are strict by design, so loading stays inside the resources root.
 
 - You can only require from a script file. Its chunk name must start with `@`.
+- The require path must start with `./`, `../`, or `@`.
+- Use `./ModuleName` for a sibling module in the same resources root.
 - Module names are flat (a single file name with no folders in the path).
 - `..` is not allowed, and escaping the root is not allowed.
 - Aliases are not supported. A path such as `@alias/name` is rejected.

@@ -20,7 +20,7 @@ return M
 ```
 
 ```lua
-local Math = require("Math")
+local Math = require("./Math")
 print(Math.add(2, 3))
 ```
 
