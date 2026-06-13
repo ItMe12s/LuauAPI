@@ -47,7 +47,7 @@ _LUA_CALLBACK = "src/framework/callback/LuaCallback.hpp"
 _USERTYPE = "src/framework/usertype/Usertype.cpp"
 _JSON_CONVERT = "src/bindings/geode/JsonConvert.cpp"
 _GEODE_MOD = "src/bindings/geode/GeodeModBinding.cpp"
-_GEODE_PERMISSION = "src/bindings/geode/GeodePermissionBinding.cpp"
+_GEODE_PERMISSION = "src/bindings/geode/GeodeSmallBindings.cpp"
 _CONFIG_HEADER = "src/core/Config.hpp"
 
 _COCOS_GENERATED_OWNERS = frozenset(

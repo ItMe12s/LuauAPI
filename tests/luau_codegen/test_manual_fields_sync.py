@@ -12,11 +12,11 @@ _REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__f
 
 _NAMESPACE_SOURCES = {
     "geode.cocos": "src/bindings/geode/GeodeCocosBinding.cpp",
-    "geode.utils.base64": "src/bindings/geode/GeodeBase64Binding.cpp",
-    "geode.utils.permission": "src/bindings/geode/GeodePermissionBinding.cpp",
-    "geode.ColorProvider": "src/bindings/geode/GeodeColorProviderBinding.cpp",
-    "geode.VersionInfo": "src/bindings/geode/GeodeVersionBinding.cpp",
-    "geode.Keybind": "src/bindings/geode/GeodeKeybindBinding.cpp",
+    "geode.utils.base64": "src/bindings/geode/GeodeSmallBindings.cpp",
+    "geode.utils.permission": "src/bindings/geode/GeodeSmallBindings.cpp",
+    "geode.ColorProvider": "src/bindings/geode/GeodeSmallBindings.cpp",
+    "geode.VersionInfo": "src/bindings/geode/GeodeSmallBindings.cpp",
+    "geode.Keybind": "src/bindings/geode/GeodeSmallBindings.cpp",
 }
 
 _SET_CFUNCTION = re.compile(r'setTableCFunction\(L,\s*[^,]+,\s*"([^"]+)"')

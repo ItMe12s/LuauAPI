@@ -19,7 +19,7 @@ _EXTRA_BINDING_SOURCES = {
     },
     "json": {
         "dluau": "tools/luau_codegen/extra_bindings/json.dluau",
-        "cpp": "src/bindings/geode/GeodeJsonBinding.cpp",
+        "cpp": "src/bindings/geode/GeodeSmallBindings.cpp",
         "type_name": "JsonNamespace",
         "start_marker": "registerGeodeJson(lua_State* L)",
         "end_marker": 'lua_setfield(L, -2, "json")',

@@ -318,7 +318,7 @@ if(LUAUAPI_BUILD_TESTS)
         src/bindings/geode/CurrentMod.cpp
         src/bindings/geode/ModSandbox.cpp
         src/bindings/geode/GeodeFsBinding.cpp
-        src/bindings/geode/GeodeJsonBinding.cpp
+        src/bindings/geode/GeodeSmallBindings.cpp
         src/bindings/geode/JsonConvert.cpp
         src/bindings/imgui/ImGuiDrawHandleBinding.cpp
         src/bindings/imgui/ImGuiDrawScheduler.cpp
