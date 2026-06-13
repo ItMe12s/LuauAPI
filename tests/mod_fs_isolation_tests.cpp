@@ -145,12 +145,16 @@ TEST_CASE("geode.fs rejects traversal from one mod toward another mod") {
     auto* L = runtime->state();
     registerFsBindings(L);
 
-    std::ofstream out(mods.modB->getSaveDir() / "secret.txt");
-    out << "hidden";
-    REQUIRE(out.good());
+    {
+        std::ofstream out(mods.modB->getSaveDir() / "secret.txt");
+        out << "hidden";
+        REQUIRE(out.good());
+    }
 
+    auto const traversal =
+        std::filesystem::relative(mods.modB->getSaveDir() / "secret.txt", mods.modA->getSaveDir());
     runtime->setResourcesRoot(mods.modA->getResourcesDir());
-    REQUIRE(callFs(L, "read", "save", "../../modB/save/secret.txt") == 0);
+    REQUIRE(callFs(L, "read", "save", traversal.generic_string()) == 0);
     REQUIRE(lua_isnil(L, 1));
     REQUIRE(lua_isstring(L, 2));
     std::string err(lua_tostring(L, 2));

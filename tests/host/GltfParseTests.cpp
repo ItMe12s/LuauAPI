@@ -327,14 +327,12 @@ TEST_CASE("MeshAsset loadFromBytes rejects sparse accessors") {
     requireGltfError(R"({
   "asset": {"version": "2.0"},
   "buffers": [{
-    "byteLength": 56,
-    "uri": "data:application/octet-stream;base64,AAAAAAAAAAAAAAAAAACAPwAAAAAAAAAAAAAAAAAAgD8AAAAAAAAAAIA/AAAAAAEAAgA="
+    "byteLength": 42,
+    "uri": "data:application/octet-stream;base64,AAAAAAAAAAAAAAAAAACAPwAAAAAAAAAAAAAAAAAAgD8AAAAAAAABAAIA"
   }],
   "bufferViews": [
     {"buffer": 0, "byteOffset": 0, "byteLength": 36},
-    {"buffer": 0, "byteOffset": 36, "byteLength": 2},
-    {"buffer": 0, "byteOffset": 38, "byteLength": 12},
-    {"buffer": 0, "byteOffset": 50, "byteLength": 6}
+    {"buffer": 0, "byteOffset": 36, "byteLength": 6}
   ],
   "accessors": [{
     "bufferView": 0,
@@ -344,9 +342,9 @@ TEST_CASE("MeshAsset loadFromBytes rejects sparse accessors") {
     "sparse": {
       "count": 1,
       "indices": {"bufferView": 1, "componentType": 5123, "byteOffset": 0},
-      "values": {"bufferView": 2, "byteOffset": 0}
+      "values": {"bufferView": 0, "byteOffset": 0}
     }
-  }, {"bufferView": 3, "componentType": 5123, "count": 3, "type": "SCALAR"}],
+  }, {"bufferView": 1, "componentType": 5123, "count": 3, "type": "SCALAR"}],
   "meshes": [{
     "primitives": [{"attributes": {"POSITION": 0}, "indices": 1}]
   }],

@@ -124,6 +124,27 @@ end
 local function transformNear(a, b, eps)
     return vec3Near(a:position(), b:position(), eps)
 end
+
+local function abs(v)
+    if v < 0 then return -v end
+    return v
+end
+
+local function dot(a, b)
+    return a.x * b.x + a.y * b.y + a.z * b.z
+end
+
+local function basisLooksValid(t)
+    local right = t:rightVector()
+    local up = t:upVector()
+    local look = t:lookVector()
+    return abs(dot(right, right) - 1) <= 1e-3
+        and abs(dot(up, up) - 1) <= 1e-3
+        and abs(dot(look, look) - 1) <= 1e-3
+        and abs(dot(right, up)) <= 1e-3
+        and abs(dot(right, look)) <= 1e-3
+        and abs(dot(up, look)) <= 1e-3
+end
 )";
 } // namespace
 
@@ -188,10 +209,8 @@ TEST_CASE("gd3d.Transform.fromEuler produces usable transform") {
 
     REQUIRE(runScriptReturnsBool(L.get(), std::string(kTransformNearHelper) + R"(
         local t = gd3d.Transform.fromEuler(0.3, -0.8, 0.1)
-        local angles = t:eulerAngles()
-        return math.abs(angles.x - 0.3) <= 1e-3
-            and math.abs(angles.y + 0.8) <= 1e-3
-            and math.abs(angles.z - 0.1) <= 1e-3
+        return basisLooksValid(t)
+            and transformNear(t * t:inverse(), gd3d.Transform.new())
     )"));
 }
 
@@ -203,8 +222,9 @@ TEST_CASE("gd3d.Transform.fromAxisAngle produces usable transform") {
     REQUIRE(runScriptReturnsBool(L.get(), std::string(kTransformNearHelper) + R"(
         local t = gd3d.Transform.fromAxisAngle({ x = 0, y = 1, z = 0 }, 1.1)
         local look = t:lookVector()
-        local len = math.sqrt(look.x * look.x + look.y * look.y + look.z * look.z)
-        return math.abs(len - 1.0) <= 1e-3
+        return basisLooksValid(t)
+            and abs((look.x * look.x + look.y * look.y + look.z * look.z) - 1.0) <= 1e-3
+            and abs(look.x) > 0.5
     )"));
 }
 

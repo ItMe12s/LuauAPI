@@ -205,7 +205,8 @@ TEST_CASE("resolveSandboxTarget rejects absolute relative paths") {
     auto* L = runtime->state();
     REQUIRE(std::filesystem::create_directories(mod->getSaveDir()));
 
-    ResolveArgs args{"save", "/absolute/path.txt", false};
+    auto absolutePath = dir.root_path() / "absolute" / "path.txt";
+    ResolveArgs args{"save", luax::filesystemPathString(absolutePath), false};
     int results = 0;
     REQUIRE(callResolve(L, args, results));
     REQUIRE(results == 2);

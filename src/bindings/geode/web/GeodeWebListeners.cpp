@@ -114,6 +114,8 @@ namespace luax::webdetail {
             if (Runtime::isMainThread()) {
                 return invokeResponseEventNow(cb, context, modID, response);
             }
+            // Off-thread response listeners run later for side effects only,
+            // they cannot stop propagation synchronously. Trust me on this one.
             std::optional<std::string> ownedModID;
             if (modID) ownedModID = std::string(*modID);
             geode::queueInMainThread(
