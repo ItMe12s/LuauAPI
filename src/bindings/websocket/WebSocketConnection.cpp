@@ -272,7 +272,10 @@ namespace luax::wsdetail {
             return pushNilErr(L, kWsConnectionClosedMsg);
         }
         auto info = conn.socket.ping(payload);
-        push(L, info.success);
+        if (!info.success) {
+            return pushNilErr(L, kWsConnectionClosedMsg);
+        }
+        push(L, true);
         return 1;
     }
 
