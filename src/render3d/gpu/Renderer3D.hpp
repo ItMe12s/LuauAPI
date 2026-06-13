@@ -35,12 +35,6 @@ namespace luax::render3d {
         Renderer3D(Renderer3D const&) = delete;
         Renderer3D& operator=(Renderer3D const&) = delete;
 
-        void drawDebugOverlay(
-            glm::mat4 const& projection, glm::mat4 const& view,
-            std::map<int, DebugLine> const& debugLines, bool debugBounds,
-            std::map<int, ViewportInstance> const& instances
-        );
-
         Renderer3DPrograms m_programs;
         Renderer3DMeshCache m_meshCache;
     };

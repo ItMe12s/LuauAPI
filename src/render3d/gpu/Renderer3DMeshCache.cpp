@@ -3,6 +3,7 @@
 #include "render3d/assets/MeshAsset.hpp"
 #include "render3d/assets/TextureAsset.hpp"
 #include "render3d/gpu/GlUtil.hpp"
+#include "render3d/gpu/Texture2D.hpp"
 #include "render3d/gpu/VertexLayout.hpp"
 
 #include <glm/glm.hpp>
@@ -96,25 +97,10 @@ namespace luax::render3d {
             return 0;
         }
 
-        unsigned int texture = 0;
-        glGenTextures(1, &texture);
-        glBindTexture(GL_TEXTURE_2D, texture);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-        glTexImage2D(
-            GL_TEXTURE_2D,
-            0,
-            GL_RGBA,
-            image.width,
-            image.height,
-            0,
-            GL_RGBA,
-            GL_UNSIGNED_BYTE,
-            image.rgba.data()
-        );
-        glBindTexture(GL_TEXTURE_2D, 0);
+        unsigned int const texture = uploadRgbaTexture2D(image);
+        if (texture == 0) {
+            return 0;
+        }
         m_gpuTextures[textureId] = texture;
         return texture;
     }
@@ -186,25 +172,7 @@ namespace luax::render3d {
                 continue;
             }
 
-            unsigned int texture = 0;
-            glGenTextures(1, &texture);
-            glBindTexture(GL_TEXTURE_2D, texture);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-            glTexImage2D(
-                GL_TEXTURE_2D,
-                0,
-                GL_RGBA,
-                image.width,
-                image.height,
-                0,
-                GL_RGBA,
-                GL_UNSIGNED_BYTE,
-                image.rgba.data()
-            );
-            gpuMesh.textures[i] = texture;
+            gpuMesh.textures[i] = uploadRgbaTexture2D(image);
         }
 
         glBindBuffer(GL_ARRAY_BUFFER, 0);

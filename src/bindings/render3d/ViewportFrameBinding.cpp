@@ -1,5 +1,5 @@
-#include "bindings/render3d/Gd3dShared.hpp"
-#include "framework/Binding.hpp"
+#include "bindings/render3d/internal/Handles.hpp"
+#include "bindings/render3d/internal/Marshaling.hpp"
 #include "framework/stack/Stack.hpp"
 #include "framework/stack/TableUtil.hpp"
 #include "framework/stack/UserdataTags.hpp"
@@ -394,7 +394,3 @@ namespace luax {
         return geode::Ok();
     }
 } // namespace luax
-
-#if !defined(LUAUAPI_HOST_TESTS)
-LUAX_BINDING(gd3d_viewport_frame_lib, registerViewportFrame)
-#endif

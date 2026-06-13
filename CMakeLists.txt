@@ -322,10 +322,12 @@ if(LUAUAPI_BUILD_TESTS)
         src/render3d/assets/TextureAsset.cpp
         src/render3d/assets/GltfIo.cpp
         src/render3d/assets/ImageDecode.cpp
+        src/render3d/gpu/SceneDrawList.cpp
         tests/host/Render3DMathTests.cpp
         tests/host/GltfParseTests.cpp
         tests/host/ProceduralMeshTests.cpp
         tests/host/FrustumTests.cpp
+        tests/host/SceneDrawListTests.cpp
         ${LUAUAPI_TEST_SOURCES}
     )
     target_compile_features(luauapi_tests PRIVATE cxx_std_23)

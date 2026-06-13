@@ -341,7 +341,10 @@ See [Limits and errors](../cpp/limits-and-errors.md).
 
 ## Source
 
-- `src/bindings/render3d/Gd3dShared.hpp`
+- `src/bindings/render3d/internal/Marshaling.hpp`
+- `src/bindings/render3d/internal/Handles.hpp`
+- `src/bindings/render3d/internal/MeshHandleBinding.cpp`
+- `src/bindings/render3d/Gd3dRegister.cpp`
 - `src/bindings/render3d/TransformBinding.cpp`
 - `src/bindings/render3d/GltfBinding.cpp`
 - `src/bindings/render3d/ProceduralMeshBinding.cpp`

@@ -3,6 +3,7 @@
 #include "render3d/assets/TextureAsset.hpp"
 #include "render3d/gpu/GlUtil.hpp"
 #include "render3d/gpu/Renderer3D.hpp"
+#include "render3d/gpu/Texture2D.hpp"
 
 #include <Geode/Geode.hpp>
 #include <algorithm>
@@ -241,13 +242,13 @@ namespace luax::render3d {
         glGenFramebuffers(1, &m_fbo);
         glBindFramebuffer(GL_FRAMEBUFFER, m_fbo);
 
-        glGenTextures(1, &m_colorTexture);
-        glBindTexture(GL_TEXTURE_2D, m_colorTexture);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+        m_colorTexture =
+            uploadRgbaTexture2D(width, height, nullptr, TextureWrapMode::ClampToEdge, true);
+        if (m_colorTexture == 0) {
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+            destroyFramebuffer();
+            return;
+        }
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_colorTexture, 0);
 
         glGenRenderbuffers(1, &m_depthRenderbuffer);
