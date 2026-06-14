@@ -221,6 +221,8 @@ PREFERRED_OVERLOADS: dict[tuple[str, str], set[tuple[str, ...]]] = {
             "cocos2d::CCPoint",
         ),
     },
+    ("EditorUI", "moveObjectCall"): {("EditCommand",)},
+    ("EditorUI", "transformObjectCall"): {("EditCommand",)},
     ("CCNode", "removeComponent"): {("char const*",)},
     ("CCSpriteFrameCache", "addSpriteFramesWithFile"): {
         ("char const*", "char const*"),

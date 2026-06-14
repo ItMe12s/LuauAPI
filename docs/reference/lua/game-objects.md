@@ -99,6 +99,10 @@ local fields = geode.fields(self)
 fields.count = (fields.count or 0) + 1
 ```
 
+## Enums
+
+GD and Geode enums are integer constant tables on `geode.gd` and `geode`. See [Enums](enums.md).
+
 ## Ownership
 
 The runtime tracks whether an object is owned by Lua or only borrowed and handles it for you.
@@ -114,6 +118,7 @@ You do not manage retain or release by hand. See the [bindings framework](../../
 - [cocos](cocos.md)
 - [mod](mod.md)
 - [UI and layouts](ui.md)
+- [Enums](enums.md)
 - [Type stubs](type-stubs.md)
 
 ## Source

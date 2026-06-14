@@ -1,13 +1,17 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import AbstractSet, Dict, Mapping, Sequence, Set, Tuple
+from typing import AbstractSet, Mapping, Sequence, Set, Tuple
+
+from luau_codegen.model.geode_enums import EnumInfo
 
 
 @dataclass(frozen=True)
 class CodegenContext:
     geode_enum_names: frozenset[str] = frozenset()
     geode_enum_cxx: Mapping[str, str] = field(default_factory=dict)
+    geode_enum_members: Mapping[str, Tuple[Tuple[str, int], ...]] = field(default_factory=dict)
+    gd_enum_members: Mapping[str, Tuple[Tuple[str, int], ...]] = field(default_factory=dict)
     cocos_enum_members: Mapping[str, Tuple[Tuple[str, int], ...]] = field(default_factory=dict)
 
     @classmethod
@@ -17,18 +21,33 @@ class CodegenContext:
     @classmethod
     def with_geode_enums(
         cls,
-        names_to_cxx: Dict[str, str],
+        enums: Mapping[str, EnumInfo],
         skip: AbstractSet[str] = frozenset(),
         cocos_enum_members: Mapping[str, Sequence[tuple[str, int]]] | None = None,
     ) -> CodegenContext:
-        geode: dict[str, str] = {}
-        for name, cxx in names_to_cxx.items():
+        from luau_codegen.convert.type_map import GD_ENUM_TYPES
+
+        geode_cxx: dict[str, str] = {}
+        geode_members: dict[str, tuple[tuple[str, int], ...]] = {}
+        gd_members: dict[str, tuple[tuple[str, int], ...]] = {}
+        for name, info in enums.items():
+            member_tuple = (
+                tuple((member.name, member.value) for member in info.members)
+                if info.members
+                else ()
+            )
             if name in skip:
+                if name in GD_ENUM_TYPES and member_tuple:
+                    gd_members[name] = member_tuple
                 continue
-            geode[name] = cxx
+            geode_cxx[name] = info.cxx_name
+            if member_tuple:
+                geode_members[name] = member_tuple
         return cls(
-            geode_enum_names=frozenset(geode.keys()),
-            geode_enum_cxx=geode,
+            geode_enum_names=frozenset(geode_cxx.keys()),
+            geode_enum_cxx=geode_cxx,
+            geode_enum_members=geode_members,
+            gd_enum_members=gd_members,
             cocos_enum_members={
                 name: tuple((member, int(value)) for member, value in members)
                 for name, members in (cocos_enum_members or {}).items()

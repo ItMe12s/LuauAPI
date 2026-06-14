@@ -16,6 +16,12 @@ from luau_codegen.emit.bindings.cocos_enums import (
     ENUM_KEY_CODES_MANIFEST,
     emit_enum_key_codes_manifest,
 )
+from luau_codegen.emit.bindings.geode_enums import (
+    GEODE_ENUMS_BINDING,
+    GEODE_ENUMS_MANIFEST,
+    emit_geode_enums_binding,
+    emit_geode_enums_manifest,
+)
 
 __all__ = [
     "emit",
@@ -37,6 +43,8 @@ def emit(
         "bindings_internal.hpp": emit_internal_hpp(),
         "bindings_common.cpp": _emit_common_file(plan.emitted_classes, plan, target_platform),
         ENUM_KEY_CODES_MANIFEST: emit_enum_key_codes_manifest(plan.ctx),
+        GEODE_ENUMS_MANIFEST: emit_geode_enums_manifest(plan.ctx),
+        GEODE_ENUMS_BINDING: emit_geode_enums_binding(plan.ctx),
         FREE_FUNCTIONS_FILE: emit_free_functions_file(
             plan.supported_free_functions,
             plan.objects,

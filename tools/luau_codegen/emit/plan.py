@@ -39,7 +39,8 @@ from luau_codegen.model.domain import (
 from luau_codegen.model.codegen_context import CodegenContext
 from luau_codegen.util.paths import binding_filename
 
-ENUM_KEY_CODES_MANIFEST = "bindings/geode/EnumKeyCodes.manifest.hpp"
+from luau_codegen.emit.bindings.cocos_enums import ENUM_KEY_CODES_MANIFEST
+from luau_codegen.emit.bindings.geode_enums import GEODE_ENUMS_BINDING, GEODE_ENUMS_MANIFEST
 
 
 def _ctx_from_root(root: Root) -> CodegenContext:
@@ -389,6 +390,8 @@ def plan_outputs(
         "bindings_internal.hpp",
         "bindings_common.cpp",
         ENUM_KEY_CODES_MANIFEST,
+        GEODE_ENUMS_MANIFEST,
+        GEODE_ENUMS_BINDING,
         "bindings_free_functions.cpp",
     ]
     outputs.extend(binding_filename(cls.name) for cls in plan.emitted_classes)

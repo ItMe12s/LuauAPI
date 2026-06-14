@@ -42,7 +42,7 @@ Supported bindable return types include:
 - booleans
 - numbers
 - strings
-- enums
+- [enums](enums.md)
 - objects
 - value types (such as `CCPoint` or `RGBAColor`).
 
@@ -104,6 +104,7 @@ See [Limits and errors](../cpp/limits-and-errors.md).
 - [Delegates](delegates.md)
 - [hooks](hooks.md)
 - [Tasks and time](tasks.md)
+- [Enums](enums.md)
 - [game objects](game-objects.md)
 - [mod](mod.md)
 - [web](web.md)

@@ -62,6 +62,7 @@ Start at [globals](docs/reference/lua/globals.md) for the full module index.
     - [delegates](docs/reference/lua/delegates.md)
     - [type stubs](docs/reference/lua/type-stubs.md)
   - Game
+    - [enums](docs/reference/lua/enums.md)
     - [game objects](docs/reference/lua/game-objects.md)
     - [cocos](docs/reference/lua/cocos.md)
     - [ColorProvider](docs/reference/lua/color-provider.md)

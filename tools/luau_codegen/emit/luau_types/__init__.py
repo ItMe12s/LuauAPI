@@ -12,7 +12,11 @@ from luau_codegen.emit.luau_types.classes import (
     _should_emit_type_class,
     _topo_sort_chunks,
 )
-from luau_codegen.emit.luau_types.enums import _enum_block, _enum_tables_block
+from luau_codegen.emit.luau_types.enums import (
+    _enum_block,
+    _enum_tables_block,
+    enum_namespace_field_lines,
+)
 from luau_codegen.emit.luau_types.factories import (
     _collect_factories,
     _emit_factories,
@@ -131,7 +135,15 @@ def emit(
     cocos_factory_text = "".join(
         _emit_factories(cocos_factories, objects, cocos_namespace, ctx=plan.ctx)
     )
-    gd_factory_text = "".join(_emit_factories(gd_factories, objects, gd_namespace, ctx=plan.ctx))
+    gd_factory_text = "".join(
+        _emit_factories(
+            gd_factories,
+            objects,
+            gd_namespace,
+            ctx=plan.ctx,
+            extra_field_lines=enum_namespace_field_lines(plan.ctx.gd_enum_members),
+        )
+    )
 
     geode_factory_text = "".join(_emit_factory_records(geode_factories, objects, ctx=plan.ctx))
 
@@ -197,7 +209,12 @@ def emit(
     lines.append("    Mod: ModNamespace,\n")
     lines.append("    json: JsonNamespace,\n")
     lines.append("    fs: FsNamespace,\n")
-    lines.extend(_factory_field_lines(geode_factories))
+    geode_enum_fields = enum_namespace_field_lines(plan.ctx.geode_enum_members)
+    geode_namespace_fields = sorted(
+        _factory_field_lines(geode_factories) + geode_enum_fields,
+        key=lambda line: line.strip().split(":", 1)[0].strip(),
+    )
+    lines.extend(geode_namespace_fields)
     lines.extend(function_field_lines)
     lines.append("    hook: (target: string, callback: HookCallbackTable) -> HookHandle,\n")
     lines.append("    skip: (value: any?) -> any,\n")

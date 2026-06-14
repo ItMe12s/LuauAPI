@@ -119,6 +119,8 @@ file(GLOB LUAUAPI_GEODE_UI_HEADERS CONFIGURE_DEPENDS
     "${LUAUAPI_GEODE_SDK_PATH}/loader/include/Geode/ui/*.hpp")
 set(LUAUAPI_GEODE_UI_MANIFEST
     "${LUAUAPI_GEODE_SDK_PATH}/loader/include/Geode/UI.hpp")
+set(LUAUAPI_GEODE_ENUMS_HEADER
+    "${geode_bindings_SOURCE_DIR}/bindings/include/Geode/Enums.hpp")
 set(LUAUAPI_GEODE_COCOS_HEADERS
     "${LUAUAPI_GEODE_SDK_PATH}/loader/include/Geode/cocos/base_nodes/CCNode.h"
     "${LUAUAPI_GEODE_SDK_PATH}/loader/include/Geode/cocos/robtop/keyboard_dispatcher/CCKeyboardDelegate.h")
@@ -188,6 +190,7 @@ add_custom_command(
         ${LUAUAPI_EXTRA_DLUAU_FILES}
         ${LUAUAPI_GEODE_UI_HEADERS}
         ${LUAUAPI_GEODE_UI_MANIFEST}
+        ${LUAUAPI_GEODE_ENUMS_HEADER}
         ${LUAUAPI_GEODE_COCOS_HEADERS}
         ${LUAUAPI_GEODE_UTILS_HEADERS}
     COMMENT "LuauAPI Broma codegen"

@@ -70,6 +70,7 @@ The custom command depends on the following. A change to any reruns codegen:
 
 `parse/geode_sdk.py` discovers extra bindings from the installed Geode SDK headers:
 
+- GD and Geode enums (see [Geode and GD enums](#geode-and-gd-enums) below).
 - UI classes and enums from `Geode/ui/*.hpp` headers included by `UI.hpp`.
 - Free functions from headers and namespaces in `model/free_fn_sources.py` (`FREE_FUNCTION_SOURCES`),
   mainly `geode::utils`, `geode::cocos`, `geode::createQuickPopup`, and Geode UI functions.
@@ -80,6 +81,15 @@ Only `GEODE_DLL` declarations are processed, and functions must be marshallable.
 Only the first free function per name and arity is kept.
 `web.hpp`, `utils/Task.hpp`, `utils/async.hpp`, and `utils/file.hpp` are purposely ignored,
 since async, HTTP, and file I/O are handled separately.
+
+## Geode and GD enums
+
+`parse/geode_sdk.py` reads `bindings/include/Geode/Enums.hpp` and UI enum tables into `CodegenContext`.
+`emit/bindings/geode_enums.py` registers integer constant tables under `geode.gd` and `geode`.
+`emit/luau_types/enums.py` emits stub types in `types/geode.d.luau`.
+
+Enums marshal as numbers in both directions (`check<int>` in, `lua_pushnumber` out).
+For script usage and compares, see [Enums](../../reference/lua/enums.md).
 
 ## Handwritten type-stub fields
 
@@ -186,6 +196,7 @@ See [delegates reference](../../reference/lua/delegates.md) for how scripts use 
 
 ## Related
 
+- [Enums](../../reference/lua/enums.md)
 - [Platform parity](platform-parity.md)
 - [Pair containers](pair-containers.md)
 - [Nested containers](nested-containers.md)
@@ -197,6 +208,9 @@ See [delegates reference](../../reference/lua/delegates.md) for how scripts use 
 - `CMakeLists.txt`
 - `tools/luau_codegen/cli/main.py`
 - `tools/luau_codegen/parse/collect.py`
+- `tools/luau_codegen/parse/geode_sdk.py`
+- `tools/luau_codegen/emit/bindings/geode_enums.py`
+- `tools/luau_codegen/emit/luau_types/enums.py`
 - `tools/luau_codegen/policy/filtering.py`
 - `tools/luau_codegen/model/denylist.py`
 - `tools/luau_codegen/emit/hooks.py`

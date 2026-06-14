@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import os
+import shutil
+import tempfile
 import unittest
 from helpers import (
     Arg,  # type: ignore[import-unresolved]
@@ -16,6 +19,9 @@ from helpers import (
     object_classes,  # type: ignore[import-unresolved]
     register_geode_enums,  # type: ignore[import-unresolved]
 )
+from luau_codegen.model.codegen_context import CodegenContext  # type: ignore[import-unresolved]
+from luau_codegen.model.geode_enums import EnumInfo, EnumMember  # type: ignore[import-unresolved]
+from luau_codegen.parse.collect import collect_bindings_root  # type: ignore[import-unresolved]
 
 
 class GeodeEnumRegistrationTests(unittest.TestCase):
@@ -39,6 +45,88 @@ class GeodeEnumRegistrationTests(unittest.TestCase):
         ctx = register_geode_enums({"BaseType": "geode::BaseType"})
         self.assertEqual(ctx.geode_enum_names, frozenset({"BaseType"}))
         self.assertIn("BaseType", ctx.enum_cxx_names())
+
+    def test_with_geode_enums_stores_members(self) -> None:
+        ctx = CodegenContext.with_geode_enums(
+            {
+                "GJLevelType": EnumInfo(
+                    name="GJLevelType",
+                    cxx_name="GJLevelType",
+                    members=(
+                        EnumMember("Saved", 3),
+                        EnumMember("SearchResult", 4),
+                    ),
+                )
+            }
+        )
+        self.assertEqual(
+            ctx.geode_enum_members["GJLevelType"],
+            (("Saved", 3), ("SearchResult", 4)),
+        )
+
+    def test_with_geode_enums_routes_skipped_gd_enum_to_gd_members(self) -> None:
+        ctx = CodegenContext.with_geode_enums(
+            {
+                "GJLevelType": EnumInfo(
+                    name="GJLevelType",
+                    cxx_name="GJLevelType",
+                    members=(
+                        EnumMember("Saved", 3),
+                        EnumMember("SearchResult", 4),
+                    ),
+                )
+            },
+            skip={"GJLevelType"},
+        )
+        self.assertEqual(
+            ctx.gd_enum_members["GJLevelType"],
+            (("Saved", 3), ("SearchResult", 4)),
+        )
+        self.assertNotIn("GJLevelType", ctx.geode_enum_members)
+        self.assertNotIn("GJLevelType", ctx.geode_enum_names)
+
+    def test_with_geode_enums_skips_reserved_members(self) -> None:
+        skip = GD_ENUM_TYPES | {"CollidingClass"}
+        ctx = CodegenContext.with_geode_enums(
+            {
+                "UniqueGeodeEnum": EnumInfo(
+                    name="UniqueGeodeEnum",
+                    cxx_name="geode::UniqueGeodeEnum",
+                    members=(EnumMember("Alpha", 1),),
+                ),
+                "IconType": EnumInfo(
+                    name="IconType",
+                    cxx_name="IconType",
+                    members=(EnumMember("A", 0),),
+                ),
+            },
+            skip=skip,
+        )
+        self.assertIn("UniqueGeodeEnum", ctx.geode_enum_members)
+        self.assertNotIn("IconType", ctx.geode_enum_members)
+        self.assertIn("IconType", ctx.gd_enum_members)
+
+    def test_collect_bindings_root_threads_enum_members(self) -> None:
+        bindings = tempfile.mkdtemp()
+        sdk = tempfile.mkdtemp()
+        try:
+            os.makedirs(os.path.join(bindings), exist_ok=True)
+            with open(os.path.join(bindings, "Cocos2d.bro"), "w", encoding="utf-8") as f:
+                f.write("[[link(win)]] class cocos2d::CCObject {};\n")
+            include_dir = os.path.join(sdk, "loader", "include", "Geode")
+            os.makedirs(include_dir)
+            with open(os.path.join(include_dir, "Enums.hpp"), "w", encoding="utf-8") as f:
+                f.write("enum class UniqueGeodeEnum { Alpha = 1, Beta = 2 };\n")
+
+            root = collect_bindings_root(bindings, geode_sdk_path=sdk)
+            assert root.codegen_ctx is not None
+            self.assertEqual(
+                root.codegen_ctx.geode_enum_members["UniqueGeodeEnum"],
+                (("Alpha", 1), ("Beta", 2)),
+            )
+        finally:
+            shutil.rmtree(bindings)
+            shutil.rmtree(sdk)
 
     def test_classify_arg_no_enum_shadow(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")

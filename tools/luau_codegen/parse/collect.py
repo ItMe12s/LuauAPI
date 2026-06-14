@@ -5,6 +5,7 @@ import warnings
 
 from luau_codegen.parse import broma
 from luau_codegen.model.domain import BRO_FILES, object_classes
+from luau_codegen.model.geode_enums import EnumInfo
 
 
 def collect_bindings_root(bindings_dir: str, geode_sdk_path: str | None = None) -> broma.Root:
@@ -17,7 +18,7 @@ def collect_bindings_root(bindings_dir: str, geode_sdk_path: str | None = None) 
             continue
         parsed = broma.parse_file(path)
         root.classes.extend(parsed.classes)
-    geode_enums: dict[str, str] | None = None
+    geode_enum_infos: dict[str, EnumInfo] | None = None
     if geode_sdk_path:
         from luau_codegen.parse.cocos_enums import scan_enum_key_codes
         from luau_codegen.parse.geode_sdk import (
@@ -28,7 +29,7 @@ def collect_bindings_root(bindings_dir: str, geode_sdk_path: str | None = None) 
             take_scan_warnings,
         )
 
-        geode_enums = scan_geode_enums(geode_sdk_path)
+        geode_enum_infos = scan_geode_enums(geode_sdk_path, bindings_dir=bindings_dir)
         enum_key_codes = scan_enum_key_codes(geode_sdk_path)
         root.classes.extend(scan_geode_sdk(geode_sdk_path))
         ccnode_additions = scan_geode_ccnode_additions(geode_sdk_path)
@@ -59,13 +60,13 @@ def collect_bindings_root(bindings_dir: str, geode_sdk_path: str | None = None) 
             seen[cls.qualified_name] = cls
     root.classes = list(seen.values())
     root.classes.sort(key=lambda c: (c.namespace, c.name))
-    if geode_enums is not None:
+    if geode_enum_infos is not None:
         from luau_codegen.convert.type_map import COCOS_ENUM_TYPES, GD_ENUM_TYPES
         from luau_codegen.model.codegen_context import CodegenContext
 
         skip = GD_ENUM_TYPES | COCOS_ENUM_TYPES | {c.name for c in object_classes(root)}
         root.codegen_ctx = CodegenContext.with_geode_enums(
-            geode_enums,
+            geode_enum_infos,
             skip=skip,
             cocos_enum_members={
                 "enumKeyCodes": [(entry.name, entry.value) for entry in enum_key_codes]

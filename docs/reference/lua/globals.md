@@ -29,6 +29,7 @@ Caps and error strings live in [Limits and errors](../cpp/limits-and-errors.md).
 | Core | [Tasks and time](tasks.md) | `task` and `time` |
 | Core | [callbacks](callbacks.md) | C++ callback lifetime |
 | Core | [delegates](delegates.md) | Virtual interface tables |
+| Game | [enums](enums.md) | GD and Geode enum constants |
 | Game | [game objects](game-objects.md) | Cocos and GD objects |
 | Game | [cocos](cocos.md) | Node and color helpers |
 | Game | [ColorProvider](color-provider.md) | Theme colors |

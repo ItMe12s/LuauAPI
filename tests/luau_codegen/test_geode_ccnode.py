@@ -255,7 +255,7 @@ public:
             )
 
             enums = scan_geode_enums(tmpdir)
-            ctx = register_geode_enums(enums)
+            ctx = register_geode_enums({name: info.cxx_name for name, info in enums.items()})
             info = classify_arg("geode::Anchor", {}, ctx=ctx)
             self.assertIsNotNone(info)
             assert info is not None

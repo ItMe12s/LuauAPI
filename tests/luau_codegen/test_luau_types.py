@@ -21,6 +21,7 @@ from helpers import (
     types_text,  # type: ignore[import-unresolved]
 )
 from luau_codegen.model.codegen_context import CodegenContext  # type: ignore[import-unresolved]
+from luau_codegen.model.geode_enums import EnumInfo, EnumMember  # type: ignore[import-unresolved]
 from luau_codegen.emit.luau_types.manual_fields import (  # type: ignore[import-unresolved]
     MANUAL_FREE_FN_FIELDS,
 )
@@ -96,6 +97,48 @@ class LuauTypeEmissionTests(unittest.TestCase):
             "export type EnumKeyCodesNamespace = { KEY_A: number, MOUSE_4: number }", text
         )
         self.assertIn("enumKeyCodes: EnumKeyCodesNamespace", text)
+
+    def test_gd_and_geode_enum_namespaces_use_scanned_members(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        root = Root(classes=[ccobject])
+        root.codegen_ctx = CodegenContext.with_geode_enums(
+            {
+                "GJLevelType": EnumInfo(
+                    name="GJLevelType",
+                    cxx_name="GJLevelType",
+                    members=(
+                        EnumMember("Saved", 3),
+                        EnumMember("SearchResult", 4),
+                    ),
+                ),
+                "UniqueGeodeEnum": EnumInfo(
+                    name="UniqueGeodeEnum",
+                    cxx_name="geode::UniqueGeodeEnum",
+                    members=(
+                        EnumMember("Alpha", 1),
+                        EnumMember("Beta", 2),
+                    ),
+                ),
+            },
+            skip={"GJLevelType"},
+        )
+
+        text = types_text(emit_luau_types(root))
+
+        self.assertIn("export type GJLevelType = number", text)
+        self.assertIn(
+            "export type GJLevelTypeNamespace = { Saved: number, SearchResult: number }",
+            text,
+        )
+        self.assertIn("export type UniqueGeodeEnum = number", text)
+        self.assertIn(
+            "export type UniqueGeodeEnumNamespace = { Alpha: number, Beta: number }",
+            text,
+        )
+        self.assertIn("export type GDNamespace", text)
+        self.assertIn("GJLevelType: GJLevelTypeNamespace", text)
+        self.assertIn("export type GeodeNamespace", text)
+        self.assertIn("UniqueGeodeEnum: UniqueGeodeEnumNamespace", text)
 
     def test_factories_and_namespace_types(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")

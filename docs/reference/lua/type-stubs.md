@@ -68,6 +68,10 @@ At runtime, pass decimal integer strings for those arguments and read wide integ
 
 `tests/luau_codegen/test_manual_fields_sync.py` guards drift between the Python map and emitted stubs.
 
+## Enums
+
+Enum stubs use a `number` alias plus a `FooNamespace` table type for constants. See [Enums](enums.md).
+
 ## Overloaded members
 
 Methods and factories with several overloads are emitted as one widened signature that ends in `...any`.
@@ -81,6 +85,7 @@ See [Codegen](../../contributor/codegen/codegen.md) and [Editor setup](../../get
 
 ## Related
 
+- [Enums](enums.md)
 - [Globals](globals.md)
 - [geode.utils](utils.md)
 - [Editor setup](../../getting-started/editor-setup.md)

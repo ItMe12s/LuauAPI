@@ -160,6 +160,40 @@ class F5OverloadPreferredOnlyTests(unittest.TestCase):
             f"resolved overload should not be flagged ambiguous: {reasons}",
         )
 
+    def test_editorui_command_overloads_prefer_edit_command(self) -> None:
+        cls = Class(
+            name="EditorUI",
+            bases=["CCNode"],
+            attributes=["link(win)"],
+        )
+        command = Method(
+            name="moveObjectCall",
+            ret="void",
+            args=[Arg(type="EditCommand", name="command")],
+            platforms={"win": "0x1"},
+        )
+        sender = Method(
+            name="moveObjectCall",
+            ret="void",
+            args=[Arg(type="cocos2d::CCObject*", name="sender")],
+            platforms={"win": "0x2"},
+        )
+        cls.methods = [command, sender]
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        ccnode = Class(name="CCNode", namespace="cocos2d", bases=["CCObject"])
+        objects = {
+            "CCObject": ccobject,
+            "cocos2d::CCObject": ccobject,
+            "CCNode": ccnode,
+            "cocos2d::CCNode": ccnode,
+            "EditorUI": cls,
+        }
+
+        grouped, skipped = group_supported(cls, objects, "win")
+
+        self.assertEqual(grouped["moveObjectCall"], [command])
+        self.assertEqual([reason for _, reason in skipped], ["overload-superseded:1"])
+
     def test_gj_item_icon_darken_store_item_prefers_shop_type(self) -> None:
         cls = Class(
             name="GJItemIcon",

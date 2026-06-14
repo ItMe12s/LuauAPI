@@ -44,10 +44,17 @@ def _emit_factories(
     objects: Dict[str, Class],
     namespace: str,
     ctx: CodegenContext | None = None,
+    extra_field_lines: List[str] | None = None,
 ) -> List[str]:
     lines = _emit_factory_records(factories, objects, ctx=ctx)
+    field_lines = _factory_field_lines(factories)
+    if extra_field_lines:
+        field_lines = sorted(
+            field_lines + extra_field_lines,
+            key=lambda line: line.strip().split(":", 1)[0].strip(),
+        )
     lines.append(f"export type {_namespace_type_name(namespace)} = {{\n")
-    lines.extend(_factory_field_lines(factories))
+    lines.extend(field_lines)
     lines.append("}\n\n")
     return lines
 

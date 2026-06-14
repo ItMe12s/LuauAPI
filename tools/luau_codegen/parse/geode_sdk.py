@@ -23,6 +23,7 @@ def _record_scan_failure(message: str) -> None:
     _SCAN_WARNINGS.append(message)
 
 
+from luau_codegen.model.geode_enums import EnumInfo, parse_enum_members
 from luau_codegen.parse.broma import (
     Class,
     Function,
@@ -123,21 +124,52 @@ def scan_geode_sdk(sdk_path: str) -> List[Class]:
     return classes
 
 
-def scan_geode_enums(sdk_path: str) -> dict[str, str]:
-    ui_dir = os.path.join(sdk_path, "loader", "include", "Geode", "ui")
-    if not os.path.isdir(ui_dir):
-        return {}
+def _bindings_enums_header_candidates(bindings_dir: str | None) -> list[str]:
+    if not bindings_dir:
+        return []
+    return [
+        os.path.join(bindings_dir, "include", "Geode", "Enums.hpp"),
+        os.path.join(os.path.dirname(bindings_dir), "include", "Geode", "Enums.hpp"),
+    ]
+
+
+def scan_geode_enums(
+    sdk_path: str,
+    *,
+    bindings_dir: str | None = None,
+) -> dict[str, EnumInfo]:
+    include_dir = os.path.join(sdk_path, "loader", "include", "Geode")
+    ui_dir = os.path.join(include_dir, "ui")
     allowed = _included_headers(sdk_path)
-    out: dict[str, str] = {}
-    for filename in sorted(os.listdir(ui_dir)):
-        if not filename.endswith(".hpp"):
+    out: dict[str, EnumInfo] = {}
+
+    if os.path.isdir(ui_dir):
+        for filename in sorted(os.listdir(ui_dir)):
+            if not filename.endswith(".hpp"):
+                continue
+            if allowed and filename not in allowed:
+                continue
+            try:
+                out.update(_scan_header_enums(os.path.join(ui_dir, filename)))
+            except Exception as exc:
+                _record_scan_failure(f"[luauapi] failed to scan enums {filename}: {exc}")
+
+    seen_headers: set[str] = set()
+    for enums_hpp in [
+        *_bindings_enums_header_candidates(bindings_dir),
+        os.path.join(include_dir, "Enums.hpp"),
+    ]:
+        norm = os.path.normcase(os.path.abspath(enums_hpp))
+        if norm in seen_headers:
             continue
-        if allowed and filename not in allowed:
+        seen_headers.add(norm)
+        if not os.path.isfile(enums_hpp):
             continue
         try:
-            out.update(_scan_header_enums(os.path.join(ui_dir, filename)))
+            out.update(_scan_header_enums(enums_hpp))
         except Exception as exc:
-            _record_scan_failure(f"[luauapi] failed to scan enums {filename}: {exc}")
+            _record_scan_failure(f"[luauapi] failed to scan enums {enums_hpp}: {exc}")
+
     return out
 
 
@@ -266,27 +298,101 @@ def _scan_header_functions(path: str, namespaces, names) -> List[Function]:
     return out
 
 
-def _scan_header_enums(path: str) -> dict[str, str]:
-    with open(path, "r", encoding="utf-8") as f:
-        text = f.read()
-    text = strip_comments(text)
-    text = _strip_preproc(text)
-    namespace = _find_namespace(text)
+def _enum_body_slice(text: str, decl_end: int) -> str | None:
+    i = decl_end
+    n = len(text)
+    while i < n and text[i] in " \t\r\n":
+        i += 1
+    if i < n and text[i] == ":":
+        brace = text.find("{", i)
+        if brace == -1:
+            return None
+        i = brace
+    if i >= n or text[i] != "{":
+        return None
+    brace_end = balanced_delimiter_end(text, i)
+    return text[i + 1 : brace_end]
 
-    class_ranges: list[tuple[int, int]] = []
+
+def _class_body_ranges(text: str) -> list[tuple[int, int]]:
+    ranges: list[tuple[int, int]] = []
     for match in _CLASS_DECL.finditer(text):
         brace_start = match.end() - 1
         brace_end = balanced_delimiter_end(text, brace_start)
-        class_ranges.append((brace_start, brace_end))
+        ranges.append((brace_start, brace_end))
+    return ranges
 
-    out: dict[str, str] = {}
+
+def _namespace_at(text: str, pos: int, class_ranges: list[tuple[int, int]]) -> str:
+    ns_stack: list[str] = []
+    frames: list[str] = []
+    i = 0
+    while i < pos:
+        c = text[i]
+        if c in " \t\r\n":
+            i += 1
+            continue
+        for start, end in class_ranges:
+            if start <= i < end:
+                i = end
+                break
+        else:
+            m = _NS_OPEN.match(text, i)
+            if m:
+                ns_stack.append(m.group(1) or "")
+                frames.append("ns")
+                i = m.end()
+                continue
+            m = _BLOCK_OPEN.match(text, i)
+            if m:
+                frames.append("block")
+                i = m.end()
+                continue
+            if c == "{":
+                frames.append("block")
+                i += 1
+                continue
+            if c == "}":
+                if frames and frames.pop() == "ns" and ns_stack:
+                    ns_stack.pop()
+                i += 1
+                continue
+            i += 1
+    return "::".join(seg for seg in ns_stack if seg)
+
+
+def parse_geode_enums(text: str, *, source: str = "") -> dict[str, EnumInfo]:
+    text = strip_comments(text)
+    text = _strip_preproc(text)
+
+    class_ranges = _class_body_ranges(text)
+
+    out: dict[str, EnumInfo] = {}
     for m in _ENUM_DECL.finditer(text):
         pos = m.start()
         if any(start <= pos < end for start, end in class_ranges):
             continue
         name = m.group(1)
-        out[name] = f"{namespace}::{name}" if namespace else name
+        body = _enum_body_slice(text, m.end())
+        if body is None:
+            continue
+        namespace = _namespace_at(text, pos, class_ranges)
+        cxx_name = f"{namespace}::{name}" if namespace else name
+        members, warning = parse_enum_members(body)
+        if warning:
+            label = source or name
+            _record_scan_failure(
+                f"[luauapi] failed to parse enum members {name} in {label}: {warning}"
+            )
+            members = ()
+        out[name] = EnumInfo(name=name, cxx_name=cxx_name, members=members)
     return out
+
+
+def _scan_header_enums(path: str) -> dict[str, EnumInfo]:
+    with open(path, "r", encoding="utf-8") as f:
+        text = f.read()
+    return parse_geode_enums(text, source=path)
 
 
 def _strip_preproc(text: str) -> str:

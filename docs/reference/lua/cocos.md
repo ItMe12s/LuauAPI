@@ -66,6 +66,7 @@ geode.cocos.enumKeyCodes.MOUSE_4
 
 `geode.cocos.enumKeyCodes` contains the full cocos `enumKeyCodes` table.
 Use these values with keyboard delegates, [Keyboard input](keyboard-input.md), and [Keybind](keybind.md).
+See [Enums](enums.md) for how enum values compare at runtime.
 
 ## Example
 
@@ -82,6 +83,7 @@ print(cc.lighten3B(red, 20).r) -- 255
 ## Related
 
 - [Globals](globals.md)
+- [Enums](enums.md)
 - [game objects](game-objects.md)
 - [ColorProvider](color-provider.md)
 - [Keyboard input](keyboard-input.md)
