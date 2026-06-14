@@ -174,27 +174,6 @@ namespace luax::detail {
         lua_pop(L, 1);
     }
 
-    geode::Result<void> ensureUserdataMetatable(lua_State* L, TypeInfo const& info) {
-        if (!isValidUserdataTag(info.tag)) {
-            return geode::Err(fmt::format("{} invalid userdata tag {}", info.name, info.tag));
-        }
-
-        lua_getuserdatametatable(L, static_cast<int>(info.tag));
-        if (!lua_isnil(L, -1)) {
-            lua_pop(L, 1);
-            return geode::Ok();
-        }
-        lua_pop(L, 1);
-
-        luaL_getmetatable(L, info.mtName.c_str());
-        if (lua_isnil(L, -1)) {
-            lua_pop(L, 1);
-            return geode::Err(fmt::format("missing userdata metatable for {}", info.name));
-        }
-        lua_setuserdatametatable(L, static_cast<int>(info.tag));
-        return geode::Ok();
-    }
-
     void chainMethodTable(lua_State* L, TypeInfo const& info, std::uint32_t baseTag) {
         auto const* base = UsertypeRegistry::get().findByTag(baseTag);
         if (!base || base->mtName.empty()) return;
@@ -274,18 +253,17 @@ namespace luax::detail {
         if (lua_type(L, idx) != LUA_TUSERDATA) {
             luaL_error(L, "%s expected %s at arg %d", method, targetName, idx);
         }
-        int tagInt = lua_userdatatag(L, idx);
-        if (tagInt <= 0) {
-            luaL_error(L, "%s expected %s at arg %d", method, targetName, idx);
-        }
-        if (detail::isReservedUserdataTag(static_cast<std::uint32_t>(tagInt))) {
-            luaL_error(L, "%s expected %s at arg %d", method, targetName, idx);
-        }
-        auto* info = UsertypeRegistry::get().findByTag(static_cast<std::uint32_t>(tagInt));
-        if (!info) {
+        if (lua_userdatatag(L, idx) != static_cast<int>(kSharedUsertypeTag)) {
             luaL_error(L, "%s expected %s at arg %d", method, targetName, idx);
         }
         auto* block = static_cast<UserdataBlock*>(lua_touserdata(L, idx));
+        if (!block) {
+            luaL_error(L, "%s expected %s at arg %d", method, targetName, idx);
+        }
+        auto* info = UsertypeRegistry::get().findByTag(block->typeTag);
+        if (!info) {
+            luaL_error(L, "%s expected %s at arg %d", method, targetName, idx);
+        }
         auto* obj = liveObject(block);
         if (!obj) {
             luaL_error(L, "%s expected live %s at arg %d", method, targetName, idx);
@@ -295,11 +273,11 @@ namespace luax::detail {
 
     UserdataCandidate tryCandidate(lua_State* L, int idx) {
         if (lua_type(L, idx) != LUA_TUSERDATA) return {};
-        int tagInt = lua_userdatatag(L, idx);
-        if (tagInt <= 0) return {};
-        auto* info = UsertypeRegistry::get().findByTag(static_cast<std::uint32_t>(tagInt));
-        if (!info) return {};
+        if (lua_userdatatag(L, idx) != static_cast<int>(kSharedUsertypeTag)) return {};
         auto* block = static_cast<UserdataBlock*>(lua_touserdata(L, idx));
+        if (!block) return {};
+        auto* info = UsertypeRegistry::get().findByTag(block->typeTag);
+        if (!info) return {};
         auto* obj = liveObject(block);
         if (!obj) return {};
         return {obj, info};
@@ -320,16 +298,28 @@ namespace luax::detail {
         return nullptr;
     }
 
+    void assignUsertypeMetatable(lua_State* L, TypeInfo const& info) {
+        luaL_getmetatable(L, info.mtName.c_str());
+        if (lua_istable(L, -1)) {
+            lua_setmetatable(L, -2);
+        }
+        else {
+            lua_pop(L, 1);
+        }
+    }
+
     void pushUserdataOwned(lua_State* L, cocos2d::CCObject* obj, TypeInfo const& info) {
         if (!isValidUserdataTag(info.tag)) {
             lua_pushnil(L);
             return;
         }
         auto* storage =
-            lua_newuserdatataggedwithmetatable(L, sizeof(UserdataBlock), static_cast<int>(info.tag));
+            lua_newuserdatatagged(L, sizeof(UserdataBlock), static_cast<int>(kSharedUsertypeTag));
         auto* block = new (storage) UserdataBlock();
         block->ptr = obj;
         block->flags = kUserdataOwnedFlag;
+        block->typeTag = info.tag;
+        assignUsertypeMetatable(L, info);
     }
 
     void pushUserdataBorrowed(lua_State* L, cocos2d::CCObject* obj, TypeInfo const& info) {
@@ -338,10 +328,12 @@ namespace luax::detail {
             return;
         }
         auto* storage =
-            lua_newuserdatataggedwithmetatable(L, sizeof(UserdataBlock), static_cast<int>(info.tag));
+            lua_newuserdatatagged(L, sizeof(UserdataBlock), static_cast<int>(kSharedUsertypeTag));
         auto* block = new (storage) UserdataBlock();
         block->ptr = nullptr;
         block->weak = geode::WeakRef<cocos2d::CCObject>(obj);
         block->flags = 0u;
+        block->typeTag = info.tag;
+        assignUsertypeMetatable(L, info);
     }
 } // namespace luax::detail

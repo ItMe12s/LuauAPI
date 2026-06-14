@@ -26,6 +26,7 @@ namespace luax {
         cocos2d::CCObject* ptr = nullptr;
         geode::WeakRef<cocos2d::CCObject> weak;
         std::uint32_t flags = 0;
+        std::uint32_t typeTag = 0;
     };
 
     namespace detail {
@@ -68,7 +69,6 @@ namespace luax {
         cocos2d::CCObject* liveObject(UserdataBlock* block);
         void destructorDispatch(lua_State* L, void* ud);
         void getOrCreateMetatable(lua_State* L, TypeInfo& info);
-        geode::Result<void> ensureUserdataMetatable(lua_State* L, TypeInfo const& info);
         void chainMethodTable(lua_State* L, TypeInfo const& info, std::uint32_t baseTag);
         void appendMethod(lua_State* L, TypeInfo const& info, char const* name, lua_CFunction fn);
         void appendField(
@@ -147,11 +147,9 @@ namespace luax {
             if (baseTags.size() > 0) {
                 detail::chainMethodTable(L, info, *baseTags.begin());
             }
-            auto mtResult = detail::ensureUserdataMetatable(L, info);
-            if (mtResult.isErr()) {
-                return geode::Err(mtResult.unwrapErr());
-            }
-            lua_setuserdatadtor(L, static_cast<int>(info.tag), &detail::destructorDispatch);
+            lua_setuserdatadtor(
+                L, static_cast<int>(detail::kSharedUsertypeTag), &detail::destructorDispatch
+            );
             return geode::Ok();
         }
 

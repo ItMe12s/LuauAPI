@@ -14,11 +14,15 @@ namespace luax::detail {
     constexpr std::uint32_t kMeshAssetUserdataTag = 8;
     constexpr std::uint32_t kMaterialUserdataTag = 9;
     constexpr std::uint32_t kTextureUserdataTag = 10;
-    constexpr std::uint32_t kFirstDynamicUsertypeTag = 11;
+    // Luau userdata tags are uint8_t.
+    // All usertypes share this tag, the real type id lives in UserdataBlock::typeTag.
+    constexpr std::uint32_t kSharedUsertypeTag = 11;
+    constexpr std::uint32_t kFirstDynamicUsertypeTag = 12;
 
     static_assert(
         kFirstDynamicUsertypeTag < LUA_UTAG_LIMIT, "Reserved userdata tags exceed LUA_UTAG_LIMIT"
     );
+    static_assert(kSharedUsertypeTag < 256, "Shared usertype tag must fit in Luau's uint8_t tag");
     static_assert(
         kOpaqueHandleUserdataTag < kTaskHandleUserdataTag &&
             kTaskHandleUserdataTag < kImGuiDrawHandleUserdataTag &&
