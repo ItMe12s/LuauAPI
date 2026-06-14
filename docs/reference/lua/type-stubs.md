@@ -46,6 +46,26 @@ Namespaces covered today:
 - `geode.ColorProvider`, `geode.VersionInfo`, `geode.Keybind`, and keyboard input namespaces
 - Selected `geode.cocos` color helpers
 
+## Codegen free-function namespaces
+
+Codegen scans Geode headers listed in `tools/luau_codegen/model/free_fn_sources.py`
+and merges the results into `types/geode.d.luau`. These are not in `MANUAL_FREE_FN_FIELDS`.
+
+| Namespace | Source header | Doc page |
+| --- | --- | --- |
+| `geode.utils` (top-level) | `utils/general.hpp` | [geode.utils](utils.md) |
+| `geode.utils.clipboard` | `utils/general.hpp` | [clipboard](clipboard.md) |
+| `geode.utils.game` | `utils/general.hpp` | [game](game.md) |
+| `geode.utils.platform` | `utils/general.hpp` | [geode.utils](utils.md) |
+| `geode.utils.thread` | `utils/general.hpp` | [geode.utils](utils.md) |
+| `geode.utils.string` | `utils/string.hpp` | [string](string.md) |
+| `geode.utils.random` | `utils/random.hpp` | [random](random.md) |
+| `geode.cocos` (codegen portion) | `utils/cocos.hpp` | [cocos](cocos.md) |
+| `geode` UI free functions | `ui/Popup.hpp`, `ui/GeodeUI.hpp` | [UI and layouts](ui.md) |
+
+Some Geode C++ wide integer types (`size_t`, `uint64_t`, and similar) appear as `string` in the stub.
+At runtime, pass decimal integer strings for those arguments and read wide integer results as decimal strings.
+
 `tests/luau_codegen/test_manual_fields_sync.py` guards drift between the Python map and emitted stubs.
 
 ## Overloaded members
@@ -62,6 +82,7 @@ See [Codegen](../../contributor/codegen/codegen.md) and [Editor setup](../../get
 ## Related
 
 - [Globals](globals.md)
+- [geode.utils](utils.md)
 - [Editor setup](../../getting-started/editor-setup.md)
 - [Building from source](../../contributor/building.md)
 - [Codegen](../../contributor/codegen/codegen.md)

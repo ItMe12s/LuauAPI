@@ -29,15 +29,12 @@ Colors use plain tables:
 | `getChildBySpriteFrameName(node: CCNode, name: string) -> CCNode?` | First child using that sprite frame. |
 | `isSpriteName(node: CCNode, name: string) -> boolean` | True if the node uses that sprite. |
 | `getChildBySpriteName(node: CCNode, name: string) -> CCNode?` | First child using that sprite. |
-| `getObjectName(object: CCObject) -> string` | Class name of an object. |
 | `getMousePos() -> CCPoint` | Mouse position in cocos coordinates. |
 | `getLabelSize(text: string, font: string, kerning: number) -> CCSize` | Size of text in a bitmap font. |
 | `fileExistsInSearchPaths(filename: string) -> boolean` | True if the file is in the search paths. |
 | `limitNodeSize(node: CCNode, size: CCSize, default: number, min: number) -> ()` | Scale a node to fit a size. |
 | `limitNodeWidth(node: CCNode, width: number, default: number, min: number) -> ()` | Scale to fit a width. |
 | `limitNodeHeight(node: CCNode, height: number, default: number, min: number) -> ()` | Scale to fit a height. |
-| `handleTouchPriority(node: CCNode, force: boolean?) -> ()` | Fix touch priority for a node tree. |
-| `handleTouchPriorityWith(node: CCNode, priority: number, force: boolean?) -> ()` | Set touch priority for a tree. |
 
 ## Color functions
 

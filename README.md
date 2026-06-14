@@ -78,6 +78,10 @@ Start at [globals](docs/reference/lua/globals.md) for the full module index.
     - [websocket](docs/reference/lua/websocket.md)
   - Utils
     - [geode.utils](docs/reference/lua/utils.md)
+    - [clipboard](docs/reference/lua/clipboard.md)
+    - [string](docs/reference/lua/string.md)
+    - [random](docs/reference/lua/random.md)
+    - [game](docs/reference/lua/game.md)
     - [base64](docs/reference/lua/base64.md)
     - [permission](docs/reference/lua/permission.md)
     - [VersionInfo](docs/reference/lua/version-info.md)

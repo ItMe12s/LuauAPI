@@ -63,6 +63,7 @@ print(back) -- hello
 ## Related
 
 - [geode.utils](utils.md)
+- [clipboard](clipboard.md)
 - [permission](permission.md)
 - [Globals](globals.md)
 

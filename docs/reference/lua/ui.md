@@ -75,6 +75,17 @@ geode.createQuickPopup(
 )
 ```
 
+## Other geode helpers
+
+The stub also exposes a few free functions on `geode` itself:
+
+- `geode.createDefaultLogo()` and `geode.createServerModLogo(modPath)` for mod branding nodes
+- `geode.openModsList()` to open the in-game mod list
+- `geode.Notification.create(text, icon, duration)` for toast overlays
+
+LuauAPI does not document every UI factory signature here.
+Use editor autocomplete from [type stubs](type-stubs.md) and read behavior in the [Geode SDK docs](https://docs.geode-sdk.org/).
+
 ## ImGui mod menus
 
 See [imgui](imgui.md) and [src/scripts/_modmenudemo.luau](../../../src/scripts/_modmenudemo.luau) for overlay menus.

@@ -40,6 +40,10 @@ Caps and error strings live in [Limits and errors](../cpp/limits-and-errors.md).
 | Network | [web](web.md) | HTTP client |
 | Network | [websocket](websocket.md) | WebSocket client and server |
 | Utils | [geode.utils](utils.md) | Utils namespace index |
+| Utils | [clipboard](clipboard.md) | System clipboard |
+| Utils | [string](string.md) | String helpers |
+| Utils | [random](random.md) | Random strings and UUIDs |
+| Utils | [game](game.md) | Game process control |
 | Utils | [base64](base64.md) | Base64 encode and decode |
 | Utils | [permission](permission.md) | OS permissions |
 | Utils | [VersionInfo](version-info.md) | Version parsing |
@@ -126,6 +130,7 @@ See [Limits and errors](../cpp/limits-and-errors.md).
 - [Examples](../../getting-started/examples.md)
 - [modules](modules.md)
 - [Sharing APIs between mods](sharing-apis.md)
+- [geode.utils](utils.md)
 - [type stubs](type-stubs.md)
 - [Limits and errors](../cpp/limits-and-errors.md)
 
