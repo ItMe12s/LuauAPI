@@ -114,6 +114,13 @@ For anyone working on LuauAPI itself.
 
 ## Project
 
+Special thanks to:
+
+- [Juniper](https://github.com/TreehouseFalcon) (Testing and debugging)
+- [YellowCat98](https://github.com/YellowCat98) (Pre-RC testing)
+
+In-game:
+
 - [About](about.md)
 - [Changelog](changelog.md)
 - [Support](support.md)

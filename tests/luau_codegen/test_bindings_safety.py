@@ -246,6 +246,17 @@ class GeneratedSafetyTests(unittest.TestCase):
         self.assertIn("luax::check<int>", text)
         self.assertIn("*ctx->arg0 = arg0Override", text)
         self.assertIn("if (!skipOriginal)", text)
+        hook_body = text.split("void luaapi_hook_CCNode_setTag_1")[1].split(
+            "geode::Result<geode::Hook*>"
+        )[0]
+        self.assertIn("luaapi_original_CCNode_setTag_1", text)
+        self.assertIn("geode::hook::createWrapper", text)
+        self.assertIn(
+            "reinterpret_cast<void (*)(cocos2d::CCNode* self, int arg0)>(luaapi_original_CCNode_setTag_1)(self, arg0);",
+            hook_body,
+        )
+        self.assertNotIn("self->setTag(arg0);", hook_body)
+        self.assertNotIn("self->cocos2d::CCNode::setTag(arg0);", hook_body)
 
     def test_hook_named_args_disabled_for_duplicate_names(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")

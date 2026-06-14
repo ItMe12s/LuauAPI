@@ -137,7 +137,11 @@ def emit_hook_target(
     params = [f"{cxx_cls}* self"]
     params.extend(f"{info.cxx_type} {name}" for _, info, name in args)
     params_text = ", ".join(params)
-    call = f"self->{m.name}({', '.join(call_args)})"
+    original_var = f"luaapi_original_{suffix}"
+    hook_fn = f"luaapi_hook_{suffix}"
+    original_args = ", ".join(["self", *call_args])
+    fn_type = f"{ret_type} (*)({params_text})"
+    call = f"reinterpret_cast<{fn_type}>({original_var})({original_args})"
     arg_names = [arg.name for arg, _, _ in args]
     named_args = bool(arg_names) and len(set(arg_names)) == len(arg_names)
     apply_args_ctx = "&applyArgsCtx" if args else "nullptr"
@@ -152,7 +156,8 @@ def emit_hook_target(
         )
         out.append(_emit_apply_return_fn(suffix, ret, "hook skip", f"luaapi_apply_skip_{suffix}"))
 
-    out.append(f"    {ret_type} luaapi_hook_{suffix}({params_text}) {{\n")
+    out.append(f"    static void* {original_var} = nullptr;\n\n")
+    out.append(f"    {ret_type} {hook_fn}({params_text}) {{\n")
     if ret.kind != "void":
         out.append(f"        {ret.cxx_type} result{{}};\n")
     for _, info, name in args:
@@ -192,31 +197,33 @@ def emit_hook_target(
         )
     out.append("        });\n")
     out.append("        if (!skipOriginal) {\n")
+    out.append(f"            if ({original_var}) {{\n")
     if ret.kind == "void":
-        out.append(f"            {call};\n")
+        out.append(f"                {call};\n")
     else:
-        out.append(f"            result = {call};\n")
-    out.append("        }\n")
+        out.append(f"                result = {call};\n")
+    out.append("            }\n")
     nargs = 1 + len(args) + (1 if ret.kind != "void" else 0)
     out.append(
-        f'        luauapi_gen::runLuaPostHooks("{target_id}", {nargs}, [&](lua_State* L) {{\n'
+        f'            luauapi_gen::runLuaPostHooks("{target_id}", {nargs}, [&](lua_State* L) {{\n'
     )
     out.extend(
-        f"    {line}"
+        f"        {line}"
         for line in push_value(TypeInfo("object", f"{cxx_cls}*", cls.name, cls.name), "self")
     )
     for _, info, name in args:
-        out.extend(f"    {line}" for line in push_value(info, name))
+        out.extend(f"        {line}" for line in push_value(info, name))
     if ret.kind != "void":
-        out.extend(f"    {line}" for line in push_value(ret, "result"))
-    out.append("        }, [&](lua_State* L, int idx) -> bool {\n")
+        out.extend(f"        {line}" for line in push_value(ret, "result"))
+    out.append("            }, [&](lua_State* L, int idx) -> bool {\n")
     if ret.kind == "void":
-        out.append("            return true;\n")
+        out.append("                return true;\n")
     else:
         out.append(
-            f'            return luauapi_gen::applyHookOverride(L, idx, &luaapi_apply_return_{suffix}, &applyReturnCtx, "{target_id}");\n'
+            f'                return luauapi_gen::applyHookOverride(L, idx, &luaapi_apply_return_{suffix}, &applyReturnCtx, "{target_id}");\n'
         )
-    out.append("        });\n")
+    out.append("            });\n")
+    out.append("        }\n")
     if ret.kind != "void":
         out.append("        return result;\n")
     out.append("    }\n\n")
@@ -231,8 +238,29 @@ def emit_hook_target(
     )
     out.append("        }\n")
     out.append(
-        f"        return geode::Mod::get()->hook(address, "
-        f"&luaapi_hook_{suffix}, displayName, tulip::hook::TulipConvention::Default);\n"
+        f"        auto hookResult = geode::Mod::get()->hook(address, "
+        f"&{hook_fn}, displayName, tulip::hook::TulipConvention::Default);\n"
     )
+    out.append("        if (hookResult.isErr()) {\n")
+    out.append("            return geode::Err(hookResult.unwrapErr());\n")
+    out.append("        }\n")
+    out.append(f"        if (!{original_var}) {{\n")
+    out.append("            tulip::hook::WrapperMetadata wrapperMetadata {\n")
+    out.append(
+        "                .m_convention = geode::hook::createConvention(tulip::hook::TulipConvention::Default),\n"
+    )
+    out.append(f"                .m_abstract = tulip::hook::AbstractFunction::from(&{hook_fn}),\n")
+    out.append("            };\n")
+    out.append(
+        "            auto wrapperResult = geode::hook::createWrapper(address, wrapperMetadata);\n"
+    )
+    out.append("            if (wrapperResult.isErr()) {\n")
+    out.append(
+        f'                return geode::Err("hook original wrapper failed for {_cstr(target_id)}: " + wrapperResult.unwrapErr());\n'
+    )
+    out.append("            }\n")
+    out.append(f"            {original_var} = wrapperResult.unwrap();\n")
+    out.append("        }\n")
+    out.append("        return hookResult;\n")
     out.append("    }\n\n")
     return "".join(out)

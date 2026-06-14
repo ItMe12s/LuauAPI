@@ -497,3 +497,84 @@ class HookableSelCallbackTests(unittest.TestCase):
         objects = {"CCObject": ccobject, "FMODAudioEngine": cls}
 
         self.assertFalse(hookable(cls, cls.methods[0], objects, "win"))
+
+
+class HookCodegenTests(unittest.TestCase):
+    def test_hook_original_uses_qualified_call(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        ccnode = Class(name="CCNode", namespace="cocos2d", bases=["CCObject"])
+        game_level = Class(name="GJGameLevel", bases=["CCObject"])
+        cls = Class(
+            name="LevelInfoLayer",
+            bases=["CCNode"],
+            methods=[
+                Method(
+                    name="levelDownloadFinished",
+                    ret="void",
+                    args=[Arg("GJGameLevel*", "level")],
+                    is_virtual=True,
+                    platforms=all_platforms("0x1"),
+                )
+            ],
+        )
+        objects = {
+            "CCObject": ccobject,
+            "CCNode": ccnode,
+            "GJGameLevel": game_level,
+            "LevelInfoLayer": cls,
+        }
+
+        text = _emit_class_file(
+            cls,
+            {"levelDownloadFinished": cls.methods},
+            [(cls, cls.methods[0])],
+            [],
+            objects,
+            set(),
+            1,
+            "win",
+        )
+
+        hook_body = text.split("void luaapi_hook_LevelInfoLayer_levelDownloadFinished_1")[1].split(
+            "geode::Result<geode::Hook*>"
+        )[0]
+        self.assertIn("luaapi_original_LevelInfoLayer_levelDownloadFinished_1", text)
+        self.assertIn(
+            "reinterpret_cast<void (*)(LevelInfoLayer* self, GJGameLevel* arg0)>(luaapi_original_LevelInfoLayer_levelDownloadFinished_1)(self, arg0);",
+            hook_body,
+        )
+        self.assertNotIn("self->levelDownloadFinished(arg0);", hook_body)
+        self.assertNotIn("self->LevelInfoLayer::levelDownloadFinished(arg0);", hook_body)
+
+    def test_hook_post_hooks_gated_by_skip_original(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        cls = Class(
+            name="CCNode",
+            namespace="cocos2d",
+            bases=["CCObject"],
+            methods=[
+                Method(
+                    name="setTag",
+                    ret="void",
+                    args=[Arg("int", "tag")],
+                    platforms=all_platforms("0x1"),
+                )
+            ],
+        )
+
+        text = _emit_class_file(
+            cls,
+            {"setTag": cls.methods},
+            [(cls, cls.methods[0])],
+            [],
+            {"CCObject": ccobject, "CCNode": cls},
+            set(),
+            1,
+            "win",
+        )
+
+        hook_body = text.split("void luaapi_hook_CCNode_setTag_1")[1].split(
+            "geode::Result<geode::Hook*>"
+        )[0]
+        self.assertRegex(hook_body, r"if \(!skipOriginal\) \{[\s\S]*runLuaPostHooks")
+        self.assertEqual(hook_body.count("runLuaPostHooks"), 1)

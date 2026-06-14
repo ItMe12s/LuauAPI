@@ -49,6 +49,7 @@ Provide at least one of `before` or `after`. `priority` orders callbacks on the 
   Wrong types are logged and the original args are kept.
 - `geode.skip(value)`: skip the original and use `value` as the return.
   For void methods use `geode.skip()`.
+  Skip also suppresses all `after` callbacks for that invocation.
 - Any other non-nil value: logged and ignored, original still runs.
 
 ```lua
@@ -64,6 +65,8 @@ geode.hook("geode.gd.GameManager:setIntGameVariable/2", {
 ## The after callback
 
 `after` receives `self`, the method arguments, then the return value last.
+It runs only when the original C++ call runs on that invocation.
+If `before` returns `geode.skip()`, neither the original nor any `after` callback runs.
 
 - Return a new value to replace the return.
 - Return the value you received, or `nil`, to keep it.
@@ -91,7 +94,7 @@ geode.skip(value: any?) -> any
 ```
 
 Builds a skip marker for use as a `before` return.
-The original does not run and the value becomes the return.
+The original does not run, the value becomes the return, and `after` callbacks do not run.
 Use no argument for functions that return nothing.
 
 ## HookHandle
@@ -130,6 +133,9 @@ A hook is a sharp tool. Reach for a built-in API first when one exists.
 
 Hooking hot functions to do work an existing API already covers is a common Index rejection reason.
 See the [Geode SDK guidelines tips](https://docs.geode-sdk.org/mods/guidelines-tips/) and [LuauAPI mod guidelines](../../mod_guidelines.md).
+
+Luau hooks call originals through Geode's tulip wrapper for the hooked address,
+so they compose with C++ `$modify` mods on the same method.
 
 ## Limits
 
