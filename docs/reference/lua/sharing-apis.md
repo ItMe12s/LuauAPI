@@ -63,7 +63,7 @@ end)
 
 - This is a convention, not enforced. Key by your full mod id to avoid collisions.
 - Values stay for the life of the runtime. There is no auto cleanup.
-- The poll runs on the game tick, so it pauses when the game pauses.
+- The poll runs on the game tick. It keeps running when the game pauses. Speedhacks change poll timing because it uses frame delta.
 - `require` cannot reach another mod. It is sandboxed to your own resources. See [Modules](modules.md).
 
 ## Related

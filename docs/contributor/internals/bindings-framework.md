@@ -84,18 +84,36 @@ The handlers search methods first, then fields, then the per-node field table fo
 
 ## The usertype registry
 
-`UsertypeRegistry` maps each C++ type to a small integer tag and back. Tags are stable for the life of the runtime.
+`UsertypeRegistry` maps each bound C++ type to an internal type id. Examples: `CCNode`, `CCLayer`.
+Ids stay fixed for the whole runtime. This is not a mod count. One id per usertype class, no matter how many mods load.
 
-Each usertype record contains:
+Each record holds:
 
-- Tag (unique integer)
+- Tag (internal type id)
 - Name
 - Metatable name
-- Base tags (for inheritance checks)
+- Base tags (for inheritance)
+
+### Luau tag vs internal type id
+
+Luau userdata tags are 8-bit (`uint8_t`). Only 256 Luau tag slots exist. That is too small for one tag per game class.
+
+Usertypes use two layers:
+
+- Luau tag: all `Usertype<T>` userdata share `kSharedUsertypeTag` (11).
+- Internal type id: the real class id is in `UserdataBlock::typeTag` and `UsertypeRegistry`.
+
+`requireLive`, `tryCandidate`, and GC check the shared Luau tag first, then read `typeTag`.
+
+On push, `pushUserdataOwned` and `pushUserdataBorrowed` create userdata with the shared Luau tag,
+set `block->typeTag`, and call `lua_setmetatable`. One destructor is registered on the shared Luau tag.
+
+Reserved userdata (handles, websocket, gd3d assets, and so on) still get their own Luau tags
+through `registerTaggedMetatable` and `lua_setuserdatametatable`.
 
 Tag assignments:
 
-- Reserved tags:
+- Reserved Luau tags:
   - `kOpaqueHandleUserdataTag` (1)
   - `kTaskHandleUserdataTag` (2)
   - `kImGuiDrawHandleUserdataTag` (3)
@@ -106,10 +124,12 @@ Tag assignments:
   - `kMeshAssetUserdataTag` (8)
   - `kMaterialUserdataTag` (9)
   - `kTextureUserdataTag` (10)
-- Dynamic tags:
-  - Begin at `kFirstDynamicUsertypeTag` (11)
+- Shared Luau tag for all usertypes:
+  - `kSharedUsertypeTag` (11)
+- Internal registry ids for usertypes:
+  - Start at `kFirstDynamicUsertypeTag` (12)
 
-Codegen usertypes take the next free dynamic tag at registration time.
+Codegen picks the next free internal id at registration. That id goes in `UserdataBlock::typeTag`, not in the Luau userdata tag.
 
 ## Handle pools
 
@@ -198,6 +218,8 @@ locks `__metatable`, and optionally adds:
 
 Pass `std::nullopt` for `tag` when userdata is plain `lua_newuserdata` without a reserved tag.
 Some handles (for example texture and mesh) also expose `__gc` in the method table in addition to a tag destructor.
+
+`Usertype<T>` skips this path. It uses `kSharedUsertypeTag`, stores the id in `UserdataBlock::typeTag`, and sets the metatable on push.
 
 `ScheduledHandleBinding` uses the same helper for task and imgui draw handles.
 

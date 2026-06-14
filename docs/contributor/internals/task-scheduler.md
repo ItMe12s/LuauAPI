@@ -46,10 +46,10 @@ Cancelled tasks are then removed.
 ## Game integration
 
 `armTaskTick` creates a small `CCNode` and schedules its update with the Cocos2d scheduler.
-The update calls `advance`. Because it uses the game scheduler,
-tasks follow the game tick and freeze when the game pauses. If the director or scheduler is not ready,
-`armTaskTick` queues a one-shot retry on the main thread until arming works, so early scheduled callbacks still run.
-Failures are logged once. `disarmTaskTick` removes the node and stops any pending arm retry.
+The update calls `advance`. Tasks use frame delta, so speedhacks change their timing.
+Tasks are not paused when the game pauses (game as in playing a level and the pause menu).
+If the director or scheduler is not ready, `armTaskTick` queues a one-shot retry on the main thread until arming works,
+so early scheduled callbacks still run. Failures are logged once. `disarmTaskTick` removes the node and stops any pending arm retry.
 
 ## Limits
 

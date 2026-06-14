@@ -3,7 +3,7 @@
 ## Summary
 
 The `task` library schedules callbacks and the `time` library reads clocks.
-Tasks run on the game tick, so they freeze when the game pauses.
+Tasks run on the game tick. They keep running when the game pauses. Speedhacks change task timing because timers use frame delta.
 Types match `tools/luau_codegen/extra_bindings/task.dluau`.
 
 `loadstring` is a global, not part of `task`.
