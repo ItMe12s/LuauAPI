@@ -59,6 +59,17 @@ Colors use plain tables:
 The hex parse functions return `nil` and an error message on a bad string, so you can handle them without `pcall`.
 With `permissive` true, a short string like `"f"` reads as white.
 
+## enumKeyCodes
+
+```lua
+geode.cocos.enumKeyCodes.KEY_A
+geode.cocos.enumKeyCodes.KEY_Escape
+geode.cocos.enumKeyCodes.MOUSE_4
+```
+
+`geode.cocos.enumKeyCodes` contains the full cocos `enumKeyCodes` table.
+Use these values with keyboard delegates, [Keyboard input](keyboard-input.md), and [Keybind](keybind.md).
+
 ## Example
 
 ```lua
@@ -76,6 +87,7 @@ print(cc.lighten3B(red, 20).r) -- 255
 - [ColorProvider](color-provider.md)
 - [Game objects](game-objects.md)
 - [gd3d](gd3d.md)
+- [Keyboard input](keyboard-input.md)
 
 ## Source
 

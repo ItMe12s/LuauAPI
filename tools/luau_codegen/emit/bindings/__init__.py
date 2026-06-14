@@ -12,6 +12,10 @@ from luau_codegen.emit.bindings.free_functions import (
     FREE_FUNCTIONS_FILE,
     emit_free_functions_file,
 )
+from luau_codegen.emit.bindings.cocos_enums import (
+    ENUM_KEY_CODES_MANIFEST,
+    emit_enum_key_codes_manifest,
+)
 
 __all__ = [
     "emit",
@@ -32,6 +36,7 @@ def emit(
     files: dict[str, str] = {
         "bindings_internal.hpp": emit_internal_hpp(),
         "bindings_common.cpp": _emit_common_file(plan.emitted_classes, plan, target_platform),
+        ENUM_KEY_CODES_MANIFEST: emit_enum_key_codes_manifest(plan.ctx),
         FREE_FUNCTIONS_FILE: emit_free_functions_file(
             plan.supported_free_functions,
             plan.objects,

@@ -9,6 +9,7 @@ from luau_codegen.model.domain import BRO_FILES, object_classes
 
 def collect_bindings_root(bindings_dir: str, geode_sdk_path: str | None = None) -> broma.Root:
     root = broma.Root()
+    enum_key_codes = []
     for name in BRO_FILES:
         path = os.path.join(bindings_dir, name)
         if not os.path.exists(path):
@@ -18,6 +19,7 @@ def collect_bindings_root(bindings_dir: str, geode_sdk_path: str | None = None) 
         root.classes.extend(parsed.classes)
     geode_enums: dict[str, str] | None = None
     if geode_sdk_path:
+        from luau_codegen.parse.cocos_enums import scan_enum_key_codes
         from luau_codegen.parse.geode_sdk import (
             scan_geode_sdk,
             scan_geode_ccnode_additions,
@@ -27,6 +29,7 @@ def collect_bindings_root(bindings_dir: str, geode_sdk_path: str | None = None) 
         )
 
         geode_enums = scan_geode_enums(geode_sdk_path)
+        enum_key_codes = scan_enum_key_codes(geode_sdk_path)
         root.classes.extend(scan_geode_sdk(geode_sdk_path))
         ccnode_additions = scan_geode_ccnode_additions(geode_sdk_path)
         if ccnode_additions:
@@ -61,5 +64,11 @@ def collect_bindings_root(bindings_dir: str, geode_sdk_path: str | None = None) 
         from luau_codegen.model.codegen_context import CodegenContext
 
         skip = GD_ENUM_TYPES | COCOS_ENUM_TYPES | {c.name for c in object_classes(root)}
-        root.codegen_ctx = CodegenContext.with_geode_enums(geode_enums, skip=skip)
+        root.codegen_ctx = CodegenContext.with_geode_enums(
+            geode_enums,
+            skip=skip,
+            cocos_enum_members={
+                "enumKeyCodes": [(entry.name, entry.value) for entry in enum_key_codes]
+            },
+        )
     return root

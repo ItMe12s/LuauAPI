@@ -120,7 +120,8 @@ file(GLOB LUAUAPI_GEODE_UI_HEADERS CONFIGURE_DEPENDS
 set(LUAUAPI_GEODE_UI_MANIFEST
     "${LUAUAPI_GEODE_SDK_PATH}/loader/include/Geode/UI.hpp")
 set(LUAUAPI_GEODE_COCOS_HEADERS
-    "${LUAUAPI_GEODE_SDK_PATH}/loader/include/Geode/cocos/base_nodes/CCNode.h")
+    "${LUAUAPI_GEODE_SDK_PATH}/loader/include/Geode/cocos/base_nodes/CCNode.h"
+    "${LUAUAPI_GEODE_SDK_PATH}/loader/include/Geode/cocos/robtop/keyboard_dispatcher/CCKeyboardDelegate.h")
 set(LUAUAPI_GEODE_UTILS_HEADERS
     "${LUAUAPI_GEODE_SDK_PATH}/loader/include/Geode/utils/general.hpp"
     "${LUAUAPI_GEODE_SDK_PATH}/loader/include/Geode/utils/string.hpp"

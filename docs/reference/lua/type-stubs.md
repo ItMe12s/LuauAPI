@@ -22,6 +22,8 @@ Every file in `tools/luau_codegen/extra_bindings/` is appended to the same outpu
 - [`hook.dluau`](../../tools/luau_codegen/extra_bindings/hook.dluau) adds `HookHandle` and `HookCallbackTable`. See [Hooks](hooks.md).
 - [`mod.dluau`](../../tools/luau_codegen/extra_bindings/mod.dluau) adds `ModNamespace`. See [mod](mod.md).
 - [`json.dluau`](../../tools/luau_codegen/extra_bindings/json.dluau) adds `JsonNamespace`. See [json](json.md).
+- [`keyboard.dluau`](../../tools/luau_codegen/extra_bindings/keyboard.dluau) adds keyboard input support types.
+  See [Keyboard input](keyboard-input.md).
 - [`fs.dluau`](../../tools/luau_codegen/extra_bindings/fs.dluau) adds `FsRoot` and `FsNamespace`. See [fs](fs.md).
 - [`gd3d.dluau`](../../tools/luau_codegen/extra_bindings/gd3d.dluau) adds `gd3d`,
   Transform, Mesh, Material, Texture, and ViewportFrame types. See [gd3d](gd3d.md).
@@ -41,7 +43,7 @@ Namespaces covered today:
 
 - `geode.utils.web`
 - `geode.utils.base64` and `geode.utils.permission`
-- `geode.ColorProvider`, `geode.VersionInfo`, and `geode.Keybind`
+- `geode.ColorProvider`, `geode.VersionInfo`, `geode.Keybind`, and keyboard input namespaces
 - Selected `geode.cocos` color helpers
 
 `tests/luau_codegen/test_manual_fields_sync.py` guards drift between the Python map and emitted stubs.

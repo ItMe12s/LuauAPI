@@ -27,6 +27,7 @@ MANUAL_FREE_FN_FIELDS: Dict[str, List[str]] = {
         "ccDrawColor4B: (arg1: RGBAColor) -> ()",
         "cc3bFromHexString: (arg1: string, arg2: boolean?) -> (RGBColor?, string?)",
         "cc4bFromHexString: (arg1: string, arg2: boolean?, arg3: boolean?) -> (RGBAColor?, string?)",
+        "enumKeyCodes: EnumKeyCodesNamespace",
     ],
     "geode.utils.base64": [
         "encode: (data: string, variant: number?) -> string",
@@ -55,5 +56,19 @@ MANUAL_FREE_FN_FIELDS: Dict[str, List[str]] = {
         "fromString: (str: string) -> ({ key: number, modifiers: number }?, string?)",
         "toString: (keybind: { key: number, modifiers: number }) -> string",
         "createNode: (keybind: { key: number, modifiers: number }) -> CCNode?",
+    ],
+    "geode.KeyboardModifier": [
+        "Alt: number",
+        "Control: number",
+        "None: number",
+        "Shift: number",
+        "Super: number",
+    ],
+    "geode.KeyboardInputData": [
+        "Action: { Press: number, Release: number, Repeat: number }",
+    ],
+    "geode.KeyboardInputEvent": [
+        "listen: (callback: (data: KeyboardInputData) -> boolean?, priority: number?) -> KeyboardInputListenerHandle",
+        "listenFor: (key: number, callback: (data: KeyboardInputData) -> boolean?, priority: number?) -> KeyboardInputListenerHandle",
     ],
 }

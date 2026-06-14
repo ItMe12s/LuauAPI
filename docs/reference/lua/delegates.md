@@ -34,6 +34,25 @@ When a callback errors, times out, or is missing, LuauAPI logs the failure and r
 `bool` returns `false`, `int` returns `0`, `string` returns empty, and object methods return `nil`.
 Method names and argument types match the C++ interface. Multi-touch variants use `CCSet`.
 
+## Keyboard delegate
+
+Use `CCKeyboardDelegate` when you need cocos dispatcher integration on a node or layer.
+Use [Keyboard input](keyboard-input.md) for the global Geode event stream.
+
+```lua
+local director = geode.cocos2d.CCDirector.sharedDirector()
+if not director then return end
+
+director:getKeyboardDispatcher():addDelegate({
+    keyDown = function(key: number, dt: number)
+        print("down", key, dt)
+    end,
+    keyUp = function(key: number, dt: number)
+        print("up", key, dt)
+    end,
+})
+```
+
 ## Lifetime and anchoring
 
 Delegate trampolines use the same retention model as menu handlers:
@@ -83,6 +102,7 @@ See [Limits and errors](../cpp/limits-and-errors.md).
 
 - [Callbacks](callbacks.md)
 - [Game objects](game-objects.md)
+- [Keyboard input](keyboard-input.md)
 - [Type stubs](type-stubs.md)
 - [Codegen](../../contributor/codegen/codegen.md)
 - [Globals](globals.md)

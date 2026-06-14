@@ -38,6 +38,13 @@ _EXTRA_BINDING_SOURCES = {
         "start_marker": "registerGeodeWeb(lua_State* L)",
         "end_marker": "registerConstants(L)",
     },
+    "keyboard": {
+        "dluau": "tools/luau_codegen/extra_bindings/keyboard.dluau",
+        "cpp": "src/bindings/geode/GeodeKeyboardBinding.cpp",
+        "type_name": "KeyboardInputEventNamespace",
+        "start_marker": "registerKeyboardInputEvent(lua_State* L)",
+        "end_marker": "return geode::Ok();",
+    },
     "websocket": {
         "dluau": "tools/luau_codegen/extra_bindings/websocket.dluau",
         "cpp": "src/bindings/websocket/WebSocketBinding.cpp",

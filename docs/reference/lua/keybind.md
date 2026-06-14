@@ -9,6 +9,9 @@
 | `key` | number | a key code |
 | `modifiers` | number | a bit mask of held modifier keys |
 
+Use `geode.cocos.enumKeyCodes.KEY_*` values for `key`.
+Use `geode.KeyboardModifier` constants for `modifiers`.
+
 `fromString` returns `nil` and an error message on a bad string.
 See [Globals](globals.md) Error shapes.
 
@@ -52,6 +55,8 @@ if node then someMenu:addChild(node) end
 ## Related
 
 - [Game objects](game-objects.md)
+- [Keyboard input](keyboard-input.md)
+- [delegates](delegates.md)
 - [UI and layouts](ui.md)
 
 ## Source

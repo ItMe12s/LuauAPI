@@ -19,7 +19,7 @@ Caps and error strings live in [Limits and errors](../cpp/limits-and-errors.md).
 ## Error shapes
 
 Some APIs return `nil` and an error string instead of throwing.
-Examples include `loadstring`, `fs` reads, `json` parse, `keybind.fromString`, and `websocket.serve`.
+Examples include `loadstring`, `fs` reads, `json` parse, `geode.Keybind.fromString`, and `websocket.serve`.
 Other APIs raise on failure, such as `json.dump` and invalid hook targets.
 Check each function's signature for which shape it uses.
 

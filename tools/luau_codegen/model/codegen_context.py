@@ -1,19 +1,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import AbstractSet, Dict, Mapping, Set
-
-from luau_codegen.convert.type_map import (
-    COCOS_ENUM_TYPES,
-    GD_ENUM_TYPES,
-    STATIC_ENUM_CXX_NAMES,
-)
+from typing import AbstractSet, Dict, Mapping, Sequence, Set, Tuple
 
 
 @dataclass(frozen=True)
 class CodegenContext:
     geode_enum_names: frozenset[str] = frozenset()
     geode_enum_cxx: Mapping[str, str] = field(default_factory=dict)
+    cocos_enum_members: Mapping[str, Tuple[Tuple[str, int], ...]] = field(default_factory=dict)
 
     @classmethod
     def static(cls) -> CodegenContext:
@@ -24,6 +19,7 @@ class CodegenContext:
         cls,
         names_to_cxx: Dict[str, str],
         skip: AbstractSet[str] = frozenset(),
+        cocos_enum_members: Mapping[str, Sequence[tuple[str, int]]] | None = None,
     ) -> CodegenContext:
         geode: dict[str, str] = {}
         for name, cxx in names_to_cxx.items():
@@ -33,9 +29,15 @@ class CodegenContext:
         return cls(
             geode_enum_names=frozenset(geode.keys()),
             geode_enum_cxx=geode,
+            cocos_enum_members={
+                name: tuple((member, int(value)) for member, value in members)
+                for name, members in (cocos_enum_members or {}).items()
+            },
         )
 
     def enum_cxx_names(self) -> dict[str, str]:
+        from luau_codegen.convert.type_map import STATIC_ENUM_CXX_NAMES
+
         merged = dict(STATIC_ENUM_CXX_NAMES)
         for name, cxx in self.geode_enum_cxx.items():
             merged.setdefault(name, cxx)
@@ -54,6 +56,8 @@ class CodegenContext:
         return "int"
 
     def enum_lua_names(self, namespace: str) -> Set[str]:
+        from luau_codegen.convert.type_map import COCOS_ENUM_TYPES, GD_ENUM_TYPES
+
         if namespace == "geode.cocos2d":
             return set(COCOS_ENUM_TYPES)
         if namespace == "geode":

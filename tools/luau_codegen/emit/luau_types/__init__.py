@@ -12,7 +12,7 @@ from luau_codegen.emit.luau_types.classes import (
     _should_emit_type_class,
     _topo_sort_chunks,
 )
-from luau_codegen.emit.luau_types.enums import _enum_block
+from luau_codegen.emit.luau_types.enums import _enum_block, _enum_tables_block
 from luau_codegen.emit.luau_types.factories import (
     _collect_factories,
     _emit_factories,
@@ -174,6 +174,11 @@ def emit(
         if enum_block:
             lines.append(enum_block)
             lines.append("\n")
+
+    enum_tables_block = _enum_tables_block(plan.ctx)
+    if enum_tables_block:
+        lines.append(enum_tables_block)
+        lines.append("\n")
 
     orphan_block = _emit_orphan_stubs(orphan_names)
     if orphan_block:

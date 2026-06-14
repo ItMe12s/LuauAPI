@@ -1,3 +1,4 @@
+#include "bindings/geode/EnumKeyCodes.manifest.hpp"
 #include "framework/Binding.hpp"
 #include "framework/stack/Stack.hpp"
 #include "framework/stack/TableUtil.hpp"
@@ -5,12 +6,21 @@
 
 #include <Geode/utils/cocos.hpp>
 #include <cocos2d.h>
+#include <cstddef>
+#include <iterator>
 #include <lua.h>
 #include <lualib.h>
 #include <string>
 
 namespace {
     using namespace luax;
+
+    struct IntEnumEntry {
+        char const* name;
+        int value;
+    };
+
+    constexpr IntEnumEntry kEnumKeyCodeEntries[] = {LUAX_ENUM_KEY_CODES(LUAX_ENUM_KEY_CODES_ENTRY)};
 
     bool optBool(lua_State* L, int idx, bool def) {
         if (lua_gettop(L) < idx || lua_isnil(L, idx)) return def;
@@ -93,6 +103,7 @@ namespace {
         push(L, result.unwrap());
         return 1;
     }
+
 } // namespace
 
 namespace luax {
@@ -108,6 +119,11 @@ namespace luax {
         setTableCFunction(L, -1, "ccDrawColor4B", &cocosDrawColor4B);
         setTableCFunction(L, -1, "cc3bFromHexString", &cocosCc3bFromHexString);
         setTableCFunction(L, -1, "cc4bFromHexString", &cocosCc4bFromHexString);
+        lua_createtable(L, 0, static_cast<int>(std::size(kEnumKeyCodeEntries)));
+        for (auto const& entry : kEnumKeyCodeEntries) {
+            setIntField(L, entry.name, entry.value);
+        }
+        lua_setfield(L, -2, "enumKeyCodes");
         lua_pop(L, 1);
         return geode::Ok();
     }

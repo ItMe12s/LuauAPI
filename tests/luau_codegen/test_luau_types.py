@@ -20,6 +20,10 @@ from helpers import (
     parse_file,  # type: ignore[import-unresolved]
     types_text,  # type: ignore[import-unresolved]
 )
+from luau_codegen.model.codegen_context import CodegenContext  # type: ignore[import-unresolved]
+from luau_codegen.emit.luau_types.manual_fields import (  # type: ignore[import-unresolved]
+    MANUAL_FREE_FN_FIELDS,
+)
 
 
 class LuauTypeEmissionTests(unittest.TestCase):
@@ -76,6 +80,22 @@ class LuauTypeEmissionTests(unittest.TestCase):
         self.assertIn("export type enumKeyCodes = number", text)
         self.assertIn("export type RGBColor = { r: number, g: number, b: number }", text)
         self.assertNotIn("declare class CCNode end", text)
+
+    def test_enum_key_codes_namespace_uses_scanned_members(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        root = Root(classes=[ccobject])
+        root.codegen_ctx = CodegenContext.with_geode_enums(
+            {},
+            cocos_enum_members={"enumKeyCodes": [("KEY_A", 0x41), ("MOUSE_4", 0x1100)]},
+        )
+
+        text = types_text(emit_luau_types(root, manual_fields=MANUAL_FREE_FN_FIELDS))
+
+        self.assertIn("export type enumKeyCodes = number", text)
+        self.assertIn(
+            "export type EnumKeyCodesNamespace = { KEY_A: number, MOUSE_4: number }", text
+        )
+        self.assertIn("enumKeyCodes: EnumKeyCodesNamespace", text)
 
     def test_factories_and_namespace_types(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")

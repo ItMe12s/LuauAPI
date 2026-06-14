@@ -1,0 +1,21 @@
+export type KeyboardInputNativeData = {
+    code: number,
+    extra: number,
+}
+
+export type KeyboardInputData = {
+    key: number,
+    action: number,
+    modifiers: number,
+    timestamp: number,
+    native: KeyboardInputNativeData,
+}
+
+export type KeyboardInputListenerHandle = {
+    disconnect: (self: KeyboardInputListenerHandle) -> (),
+}
+
+export type KeyboardInputEventNamespace = {
+    listen: (callback: (data: KeyboardInputData) -> boolean?, priority: number?) -> KeyboardInputListenerHandle,
+    listenFor: (key: number, callback: (data: KeyboardInputData) -> boolean?, priority: number?) -> KeyboardInputListenerHandle,
+}

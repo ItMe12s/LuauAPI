@@ -60,6 +60,7 @@ API reference for everything a script or host can call.
   - [imgui](docs/reference/lua/imgui.md)
   - [json](docs/reference/lua/json.md)
   - [Keybind](docs/reference/lua/keybind.md)
+  - [Keyboard input](docs/reference/lua/keyboard-input.md)
   - [mod](docs/reference/lua/mod.md)
   - [Modules](docs/reference/lua/modules.md)
   - [permission](docs/reference/lua/permission.md)
