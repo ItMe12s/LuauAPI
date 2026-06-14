@@ -4,7 +4,7 @@
 
 How to build LuauAPI from this repository.
 Build from source only if you want unreleased features or to work on the runtime itself.
-Mod authors who just use LuauAPI install it from the Geode index instead.
+Mod authors who just use LuauAPI install it from the Geode index in-game or GitHub releases instead.
 See [Installation](../getting-started/installation.md).
 
 ## Required tools
@@ -26,8 +26,9 @@ CMake downloads these during configuration, so you do not install them by hand.
   It fetches Dear ImGui `v1.92.8` through `LUAUAPI_IMGUI_VERSION` in `cmake/ImGuiCocos.cmake`.
   Only the LuauAPI mod links it.
   Other mods use the `imgui` Lua API instead.
-- Catch2 `v3.15.0`, fetched only when tests are on
 - GLM `1.0.3`, used by the 3D math and glTF loader
+- IXWebSocket `v12.0.0` and mbedTLS `v3.6.6`, fetched for websocket support
+- Catch2 `v3.15.0` and fmt `12.1.0`, fetched only when tests are on
 
 Vendored headers in `vendor/` are not fetched by CMake:
 
@@ -51,7 +52,8 @@ cmake --build build
 
 Two shortcuts do the same thing:
 
-- `geode build` runs the Geode CLI, which configures, builds, and installs the mod.
+- `geode build` runs the Geode CLI, which configures and builds the mod.
+  Auto-install needs a configured Geode CLI profile. Without one, the package stays in the build folder.
 - In VSCode, run `CMake: Configure` then `CMake: Build` from the Command Palette.
 
 Python 3.11+ must be on PATH before you configure, because the first configure runs the codegen listing.

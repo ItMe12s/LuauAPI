@@ -17,6 +17,8 @@
 
 **Heads up: LuauAPI is still in beta, so expect things to change.**
 
+**LuauAPI development will NOT support older versions of GD, Geode SDK, bindings, and dependencies.**
+
 ## Before you start
 
 You are expected to already have:

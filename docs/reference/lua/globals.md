@@ -2,14 +2,17 @@
 
 ## Summary
 
-The globally available functions and values in every script are:
+Core script globals in every Luau chunk:
 
 - `print`
 - `loadstring`
 - `require`
 - `_G`
 
-This page covers signatures for those globals plus error shapes.
+LuauAPI also exposes namespaces such as `task`, `geode`, `imgui`, and `gd3d`.
+See Other globals below.
+
+This page covers signatures for the core globals plus error shapes.
 
 ## Script basics
 
@@ -90,7 +93,7 @@ print(fn())
 Sources over the script size cap return `nil` and an error message.
 If the runtime is not ready, it returns `nil, "luau runtime not ready"`.
 
-`loadstring` is always available, can compile any string, and ignores the `require` sandbox.
+`loadstring` is always available, can compile any valid Luau source within the size cap, and ignores the `require` sandbox.
 Treat it as trusted-code execution. Calling the returned function does not start a new script deadline.
 It inherits an existing guarded call path, such as code already running inside a `task` callback.
 

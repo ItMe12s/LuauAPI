@@ -36,8 +36,8 @@ geode.json.dump(value: any, indent: number?) -> string
 
 Serializes a Luau value to a JSON string.
 
-- An array-like table (sequential integer keys from 1) becomes a JSON array.
-- Any other table becomes a JSON object, keeping only string keys.
+- If `#table > 0`, the table becomes a JSON array. Only numeric keys `1..#table` are kept. String keys are dropped.
+- Otherwise the table becomes a JSON object. Only string keys are kept.
 - `indent` controls formatting. The default is compact.
   A positive number indents with that many spaces, and `-1` indents with tabs.
 

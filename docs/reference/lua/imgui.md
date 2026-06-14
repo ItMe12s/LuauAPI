@@ -84,6 +84,11 @@ imgui.cancel(handle)
 imgui.setVisible(visible)
 imgui.toggle()
 imgui.isVisible() -> boolean
+imgui.isItemHovered(flags: number?) -> boolean
+imgui.isItemClicked(mouseButton: number?) -> boolean
+imgui.isWindowHovered(flags: number?) -> boolean
+imgui.setNextWindowFocus() -> ()
+imgui.setWindowFocus(name: string?) -> ()
 ```
 
 `onDraw` starts the backend on first use. `cancel` removes a callback.

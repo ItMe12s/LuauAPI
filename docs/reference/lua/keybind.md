@@ -21,7 +21,8 @@ See [Globals](globals.md) Error shapes.
 geode.Keybind.fromString(str: string) -> ({ key: number, modifiers: number }?, string?)
 ```
 
-Parses a string such as `"Ctrl + A"` into a keybind.
+Parses a string such as `"Ctrl+A"` into a keybind.
+Modifier and key tokens use `+` with no spaces.
 Returns the keybind, or `nil` and an error message.
 
 ## toString
@@ -43,10 +44,10 @@ Builds a node that shows the keybind. Returns the node, or `nil` if it could not
 ## Example
 
 ```lua
-local kb, err = geode.Keybind.fromString("Ctrl + A")
+local kb, err = geode.Keybind.fromString("Ctrl+A")
 if not kb then return print(err) end
 
-print(geode.Keybind.toString(kb)) -- Ctrl + A
+print(geode.Keybind.toString(kb)) -- Ctrl+A
 
 local node = geode.Keybind.createNode(kb)
 if node then someMenu:addChild(node) end

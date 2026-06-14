@@ -15,6 +15,7 @@ Proven fields expose a read-only sequence:
 
 The same pattern applies to `CCKeypadHandler`, `CCMouseHandler`, and `CCTouchHandler`
 on the matching dispatcher `m_pHandlersToAdd` and `m_pHandlersToRemove` fields in the allowlist.
+`CCTouchDispatcher` only exposes `m_pHandlersToRemove`, not `m_pHandlersToAdd`.
 
 ## Runtime
 

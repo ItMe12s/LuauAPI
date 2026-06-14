@@ -44,5 +44,4 @@ clip.write("copied from Luau")
 ## Source
 
 - `tools/luau_codegen/model/free_fn_sources.py`
-- `build/luauapi-gen/bindings_free_functions.cpp`
-- `types/geode.d.luau`
+- Generated free-function bindings at build time

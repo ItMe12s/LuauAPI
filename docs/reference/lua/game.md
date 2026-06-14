@@ -31,8 +31,9 @@ geode.utils.game.restart(saveData: boolean) -> ()
 
 Restarts the game. When `saveData` is true, Geode saves game data before restarting.
 
-Some desktop builds also expose a two-argument `restart` overload with a safe-mode flag.
-The published stub lists one boolean only.
+The published Luau stub exposes one boolean only.
+Upstream Geode also has a two-argument `restart` with a safe-mode flag on some Windows builds,
+but LuauAPI omits it for cross-platform parity.
 
 ## launchLoaderUninstaller
 
@@ -40,7 +41,9 @@ The published stub lists one boolean only.
 geode.utils.game.launchLoaderUninstaller(deleteSaveData: boolean) -> ()
 ```
 
-Opens the loader uninstaller. When `deleteSaveData` is true, saved game data is deleted as part of uninstall.
+Opens the loader uninstaller on Windows. When `deleteSaveData` is true, saved game data is deleted as part of uninstall.
+
+On iOS, Android, and macOS this call is unsupported and has no effect.
 
 ## Related
 
@@ -53,5 +56,4 @@ Opens the loader uninstaller. When `deleteSaveData` is true, saved game data is 
 ## Source
 
 - `tools/luau_codegen/model/free_fn_sources.py`
-- `build/luauapi-gen/bindings_free_functions.cpp`
-- `types/geode.d.luau`
+- Generated free-function bindings at build time

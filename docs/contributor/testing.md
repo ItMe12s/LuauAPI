@@ -45,10 +45,12 @@ CTest discovers the cases at build time. The files are:
 | `tests/host/ProceduralMeshTests.cpp` | Procedural mesh build and validation |
 | `tests/host/Render3DMathTests.cpp` | Transform math and helpers |
 | `tests/host/SceneDrawListTests.cpp` | Scene draw list sorting and batching |
+| `tests/imgui_binding_tests.cpp` | ImGui widget binding smoke |
 | `tests/imgui_scheduler_tests.cpp` | ImGui draw scheduler registration |
 | `tests/indexed_slot_map_tests.cpp` | Indexed slot map used by the schedulers |
 | `tests/loadstring_tests.cpp` | `loadstring` compile and runtime behavior |
 | `tests/misc_correctness_tests.cpp` | Assorted runtime correctness cases |
+| `tests/mod_fs_isolation_tests.cpp` | Mod filesystem isolation policy |
 | `tests/mod_sandbox_tests.cpp` | Mod sandbox path resolution and root access policy |
 | `tests/opaque_handle_tests.cpp` | Opaque pointer userdata handles |
 | `tests/path_rules_tests.cpp` | Flat path rules and extension checks |
@@ -84,11 +86,16 @@ The host tests must not link the following game libraries:
 - FMOD
 - OpenGL
 
-The `luauapi_tests` target links only:
+The `luauapi_tests` target links:
 
 - Catch2
 - fmt
 - Luau libraries
+- glm
+- luauapi_imgui_headless
+- IXWebSocket
+- mbedTLS (`mbedtls`, `mbedx509`, `mbedcrypto`)
+- `ws2_32` on Windows
 
 Which keeps the tests fast and host only.
 

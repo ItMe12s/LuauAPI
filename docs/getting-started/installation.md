@@ -9,8 +9,9 @@ See the README beta note for release stability.
 
 ## Install the mod
 
-Install LuauAPI from the Geode in-game mod index,
-or download the `.geode` file from [GitHub releases](https://github.com/ItMe12s/LuauAPI/releases).
+Install LuauAPI from [GitHub releases](https://github.com/ItMe12s/LuauAPI/releases) for the latest features and patches,
+or from the Geode in-game mod index when it is listed there (more stable and approved by index staffs).
+Download the `.geode` file and place it in your mods folder if you install manually.
 LuauAPI ships with the mod id `imes.luauapi`.
 It loads early with first priority, so the runtime is ready for other mods as soon as the game starts.
 

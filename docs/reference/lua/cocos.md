@@ -5,7 +5,7 @@
 `geode.cocos` holds helper functions for cocos2d nodes and colors.
 These are utility functions, not classes. The node classes themselves live on `geode.cocos2d`.
 
-`geode.cocos` is a hybrid namespace. Node helpers come from codegen over `Geode/utils/cocos.hpp`.
+`geode.cocos` is a hybrid namespace. Node helpers and hex string functions come from codegen over `Geode/utils/cocos.hpp`.
 Color helpers and hex parsers are handwritten in `GeodeCocosBinding.cpp`.
 
 Colors use plain tables:
@@ -47,8 +47,8 @@ Colors use plain tables:
 | `to3B(color: RGBAColor) -> RGBColor` | Drop the alpha. |
 | `to4B(color: RGBColor, alpha: number?) -> RGBAColor` | Add an alpha, default 255. |
 | `to4F(color: RGBAColor) -> RGBAFloatColor` | Convert 0 to 255 values to 0.0 to 1.0. |
-| `cc3bToHexString(color: RGBColor) -> string` | Color as `rrggbb`. |
-| `cc4bToHexString(color: RGBAColor) -> string` | Color as `rrggbbaa`. |
+| `cc3bToHexString(color: RGBColor) -> string` | Color as uppercase `RRGGBB`. |
+| `cc4bToHexString(color: RGBAColor) -> string` | Color as uppercase `RRGGBBAA`. |
 | `cc3bFromHexString(hex: string, permissive: boolean?) -> (RGBColor?, string?)` | Parse a hex string. |
 | `cc4bFromHexString(hex: string, requireAlpha: boolean?, permissive: boolean?) -> (RGBAColor?, string?)` | Parse a hex string with alpha. |
 | `ccDrawColor4B(color: RGBAColor) -> ()` | Set the draw color, only valid inside a draw call. |
@@ -75,7 +75,7 @@ local cc = geode.cocos
 local red, err = cc.cc3bFromHexString("ff0000")
 if not red then return print(err) end
 
-print(cc.cc3bToHexString(red)) -- ff0000
+print(cc.cc3bToHexString(red)) -- FF0000
 print(cc.lighten3B(red, 20).r) -- 255
 ```
 
@@ -89,6 +89,7 @@ print(cc.lighten3B(red, 20).r) -- 255
 
 ## Source
 
-- `build/luauapi-gen/bindings_free_functions.cpp`
+- `tools/luau_codegen/model/free_fn_sources.py`
 - `src/bindings/geode/GeodeCocosBinding.cpp`
 - `tools/luau_codegen/emit/luau_types/manual_fields.py`
+- Generated free-function bindings at build time

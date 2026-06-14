@@ -144,7 +144,7 @@ end)
 
 ## Rewrite mutable data example
 
-The callback receives a table backed by Geode's event data.
+The callback receives a copy of the event data table.
 Changes you make are written back before later listeners run.
 
 ```lua

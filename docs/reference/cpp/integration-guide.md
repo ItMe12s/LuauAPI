@@ -11,6 +11,8 @@ Async variants may be called from a worker thread.
 Set up the dependency, resources directory, header, and your first `runFile` call.
 See [Your first script](../../getting-started/first-script.md) and [Installation](../../getting-started/installation.md).
 
+LuauAPI exports its public header through `api.include` in `mod.json`. Make sure your Geode SDK is up to date.
+
 ## Runtime ownership
 
 LuauAPI owns the runtime lifecycle.

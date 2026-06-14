@@ -5,7 +5,7 @@
 `geode.utils` groups small helper libraries under the `geode.utils` prefix.
 Large modules have their own reference page. Smaller ones are documented below.
 
-Signatures match [types/geode.d.luau](../../../types/geode.d.luau).
+Signatures match the generated stub at `types/geode.d.luau` after build.
 Some Geode C++ integer sizes appear as `string` in the stub and use integer-string arguments at runtime.
 
 ## Libraries
@@ -32,12 +32,14 @@ These functions sit directly on `geode.utils`, not in a child table.
 ```lua
 geode.utils.formatSystemError(code: number) -> string
 geode.utils.getDisplayFactor() -> number
+geode.utils.getEnvironmentVariable(name: string) -> string
 geode.utils.getInputTimestamp() -> number
 geode.utils.getSafeAreaRect() -> CCRect
 ```
 
 `formatSystemError` turns a system error code into text.
 `getDisplayFactor` returns the ratio of physical pixels to logical pixels on one axis.
+`getEnvironmentVariable` reads a process environment variable by name. Not available on iOS.
 `getInputTimestamp` returns the latest input timestamp in seconds.
 `getSafeAreaRect` returns the safe area rectangle relative to the window size.
 
@@ -60,7 +62,7 @@ geode.utils.thread.setName(name: string) -> ()
 ```
 
 Read or set the current thread name for debugging and logging.
-`getName` returns an empty string when no name was assigned.
+`getName` returns the default thread name when no custom name was set.
 
 ## Related
 
@@ -81,5 +83,4 @@ Read or set the current thread name for debugging and logging.
 - `tools/luau_codegen/extra_bindings/web.dluau`
 - `tools/luau_codegen/model/free_fn_sources.py`
 - `tools/luau_codegen/emit/luau_types/manual_fields.py`
-- `build/luauapi-gen/bindings_free_functions.cpp`
-- `types/geode.d.luau`
+- Generated free-function bindings and `types/geode.d.luau` at build time

@@ -70,8 +70,8 @@ geode.createQuickPopup(
     function(_popup, btn2)
         if btn2 then print("deleted") end
     end,
-    true, -- pop existing popups first
-    false -- align buttons to the left
+    true, -- doShow: show the popup now
+    false -- cancelledByEscape: Escape does not close it
 )
 ```
 
@@ -79,7 +79,8 @@ geode.createQuickPopup(
 
 The stub also exposes a few free functions on `geode` itself:
 
-- `geode.createDefaultLogo()` and `geode.createServerModLogo(modPath)` for mod branding nodes
+- `geode.createDefaultLogo()` and `geode.createServerModLogo(modId)` for mod branding nodes.
+  `createServerModLogo` takes a server mod ID string, not a local package path.
 - `geode.openModsList()` to open the in-game mod list
 - `geode.Notification.create(text, icon, duration)` for toast overlays
 
@@ -111,4 +112,4 @@ See [Type stubs](type-stubs.md). For class behavior, read the upstream [Geode UI
 
 - `tools/luau_codegen/emit/luau_types/factories.py`
 - `tools/luau_codegen/parse/geode_sdk.py`
-- `types/geode.d.luau`
+- Generated `types/geode.d.luau` at build time

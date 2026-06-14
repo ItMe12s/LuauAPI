@@ -19,6 +19,8 @@ See [globals](../reference/lua/globals.md) for `print` behavior.
 Include the header and call `runFile` with your resources directory and the file name.
 All public functions live in the `imes::luauapi` namespace.
 
+LuauAPI exports `include/LuauAPI.hpp` through `api.include` in its `mod.json`.
+
 ```cpp
 #include <Geode/Geode.hpp>
 #include <Geode/loader/ModEvent.hpp>
@@ -58,8 +60,8 @@ See [Installation Settings](installation.md).
 
 ## Related
 
-- [Getting started overview](../../getting-started/overview.md)
-- [Examples](../../getting-started/examples.md)
+- [Getting started overview](overview.md)
+- [Examples](examples.md)
 - [globals](../reference/lua/globals.md)
 - [modules](../reference/lua/modules.md)
 - [C++ integration guide](../reference/cpp/integration-guide.md)

@@ -30,7 +30,9 @@ Encodes a string into base64. The default variant is `UrlWithPad`.
 geode.utils.base64.decode(data: string, variant: number?) -> (string?, string?)
 ```
 
-Decodes base64 into raw bytes, returned as a string.
+Decodes base64 into raw bytes, returned as a Luau string.
+Whitespace is skipped. Decoding stops at the first NUL byte or `=` padding marker.
+Padding is ignored for `Normal`, which behaves like `NormalNoPad`.
 Returns the bytes, or `nil` and an error message. The default variant is `Url`.
 
 ## decodeString
@@ -39,7 +41,8 @@ Returns the bytes, or `nil` and an error message. The default variant is `Url`.
 geode.utils.base64.decodeString(data: string, variant: number?) -> (string?, string?)
 ```
 
-Same as `decode`, but does not check that the result is valid text.
+Same bytes as `decode`, returned as a Luau string.
+Does not validate that the result is valid UTF-8 text.
 
 ## Variant
 

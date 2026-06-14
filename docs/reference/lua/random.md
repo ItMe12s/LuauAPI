@@ -40,6 +40,7 @@ geode.utils.random.generateString(length: string, alphabet: string) -> string
 ```
 
 Returns a random string with `length` characters, picking only from `alphabet`.
+`alphabet` must not be empty.
 
 ## Example
 
@@ -62,5 +63,4 @@ print(token)
 ## Source
 
 - `tools/luau_codegen/model/free_fn_sources.py`
-- `build/luauapi-gen/bindings_free_functions.cpp`
-- `types/geode.d.luau`
+- Generated free-function bindings at build time

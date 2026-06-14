@@ -4,7 +4,7 @@
 
 `geode.utils.string` holds small string helpers from Geode.
 They do not replace Luau's built-in string library.
-Signatures match [types/geode.d.luau](../../../types/geode.d.luau).
+Signatures match the generated stub at `types/geode.d.luau` after build.
 
 ## trim
 
@@ -103,7 +103,7 @@ Keeps only characters that appear in `chars`.
 geode.utils.string.normalize(s: string) -> string
 ```
 
-Normalizes line endings and whitespace according to Geode's rules.
+Collapses repeated spaces according to Geode's rules.
 
 ## count
 
@@ -135,5 +135,4 @@ print(str.count("hello", string.byte("l"))) -- "2"
 ## Source
 
 - `tools/luau_codegen/model/free_fn_sources.py`
-- `build/luauapi-gen/bindings_free_functions.cpp`
-- `types/geode.d.luau`
+- Generated free-function bindings at build time
