@@ -218,6 +218,8 @@ namespace {
         setTableCFunction(L, -1, "separator", &imguiSeparator);
         setTableCFunction(L, -1, "spacing", &imguiSpacing);
         setTableCFunction(L, -1, "getContentRegionAvail", &imguiGetContentRegionAvail);
+        registerImGuiConstants(L);
+        registerImGuiStyleAndTheme(L);
         lua_setglobal(L, "imgui");
 
         if (auto* runtime = static_cast<Runtime*>(lua_callbacks(L)->userdata)) {

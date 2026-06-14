@@ -13,6 +13,7 @@
 #include <imgui.h>
 #include <lua.h>
 #include <lualib.h>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -167,4 +168,19 @@ namespace luax {
         }
         lua_setfield(L, -2, tableName);
     }
+
+    template <typename T, std::size_t N>
+    inline void registerImGuiIntEnumSubgroup(
+        lua_State* L, T const (&entries)[N], char const* subgroupName
+    ) {
+        lua_createtable(L, 0, static_cast<int>(N));
+        for (auto const& entry : entries) {
+            setIntField(L, entry.name, entry.value);
+        }
+        lua_setfield(L, -2, subgroupName);
+    }
+
+    std::optional<ImGuiCol> resolveImGuiColByName(char const* name);
+    void registerImGuiConstants(lua_State* L);
+    void registerImGuiStyleAndTheme(lua_State* L);
 } // namespace luax

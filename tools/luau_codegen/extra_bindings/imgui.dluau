@@ -4,6 +4,8 @@ export type ImGuiDrawHandle = {
 
 export type ImGuiVec2 = { x: number, y: number }
 
+export type ImGuiVec4 = { x: number, y: number, z: number, w: number }
+
 export type ImGuiWindowOpts = {
     size: ImGuiVec2?,
     pos: ImGuiVec2?,
@@ -14,6 +16,86 @@ export type ImGuiWindowOpts = {
 export type ImGuiChildOpts = { size: ImGuiVec2? }
 
 export type ImGuiButtonOpts = { size: ImGuiVec2? }
+
+export type ImGuiIntEnumTable = { [string]: number }
+
+export type ImGuiFlagTables = {
+    Window: ImGuiIntEnumTable,
+    Child: ImGuiIntEnumTable,
+    InputText: ImGuiIntEnumTable,
+    TreeNode: ImGuiIntEnumTable,
+    Popup: ImGuiIntEnumTable,
+    Selectable: ImGuiIntEnumTable,
+    ColorEdit: ImGuiIntEnumTable,
+    Slider: ImGuiIntEnumTable,
+    Combo: ImGuiIntEnumTable,
+    TabBar: ImGuiIntEnumTable,
+    TabItem: ImGuiIntEnumTable,
+    Table: ImGuiIntEnumTable,
+    TableColumn: ImGuiIntEnumTable,
+    Hovered: ImGuiIntEnumTable,
+    Focused: ImGuiIntEnumTable,
+    Item: ImGuiIntEnumTable,
+    DragDrop: ImGuiIntEnumTable,
+    MultiSelect: ImGuiIntEnumTable,
+}
+
+export type ImGuiStyleOpts = {
+    alpha: number?,
+    disabledAlpha: number?,
+    windowPadding: ImGuiVec2?,
+    windowRounding: number?,
+    windowBorderSize: number?,
+    windowMinSize: ImGuiVec2?,
+    windowTitleAlign: ImGuiVec2?,
+    childRounding: number?,
+    childBorderSize: number?,
+    popupRounding: number?,
+    popupBorderSize: number?,
+    framePadding: ImGuiVec2?,
+    frameRounding: number?,
+    frameBorderSize: number?,
+    itemSpacing: ImGuiVec2?,
+    itemInnerSpacing: ImGuiVec2?,
+    indentSpacing: number?,
+    cellPadding: ImGuiVec2?,
+    scrollbarSize: number?,
+    scrollbarRounding: number?,
+    scrollbarPadding: number?,
+    grabMinSize: number?,
+    grabRounding: number?,
+    imageRounding: number?,
+    imageBorderSize: number?,
+    tabRounding: number?,
+    tabBorderSize: number?,
+    tabMinWidthBase: number?,
+    tabMinWidthShrink: number?,
+    tabBarBorderSize: number?,
+    tabBarOverlineSize: number?,
+    tableAngledHeadersAngle: number?,
+    tableAngledHeadersTextAlign: ImGuiVec2?,
+    treeLinesSize: number?,
+    treeLinesRounding: number?,
+    dragDropTargetRounding: number?,
+    buttonTextAlign: ImGuiVec2?,
+    selectableTextAlign: ImGuiVec2?,
+    separatorSize: number?,
+    separatorTextBorderSize: number?,
+    separatorTextAlign: ImGuiVec2?,
+    separatorTextPadding: ImGuiVec2?,
+    colors: { [number | string]: ImGuiVec4 }?,
+}
+
+export type ImGuiThemeOpts = ImGuiStyleOpts
+
+export type ImGuiStyleNamespace = {
+    with: (opts: ImGuiStyleOpts, fn: () -> ()) -> (),
+}
+
+export type ImGuiThemeNamespace = {
+    apply: (name: "dark" | "light" | "classic") -> (),
+    applyCustom: (opts: ImGuiThemeOpts) -> (),
+}
 
 export type ImGuiNamespace = {
     onDraw: (fn: () -> ()) -> ImGuiDrawHandle,
@@ -34,6 +116,12 @@ export type ImGuiNamespace = {
     separator: () -> (),
     spacing: () -> (),
     getContentRegionAvail: () -> ImGuiVec2,
+    Flag: ImGuiFlagTables,
+    Col: ImGuiIntEnumTable,
+    StyleVar: ImGuiIntEnumTable,
+    Cond: ImGuiIntEnumTable,
+    style: ImGuiStyleNamespace,
+    theme: ImGuiThemeNamespace,
 }
 
 declare imgui: ImGuiNamespace
