@@ -28,8 +28,6 @@ Common factories include:
 - Lists: `ListView`, `ListBorders`
 - Overlays: `Notification`, `LoadingSpinner`, `ProgressBar`, `ColorPickPopup`
 
-Every node you create must get a mod-prefixed string ID. See [Game objects](game-objects.md).
-
 ## Layouts
 
 A layout positions a node's children for you.
