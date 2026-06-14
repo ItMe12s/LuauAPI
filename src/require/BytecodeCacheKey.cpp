@@ -9,7 +9,6 @@
 
 #include <chrono>
 #include <cstdint>
-#include <functional>
 #include <span>
 #include <string>
 #include <system_error>
@@ -17,9 +16,21 @@
 
 namespace luax {
     namespace {
+        std::string stableContentHashToken(std::string_view source) {
+            constexpr std::uint64_t kOffset = 14695981039346656037ull;
+            constexpr std::uint64_t kPrime = 1099511628211ull;
+
+            std::uint64_t hash = kOffset;
+            for (unsigned char byte : source) {
+                hash ^= byte;
+                hash *= kPrime;
+            }
+            return std::to_string(hash);
+        }
+
 #if defined(LUAUAPI_HOST_TESTS)
         std::string contentHashToken(std::string_view source) {
-            return std::to_string(std::hash<std::string_view>{}(source));
+            return stableContentHashToken(source);
         }
 
         template <class Num>
@@ -39,7 +50,7 @@ namespace luax {
         }
 #else
         std::string contentHashToken(std::string_view source) {
-            return geode::utils::numToString(geode::utils::hash(source));
+            return stableContentHashToken(source);
         }
 
         template <class Num>

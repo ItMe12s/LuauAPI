@@ -169,6 +169,8 @@ imgui.tooltip(fn)
 `treeNode` returns a tracked open value only when `opts.open` is set.
 `tabItem` and `popupModal` return a close state only when `closable` is true.
 Use `openPopup` before `popup` or `popupModal`.
+`imgui.tooltip(fn)` shows a tooltip for the previous item only when it is hovered.
+Use `imgui.isItemHovered()` before `imgui.setTooltip(text)` when you need manual control.
 
 ## Tables And Menus
 
@@ -198,8 +200,9 @@ imgui.theme.applyCustom(opts)
 imgui.style.with(opts, fn)
 ```
 
-Themes change global ImGui style until changed again. `style.with` is scoped to `fn`.
-It pops colors and style vars even when `fn` errors.
+`imgui.theme.apply` and `imgui.theme.applyCustom` change global ImGui style until changed again.
+Use `imgui.style.with` for per-window or per-mod styling that does not affect other `onDraw` callbacks.
+`style.with` is scoped to `fn` and pops colors and style vars even when `fn` errors.
 
 Useful option fields include `alpha`, `windowPadding`, `windowRounding`, `framePadding`, `frameRounding`, `itemSpacing`, and `colors`.
 Color keys can be `imgui.Col.*` values or color names from `imgui.Col`.

@@ -77,8 +77,8 @@ local function stepAnim(current: number, target: number, dt: number, speed: numb
     return current + (target - current) * step
 end
 
-local function applyTheme()
-    imgui.theme.applyCustom({
+local function getThemeOpts(): ImGuiStyleOpts
+    return {
         windowRounding = 10,
         frameRounding = 6,
         tabRounding = 6,
@@ -106,7 +106,7 @@ local function applyTheme()
             [imgui.Col.HeaderHovered] = { x = 0.24, y = 0.30, z = 0.42, w = 0.85 },
             [imgui.Col.HeaderActive] = state.accent,
         },
-    })
+    } :: ImGuiStyleOpts
 end
 
 local function beginTab(index: number)
@@ -388,8 +388,6 @@ local function updateAnimation(dt: number)
     state.tabAnim = math.min(1, state.tabAnim + dt * 10)
 end
 
-applyTheme()
-
 geode.KeyboardInputEvent.listenFor(keys.KEY_Tab, function(data)
     if data.action ~= action.Press then
         return false
@@ -408,9 +406,10 @@ _G.modmenudemo_imguiHandle = imgui.onDraw(function()
         return
     end
 
-    applyTheme()
-    drawMainWindow()
-    drawFloatingPanels()
+    imgui.style.with(getThemeOpts(), function()
+        drawMainWindow()
+        drawFloatingPanels()
+    end)
 end)
 
 print("ImGui demo loaded. Press TAB to toggle.")

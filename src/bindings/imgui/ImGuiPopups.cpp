@@ -116,6 +116,9 @@ namespace {
     int imguiTooltip(lua_State* L) {
         requireFrame(L, "imgui.tooltip");
         luaL_checktype(L, 1, LUA_TFUNCTION);
+        if (!ImGui::IsItemHovered()) {
+            return 0;
+        }
         ImGuiTooltipGuard tooltipGuard;
         callDrawClosure(L, 1, "imgui.tooltip");
         return 0;
