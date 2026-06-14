@@ -183,7 +183,7 @@ Every mod shares one runtime, so treat those numbers as a safety net, not a targ
 Aim for much less than the cap:
 
 - Keep hook, task, web, and websocket callback work under 100 ms.
-- Keep `imgui.onDraw` work under 20 ms so the game stays responsive while you debug.
+- Keep `imgui.onDraw` work under 20 ms so game input and menus stay responsive.
 
 If your mod keeps hitting deadline errors, the code needs work.
 
@@ -411,8 +411,10 @@ Bad:
 ```lua
 geode.hook("geode.gd.MenuLayer:init/0", {
     after = function(self, result)
-        local label = geode.cocos2d.CCLabelBMFont.create("hi", "bigFont.fnt"); if not label then return end
-        local director = geode.cocos2d.CCDirector.sharedDirector(); if not director then return end
+        local label = geode.cocos2d.CCLabelBMFont.create("hi", "bigFont.fnt")
+        if not label then return end
+        local director = geode.cocos2d.CCDirector.sharedDirector()
+        if not director then return end
         local size = director:getWinSize()
         label:setPosition({ x = size.width / 2, y = size.height / 2 })
         self:addChild(label)

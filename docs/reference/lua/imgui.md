@@ -2,100 +2,251 @@
 
 ## Summary
 
-The `imgui` library lets a script draw a [Dear ImGui](https://github.com/ocornut/imgui) overlay on top of the game,
-backed by [gd-imgui-cocos](https://github.com/matcool/gd-imgui-cocos). It is debug and tooling UI, not player-facing UI.
+`imgui` draws Dear ImGui UI over the game through gd-imgui-cocos.
+Use it for player mod menus, settings panels, tabs, popups, and debug tools.
 Types match `tools/luau_codegen/extra_bindings/imgui.dluau`.
 
 ## Model
 
-Use `imgui.onDraw` to set a draw callback.
-The runtime runs it every frame. Build windows and widgets inside the callback.
-ImGui is immediate mode and saves no widget state, so widgets return their value each frame.
-Store values in your script if you want to keep them.
+Register one draw callback with `imgui.onDraw`. Build all ImGui UI inside that callback.
+Widget calls must run on the main thread and inside `imgui.onDraw`.
 
-See [Examples](../../getting-started/examples.md).
+ImGui is immediate mode. It does not store your widget state.
+Pass current values each frame and save returned values in Luau.
 
-## Types
+The game keeps input when ImGui is not hovered or focused.
+Focused ImGui windows capture the input they need.
+
+## Example
 
 ```lua
-type ImGuiDrawHandle = { cancel: (self: ImGuiDrawHandle) -> () }
-type ImGuiVec2 = { x: number, y: number }
-type ImGuiWindowOpts = { size: ImGuiVec2?, pos: ImGuiVec2?, flags: number?, closable: boolean? }
-type ImGuiChildOpts = { size: ImGuiVec2? }
-type ImGuiButtonOpts = { size: ImGuiVec2? }
+local open = true
+local enabled = true
+local volume = 0.7
+local mode = 1
+local modes = { "Easy", "Normal", "Hard" }
+local accent = { x = 0.3, y = 0.7, z = 1.0, w = 1.0 }
+
+imgui.onDraw(function()
+    if not open then return end
+
+    imgui.theme.apply("dark")
+
+    open = imgui.window("my.mod/settings", function()
+        imgui.style.with({
+            frameRounding = 4,
+            colors = {
+                [imgui.Col.Button] = accent,
+            },
+        }, function()
+            imgui.tabBar("tabs", function()
+                imgui.tabItem("General", function()
+                    enabled = imgui.checkbox("Enabled", enabled)
+                    volume = imgui.sliderFloat("Volume", volume, 0, 1)
+                    mode = imgui.combo("Mode", mode, modes)
+                    accent = imgui.colorEdit4("Accent", accent)
+                end)
+
+                imgui.tabItem("Danger", function()
+                    if imgui.button("Reset") then
+                        imgui.openPopup("reset-confirm")
+                    end
+
+                    imgui.popupModal("reset-confirm", function()
+                        imgui.text("Reset settings?")
+                        if imgui.button("Yes") then
+                            volume = 0.7
+                            imgui.closeCurrentPopup()
+                        end
+                        imgui.sameLine()
+                        if imgui.button("No") then
+                            imgui.closeCurrentPopup()
+                        end
+                    end)
+                end)
+            end)
+        end)
+    end, {
+        closable = true,
+        size = { x = 420, y = 280 },
+        flags = imgui.Flag.Window.NoCollapse,
+    })
+end)
 ```
 
-## Lifecycle and visibility
+## Lifecycle
 
 ```lua
-imgui.onDraw(fn: () -> ()) -> ImGuiDrawHandle
-imgui.cancel(handle: ImGuiDrawHandle) -> ()
-imgui.setVisible(visible: boolean) -> ()
-imgui.toggle() -> ()
+imgui.onDraw(fn) -> ImGuiDrawHandle
+imgui.cancel(handle)
+imgui.setVisible(visible)
+imgui.toggle()
 imgui.isVisible() -> boolean
 ```
 
-`imgui.onDraw` registers a per-frame callback and returns a handle. The first call starts the ImGui backend.
-`imgui.cancel` or `handle:cancel()` removes it, and dropping the handle cancels it on GC.
-A callback that errors is removed automatically. While hidden, draw callbacks do not run.
+`onDraw` starts the backend on first use. `cancel` removes a callback.
+Dropping the handle cancels it on GC. A callback that errors is removed.
 
-## Containers
+## Windows And Layout
 
 ```lua
-imgui.window(title: string, fn: () -> (), opts: ImGuiWindowOpts?) -> boolean
-imgui.child(id: string, fn: () -> (), opts: ImGuiChildOpts?) -> ()
+imgui.window(title, fn, opts?) -> boolean
+imgui.child(id, fn, opts?)
+imgui.group(fn)
+imgui.sameLine(offset?, spacing?)
+imgui.separator()
+imgui.separatorText(label)
+imgui.spacing()
+imgui.indent(width?)
+imgui.unindent(width?)
+imgui.dummy(size)
+imgui.newLine()
+imgui.getContentRegionAvail() -> ImGuiVec2
 ```
 
-Both run `fn` then always close the region, even if `fn` errors, so the frame stays balanced.
-`imgui.window` returns whether the window wants to stay open.
-With `opts.closable` true, the window shows a close button and returns false the frame it is pressed.
-`opts.size` and `opts.pos` apply on first use, `opts.flags` is a raw ImGui flags number.
+Scoped wrappers always close their ImGui region after `fn`. This also happens when `fn` errors.
+`window` returns false when its close button is pressed. Use mod-prefixed titles and IDs.
 
 ## Widgets
 
 ```lua
-imgui.text(text: string) -> ()
-imgui.button(label: string, opts: ImGuiButtonOpts?) -> boolean
-imgui.checkbox(label: string, value: boolean) -> boolean
-imgui.sliderFloat(label: string, value: number, min: number, max: number, fmt: string?) -> number
-imgui.sliderInt(label: string, value: number, min: number, max: number) -> number
-imgui.inputText(label: string, value: string, maxLen: number?) -> string
-imgui.inputTextMultiline(label: string, value: string, size: ImGuiVec2?, maxLen: number?) -> string
+imgui.text(text)
+imgui.textWrapped(text)
+imgui.bulletText(text)
+imgui.button(label, opts?) -> boolean
+imgui.checkbox(label, value) -> boolean
+imgui.checkboxFlags(label, flags, flagValue) -> number
+imgui.radioButton(label, active) -> boolean
+imgui.sliderFloat(label, value, min, max, fmt?) -> number
+imgui.sliderInt(label, value, min, max) -> number
+imgui.dragFloat(label, value, opts?) -> number
+imgui.dragInt(label, value, opts?) -> number
+imgui.inputText(label, value, maxLen?) -> string
+imgui.inputTextMultiline(label, value, size?, maxLen?) -> string
+imgui.inputFloat(label, value, opts?) -> number
+imgui.inputInt(label, value, opts?) -> number
+imgui.inputDouble(label, value, opts?) -> number
+imgui.progressBar(fraction, opts?)
 ```
 
-`imgui.text` draws the string verbatim, so `%` is safe. `imgui.button` returns true the frame it is clicked.
-`imgui.checkbox` and the sliders return their new value, which you store and pass back next frame.
-`fmt` defaults to `"%.3f"`. `maxLen` is the buffer size, default `16384`, capped at `65536`.
+Text is drawn as raw text, so percent signs are safe.
+Input text uses a shared per-thread buffer.
+Default max length is 16384 and the cap is 65536.
 
-## Layout helpers
+## Lists And Colors
 
 ```lua
-imgui.sameLine(offset: number?, spacing: number?) -> ()
-imgui.separator() -> ()
-imgui.spacing() -> ()
-imgui.getContentRegionAvail() -> ImGuiVec2
+imgui.combo(label, index, items, opts?) -> number
+imgui.comboPopup(label, preview, fn, opts?) -> boolean
+imgui.selectable(label, selected, opts?) -> boolean
+imgui.listBox(label, index, items, opts?) -> number
+imgui.colorEdit3(label, color, opts?) -> ImGuiVec3
+imgui.colorEdit4(label, color, opts?) -> ImGuiVec4
+imgui.colorButton(label, color, opts?) -> boolean
 ```
 
-`imgui.sameLine` keeps the next widget on the current line.
-`imgui.getContentRegionAvail` returns the space left in the current window as `{ x, y }` in pixels.
-Negative sizes also fill the space.
+Indexes are zero-based. Colors use `{ x, y, z, w }` floats from 0 to 1.
+`comboPopup` is scoped and lets you build custom combo contents.
+
+## Trees, Tabs, Popups
+
+```lua
+imgui.collapsingHeader(label, opts?) -> boolean, boolean?
+imgui.treeNode(label, fn, opts?) -> boolean?
+imgui.tabBar(id, fn, opts?)
+imgui.tabItem(label, fn, opts?) -> boolean?
+imgui.openPopup(id, flags?)
+imgui.closeCurrentPopup()
+imgui.popup(id, fn, opts?) -> boolean
+imgui.popupModal(title, fn, opts?) -> boolean?
+imgui.setTooltip(text)
+imgui.tooltip(fn)
+```
+
+`treeNode` returns a tracked open value only when `opts.open` is set.
+`tabItem` and `popupModal` return a close state only when `closable` is true.
+Use `openPopup` before `popup` or `popupModal`.
+
+## Tables And Menus
+
+```lua
+imgui.table(id, columns, fn, opts?)
+imgui.tableSetupColumn(label, opts?)
+imgui.tableHeadersRow()
+imgui.tableNextRow(flags?)
+imgui.tableNextColumn() -> boolean
+imgui.tableSetColumnIndex(column) -> boolean
+imgui.columns(count?, opts?)
+imgui.nextColumn()
+imgui.menuBar(fn)
+imgui.menu(label, fn, opts?)
+imgui.menuItem(label, selected?, opts?) -> boolean
+```
+
+Call table row and column helpers inside `imgui.table`.
+`menuItem` returns clicked when no selected value is passed.
+When selected is passed, it returns the new selected value.
+
+## Style And Theme
+
+```lua
+imgui.theme.apply("dark" | "light" | "classic")
+imgui.theme.applyCustom(opts)
+imgui.style.with(opts, fn)
+```
+
+Themes change global ImGui style until changed again. `style.with` is scoped to `fn`.
+It pops colors and style vars even when `fn` errors.
+
+Useful option fields include `alpha`, `windowPadding`, `windowRounding`, `framePadding`, `frameRounding`, `itemSpacing`, and `colors`.
+Color keys can be `imgui.Col.*` values or color names from `imgui.Col`.
+
+## Flags
+
+Use constants instead of magic numbers:
+
+```lua
+imgui.Flag.Window.NoResize
+imgui.Flag.Combo.HeightLarge
+imgui.Flag.Table.Borders
+imgui.Flag.Selectable.SpanAllColumns
+imgui.Col.Text
+imgui.StyleVar.Alpha
+imgui.Cond.FirstUseEver
+```
+
+See `imgui.dluau` for all constant tables.
 
 ## Limits
 
-Widget calls must run inside an `imgui.onDraw` callback on the main thread.
+- Use one `imgui.onDraw` per mod when possible.
+- Keep draw work under 20 ms.
+- Hard callback deadline is 500 ms.
+- At most 256 draw callbacks can be registered.
+- Do not do IO, web work, or heavy list rebuilds in `onDraw`.
+- Image, texture, font, docking, viewport, and draw list APIs are not bound.
 
-See [Limits and errors](../cpp/limits-and-errors.md).
+## ImGui Or Cocos UI
+
+Use `imgui` for menus that are easy to rebuild every frame.
+Use [`geode.*` Cocos UI](ui.md) for native game nodes, persistent layers, sprites, and layout objects.
 
 ## Related
 
 - [UI and layouts](ui.md)
 - [ImGui draw scheduler](../../contributor/internals/imgui-draw-scheduler.md)
-- [Globals](globals.md)
+- [Limits and errors](../cpp/limits-and-errors.md)
+- [Type stubs](type-stubs.md)
 
 ## Source
 
 - `tools/luau_codegen/extra_bindings/imgui.dluau`
 - `src/bindings/imgui/ImGuiBinding.cpp`
-- `src/bindings/imgui/ImGuiDrawScheduler.cpp`
-- `src/bindings/imgui/ImGuiHost.cpp`
-- `src/core/Config.hpp`
+- `src/bindings/imgui/ImGuiBindingInternal.hpp`
+- `src/bindings/imgui/ImGuiWidgets.cpp`
+- `src/bindings/imgui/ImGuiLayout.cpp`
+- `src/bindings/imgui/ImGuiPopups.cpp`
+- `src/bindings/imgui/ImGuiTables.cpp`
+- `src/bindings/imgui/ImGuiMenus.cpp`
+- `src/bindings/imgui/ImGuiStyle.cpp`
+- `src/bindings/imgui/ImGuiConstants.cpp`

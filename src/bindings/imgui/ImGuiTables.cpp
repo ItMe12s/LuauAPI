@@ -40,8 +40,8 @@ namespace {
 
     int imguiTableNextColumn(lua_State* L) {
         requireFrame(L, "imgui.tableNextColumn");
-        ImGui::TableNextColumn();
-        return 0;
+        lua_pushboolean(L, ImGui::TableNextColumn());
+        return 1;
     }
 
     int imguiTableSetColumnIndex(lua_State* L) {

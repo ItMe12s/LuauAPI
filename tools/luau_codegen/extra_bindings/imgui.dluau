@@ -216,7 +216,7 @@ export type ImGuiNamespace = {
     setWindowFocus: (name: string?) -> (),
     table: (id: string, columns: number, fn: () -> (), opts: ImGuiTableOpts?) -> (),
     tableNextRow: (flags: number?) -> (),
-    tableNextColumn: () -> (),
+    tableNextColumn: () -> boolean,
     tableSetColumnIndex: (column: number) -> boolean,
     tableSetupColumn: (label: string, opts: ImGuiTableSetupColumnOpts?) -> (),
     tableHeadersRow: () -> (),

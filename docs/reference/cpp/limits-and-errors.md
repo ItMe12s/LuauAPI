@@ -267,10 +267,9 @@ A run that passes its deadline is interrupted and turned into an error.
 The check happens at Luau instruction boundaries,
 so a very tight loop can run slightly past the deadline before the check fires.
 
-Defaults are generous so scripts can finish under load.
-For C++ callers, pass a lower `deadlineMs` when you can.
+Defaults are generous so scripts can finish under load. For C++ callers, pass a lower `deadlineMs` when you can.
 The runtime is shared with hooks, tasks, and ImGui, so keep custom deadlines under 100 ms when possible.
-For `imgui.onDraw`, stay under 20 ms so frame time stays usable while you debug.
+For `imgui.onDraw`, stay under 20 ms so frame time and menu input stay usable.
 
 ## Memory behavior
 

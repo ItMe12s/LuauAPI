@@ -69,6 +69,14 @@ geode.createQuickPopup(
 )
 ```
 
+## ImGui mod menus
+
+Use [`imgui`](imgui.md) when you want a player-facing mod menu built in one draw callback.
+It is best for settings, toggles, tabs, lists, color edits, and confirm popups.
+
+Use `geode.*` Cocos UI when you need native game nodes, sprites, persistent layers, or layout objects.
+Cocos UI is part of the scene graph. ImGui is rebuilt every frame.
+
 ## Finding signatures
 
 These classes are generated from the Geode bindings.
@@ -78,6 +86,7 @@ See [Type stubs](type-stubs.md). For class behavior, read the upstream [Geode UI
 ## Related
 
 - [Game objects](game-objects.md)
+- [imgui](imgui.md)
 - [Type stubs](type-stubs.md)
 - [gd3d](gd3d.md)
 

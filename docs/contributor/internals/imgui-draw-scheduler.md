@@ -16,10 +16,21 @@ The handle returned to Lua is a small userdata that holds a draw id and a `cance
 Widget and window functions call `requireFrame` first,
 which rejects a call made off the main thread or outside a draw callback.
 So a stray `imgui.button` from a `task` callback errors cleanly instead of breaking the ImGui frame.
-`imgui.window` and `imgui.child` are scoped wrappers.
-They call `Begin` or `BeginChild`, run the Lua closure through the runtime protected call,
-then always call `End` or `EndChild`, so a script error cannot skip the matching end.
+`imgui.window`, `imgui.child`, tabs, popups, tables, menus, groups, and style helpers are scoped wrappers.
+They call the matching ImGui begin or push function, run the Lua closure through the runtime protected call,
+then always call the matching end or pop function. So a script error cannot skip the matching cleanup.
 There are no bare `begin` or `end` functions on purpose.
+
+The binding is split by feature:
+
+- `ImGuiBindingInternal.hpp` has shared guards and argument helpers.
+- `ImGuiWidgets.cpp` has common widgets and input helpers.
+- `ImGuiLayout.cpp` has layout, groups, and tree nodes.
+- `ImGuiPopups.cpp` has tabs, popups, and tooltips.
+- `ImGuiTables.cpp` has table helpers.
+- `ImGuiMenus.cpp` has menu helpers.
+- `ImGuiStyle.cpp` has style and theme helpers.
+- `ImGuiConstants.cpp` has enum tables.
 
 ## The scheduler
 
@@ -56,6 +67,14 @@ See [Limits and errors](../../reference/cpp/limits-and-errors.md).
 ## Source
 
 - `src/bindings/imgui/ImGuiBinding.cpp`
+- `src/bindings/imgui/ImGuiBindingInternal.hpp`
+- `src/bindings/imgui/ImGuiWidgets.cpp`
+- `src/bindings/imgui/ImGuiLayout.cpp`
+- `src/bindings/imgui/ImGuiPopups.cpp`
+- `src/bindings/imgui/ImGuiTables.cpp`
+- `src/bindings/imgui/ImGuiMenus.cpp`
+- `src/bindings/imgui/ImGuiStyle.cpp`
+- `src/bindings/imgui/ImGuiConstants.cpp`
 - `src/bindings/imgui/ImGuiDrawScheduler.hpp`
 - `src/bindings/imgui/ImGuiDrawScheduler.cpp`
 - `src/bindings/imgui/ImGuiHost.cpp`
