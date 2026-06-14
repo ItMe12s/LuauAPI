@@ -271,6 +271,120 @@ namespace {
         }
         return 0;
     }
+
+    int imguiProgressBar(lua_State* L) {
+        requireFrame(L, "imgui.progressBar");
+        float fraction = check<float>(L, 1, "imgui.progressBar");
+
+        ImVec2 size(-1.0f, 0.0f);
+        char const* overlay = nullptr;
+        if (lua_istable(L, 2)) {
+            optFieldVec2(L, 2, "size", size, "imgui.progressBar");
+            lua_getfield(L, 2, "overlay");
+            if (lua_isstring(L, -1)) {
+                overlay = lua_tostring(L, -1);
+            }
+            lua_pop(L, 1);
+        }
+
+        ImGui::ProgressBar(fraction, size, overlay);
+        return 0;
+    }
+
+    int imguiBulletText(lua_State* L) {
+        requireFrame(L, "imgui.bulletText");
+        size_t textLen = 0;
+        char const* text = checkLuaString(L, 1, &textLen);
+        ImGui::BulletText("%.*s", static_cast<int>(textLen), text);
+        return 0;
+    }
+
+    int imguiTextWrapped(lua_State* L) {
+        requireFrame(L, "imgui.textWrapped");
+        size_t textLen = 0;
+        char const* text = checkLuaString(L, 1, &textLen);
+        ImGui::TextWrapped("%.*s", static_cast<int>(textLen), text);
+        return 0;
+    }
+
+    int imguiInputFloat(lua_State* L) {
+        requireFrame(L, "imgui.inputFloat");
+        char const* label = checkLuaString(L, 1);
+        float value = check<float>(L, 2, "imgui.inputFloat");
+
+        float step = 0.0f;
+        float stepFast = 0.0f;
+        char const* fmt = "%.3f";
+        ImGuiInputTextFlags flags = 0;
+        if (lua_istable(L, 3)) {
+            step = optFieldNumber(L, 3, "step", 0.0f);
+            stepFast = optFieldNumber(L, 3, "stepFast", 0.0f);
+            lua_getfield(L, 3, "fmt");
+            if (lua_isstring(L, -1)) {
+                fmt = lua_tostring(L, -1);
+            }
+            lua_pop(L, 1);
+            flags = static_cast<ImGuiInputTextFlags>(optFieldNumber(L, 3, "flags", 0.0f));
+        }
+
+        ImGui::InputFloat(label, &value, step, stepFast, fmt, flags);
+        lua_pushnumber(L, value);
+        return 1;
+    }
+
+    int imguiInputInt(lua_State* L) {
+        requireFrame(L, "imgui.inputInt");
+        char const* label = checkLuaString(L, 1);
+        int value = check<int>(L, 2, "imgui.inputInt");
+
+        int step = 1;
+        int stepFast = 100;
+        ImGuiInputTextFlags flags = 0;
+        if (lua_istable(L, 3)) {
+            step = static_cast<int>(optFieldNumber(L, 3, "step", 1.0f));
+            stepFast = static_cast<int>(optFieldNumber(L, 3, "stepFast", 100.0f));
+            flags = static_cast<ImGuiInputTextFlags>(optFieldNumber(L, 3, "flags", 0.0f));
+        }
+
+        ImGui::InputInt(label, &value, step, stepFast, flags);
+        lua_pushinteger(L, value);
+        return 1;
+    }
+
+    int imguiInputDouble(lua_State* L) {
+        requireFrame(L, "imgui.inputDouble");
+        char const* label = checkLuaString(L, 1);
+        double value = check<double>(L, 2, "imgui.inputDouble");
+
+        double step = 0.0;
+        double stepFast = 0.0;
+        char const* fmt = "%.6f";
+        ImGuiInputTextFlags flags = 0;
+        if (lua_istable(L, 3)) {
+            step = optFieldNumber(L, 3, "step", 0.0f);
+            stepFast = optFieldNumber(L, 3, "stepFast", 0.0f);
+            lua_getfield(L, 3, "fmt");
+            if (lua_isstring(L, -1)) {
+                fmt = lua_tostring(L, -1);
+            }
+            lua_pop(L, 1);
+            flags = static_cast<ImGuiInputTextFlags>(optFieldNumber(L, 3, "flags", 0.0f));
+        }
+
+        ImGui::InputDouble(label, &value, step, stepFast, fmt, flags);
+        lua_pushnumber(L, value);
+        return 1;
+    }
+
+    int imguiCheckboxFlags(lua_State* L) {
+        requireFrame(L, "imgui.checkboxFlags");
+        char const* label = checkLuaString(L, 1);
+        unsigned int flags = static_cast<unsigned int>(check<int>(L, 2, "imgui.checkboxFlags"));
+        unsigned int flagValue = static_cast<unsigned int>(check<int>(L, 3, "imgui.checkboxFlags"));
+        ImGui::CheckboxFlags(label, &flags, flagValue);
+        lua_pushinteger(L, static_cast<int>(flags));
+        return 1;
+    }
 } // namespace
 
 namespace luax {
@@ -290,5 +404,12 @@ namespace luax {
         setTableCFunction(L, -1, "isWindowHovered", &imguiIsWindowHovered);
         setTableCFunction(L, -1, "setNextWindowFocus", &imguiSetNextWindowFocus);
         setTableCFunction(L, -1, "setWindowFocus", &imguiSetWindowFocus);
+        setTableCFunction(L, -1, "progressBar", &imguiProgressBar);
+        setTableCFunction(L, -1, "bulletText", &imguiBulletText);
+        setTableCFunction(L, -1, "textWrapped", &imguiTextWrapped);
+        setTableCFunction(L, -1, "inputFloat", &imguiInputFloat);
+        setTableCFunction(L, -1, "inputInt", &imguiInputInt);
+        setTableCFunction(L, -1, "inputDouble", &imguiInputDouble);
+        setTableCFunction(L, -1, "checkboxFlags", &imguiCheckboxFlags);
     }
 } // namespace luax

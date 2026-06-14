@@ -52,6 +52,8 @@ _EXTRA_BINDING_SOURCES = {
             "src/bindings/imgui/ImGuiWidgets.cpp",
             "src/bindings/imgui/ImGuiLayout.cpp",
             "src/bindings/imgui/ImGuiPopups.cpp",
+            "src/bindings/imgui/ImGuiTables.cpp",
+            "src/bindings/imgui/ImGuiMenus.cpp",
         ],
         "type_name": "ImGuiNamespace",
         "start_marker": "registerImGui(lua_State* L)",

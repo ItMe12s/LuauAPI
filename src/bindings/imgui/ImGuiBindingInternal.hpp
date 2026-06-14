@@ -179,6 +179,9 @@ namespace luax {
             TabItem,
             Popup,
             Combo,
+            MenuBar,
+            Menu,
+            Table,
         };
 
         ImGuiConditionalEndGuard(Kind kind, bool active) : kind_(kind), active_(active) {}
@@ -193,6 +196,9 @@ namespace luax {
                 case Kind::TabItem: ImGui::EndTabItem(); break;
                 case Kind::Popup: ImGui::EndPopup(); break;
                 case Kind::Combo: ImGui::EndCombo(); break;
+                case Kind::MenuBar: ImGui::EndMenuBar(); break;
+                case Kind::Menu: ImGui::EndMenu(); break;
+                case Kind::Table: ImGui::EndTable(); break;
             }
         }
 
@@ -254,4 +260,6 @@ namespace luax {
     void registerImGuiWidgets(lua_State* L);
     void registerImGuiLayout(lua_State* L);
     void registerImGuiPopups(lua_State* L);
+    void registerImGuiTables(lua_State* L);
+    void registerImGuiMenus(lua_State* L);
 } // namespace luax

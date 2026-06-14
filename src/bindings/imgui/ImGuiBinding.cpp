@@ -221,6 +221,8 @@ namespace {
         registerImGuiWidgets(L);
         registerImGuiLayout(L);
         registerImGuiPopups(L);
+        registerImGuiTables(L);
+        registerImGuiMenus(L);
         registerImGuiConstants(L);
         registerImGuiStyleAndTheme(L);
         lua_setglobal(L, "imgui");

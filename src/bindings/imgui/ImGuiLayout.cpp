@@ -97,6 +97,44 @@ namespace {
         }
         return 0;
     }
+
+    int imguiGroup(lua_State* L) {
+        requireFrame(L, "imgui.group");
+        luaL_checktype(L, 1, LUA_TFUNCTION);
+        ImGui::BeginGroup();
+        ImGuiEndGuard endGuard{ImGuiEndGuard::Kind::Group};
+        callDrawClosure(L, 1, "imgui.group");
+        return 0;
+    }
+
+    int imguiColumns(lua_State* L) {
+        requireFrame(L, "imgui.columns");
+        int count = lua_isnoneornil(L, 1) ? 1 : check<int>(L, 1, "imgui.columns");
+        char const* id = nullptr;
+        bool border = true;
+        if (lua_istable(L, 2)) {
+            lua_getfield(L, 2, "id");
+            if (lua_isstring(L, -1)) {
+                id = lua_tostring(L, -1);
+            }
+            lua_pop(L, 1);
+            border = optFieldBool(L, 2, "border", true);
+        }
+        else if (!lua_isnoneornil(L, 2)) {
+            id = checkLuaString(L, 2);
+            if (!lua_isnoneornil(L, 3)) {
+                border = check<bool>(L, 3, "imgui.columns");
+            }
+        }
+        ImGui::Columns(count, id, border);
+        return 0;
+    }
+
+    int imguiNextColumn(lua_State* L) {
+        requireFrame(L, "imgui.nextColumn");
+        ImGui::NextColumn();
+        return 0;
+    }
 } // namespace
 
 namespace luax {
@@ -108,5 +146,8 @@ namespace luax {
         setTableCFunction(L, -1, "newLine", &imguiNewLine);
         setTableCFunction(L, -1, "collapsingHeader", &imguiCollapsingHeader);
         setTableCFunction(L, -1, "treeNode", &imguiTreeNode);
+        setTableCFunction(L, -1, "group", &imguiGroup);
+        setTableCFunction(L, -1, "columns", &imguiColumns);
+        setTableCFunction(L, -1, "nextColumn", &imguiNextColumn);
     }
 } // namespace luax

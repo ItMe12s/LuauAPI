@@ -57,6 +57,34 @@ export type ImGuiPopupOpts = { flags: number? }
 
 export type ImGuiPopupModalOpts = { flags: number?, closable: boolean? }
 
+export type ImGuiTableOpts = { flags: number?, outerSize: ImGuiVec2?, innerWidth: number? }
+
+export type ImGuiTableSetupColumnOpts = { flags: number?, width: number?, userId: number? }
+
+export type ImGuiMenuOpts = { enabled: boolean? }
+
+export type ImGuiMenuItemOpts = { shortcut: string?, enabled: boolean? }
+
+export type ImGuiColumnsOpts = { id: string?, border: boolean? }
+
+export type ImGuiProgressBarOpts = { size: ImGuiVec2?, overlay: string? }
+
+export type ImGuiInputFloatOpts = {
+    step: number?,
+    stepFast: number?,
+    fmt: string?,
+    flags: number?,
+}
+
+export type ImGuiInputIntOpts = { step: number?, stepFast: number?, flags: number? }
+
+export type ImGuiInputDoubleOpts = {
+    step: number?,
+    stepFast: number?,
+    fmt: string?,
+    flags: number?,
+}
+
 export type ImGuiIntEnumTable = { [string]: number }
 
 export type ImGuiFlagTables = {
@@ -186,6 +214,25 @@ export type ImGuiNamespace = {
     isWindowHovered: (flags: number?) -> boolean,
     setNextWindowFocus: () -> (),
     setWindowFocus: (name: string?) -> (),
+    table: (id: string, columns: number, fn: () -> (), opts: ImGuiTableOpts?) -> (),
+    tableNextRow: (flags: number?) -> (),
+    tableNextColumn: () -> (),
+    tableSetColumnIndex: (column: number) -> boolean,
+    tableSetupColumn: (label: string, opts: ImGuiTableSetupColumnOpts?) -> (),
+    tableHeadersRow: () -> (),
+    group: (fn: () -> ()) -> (),
+    columns: (count: number?, opts: ImGuiColumnsOpts?) -> (),
+    nextColumn: () -> (),
+    menuBar: (fn: () -> ()) -> (),
+    menu: (label: string, fn: () -> (), opts: ImGuiMenuOpts?) -> (),
+    menuItem: (label: string, selected: boolean?, opts: ImGuiMenuItemOpts?) -> boolean,
+    progressBar: (fraction: number, opts: ImGuiProgressBarOpts?) -> (),
+    bulletText: (text: string) -> (),
+    textWrapped: (text: string) -> (),
+    inputFloat: (label: string, value: number, opts: ImGuiInputFloatOpts?) -> number,
+    inputInt: (label: string, value: number, opts: ImGuiInputIntOpts?) -> number,
+    inputDouble: (label: string, value: number, opts: ImGuiInputDoubleOpts?) -> number,
+    checkboxFlags: (label: string, flags: number, flagValue: number) -> number,
     Flag: ImGuiFlagTables,
     Col: ImGuiIntEnumTable,
     StyleVar: ImGuiIntEnumTable,
