@@ -9,7 +9,7 @@ This page is the canonical list of caps, deadlines, and error strings for LuauAP
 
 | Constant | Value | Meaning |
 | --- | --- | --- |
-| `kMaxCompileDeadlineMs` | `5000 ms` | Max compile time per source before cache insert fails |
+| `kMaxCompileDeadlineMs` | `15000 ms` | Max compile time per source before cache insert fails |
 | `kMaxBytecodeCacheEntries` | `512` | Max cached compiled scripts |
 | `kMaxBytecodeCacheBytes` | `64 MiB` | Max total cached bytecode bytes |
 
@@ -17,7 +17,7 @@ This page is the canonical list of caps, deadlines, and error strings for LuauAP
 
 | Message | When | Return shape |
 | --- | --- | --- |
-| `luau compile exceeded 5000 ms budget` | Compile over deadline | Internal. Cache insert fails. |
+| `luau compile exceeded 15000 ms budget` | Compile over deadline | Internal. Cache insert fails. |
 | (none) | Cache over entry or byte cap | Oldest entries evicted. No Lua error. |
 
 ---
@@ -111,8 +111,8 @@ This page is the canonical list of caps, deadlines, and error strings for LuauAP
 
 | Constant | Value | Meaning |
 | --- | --- | --- |
-| `kHookScriptDeadlineMs` | `50 ms` | Budget for hooks, tasks, callbacks, web, and websocket Lua calls |
-| `kImGuiScriptDeadlineMs` | `16 ms` | Budget for one `imgui.onDraw` callback |
+| `kHookScriptDeadlineMs` | `30000 ms` | Budget for hooks, tasks, callbacks, web, and websocket Lua calls |
+| `kImGuiScriptDeadlineMs` | `500 ms` | Budget for one `imgui.onDraw` callback |
 
 ### Script deadlines for hooks and ImGui errors
 
@@ -126,7 +126,7 @@ This page is the canonical list of caps, deadlines, and error strings for LuauAP
 
 | Constant | Value | Meaning |
 | --- | --- | --- |
-| `kDefaultScriptDeadlineMs` | `250 ms` | Default budget for `runScript`, `require`, and module load |
+| `kDefaultScriptDeadlineMs` | `15000 ms` | Default budget for `runScript`, `require`, and module load |
 | `kMaxScriptBytes` | `4 MiB` | Max script, module, or `loadstring` source size |
 
 `kDefaultScriptDeadlineMs` is defined in `include/RuntimeTypes.hpp` and exposed through `include/LuauAPI.hpp`.
@@ -266,6 +266,11 @@ See [Your first script](../../getting-started/first-script.md) and [Integration 
 A run that passes its deadline is interrupted and turned into an error.
 The check happens at Luau instruction boundaries,
 so a very tight loop can run slightly past the deadline before the check fires.
+
+Defaults are generous so scripts can finish under load.
+For C++ callers, pass a lower `deadlineMs` when you can.
+The runtime is shared with hooks, tasks, and ImGui, so keep custom deadlines under 100 ms when possible.
+For `imgui.onDraw`, stay under 20 ms so frame time stays usable while you debug.
 
 ## Memory behavior
 

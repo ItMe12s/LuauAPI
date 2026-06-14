@@ -266,7 +266,7 @@ handle:disconnect()
 
 HTTP work runs on Geode's web worker. Lua callbacks run on the main thread.
 
-Web callbacks share the hook callback budget (50 ms). See [Limits and errors](../cpp/limits-and-errors.md).
+Web callbacks share the hook callback budget (30000 ms). See [Limits and errors](../cpp/limits-and-errors.md).
 Use [tasks](tasks.md) to schedule work around callbacks.
 
 Request intercept:

@@ -176,9 +176,16 @@ See [gd3d](reference/lua/gd3d.md) and [Limits and errors](reference/cpp/limits-a
 
 Optimize code that burns script budgets.
 
-Hooks, tasks, callbacks, web handlers, and draw callbacks run under time limits.
+Hooks, tasks, callbacks, web handlers, and `imgui.onDraw` run under time limits.
+Default ceilings are high. See [Limits and errors](reference/cpp/limits-and-errors.md).
+Every mod shares one runtime, so treat those numbers as a safety net, not a target.
 
-If your mod keeps hitting those limits, the code needs work.
+Aim for much less than the cap:
+
+- Keep hook, task, web, and websocket callback work under 100 ms.
+- Keep `imgui.onDraw` work under 20 ms so the game stays responsive while you debug.
+
+If your mod keeps hitting deadline errors, the code needs work.
 
 Bad:
 

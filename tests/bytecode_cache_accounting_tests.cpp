@@ -1,4 +1,5 @@
 #include "core/BytecodeCacheAccounting.hpp"
+#include "core/Config.hpp"
 
 #include <catch2/catch_test_macros.hpp>
 
@@ -17,9 +18,11 @@ TEST_CASE("bytecode cache accounting detects when eviction is needed") {
 }
 
 TEST_CASE("bytecode cache accounting enforces compile time budget") {
-    REQUIRE(luax::compileTimeWithinBudget(0, 5000));
-    REQUIRE(luax::compileTimeWithinBudget(5000, 5000));
-    REQUIRE_FALSE(luax::compileTimeWithinBudget(5001, 5000));
+    REQUIRE(luax::compileTimeWithinBudget(0, luax::kMaxCompileDeadlineMs));
+    REQUIRE(luax::compileTimeWithinBudget(luax::kMaxCompileDeadlineMs, luax::kMaxCompileDeadlineMs));
+    REQUIRE_FALSE(
+        luax::compileTimeWithinBudget(luax::kMaxCompileDeadlineMs + 1, luax::kMaxCompileDeadlineMs)
+    );
 }
 
 TEST_CASE("bytecode cache accounting checks unified memory budget") {

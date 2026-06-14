@@ -5,7 +5,7 @@
 
 namespace luax {
     // Compilation and Bytecode
-    constexpr int kMaxCompileDeadlineMs = 5000;
+    constexpr int kMaxCompileDeadlineMs = 15000;
     constexpr std::size_t kMaxBytecodeCacheEntries = 512;
     constexpr std::size_t kMaxBytecodeCacheBytes = 64 * 1024 * 1024;
 
@@ -33,8 +33,8 @@ namespace luax {
     constexpr std::size_t kMemoryLimitBytes = 512 * 1024 * 1024;
 
     // Script deadlines for hooks/ImGui
-    constexpr int kHookScriptDeadlineMs = 50;
-    constexpr int kImGuiScriptDeadlineMs = 16;
+    constexpr int kHookScriptDeadlineMs = 30000;
+    constexpr int kImGuiScriptDeadlineMs = 500;
 
     // Script limits
     inline constexpr int kDefaultScriptDeadlineMs = imes::luauapi::kDefaultScriptDeadlineMs;
