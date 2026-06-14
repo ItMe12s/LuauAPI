@@ -206,6 +206,8 @@ imgui.onDraw(function()
 end)
 ```
 
+See [imgui](../reference/lua/imgui.md) and [src/scripts/_modmenudemo.luau](../../src/scripts/_modmenudemo.luau).
+
 ## Spin a 3D mesh in a viewport
 
 Pack a `.glb` or `.gltf` file in your mod resources, load it, and parent a `ViewportFrame` under the menu when it opens.

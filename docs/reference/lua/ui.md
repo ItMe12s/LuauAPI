@@ -70,7 +70,8 @@ geode.createQuickPopup(
 ## ImGui mod menus
 
 Use [`imgui`](imgui.md) when you want a player-facing mod menu built in one draw callback.
-It is best for settings, toggles, tabs, lists, color edits, and confirm popups.
+It's nice for settings, toggles, tabs, lists, color edits, and confirm popups. But beware, mobile players might not enjoy it.
+See [src/scripts/_modmenudemo.luau](../../../src/scripts/_modmenudemo.luau) for a demo with TAB toggle, tab animations, and floating panels.
 
 Use `geode.*` Cocos UI when you need native game nodes, sprites, persistent layers, or layout objects.
 Cocos UI is part of the scene graph. ImGui is rebuilt every frame.

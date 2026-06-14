@@ -74,6 +74,8 @@ imgui.onDraw(function()
 end)
 ```
 
+See [Examples](../../getting-started/examples.md) and [src/scripts/_modmenudemo.luau](../../../src/scripts/_modmenudemo.luau).
+
 ## Lifecycle
 
 ```lua
@@ -105,7 +107,7 @@ imgui.getContentRegionAvail() -> ImGuiVec2
 ```
 
 Scoped wrappers always close their ImGui region after `fn`. This also happens when `fn` errors.
-`window` returns false when its close button is pressed.
+`window` returns false when its close button is pressed. You don't have to name the window with your mod name or ID.
 Use `sizeCond` or `posCond` with `imgui.Cond.Always` for animated windows.
 
 ## Widgets
