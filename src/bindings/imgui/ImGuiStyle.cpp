@@ -220,6 +220,7 @@ namespace {
     }
 
     int imguiThemeApply(lua_State* L) {
+        requireFrame(L, "imgui.theme.apply");
         char const* name = checkLuaString(L, 1);
         if (std::strcmp(name, "dark") == 0) {
             ImGui::StyleColorsDark();
@@ -237,6 +238,7 @@ namespace {
     }
 
     int imguiThemeApplyCustom(lua_State* L) {
+        requireFrame(L, "imgui.theme.applyCustom");
         luaL_checktype(L, 1, LUA_TTABLE);
         ImGuiStyle& style = ImGui::GetStyle();
         applyStyleVarsGlobal(L, 1, "imgui.theme.applyCustom", style);

@@ -106,6 +106,7 @@ imgui.getContentRegionAvail() -> ImGuiVec2
 
 Scoped wrappers always close their ImGui region after `fn`. This also happens when `fn` errors.
 `window` returns false when its close button is pressed. Use mod-prefixed titles and IDs.
+Use `sizeCond` or `posCond` with `imgui.Cond.Always` for animated windows.
 
 ## Widgets
 

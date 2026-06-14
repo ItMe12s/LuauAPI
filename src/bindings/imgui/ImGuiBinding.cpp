@@ -38,10 +38,16 @@ namespace {
         if (lua_istable(L, 3)) {
             ImVec2 vec;
             if (optFieldVec2(L, 3, "size", vec, "imgui.window")) {
-                ImGui::SetNextWindowSize(vec, ImGuiCond_FirstUseEver);
+                auto cond = static_cast<ImGuiCond>(
+                    optFieldNumber(L, 3, "sizeCond", static_cast<float>(ImGuiCond_FirstUseEver))
+                );
+                ImGui::SetNextWindowSize(vec, cond);
             }
             if (optFieldVec2(L, 3, "pos", vec, "imgui.window")) {
-                ImGui::SetNextWindowPos(vec, ImGuiCond_FirstUseEver);
+                auto cond = static_cast<ImGuiCond>(
+                    optFieldNumber(L, 3, "posCond", static_cast<float>(ImGuiCond_FirstUseEver))
+                );
+                ImGui::SetNextWindowPos(vec, cond);
             }
             flags = static_cast<ImGuiWindowFlags>(optFieldNumber(L, 3, "flags", 0.0f));
             closable = optFieldBool(L, 3, "closable", false);

@@ -10,7 +10,9 @@ export type ImGuiVec4 = { x: number, y: number, z: number, w: number }
 
 export type ImGuiWindowOpts = {
     size: ImGuiVec2?,
+    sizeCond: number?,
     pos: ImGuiVec2?,
+    posCond: number?,
     flags: number?,
     closable: boolean?,
 }
