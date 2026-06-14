@@ -41,6 +41,8 @@ _IMGUI_BINDING_CPP = "src/bindings/imgui/ImGuiBinding.cpp"
 _IMGUI_HOST_STUB = "tests/host/ImGuiHostStub.cpp"
 _IMGUI_STYLE = "src/bindings/imgui/ImGuiStyle.cpp"
 _IMGUI_BINDING_TESTS = "tests/imgui_binding_tests.cpp"
+_IMGUI_HEADLESS_CMAKE = "cmake/ImGuiHeadless.cmake"
+_IMGUI_TEST_HARNESS = "tests/host/ImGuiTestHarness.hpp"
 _CMAKE_LISTS = "CMakeLists.txt"
 _SCHEDULED_HANDLE_BINDING = "src/framework/schedule/ScheduledHandleBinding.hpp"
 _SCHEDULED_CALLBACK = "src/framework/schedule/ScheduledCallback.hpp"
@@ -781,7 +783,10 @@ class ImGuiGuardTests(unittest.TestCase):
     def test_imgui_binding_tests_cover_headless_checks(self) -> None:
         source = _read_repo_file(_IMGUI_BINDING_TESTS)
         for needle in (
+            "ImGuiTestHarness.hpp",
             "ImGuiContextGuard",
+            "beginImGuiTestFrame",
+            "endImGuiTestFrame",
             "ImGuiWindowFlags_NoTitleBar",
             "imgui.style.with",
             "secondWindowOk",
@@ -792,8 +797,11 @@ class ImGuiGuardTests(unittest.TestCase):
 
     def test_cmake_links_headless_imgui_for_host_tests(self) -> None:
         cmake = _read_repo_file(_CMAKE_LISTS)
+        headless = _read_repo_file(_IMGUI_HEADLESS_CMAKE)
         self.assertIn("cmake/ImGuiHeadless.cmake", cmake)
         self.assertIn("luauapi_imgui_headless", cmake)
+        self.assertIn("imgui_impl_null.cpp", headless)
+        self.assertIn("host/ImGuiTestHarness.hpp", _read_repo_file(_IMGUI_BINDING_TESTS))
         for source in (
             "src/bindings/imgui/ImGuiBinding.cpp",
             "src/bindings/imgui/ImGuiConstants.cpp",

@@ -1,6 +1,7 @@
 #include "bindings/imgui/ImGuiDrawScheduler.hpp"
 #include "core/Runtime.hpp"
 #include "framework/Binding.hpp"
+#include "host/ImGuiTestHarness.hpp"
 #include "host/lua_test_helpers.hpp"
 
 #include <catch2/catch_approx.hpp>
@@ -32,16 +33,7 @@ namespace {
         }
     };
 
-    struct ImGuiContextGuard {
-        ImGuiContextGuard() {
-            IMGUI_CHECKVERSION();
-            ImGui::CreateContext();
-        }
-
-        ~ImGuiContextGuard() {
-            ImGui::DestroyContext();
-        }
-    };
+    struct ImGuiContextGuard : luauapi_test::ImGuiTestContext {};
 
     void registerImGuiBinding(lua_State* L) {
         luax::registerBinding({"imgui_lib", &luax::registerImGui, 10});
@@ -66,9 +58,9 @@ namespace {
         auto& scheduler = luax::ImGuiDrawScheduler::get();
         auto const id = scheduler.add(std::move(ref));
         REQUIRE(id != 0);
-        ImGui::NewFrame();
+        luauapi_test::beginImGuiTestFrame();
         scheduler.drawAll();
-        ImGui::Render();
+        luauapi_test::endImGuiTestFrame();
     }
 
     bool globalIsTrue(lua_State* L, char const* name) {

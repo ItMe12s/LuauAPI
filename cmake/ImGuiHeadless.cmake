@@ -13,5 +13,6 @@ add_library(luauapi_imgui_headless STATIC
     ${imgui_headless_SOURCE_DIR}/imgui_draw.cpp
     ${imgui_headless_SOURCE_DIR}/imgui_tables.cpp
     ${imgui_headless_SOURCE_DIR}/imgui_widgets.cpp
+    ${imgui_headless_SOURCE_DIR}/backends/imgui_impl_null.cpp
 )
 target_include_directories(luauapi_imgui_headless PUBLIC ${imgui_headless_SOURCE_DIR})

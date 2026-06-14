@@ -210,6 +210,9 @@ local function drawListsTab()
     beginTab(4)
     drawAnimatedTabBody(function()
         imgui.separatorText("Selection")
+        if imgui.isItemHovered() then
+            imgui.setTooltip("Click to select a row.")
+        end
         state.listIndex = imgui.listBox("Items", state.listIndex, listItems, { height = 96 })
 
         imgui.text("Flags")
@@ -223,10 +226,6 @@ local function drawListsTab()
             if imgui.selectable(label, selected) then
                 state.selectedRow = i
             end
-        end
-
-        if imgui.isItemHovered() then
-            imgui.setTooltip("Click to select a row.")
         end
     end)
 end
