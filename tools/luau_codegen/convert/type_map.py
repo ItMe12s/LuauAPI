@@ -125,6 +125,7 @@ GD_ENUM_TYPES = {
     "CurrencySpriteType",
     "DialogAnimationType",
     "EasingType",
+    "EditCommand",
     "FormatterType",
     "GameObjectClassType",
     "GameObjectType",
