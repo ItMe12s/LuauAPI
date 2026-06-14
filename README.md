@@ -30,7 +30,9 @@ You are expected to already have:
 ## Getting started
 
 For mod authors building a Geode mod using Luau scripting.
+
 Runnable samples: [Examples](docs/getting-started/examples.md).
+
 Kindly read this: [LuauAPI mod guidelines](docs/mod_guidelines.md).
 
 - [Overview](docs/getting-started/overview.md)
