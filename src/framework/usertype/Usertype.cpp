@@ -1,9 +1,11 @@
 #include "framework/usertype/Usertype.hpp"
 
 #include "core/Config.hpp"
+#include "core/Runtime.hpp"
 #include "framework/BindingHost.hpp"
 #include "framework/usertype/Fields.hpp"
 #include "framework/usertype/OpaqueHandle.hpp"
+#include "framework/usertype/WeakRefShutdown.hpp"
 
 #include <Geode/Geode.hpp>
 #include <cstring>
@@ -149,9 +151,12 @@ namespace luax::detail {
         auto* block = static_cast<UserdataBlock*>(ud);
         if (!block) return;
         if (block->flags & kUserdataOwnedFlag) {
-            if (block->ptr) {
+            if (block->ptr && !Runtime::isShuttingDown()) {
                 releaseLuaRetain(block->ptr, "__gc", false);
             }
+        }
+        else if (Runtime::isShuttingDown()) {
+            leakWeakRefDuringShutdown(std::move(block->weak));
         }
         block->~UserdataBlock();
     }

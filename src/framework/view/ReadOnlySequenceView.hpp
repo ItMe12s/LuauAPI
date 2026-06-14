@@ -1,5 +1,7 @@
 #pragma once
 
+#include "core/Runtime.hpp"
+#include "framework/usertype/WeakRefShutdown.hpp"
 #include "framework/view/ReadOnlyView.hpp"
 
 #include <Geode/Geode.hpp>
@@ -69,6 +71,9 @@ namespace luax::detail {
         );
         if (block) {
             using Block = typename BackingPolicy::Block;
+            if (Runtime::isShuttingDown()) {
+                leakWeakRefDuringShutdown(std::move(block->owner));
+            }
             block->~Block();
         }
         return 0;

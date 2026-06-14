@@ -1,5 +1,8 @@
 #include "framework/usertype/Fields.hpp"
 
+#include "core/Runtime.hpp"
+#include "framework/usertype/WeakRefShutdown.hpp"
+
 #include <Geode/Geode.hpp>
 #include <unordered_map>
 
@@ -99,6 +102,9 @@ namespace luax {
         auto it = tables.find(node);
         if (it == tables.end()) return;
         it->second.table.reset();
+        if (Runtime::isShuttingDown()) {
+            detail::leakWeakRefDuringShutdown(std::move(it->second.owner));
+        }
         tables.erase(it);
     }
 
@@ -116,6 +122,14 @@ namespace luax {
 
     void Fields::clear() {
         auto& tables = fieldTables();
+        if (Runtime::isShuttingDown()) {
+            for (auto& [_, entry] : tables) {
+                entry.table.reset();
+                detail::leakWeakRefDuringShutdown(std::move(entry.owner));
+            }
+            tables.clear();
+            return;
+        }
         for (auto& [_, entry] : tables) {
             entry.table.reset();
         }

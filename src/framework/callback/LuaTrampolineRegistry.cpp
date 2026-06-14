@@ -64,6 +64,11 @@ namespace luax {
     }
 
     void clearOrphanTrampolines() {
+        if (Runtime::isShuttingDown()) {
+            orphanTrampolines().clear();
+            anchorMap().clear();
+            return;
+        }
         for (auto* trampoline : orphanTrampolines()) {
             trampoline->release();
         }

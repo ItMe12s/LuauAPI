@@ -14,6 +14,10 @@ namespace luax {
 
     inline void clearLuaRetains() {
         auto& retains = luaRetains();
+        if (Runtime::isShuttingDown()) {
+            retains.clear();
+            return;
+        }
         for (auto const& entry : retains) {
             for (unsigned int i = 0; i < entry.second; ++i) {
                 entry.first->release();
