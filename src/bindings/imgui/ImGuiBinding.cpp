@@ -195,7 +195,9 @@ namespace {
         pushImVec2(L, ImGui::GetContentRegionAvail());
         return 1;
     }
+} // namespace
 
+namespace luax {
     geode::Result<void> registerImGui(lua_State* L) {
         registerImGuiDrawHandleMetatable(L);
 
@@ -233,6 +235,6 @@ namespace {
 
         return geode::Ok();
     }
-} // namespace
+} // namespace luax
 
 LUAX_BINDING(imgui_lib, registerImGui)

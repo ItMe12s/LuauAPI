@@ -37,6 +37,11 @@ _COCOS_BINDING = "src/bindings/geode/GeodeCocosBinding.cpp"
 _TASK_SCHEDULER = "src/bindings/task/TaskScheduler.cpp"
 _TASK_BINDING = "src/bindings/task/TaskBinding.cpp"
 _IMGUI_BINDING = "src/bindings/imgui/ImGuiDrawHandleBinding.cpp"
+_IMGUI_BINDING_CPP = "src/bindings/imgui/ImGuiBinding.cpp"
+_IMGUI_HOST_STUB = "tests/host/ImGuiHostStub.cpp"
+_IMGUI_STYLE = "src/bindings/imgui/ImGuiStyle.cpp"
+_IMGUI_BINDING_TESTS = "tests/imgui_binding_tests.cpp"
+_CMAKE_LISTS = "CMakeLists.txt"
 _SCHEDULED_HANDLE_BINDING = "src/framework/schedule/ScheduledHandleBinding.hpp"
 _SCHEDULED_CALLBACK = "src/framework/schedule/ScheduledCallback.hpp"
 _SCHEDULED_SLOT_STORE = "src/framework/schedule/ScheduledSlotStore.hpp"
@@ -726,6 +731,77 @@ class HandleGcGuardTests(unittest.TestCase):
         imgui_scheduler = _read_repo_file("src/bindings/imgui/ImGuiDrawScheduler.cpp")
         self.assertIn("m_store", imgui_scheduler)
         self.assertIn("compactCancelled", imgui_scheduler)
+
+
+class ImGuiGuardTests(unittest.TestCase):
+    def test_host_tests_use_imgui_host_stub(self) -> None:
+        cmake = _read_repo_file(_CMAKE_LISTS)
+        self.assertIn("tests/host/ImGuiHostStub.cpp", cmake)
+        self.assertNotIn("src/bindings/imgui/ImGuiHost.cpp", cmake)
+
+        stub = _read_repo_file(_IMGUI_HOST_STUB)
+        for fn in (
+            "initImGuiHost",
+            "shutdownImGuiHost",
+            "imguiHostSetVisible",
+            "imguiHostToggle",
+        ):
+            with self.subTest(fn=fn):
+                self.assertIn(f"void {fn}", stub)
+        self.assertIn("bool imguiHostIsVisible", stub)
+
+    def test_on_draw_skips_imgui_cocos_init_in_host_tests(self) -> None:
+        source = _read_repo_file(_IMGUI_BINDING)
+        self.assertIn("#if !defined(LUAUAPI_HOST_TESTS)", source)
+        self.assertIn("initImGuiHost();", source)
+
+    def test_style_with_uses_raii_pop_guards(self) -> None:
+        source = _read_repo_file(_IMGUI_STYLE)
+        self.assertIn("ImGuiStyleVarPopGuard", source)
+        self.assertIn("ImGuiStyleColorPopGuard", source)
+        body = _function_body(source, "imguiStyleWith")
+        self.assertIn("callDrawClosure", body)
+
+    def test_scoped_imgui_wrappers_use_end_guards(self) -> None:
+        scoped_sources = (
+            _IMGUI_BINDING_CPP,
+            "src/bindings/imgui/ImGuiPopups.cpp",
+            "src/bindings/imgui/ImGuiTables.cpp",
+            "src/bindings/imgui/ImGuiMenus.cpp",
+            "src/bindings/imgui/ImGuiLayout.cpp",
+        )
+        for source_path in scoped_sources:
+            with self.subTest(source=source_path):
+                source = _read_repo_file(source_path)
+                self.assertTrue(
+                    "ImGuiEndGuard" in source or "ImGuiConditionalEndGuard" in source,
+                    f"{source_path} must use scoped end guards",
+                )
+
+    def test_imgui_binding_tests_cover_headless_checks(self) -> None:
+        source = _read_repo_file(_IMGUI_BINDING_TESTS)
+        for needle in (
+            "ImGuiContextGuard",
+            "ImGuiWindowFlags_NoTitleBar",
+            "imgui.style.with",
+            "secondWindowOk",
+            "recoveredTabOk",
+        ):
+            with self.subTest(needle=needle):
+                self.assertIn(needle, source)
+
+    def test_cmake_links_headless_imgui_for_host_tests(self) -> None:
+        cmake = _read_repo_file(_CMAKE_LISTS)
+        self.assertIn("cmake/ImGuiHeadless.cmake", cmake)
+        self.assertIn("luauapi_imgui_headless", cmake)
+        for source in (
+            "src/bindings/imgui/ImGuiBinding.cpp",
+            "src/bindings/imgui/ImGuiConstants.cpp",
+            "src/bindings/imgui/ImGuiStyle.cpp",
+            "src/bindings/imgui/ImGuiWidgets.cpp",
+        ):
+            with self.subTest(source=source):
+                self.assertIn(source, cmake)
 
 
 class ErrorSemanticsGuardTests(unittest.TestCase):

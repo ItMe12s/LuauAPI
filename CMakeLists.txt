@@ -277,6 +277,7 @@ endif()
 
 if(LUAUAPI_BUILD_TESTS)
     include(cmake/WebSocketDeps.cmake)
+    include(cmake/ImGuiHeadless.cmake)
     enable_testing()
 
     FetchContent_Declare(
@@ -327,8 +328,17 @@ if(LUAUAPI_BUILD_TESTS)
         src/bindings/geode/web/GeodeWebMultipart.cpp
         src/bindings/geode/web/GeodeWebListeners.cpp
         src/bindings/geode/JsonConvert.cpp
+        src/bindings/imgui/ImGuiBinding.cpp
+        src/bindings/imgui/ImGuiConstants.cpp
         src/bindings/imgui/ImGuiDrawHandleBinding.cpp
         src/bindings/imgui/ImGuiDrawScheduler.cpp
+        src/bindings/imgui/ImGuiLayout.cpp
+        src/bindings/imgui/ImGuiMenus.cpp
+        src/bindings/imgui/ImGuiPopups.cpp
+        src/bindings/imgui/ImGuiStyle.cpp
+        src/bindings/imgui/ImGuiTables.cpp
+        src/bindings/imgui/ImGuiWidgets.cpp
+        tests/host/ImGuiHostStub.cpp
         src/bindings/task/TaskScheduler.cpp
         src/require/BytecodeCacheKey.cpp
         src/require/Requirer.cpp
@@ -367,6 +377,7 @@ if(LUAUAPI_BUILD_TESTS)
         Luau.Compiler
         Luau.CodeGen
         Luau.Require
+        luauapi_imgui_headless
         ixwebsocket
         mbedtls
         mbedx509
