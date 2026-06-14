@@ -75,6 +75,16 @@ Call methods with a colon. Read and write simple properties with a dot.
 local pos = self.m_obPosition
 ```
 
+Some APIs return a `CCArray`. Use Cocos methods to read it.
+`objectAtIndex` starts at index `0`.
+
+```lua
+local lists = localLevelManager:getCreatedLists(0)
+if not lists or lists:count() == 0 then return nil end
+
+local first = lists:objectAtIndex(0)
+```
+
 ## Table-shaped values
 
 Some method arguments are small structs you pass as plain Lua tables with named keys.

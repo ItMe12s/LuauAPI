@@ -123,6 +123,7 @@ set(LUAUAPI_GEODE_ENUMS_HEADER
     "${geode_bindings_SOURCE_DIR}/bindings/include/Geode/Enums.hpp")
 set(LUAUAPI_GEODE_COCOS_HEADERS
     "${LUAUAPI_GEODE_SDK_PATH}/loader/include/Geode/cocos/base_nodes/CCNode.h"
+    "${LUAUAPI_GEODE_SDK_PATH}/loader/include/Geode/cocos/cocoa/CCArray.h"
     "${LUAUAPI_GEODE_SDK_PATH}/loader/include/Geode/cocos/robtop/keyboard_dispatcher/CCKeyboardDelegate.h")
 set(LUAUAPI_GEODE_UTILS_HEADERS
     "${LUAUAPI_GEODE_SDK_PATH}/loader/include/Geode/utils/general.hpp"

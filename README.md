@@ -107,6 +107,7 @@ For anyone working on LuauAPI itself.
   - [Runtime](docs/contributor/internals/runtime.md)
   - [Task scheduler](docs/contributor/internals/task-scheduler.md)
 - Codegen
+  - [CCArray methods](docs/contributor/codegen/cc-array.md)
   - [ccCArray fields](docs/contributor/codegen/cc-c-array.md)
   - [Codegen](docs/contributor/codegen/codegen.md)
   - [Nested containers](docs/contributor/codegen/nested-containers.md)

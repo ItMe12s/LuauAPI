@@ -200,6 +200,7 @@ See [delegates reference](../../reference/lua/delegates.md) for how scripts use 
 - [Platform parity](platform-parity.md)
 - [Pair containers](pair-containers.md)
 - [Nested containers](nested-containers.md)
+- [CCArray methods](cc-array.md)
 - [ccCArray fields](cc-c-array.md)
 - [Testing](../testing.md)
 

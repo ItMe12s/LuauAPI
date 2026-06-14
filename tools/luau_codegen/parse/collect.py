@@ -23,6 +23,7 @@ def collect_bindings_root(bindings_dir: str, geode_sdk_path: str | None = None) 
         from luau_codegen.parse.cocos_enums import scan_enum_key_codes
         from luau_codegen.parse.geode_sdk import (
             scan_geode_sdk,
+            scan_geode_ccarray_additions,
             scan_geode_ccnode_additions,
             scan_geode_enums,
             scan_geode_functions,
@@ -35,6 +36,9 @@ def collect_bindings_root(bindings_dir: str, geode_sdk_path: str | None = None) 
         ccnode_additions = scan_geode_ccnode_additions(geode_sdk_path)
         if ccnode_additions:
             root.classes.append(ccnode_additions)
+        ccarray_additions = scan_geode_ccarray_additions(geode_sdk_path)
+        if ccarray_additions:
+            root.classes.append(ccarray_additions)
         root.functions.extend(scan_geode_functions(geode_sdk_path))
         root.scan_warnings.extend(take_scan_warnings())
     from luau_codegen.policy.filtering import method_key

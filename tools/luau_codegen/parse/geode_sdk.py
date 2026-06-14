@@ -78,6 +78,23 @@ _CCNODE_DECL = re.compile(
     r"class\s+CC_DLL\s+CCNode\s*:\s*public\s+CCObject\s*\{",
     re.DOTALL,
 )
+_CCARRAY_DECL = re.compile(
+    r"class\s+CC_DLL\s+CCArray\s*:\s*public\s+CCObject\s*\{",
+    re.DOTALL,
+)
+_GEODE_FRIEND_MODIFY_LINE = re.compile(r"^\s*GEODE_FRIEND_MODIFY\s*$", re.MULTILINE)
+_CCARRAY_READ_METHOD_ALLOWLIST = frozenset(
+    {
+        "count",
+        "capacity",
+        "objectAtIndex",
+        "indexOfObject",
+        "containsObject",
+        "firstObject",
+        "lastObject",
+        "randomObject",
+    }
+)
 _ACCESS_LABEL = re.compile(r"(public|protected|private)\s*:")
 _NESTED_DECL = re.compile(r"(class|struct|enum)\s+")
 _TEMPLATE_DECL = re.compile(r"template\s*<")
@@ -228,6 +245,57 @@ def scan_geode_ccnode_additions(sdk_path: str) -> Class | None:
 
     return Class(
         name="CCNode",
+        namespace="cocos2d",
+        bases=["CCObject"],
+        methods=methods,
+        source=path,
+        line=line,
+    )
+
+
+def scan_geode_ccarray_additions(sdk_path: str) -> Class | None:
+    path = os.path.join(
+        sdk_path,
+        "loader",
+        "include",
+        "Geode",
+        "cocos",
+        "cocoa",
+        "CCArray.h",
+    )
+    if not os.path.isfile(path):
+        return None
+
+    with open(path, "r", encoding="utf-8") as f:
+        text = f.read()
+    text = strip_comments(text)
+    text = _strip_preproc(text)
+
+    match = _CCARRAY_DECL.search(text)
+    if not match:
+        return None
+
+    brace_start = match.end() - 1
+    brace_end = balanced_delimiter_end(text, brace_start)
+    body = text[brace_start + 1 : brace_end]
+    body = _GEODE_FRIEND_MODIFY_LINE.sub("", body)
+    line = text[: match.start()].count("\n") + 1
+    methods = _extract_public_methods(
+        "CCArray",
+        body,
+        line,
+        geode_only=False,
+        include_bodies=False,
+        method_allowlist=_CCARRAY_READ_METHOD_ALLOWLIST,
+    )
+    if not methods:
+        return None
+    for method in methods:
+        for platform in _SCANNED_LINK_PLATFORMS:
+            method.platforms.setdefault(platform, "link")
+
+    return Class(
+        name="CCArray",
         namespace="cocos2d",
         bases=["CCObject"],
         methods=methods,
@@ -436,6 +504,7 @@ def _extract_public_methods(
     *,
     geode_only: bool = False,
     include_bodies: bool = True,
+    method_allowlist: frozenset[str] | None = None,
 ) -> List[Method]:
     methods: List[Method] = []
     access = "private"
@@ -494,7 +563,7 @@ def _extract_public_methods(
             ):
                 cleaned = _clean_method_text(stmt)
                 m = parse_method(class_name, cleaned, base_line, access)
-                if m:
+                if m and (method_allowlist is None or m.name in method_allowlist):
                     methods.append(m)
             i = balanced_delimiter_end(body, brace) + 1
             if i < length and body[i] == ";":
@@ -511,7 +580,7 @@ def _extract_public_methods(
             ):
                 cleaned = _clean_method_text(stmt)
                 m = parse_method(class_name, cleaned, base_line, access)
-                if m:
+                if m and (method_allowlist is None or m.name in method_allowlist):
                     methods.append(m)
             i = semi + 1
             continue
