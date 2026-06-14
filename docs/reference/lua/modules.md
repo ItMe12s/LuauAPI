@@ -39,6 +39,8 @@ For the full load pipeline, see [Module system internals](../../contributor/inte
 
 ## Related
 
+- [Getting started overview](../../getting-started/overview.md)
+- [Examples](../../getting-started/examples.md)
 - [Globals](globals.md)
 - [Sharing APIs between mods](sharing-apis.md)
 - [Module system internals](../../contributor/internals/module-system.md)

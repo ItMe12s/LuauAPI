@@ -57,6 +57,7 @@ print(c.r, c.g, c.b) -- 255 128 0
 
 ## Related
 
+- [Globals](globals.md)
 - [cocos](cocos.md)
 - [mod](mod.md)
 

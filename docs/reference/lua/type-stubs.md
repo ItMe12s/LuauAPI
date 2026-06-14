@@ -61,10 +61,10 @@ See [Codegen](../../contributor/codegen/codegen.md) and [Editor setup](../../get
 
 ## Related
 
+- [Globals](globals.md)
 - [Editor setup](../../getting-started/editor-setup.md)
 - [Building from source](../../contributor/building.md)
 - [Codegen](../../contributor/codegen/codegen.md)
-- [Globals](globals.md)
 
 ## Source
 

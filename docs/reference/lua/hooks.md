@@ -116,23 +116,9 @@ print(handle:isEnabled())
 
 ## geode.fields
 
-```lua
-geode.fields(self: CCNode) -> { [string]: any }
-```
-
 Returns a plain table tied to the node, alive as long as the node.
-The `m_fields` property returns the same table. Useful for storing per-object state from a hook.
-See [Game objects](game-objects.md).
-
-```lua
-geode.hook("geode.gd.MenuLayer:init/0", {
-    after = function(self, result)
-        local fields = geode.fields(self)
-        fields.opens = (fields.opens or 0) + 1
-        return result
-    end,
-})
-```
+The `m_fields` property returns the same table.
+See [game objects](game-objects.md) for usage and node placement rules.
 
 ## Prefer the right tool
 
@@ -143,7 +129,7 @@ A hook is a sharp tool. Reach for a built-in API first when one exists.
 - Reading another mod's effect: check for the node or value it produces instead of hooking.
 
 Hooking hot functions to do work an existing API already covers is a common Index rejection reason.
-See the [Geode SDK guidelines tips](https://docs.geode-sdk.org/mods/guidelines-tips/).
+See the [Geode SDK guidelines tips](https://docs.geode-sdk.org/mods/guidelines-tips/) and [LuauAPI mod guidelines](../../mod_guidelines.md).
 
 ## Limits
 
@@ -153,8 +139,12 @@ See [Limits and errors](../cpp/limits-and-errors.md).
 
 ## Related
 
+- [Getting started overview](../../getting-started/overview.md)
+- [Examples](../../getting-started/examples.md)
+- [LuauAPI mod guidelines](../../mod_guidelines.md)
+- [Tasks and time](tasks.md)
 - [Callbacks](callbacks.md)
-- [Game objects](game-objects.md)
+- [game objects](game-objects.md)
 - [Globals](globals.md)
 
 ## Source

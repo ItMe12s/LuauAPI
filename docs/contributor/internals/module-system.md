@@ -63,8 +63,10 @@ See [Limits and errors](../../reference/cpp/limits-and-errors.md).
 
 ## Related
 
+- [Architecture](../architecture.md)
+- [Modules](../reference/lua/modules.md)
 - [Runtime](runtime.md)
-- [Modules reference](../../reference/lua/modules.md)
+- [Limits and errors](../../reference/cpp/limits-and-errors.md)
 
 ## Source
 

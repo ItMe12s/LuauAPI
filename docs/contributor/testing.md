@@ -139,8 +139,10 @@ See [Codegen](codegen/codegen.md) for what the generator produces.
 
 ## Related
 
+- [Architecture](architecture.md)
 - [Building from source](building.md)
 - [Codegen](codegen/codegen.md)
+- [Limits and errors](../reference/cpp/limits-and-errors.md)
 
 ## Source
 

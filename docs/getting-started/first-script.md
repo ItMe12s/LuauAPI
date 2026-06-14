@@ -12,7 +12,7 @@ Create a `.luau` file in your mod resources, for example `Bootstrap.luau`.
 print("Hello from Luau")
 ```
 
-See [Globals](../reference/lua/globals.md) for `print` behavior.
+See [globals](../reference/lua/globals.md) for `print` behavior.
 
 ## Step 2: run it from C++
 
@@ -43,7 +43,7 @@ LuauAPI owns the runtime, so you do not start it. Check `status()` is `Ready` fi
 ## The rules
 
 The file name must be a flat `.luau` resource name inside the resources directory you pass.
-See [Modules](../reference/lua/modules.md) and [Limits and errors](../reference/cpp/limits-and-errors.md).
+See [modules](../reference/lua/modules.md) and [Limits and errors](../reference/cpp/limits-and-errors.md).
 
 ## Developer mode
 
@@ -58,7 +58,10 @@ See [Installation Settings](installation.md).
 
 ## Related
 
-- [Lua reference](../reference/lua/globals.md)
+- [Getting started overview](../../getting-started/overview.md)
+- [Examples](../../getting-started/examples.md)
+- [globals](../reference/lua/globals.md)
+- [modules](../reference/lua/modules.md)
 - [C++ integration guide](../reference/cpp/integration-guide.md)
 
 ## Source

@@ -84,6 +84,8 @@ The `definitionFiles` entry is a fixed single path, so you only reload after a s
 
 ## Related
 
+- [Getting started overview](overview.md)
+- [Examples](examples.md)
 - [Type stubs](../reference/lua/type-stubs.md)
 - [Building from source](../contributor/building.md)
 

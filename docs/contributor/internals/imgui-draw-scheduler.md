@@ -60,9 +60,11 @@ See [Limits and errors](../../reference/cpp/limits-and-errors.md).
 
 ## Related
 
+- [Architecture](../architecture.md)
 - [imgui reference](../../reference/lua/imgui.md)
 - [Task scheduler](task-scheduler.md)
 - [Runtime](runtime.md)
+- [Limits and errors](../../reference/cpp/limits-and-errors.md)
 
 ## Source
 

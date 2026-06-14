@@ -46,6 +46,7 @@ print(v.matches(">=v1.2.0", "v1.3.0")) -- true
 
 ## Related
 
+- [Globals](globals.md)
 - [mod](mod.md)
 - [Sharing APIs between mods](sharing-apis.md)
 

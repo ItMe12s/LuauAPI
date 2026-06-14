@@ -387,15 +387,20 @@ Listeners:
 - Do not put secrets in URLs, headers, or bodies when other mods may be loaded.
 
 For WebSocket LAN exposure with `host = "0.0.0.0"`, see [websocket](websocket.md).
+See [LuauAPI mod guidelines](../../mod_guidelines.md) for loadstring and network abuse rules.
 
 ## Related
 
+- [Getting started overview](../../getting-started/overview.md)
+- [Examples](../../getting-started/examples.md)
+- [LuauAPI mod guidelines](../../mod_guidelines.md)
 - [geode.utils](utils.md)
 - [websocket](websocket.md)
 - [json](json.md)
 - [fs](fs.md)
-- [tasks](tasks.md)
+- [Tasks and time](tasks.md)
 - [Globals](globals.md)
+- [Limits and errors](../cpp/limits-and-errors.md)
 
 ## Source
 

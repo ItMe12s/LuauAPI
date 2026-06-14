@@ -65,7 +65,7 @@ Return `true` from the callback to stop propagation to later listeners.
 Return `false` or nothing to let the event continue.
 If a callback errors or times out, LuauAPI logs it and lets propagation continue.
 
-## Example: Ctrl + A
+## Ctrl + A example
 
 ```lua
 local keys = geode.cocos.enumKeyCodes
@@ -84,7 +84,7 @@ end)
 handle:disconnect()
 ```
 
-## Example: listen to every key
+## Listen to every key example
 
 Use `listen` when you care about many keys or want one place to filter them.
 
@@ -101,7 +101,7 @@ geode.KeyboardInputEvent.listen(function(data)
 end)
 ```
 
-## Example: press, release, and repeat
+## Press, release, and repeat example
 
 `Repeat` fires while a key is held. Ignore it when you only want one action per physical press.
 
@@ -119,7 +119,7 @@ geode.KeyboardInputEvent.listenFor(keys.KEY_Space, function(data)
 end)
 ```
 
-## Example: modifier shortcut
+## Modifier shortcut example
 
 Test modifiers with `bit32.band`. Combine held modifiers the same way when building keybind tables.
 
@@ -142,7 +142,7 @@ geode.KeyboardInputEvent.listenFor(keys.KEY_F5, function(data)
 end)
 ```
 
-## Example: rewrite mutable data
+## Rewrite mutable data example
 
 The callback receives a table backed by Geode's event data.
 Changes you make are written back before later listeners run.
@@ -161,7 +161,7 @@ end)
 
 Use this sparingly. It affects every listener that runs after yours.
 
-## Example: priority
+## Priority example
 
 The optional priority argument works like other Geode event listeners.
 Higher priority runs first. A listener that returns `true` blocks lower ones.
@@ -180,7 +180,7 @@ geode.KeyboardInputEvent.listenFor(keys.KEY_Space, function(data)
 end)
 ```
 
-## Example: temporary listener
+## Temporary listener example
 
 Store the handle and disconnect when you no longer need input.
 
@@ -197,6 +197,9 @@ end)
 
 ## Related
 
+- [Getting started overview](../../getting-started/overview.md)
+- [Examples](../../getting-started/examples.md)
+- [Callbacks](callbacks.md)
 - [Keybind](keybind.md)
 - [cocos](cocos.md)
 - [delegates](delegates.md)

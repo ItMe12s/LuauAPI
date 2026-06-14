@@ -62,8 +62,9 @@ print(back) -- hello
 
 ## Related
 
+- [geode.utils](utils.md)
 - [permission](permission.md)
-- [json](json.md)
+- [Globals](globals.md)
 
 ## Source
 

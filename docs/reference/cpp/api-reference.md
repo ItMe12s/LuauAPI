@@ -5,6 +5,7 @@
 The public C++ API in `imes::luauapi`. Signatures match `include/LuauAPI.hpp`.
 Sync run functions and status queries must run on the main thread.
 Async run functions prepare on the calling thread and execute on the main thread.
+See [Getting started overview](../../getting-started/overview.md) for the user-facing threading rule.
 
 ## Threading
 
@@ -110,8 +111,11 @@ See [Limits and errors](limits-and-errors.md).
 
 ## Related
 
+- [Getting started overview](../../getting-started/overview.md)
 - [Integration guide](integration-guide.md)
 - [Your first script](../../getting-started/first-script.md)
+- [Limits and errors](limits-and-errors.md)
+- [Architecture](../../contributor/architecture.md)
 
 ## Source
 

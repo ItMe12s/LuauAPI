@@ -15,7 +15,7 @@ See [Your first script](../../getting-started/first-script.md) and [Installation
 
 LuauAPI owns the runtime lifecycle.
 Your mod does not create or destroy the runtime.
-See [Architecture Lifecycle](../../contributor/architecture.md).
+See [Architecture](../../contributor/architecture.md).
 
 ## Run scripts
 
@@ -34,12 +34,15 @@ When a sync run fails, read the message from `Result` and optionally `lastError(
 Async preparation errors (bad path, file too large) appear only in the future `Result`.
 Execution errors appear in both the future `Result` and `lastError()`.
 
-See [Limits and errors](limits-and-errors.md) How errors reach you.
+See [Limits and errors](limits-and-errors.md) for caps and error strings.
 
 ## Related
 
-- [API reference](api-reference.md)
+- [Getting started overview](../../getting-started/overview.md)
 - [Your first script](../../getting-started/first-script.md)
+- [API reference](api-reference.md)
+- [Limits and errors](limits-and-errors.md)
+- [Architecture](../../contributor/architecture.md)
 
 ## Source
 

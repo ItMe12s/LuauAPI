@@ -56,6 +56,7 @@ local position = transform:position()
 Hooks and callbacks must return required values.
 
 A missing return can corrupt the call path. Some failures can crash outside normal Lua errors and may escape the Geode crash handler.
+See [hooks](reference/lua/hooks.md).
 
 Bad:
 
@@ -177,13 +178,8 @@ See [gd3d](reference/lua/gd3d.md) and [Limits and errors](reference/cpp/limits-a
 Optimize code that burns script budgets.
 
 Hooks, tasks, callbacks, web handlers, and `imgui.onDraw` run under time limits.
-Default ceilings are high. See [Limits and errors](reference/cpp/limits-and-errors.md).
-Every mod shares one runtime, so treat those numbers as a safety net, not a target.
-
-Aim for much less than the cap:
-
-- Keep hook, task, web, and websocket callback work under 100 ms.
-- Keep `imgui.onDraw` work under 20 ms so game input and menus stay responsive.
+Every mod shares one runtime, so treat hard caps as a safety net, not a target.
+See [Limits and errors](reference/cpp/limits-and-errors.md) for deadline numbers and soft guidance.
 
 If your mod keeps hitting deadline errors, the code needs work.
 
@@ -209,8 +205,6 @@ task.every(0.05, function()
     end
 end)
 ```
-
-See [Limits and errors](reference/cpp/limits-and-errors.md).
 
 ### `reject-bad-gc`
 
@@ -474,10 +468,17 @@ These are allowed when done with care.
 
 ## Related
 
-1. [Geode SDK Mod Guidelines](https://docs.geode-sdk.org/mods/guidelines/)
-2. [Globals](reference/lua/globals.md)
-3. [Sharing APIs between mods](reference/lua/sharing-apis.md)
-4. [Modules](reference/lua/modules.md)
-5. [Tasks and time](reference/lua/tasks.md)
-6. [gd3d](reference/lua/gd3d.md)
-7. [Limits and errors](reference/cpp/limits-and-errors.md)
+- [Geode SDK Mod Guidelines](https://docs.geode-sdk.org/mods/guidelines/)
+- [Getting started overview](getting-started/overview.md)
+- [globals](reference/lua/globals.md)
+- [Sharing APIs between mods](reference/lua/sharing-apis.md)
+- [Modules](reference/lua/modules.md)
+- [hooks](reference/lua/hooks.md)
+- [Tasks and time](reference/lua/tasks.md)
+- [gd3d](reference/lua/gd3d.md)
+- [Limits and errors](reference/cpp/limits-and-errors.md)
+
+## Source
+
+- `src/core/Config.hpp`
+- `docs/mod_guidelines.md`

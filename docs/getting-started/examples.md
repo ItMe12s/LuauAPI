@@ -2,13 +2,12 @@
 
 ## Summary
 
-A few small scripts that show the common things a script does. Each one is complete and runnable on its own.
-For full signatures, see the [Lua reference](../reference/lua/globals.md).
+Small runnable scripts for common tasks. Each block stands on its own.
+Full signatures live in the [Lua reference](../reference/lua/globals.md).
 
 ## Load a module with require
 
-Entry scripts and modules share one flat resources root.
-A module file returns exactly one value.
+Full API: [modules](../reference/lua/modules.md).
 
 ```lua
 -- Math.luau
@@ -24,24 +23,9 @@ local Math = require("./Math")
 print(Math.add(2, 3))
 ```
 
-See [Modules](../reference/lua/modules.md) for path rules.
-
-## Log and return a module
-
-A file run with `runFile` does not need to return anything. A file loaded with `require` must return exactly one value.
-
-```lua
--- Helper.luau
-local M = {}
-function M.greet(name)
-    print("hello", name)
-end
-return M
-```
-
 ## Hook a game function
 
-`geode.hook` runs your code before or after a method. The target id is `namespace.Class:method/argCount`.
+Full API: [hooks](../reference/lua/hooks.md).
 
 ```lua
 geode.hook("geode.gd.MenuLayer:init/0", {
@@ -54,23 +38,35 @@ geode.hook("geode.gd.MenuLayer:init/0", {
 
 ## Schedule work with task
 
-`task.delay`, `task.every`, and `task.defer` return a handle you can cancel.
+Full API: [Tasks and time](../reference/lua/tasks.md).
 
 ```lua
+task.spawn(function()
+    print("runs now")
+end)
+
+task.defer(function()
+    print("runs next tick")
+end)
+
+local handle = task.delay(1.0, function()
+    print("runs after one second")
+end)
+
 local ticks = 0
-local handle
-handle = task.every(0.5, function()
+local everyHandle
+everyHandle = task.every(0.5, function()
     ticks += 1
     print("tick", ticks)
     if ticks >= 5 then
-        handle:cancel()
+        everyHandle:cancel()
     end
 end)
 ```
 
 ## Save data with fs, json, and Mod
 
-Use sandbox roots instead of raw filesystem paths.
+Full API: [fs](../reference/lua/fs.md), [json](../reference/lua/json.md), [mod](../reference/lua/mod.md).
 
 ```lua
 local raw, err = geode.fs.read("save", "stats.json")
@@ -87,110 +83,23 @@ end
 
 ## Share an API on _G
 
-Publish once from the provider mod. Consumers index `_G` by mod id.
+Full API: [Sharing APIs between mods](../reference/lua/sharing-apis.md).
 
-```lua
--- provider mod
-_G["my.mod.id"] = {
-    version = 1,
-    greet = function(name) print("hi", name) end,
-}
-```
-
-```lua
--- consumer mod
-local api = _G["my.mod.id"]
-if api then
-    api.greet("world")
-end
-```
-
-See [Sharing APIs between mods](../reference/lua/sharing-apis.md) for load-order polling with `task`.
-
-## task.spawn, defer, and delay
-
-`task.spawn` runs immediately. `task.defer` runs on the next tick. `task.delay` runs once after a delay.
-
-```lua
-task.spawn(function()
-    print("runs now")
-end)
-
-task.defer(function()
-    print("runs next tick")
-end)
-
-task.delay(1.0, function()
-    print("runs after one second")
-end)
-```
+Publish from the provider mod. Read with `_G["other.mod.id"]` from consumers.
+Use `task` polling when load order is unknown.
 
 ## Fetch over the web
 
-Web requests run on Geode's worker and call back on the main thread.
+Full API: [web](../reference/lua/web.md).
 
-```lua
-geode.utils.web.get("https://api.example.com/data", function(response, err)
-    if err then
-        print(err)
-        return
-    end
-    local data, jsonErr = response:json()
-    if data then
-        print(data.version)
-    end
-end)
-```
+## WebSocket client and server
 
-## WebSocket client
-
-WebSocket I/O runs on background threads and delivers events to Lua on the main thread.
-Register callbacks right after `connect` so you do not miss early events.
-
-```lua
-local ws = websocket.connect("wss://echo.websocket.org")
-ws:onOpen(function()
-    ws:send("hello")
-end):onMessage(function(data, isBinary)
-    print("received:", data)
-end):onClose(function(code, reason, remote)
-    print("closed:", code, reason)
-end):onError(function(message)
-    print("error:", message)
-end)
-```
-
-## WebSocket server
-
-`websocket.serve` starts a local server. It binds to loopback (`127.0.0.1`) by default.
-Only pass `host = "0.0.0.0"` when you intend to expose the port on your LAN.
-
-```lua
-local server, err = websocket.serve(7777)
-if not server then
-    print(err)
-    return
-end
-
-server:onClientConnect(function(peer)
-    peer:send("welcome")
-end):onMessage(function(peer, data)
-    print("from client:", data)
-end)
-```
-
-Pair with a client on the same machine:
-
-```lua
-local ws = websocket.connect("ws://127.0.0.1:7777")
-ws:onMessage(function(data)
-    print("from server:", data)
-end)
-```
+Full API: [websocket](../reference/lua/websocket.md).
 
 ## Draw a debug overlay
 
-`imgui.onDraw` runs every frame. Build windows and widgets inside the callback.
+Full API: [imgui](../reference/lua/imgui.md).
+Demo: [src/scripts/_modmenudemo.luau](../../src/scripts/_modmenudemo.luau).
 
 ```lua
 local state = { enabled = false }
@@ -206,12 +115,10 @@ imgui.onDraw(function()
 end)
 ```
 
-See [imgui](../reference/lua/imgui.md) and [src/scripts/_modmenudemo.luau](../../src/scripts/_modmenudemo.luau).
-
 ## Spin a 3D mesh in a viewport
 
-Pack a `.glb` or `.gltf` file in your mod resources, load it, and parent a `ViewportFrame` under the menu when it opens.
-See [gd3d](../reference/lua/gd3d.md) and [src/scripts/_viewportdemo.luau](../../src/scripts/_viewportdemo.luau) for a longer demo.
+Full API: [gd3d](../reference/lua/gd3d.md).
+Demo: [src/scripts/_viewportdemo.luau](../../src/scripts/_viewportdemo.luau).
 
 ```lua
 local Transform = gd3d.Transform
@@ -258,11 +165,16 @@ geode.hook("geode.gd.MenuLayer:init/0", {
 
 ## Related
 
-- [Globals](../reference/lua/globals.md)
-- [Modules](../reference/lua/modules.md)
+- [Getting started overview](overview.md)
+- [LuauAPI mod guidelines](../mod_guidelines.md)
+- [globals](../reference/lua/globals.md)
+- [modules](../reference/lua/modules.md)
 - [Sharing APIs between mods](../reference/lua/sharing-apis.md)
-- [Hooks](../reference/lua/hooks.md)
+- [hooks](../reference/lua/hooks.md)
 - [Tasks and time](../reference/lua/tasks.md)
+- [fs](../reference/lua/fs.md)
+- [json](../reference/lua/json.md)
+- [mod](../reference/lua/mod.md)
 - [web](../reference/lua/web.md)
 - [websocket](../reference/lua/websocket.md)
 - [imgui](../reference/lua/imgui.md)

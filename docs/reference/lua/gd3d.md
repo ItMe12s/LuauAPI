@@ -329,21 +329,19 @@ See [Examples](../../getting-started/examples.md) and [src/scripts/_viewportdemo
 
 ## Limits
 
-Mesh files use the filesystem read cap. Procedural meshes cap at 200000 vertices.
-PNG and JPEG decode caps at 8192 px per side.
-The viewport framebuffer is the off-screen render target, sized at content size times cocos scale.
-
-There is no hard cap on mesh instances per viewport.
-Performance depends on GPU memory and draw cost.
-
-See [Limits and errors](../cpp/limits-and-errors.md) for cap values, glTF, and procedural mesh error strings.
+See [Limits and errors](../cpp/limits-and-errors.md) for mesh, texture, and procedural caps.
 
 ## Related
 
+- [Getting started overview](../../getting-started/overview.md)
+- [Examples](../../getting-started/examples.md)
+- [LuauAPI mod guidelines](../../mod_guidelines.md)
 - [fs](fs.md)
-- [Game objects](game-objects.md)
+- [hooks](hooks.md)
+- [game objects](game-objects.md)
 - [UI and layouts](ui.md)
 - [Tasks and time](tasks.md)
+- [Limits and errors](../cpp/limits-and-errors.md)
 
 ## Source
 

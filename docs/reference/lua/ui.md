@@ -6,6 +6,14 @@ How to build interface elements from a script using the Geode UI classes exposed
 Covers the factory pattern, the layout system, and quick popups.
 For signatures, use editor autocomplete. For class behavior, see the [Geode docs](https://docs.geode-sdk.org/).
 
+## Which UI to use
+
+Use [`imgui`](imgui.md) for player mod menus you can rebuild every frame.
+Settings, toggles, tabs, lists, color edits, and confirm popups fit well there.
+
+Use `geode.*` Cocos UI when you need native game nodes, sprites, persistent layers, or layout objects.
+Cocos UI lives in the scene graph. ImGui is immediate mode and redraws each frame.
+
 ## The factory pattern
 
 Geode UI classes sit directly under `geode`, next to `cocos2d` and `gd`.
@@ -69,12 +77,7 @@ geode.createQuickPopup(
 
 ## ImGui mod menus
 
-Use [`imgui`](imgui.md) when you want a player-facing mod menu built in one draw callback.
-It's nice for settings, toggles, tabs, lists, color edits, and confirm popups. But beware, mobile players might not enjoy it.
-See [src/scripts/_modmenudemo.luau](../../../src/scripts/_modmenudemo.luau) for a demo with TAB toggle, tab animations, and floating panels.
-
-Use `geode.*` Cocos UI when you need native game nodes, sprites, persistent layers, or layout objects.
-Cocos UI is part of the scene graph. ImGui is rebuilt every frame.
+See [imgui](imgui.md) and [src/scripts/_modmenudemo.luau](../../../src/scripts/_modmenudemo.luau) for overlay menus.
 
 ## Finding signatures
 
@@ -84,7 +87,11 @@ See [Type stubs](type-stubs.md). For class behavior, read the upstream [Geode UI
 
 ## Related
 
-- [Game objects](game-objects.md)
+- [Getting started overview](../../getting-started/overview.md)
+- [Examples](../../getting-started/examples.md)
+- [LuauAPI mod guidelines](../../mod_guidelines.md)
+- [game objects](game-objects.md)
+- [Callbacks](callbacks.md)
 - [imgui](imgui.md)
 - [Type stubs](type-stubs.md)
 - [gd3d](gd3d.md)

@@ -54,7 +54,7 @@ if node then someMenu:addChild(node) end
 
 ## Related
 
-- [Game objects](game-objects.md)
+- [Globals](globals.md)
 - [Keyboard input](keyboard-input.md)
 - [delegates](delegates.md)
 - [UI and layouts](ui.md)

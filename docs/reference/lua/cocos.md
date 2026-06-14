@@ -84,10 +84,11 @@ print(cc.lighten3B(red, 20).r) -- 255
 
 ## Related
 
+- [Globals](globals.md)
+- [game objects](game-objects.md)
 - [ColorProvider](color-provider.md)
-- [Game objects](game-objects.md)
-- [gd3d](gd3d.md)
 - [Keyboard input](keyboard-input.md)
+- [gd3d](gd3d.md)
 
 ## Source
 

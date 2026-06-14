@@ -122,9 +122,7 @@ Methods on a disconnected peer return `nil` and `"websocket peer is disconnected
 
 ## Limits
 
-Caps apply: 16 client connections, 2 servers, 32 clients per server, and 8 MiB per message.
-Closed connections, stopped servers, and disconnected peers return lifecycle errors such as `websocket connection is closed`.
-See [Limits and errors](../cpp/limits-and-errors.md) for the full cap table and error strings.
+See [Limits and errors](../cpp/limits-and-errors.md) for connection caps and error strings.
 
 ## Security
 
@@ -145,6 +143,7 @@ TLS on the client:
 - The server side does not support TLS.
 
 For HTTP request caps and TLS options on `geode.utils.web`, see [web](web.md) Security.
+See [LuauAPI mod guidelines](../../mod_guidelines.md) for loadstring and network abuse rules.
 
 ## Lifecycle
 
@@ -153,9 +152,13 @@ Nothing closes them when an individual script run returns, so keep a reference f
 
 ## Related
 
+- [Getting started overview](../../getting-started/overview.md)
+- [Examples](../../getting-started/examples.md)
+- [LuauAPI mod guidelines](../../mod_guidelines.md)
 - [web](web.md)
-- [tasks](tasks.md)
+- [Tasks and time](tasks.md)
 - [Globals](globals.md)
+- [Limits and errors](../cpp/limits-and-errors.md)
 
 ## Source
 

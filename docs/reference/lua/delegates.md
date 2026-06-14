@@ -55,14 +55,8 @@ director:getKeyboardDispatcher():addDelegate({
 
 ## Lifetime and anchoring
 
-Delegate trampolines use the same retention model as menu handlers:
-
-- When a bound method returns a `CCObject*`, that object anchors the delegate.
-- For instance methods that do not return an object, `self` anchors the delegate.
-- For static calls and void-return methods, delegates go into the orphan registry, cleared on runtime shutdown.
-
-When the anchor's retain count drops to one before `release`, anchored delegates are cleaned up.
-The orphan registry has a soft cap.
+Delegate trampolines use the same anchor and orphan registry rules as other callbacks.
+See [callbacks](callbacks.md) for retention, cleanup, and caps.
 
 ## Delegate return values
 
@@ -100,9 +94,10 @@ See [Limits and errors](../cpp/limits-and-errors.md).
 
 ## Related
 
+- [Getting started overview](../../getting-started/overview.md)
 - [Callbacks](callbacks.md)
-- [Game objects](game-objects.md)
 - [Keyboard input](keyboard-input.md)
+- [game objects](game-objects.md)
 - [Type stubs](type-stubs.md)
 - [Codegen](../../contributor/codegen/codegen.md)
 - [Globals](globals.md)

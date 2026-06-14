@@ -49,8 +49,10 @@ end
 
 ## Related
 
+- [geode.utils](utils.md)
 - [base64](base64.md)
-- [callbacks](callbacks.md)
+- [Callbacks](callbacks.md)
+- [Globals](globals.md)
 
 ## Source
 

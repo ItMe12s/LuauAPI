@@ -68,9 +68,12 @@ end)
 
 ## Related
 
+- [Getting started overview](../../getting-started/overview.md)
+- [Examples](../../getting-started/examples.md)
 - [Modules](modules.md)
 - [Tasks and time](tasks.md)
 - [Globals](globals.md)
+- [LuauAPI mod guidelines](../../mod_guidelines.md)
 
 ## Source
 

@@ -265,6 +265,7 @@ In practice most game types are generated. See [Codegen](../codegen/codegen.md).
 
 ## Related
 
+- [Architecture](../architecture.md)
 - [Runtime](runtime.md)
 - [Codegen](../codegen/codegen.md)
 - [callbacks](../../reference/lua/callbacks.md)

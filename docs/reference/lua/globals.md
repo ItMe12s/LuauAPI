@@ -13,8 +13,37 @@ This page covers signatures for those globals plus error shapes.
 
 ## Script basics
 
-Runtime rules for scripts live in [Getting started Key concepts](../../getting-started/overview.md).
+Runtime rules live in [Getting started overview](../../getting-started/overview.md).
 Caps and error strings live in [Limits and errors](../cpp/limits-and-errors.md).
+
+## All modules
+
+| Group | Page | Role |
+| --- | --- | --- |
+| Core | [hooks](hooks.md) | Hook game functions |
+| Core | [modules](modules.md) | Sandboxed `require` |
+| Core | [Sharing APIs between mods](sharing-apis.md) | `_G` mod APIs |
+| Core | [Tasks and time](tasks.md) | `task` and `time` |
+| Core | [callbacks](callbacks.md) | C++ callback lifetime |
+| Core | [delegates](delegates.md) | Virtual interface tables |
+| Game | [game objects](game-objects.md) | Cocos and GD objects |
+| Game | [cocos](cocos.md) | Node and color helpers |
+| Game | [ColorProvider](color-provider.md) | Theme colors |
+| Game | [Keybind](keybind.md) | Keybind strings |
+| Game | [Keyboard input](keyboard-input.md) | Keyboard events |
+| UI | [UI and layouts](ui.md) | Cocos UI factories |
+| UI | [imgui](imgui.md) | Dear ImGui overlay |
+| UI | [gd3d](gd3d.md) | 3D viewport rendering |
+| IO | [mod](mod.md) | Saved values and settings |
+| IO | [fs](fs.md) | Sandboxed filesystem |
+| IO | [json](json.md) | JSON parse and dump |
+| Network | [web](web.md) | HTTP client |
+| Network | [websocket](websocket.md) | WebSocket client and server |
+| Utils | [geode.utils](utils.md) | Utils namespace index |
+| Utils | [base64](base64.md) | Base64 encode and decode |
+| Utils | [permission](permission.md) | OS permissions |
+| Utils | [VersionInfo](version-info.md) | Version parsing |
+| Meta | [type stubs](type-stubs.md) | `geode.d.luau` reference |
 
 ## Error shapes
 
@@ -68,7 +97,7 @@ require(path: string) -> any
 ```
 
 Loads a sibling Luau module and returns its single value.
-See [Modules](modules.md) for the full rules.
+See [modules](modules.md) for the full rules.
 See [Examples](../../getting-started/examples.md).
 
 ## _G
@@ -93,10 +122,12 @@ See [Limits and errors](../cpp/limits-and-errors.md).
 
 ## Related
 
-- [Modules](modules.md)
-- [Sharing APIs between mods](sharing-apis.md)
-- [Type stubs](type-stubs.md)
 - [Getting started overview](../../getting-started/overview.md)
+- [Examples](../../getting-started/examples.md)
+- [modules](modules.md)
+- [Sharing APIs between mods](sharing-apis.md)
+- [type stubs](type-stubs.md)
+- [Limits and errors](../cpp/limits-and-errors.md)
 
 ## Source
 

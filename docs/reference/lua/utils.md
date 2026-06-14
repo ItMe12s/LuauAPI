@@ -20,10 +20,10 @@ Related top-level helpers outside this prefix:
 
 ## Related
 
+- [Globals](globals.md)
 - [web](web.md)
 - [base64](base64.md)
 - [permission](permission.md)
-- [Globals](globals.md)
 
 ## Source
 

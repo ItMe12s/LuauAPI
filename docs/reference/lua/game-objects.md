@@ -106,7 +106,13 @@ You do not manage retain or release by hand. See the [bindings framework](../../
 
 ## Related
 
-- [Hooks](hooks.md)
+- [Getting started overview](../../getting-started/overview.md)
+- [Examples](../../getting-started/examples.md)
+- [LuauAPI mod guidelines](../../mod_guidelines.md)
+- [hooks](hooks.md)
+- [Callbacks](callbacks.md)
+- [cocos](cocos.md)
+- [mod](mod.md)
 - [UI and layouts](ui.md)
 - [Type stubs](type-stubs.md)
 

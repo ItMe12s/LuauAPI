@@ -89,7 +89,7 @@ imgui.isVisible() -> boolean
 `onDraw` starts the backend on first use. `cancel` removes a callback.
 Dropping the handle cancels it on GC. A callback that errors is removed.
 
-## Windows And Layout
+## Windows and layout
 
 ```lua
 imgui.window(title, fn, opts?) -> boolean
@@ -136,7 +136,7 @@ Text is drawn as raw text, so percent signs are safe.
 Input text uses a shared per-thread buffer.
 Default max length is 16384 and the cap is 65536.
 
-## Lists And Colors
+## Lists and colors
 
 ```lua
 imgui.combo(label, index, items, opts?) -> number
@@ -225,21 +225,20 @@ See `imgui.dluau` for all constant tables.
 
 ## Limits
 
-- Use one `imgui.onDraw` per mod when possible.
-- Keep draw work under 20 ms.
-- Hard callback deadline is 500 ms.
-- At most 256 draw callbacks can be registered.
-- Do not do IO, web work, or heavy list rebuilds in `onDraw`.
-- Image, texture, font, docking, viewport, and draw list APIs are not bound.
+Use one `imgui.onDraw` per mod when possible. Keep draw work under 20 ms.
+Do not do IO, web work, or heavy list rebuilds in `onDraw`.
+Image, texture, font, docking, viewport, and draw list APIs are not bound.
+See [Limits and errors](../cpp/limits-and-errors.md) for hard caps and error strings.
 
-## ImGui Or Cocos UI
+## ImGui or Cocos UI
 
-Use `imgui` for menus that are easy to rebuild every frame.
-Use [`geode.*` Cocos UI](ui.md) for native game nodes, persistent layers, sprites, and layout objects.
+See [UI and layouts](ui.md) for when to use ImGui vs Cocos UI.
 
 ## Related
 
 - [UI and layouts](ui.md)
+- [Examples](../../getting-started/examples.md)
+- [LuauAPI mod guidelines](../../mod_guidelines.md)
 - [ImGui draw scheduler](../../contributor/internals/imgui-draw-scheduler.md)
 - [Limits and errors](../cpp/limits-and-errors.md)
 - [Type stubs](type-stubs.md)

@@ -54,9 +54,12 @@ See [Limits and errors](../cpp/limits-and-errors.md).
 
 ## Related
 
+- [Getting started overview](../../getting-started/overview.md)
+- [Examples](../../getting-started/examples.md)
 - [mod](mod.md)
 - [fs](fs.md)
 - [Globals](globals.md)
+- [Limits and errors](../cpp/limits-and-errors.md)
 
 ## Source
 

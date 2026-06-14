@@ -64,9 +64,9 @@ See [Codegen](codegen/codegen.md).
 
 ## Supported platforms
 
-Codegen is set up for Windows, macOS (arm64 and x86_64), iOS (arm64), and Android (32-bit and 64-bit).
-Other Android ABIs fail at configure time. `LUAUAPI_HOST_ONLY=ON` skips the Geode SDK
-and configure-time codegen listing, for host-only tooling without `GEODE_SDK`.
+See [Installation](../getting-started/installation.md) for the supported platform list.
+Other Android ABIs fail at configure time.
+`LUAUAPI_HOST_ONLY=ON` skips the Geode SDK and configure-time codegen listing for host-only tooling.
 
 ## Tests
 
@@ -86,15 +86,7 @@ Drop `-Check` to rewrite files in place.
 
 ## CI
 
-Continuous integration is defined in `.github/workflows/multi-platform.yml`:
-
-- **Windows Tests** and **macOS Tests** configure with `-DLUAUAPI_BUILD_TESTS=ON`, build `luauapi_tests`, and run CTest.
-- **Linux Codegen Tests** run the Python suite under `tests/luau_codegen/`.
-- The **build** matrix produces the mod for Windows, macOS, iOS, and Android ABIs.
-- **Package builds** combines matrix artifacts for release.
-
-Host tests link IXWebSocket and mbedTLS for websocket coverage.
-See [Testing](testing.md) for the full host test list and link dependencies.
+See [Testing](testing.md) for CI jobs, how to run tests, and the host test list.
 
 ## Related
 

@@ -5,8 +5,7 @@
 How to build a Geode mod that uses LuauAPI.
 Install the mod, declare a dependency, and pack your `.luau` files as resources.
 No build steps are needed for this path.
-
-LuauAPI is in beta. APIs and limits may change between releases.
+See the README beta note for release stability.
 
 ## Install the mod
 

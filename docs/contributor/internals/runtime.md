@@ -83,6 +83,7 @@ WebSocket uses this to close live connections and servers. See [Bindings framewo
 ## Related
 
 - [Architecture](../architecture.md)
+- [Getting started overview](../../getting-started/overview.md)
 - [Bindings framework](bindings-framework.md)
 - [Module system](module-system.md)
 

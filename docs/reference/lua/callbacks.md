@@ -11,7 +11,8 @@ The supported callback shapes are:
 - `SEL_*` selector handlers
 - Delegate tables
 
-Callbacks run on the main thread under the script budget. See [Globals](globals.md) Script basics.
+Callbacks run on the main thread under the script budget.
+See [Getting started overview](../../getting-started/overview.md).
 If a callback raises an error, LuauAPI logs the failure and applies the callback site's fallback.
 Selector, menu, delegate, setting, web, and permission callbacks keep their registration lifetime.
 Task intervals and ImGui draw callbacks are removed after an error to avoid log spam.
@@ -98,11 +99,17 @@ See [Limits and errors](../cpp/limits-and-errors.md).
 
 ## Related
 
+- [Getting started overview](../../getting-started/overview.md)
+- [Examples](../../getting-started/examples.md)
 - [Delegates](delegates.md)
-- [Hooks](hooks.md)
+- [hooks](hooks.md)
 - [Tasks and time](tasks.md)
-- [Game objects](game-objects.md)
+- [game objects](game-objects.md)
+- [mod](mod.md)
+- [web](web.md)
+- [imgui](imgui.md)
 - [Globals](globals.md)
+- [Limits and errors](../cpp/limits-and-errors.md)
 
 ## Source
 

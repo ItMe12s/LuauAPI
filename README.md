@@ -31,49 +31,57 @@ You are expected to already have:
 
 For mod authors building a Geode mod using Luau scripting.
 Runnable samples: [Examples](docs/getting-started/examples.md).
+Kindly read this: [LuauAPI mod guidelines](docs/mod_guidelines.md).
 
 - [Overview](docs/getting-started/overview.md)
 - [Installation](docs/getting-started/installation.md)
 - [Editor setup](docs/getting-started/editor-setup.md)
 - [Your first script](docs/getting-started/first-script.md)
 - [Examples](docs/getting-started/examples.md)
-- [Mod guidelines](docs/mod_guidelines.md)
+- [LuauAPI mod guidelines](docs/mod_guidelines.md)
 
 Join the [Discord](https://discord.gg/E8f6D6XqbW) for help!
 
 ## Reference
 
 API reference for everything a script or host can call.
+Start at [globals](docs/reference/lua/globals.md) for the full module index.
 
 - Lua
-  - [base64](docs/reference/lua/base64.md)
-  - [Callbacks](docs/reference/lua/callbacks.md)
-  - [cocos](docs/reference/lua/cocos.md)
-  - [ColorProvider](docs/reference/lua/color-provider.md)
-  - [Delegates](docs/reference/lua/delegates.md)
-  - [fs](docs/reference/lua/fs.md)
-  - [Game objects](docs/reference/lua/game-objects.md)
-  - [gd3d](docs/reference/lua/gd3d.md)
-  - [geode.utils](docs/reference/lua/utils.md)
-  - [Globals](docs/reference/lua/globals.md)
-  - [Hooks](docs/reference/lua/hooks.md)
-  - [imgui](docs/reference/lua/imgui.md)
-  - [json](docs/reference/lua/json.md)
-  - [Keybind](docs/reference/lua/keybind.md)
-  - [Keyboard input](docs/reference/lua/keyboard-input.md)
-  - [mod](docs/reference/lua/mod.md)
-  - [Modules](docs/reference/lua/modules.md)
-  - [permission](docs/reference/lua/permission.md)
-  - [Sharing APIs between mods](docs/reference/lua/sharing-apis.md)
-  - [Tasks and time](docs/reference/lua/tasks.md)
-  - [Type stubs](docs/reference/lua/type-stubs.md)
-  - [UI and layouts](docs/reference/lua/ui.md)
-  - [VersionInfo](docs/reference/lua/version-info.md)
-  - [web](docs/reference/lua/web.md)
-  - [websocket](docs/reference/lua/websocket.md)
+  - Core
+    - [globals](docs/reference/lua/globals.md)
+    - [modules](docs/reference/lua/modules.md)
+    - [Sharing APIs between mods](docs/reference/lua/sharing-apis.md)
+    - [hooks](docs/reference/lua/hooks.md)
+    - [Tasks and time](docs/reference/lua/tasks.md)
+    - [callbacks](docs/reference/lua/callbacks.md)
+    - [delegates](docs/reference/lua/delegates.md)
+    - [type stubs](docs/reference/lua/type-stubs.md)
+  - Game
+    - [game objects](docs/reference/lua/game-objects.md)
+    - [cocos](docs/reference/lua/cocos.md)
+    - [ColorProvider](docs/reference/lua/color-provider.md)
+    - [Keybind](docs/reference/lua/keybind.md)
+    - [Keyboard input](docs/reference/lua/keyboard-input.md)
+  - UI
+    - [UI and layouts](docs/reference/lua/ui.md)
+    - [imgui](docs/reference/lua/imgui.md)
+    - [gd3d](docs/reference/lua/gd3d.md)
+  - IO
+    - [mod](docs/reference/lua/mod.md)
+    - [fs](docs/reference/lua/fs.md)
+    - [json](docs/reference/lua/json.md)
+  - Network
+    - [web](docs/reference/lua/web.md)
+    - [websocket](docs/reference/lua/websocket.md)
+  - Utils
+    - [geode.utils](docs/reference/lua/utils.md)
+    - [base64](docs/reference/lua/base64.md)
+    - [permission](docs/reference/lua/permission.md)
+    - [VersionInfo](docs/reference/lua/version-info.md)
 - C++
-  - [API reference](docs/reference/cpp/api-reference.md)
-  - [Integration guide](docs/reference/cpp/integration-guide.md)
+  - [C++ API reference](docs/reference/cpp/api-reference.md)
+  - [C++ integration guide](docs/reference/cpp/integration-guide.md)
   - [Limits and errors](docs/reference/cpp/limits-and-errors.md)
 
 ## Contributor

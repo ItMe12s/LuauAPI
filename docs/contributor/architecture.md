@@ -18,7 +18,7 @@ This page names the main parts and traces how a script gets from a file to runni
 - 3D rendering. Loads glTF meshes and draws them through `gd3d.ViewportFrame` nodes. See [gd3d](../reference/lua/gd3d.md).
 - Codegen. Generates the game bindings and the type stubs. See [Codegen](codegen/codegen.md).
 
-## Source layout
+## Repository layout
 
 - `include/LuauAPI.hpp`: the public header.
 - `src/api.cpp`: the public API implementation.
@@ -46,19 +46,14 @@ and it shuts down when the game is exiting.
 
 ## How a script runs
 
-For `runFile`:
-
-1. The host calls `runFile` on the main thread.
-2. `src/api.cpp` checks the thread, then resolves the path inside the resources root and reads the file.
-3. It builds a chunk name and sets the resources root scope.
-4. The runtime compiles the source to bytecode, or reuses a cached copy.
-5. The runtime loads the bytecode and runs it inside a protected call with a deadline.
-6. Errors are caught and stored as the last error, and the result is returned to the host.
+The host calls `runFile` on the main thread. The runtime resolves the path, compiles or loads cached bytecode, and runs it under a deadline.
+Errors are caught and returned to the host.
+See [Runtime](internals/runtime.md) for the full pipeline.
 
 ## How a hook runs
 
 A script registers with `geode.hook`. Generated hook code runs before callbacks, the original, then after callbacks.
-See [Hooks](../reference/lua/hooks.md) and [Codegen](codegen/codegen.md).
+See [hooks](../reference/lua/hooks.md) and [Codegen](codegen/codegen.md).
 
 ## How ImGui draw runs
 
@@ -68,19 +63,27 @@ See [ImGui draw scheduler](internals/imgui-draw-scheduler.md).
 ## How a ViewportFrame draws
 
 Scripts load meshes, add them to `gd3d.ViewportFrame`, and parent the node in the scene graph.
-Each frame the node renders off-screen and composites via a cocos textured quad into its content rect.
-See [gd3d](../reference/lua/gd3d.md) Rendering model.
+See [gd3d](../reference/lua/gd3d.md) for the rendering model.
 
 ## Threading
 
-The runtime is single threaded. Almost every call must run on the main thread, and the runtime enforces this.
-The async API does its file work off thread, then hops to the main thread to run the script.
+The runtime is single threaded. Almost every call must run on the main thread.
+See [Getting started Key concepts](../getting-started/overview.md) for the user-facing rule.
 
 ## Related
 
+- [Getting started overview](../getting-started/overview.md)
 - [Runtime](internals/runtime.md)
 - [Bindings framework](internals/bindings-framework.md)
+- [Module system](internals/module-system.md)
+- [Task scheduler](internals/task-scheduler.md)
+- [ImGui draw scheduler](internals/imgui-draw-scheduler.md)
 - [Codegen](codegen/codegen.md)
+- [Pair containers](codegen/pair-containers.md)
+- [Nested containers](codegen/nested-containers.md)
+- [ccCArray fields](codegen/cc-c-array.md)
+- [Platform parity](codegen/platform-parity.md)
+- [hooks](../reference/lua/hooks.md)
 - [gd3d](../reference/lua/gd3d.md)
 - [API reference](../reference/cpp/api-reference.md)
 
