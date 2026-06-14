@@ -4,6 +4,8 @@ export type ImGuiDrawHandle = {
 
 export type ImGuiVec2 = { x: number, y: number }
 
+export type ImGuiVec3 = { x: number, y: number, z: number }
+
 export type ImGuiVec4 = { x: number, y: number, z: number, w: number }
 
 export type ImGuiWindowOpts = {
@@ -16,6 +18,44 @@ export type ImGuiWindowOpts = {
 export type ImGuiChildOpts = { size: ImGuiVec2? }
 
 export type ImGuiButtonOpts = { size: ImGuiVec2? }
+
+export type ImGuiComboOpts = { flags: number?, height: number? }
+
+export type ImGuiSelectableOpts = { flags: number? }
+
+export type ImGuiListBoxOpts = { height: number? }
+
+export type ImGuiDragFloatOpts = {
+    speed: number?,
+    min: number?,
+    max: number?,
+    fmt: string?,
+    flags: number?,
+}
+
+export type ImGuiDragIntOpts = {
+    speed: number?,
+    min: number?,
+    max: number?,
+    fmt: string?,
+    flags: number?,
+}
+
+export type ImGuiColorEditOpts = { flags: number? }
+
+export type ImGuiColorButtonOpts = { flags: number?, size: ImGuiVec2? }
+
+export type ImGuiCollapsingHeaderOpts = { flags: number?, visible: boolean? }
+
+export type ImGuiTreeNodeOpts = { flags: number?, open: boolean? }
+
+export type ImGuiTabBarOpts = { flags: number? }
+
+export type ImGuiTabItemOpts = { flags: number?, closable: boolean? }
+
+export type ImGuiPopupOpts = { flags: number? }
+
+export type ImGuiPopupModalOpts = { flags: number?, closable: boolean? }
 
 export type ImGuiIntEnumTable = { [string]: number }
 
@@ -116,6 +156,36 @@ export type ImGuiNamespace = {
     separator: () -> (),
     spacing: () -> (),
     getContentRegionAvail: () -> ImGuiVec2,
+    combo: (label: string, index: number, items: { string }, opts: ImGuiComboOpts?) -> number,
+    comboPopup: (label: string, preview: string, fn: () -> (), opts: ImGuiComboOpts?) -> boolean,
+    selectable: (label: string, selected: boolean, opts: ImGuiSelectableOpts?) -> boolean,
+    listBox: (label: string, index: number, items: { string }, opts: ImGuiListBoxOpts?) -> number,
+    radioButton: (label: string, active: boolean) -> boolean,
+    dragFloat: (label: string, value: number, opts: ImGuiDragFloatOpts?) -> number,
+    dragInt: (label: string, value: number, opts: ImGuiDragIntOpts?) -> number,
+    colorEdit3: (label: string, color: ImGuiVec3, opts: ImGuiColorEditOpts?) -> ImGuiVec3,
+    colorEdit4: (label: string, color: ImGuiVec4, opts: ImGuiColorEditOpts?) -> ImGuiVec4,
+    colorButton: (label: string, color: ImGuiVec4, opts: ImGuiColorButtonOpts?) -> boolean,
+    separatorText: (label: string) -> (),
+    indent: (width: number?) -> (),
+    unindent: (width: number?) -> (),
+    dummy: (size: ImGuiVec2) -> (),
+    newLine: () -> (),
+    collapsingHeader: (label: string, opts: ImGuiCollapsingHeaderOpts?) -> (boolean, boolean?),
+    treeNode: (label: string, fn: () -> (), opts: ImGuiTreeNodeOpts?) -> boolean?,
+    tabBar: (id: string, fn: () -> (), opts: ImGuiTabBarOpts?) -> (),
+    tabItem: (label: string, fn: () -> (), opts: ImGuiTabItemOpts?) -> boolean?,
+    openPopup: (id: string, flags: number?) -> (),
+    closeCurrentPopup: () -> (),
+    popup: (id: string, fn: () -> (), opts: ImGuiPopupOpts?) -> boolean,
+    popupModal: (title: string, fn: () -> (), opts: ImGuiPopupModalOpts?) -> boolean?,
+    setTooltip: (text: string) -> (),
+    tooltip: (fn: () -> ()) -> (),
+    isItemHovered: (flags: number?) -> boolean,
+    isItemClicked: (mouseButton: number?) -> boolean,
+    isWindowHovered: (flags: number?) -> boolean,
+    setNextWindowFocus: () -> (),
+    setWindowFocus: (name: string?) -> (),
     Flag: ImGuiFlagTables,
     Col: ImGuiIntEnumTable,
     StyleVar: ImGuiIntEnumTable,

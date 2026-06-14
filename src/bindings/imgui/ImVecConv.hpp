@@ -38,4 +38,14 @@ namespace luax {
         lua_pushnumber(L, v.w);
         lua_setfield(L, -2, "w");
     }
+
+    inline void pushImVec3(lua_State* L, float x, float y, float z) {
+        lua_createtable(L, 0, 3);
+        lua_pushnumber(L, x);
+        lua_setfield(L, -2, "x");
+        lua_pushnumber(L, y);
+        lua_setfield(L, -2, "y");
+        lua_pushnumber(L, z);
+        lua_setfield(L, -2, "z");
+    }
 } // namespace luax

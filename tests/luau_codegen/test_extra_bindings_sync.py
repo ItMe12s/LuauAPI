@@ -47,7 +47,12 @@ _EXTRA_BINDING_SOURCES = {
     },
     "imgui": {
         "dluau": "tools/luau_codegen/extra_bindings/imgui.dluau",
-        "cpp": "src/bindings/imgui/ImGuiBinding.cpp",
+        "cpp": [
+            "src/bindings/imgui/ImGuiBinding.cpp",
+            "src/bindings/imgui/ImGuiWidgets.cpp",
+            "src/bindings/imgui/ImGuiLayout.cpp",
+            "src/bindings/imgui/ImGuiPopups.cpp",
+        ],
         "type_name": "ImGuiNamespace",
         "start_marker": "registerImGui(lua_State* L)",
         "end_marker": 'lua_setglobal(L, "imgui")',
@@ -139,13 +144,24 @@ def _declared_namespace_fields(dluau_source: str, type_name: str) -> set[str]:
     raise AssertionError(f"unterminated export type {type_name}")
 
 
-def _registered_namespace_fields(cpp_source: str, start_marker: str, end_marker: str) -> set[str]:
-    start = cpp_source.find(start_marker)
-    assert start != -1, f"missing start marker {start_marker}"
-    end = cpp_source.find(end_marker, start)
-    assert end != -1, f"missing end marker {end_marker}"
-    body = cpp_source[start:end]
-    return set(_SET_CFUNCTION.findall(body))
+def _registered_namespace_fields(
+    cpp_source: str | list[str], start_marker: str, end_marker: str
+) -> set[str]:
+    sources = [cpp_source] if isinstance(cpp_source, str) else cpp_source
+    registered: set[str] = set()
+    found_marker = False
+    for source in sources:
+        body = _read_repo_file(source)
+        start = body.find(start_marker)
+        if start == -1:
+            registered.update(_SET_CFUNCTION.findall(body))
+            continue
+        found_marker = True
+        end = body.find(end_marker, start)
+        assert end != -1, f"missing end marker {end_marker} in {source}"
+        registered.update(_SET_CFUNCTION.findall(body[start:end]))
+    assert found_marker, f"missing start marker {start_marker}"
+    return registered
 
 
 class ExtraBindingsSyncTests(unittest.TestCase):
@@ -165,10 +181,9 @@ class ExtraBindingsSyncTests(unittest.TestCase):
         for binding, spec in _EXTRA_BINDING_SOURCES.items():
             with self.subTest(binding=binding):
                 dluau_source = _read_repo_file(spec["dluau"])
-                cpp_source = _read_repo_file(spec["cpp"])
                 declared = _declared_namespace_fields(dluau_source, spec["type_name"])
                 registered = _registered_namespace_fields(
-                    cpp_source, spec["start_marker"], spec["end_marker"]
+                    spec["cpp"], spec["start_marker"], spec["end_marker"]
                 )
                 missing_from_stub = registered - declared
                 missing_from_cpp = declared - registered

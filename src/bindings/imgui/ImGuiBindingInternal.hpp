@@ -146,6 +146,74 @@ namespace luax {
         int count_;
     };
 
+    struct ImGuiTreePopGuard {
+        explicit ImGuiTreePopGuard(bool needsPop) : needsPop_(needsPop) {}
+
+        ImGuiTreePopGuard(ImGuiTreePopGuard const&) = delete;
+        ImGuiTreePopGuard& operator=(ImGuiTreePopGuard const&) = delete;
+
+        ~ImGuiTreePopGuard() {
+            if (needsPop_) ImGui::TreePop();
+        }
+
+    private:
+        bool needsPop_;
+    };
+
+    struct ImGuiTooltipGuard {
+        ImGuiTooltipGuard() {
+            ImGui::BeginTooltip();
+        }
+
+        ImGuiTooltipGuard(ImGuiTooltipGuard const&) = delete;
+        ImGuiTooltipGuard& operator=(ImGuiTooltipGuard const&) = delete;
+
+        ~ImGuiTooltipGuard() {
+            ImGui::EndTooltip();
+        }
+    };
+
+    struct ImGuiConditionalEndGuard {
+        enum class Kind : std::uint8_t {
+            TabBar,
+            TabItem,
+            Popup,
+            Combo,
+        };
+
+        ImGuiConditionalEndGuard(Kind kind, bool active) : kind_(kind), active_(active) {}
+
+        ImGuiConditionalEndGuard(ImGuiConditionalEndGuard const&) = delete;
+        ImGuiConditionalEndGuard& operator=(ImGuiConditionalEndGuard const&) = delete;
+
+        ~ImGuiConditionalEndGuard() {
+            if (!active_) return;
+            switch (kind_) {
+                case Kind::TabBar: ImGui::EndTabBar(); break;
+                case Kind::TabItem: ImGui::EndTabItem(); break;
+                case Kind::Popup: ImGui::EndPopup(); break;
+                case Kind::Combo: ImGui::EndCombo(); break;
+            }
+        }
+
+    private:
+        Kind kind_;
+        bool active_;
+    };
+
+    inline std::vector<std::string> readStringArray(lua_State* L, int idx, char const* method) {
+        luaL_checktype(L, idx, LUA_TTABLE);
+        int const len = lua_objlen(L, idx);
+        std::vector<std::string> items;
+        items.reserve(static_cast<std::size_t>(len));
+        for (int i = 1; i <= len; ++i) {
+            lua_rawgeti(L, idx, i);
+            items.push_back(check<std::string>(L, -1, method));
+            lua_pop(L, 1);
+        }
+        return items;
+    }
+
     struct ImGuiIntEnumEntry {
         char const* name;
         int value;
@@ -183,4 +251,7 @@ namespace luax {
     std::optional<ImGuiCol> resolveImGuiColByName(char const* name);
     void registerImGuiConstants(lua_State* L);
     void registerImGuiStyleAndTheme(lua_State* L);
+    void registerImGuiWidgets(lua_State* L);
+    void registerImGuiLayout(lua_State* L);
+    void registerImGuiPopups(lua_State* L);
 } // namespace luax
