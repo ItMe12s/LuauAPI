@@ -1,77 +1,17 @@
+#include "bindings/imgui/ImGuiBindingInternal.hpp"
 #include "bindings/imgui/ImGuiDrawHandleBinding.hpp"
-#include "bindings/imgui/ImGuiDrawScheduler.hpp"
 #include "bindings/imgui/ImGuiHost.hpp"
-#include "bindings/imgui/ImVecConv.hpp"
-#include "core/Config.hpp"
 #include "core/Runtime.hpp"
 #include "framework/Binding.hpp"
-#include "framework/stack/Stack.hpp"
 #include "framework/stack/TableUtil.hpp"
 
 #include <algorithm>
-#include <cstdint>
 #include <imgui.h>
 #include <lua.h>
-#include <lualib.h>
 #include <string>
-#include <vector>
 
 namespace {
     using namespace luax;
-
-    thread_local std::vector<char> s_inputTextBuffer;
-
-    std::vector<char>& inputTextBuffer(std::size_t cap) {
-        if (s_inputTextBuffer.size() < cap + 1) s_inputTextBuffer.resize(cap + 1);
-        std::fill(s_inputTextBuffer.begin(), s_inputTextBuffer.end(), '\0');
-        return s_inputTextBuffer;
-    }
-
-    constexpr std::size_t kInputTextDefaultCap = 16384;
-    constexpr std::size_t kInputTextMaxCap = 65536;
-
-    void requireFrame(lua_State* L, char const* method) {
-        if (!Runtime::isMainThread()) {
-            luaL_error(L, "%s must run on the main thread", method);
-        }
-        if (!ImGuiDrawScheduler::get().inFrame()) {
-            luaL_error(L, "%s must run inside an imgui.onDraw callback", method);
-        }
-    }
-
-    float optFieldNumber(lua_State* L, int tableIdx, char const* key, float def) {
-        lua_getfield(L, tableIdx, key);
-        float v = lua_isnumber(L, -1) ? static_cast<float>(lua_tonumber(L, -1)) : def;
-        lua_pop(L, 1);
-        return v;
-    }
-
-    bool optFieldBool(lua_State* L, int tableIdx, char const* key, bool def) {
-        lua_getfield(L, tableIdx, key);
-        bool v = lua_isboolean(L, -1) ? (lua_toboolean(L, -1) != 0) : def;
-        lua_pop(L, 1);
-        return v;
-    }
-
-    bool optFieldVec2(lua_State* L, int tableIdx, char const* key, ImVec2& out, char const* method) {
-        lua_getfield(L, tableIdx, key);
-        bool present = lua_istable(L, -1);
-        if (present) out = toImVec2(L, -1, method);
-        lua_pop(L, 1);
-        return present;
-    }
-
-    char const* checkLuaString(lua_State* L, int index, std::size_t* len = nullptr) {
-        luaL_checktype(L, index, LUA_TSTRING);
-        return lua_tolstring(L, index, len);
-    }
-
-    void callDrawClosure(lua_State* L, int fnIdx, char const* context) {
-        auto* runtime = Runtime::getIfInitialized();
-        if (!runtime) return;
-        lua_pushvalue(L, fnIdx);
-        (void)runtime->protectedCall(0, 0, context, kImGuiScriptDeadlineMs);
-    }
 
     int imguiSetVisible(lua_State* L) {
         imguiHostSetVisible(check<bool>(L, 1, "imgui.setVisible"));
@@ -108,9 +48,9 @@ namespace {
         }
 
         bool open = true;
+        ImGuiEndGuard endGuard{ImGuiEndGuard::Kind::Window};
         bool visible = ImGui::Begin(title, closable ? &open : nullptr, flags);
         if (visible) callDrawClosure(L, 2, "imgui.window");
-        ImGui::End();
 
         lua_pushboolean(L, open);
         return 1;
@@ -126,9 +66,9 @@ namespace {
             optFieldVec2(L, 3, "size", size, "imgui.child");
         }
 
+        ImGuiEndGuard endGuard{ImGuiEndGuard::Kind::Child};
         bool visible = ImGui::BeginChild(id, size);
         if (visible) callDrawClosure(L, 2, "imgui.child");
-        ImGui::EndChild();
         return 0;
     }
 
@@ -188,14 +128,14 @@ namespace {
         char const* label = checkLuaString(L, 1);
         std::string value = check<std::string>(L, 2, "imgui.inputText");
 
-        std::size_t cap = kInputTextDefaultCap;
+        std::size_t cap = kImGuiInputTextDefaultCap;
         if (!lua_isnoneornil(L, 3)) {
             int requested = check<int>(L, 3, "imgui.inputText");
             if (requested < 1) requested = 1;
-            cap = std::min(static_cast<std::size_t>(requested), kInputTextMaxCap);
+            cap = std::min(static_cast<std::size_t>(requested), kImGuiInputTextMaxCap);
         }
 
-        std::vector<char>& buffer = inputTextBuffer(cap);
+        std::vector<char>& buffer = imGuiInputTextBuffer(cap);
         std::size_t copy = std::min(value.size(), cap);
         std::copy_n(value.data(), copy, buffer.data());
 
@@ -214,14 +154,14 @@ namespace {
             size = toImVec2(L, 3, "imgui.inputTextMultiline");
         }
 
-        std::size_t cap = kInputTextDefaultCap;
+        std::size_t cap = kImGuiInputTextDefaultCap;
         if (!lua_isnoneornil(L, 4)) {
             int requested = check<int>(L, 4, "imgui.inputTextMultiline");
             if (requested < 1) requested = 1;
-            cap = std::min(static_cast<std::size_t>(requested), kInputTextMaxCap);
+            cap = std::min(static_cast<std::size_t>(requested), kImGuiInputTextMaxCap);
         }
 
-        std::vector<char>& buffer = inputTextBuffer(cap);
+        std::vector<char>& buffer = imGuiInputTextBuffer(cap);
         std::size_t copy = std::min(value.size(), cap);
         std::copy_n(value.data(), copy, buffer.data());
 
