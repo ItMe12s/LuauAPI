@@ -143,7 +143,6 @@ TEST_CASE("registerTaggedMetatable tagged round-trip") {
     REQUIRE(lua_tointeger(L, -1) == 7);
     lua_pop(L, 2);
 
-    lua_pop(L, 1);
     collectGarbage(L);
     REQUIRE(g_dtorCalled);
 }

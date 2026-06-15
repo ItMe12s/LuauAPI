@@ -192,6 +192,7 @@ if(LUAUAPI_BUILD_TESTS)
         tests/host/SceneDrawListTests.cpp
         ${LUAUAPI_TEST_SOURCES}
     )
+    luauapi_force_msvc_idl0(luauapi_tests)
     target_compile_features(luauapi_tests PRIVATE cxx_std_23)
     target_include_directories(luauapi_tests PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/tests
