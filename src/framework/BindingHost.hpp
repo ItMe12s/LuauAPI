@@ -20,10 +20,11 @@ namespace luax {
         virtual lua_State* state() = 0;
         virtual bool ready() const = 0;
         virtual geode::Result<void> protectedCall(
-            int nargs, int nresults, std::string_view context, int deadlineMs = kDefaultScriptDeadlineMs
+            lua_State* L, int nargs, int nresults, std::string_view context,
+            int deadlineMs = kDefaultScriptDeadlineMs
         ) = 0;
         virtual geode::Result<void> protectedCallWithTraceback(
-            int nargs, int nresults, std::string_view context
+            lua_State* L, int nargs, int nresults, std::string_view context
         ) = 0;
         virtual void registerShutdownHook(std::function<void()> fn) = 0;
         virtual void setResourcesRoot(std::filesystem::path const& root) = 0;

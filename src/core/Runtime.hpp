@@ -54,10 +54,11 @@ namespace luax {
             std::string_view src, std::string_view chunkName, int deadlineMs = kDefaultScriptDeadlineMs
         );
         geode::Result<void> protectedCall(
-            int nargs, int nresults, std::string_view context, int deadlineMs = kDefaultScriptDeadlineMs
+            lua_State* L, int nargs, int nresults, std::string_view context,
+            int deadlineMs = kDefaultScriptDeadlineMs
         ) override;
         geode::Result<void> protectedCallWithTraceback(
-            int nargs, int nresults, std::string_view context
+            lua_State* L, int nargs, int nresults, std::string_view context
         ) override;
         static std::string compileSource(std::string_view source);
 
@@ -148,7 +149,8 @@ namespace luax {
         geode::Result<void> ensureCallable(bool requireReady = true);
         void tryCompileLoadedChunk(lua_State* L, std::string_view chunkName);
         geode::Result<void> protectedCallImpl(
-            int nargs, int nresults, std::string_view context, ProtectedCallPolicy policy, int deadlineMs
+            lua_State* invokeL, int nargs, int nresults, std::string_view context,
+            ProtectedCallPolicy policy, int deadlineMs
         );
         void runShutdownHooks();
         void removeBytecodeCacheEntry(std::list<BytecodeCacheEntry>::iterator it);

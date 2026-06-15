@@ -53,7 +53,7 @@ namespace luax {
                 pushArgs(L, pushCtx);
             }
             BindingHost::ResourcesRootScope scope(*host, m_ref->resourcesRoot());
-            auto result = host->protectedCall(nargs, nresults, context, deadlineMs);
+            auto result = host->protectedCall(L, nargs, nresults, context, deadlineMs);
             if (result.isOk() && popResults && nresults > 0) {
                 popResults(L, popCtx);
             }

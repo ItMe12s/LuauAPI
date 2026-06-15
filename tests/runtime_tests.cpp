@@ -84,12 +84,12 @@ TEST_CASE("Runtime rejects execution while shutting down") {
     REQUIRE(runtime->lastError() == "luau runtime shutting down");
 
     pushReturnValue(L, 7);
-    auto callResult = runtime->protectedCall(0, 1, "shutdown");
+    auto callResult = runtime->protectedCall(L, 0, 1, "shutdown");
     REQUIRE(callResult.isErr());
     REQUIRE(runtime->lastError() == "luau runtime shutting down");
 
     pushReturnValue(L, 8);
-    auto tracebackResult = runtime->protectedCallWithTraceback(0, 1, "shutdown");
+    auto tracebackResult = runtime->protectedCallWithTraceback(L, 0, 1, "shutdown");
     REQUIRE(tracebackResult.isErr());
     REQUIRE(runtime->lastError() == "luau runtime shutting down");
 }
@@ -112,7 +112,7 @@ TEST_CASE("protectedCall restores stack height on success") {
 
     pushReturnValue(L, 99);
     int topBefore = lua_gettop(L);
-    REQUIRE(runtime->protectedCall(0, 1, "test").isOk());
+    REQUIRE(runtime->protectedCall(L, 0, 1, "test").isOk());
     REQUIRE(lua_gettop(L) == topBefore);
     REQUIRE(lua_tointeger(L, -1) == 99);
     lua_pop(L, 1);
@@ -134,7 +134,7 @@ TEST_CASE("protectedCall restores stack height on failure") {
         "fail"
     );
     int topBefore = lua_gettop(L);
-    REQUIRE(runtime->protectedCall(0, 0, "test").isErr());
+    REQUIRE(runtime->protectedCall(L, 0, 0, "test").isErr());
     REQUIRE(lua_gettop(L) == topBefore - 1);
     REQUIRE_FALSE(runtime->lastError().empty());
 }
@@ -252,7 +252,7 @@ TEST_CASE("protectedCallWithTraceback rejects panicked runtime without executing
         runtime->clearLastError();
         runtime->setStatusForTests(imes::luauapi::RuntimeStatus::Panicked);
 
-        REQUIRE(runtime->protectedCallWithTraceback(0, 1, "test").isErr());
+        REQUIRE(runtime->protectedCallWithTraceback(L, 0, 1, "test").isErr());
         REQUIRE(executed == 0);
         REQUIRE(lua_gettop(L) == topBefore);
         REQUIRE(runtime->lastError().find("luau runtime panicked") != std::string::npos);
@@ -269,17 +269,58 @@ TEST_CASE("protectedCallWithTraceback rejects panicked runtime without executing
             },
             "setupFail"
         );
-        REQUIRE(runtime->protectedCall(0, 0, "setup").isErr());
+        REQUIRE(runtime->protectedCall(L, 0, 0, "setup").isErr());
         auto cached = runtime->lastError();
         REQUIRE_FALSE(cached.empty());
 
         runtime->setStatusForTests(imes::luauapi::RuntimeStatus::Panicked);
         pushTrackedCallable();
 
-        REQUIRE(runtime->protectedCallWithTraceback(0, 1, "test").isErr());
+        REQUIRE(runtime->protectedCallWithTraceback(L, 0, 1, "test").isErr());
         REQUIRE(executed == 0);
         REQUIRE(runtime->lastError() == cached);
 
         lua_pop(L, 1);
     }
+}
+
+TEST_CASE("protectedCall works from sandbox thread") {
+    RuntimeGuard guard;
+    auto* runtime = luax::Runtime::getOrCreate();
+    auto* GL = runtime->state();
+    REQUIRE(GL != nullptr);
+
+    lua_State* SL = lua_newthread(GL);
+    luaL_sandboxthread(SL);
+
+    luauapi_test::loadFunction(SL, "return function() return 42 end");
+    REQUIRE(lua_pcall(SL, 0, 1, 0) == 0);
+    REQUIRE(lua_isfunction(SL, -1));
+
+    int topBefore = lua_gettop(SL);
+    REQUIRE(runtime->protectedCall(SL, 0, 1, "sandbox-test").isOk());
+    REQUIRE(lua_gettop(SL) == topBefore);
+    REQUIRE(lua_tointeger(SL, -1) == 42);
+    lua_pop(SL, 1);
+    lua_pop(GL, 1);
+}
+
+TEST_CASE("protectedCall from sandbox thread restores stack on failure") {
+    RuntimeGuard guard;
+    auto* runtime = luax::Runtime::getOrCreate();
+    auto* GL = runtime->state();
+    REQUIRE(GL != nullptr);
+
+    lua_State* SL = lua_newthread(GL);
+    luaL_sandboxthread(SL);
+
+    luauapi_test::loadFunction(SL, "return function() error('boom') end");
+    REQUIRE(lua_pcall(SL, 0, 1, 0) == 0);
+    REQUIRE(lua_isfunction(SL, -1));
+
+    int topBefore = lua_gettop(SL);
+    REQUIRE(runtime->protectedCall(SL, 0, 0, "sandbox-fail").isErr());
+    REQUIRE(lua_gettop(SL) == topBefore - 1);
+    REQUIRE_FALSE(runtime->lastError().empty());
+    lua_pop(GL, 1);
 }

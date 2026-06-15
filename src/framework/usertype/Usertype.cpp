@@ -17,15 +17,16 @@
 namespace luax::detail {
     namespace {
         bool invokeFieldAccessor(
-            BindingHost* host, int nargs, int nresults, std::string_view context, int deadlineMs
+            lua_State* L, BindingHost* host, int nargs, int nresults, std::string_view context,
+            int deadlineMs
         ) {
             if (!host) {
                 return false;
             }
             if (host->ready()) {
-                return host->protectedCall(nargs, nresults, context, deadlineMs).isOk();
+                return host->protectedCall(L, nargs, nresults, context, deadlineMs).isOk();
             }
-            return host->protectedCallWithTraceback(nargs, nresults, context).isOk();
+            return host->protectedCallWithTraceback(L, nargs, nresults, context).isOk();
         }
 
         bool tryInvokeFieldAccessor(
@@ -43,7 +44,7 @@ namespace luax::detail {
                 lua_pushvalue(L, 3);
             }
             if (auto* host = BindingHost::getIfInitialized()) {
-                if (invokeFieldAccessor(host, nargs, nresults, context, kHookScriptDeadlineMs)) {
+                if (invokeFieldAccessor(L, host, nargs, nresults, context, kHookScriptDeadlineMs)) {
                     return true;
                 }
                 lua_settop(L, top);

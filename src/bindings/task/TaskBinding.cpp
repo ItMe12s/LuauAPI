@@ -66,7 +66,7 @@ namespace {
         if (!runtime || !runtime->ready()) {
             luaL_error(L, "task.spawn requires an initialized runtime");
         }
-        (void)runtime->protectedCall(nargs, 0, "task.spawn", kHookScriptDeadlineMs);
+        (void)runtime->protectedCall(L, nargs, 0, "task.spawn", kHookScriptDeadlineMs);
         return 0;
     }
 

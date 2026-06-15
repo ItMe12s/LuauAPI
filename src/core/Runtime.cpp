@@ -676,7 +676,7 @@ namespace luax {
         tryCompileLoadedChunk(m_state, chunk);
 
         auto execStart = std::chrono::steady_clock::now();
-        auto callResult = protectedCall(0, 0, chunk, deadlineMs);
+        auto callResult = protectedCall(m_state, 0, 0, chunk, deadlineMs);
         auto execMs = std::chrono::duration_cast<std::chrono::milliseconds>(
                           std::chrono::steady_clock::now() - execStart
         )
@@ -691,7 +691,8 @@ namespace luax {
     }
 
     geode::Result<void> Runtime::protectedCallImpl(
-        int nargs, int nresults, std::string_view context, ProtectedCallPolicy policy, int deadlineMs
+        lua_State* invokeL, int nargs, int nresults, std::string_view context,
+        ProtectedCallPolicy policy, int deadlineMs
     ) {
         if (auto guard = ensureCallable(policy == ProtectedCallPolicy::WithBudget); guard.isErr()) {
             return guard;
@@ -708,11 +709,30 @@ namespace luax {
             }
         }
 
-        int baseTop = lua_gettop(m_state) - nargs;
-        if (nargs < 0 || baseTop < 1 || !lua_isfunction(m_state, baseTop)) {
-            auto err = fmt::format("[{}] luau protectedCall missing function", context);
-            geode::log::error("{}", err);
-            return failWith(std::move(err));
+        if (!invokeL) {
+            invokeL = m_state;
+        }
+
+        int const mainSavedTop = lua_gettop(m_state);
+        bool const crossState = invokeL != m_state;
+
+        if (crossState) {
+            int const invokeTop = lua_gettop(invokeL);
+            int const funcIdx = invokeTop - nargs;
+            if (nargs < 0 || funcIdx < 1 || !lua_isfunction(invokeL, funcIdx)) {
+                auto err = fmt::format("[{}] luau protectedCall missing function", context);
+                geode::log::error("{}", err);
+                return failWith(std::move(err));
+            }
+            lua_xmove(invokeL, m_state, nargs + 1);
+        }
+        else {
+            int baseTop = lua_gettop(m_state) - nargs;
+            if (nargs < 0 || baseTop < 1 || !lua_isfunction(m_state, baseTop)) {
+                auto err = fmt::format("[{}] luau protectedCall missing function", context);
+                geode::log::error("{}", err);
+                return failWith(std::move(err));
+            }
         }
 
         lua_getref(m_state, m_tracebackRef);
@@ -724,10 +744,10 @@ namespace luax {
             budget.emplace(*this, deadlineMs);
         }
 
-        int status = lua_pcall(m_state, nargs, nresults, errfunc);
+        int callStatus = lua_pcall(m_state, nargs, nresults, errfunc);
         lua_remove(m_state, errfunc);
 
-        if (status != 0) {
+        if (callStatus != 0) {
             std::string ctx(context);
             auto err = formatLuaError(ctx.c_str());
             geode::log::error("{}", err);
@@ -735,20 +755,32 @@ namespace luax {
             return failWith(std::move(err));
         }
 
+        if (crossState) {
+            int resultCount = nresults;
+            if (nresults == LUA_MULTRET) {
+                resultCount = lua_gettop(m_state) - mainSavedTop;
+            }
+            if (resultCount > 0) {
+                lua_xmove(m_state, invokeL, resultCount);
+            }
+        }
+
         return geode::Ok();
     }
 
     geode::Result<void> Runtime::protectedCall(
-        int nargs, int nresults, std::string_view context, int deadlineMs
+        lua_State* L, int nargs, int nresults, std::string_view context, int deadlineMs
     ) {
-        return protectedCallImpl(nargs, nresults, context, ProtectedCallPolicy::WithBudget, deadlineMs);
+        return protectedCallImpl(
+            L, nargs, nresults, context, ProtectedCallPolicy::WithBudget, deadlineMs
+        );
     }
 
     geode::Result<void> Runtime::protectedCallWithTraceback(
-        int nargs, int nresults, std::string_view context
+        lua_State* L, int nargs, int nresults, std::string_view context
     ) {
         return protectedCallImpl(
-            nargs, nresults, context, ProtectedCallPolicy::TracebackOnly, kDefaultScriptDeadlineMs
+            L, nargs, nresults, context, ProtectedCallPolicy::TracebackOnly, kDefaultScriptDeadlineMs
         );
     }
 

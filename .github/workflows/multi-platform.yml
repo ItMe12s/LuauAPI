@@ -26,10 +26,10 @@ jobs:
         run: cmake -B build -DLUAUAPI_HOST_ONLY=ON -DLUAUAPI_BUILD_TESTS=ON
 
       - name: Build tests
-        run: cmake --build build --target luauapi_tests
+        run: cmake --build build --config Debug --target luauapi_tests
 
       - name: Run tests
-        run: ctest --test-dir build --output-on-failure
+        run: ctest --test-dir build -C Debug --output-on-failure
 
   linux-codegen-tests:
     name: Linux Codegen Tests
