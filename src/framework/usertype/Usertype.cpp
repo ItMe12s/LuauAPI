@@ -28,6 +28,31 @@ namespace luax::detail {
             return host->protectedCallWithTraceback(nargs, nresults, context).isOk();
         }
 
+        bool tryInvokeFieldAccessor(
+            lua_State* L, char const* accessor, int nargs, int nresults, char const* context,
+            char const* failMsg
+        ) {
+            int top = lua_gettop(L);
+            lua_getfield(L, -1, accessor);
+            if (!lua_isfunction(L, -1)) {
+                lua_settop(L, top);
+                return false;
+            }
+            lua_pushvalue(L, 1);
+            if (nargs >= 2) {
+                lua_pushvalue(L, 3);
+            }
+            if (auto* host = BindingHost::getIfInitialized()) {
+                if (invokeFieldAccessor(host, nargs, nresults, context, kHookScriptDeadlineMs)) {
+                    return true;
+                }
+                lua_settop(L, top);
+                luaL_error(L, "%s", failMsg);
+            }
+            lua_settop(L, top);
+            luaL_error(L, "luau runtime not available");
+        }
+
         int usertypeIndex(lua_State* L) {
             if (!lua_getmetatable(L, 1)) {
                 lua_pushnil(L);
@@ -45,23 +70,11 @@ namespace luax::detail {
             lua_pushvalue(L, 2);
             lua_gettable(L, -2);
             if (lua_istable(L, -1)) {
-                int top = lua_gettop(L);
-                lua_getfield(L, -1, "get");
-                if (lua_isfunction(L, -1)) {
-                    lua_pushvalue(L, 1);
-                    if (auto* host = BindingHost::getIfInitialized()) {
-                        if (invokeFieldAccessor(
-                                host, 1, 1, "usertype field get", kHookScriptDeadlineMs
-                            )) {
-                            return 1;
-                        }
-                        lua_settop(L, top);
-                        luaL_error(L, "usertype field get failed");
-                    }
-                    lua_settop(L, top);
-                    luaL_error(L, "luau runtime not available");
+                if (tryInvokeFieldAccessor(
+                        L, "get", 1, 1, "usertype field get", "usertype field get failed"
+                    )) {
+                    return 1;
                 }
-                lua_settop(L, top);
             }
             lua_pop(L, 2);
 
@@ -94,24 +107,11 @@ namespace luax::detail {
             lua_pushvalue(L, 2);
             lua_gettable(L, -2);
             if (lua_istable(L, -1)) {
-                int top = lua_gettop(L);
-                lua_getfield(L, -1, "set");
-                if (lua_isfunction(L, -1)) {
-                    lua_pushvalue(L, 1);
-                    lua_pushvalue(L, 3);
-                    if (auto* host = BindingHost::getIfInitialized()) {
-                        if (!invokeFieldAccessor(
-                                host, 2, 0, "usertype field set", kHookScriptDeadlineMs
-                            )) {
-                            lua_settop(L, top);
-                            luaL_error(L, "usertype field set failed");
-                        }
-                        return 0;
-                    }
-                    lua_settop(L, top);
-                    luaL_error(L, "luau runtime not available");
+                if (tryInvokeFieldAccessor(
+                        L, "set", 2, 0, "usertype field set", "usertype field set failed"
+                    )) {
+                    return 0;
                 }
-                lua_settop(L, top);
             }
             lua_pop(L, 3);
 
@@ -179,37 +179,30 @@ namespace luax::detail {
         lua_pop(L, 1);
     }
 
-    void chainMethodTable(lua_State* L, TypeInfo const& info, std::uint32_t baseTag) {
+    void chainSubtable(
+        lua_State* L, TypeInfo const& info, std::uint32_t baseTag, char const* subtableName
+    ) {
         auto const* base = UsertypeRegistry::get().findByTag(baseTag);
         if (!base || base->mtName.empty()) return;
         luaL_getmetatable(L, info.mtName.c_str());
-        lua_getfield(L, -1, "__methods");
+        lua_getfield(L, -1, subtableName);
         luaL_getmetatable(L, base->mtName.c_str());
         if (lua_isnil(L, -1)) {
             lua_pop(L, 3);
             return;
         }
-        lua_getfield(L, -1, "__methods");
-        lua_remove(L, -2);
-        lua_createtable(L, 0, 1);
-        lua_pushvalue(L, -2);
-        lua_setfield(L, -2, "__index");
-        lua_setmetatable(L, -3);
-        lua_pop(L, 2);
-
-        lua_getfield(L, -1, "__fields");
-        luaL_getmetatable(L, base->mtName.c_str());
-        if (lua_isnil(L, -1)) {
-            lua_pop(L, 3);
-            return;
-        }
-        lua_getfield(L, -1, "__fields");
+        lua_getfield(L, -1, subtableName);
         lua_remove(L, -2);
         lua_createtable(L, 0, 1);
         lua_pushvalue(L, -2);
         lua_setfield(L, -2, "__index");
         lua_setmetatable(L, -3);
         lua_pop(L, 3);
+    }
+
+    void chainMethodTable(lua_State* L, TypeInfo const& info, std::uint32_t baseTag) {
+        chainSubtable(L, info, baseTag, "__methods");
+        chainSubtable(L, info, baseTag, "__fields");
     }
 
     void appendMethod(lua_State* L, TypeInfo const& info, char const* name, lua_CFunction fn) {
@@ -313,18 +306,28 @@ namespace luax::detail {
         }
     }
 
+    void initUserdataBlock(lua_State* L, cocos2d::CCObject* obj, TypeInfo const& info, bool owned) {
+        auto* storage =
+            lua_newuserdatatagged(L, sizeof(UserdataBlock), static_cast<int>(kSharedUsertypeTag));
+        auto* block = new (storage) UserdataBlock();
+        if (owned) {
+            block->ptr = obj;
+            block->flags = kUserdataOwnedFlag;
+        }
+        else {
+            block->weak = geode::WeakRef<cocos2d::CCObject>(obj);
+            block->flags = 0u;
+        }
+        block->typeTag = info.tag;
+        assignUsertypeMetatable(L, info);
+    }
+
     void pushUserdataOwned(lua_State* L, cocos2d::CCObject* obj, TypeInfo const& info) {
         if (!isValidUserdataTag(info.tag)) {
             lua_pushnil(L);
             return;
         }
-        auto* storage =
-            lua_newuserdatatagged(L, sizeof(UserdataBlock), static_cast<int>(kSharedUsertypeTag));
-        auto* block = new (storage) UserdataBlock();
-        block->ptr = obj;
-        block->flags = kUserdataOwnedFlag;
-        block->typeTag = info.tag;
-        assignUsertypeMetatable(L, info);
+        initUserdataBlock(L, obj, info, true);
     }
 
     void pushUserdataBorrowed(lua_State* L, cocos2d::CCObject* obj, TypeInfo const& info) {
@@ -332,14 +335,7 @@ namespace luax::detail {
             lua_pushnil(L);
             return;
         }
-        auto* storage =
-            lua_newuserdatatagged(L, sizeof(UserdataBlock), static_cast<int>(kSharedUsertypeTag));
-        auto* block = new (storage) UserdataBlock();
-        block->ptr = nullptr;
-        block->weak = geode::WeakRef<cocos2d::CCObject>(obj);
-        block->flags = 0u;
-        block->typeTag = info.tag;
-        assignUsertypeMetatable(L, info);
+        initUserdataBlock(L, obj, info, false);
     }
 
     TypeInfo const* findPushTypeInfo(cocos2d::CCObject* obj) {

@@ -412,10 +412,6 @@ namespace luax::render3d {
         }
 
         auto bytes = std::move(bytesResult.unwrap());
-        if (bytes.size() > kMaxFsReadBytes) {
-            return LoadResult<std::shared_ptr<MeshAsset>>::err("glTF file exceeds maximum read size");
-        }
-
         return loadFromBytes(bytes, path, path.parent_path());
     }
 

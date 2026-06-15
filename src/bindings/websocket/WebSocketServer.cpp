@@ -20,62 +20,70 @@ namespace luax::wsdetail {
     namespace {
         constexpr char const* kMethod = "websocket.serve";
 
+        struct ClientConnectCtx {
+            std::shared_ptr<WsPeer> peer;
+            std::map<std::string, std::string> headers;
+        };
+
+        struct ClientMessageCtx {
+            std::shared_ptr<WsPeer> peer;
+            std::string data;
+            bool binary;
+        };
+
+        struct ClientDisconnectCtx {
+            std::shared_ptr<WsPeer> peer;
+            std::uint16_t code;
+            std::string reason;
+        };
+
+        void pushErrorArgs(lua_State* L, std::string const* ctx) {
+            push(L, *ctx);
+        }
+
+        void pushClientConnectArgs(lua_State* L, ClientConnectCtx const* ctx) {
+            pushWsPeer(L, ctx->peer);
+            lua_createtable(L, 0, static_cast<int>(ctx->headers.size()));
+            for (auto const& [name, value] : ctx->headers) {
+                push(L, value);
+                lua_setfield(L, -2, name.c_str());
+            }
+        }
+
+        void pushClientMessageArgs(lua_State* L, ClientMessageCtx const* ctx) {
+            pushWsPeer(L, ctx->peer);
+            push(L, ctx->data);
+            push(L, ctx->binary);
+        }
+
+        void pushClientDisconnectArgs(lua_State* L, ClientDisconnectCtx const* ctx) {
+            pushWsPeer(L, ctx->peer);
+            push(L, static_cast<int>(ctx->code));
+            push(L, ctx->reason);
+        }
+
         void queueClientConnectEvent(
             std::weak_ptr<WsServer> weak, std::shared_ptr<WsPeer> peer,
             std::map<std::string, std::string> headers
         ) {
-            geode::queueInMainThread(
-                [weak = std::move(weak), peer = std::move(peer), headers = std::move(headers)] {
-                    auto srv = weak.lock();
-                    if (!srv || srv->stopped.load()) return;
-                    struct Ctx {
-                        std::shared_ptr<WsPeer> const* peer;
-                        std::map<std::string, std::string> const* headers;
-                    } ctx{&peer, &headers};
-                    invokeWsCallback(
-                        srv->slot(&WsServer::onClientConnect),
-                        "websocket.onClientConnect",
-                        2,
-                        +[](lua_State* L, void* raw) {
-                            auto* c = static_cast<Ctx*>(raw);
-                            pushWsPeer(L, *c->peer);
-                            lua_createtable(L, 0, static_cast<int>(c->headers->size()));
-                            for (auto const& [name, value] : *c->headers) {
-                                push(L, value);
-                                lua_setfield(L, -2, name.c_str());
-                            }
-                        },
-                        &ctx
-                    );
-                }
+            queueWsEvent<WsServer, ClientConnectCtx, pushClientConnectArgs>(
+                std::move(weak),
+                &WsServer::onClientConnect,
+                "websocket.onClientConnect",
+                2,
+                ClientConnectCtx{std::move(peer), std::move(headers)}
             );
         }
 
         void queueClientMessageEvent(
             std::weak_ptr<WsServer> weak, std::shared_ptr<WsPeer> peer, std::string data, bool binary
         ) {
-            geode::queueInMainThread(
-                [weak = std::move(weak), peer = std::move(peer), data = std::move(data), binary] {
-                    auto srv = weak.lock();
-                    if (!srv || srv->stopped.load()) return;
-                    struct Ctx {
-                        std::shared_ptr<WsPeer> const* peer;
-                        std::string const* data;
-                        bool binary;
-                    } ctx{&peer, &data, binary};
-                    invokeWsCallback(
-                        srv->slot(&WsServer::onMessage),
-                        "websocket.server.onMessage",
-                        3,
-                        +[](lua_State* L, void* raw) {
-                            auto* c = static_cast<Ctx*>(raw);
-                            pushWsPeer(L, *c->peer);
-                            push(L, *c->data);
-                            push(L, c->binary);
-                        },
-                        &ctx
-                    );
-                }
+            queueWsEvent<WsServer, ClientMessageCtx, pushClientMessageArgs>(
+                std::move(weak),
+                &WsServer::onMessage,
+                "websocket.server.onMessage",
+                3,
+                ClientMessageCtx{std::move(peer), std::move(data), binary}
             );
         }
 
@@ -83,48 +91,19 @@ namespace luax::wsdetail {
             std::weak_ptr<WsServer> weak, std::shared_ptr<WsPeer> peer, std::uint16_t code,
             std::string reason
         ) {
-            geode::queueInMainThread(
-                [weak = std::move(weak), peer = std::move(peer), code, reason = std::move(reason)] {
-                    auto srv = weak.lock();
-                    if (!srv || srv->stopped.load()) return;
-                    struct Ctx {
-                        std::shared_ptr<WsPeer> const* peer;
-                        std::uint16_t code;
-                        std::string const* reason;
-                    } ctx{&peer, code, &reason};
-                    invokeWsCallback(
-                        srv->slot(&WsServer::onClientDisconnect),
-                        "websocket.onClientDisconnect",
-                        3,
-                        +[](lua_State* L, void* raw) {
-                            auto* c = static_cast<Ctx*>(raw);
-                            pushWsPeer(L, *c->peer);
-                            push(L, static_cast<int>(c->code));
-                            push(L, *c->reason);
-                        },
-                        &ctx
-                    );
-                }
+            queueWsEvent<WsServer, ClientDisconnectCtx, pushClientDisconnectArgs>(
+                std::move(weak),
+                &WsServer::onClientDisconnect,
+                "websocket.onClientDisconnect",
+                3,
+                ClientDisconnectCtx{std::move(peer), code, std::move(reason)}
             );
         }
 
         void queueServerErrorEvent(std::weak_ptr<WsServer> weak, std::string message) {
-            geode::queueInMainThread([weak = std::move(weak), message = std::move(message)] {
-                auto srv = weak.lock();
-                if (!srv || srv->stopped.load()) return;
-                struct Ctx {
-                    std::string const* message;
-                } ctx{&message};
-                invokeWsCallback(
-                    srv->slot(&WsServer::onError),
-                    "websocket.server.onError",
-                    1,
-                    +[](lua_State* L, void* raw) {
-                        push(L, *static_cast<Ctx*>(raw)->message);
-                    },
-                    &ctx
-                );
-            });
+            queueWsEvent<WsServer, std::string, pushErrorArgs>(
+                std::move(weak), &WsServer::onError, "websocket.server.onError", 1, std::move(message)
+            );
         }
 
         void handleServerClientMessage(
@@ -255,9 +234,7 @@ namespace luax::wsdetail {
             auto* socket = lockOpenPeer(box, keepAlive);
             if (!socket) return pushNilErr(L, kWsPeerDisconnectedMsg);
             auto info = binary ? socket->sendBinary(data) : socket->sendText(data);
-            if (!info.success) return pushNilErr(L, kWsPeerDisconnectedMsg);
-            push(L, true);
-            return 1;
+            return wsSendResult(L, info, kWsPeerDisconnectedMsg);
         }
     } // namespace
 
@@ -359,19 +336,10 @@ namespace luax::wsdetail {
 
     int peerClose(lua_State* L) {
         auto* box = checkWsPeer(L, 1);
-        std::uint16_t code = ix::WebSocketCloseConstants::kNormalClosureCode;
-        std::string reason = ix::WebSocketCloseConstants::kNormalClosureMessage;
-        if (lua_gettop(L) >= 2 && !lua_isnil(L, 2)) {
-            int value = check<int>(L, 2, "close");
-            if (value < 1000 || value > 4999) luaL_error(L, "close expected code 1000..4999");
-            code = static_cast<std::uint16_t>(value);
-        }
-        if (lua_gettop(L) >= 3 && !lua_isnil(L, 3)) {
-            reason = check<std::string>(L, 3, "close");
-        }
+        auto args = parseCloseArgs(L);
         std::shared_ptr<ix::WebSocket> keepAlive;
         auto* socket = lockOpenPeer(box, keepAlive);
-        if (socket) socket->close(code, reason);
+        if (socket) socket->close(args.code, args.reason);
         return 0;
     }
 

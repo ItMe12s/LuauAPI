@@ -17,19 +17,32 @@ namespace {
     using namespace luax::gd3d;
     using namespace luax::render3d;
 
+    enum class Vec3ArrayMode {
+        Required,
+        Optional
+    };
+
     bool readVec3Array(
-        lua_State* L, int tableIdx, char const* field, char const* method,
+        lua_State* L, int tableIdx, char const* field, char const* method, Vec3ArrayMode mode,
         std::vector<glm::vec3>& out, std::string& err
     ) {
         lua_getfield(L, tableIdx, field);
+        if (mode == Vec3ArrayMode::Optional && lua_isnil(L, -1)) {
+            lua_pop(L, 1);
+            out.clear();
+            return true;
+        }
+
         if (!lua_istable(L, -1)) {
-            err = std::string(method) + ": " + field + " must be a table";
+            err = std::string(method) + ": " + field +
+                (mode == Vec3ArrayMode::Optional ? " must be a table when provided" :
+                                                   " must be a table");
             lua_pop(L, 1);
             return false;
         }
 
         int const len = lua_objlen(L, -1);
-        if (len <= 0) {
+        if (mode == Vec3ArrayMode::Required && len <= 0) {
             err = std::string(method) + ": " + field + " is empty";
             lua_pop(L, 1);
             return false;
@@ -53,40 +66,13 @@ namespace {
         return true;
     }
 
-    bool readOptionalVec3Array(
-        lua_State* L, int tableIdx, char const* field, char const* method,
-        std::vector<glm::vec3>& out, std::string& err
-    ) {
-        lua_getfield(L, tableIdx, field);
-        if (lua_isnil(L, -1)) {
-            lua_pop(L, 1);
-            out.clear();
-            return true;
+    int pushNewMeshHandle(lua_State* L, LoadResult<std::shared_ptr<MeshAsset>> result) {
+        if (result.isErr()) {
+            return pushNilErr(L, result.unwrapErr());
         }
-
-        if (!lua_istable(L, -1)) {
-            err = std::string(method) + ": " + field + " must be a table when provided";
-            lua_pop(L, 1);
-            return false;
-        }
-
-        int const len = lua_objlen(L, -1);
-        out.clear();
-        out.reserve(static_cast<std::size_t>(len));
-        for (int i = 1; i <= len; ++i) {
-            lua_rawgeti(L, -1, i);
-            if (!lua_istable(L, -1)) {
-                err = std::string(method) + ": " + field + " entries must be Vec3 tables";
-                lua_pop(L, 2);
-                return false;
-            }
-
-            out.push_back(checkVec3(L, -1, method));
-            lua_pop(L, 1);
-        }
-
-        lua_pop(L, 1);
-        return true;
+        auto const id = MeshRegistry::instance().registerMesh(result.unwrap());
+        pushMeshHandle(L, id);
+        return 1;
     }
 
     bool readVec2Array(
@@ -180,7 +166,7 @@ namespace {
         std::vector<std::uint32_t> indices;
         std::string err;
 
-        if (!readVec3Array(L, 1, "positions", method, positions, err)) {
+        if (!readVec3Array(L, 1, "positions", method, Vec3ArrayMode::Required, positions, err)) {
             return pushNilErr(L, err);
         }
 
@@ -192,7 +178,7 @@ namespace {
             return pushNilErr(L, err);
         }
 
-        if (!readOptionalVec3Array(L, 1, "normals", method, normals, err)) {
+        if (!readVec3Array(L, 1, "normals", method, Vec3ArrayMode::Optional, normals, err)) {
             return pushNilErr(L, err);
         }
 
@@ -200,16 +186,12 @@ namespace {
             return pushNilErr(L, err);
         }
 
-        auto result = MeshAsset::fromBuffers(
-            std::move(positions), std::move(normals), std::move(uvs), std::move(indices)
+        return pushNewMeshHandle(
+            L,
+            MeshAsset::fromBuffers(
+                std::move(positions), std::move(normals), std::move(uvs), std::move(indices)
+            )
         );
-        if (result.isErr()) {
-            return pushNilErr(L, result.unwrapErr());
-        }
-
-        auto const id = MeshRegistry::instance().registerMesh(result.unwrap());
-        pushMeshHandle(L, id);
-        return 1;
     }
 } // namespace
 

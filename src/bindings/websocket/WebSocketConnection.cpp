@@ -16,6 +16,32 @@ namespace luax::wsdetail {
     namespace {
         constexpr char const* kMethod = "websocket.connect";
 
+        struct MessageCtx {
+            std::string data;
+            bool binary;
+        };
+
+        struct CloseCtx {
+            std::uint16_t code;
+            std::string reason;
+            bool remote;
+        };
+
+        void pushMessageArgs(lua_State* L, MessageCtx const* ctx) {
+            push(L, ctx->data);
+            push(L, ctx->binary);
+        }
+
+        void pushCloseArgs(lua_State* L, CloseCtx const* ctx) {
+            push(L, static_cast<int>(ctx->code));
+            push(L, ctx->reason);
+            push(L, ctx->remote);
+        }
+
+        void pushErrorArgs(lua_State* L, std::string const* ctx) {
+            push(L, *ctx);
+        }
+
         void queueOpenEvent(std::weak_ptr<WsConnection> weak) {
             geode::queueInMainThread([weak = std::move(weak)] {
                 auto conn = weak.lock();
@@ -27,70 +53,31 @@ namespace luax::wsdetail {
         }
 
         void queueMessageEvent(std::weak_ptr<WsConnection> weak, std::string data, bool binary) {
-            geode::queueInMainThread([weak = std::move(weak), data = std::move(data), binary] {
-                auto conn = weak.lock();
-                if (!conn || conn->stopped.load()) return;
-                struct Ctx {
-                    std::string const* data;
-                    bool binary;
-                } ctx{&data, binary};
-                invokeWsCallback(
-                    conn->slot(&WsConnection::onMessage),
-                    "websocket.onMessage",
-                    2,
-                    +[](lua_State* L, void* raw) {
-                        auto* c = static_cast<Ctx*>(raw);
-                        push(L, *c->data);
-                        push(L, c->binary);
-                    },
-                    &ctx
-                );
-            });
+            queueWsEvent<WsConnection, MessageCtx, pushMessageArgs>(
+                std::move(weak),
+                &WsConnection::onMessage,
+                "websocket.onMessage",
+                2,
+                MessageCtx{std::move(data), binary}
+            );
         }
 
         void queueCloseEvent(
             std::weak_ptr<WsConnection> weak, std::uint16_t code, std::string reason, bool remote
         ) {
-            geode::queueInMainThread([weak = std::move(weak), code, reason = std::move(reason), remote] {
-                auto conn = weak.lock();
-                if (!conn || conn->stopped.load()) return;
-                struct Ctx {
-                    std::uint16_t code;
-                    std::string const* reason;
-                    bool remote;
-                } ctx{code, &reason, remote};
-                invokeWsCallback(
-                    conn->slot(&WsConnection::onClose),
-                    "websocket.onClose",
-                    3,
-                    +[](lua_State* L, void* raw) {
-                        auto* c = static_cast<Ctx*>(raw);
-                        push(L, static_cast<int>(c->code));
-                        push(L, *c->reason);
-                        push(L, c->remote);
-                    },
-                    &ctx
-                );
-            });
+            queueWsEvent<WsConnection, CloseCtx, pushCloseArgs>(
+                std::move(weak),
+                &WsConnection::onClose,
+                "websocket.onClose",
+                3,
+                CloseCtx{code, std::move(reason), remote}
+            );
         }
 
         void queueErrorEvent(std::weak_ptr<WsConnection> weak, std::string message) {
-            geode::queueInMainThread([weak = std::move(weak), message = std::move(message)] {
-                auto conn = weak.lock();
-                if (!conn || conn->stopped.load()) return;
-                struct Ctx {
-                    std::string const* message;
-                } ctx{&message};
-                invokeWsCallback(
-                    conn->slot(&WsConnection::onError),
-                    "websocket.onError",
-                    1,
-                    +[](lua_State* L, void* raw) {
-                        push(L, *static_cast<Ctx*>(raw)->message);
-                    },
-                    &ctx
-                );
-            });
+            queueWsEvent<WsConnection, std::string, pushErrorArgs>(
+                std::move(weak), &WsConnection::onError, "websocket.onError", 1, std::move(message)
+            );
         }
 
         void installMessageCallback(std::shared_ptr<WsConnection> const& conn) {
@@ -223,11 +210,7 @@ namespace luax::wsdetail {
                 return pushNilErr(L, kWsConnectionClosedMsg);
             }
             auto info = binary ? conn.socket.sendBinary(data) : conn.socket.sendText(data);
-            if (!info.success) {
-                return pushNilErr(L, kWsConnectionClosedMsg);
-            }
-            push(L, true);
-            return 1;
+            return wsSendResult(L, info, kWsConnectionClosedMsg);
         }
     } // namespace
 
@@ -271,28 +254,14 @@ namespace luax::wsdetail {
         if (conn.stopped.load()) {
             return pushNilErr(L, kWsConnectionClosedMsg);
         }
-        auto info = conn.socket.ping(payload);
-        if (!info.success) {
-            return pushNilErr(L, kWsConnectionClosedMsg);
-        }
-        push(L, true);
-        return 1;
+        return wsSendResult(L, conn.socket.ping(payload), kWsConnectionClosedMsg);
     }
 
     int connClose(lua_State* L) {
         auto& conn = checkOpenConnection(L);
-        std::uint16_t code = ix::WebSocketCloseConstants::kNormalClosureCode;
-        std::string reason = ix::WebSocketCloseConstants::kNormalClosureMessage;
-        if (lua_gettop(L) >= 2 && !lua_isnil(L, 2)) {
-            int value = check<int>(L, 2, "close");
-            if (value < 1000 || value > 4999) luaL_error(L, "close expected code 1000..4999");
-            code = static_cast<std::uint16_t>(value);
-        }
-        if (lua_gettop(L) >= 3 && !lua_isnil(L, 3)) {
-            reason = check<std::string>(L, 3, "close");
-        }
+        auto args = parseCloseArgs(L);
         conn.socket.disableAutomaticReconnection();
-        conn.socket.close(code, reason);
+        conn.socket.close(args.code, args.reason);
         return 0;
     }
 

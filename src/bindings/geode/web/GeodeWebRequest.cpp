@@ -234,7 +234,7 @@ namespace luax::webdetail {
                             +[](lua_State* L, void* raw) {
                                 auto& response = *static_cast<Ctx*>(raw)->response;
                                 if (!responseDataWithinLimit(response.data().size())) {
-                                    pushNilErrCallback(L, kWebResponseSizeExceededMsg);
+                                    pushNilErr(L, kWebResponseSizeExceededMsg);
                                     return;
                                 }
                                 pushResponseOrError(L, std::move(response));

@@ -43,6 +43,20 @@ namespace luax {
         lua_setfield(L, -2, name);
     }
 
+    struct IntEnumEntry {
+        char const* name;
+        int value;
+    };
+
+    template <typename T, std::size_t N>
+    inline void registerIntEnumTable(lua_State* L, T const (&entries)[N], char const* tableName) {
+        lua_createtable(L, 0, static_cast<int>(N));
+        for (auto const& entry : entries) {
+            setIntField(L, entry.name, entry.value);
+        }
+        lua_setfield(L, -2, tableName);
+    }
+
     inline bool optField(lua_State* L, int tableIdx, char const* key) {
         lua_getfield(L, tableIdx, key);
         bool present = !lua_isnil(L, -1);

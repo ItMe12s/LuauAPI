@@ -8,15 +8,6 @@
 namespace {
     using namespace luax;
 
-    std::vector<char const*> toCStringView(std::vector<std::string> const& items) {
-        std::vector<char const*> ptrs;
-        ptrs.reserve(items.size());
-        for (auto const& item : items) {
-            ptrs.push_back(item.c_str());
-        }
-        return ptrs;
-    }
-
     int imguiCombo(lua_State* L) {
         requireFrame(L, "imgui.combo");
         char const* label = checkLuaString(L, 1);
@@ -135,11 +126,7 @@ namespace {
             speed = optFieldNumber(L, 3, "speed", 1.0f);
             vmin = optFieldNumber(L, 3, "min", 0.0f);
             vmax = optFieldNumber(L, 3, "max", 0.0f);
-            lua_getfield(L, 3, "fmt");
-            if (lua_isstring(L, -1)) {
-                fmt = lua_tostring(L, -1);
-            }
-            lua_pop(L, 1);
+            fmt = optFmtField(L, 3, fmt);
             flags = static_cast<ImGuiSliderFlags>(optFieldNumber(L, 3, "flags", 0.0f));
         }
 
@@ -162,11 +149,7 @@ namespace {
             speed = optFieldNumber(L, 3, "speed", 1.0f);
             vmin = static_cast<int>(optFieldNumber(L, 3, "min", 0.0f));
             vmax = static_cast<int>(optFieldNumber(L, 3, "max", 0.0f));
-            lua_getfield(L, 3, "fmt");
-            if (lua_isstring(L, -1)) {
-                fmt = lua_tostring(L, -1);
-            }
-            lua_pop(L, 1);
+            fmt = optFmtField(L, 3, fmt);
             flags = static_cast<ImGuiSliderFlags>(optFieldNumber(L, 3, "flags", 0.0f));
         }
 
@@ -319,11 +302,7 @@ namespace {
         if (lua_istable(L, 3)) {
             step = optFieldNumber(L, 3, "step", 0.0f);
             stepFast = optFieldNumber(L, 3, "stepFast", 0.0f);
-            lua_getfield(L, 3, "fmt");
-            if (lua_isstring(L, -1)) {
-                fmt = lua_tostring(L, -1);
-            }
-            lua_pop(L, 1);
+            fmt = optFmtField(L, 3, fmt);
             flags = static_cast<ImGuiInputTextFlags>(optFieldNumber(L, 3, "flags", 0.0f));
         }
 
@@ -363,11 +342,7 @@ namespace {
         if (lua_istable(L, 3)) {
             step = optFieldNumber(L, 3, "step", 0.0f);
             stepFast = optFieldNumber(L, 3, "stepFast", 0.0f);
-            lua_getfield(L, 3, "fmt");
-            if (lua_isstring(L, -1)) {
-                fmt = lua_tostring(L, -1);
-            }
-            lua_pop(L, 1);
+            fmt = optFmtField(L, 3, fmt);
             flags = static_cast<ImGuiInputTextFlags>(optFieldNumber(L, 3, "flags", 0.0f));
         }
 

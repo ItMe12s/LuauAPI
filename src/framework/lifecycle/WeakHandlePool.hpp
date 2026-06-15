@@ -17,10 +17,6 @@ namespace luax {
             items_.push_back(std::move(weak));
         }
 
-        void compact() {
-            (void)compactAndCountLive();
-        }
-
         std::size_t compactAndCountLive() {
             items_.erase(
                 std::remove_if(

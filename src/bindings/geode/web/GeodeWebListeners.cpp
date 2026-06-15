@@ -86,7 +86,7 @@ namespace luax::webdetail {
                     auto* c = static_cast<Ctx*>(raw);
                     if (c->modID) push(L, *c->modID);
                     if (!responseDataWithinLimit(c->response.data().size())) {
-                        pushNilErrCallback(L, kWebResponseSizeExceededMsg);
+                        pushNilErr(L, kWebResponseSizeExceededMsg);
                     }
                     else {
                         pushResponse(L, std::move(c->response));
@@ -291,11 +291,6 @@ namespace luax::webdetail {
             );
         }
 
-        struct IntEnumEntry {
-            char const* name;
-            int value;
-        };
-
         struct LongEnumEntry {
             char const* name;
             long value;
@@ -310,15 +305,6 @@ namespace luax::webdetail {
         };
 
         constexpr LongEnumEntry kHttpAuthEntries[] = {LUAX_WEB_HTTP_AUTH(LUAX_WEB_LONG_ENUM_ENTRY)};
-
-        template <typename T, std::size_t N>
-        void registerIntEnumTable(lua_State* L, T const (&entries)[N], char const* tableName) {
-            lua_createtable(L, 0, static_cast<int>(N));
-            for (auto const& entry : entries) {
-                setIntField(L, entry.name, entry.value);
-            }
-            lua_setfield(L, -2, tableName);
-        }
 
         template <typename T, std::size_t N>
         void registerLongEnumTable(lua_State* L, T const (&entries)[N], char const* tableName) {

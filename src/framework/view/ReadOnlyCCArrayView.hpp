@@ -2,6 +2,7 @@
 
 #include "framework/usertype/Usertype.hpp"
 #include "framework/view/ReadOnlySequenceView.hpp"
+#include "framework/view/ReadOnlyVectorView.hpp"
 
 #include <Geode/Geode.hpp>
 #include <cocos2d.h>
@@ -64,15 +65,7 @@ namespace luax {
 
             template <class U>
             static void pushElement(lua_State* L, U* value) {
-                if (value == nullptr) {
-                    lua_pushnil(L);
-                }
-                else if constexpr (std::is_same_v<U, cocos2d::CCObject>) {
-                    Usertype<cocos2d::CCObject>::pushBorrowedDynamic(L, value);
-                }
-                else {
-                    Usertype<U>::pushBorrowed(L, value);
-                }
+                pushCCObjectElement(L, value);
             }
         };
     } // namespace detail

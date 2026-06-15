@@ -176,7 +176,7 @@ namespace {
 
     void rememberListener(std::shared_ptr<KeyboardListenerState> const& state) {
         activeKeyboardListeners().track(state);
-        activeKeyboardListeners().compact();
+        activeKeyboardListeners().compactAndCountLive();
         ensureKeyboardShutdownHook();
     }
 
@@ -286,9 +286,15 @@ namespace {
 namespace luax {
     geode::Result<void> registerGeodeKeyboardInput(lua_State* L) {
         registerListenerMetatable(L);
-        registerKeyboardModifier(L);
-        registerKeyboardInputData(L);
-        registerKeyboardInputEvent(L);
+        if (auto result = registerKeyboardModifier(L); result.isErr()) {
+            return result;
+        }
+        if (auto result = registerKeyboardInputData(L); result.isErr()) {
+            return result;
+        }
+        if (auto result = registerKeyboardInputEvent(L); result.isErr()) {
+            return result;
+        }
         return geode::Ok();
     }
 } // namespace luax

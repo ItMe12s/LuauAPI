@@ -111,9 +111,12 @@ namespace luax {
         return 2;
     }
 
-    inline void pushNilErrCallback(lua_State* L, std::string_view err) {
-        lua_pushnil(L);
-        push(L, err);
+    inline std::string stackValueToString(lua_State* L, int idx) {
+        size_t len = 0;
+        char const* text = luaL_tolstring(L, idx, &len);
+        std::string out = text ? std::string(text, len) : std::string();
+        lua_pop(L, 1);
+        return out;
     }
 
     template <class T>

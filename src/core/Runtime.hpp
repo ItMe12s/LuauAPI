@@ -145,6 +145,8 @@ namespace luax {
         void setLastError(std::string error);
         geode::Result<void> failWith(std::string error);
         geode::Result<void> cachedError() const;
+        geode::Result<void> ensureCallable(bool requireReady = true);
+        void tryCompileLoadedChunk(lua_State* L, std::string_view chunkName);
         geode::Result<void> protectedCallImpl(
             int nargs, int nresults, std::string_view context, ProtectedCallPolicy policy, int deadlineMs
         );

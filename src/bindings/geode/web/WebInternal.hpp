@@ -106,8 +106,8 @@ namespace luax {
     }
 
     inline void compactWeakState() {
-        activeTasks().compact();
-        activeListeners().compact();
+        activeTasks().compactAndCountLive();
+        activeListeners().compactAndCountLive();
     }
 
     inline WebRequestBox* checkRequestBox(lua_State* L, int idx, [[maybe_unused]] char const* method) {
@@ -153,7 +153,7 @@ namespace luax {
 
     inline void pushResponseOrError(lua_State* L, web::WebResponse response) {
         if (!responseDataWithinLimit(response.data().size())) {
-            pushNilErrCallback(L, kWebResponseSizeExceededMsg);
+            pushNilErr(L, kWebResponseSizeExceededMsg);
             return;
         }
         pushResponse(L, std::move(response));

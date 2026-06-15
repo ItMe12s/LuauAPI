@@ -7,6 +7,7 @@
 #include "framework/stack/Stack.hpp"
 #include "framework/stack/UserdataTags.hpp"
 
+#include <Geode/Geode.hpp>
 #include <Geode/loader/Log.hpp>
 #include <atomic>
 #include <cstddef>
@@ -38,6 +39,54 @@ namespace luax {
 
     inline int pushWsSendSizeExceeded(lua_State* L) {
         return pushNilErr(L, kWsSendSizeExceededMsg);
+    }
+
+    struct WsCloseArgs {
+        std::uint16_t code = ix::WebSocketCloseConstants::kNormalClosureCode;
+        std::string reason = ix::WebSocketCloseConstants::kNormalClosureMessage;
+    };
+
+    inline WsCloseArgs parseCloseArgs(lua_State* L) {
+        WsCloseArgs args;
+        if (lua_gettop(L) >= 2 && !lua_isnil(L, 2)) {
+            int value = check<int>(L, 2, "close");
+            if (value < 1000 || value > 4999) luaL_error(L, "close expected code 1000..4999");
+            args.code = static_cast<std::uint16_t>(value);
+        }
+        if (lua_gettop(L) >= 3 && !lua_isnil(L, 3)) {
+            args.reason = check<std::string>(L, 3, "close");
+        }
+        return args;
+    }
+
+    inline int wsSendResult(lua_State* L, ix::WebSocketSendInfo const& info, char const* closedMsg) {
+        if (!info.success) {
+            return pushNilErr(L, closedMsg);
+        }
+        push(L, true);
+        return 1;
+    }
+
+    template <class Owner, class Ctx, void (*PushArgs)(lua_State*, Ctx const*)>
+    void queueWsEvent(
+        std::weak_ptr<Owner> weak, std::shared_ptr<LuaCallback> Owner::* slotMember,
+        char const* context, int nargs, Ctx ctx
+    ) {
+        geode::queueInMainThread(
+            [weak = std::move(weak), slotMember, context, nargs, ctx = std::move(ctx)]() mutable {
+                auto owner = weak.lock();
+                if (!owner || owner->stopped.load()) return;
+                invokeWsCallback(
+                    owner->slot(slotMember),
+                    context,
+                    nargs,
+                    +[](lua_State* L, void* raw) {
+                        PushArgs(L, static_cast<Ctx*>(raw));
+                    },
+                    &ctx
+                );
+            }
+        );
     }
 
     inline constexpr char kWsConnectionClosedMsg[] = "websocket connection is closed";

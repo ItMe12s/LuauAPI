@@ -47,6 +47,16 @@ namespace luax {
         return v;
     }
 
+    inline char const* optFmtField(lua_State* L, int tableIdx, char const* defaultFmt) {
+        lua_getfield(L, tableIdx, "fmt");
+        char const* fmt = defaultFmt;
+        if (lua_isstring(L, -1)) {
+            fmt = lua_tostring(L, -1);
+        }
+        lua_pop(L, 1);
+        return fmt;
+    }
+
     inline bool optFieldBool(lua_State* L, int tableIdx, char const* key, bool def) {
         lua_getfield(L, tableIdx, key);
         bool v = lua_isboolean(L, -1) ? (lua_toboolean(L, -1) != 0) : def;
@@ -220,10 +230,16 @@ namespace luax {
         return items;
     }
 
-    struct ImGuiIntEnumEntry {
-        char const* name;
-        int value;
-    };
+    inline std::vector<char const*> toCStringView(std::vector<std::string> const& items) {
+        std::vector<char const*> ptrs;
+        ptrs.reserve(items.size());
+        for (auto const& item : items) {
+            ptrs.push_back(item.c_str());
+        }
+        return ptrs;
+    }
+
+    using ImGuiIntEnumEntry = IntEnumEntry;
 
     inline void ensureNestedTable(lua_State* L, char const* name) {
         lua_getfield(L, -1, name);
@@ -236,11 +252,7 @@ namespace luax {
 
     template <typename T, std::size_t N>
     inline void registerImGuiIntEnumTable(lua_State* L, T const (&entries)[N], char const* tableName) {
-        lua_createtable(L, 0, static_cast<int>(N));
-        for (auto const& entry : entries) {
-            setIntField(L, entry.name, entry.value);
-        }
-        lua_setfield(L, -2, tableName);
+        registerIntEnumTable(L, entries, tableName);
     }
 
     template <typename T, std::size_t N>

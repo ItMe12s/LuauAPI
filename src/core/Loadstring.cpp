@@ -1,19 +1,10 @@
 #include "core/Loadstring.hpp"
 
+#include "framework/stack/Stack.hpp"
+
 #include <lualib.h>
-#include <string>
 
 namespace luax {
-    namespace {
-        std::string stackValueToString(lua_State* L, int idx) {
-            size_t len = 0;
-            char const* text = luaL_tolstring(L, idx, &len);
-            std::string out = text ? std::string(text, len) : std::string();
-            lua_pop(L, 1);
-            return out;
-        }
-    } // namespace
-
     LoadstringStatus loadstringPushResult(
         lua_State* L, std::string_view chunkName, std::string const& bytecode
     ) {

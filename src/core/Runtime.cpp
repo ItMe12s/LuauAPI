@@ -9,6 +9,7 @@
     #include "framework/usertype/Ref.hpp"
     #include "require/Requirer.hpp"
 #endif
+#include "framework/stack/Stack.hpp"
 #include "require/BytecodeCacheKey.hpp"
 #include "require/PathSandbox.hpp"
 #if defined(LUAUAPI_HOST_TESTS)
@@ -73,14 +74,6 @@ namespace luax {
             int m_top = 0;
             bool m_active = true;
         };
-
-        std::string valueToString(lua_State* L, int idx) {
-            size_t len = 0;
-            char const* text = luaL_tolstring(L, idx, &len);
-            std::string out = text ? std::string(text, len) : std::string();
-            lua_pop(L, 1);
-            return out;
-        }
 
         bool iequalsPrefix(std::string_view haystack, std::string_view needle) {
             if (haystack.size() < needle.size()) return false;
@@ -374,12 +367,8 @@ namespace luax {
     void Runtime::setResourcesRoot(std::filesystem::path const& root) {
         if (!assertMainThread()) return;
         if (m_resourcesRoot == root) return;
-        m_resourcesRoot = root;
-#if !defined(LUAUAPI_HOST_TESTS)
-        if (m_requirer) {
-            m_requirer->setResourcesRoot(m_resourcesRoot);
-        }
-#endif
+        auto tmp = root;
+        swapResourcesRoot(tmp);
     }
 
     void Runtime::swapResourcesRoot(std::filesystem::path& root) {
@@ -419,7 +408,7 @@ namespace luax {
 
         for (int i = 1; i <= argc; ++i) {
             if (i > 1) out.push_back('\t');
-            out.append(redactHostPaths(valueToString(L, i), resourcesRoot));
+            out.append(redactHostPaths(stackValueToString(L, i), resourcesRoot));
         }
 
         geode::log::info("[lua] {}", out);
@@ -458,14 +447,7 @@ namespace luax {
             return 2;
         }
 
-        if (self->m_codegenEnabled) {
-            auto cgResult = Luau::CodeGen::compile(L, -1, Luau::CodeGen::CodeGen_ColdFunctions);
-            if (cgResult.hasErrors()) {
-                geode::log::warn(
-                    "luau codegen [{}] partial: {}", chunk, Luau::CodeGen::toString(cgResult.result)
-                );
-            }
-        }
+        self->tryCompileLoadedChunk(L, chunk);
 
         return 1;
     }
@@ -634,20 +616,39 @@ namespace luax {
         }
     }
 
-    geode::Result<void> Runtime::runScript(
-        std::string_view src, std::string_view chunkName, int deadlineMs
-    ) {
+    geode::Result<void> Runtime::ensureCallable(bool requireReady) {
         if (!assertMainThread()) {
             return failWith("luau runtime accessed off main thread");
         }
         if (isShuttingDown()) {
             return failWith("luau runtime shutting down");
         }
-        if (!ready() || !m_state) {
-            if (m_lastError.empty()) {
-                return failWith(m_initError.empty() ? "luau runtime not ready" : m_initError);
+        if (requireReady) {
+            if (!ready() || !m_state) {
+                if (m_lastError.empty()) {
+                    return failWith(m_initError.empty() ? "luau runtime not ready" : m_initError);
+                }
+                return cachedError();
             }
-            return cachedError();
+        }
+        return geode::Ok();
+    }
+
+    void Runtime::tryCompileLoadedChunk(lua_State* L, std::string_view chunkName) {
+        if (!m_codegenEnabled) return;
+        auto cgResult = Luau::CodeGen::compile(L, -1, Luau::CodeGen::CodeGen_ColdFunctions);
+        if (cgResult.hasErrors()) {
+            geode::log::warn(
+                "luau codegen [{}] partial: {}", chunkName, Luau::CodeGen::toString(cgResult.result)
+            );
+        }
+    }
+
+    geode::Result<void> Runtime::runScript(
+        std::string_view src, std::string_view chunkName, int deadlineMs
+    ) {
+        if (auto guard = ensureCallable(); guard.isErr()) {
+            return guard;
         }
         if (src.size() > kMaxScriptBytes) {
             geode::log::error("luau script exceeds maximum size: {}", chunkName);
@@ -672,14 +673,7 @@ namespace luax {
             return failWith(std::move(err));
         }
 
-        if (m_codegenEnabled) {
-            auto cgResult = Luau::CodeGen::compile(m_state, -1, Luau::CodeGen::CodeGen_ColdFunctions);
-            if (cgResult.hasErrors()) {
-                geode::log::warn(
-                    "luau codegen [{}] partial: {}", chunk, Luau::CodeGen::toString(cgResult.result)
-                );
-            }
-        }
+        tryCompileLoadedChunk(m_state, chunk);
 
         auto execStart = std::chrono::steady_clock::now();
         auto callResult = protectedCall(0, 0, chunk, deadlineMs);
@@ -699,28 +693,19 @@ namespace luax {
     geode::Result<void> Runtime::protectedCallImpl(
         int nargs, int nresults, std::string_view context, ProtectedCallPolicy policy, int deadlineMs
     ) {
-        if (!assertMainThread()) {
-            return failWith("luau runtime accessed off main thread");
+        if (auto guard = ensureCallable(policy == ProtectedCallPolicy::WithBudget); guard.isErr()) {
+            return guard;
         }
-        if (isShuttingDown()) {
-            return failWith("luau runtime shutting down");
-        }
-        if (policy == ProtectedCallPolicy::WithBudget) {
-            if (!ready() || !m_state) {
+        if (policy == ProtectedCallPolicy::TracebackOnly) {
+            if (status() == imes::luauapi::RuntimeStatus::Panicked) {
+                return m_lastError.empty() ? failWith("luau runtime panicked") : cachedError();
+            }
+            if (!m_state || !m_tracebackRef) {
                 if (m_lastError.empty()) {
-                    return failWith(m_initError.empty() ? "luau runtime not ready" : m_initError);
+                    return failWith(m_initError.empty() ? "luau runtime not available" : m_initError);
                 }
                 return cachedError();
             }
-        }
-        else if (status() == imes::luauapi::RuntimeStatus::Panicked) {
-            return m_lastError.empty() ? failWith("luau runtime panicked") : cachedError();
-        }
-        else if (!m_state || !m_tracebackRef) {
-            if (m_lastError.empty()) {
-                return failWith(m_initError.empty() ? "luau runtime not available" : m_initError);
-            }
-            return cachedError();
         }
 
         int baseTop = lua_gettop(m_state) - nargs;
