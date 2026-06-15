@@ -32,7 +32,7 @@ namespace luauapi_test {
         return LuaStatePtr(L);
     }
 
-    inline std::string compile(std::string const& source) {
+    inline std::string compile(std::string_view source) {
         return luax::Runtime::compileSource(source);
     }
 

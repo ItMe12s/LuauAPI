@@ -192,6 +192,7 @@ namespace luax::webdetail {
                         },
                         priority
                     );
+                default: std::unreachable();
             }
         }
 
@@ -223,6 +224,7 @@ namespace luax::webdetail {
                         },
                         priority
                     );
+                default: std::unreachable();
             }
         }
 
