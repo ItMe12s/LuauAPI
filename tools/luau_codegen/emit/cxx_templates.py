@@ -308,7 +308,7 @@ def emit_hook_support() -> str:
                 if (callback && callback->id == callbackId && !callback->removed) {
                     callback->removed = true;
                     callback->ref.reset();
-                    removeFromSortedLists(state, callback);
+                    // removeFromSortedLists(state, callback); // Just say as a tombstone for now, doesn't cause any bugs.
                     removed = true;
                 }
             }
