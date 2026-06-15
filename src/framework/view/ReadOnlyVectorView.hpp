@@ -79,7 +79,12 @@ namespace luax {
 
             template <class T>
             static void pushElement(lua_State* L, T* value) {
-                Usertype<T>::pushBorrowed(L, value);
+                if constexpr (std::is_same_v<T, cocos2d::CCObject>) {
+                    Usertype<cocos2d::CCObject>::pushBorrowedDynamic(L, value);
+                }
+                else {
+                    Usertype<T>::pushBorrowed(L, value);
+                }
             }
         };
 

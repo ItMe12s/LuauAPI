@@ -363,3 +363,31 @@ TEST_CASE("Usertype field setter skips accessor when runtime panicked") {
     lua_pop(L, 1);
     node->release();
 }
+
+TEST_CASE("Usertype pushBorrowedDynamic preserves runtime subclass type") {
+    RuntimeGuard guard;
+    auto* runtime = luax::Runtime::getOrCreate();
+    auto* L = runtime->state();
+    REQUIRE(L != nullptr);
+
+    REQUIRE(luax::Usertype<cocos2d::CCObject>::registerType(L, "CCObject").isOk());
+    REQUIRE(
+        luax::Usertype<TestNode>::registerType(L, "TestNode", {luax::Usertype<cocos2d::CCObject>::tag()})
+            .isOk()
+    );
+
+    luax::Usertype<TestNode>::method(L, "ping", &testMethod);
+
+    auto* node = new TestNode();
+    luax::Usertype<cocos2d::CCObject>::pushBorrowedDynamic(L, node);
+    REQUIRE(lua_isuserdata(L, -1));
+
+    lua_getfield(L, -1, "ping");
+    REQUIRE(lua_isfunction(L, -1));
+    lua_pushvalue(L, -2);
+    REQUIRE(lua_pcall(L, 1, 1, 0) == 0);
+    REQUIRE(std::string_view(lua_tostring(L, -1)) == "called");
+    lua_pop(L, 2);
+
+    node->release();
+}

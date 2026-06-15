@@ -34,6 +34,12 @@ local first = lists:objectAtIndex(0)
 These methods bind as normal `CCArray` methods.
 Return values such as `getCreatedLists()` still return `CCArray?`, not a table view.
 
+`objectAtIndex`, `firstObject`, `lastObject`, and `randomObject` return `CCObject*` in C++.
+When pushing these to Lua, codegen tries to keep the object's right type,
+so if the element is a subclass like `GJLevelList` and it is registered, Lua gets that type.
+Generated stubs still use `CCObject?`, but you can annotate like `:: GJLevelList?` for type checking.
+If a runtime type is not registered, it falls back to `CCObject`.
+
 ## Rejected
 
 - `CCArray.data` and `cocos2d::ccArray*` internals

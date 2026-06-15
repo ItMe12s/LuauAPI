@@ -86,6 +86,7 @@ namespace luax {
         bool hasBase(TypeInfo const& info, std::uint32_t targetTag);
         void pushUserdataOwned(lua_State* L, cocos2d::CCObject* obj, TypeInfo const& info);
         void pushUserdataBorrowed(lua_State* L, cocos2d::CCObject* obj, TypeInfo const& info);
+        TypeInfo const* findPushTypeInfo(cocos2d::CCObject* obj);
     } // namespace detail
 
     template <class T>
@@ -219,6 +220,40 @@ namespace luax {
                 return;
             }
             detail::pushUserdataBorrowed(L, static_cast<cocos2d::CCObject*>(obj), *info);
+        }
+
+        static void pushBorrowedDynamic(lua_State* L, cocos2d::CCObject* obj)
+            requires std::is_same_v<T, cocos2d::CCObject>
+        {
+            if (!obj) {
+                lua_pushnil(L);
+                return;
+            }
+            auto const* info = detail::findPushTypeInfo(obj);
+            if (!info) {
+                lua_pushnil(L);
+                return;
+            }
+            detail::pushUserdataBorrowed(L, obj, *info);
+        }
+
+        static void pushOwnedDynamic(lua_State* L, cocos2d::CCObject* obj)
+            requires std::is_same_v<T, cocos2d::CCObject>
+        {
+            if (!obj) {
+                lua_pushnil(L);
+                return;
+            }
+            auto const* info = detail::findPushTypeInfo(obj);
+            if (!info) {
+                lua_pushnil(L);
+                return;
+            }
+            detail::pushUserdataOwned(L, obj, *info);
+            if (!retainLuaRef(obj, info->name.c_str())) {
+                lua_pop(L, 1);
+                lua_pushnil(L);
+            }
         }
     };
 } // namespace luax

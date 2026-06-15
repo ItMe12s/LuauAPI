@@ -341,4 +341,22 @@ namespace luax::detail {
         block->typeTag = info.tag;
         assignUsertypeMetatable(L, info);
     }
+
+    TypeInfo const* findPushTypeInfo(cocos2d::CCObject* obj) {
+        if (!obj) {
+            return nullptr;
+        }
+        auto const& reg = UsertypeRegistry::get();
+        if (auto const* info = reg.findInfo(std::type_index(typeid(*obj)))) {
+            if (isValidUserdataTag(info->tag) && !info->name.empty()) {
+                return info;
+            }
+        }
+        if (auto const* fallback = reg.findInfo(std::type_index(typeid(cocos2d::CCObject)))) {
+            if (isValidUserdataTag(fallback->tag) && !fallback->name.empty()) {
+                return fallback;
+            }
+        }
+        return nullptr;
+    }
 } // namespace luax::detail

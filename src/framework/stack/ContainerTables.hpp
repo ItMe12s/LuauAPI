@@ -403,6 +403,9 @@ namespace luax {
                         if (elem == nullptr) {
                             lua_pushnil(state);
                         }
+                        else if constexpr (std::is_same_v<Pointee, cocos2d::CCObject>) {
+                            Usertype<cocos2d::CCObject>::pushBorrowedDynamic(state, elem);
+                        }
                         else {
                             Usertype<Pointee>::pushBorrowed(state, elem);
                         }
@@ -423,6 +426,9 @@ namespace luax {
             using Pointee = std::remove_pointer_t<V>;
             if (value == nullptr) {
                 lua_pushnil(L);
+            }
+            else if constexpr (std::is_same_v<Pointee, cocos2d::CCObject>) {
+                Usertype<cocos2d::CCObject>::pushBorrowedDynamic(L, value);
             }
             else {
                 Usertype<Pointee>::pushBorrowed(L, value);

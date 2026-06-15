@@ -67,6 +67,9 @@ namespace luax {
                 if (value == nullptr) {
                     lua_pushnil(L);
                 }
+                else if constexpr (std::is_same_v<U, cocos2d::CCObject>) {
+                    Usertype<cocos2d::CCObject>::pushBorrowedDynamic(L, value);
+                }
                 else {
                     Usertype<U>::pushBorrowed(L, value);
                 }

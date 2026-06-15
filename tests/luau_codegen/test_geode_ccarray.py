@@ -199,6 +199,8 @@ public:
         )
         self.assertIn("auto result = self->count();", cxx)
         self.assertIn("auto result = self->objectAtIndex(arg0);", cxx)
+        self.assertIn("luax::Usertype<cocos2d::CCObject>::pushBorrowedDynamic(L, result);", cxx)
+        self.assertNotIn("luax::Usertype<cocos2d::CCObject>::pushBorrowed(L, result);", cxx)
 
         plan = collect_plan(root, "win")
         luau = types_text(emit_luau_types(root, "win", plan=plan))
