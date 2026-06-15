@@ -1,5 +1,4 @@
-set(LUAUAPI_IMGUI_VERSION "v1.92.8"
-    CACHE STRING "Dear ImGui release for headless host tests")
+include(${CMAKE_CURRENT_LIST_DIR}/ImGui.cmake)
 
 FetchContent_Declare(
     imgui_headless

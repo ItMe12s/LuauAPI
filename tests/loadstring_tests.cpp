@@ -1,38 +1,13 @@
 #include "core/Loadstring.hpp"
+#include "host/lua_test_helpers.hpp"
 #include "require/BytecodeCacheKey.hpp"
 
-#include <Luau/Compiler.h>
 #include <catch2/catch_test_macros.hpp>
 #include <lua.h>
-#include <lualib.h>
-#include <memory>
 #include <string>
 
-namespace {
-    struct LuaStateDeleter {
-        void operator()(lua_State* L) const {
-            if (L) {
-                lua_close(L);
-            }
-        }
-    };
-
-    using LuaStatePtr = std::unique_ptr<lua_State, LuaStateDeleter>;
-
-    LuaStatePtr makeLuaState() {
-        auto* L = luaL_newstate();
-        REQUIRE(L != nullptr);
-        return LuaStatePtr(L);
-    }
-
-    std::string compile(std::string const& source) {
-        Luau::CompileOptions opts;
-        opts.optimizationLevel = 2;
-        opts.debugLevel = 1;
-        opts.typeInfoLevel = 1;
-        return Luau::compile(source, opts);
-    }
-} // namespace
+using luauapi_test::compile;
+using luauapi_test::makeLuaState;
 
 TEST_CASE("loadstring result returns compiled function without running it") {
     auto L = makeLuaState();

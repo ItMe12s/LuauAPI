@@ -2,12 +2,10 @@
 #include "core/Config.hpp"
 #include "core/Runtime.hpp"
 #include "framework/Binding.hpp"
+#include "host/lua_test_helpers.hpp"
 
-#include <Luau/Compiler.h>
 #include <catch2/catch_test_macros.hpp>
 #include <lua.h>
-#include <lualib.h>
-#include <memory>
 #include <optional>
 #include <string>
 #include <thread>
@@ -18,16 +16,8 @@ namespace luax {
 
 namespace {
     using namespace luax;
-
-    struct LuaStateDeleter {
-        void operator()(lua_State* L) const {
-            if (L) {
-                lua_close(L);
-            }
-        }
-    };
-
-    using LuaStatePtr = std::unique_ptr<lua_State, LuaStateDeleter>;
+    using luauapi_test::compile;
+    using luauapi_test::makeLuaState;
 
     struct WebSocketGuard {
         WebSocketGuard() {
@@ -41,21 +31,6 @@ namespace {
             resetBindingsForTests();
         }
     };
-
-    LuaStatePtr makeLuaState() {
-        auto* L = luaL_newstate();
-        REQUIRE(L != nullptr);
-        luaL_openlibs(L);
-        return LuaStatePtr(L);
-    }
-
-    std::string compile(std::string const& source) {
-        Luau::CompileOptions opts;
-        opts.optimizationLevel = 2;
-        opts.debugLevel = 1;
-        opts.typeInfoLevel = 1;
-        return Luau::compile(source, opts);
-    }
 
     void registerWebSocketBindings(lua_State* L) {
         REQUIRE(registerWebSocket(L).isOk());
@@ -108,7 +83,7 @@ namespace {
 
 TEST_CASE("websocket.connect rejects non-ws schemes") {
     WebSocketGuard guard;
-    auto L = makeLuaState();
+    auto L = makeLuaState(true);
     registerWebSocketBindings(L.get());
 
     auto err = runScriptReturnsString(L.get(), R"(
@@ -121,7 +96,7 @@ TEST_CASE("websocket.connect rejects non-ws schemes") {
 
 TEST_CASE("websocket.connect rejects connection cap overflow") {
     WebSocketGuard guard;
-    auto L = makeLuaState();
+    auto L = makeLuaState(true);
     registerWebSocketBindings(L.get());
     Runtime::getOrCreate();
 
@@ -145,7 +120,7 @@ TEST_CASE("websocket.connect rejects connection cap overflow") {
 
 TEST_CASE("websocket connection send rejects oversized payload") {
     WebSocketGuard guard;
-    auto L = makeLuaState();
+    auto L = makeLuaState(true);
     registerWebSocketBindings(L.get());
     Runtime::getOrCreate();
 
@@ -166,7 +141,7 @@ TEST_CASE("websocket connection send rejects oversized payload") {
 
 TEST_CASE("websocket.serve rejects invalid ports") {
     WebSocketGuard guard;
-    auto L = makeLuaState();
+    auto L = makeLuaState(true);
     registerWebSocketBindings(L.get());
 
     auto errZero = runScriptReturnsString(L.get(), R"(
@@ -186,7 +161,7 @@ TEST_CASE("websocket.serve rejects invalid ports") {
 
 TEST_CASE("websocket.serve rejects server cap overflow") {
     WebSocketGuard guard;
-    auto L = makeLuaState();
+    auto L = makeLuaState(true);
     registerWebSocketBindings(L.get());
     Runtime::getOrCreate();
 
@@ -203,7 +178,7 @@ TEST_CASE("websocket.serve rejects server cap overflow") {
 
 TEST_CASE("websocket server broadcast rejects oversized payload") {
     WebSocketGuard guard;
-    auto L = makeLuaState();
+    auto L = makeLuaState(true);
     registerWebSocketBindings(L.get());
     Runtime::getOrCreate();
 
@@ -224,7 +199,7 @@ TEST_CASE("websocket server broadcast rejects oversized payload") {
 
 TEST_CASE("runtime reset clears global websocket state") {
     WebSocketGuard guard;
-    auto L = makeLuaState();
+    auto L = makeLuaState(true);
     registerWebSocketBindings(L.get());
     Runtime::getOrCreate();
 

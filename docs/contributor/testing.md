@@ -109,8 +109,7 @@ GitHub Actions workflow `.github/workflows/multi-platform.yml` runs:
 
 | Job | Platform | What it runs |
 | --- | --- | --- |
-| `windows-tests` | Windows | Builds `luauapi_tests`, runs CTest (Catch2 host suite) |
-| `macos-tests` | macOS | Same as Windows |
+| `host-tests` | Windows, macOS | Host-only configure (`LUAUAPI_HOST_ONLY=ON`), builds `luauapi_tests`, runs CTest |
 | `linux-codegen-tests` | Linux | Python codegen tests only (`luauapi_codegen_tests`) |
 | `build` matrix | Windows, macOS, iOS, Android32, Android64 | Full mod build via Geode SDK |
 | `package` | Ubuntu | Combines matrix artifacts |
