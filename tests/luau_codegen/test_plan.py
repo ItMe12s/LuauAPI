@@ -7,8 +7,10 @@ import unittest
 from helpers import (
     Arg,  # type: ignore[import-unresolved]
     Class,  # type: ignore[import-unresolved]
+    Field,  # type: ignore[import-unresolved]
     Method,  # type: ignore[import-unresolved]
     Root,  # type: ignore[import-unresolved]
+    all_platforms,  # type: ignore[import-unresolved]
     collect_bindings_root,  # type: ignore[import-unresolved]
     collect_parity,  # type: ignore[import-unresolved]
     collect_plan,  # type: ignore[import-unresolved]
@@ -53,6 +55,56 @@ class Foo : CCObject {
 
 
 class PlanRegressionTests(unittest.TestCase):
+    def test_skipped_class_field_ref_is_pruned(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        ccnode = Class(name="CCNode", namespace="cocos2d", bases=["CCObject"])
+        weak = Class(
+            name="WeakFieldType",
+            bases=["CCObject"],
+            methods=[
+                Method(name="winOnly", ret="void", args=[], platforms={"win": "0x1"}),
+                Method(name="m1Only", ret="void", args=[], platforms={"m1": "0x1"}),
+                Method(name="iosOnly", ret="void", args=[], platforms={"ios": "0x1"}),
+                Method(
+                    name="android32Only",
+                    ret="void",
+                    args=[],
+                    platforms={"android32": "0x1"},
+                ),
+                Method(
+                    name="android64Only",
+                    ret="void",
+                    args=[],
+                    platforms={"android64": "0x1"},
+                ),
+            ],
+        )
+        host = Class(
+            name="HostNode",
+            namespace="cocos2d",
+            bases=["CCNode"],
+            attributes=["link(win)"],
+            fields=[
+                Field("m_safe", "float"),
+                Field("m_weak", "WeakFieldType*"),
+            ],
+            methods=[
+                Method(name="tick", ret="void", args=[], platforms=all_platforms("0x10")),
+            ],
+        )
+        root = Root(classes=[ccobject, ccnode, weak, host])
+
+        plan = collect_plan(root, "win")
+        files = emit_luau_types(root, "win", plan=plan)
+
+        bound_names = [field.name for _, field in plan.field_targets_by_class.get("HostNode", [])]
+        self.assertEqual(bound_names, ["m_safe"])
+        self.assertIn("WeakFieldType", plan.skipped_classes)
+        self.assertIn(
+            "-- skipped m_weak: not-callable-type:win:WeakFieldType",
+            types_text(files),
+        )
+
     def test_scanned_geode_ui_class_survives_intersection(self) -> None:
         from luau_codegen.parse.geode_sdk import _SCANNED_LINK_ATTR  # type: ignore[import-unresolved]
 

@@ -7,7 +7,11 @@ from luau_codegen.parse.broma import Class, Field, Method
 if TYPE_CHECKING:
     from luau_codegen.model.codegen_context import CodegenContext
 
-from luau_codegen.policy.fields import bindable_field, field_applies_on_platform
+from luau_codegen.policy.fields import (
+    bindable_field,
+    field_applies_on_platform,
+    field_skipped_object_ref,
+)
 from luau_codegen.model.domain import short_name
 
 from luau_codegen.emit.luau_types.method_types import (
@@ -71,7 +75,12 @@ def _emit_class(
         if not field_applies_on_platform(field, target_platform):
             continue
         ok, reason, _, ret = bindable_field(field, objects, cls, ctx=ctx)
-        if ok and field.name in bound_field_names and ret:
+        skipped_ref = field_skipped_object_ref(field, objects, skipped_classes, cls, ctx=ctx)
+        if skipped_ref:
+            field_lines.append(
+                f"    -- skipped {field.name}: not-callable-type:{target_platform}:{skipped_ref}\n"
+            )
+        elif ok and field.name in bound_field_names and ret:
             field_lines.append(f"    {field.name}: {ret.lua_type}\n")
         elif reason:
             field_lines.append(f"    -- skipped {field.name}: {reason}\n")

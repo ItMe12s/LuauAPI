@@ -41,6 +41,7 @@ class Field:
     type: str
     count: int = 1
     line: int = 0
+    access: str = "public"
     platforms: frozenset[str] | None = None
 
 
@@ -419,6 +420,7 @@ def _parse_member(
         return None
     field = _parse_field(head, line)
     if field:
+        field.access = current_access
         field.platforms = field_platforms
         cls.fields.append(field)
     return None

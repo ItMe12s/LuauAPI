@@ -46,6 +46,8 @@ def bindable_field(
     ctx: CodegenContext | None = None,
 ) -> tuple[bool, str, TypeInfo | None, TypeInfo | None]:
     normalized = normalize_type(field.type)
+    if field.access != "public":
+        return False, "inaccessible", None, None
     if cls and (cls.name, field.name) in INACCESSIBLE_FIELDS:
         return False, "inaccessible-field", None, None
     if field.count > 1:
@@ -80,3 +82,33 @@ def bindable_field(
     if arg.kind == "object" and arg.class_name in INACCESSIBLE_CLASSES:
         return False, f"inaccessible-type:{arg.class_name}", arg, ret
     return True, "", arg, ret
+
+
+def field_skipped_object_ref(
+    field: Field,
+    objects: Dict[str, Class],
+    skipped_classes: set[str],
+    cls: Class | None = None,
+    ctx: CodegenContext | None = None,
+) -> str:
+    blocked = skipped_classes | INACCESSIBLE_CLASSES
+    owner_class = cls.name if cls else ""
+    for info in (
+        classify_arg(
+            field.type,
+            objects,
+            owner_class=owner_class,
+            field_name=field.name,
+            ctx=ctx,
+        ),
+        classify_return(
+            field.type,
+            objects,
+            owner_class=owner_class,
+            field_name=field.name,
+            ctx=ctx,
+        ),
+    ):
+        if info and info.kind == "object" and info.class_name in blocked:
+            return info.class_name
+    return ""

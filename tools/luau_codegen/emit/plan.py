@@ -10,6 +10,7 @@ from luau_codegen.policy.fields import (
     bindable_field,
     field_applies_on_platform,
     field_key,
+    field_skipped_object_ref,
 )
 from luau_codegen.policy.filtering import (
     group_supported,
@@ -91,6 +92,29 @@ def _emitted_classes(plan: EmitPlan) -> List[Class]:
     return out
 
 
+def _prune_field_object_refs(
+    field_targets_by_class: dict[str, List[tuple[Class, Field]]],
+    objects: dict[str, Class],
+    skipped_classes: set[str],
+    target_platform: str,
+    ctx: CodegenContext | None = None,
+) -> list[tuple[str, str, str]]:
+    pruned: list[tuple[str, str, str]] = []
+    for cls_name, targets in field_targets_by_class.items():
+        kept: List[tuple[Class, Field]] = []
+        for field_cls, bound_field in targets:
+            skipped_ref = field_skipped_object_ref(
+                bound_field, objects, skipped_classes, field_cls, ctx=ctx
+            )
+            if skipped_ref:
+                reason = f"not-callable-type:{target_platform}:{skipped_ref}"
+                pruned.append((cls_name, bound_field.name, reason))
+            else:
+                kept.append((field_cls, bound_field))
+        field_targets_by_class[cls_name] = kept
+    return pruned
+
+
 def _filter_free_function_object_refs(
     functions: list[Function],
     objects: dict[str, Class],
@@ -162,6 +186,16 @@ def collect_platform_plan(root: Root, target_platform: str = "win") -> EmitPlan:
             ok, _, _, _ = bindable_field(cls_field, objects, cls, ctx=ctx)
             if ok:
                 field_targets_by_class[cls.name].append((cls, cls_field))
+
+    skipped.extend(
+        _prune_field_object_refs(
+            field_targets_by_class,
+            objects,
+            skipped_classes,
+            target_platform,
+            ctx=ctx,
+        )
+    )
 
     supported_free_functions, skipped_free_functions = group_supported_free_functions(
         root.functions, objects, target_platform, ctx=ctx
@@ -333,6 +367,17 @@ def _apply_intersection(
         )
         if pruned:
             plan.skipped.extend(pruned)
+            changed = True
+
+        field_pruned = _prune_field_object_refs(
+            plan.field_targets_by_class,
+            plan.objects,
+            plan.skipped_classes,
+            target_platform,
+            ctx=plan.ctx,
+        )
+        if field_pruned:
+            plan.skipped.extend(field_pruned)
             changed = True
 
         for cls_name in list(plan.hook_targets_by_class):

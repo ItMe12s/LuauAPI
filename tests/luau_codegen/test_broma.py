@@ -75,6 +75,40 @@ protected:
         finally:
             os.unlink(path)
 
+    def test_protected_field_rejected(self) -> None:
+        from luau_codegen.parse.broma import Field  # type: ignore[import-unresolved]
+        from luau_codegen.policy.fields import bindable_field  # type: ignore[import-unresolved]
+
+        cls = Class(name="Foo")
+        field = Field(name="m_secret", type="int", access="protected")
+
+        ok, reason, _, _ = bindable_field(field, {"Foo": cls}, cls)
+
+        self.assertFalse(ok)
+        self.assertEqual(reason, "inaccessible")
+
+    def test_parse_protected_field_access_section(self) -> None:
+        import tempfile
+
+        bro = """
+class Foo {
+protected:
+    int m_secret;
+public:
+    float m_visible;
+};
+"""
+        with tempfile.NamedTemporaryFile("w", suffix=".bro", delete=False) as f:
+            f.write(bro)
+            path = f.name
+        try:
+            root = parse_file(path)
+            fields = {field.name: field for field in root.classes[0].fields}
+            self.assertEqual(fields["m_secret"].access, "protected")
+            self.assertEqual(fields["m_visible"].access, "public")
+        finally:
+            os.unlink(path)
+
 
 class CompoundLinkAttributeTests(unittest.TestCase):
     def test_compound_link_attribute_matches_android64(self) -> None:

@@ -997,6 +997,26 @@ class GeneratedSafetyTests(unittest.TestCase):
             types_text(files),
         )
 
+    def test_protected_broma_field_is_not_bound(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        cls = Class(
+            name="Foo",
+            attributes=["link(win)"],
+            bases=["CCObject"],
+            fields=[
+                Field("m_secret", "int", access="protected"),
+                Field("m_visible", "float"),
+            ],
+        )
+        root = Root(classes=[ccobject, cls])
+
+        plan = collect_plan(root, "win")
+        files = emit_luau_types(root, "win", plan=plan)
+
+        bound_names = [field.name for _, field in plan.field_targets_by_class.get("Foo", [])]
+        self.assertEqual(bound_names, ["m_visible"])
+        self.assertIn("-- skipped m_secret: inaccessible", types_text(files))
+
     def test_inaccessible_field_type_is_not_bound(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")
         ccnode = Class(name="CCNode", namespace="cocos2d", bases=["CCObject"])
@@ -1018,6 +1038,6 @@ class GeneratedSafetyTests(unittest.TestCase):
 
         self.assertEqual(plan.field_targets_by_class.get("CCParticleSystem", []), [])
         self.assertIn(
-            "-- skipped m_pBatchNode: inaccessible-type:CCParticleBatchNode",
+            "-- skipped m_pBatchNode: not-callable-type:win:CCParticleBatchNode",
             types_text(files),
         )
