@@ -504,24 +504,41 @@ class WebSocketGuardTests(unittest.TestCase):
         )
 
     def test_websocket_callbacks_queue_to_main_thread(self) -> None:
-        for rel_path, fn in (
-            (_WEBSOCKET_CONNECTION, "queueOpenEvent"),
-            (_WEBSOCKET_CONNECTION, "queueMessageEvent"),
-            (_WEBSOCKET_CONNECTION, "queueCloseEvent"),
-            (_WEBSOCKET_CONNECTION, "queueErrorEvent"),
-            (_WEBSOCKET_SERVER, "queueClientConnectEvent"),
-            (_WEBSOCKET_SERVER, "queueClientMessageEvent"),
-            (_WEBSOCKET_SERVER, "queueClientDisconnectEvent"),
-            (_WEBSOCKET_SERVER, "queueServerErrorEvent"),
-        ):
-            with self.subTest(fn=fn):
-                source = _read_repo_file(rel_path)
-                body = _function_body(source, fn, ret="void")
-                self.assertIn(
-                    "queueInMainThread",
-                    body,
-                    f"{fn} must defer websocket callbacks to the main thread",
-                )
+        internal = _read_repo_file(_WEBSOCKET_INTERNAL)
+        start = internal.find("void queueWsEvent(")
+        self.assertNotEqual(start, -1, "missing shared queueWsEvent helper")
+        end = internal.find("inline constexpr char kWsConnectionClosedMsg", start)
+        template_body = internal[start:end]
+        self.assertIn(
+            "geode::queueInMainThread",
+            template_body,
+            "queueWsEvent must defer websocket callbacks to the main thread",
+        )
+        self.assertIn(
+            "stopped.load()",
+            template_body,
+            "queueWsEvent must drop events for stopped owners",
+        )
+
+        conn_source = _read_repo_file(_WEBSOCKET_CONNECTION)
+        open_body = _function_body(conn_source, "queueOpenEvent", ret="void")
+        self.assertIn(
+            "queueInMainThread",
+            open_body,
+            "queueOpenEvent must defer to the main thread",
+        )
+        self.assertGreaterEqual(
+            conn_source.count("queueWsEvent<"),
+            3,
+            "connection message/close/error events must route through queueWsEvent",
+        )
+
+        server_source = _read_repo_file(_WEBSOCKET_SERVER)
+        self.assertGreaterEqual(
+            server_source.count("queueWsEvent<"),
+            4,
+            "server connect/message/disconnect/error events must route through queueWsEvent",
+        )
 
     def test_websocket_shutdown_hook_clears_state(self) -> None:
         source = _read_repo_file(_WEBSOCKET_INTERNAL)
@@ -815,12 +832,30 @@ class ImGuiGuardTests(unittest.TestCase):
 class ErrorSemanticsGuardTests(unittest.TestCase):
     def test_usertype_field_get_raises_on_failure(self) -> None:
         source = _read_repo_file(_USERTYPE)
-        body = _function_body(source, "usertypeIndex")
-        self.assertIn('luaL_error(L, "usertype field get failed")', body)
+        index_body = _function_body(source, "usertypeIndex")
+        self.assertIn(
+            "tryInvokeFieldAccessor",
+            index_body,
+            "usertype field get must delegate to the shared field accessor",
+        )
+        self.assertIn(
+            '"usertype field get failed"',
+            index_body,
+            "usertype field get must supply a failure message to the accessor",
+        )
+        helper_start = source.find("bool tryInvokeFieldAccessor")
+        self.assertNotEqual(helper_start, -1, "missing tryInvokeFieldAccessor helper")
+        helper_end = source.find("int usertypeIndex", helper_start)
+        helper_body = source[helper_start:helper_end]
+        self.assertIn(
+            'luaL_error(L, "%s", failMsg)',
+            helper_body,
+            "field accessor must raise on protected-call failure, not silently return nil",
+        )
         self.assertNotRegex(
-            body,
-            r"invokeFieldAccessor\([^)]+\)\)\s*\{\s*return 1;\s*\}\s*lua_settop\(L, top\);\s*lua_pushnil\(L\);\s*return 1;",
-            "usertype field get must not silently return nil on protected-call failure",
+            helper_body,
+            r"invokeFieldAccessor\([^)]*\)\)\s*\{\s*return true;\s*\}\s*lua_settop\(L, top\);\s*lua_pushnil",
+            "field accessor must not silently push nil on protected-call failure",
         )
 
     def test_fs_exists_returns_error_on_filesystem_failure(self) -> None:
