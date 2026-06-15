@@ -8,6 +8,7 @@ from helpers import (
     DelegateSpec,  # type: ignore[import-unresolved]
     collect_delegate_specs,  # type: ignore[import-unresolved]
     cpp_emit_supported,  # type: ignore[import-unresolved]
+    emit_gen_cpp,  # type: ignore[import-unresolved]
     emit_gen_hpp,  # type: ignore[import-unresolved]
     emit_override,  # type: ignore[import-unresolved]
 )
@@ -84,6 +85,27 @@ class DelegateGeneratorTests(unittest.TestCase):
         text = emit_override(spec, spec.methods[0])
         self.assertIn("void setFrameSize(float arg, float arg1) override", text)
         self.assertIn("Ctx ctx{ arg, arg1 }", text)
+
+    def test_table_view_delegate_emits_ccindexpath_reference(self) -> None:
+        specs = collect_delegate_specs()
+        spec = specs["TableViewDelegate"]
+        method = next(m for m in spec.methods if m.name == "didSelectRowAtIndexPath")
+        self.assertEqual(method.args[0][0], "CCIndexPath&")
+        text = emit_override(spec, method)
+        self.assertIn(
+            "void didSelectRowAtIndexPath(CCIndexPath& indexPath, TableView* tableView) override",
+            text,
+        )
+
+    def test_register_unregister_cast_use_qualified_cxx_type(self) -> None:
+        specs = collect_delegate_specs()
+        cxx = "cocos2d::extension::CCEditBoxDelegate"
+        spec = specs[cxx]
+        hpp = emit_gen_hpp({cxx: spec})
+        cpp = emit_gen_cpp({cxx: spec})
+        cast = f"static_cast<{cxx}*>"
+        self.assertIn(f"unregisterInterface({cast}", hpp)
+        self.assertIn(f"registerInterface({cast}", cpp)
 
 
 if __name__ == "__main__":

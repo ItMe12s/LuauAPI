@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from luau_codegen.cli.io import _write_if_changed
-from luau_codegen.convert.type_normalization import strip_ref
+from luau_codegen.convert.type_normalization import is_reference_type, strip_ref
 
 if TYPE_CHECKING:
     from luau_codegen.model import delegate_specs as delegate_specs_module
@@ -443,7 +443,9 @@ def cxx_emit_param(param_type: str, name: str) -> str:
     if n in ("enumKeyCodes", "cocos2d::enumKeyCodes"):
         return f"cocos2d::enumKeyCodes {name}"
     if n == "CCIndexPath":
-        return f"CCIndexPath& {name}"
+        if is_reference_type(param_type):
+            return f"CCIndexPath& {name}"
+        return f"CCIndexPath {name}"
     if "gd::string" in param_type and param_type.strip().endswith("&"):
         return f"gd::string const& {name}"
     return f"{cxx_ctx_type(param_type)} {name}"
@@ -564,13 +566,12 @@ def emit_gen_hpp(specs: dict[str, DelegateSpec]) -> str:
                 methods.append(textwrap.indent(o, "        "))
         if not methods:
             continue
-        base = spec.cxx_type.split("::")[-1]
         classes.append(
             f"    class {spec.cpp_class} : public {spec.cxx_type}, public cocos2d::CCObject {{\n"
             f"    public:\n"
             f"        static {spec.cpp_class}* create(lua_State* L, int tableIndex);\n"
             f"        ~{spec.cpp_class}() override {{\n"
-            f"            LuaDelegateBase::unregisterInterface(static_cast<{base}*>(this));\n"
+            f"            LuaDelegateBase::unregisterInterface(static_cast<{spec.cxx_type}*>(this));\n"
             f"        }}\n" + "\n".join(methods) + "\n    private:\n"
             "        std::shared_ptr<LuaRef> m_table;\n"
             "    };"

@@ -22,6 +22,7 @@ from luau_codegen.emit.delegates import (  # type: ignore[import-unresolved]
     collect as collect_delegate_specs,
     cpp_emit_supported,
     emit_gen_hpp,
+    emit_gen_cpp,
     emit_override,
     fallback_bindings_dir,
     install_delegate_specs_module,
@@ -257,6 +258,7 @@ __all__ = [
     "collect_delegate_specs",
     "cpp_emit_supported",
     "emit_gen_hpp",
+    "emit_gen_cpp",
     "emit_override",
     # helpers
     "resolve_test_bindings_dir",

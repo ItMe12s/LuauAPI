@@ -64,6 +64,20 @@ class CCEGLViewProtocol {
         self.assertNotIn("setTouchDelegate", methods)
         self.assertNotIn("handleTouchesBegin", methods)
 
+    def test_parse_delegate_preserves_ccindexpath_reference(self) -> None:
+        bro = """
+class TableViewDelegate {
+    virtual void didSelectRowAtIndexPath(CCIndexPath& indexPath, TableView* tableView) = inline;
+};
+"""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = os.path.join(tmpdir, "TableView.bro")
+            with open(path, "w", encoding="utf-8") as f:
+                f.write(bro)
+            parsed = parse_broma(tmpdir)
+        method = parsed["TableViewDelegate"][0]
+        self.assertEqual(method.args[0][0], "CCIndexPath&")
+
     def test_collect_delegate_ptrs_from_setter_signatures(self) -> None:
         bro = """
 class Holder {

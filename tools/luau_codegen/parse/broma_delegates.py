@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+from luau_codegen.convert.type_normalization import normalize_type
 from luau_codegen.parse.broma import parse_file
 from luau_codegen.parse.text import strip_comments
 
@@ -32,7 +33,7 @@ def _method_to_delegate(method, norm) -> tuple[str, str, list[tuple[str, str]]] 
         return None
     if lua_for(method.ret) is None:
         return None
-    args = [(norm(a.type), a.name or f"arg{i}") for i, a in enumerate(method.args)]
+    args = [(normalize_type(a.type), a.name or f"arg{i}") for i, a in enumerate(method.args)]
     if any(lua_for(t) is None for t, _ in args):
         return None
     return method.name, method.ret, args

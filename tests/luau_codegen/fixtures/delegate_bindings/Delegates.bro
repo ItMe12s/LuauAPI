@@ -379,13 +379,13 @@ class TableViewCellDelegate {
 };
 
 class TableViewDelegate {
-    virtual void willTweenToIndexPath(CCIndexPath indexPath, TableViewCell* cell, TableView* tableView) = inline;
-    virtual void didEndTweenToIndexPath(CCIndexPath indexPath, TableView* tableView) = inline;
-    virtual void TableViewWillDisplayCellForRowAtIndexPath(CCIndexPath indexPath, TableViewCell* cell, TableView* tableView) = inline;
-    virtual void TableViewDidDisplayCellForRowAtIndexPath(CCIndexPath indexPath, TableViewCell* cell, TableView* tableView) = inline;
-    virtual void TableViewWillReloadCellForRowAtIndexPath(CCIndexPath indexPath, TableViewCell* cell, TableView* tableView) = inline;
-    virtual float cellHeightForRowAtIndexPath(CCIndexPath indexPath, TableView* tableView) = inline;
-    virtual void didSelectRowAtIndexPath(CCIndexPath indexPath, TableView* tableView) = inline;
+    virtual void willTweenToIndexPath(CCIndexPath& indexPath, TableViewCell* cell, TableView* tableView) = inline;
+    virtual void didEndTweenToIndexPath(CCIndexPath& indexPath, TableView* tableView) = inline;
+    virtual void TableViewWillDisplayCellForRowAtIndexPath(CCIndexPath& indexPath, TableViewCell* cell, TableView* tableView) = inline;
+    virtual void TableViewDidDisplayCellForRowAtIndexPath(CCIndexPath& indexPath, TableViewCell* cell, TableView* tableView) = inline;
+    virtual void TableViewWillReloadCellForRowAtIndexPath(CCIndexPath& indexPath, TableViewCell* cell, TableView* tableView) = inline;
+    virtual float cellHeightForRowAtIndexPath(CCIndexPath& indexPath, TableView* tableView) = inline;
+    virtual void didSelectRowAtIndexPath(CCIndexPath& indexPath, TableView* tableView) = inline;
 };
 
 class TextAreaDelegate {
