@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import dataclasses
 from typing import Dict, Optional
 
 from luau_codegen.convert import type_containers as containers
@@ -118,6 +119,15 @@ def _delegate_lua_type(spec) -> str:
     return "{ " + ", ".join(fields) + " }"
 
 
+def _with_out_ptr_flags(info: TypeInfo) -> TypeInfo:
+    return dataclasses.replace(
+        info,
+        is_ref=False,
+        is_out=True,
+        is_vector_ptr=True,
+    )
+
+
 def _classify_core(
     t: str,
     object_classes: Dict[str, Class],
@@ -132,10 +142,12 @@ def _classify_core(
     is_out = is_out_reference(t)
     s = strip_ref(t)
     n = normalize_type(s)
-    base = short_name(without_pointer(n)) if n.endswith("*") else short_name(n)
-
     if n.endswith("*"):
         base = n[:-1].strip()
+    else:
+        base = short_name(n)
+
+    if n.endswith("*"):
         ptr_container = containers.parse_container(
             n[:-1].strip(), object_classes, TypeInfo, ctx=ctx
         )
@@ -149,55 +161,18 @@ def _classify_core(
             )
         ptr_primitive = containers.parse_primitive_vector(base, object_classes, TypeInfo, ctx=ctx)
         if ptr_primitive is not None:
-            return TypeInfo(
-                ptr_primitive.kind,
-                ptr_primitive.cxx_type,
-                ptr_primitive.lua_type,
-                ptr_primitive.class_name,
-                is_ref=False,
-                is_out=True,
-                is_vector_ptr=True,
-                element_type=ptr_primitive.element_type,
-            )
+            return _with_out_ptr_flags(ptr_primitive)
         ptr_std_array = containers.parse_std_array(base, object_classes, TypeInfo, ctx=ctx)
         if ptr_std_array is not None:
-            return TypeInfo(
-                ptr_std_array.kind,
-                ptr_std_array.cxx_type,
-                ptr_std_array.lua_type,
-                ptr_std_array.class_name,
-                is_ref=False,
-                is_out=True,
-                is_vector_ptr=True,
-                element_type=ptr_std_array.element_type,
-                array_size=ptr_std_array.array_size,
-            )
+            return _with_out_ptr_flags(ptr_std_array)
         ptr_nested = containers.parse_nested_primitive_vector_view(
             base, object_classes, TypeInfo, ctx=ctx
         )
         if ptr_nested is not None:
-            return TypeInfo(
-                ptr_nested.kind,
-                ptr_nested.cxx_type,
-                ptr_nested.lua_type,
-                ptr_nested.class_name,
-                is_ref=False,
-                is_out=True,
-                is_vector_ptr=True,
-                element_type=ptr_nested.element_type,
-            )
+            return _with_out_ptr_flags(ptr_nested)
         ptr_vector = containers.parse_vector_view(base, object_classes, TypeInfo, ctx=ctx)
         if ptr_vector is not None:
-            return TypeInfo(
-                ptr_vector.kind,
-                ptr_vector.cxx_type,
-                ptr_vector.lua_type,
-                ptr_vector.class_name,
-                is_ref=False,
-                is_out=True,
-                is_vector_ptr=True,
-                element_type=ptr_vector.element_type,
-            )
+            return _with_out_ptr_flags(ptr_vector)
 
     std_array = containers.parse_std_array(n, object_classes, TypeInfo, ctx=ctx)
     if std_array is not None:
@@ -418,34 +393,11 @@ def classify_return(
     )
     if info and info.kind != "void":
         if info.kind == "object" and not info.lua_type.endswith("?"):
-            info = TypeInfo(
-                info.kind,
-                info.cxx_type,
-                f"{info.class_name}?",
-                info.class_name,
-                info.is_ref,
-                info.is_out,
-                info.is_vector_ptr,
-            )
+            info = dataclasses.replace(info, lua_type=f"{info.class_name}?")
         elif info.kind == "opaque_handle" and not info.lua_type.endswith("?"):
-            info = TypeInfo(
-                info.kind,
-                info.cxx_type,
-                f"{info.lua_type}?",
-                is_ref=info.is_ref,
-                is_out=info.is_out,
-                is_vector_ptr=info.is_vector_ptr,
-            )
+            info = dataclasses.replace(info, lua_type=f"{info.lua_type}?")
         elif info.kind == "delegate":
-            info = TypeInfo(
-                info.kind,
-                info.cxx_type,
-                f"{info.lua_type}?",
-                info.class_name,
-                info.is_ref,
-                info.is_out,
-                info.is_vector_ptr,
-            )
+            info = dataclasses.replace(info, lua_type=f"{info.lua_type}?")
     return info
 
 

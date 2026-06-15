@@ -48,7 +48,7 @@ def _map_check_call(info: TypeInfo) -> str:
             return f"checkUnorderedPairKeyMap<{first}, {second}, {value}>"
         return f"checkPairKeyMap<{first}, {second}, {value}>"
     key, value = _map_key_value_cxx(info)
-    return f"{_map_check_fn(info.kind)}<{key}, {value}>"
+    return f"{_MAP_CHECK_FNS[info.kind]}<{key}, {value}>"
 
 
 def _map_push_call(info: TypeInfo) -> str:
@@ -61,7 +61,7 @@ def _map_push_call(info: TypeInfo) -> str:
             return f"pushUnorderedPairKeyMap<{first}, {second}, {value}>"
         return f"pushPairKeyMap<{first}, {second}, {value}>"
     key, value = _map_key_value_cxx(info)
-    return f"{_map_push_fn(info.kind)}<{key}, {value}>"
+    return f"{_MAP_PUSH_FNS[info.kind]}<{key}, {value}>"
 
 
 def _set_elem_cxx(info: TypeInfo) -> str:
@@ -76,28 +76,20 @@ def _pair_component_cxx(info: TypeInfo) -> tuple[str, str]:
     return info.key_type.cxx_type, info.value_type.cxx_type
 
 
-def _map_check_fn(kind: str) -> str:
-    if kind == "unordered_map":
-        return "checkUnorderedMap"
-    return "checkMap"
+_MAP_CHECK_FNS = {"map": "checkMap", "unordered_map": "checkUnorderedMap"}
+_MAP_PUSH_FNS = {"map": "pushMap", "unordered_map": "pushUnorderedMap"}
+_SET_CHECK_FNS = {"set": "checkSet", "unordered_set": "checkUnorderedSet"}
+_SET_PUSH_FNS = {"set": "pushSet", "unordered_set": "pushUnorderedSet"}
 
 
-def _map_push_fn(kind: str) -> str:
-    if kind == "unordered_map":
-        return "pushUnorderedMap"
-    return "pushMap"
-
-
-def _set_check_fn(kind: str) -> str:
-    if kind == "unordered_set":
-        return "checkUnorderedSet"
-    return "checkSet"
-
-
-def _set_push_fn(kind: str) -> str:
-    if kind == "unordered_set":
-        return "pushUnorderedSet"
-    return "pushSet"
+def _luax_numeric_check_type(cxx: str) -> str:
+    if cxx in ("float", "double"):
+        return cxx
+    if cxx in WIDE_INTEGER_TYPES:
+        return "double"
+    if cxx in UNSIGNED_NUMERIC_TYPES:
+        return "unsigned"
+    return "int"
 
 
 def _vector_view_pointee_cxx(info: TypeInfo) -> str:
@@ -159,14 +151,11 @@ def emit_stack_check(
     if info.kind == "bool":
         return [f'        {_prefix(declare, var)} = luax::check<bool>(L, {idx}, "{label}");\n']
     if info.kind in ("number", "enum"):
-        if cxx in ("float", "double"):
-            return [f'        {_prefix(declare, var)} = luax::check<{cxx}>(L, {idx}, "{label}");\n']
-        if cxx in WIDE_INTEGER_TYPES:
-            check_type = "double"
-        elif cxx in UNSIGNED_NUMERIC_TYPES:
-            check_type = "unsigned"
-        else:
-            check_type = "int"
+        check_type = _luax_numeric_check_type(cxx)
+        if check_type in ("float", "double"):
+            return [
+                f'        {_prefix(declare, var)} = luax::check<{check_type}>(L, {idx}, "{label}");\n'
+            ]
         return [
             f'        {_prefix(declare, var)} = static_cast<{cxx}>(luax::check<{check_type}>(L, {idx}, "{label}"));\n'
         ]
@@ -263,7 +252,7 @@ def emit_stack_check(
         return [f'        {_prefix(declare, var)} = luax::{check_fn}(L, {idx}, "{label}");\n']
     if info.kind in ("set", "unordered_set"):
         elem = _set_elem_cxx(info)
-        check_fn = _set_check_fn(info.kind)
+        check_fn = _SET_CHECK_FNS[info.kind]
         return [
             f'        {_prefix(declare, var)} = luax::{check_fn}<{elem}>(L, {idx}, "{label}");\n'
         ]
@@ -340,7 +329,7 @@ def _push_impl(
         return [f"{indent}luax::{push_fn}(L, {expr});\n"]
     if info.kind in ("set", "unordered_set"):
         elem = _set_elem_cxx(info)
-        push_fn = _set_push_fn(info.kind)
+        push_fn = _SET_PUSH_FNS[info.kind]
         return [f"{indent}luax::{push_fn}<{elem}>(L, {expr});\n"]
     if info.kind == "pair":
         first, second = _pair_component_cxx(info)
@@ -376,12 +365,7 @@ def _emit_callback_pop(var: str, ret: TypeInfo) -> list[str]:
         ]
     if ret.kind == "number":
         cxx = ret.cxx_type
-        if cxx in ("float", "double"):
-            check = cxx
-        elif cxx in UNSIGNED_NUMERIC_TYPES:
-            check = "unsigned"
-        else:
-            check = "int"
+        check = _luax_numeric_check_type(cxx)
         return [
             "                +[](lua_State* L, void* raw) {\n",
             f'                    *static_cast<{cxx}*>(raw) = static_cast<{cxx}>(luax::check<{check}>(L, -1, "{var} callback return"));\n',
@@ -559,15 +543,6 @@ def sel_call_args(var: str, info: TypeInfo, *, handler_first: bool = True) -> li
     if handler_first:
         return [handler, selector]
     return [selector, handler]
-
-
-def check_sel_menu_handler(idx: int, var: str, label: str) -> list[str]:
-    return check_sel_handler(
-        idx,
-        var,
-        TypeInfo("sel", "SEL_MenuHandler", "(sender: CCObject) -> ()", class_name="menu"),
-        label,
-    )
 
 
 def sel_menu_call_args(var: str) -> list[str]:

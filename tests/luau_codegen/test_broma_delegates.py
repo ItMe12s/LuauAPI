@@ -4,8 +4,8 @@ import os
 import tempfile
 import unittest
 
+from luau_codegen.convert.type_normalization import strip_ref  # type: ignore[import-unresolved]
 from luau_codegen.emit.delegates import (  # type: ignore[import-unresolved]
-    norm,
     parse_broma,
 )
 from luau_codegen.parse.broma_delegates import (  # type: ignore[import-unresolved]
@@ -77,7 +77,7 @@ class CustomSongDelegate {
             path = os.path.join(tmpdir, "Holder.bro")
             with open(path, "w", encoding="utf-8") as f:
                 f.write(bro)
-            ptrs = collect_delegate_ptrs(tmpdir, norm=norm)
+            ptrs = collect_delegate_ptrs(tmpdir, norm=strip_ref)
         self.assertIn("CustomSongDelegate", ptrs)
 
     def test_collect_matches_fixture_delegate_count(self) -> None:

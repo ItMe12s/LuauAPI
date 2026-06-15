@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from luau_codegen.cli.io import _write_if_changed
+from luau_codegen.convert.type_normalization import strip_ref
 
 if TYPE_CHECKING:
     from luau_codegen.model import delegate_specs as delegate_specs_module
@@ -25,10 +26,6 @@ def repo_root() -> Path:
 
 def fallback_bindings_dir() -> Path:
     return repo_root() / "tests/luau_codegen/fixtures/delegate_bindings"
-
-
-def delegate_gen_rel_paths() -> tuple[str, ...]:
-    return DELEGATE_GEN_REL_PATHS
 
 
 DELEGATE_SPECS_MODULE = "luau_codegen.model.delegate_specs"
@@ -315,19 +312,8 @@ class DelegateSpec:
     methods: list[DelegateMethod] = field(default_factory=list)
 
 
-def norm(t: str) -> str:
-    s = re.sub(r"\s+", " ", t.strip()).replace(" *", "*").replace("* ", "*")
-    while s.startswith("const "):
-        s = s[6:].strip()
-    while s.endswith(" const"):
-        s = s[:-6].strip()
-    if s.endswith("&"):
-        s = s[:-1].strip()
-    return s
-
-
 def lua_for(cxx: str) -> str | None:
-    n = norm(cxx)
+    n = strip_ref(cxx)
     if n in LUA_TYPES:
         return LUA_TYPES[n]
     if n.endswith("*"):
@@ -360,7 +346,7 @@ def parse_broma(
 
     return parse_delegate_classes(
         resolve_bindings_dir(bindings_dir),
-        norm=norm,
+        norm=strip_ref,
         delegate_method_cls=DelegateMethod,
     )
 
@@ -370,7 +356,7 @@ def collect(bindings_dir: Path | str | None = None) -> dict[str, DelegateSpec]:
 
     bro_dir = resolve_bindings_dir(bindings_dir)
     broma = parse_broma(bro_dir)
-    ptrs = collect_delegate_ptrs(bro_dir, norm=norm)
+    ptrs = collect_delegate_ptrs(bro_dir, norm=strip_ref)
     specs: dict[str, DelegateSpec] = {}
     for ptr in sorted(ptrs):
         if ptr in SKIP or ptr.split("::")[-1] in SKIP:
@@ -431,7 +417,7 @@ def should_emit_method(spec: DelegateSpec, m: DelegateMethod) -> bool:
 def cpp_emit_supported(spec: DelegateSpec, m: DelegateMethod) -> bool:
     if not should_emit_method(spec, m):
         return False
-    nret = norm(m.ret)
+    nret = strip_ref(m.ret)
     if m.ret in ("void", "bool", "int"):
         return True
     if nret in ("gd::string", "char const*", "const char*", "std::string"):
@@ -442,7 +428,7 @@ def cpp_emit_supported(spec: DelegateSpec, m: DelegateMethod) -> bool:
 
 
 def cxx_ctx_type(param_type: str) -> str:
-    n = norm(param_type)
+    n = strip_ref(param_type)
     if n in ("enumKeyCodes", "cocos2d::enumKeyCodes"):
         return "cocos2d::enumKeyCodes"
     if n == "CCIndexPath":
@@ -453,7 +439,7 @@ def cxx_ctx_type(param_type: str) -> str:
 
 
 def cxx_emit_param(param_type: str, name: str) -> str:
-    n = norm(param_type)
+    n = strip_ref(param_type)
     if n in ("enumKeyCodes", "cocos2d::enumKeyCodes"):
         return f"cocos2d::enumKeyCodes {name}"
     if n == "CCIndexPath":
@@ -464,7 +450,7 @@ def cxx_emit_param(param_type: str, name: str) -> str:
 
 
 def push_stmt(t: str, expr: str) -> str:
-    n = norm(t)
+    n = strip_ref(t)
     if n == "cocos2d::CCAcceleration*":
         return textwrap.dedent(
             f"""\
@@ -612,7 +598,7 @@ def emit_override(spec: DelegateSpec, m: DelegateMethod) -> str:
         ctx_block = f"struct Ctx {{ {ctx_fields}; }};\n        Ctx ctx{{ {ctx_init} }};\n        "
     push_fn = f"+[](lua_State* L, void* raw) {{\n            auto* c = static_cast<Ctx*>(raw);\n{pushes}\n        }}"
     push_args = f", {push_fn}, &ctx" if args else ""
-    nret = norm(m.ret)
+    nret = strip_ref(m.ret)
     if m.ret == "void":
         return textwrap.dedent(
             f"""\

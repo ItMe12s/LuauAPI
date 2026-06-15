@@ -16,7 +16,7 @@ from luau_codegen.emit import plan as emit_plan
 from luau_codegen.emit.plan import EmitPlan, ambiguous_overloads
 from luau_codegen.emit.delegates import (
     collect as collect_delegate_specs,
-    delegate_gen_rel_paths,
+    DELEGATE_GEN_REL_PATHS,
     emit_delegate_artifacts,
     install_delegate_specs_module,
 )
@@ -138,7 +138,7 @@ def main(argv: List[str]) -> int:
             log_error(f"I/O failed while writing delegate artifacts: {exc}")
             return 4
         log_info(f"delegates: {len(specs)} specs -> {specs_out}")
-        for rel in delegate_gen_rel_paths():
+        for rel in DELEGATE_GEN_REL_PATHS:
             log_info(f"wrote {os.path.join(args.out, rel)}")
         return 0
 
@@ -210,7 +210,7 @@ def main(argv: List[str]) -> int:
             return code
         for rel in emit_plan.plan_outputs(root, args.platform, plan=plan):
             print(f"src/{rel}")
-        for rel in delegate_gen_rel_paths():
+        for rel in DELEGATE_GEN_REL_PATHS:
             print(rel)
         print(types_gen_rel_path())
         return 0
@@ -221,7 +221,7 @@ def main(argv: List[str]) -> int:
             return code
         for rel in emit_plan.plan_outputs(root, args.platform, plan=plan):
             print(f"binding:src/{rel}")
-        for rel in delegate_gen_rel_paths():
+        for rel in DELEGATE_GEN_REL_PATHS:
             print(f"binding:{rel}")
         print(f"binding:{types_gen_rel_path()}")
         type_files = emit_types.emit(

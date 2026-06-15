@@ -20,6 +20,17 @@ class TypeMapModuleSplitTests(unittest.TestCase):
         )
         self.assertTrue(type_normalization.is_reference_type("int const&"))
 
+    def test_strip_ref_delegate_classifier_samples(self) -> None:
+        for raw, expected in (
+            ("  const  int  &  ", "int"),
+            ("char const*", "char const*"),
+            ("const char*", "char const*"),
+            ("cocos2d::CCNode *", "cocos2d::CCNode*"),
+            ("gd::string &", "gd::string"),
+        ):
+            with self.subTest(raw=raw):
+                self.assertEqual(type_normalization.strip_ref(raw), expected)
+
     def test_container_module_exports_std_array_cap(self) -> None:
         self.assertEqual(type_containers.STD_ARRAY_MAX_SIZE, facade.STD_ARRAY_MAX_SIZE)
 

@@ -35,10 +35,6 @@ from luau_codegen.policy.delegates import (
 STRICT_DIRECT_PLATFORMS: set[str] = {"ios"}
 
 
-def _platform_aliases(target_platform: str) -> set[str]:
-    return platform_aliases(target_platform)
-
-
 def platform_value(m: Method, target_platform: str) -> str:
     value = m.platforms.get(target_platform, "")
     if value:
@@ -66,7 +62,7 @@ def _is_missing_on_platform(m: Method, target_platform: str) -> bool:
     missing = _method_missing_platforms(m)
     if not missing:
         return False
-    return bool(missing & _platform_aliases(target_platform))
+    return bool(missing & platform_aliases(target_platform))
 
 
 def direct_callable(cls: Class, m: Method, target_platform: str) -> bool:

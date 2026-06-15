@@ -851,9 +851,6 @@ class ErrorSemanticsGuardTests(unittest.TestCase):
 class FreeFnManifestSyncTests(unittest.TestCase):
     def test_scanner_and_emitter_share_one_manifest(self) -> None:
         from luau_codegen.model.free_fn_sources import free_function_includes
-        from luau_codegen.parse import geode_sdk
-
-        self.assertIs(geode_sdk._FUNCTION_SOURCES, FREE_FUNCTION_SOURCES)
 
         includes = free_function_includes()
         self.assertEqual(

@@ -392,9 +392,10 @@ class GeodeEnumParserTests(unittest.TestCase):
 
 class ExtraScanScopeTests(unittest.TestCase):
     def test_function_source_manifest_keeps_expected_headers(self) -> None:
+        from luau_codegen.model.free_fn_sources import FREE_FUNCTION_SOURCES
         from luau_codegen.parse import geode_sdk  # type: ignore[import-unresolved]
 
-        rels = {rel for rel, _, _ in geode_sdk._FUNCTION_SOURCES}
+        rels = {rel for rel, _, _ in FREE_FUNCTION_SOURCES}
         self.assertGreaterEqual(
             rels,
             {

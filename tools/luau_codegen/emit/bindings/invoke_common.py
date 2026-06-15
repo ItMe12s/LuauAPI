@@ -88,10 +88,6 @@ def emit_vector_return_push(
     return emit_owned_vector_return_push(ret, expr)
 
 
-def emit_vector_out_push_lines(info: TypeInfo, var: str) -> List[str]:
-    return emit_vector_out_push(info, var)
-
-
 def _anchor_handler(handler: str, variant: str, anchor: str) -> str:
     if variant == "menu":
         return f"luax::anchorMenuHandler({anchor}, {handler});\n"
@@ -152,7 +148,7 @@ def emit_invoke_void_tail(
     )
     if out_refs:
         for arg_idx, oinfo in out_refs:
-            lines.extend(emit_vector_out_push_lines(oinfo, f"arg{arg_idx}"))
+            lines.extend(emit_vector_out_push(oinfo, f"arg{arg_idx}"))
         lines.append(f"        return {len(out_refs)};\n")
     else:
         lines.extend(push_return(ret, "", False))

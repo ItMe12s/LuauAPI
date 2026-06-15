@@ -3,7 +3,8 @@ from __future__ import annotations
 import logging
 import os
 import re
-from typing import List
+from dataclasses import dataclass
+from typing import Iterator, List
 
 from luau_codegen.model.free_fn_sources import FREE_FUNCTION_SOURCES
 
@@ -105,8 +106,6 @@ _FUNC_DECL = re.compile(
     r"GEODE_DLL\s+([A-Za-z_][\w:<>,\s\*&]*?)\s+([A-Za-z_]\w*)\s*\(([^{};]*)\)\s*;"
 )
 
-_FUNCTION_SOURCES = FREE_FUNCTION_SOURCES
-
 
 def _included_headers(sdk_path: str) -> set[str]:
     ui_hpp = os.path.join(sdk_path, "loader", "include", "Geode", "UI.hpp")
@@ -121,21 +120,24 @@ def _included_headers(sdk_path: str) -> set[str]:
     return headers
 
 
-def scan_geode_sdk(sdk_path: str) -> List[Class]:
+def _iter_ui_headers(sdk_path: str) -> Iterator[tuple[str, str]]:
     ui_dir = os.path.join(sdk_path, "loader", "include", "Geode", "ui")
     if not os.path.isdir(ui_dir):
-        return []
-
+        return
     allowed = _included_headers(sdk_path)
-
-    classes: List[Class] = []
     for filename in sorted(os.listdir(ui_dir)):
         if not filename.endswith(".hpp"):
             continue
         if allowed and filename not in allowed:
             continue
+        yield os.path.join(ui_dir, filename), filename
+
+
+def scan_geode_sdk(sdk_path: str) -> List[Class]:
+    classes: List[Class] = []
+    for path, filename in _iter_ui_headers(sdk_path):
         try:
-            classes.extend(_scan_header(os.path.join(ui_dir, filename)))
+            classes.extend(_scan_header(path))
         except Exception as exc:
             _record_scan_failure(f"[luauapi] failed to scan {filename}: {exc}")
     return classes
@@ -156,20 +158,13 @@ def scan_geode_enums(
     bindings_dir: str | None = None,
 ) -> dict[str, EnumInfo]:
     include_dir = os.path.join(sdk_path, "loader", "include", "Geode")
-    ui_dir = os.path.join(include_dir, "ui")
-    allowed = _included_headers(sdk_path)
     out: dict[str, EnumInfo] = {}
 
-    if os.path.isdir(ui_dir):
-        for filename in sorted(os.listdir(ui_dir)):
-            if not filename.endswith(".hpp"):
-                continue
-            if allowed and filename not in allowed:
-                continue
-            try:
-                out.update(_scan_header_enums(os.path.join(ui_dir, filename)))
-            except Exception as exc:
-                _record_scan_failure(f"[luauapi] failed to scan enums {filename}: {exc}")
+    for path, filename in _iter_ui_headers(sdk_path):
+        try:
+            out.update(_scan_header_enums(path))
+        except Exception as exc:
+            _record_scan_failure(f"[luauapi] failed to scan enums {filename}: {exc}")
 
     seen_headers: set[str] = set()
     for enums_hpp in [
@@ -193,7 +188,7 @@ def scan_geode_enums(
 def scan_geode_functions(sdk_path: str) -> List[Function]:
     include_dir = os.path.join(sdk_path, "loader", "include", "Geode")
     out: List[Function] = []
-    for rel, namespaces, names in _FUNCTION_SOURCES:
+    for rel, namespaces, names in FREE_FUNCTION_SOURCES:
         path = os.path.join(include_dir, *rel.split("/"))
         if not os.path.isfile(path):
             continue
@@ -204,16 +199,39 @@ def scan_geode_functions(sdk_path: str) -> List[Function]:
     return out
 
 
-def scan_geode_ccnode_additions(sdk_path: str) -> Class | None:
-    path = os.path.join(
-        sdk_path,
-        "loader",
-        "include",
-        "Geode",
-        "cocos",
-        "base_nodes",
-        "CCNode.h",
-    )
+@dataclass(frozen=True)
+class _CocosClassScan:
+    name: str
+    rel_parts: tuple[str, ...]
+    decl: re.Pattern[str]
+    bases: tuple[str, ...]
+    geode_only: bool
+    method_allowlist: frozenset[str] | None = None
+    body_filter: re.Pattern[str] | None = None
+
+
+_COCOS_CLASS_SCANS = (
+    _CocosClassScan(
+        "CCNode",
+        ("cocos", "base_nodes", "CCNode.h"),
+        _CCNODE_DECL,
+        ("CCObject",),
+        True,
+    ),
+    _CocosClassScan(
+        "CCArray",
+        ("cocos", "cocoa", "CCArray.h"),
+        _CCARRAY_DECL,
+        ("CCObject",),
+        False,
+        _CCARRAY_READ_METHOD_ALLOWLIST,
+        _GEODE_FRIEND_MODIFY_LINE,
+    ),
+)
+
+
+def _scan_cocos_class_addition(sdk_path: str, spec: _CocosClassScan) -> Class | None:
+    path = os.path.join(sdk_path, "loader", "include", "Geode", *spec.rel_parts)
     if not os.path.isfile(path):
         return None
 
@@ -222,20 +240,23 @@ def scan_geode_ccnode_additions(sdk_path: str) -> Class | None:
     text = strip_comments(text)
     text = _strip_preproc(text)
 
-    match = _CCNODE_DECL.search(text)
+    match = spec.decl.search(text)
     if not match:
         return None
 
     brace_start = match.end() - 1
     brace_end = balanced_delimiter_end(text, brace_start)
     body = text[brace_start + 1 : brace_end]
+    if spec.body_filter is not None:
+        body = spec.body_filter.sub("", body)
     line = text[: match.start()].count("\n") + 1
     methods = _extract_public_methods(
-        "CCNode",
+        spec.name,
         body,
         line,
-        geode_only=True,
+        geode_only=spec.geode_only,
         include_bodies=False,
+        method_allowlist=spec.method_allowlist,
     )
     if not methods:
         return None
@@ -244,64 +265,21 @@ def scan_geode_ccnode_additions(sdk_path: str) -> Class | None:
             method.platforms.setdefault(platform, "link")
 
     return Class(
-        name="CCNode",
+        name=spec.name,
         namespace="cocos2d",
-        bases=["CCObject"],
+        bases=list(spec.bases),
         methods=methods,
         source=path,
         line=line,
     )
+
+
+def scan_geode_ccnode_additions(sdk_path: str) -> Class | None:
+    return _scan_cocos_class_addition(sdk_path, _COCOS_CLASS_SCANS[0])
 
 
 def scan_geode_ccarray_additions(sdk_path: str) -> Class | None:
-    path = os.path.join(
-        sdk_path,
-        "loader",
-        "include",
-        "Geode",
-        "cocos",
-        "cocoa",
-        "CCArray.h",
-    )
-    if not os.path.isfile(path):
-        return None
-
-    with open(path, "r", encoding="utf-8") as f:
-        text = f.read()
-    text = strip_comments(text)
-    text = _strip_preproc(text)
-
-    match = _CCARRAY_DECL.search(text)
-    if not match:
-        return None
-
-    brace_start = match.end() - 1
-    brace_end = balanced_delimiter_end(text, brace_start)
-    body = text[brace_start + 1 : brace_end]
-    body = _GEODE_FRIEND_MODIFY_LINE.sub("", body)
-    line = text[: match.start()].count("\n") + 1
-    methods = _extract_public_methods(
-        "CCArray",
-        body,
-        line,
-        geode_only=False,
-        include_bodies=False,
-        method_allowlist=_CCARRAY_READ_METHOD_ALLOWLIST,
-    )
-    if not methods:
-        return None
-    for method in methods:
-        for platform in _SCANNED_LINK_PLATFORMS:
-            method.platforms.setdefault(platform, "link")
-
-    return Class(
-        name="CCArray",
-        namespace="cocos2d",
-        bases=["CCObject"],
-        methods=methods,
-        source=path,
-        line=line,
-    )
+    return _scan_cocos_class_addition(sdk_path, _COCOS_CLASS_SCANS[1])
 
 
 def _scan_header_functions(path: str, namespaces, names) -> List[Function]:
