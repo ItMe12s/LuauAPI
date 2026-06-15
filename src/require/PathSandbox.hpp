@@ -2,6 +2,7 @@
 
 #include "core/Config.hpp"
 #include "require/PathRules.hpp"
+#include "require/VirtualChunk.hpp"
 
 #if defined(LUAUAPI_HOST_TESTS)
     #include <Geode/utils/string.hpp>
@@ -231,16 +232,12 @@ namespace luax {
             return scriptErr<std::filesystem::path>("chunk name is empty");
         }
 
-        std::string text(rawChunkName);
-        if (geode::utils::string::startsWith(text, "@")) {
-            text.erase(text.begin());
-        }
-
-        if (text.empty()) {
+        auto scriptPath = virtualChunkScriptPath(rawChunkName);
+        if (scriptPath.empty()) {
             return scriptErr<std::filesystem::path>("chunk name is empty");
         }
 
-        auto validated = validateResourcePath(std::filesystem::path(text));
+        auto validated = validateResourcePath(std::filesystem::path(scriptPath));
         if (validated.isErr()) {
             auto const& message = validated.unwrapErr();
             if (message == "resource path is empty") {

@@ -347,6 +347,7 @@ if(LUAUAPI_BUILD_TESTS)
         src/bindings/task/TaskScheduler.cpp
         src/require/BytecodeCacheKey.cpp
         src/require/Requirer.cpp
+        src/require/VirtualChunk.cpp
         src/core/Loadstring.cpp
         src/core/Runtime.cpp
         src/render3d/assets/MeshAsset.cpp

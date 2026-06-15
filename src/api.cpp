@@ -1,5 +1,6 @@
 #include "core/Runtime.hpp"
 #include "require/PathSandbox.hpp"
+#include "require/VirtualChunk.hpp"
 
 #include <LuauAPI.hpp>
 
@@ -48,12 +49,27 @@ namespace {
         return geode::Ok();
     }
 
-    geode::Result<std::string> prepareChunkName(std::string_view chunkName) {
+    geode::Result<std::string> prepareChunkName(
+        std::filesystem::path const& resourcesRoot, std::string_view chunkName
+    ) {
+        if (virtualChunkHasModPrefix(chunkName)) {
+            auto chunkResult = luax::normalizeVirtualPath(chunkName);
+            if (chunkResult.isErr()) {
+                return geode::Err(chunkResult.unwrapErr());
+            }
+            auto parts = luax::parseVirtualChunk(chunkName);
+            return geode::Ok(luax::formatVirtualChunk(parts.modId, parts.scriptPath));
+        }
+
         auto chunkResult = luax::normalizeVirtualPath(chunkName);
         if (chunkResult.isErr()) {
             return geode::Err(chunkResult.unwrapErr());
         }
-        return geode::Ok("@" + luax::normalizedPathString(chunkResult.unwrap()));
+        auto scriptPath = luax::normalizedPathString(chunkResult.unwrap());
+        if (auto modId = luax::modIdForResourcesRoot(resourcesRoot)) {
+            return geode::Ok(luax::formatVirtualChunk(*modId, scriptPath));
+        }
+        return geode::Ok("@" + scriptPath);
     }
 
     geode::Result<void> executeScriptOnMain(
@@ -138,7 +154,7 @@ namespace {
         std::error_code ec;
         auto rel = std::filesystem::relative(path, root, ec);
         auto chunkPath = ec ? path.filename() : rel;
-        auto chunkResult = prepareChunkName(luax::normalizedPathString(chunkPath));
+        auto chunkResult = prepareChunkName(root, luax::normalizedPathString(chunkPath));
         if (chunkResult.isErr()) {
             return geode::Err(chunkResult.unwrapErr());
         }
@@ -157,7 +173,7 @@ namespace {
             return geode::Err(rootResult.unwrapErr());
         }
 
-        auto chunkResult = prepareChunkName(chunkName);
+        auto chunkResult = prepareChunkName(rootResult.unwrap(), chunkName);
         if (chunkResult.isErr()) {
             return geode::Err(chunkResult.unwrapErr());
         }

@@ -11,6 +11,7 @@
 #endif
 #include "require/BytecodeCacheKey.hpp"
 #include "require/PathSandbox.hpp"
+#include "require/VirtualChunk.hpp"
 #if defined(LUAUAPI_HOST_TESTS)
     #include "framework/usertype/Usertype.hpp"
 #endif
@@ -139,7 +140,7 @@ namespace luax {
 #endif
         }
 
-        void replaceRootPrefix(std::string& text, std::string_view rootText) {
+        void replaceRootPrefix(std::string& text, std::string_view rootText, std::string_view replacement) {
             if (rootText.empty()) return;
             std::size_t pos = 0;
             while (pos < text.size()) {
@@ -150,9 +151,16 @@ namespace luax {
                 while (tail < text.size() && (text[tail] == '/' || text[tail] == '\\')) {
                     ++tail;
                 }
-                text.replace(found, tail - found, "@");
-                pos = found + 1;
+                text.replace(found, tail - found, replacement);
+                pos = found + replacement.size();
             }
+        }
+
+        std::string modRedactionToken(std::filesystem::path const& resourcesRoot) {
+            if (auto modId = modIdForResourcesRoot(resourcesRoot)) {
+                return formatVirtualChunk(*modId, "");
+            }
+            return "@";
         }
 
         std::string redactHostPaths(std::string_view text, std::filesystem::path const& resourcesRoot) {
@@ -163,11 +171,12 @@ namespace luax {
             if (rootResult.isErr()) return out;
 
             auto rootText = filesystemPathString(rootResult.unwrap());
-            replaceRootPrefix(out, rootText);
+            auto replacement = modRedactionToken(resourcesRoot);
+            replaceRootPrefix(out, rootText, replacement);
 
             auto genericRoot = normalizedPathString(rootResult.unwrap());
             if (genericRoot != rootText) {
-                replaceRootPrefix(out, genericRoot);
+                replaceRootPrefix(out, genericRoot, replacement);
             }
 
             return out;
@@ -444,7 +453,17 @@ namespace luax {
         }
 
         char const* chunkData = luaL_optstring(L, 2, "=loadstring");
+        std::string chunkStorage;
         std::string_view chunk(chunkData ? chunkData : "=loadstring");
+        if (!virtualChunkHasModPrefix(chunk) && !self->m_resourcesRoot.empty()) {
+            if (auto modId = modIdForResourcesRoot(self->m_resourcesRoot)) {
+                auto scriptPath = stripVirtualChunkAt(chunk);
+                if (!scriptPath.empty() && scriptPath.front() != '=') {
+                    chunkStorage = formatVirtualChunk(*modId, scriptPath);
+                    chunk = chunkStorage;
+                }
+            }
+        }
         auto bytecodeResult =
             self->getOrCompileBytecode(loadstringBytecodeKey(chunk, source), source);
         if (bytecodeResult.isErr()) {
@@ -725,7 +744,10 @@ namespace luax {
 
         int baseTop = lua_gettop(m_state) - nargs;
         if (nargs < 0 || baseTop < 1 || !lua_isfunction(m_state, baseTop)) {
-            auto err = fmt::format("[{}] luau protectedCall missing function", context);
+            auto err = fmt::format(
+                "[{}] luau protectedCall missing function",
+                enrichCallbackContext(m_resourcesRoot, context)
+            );
             geode::log::error("{}", err);
             return failWith(std::move(err));
         }
@@ -743,8 +765,7 @@ namespace luax {
         lua_remove(m_state, errfunc);
 
         if (status != 0) {
-            std::string ctx(context);
-            auto err = formatLuaError(ctx.c_str());
+            auto err = formatLuaError(enrichCallbackContext(m_resourcesRoot, context).c_str());
             geode::log::error("{}", err);
             lua_pop(m_state, 1);
             return failWith(std::move(err));
@@ -818,12 +839,16 @@ namespace luax {
 
     void Runtime::panicCallback(lua_State* L, int errcode) {
         char const* message = lua_tostring(L, -1);
-        geode::log::error("[lua:panic code={}] {}", errcode, message ? message : "unknown panic");
-
         auto* self = static_cast<Runtime*>(lua_callbacks(L)->userdata);
+        std::string msg = message ? message : "unknown lua panic";
+        std::string context = "panic";
         if (self) {
+            msg = redactHostPaths(msg, self->resourcesRoot());
+            context = enrichCallbackContext(self->resourcesRoot(), context);
             self->m_status.store(imes::luauapi::RuntimeStatus::Panicked, std::memory_order_release);
-            self->setLastError(message ? message : "unknown lua panic");
+            self->setLastError(msg);
         }
+
+        geode::log::error("[lua:{} code={}] {}", context, errcode, msg);
     }
 } // namespace luax

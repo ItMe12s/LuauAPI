@@ -7,9 +7,11 @@
 namespace geode {
     class Mod {
     public:
-        explicit Mod(std::filesystem::path resourcesDir) : m_resourcesDir(std::move(resourcesDir)) {}
+        Mod(std::filesystem::path resourcesDir, std::string id) :
+            m_resourcesDir(std::move(resourcesDir)), m_id(std::move(id)) {}
 
         std::filesystem::path const& getResourcesDir() const { return m_resourcesDir; }
+        std::string const& getID() const { return m_id; }
         std::filesystem::path getSaveDir() const { return m_resourcesDir / "save"; }
         std::filesystem::path getConfigDir() const { return m_resourcesDir / "config"; }
         std::filesystem::path getPersistentDir() const { return m_resourcesDir / "persistent"; }
@@ -17,8 +19,8 @@ namespace geode {
         static Mod* get() { return s_fallbackMod; }
         static void setFallbackMod(Mod* mod) { s_fallbackMod = mod; }
 
-        static Mod* create(std::filesystem::path resourcesDir) {
-            auto* mod = new Mod(std::move(resourcesDir));
+        static Mod* create(std::filesystem::path resourcesDir, std::string id = "test.mod") {
+            auto* mod = new Mod(std::move(resourcesDir), std::move(id));
             s_allMods.push_back(mod);
             return mod;
         }
@@ -46,6 +48,7 @@ namespace geode {
 
     private:
         std::filesystem::path m_resourcesDir;
+        std::string m_id;
         inline static std::vector<Mod*> s_allMods{};
         inline static Mod* s_fallbackMod = nullptr;
     };

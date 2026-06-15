@@ -2,43 +2,14 @@
 
 #include "core/Runtime.hpp"
 #include "require/PathSandbox.hpp"
+#include "require/VirtualChunk.hpp"
 
-#include <Geode/loader/Loader.hpp>
 #include <Geode/loader/Mod.hpp>
 #include <lua.h>
 #include <string>
 #include <unordered_map>
 
 namespace {
-    bool modStillRegistered(geode::Mod* mod) {
-        if (!mod) {
-            return false;
-        }
-        for (auto* candidate : geode::Loader::get()->getAllMods()) {
-            if (candidate == mod) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    bool modMatchesRoot(geode::Mod* mod, std::filesystem::path const& root) {
-        if (!modStillRegistered(mod)) {
-            return false;
-        }
-        auto modRoot = luax::canonicalRoot(mod->getResourcesDir());
-        return modRoot.isOk() && modRoot.unwrap() == root;
-    }
-
-    geode::Mod* findModForRoot(std::filesystem::path const& root) {
-        for (auto* mod : geode::Loader::get()->getAllMods()) {
-            if (modMatchesRoot(mod, root)) {
-                return mod;
-            }
-        }
-        return nullptr;
-    }
-
     std::unordered_map<std::string, geode::Mod*>& modCache() {
         static std::unordered_map<std::string, geode::Mod*> cache;
         return cache;
@@ -71,13 +42,13 @@ namespace luax {
 
         auto& cache = modCache();
         if (auto it = cache.find(key); it != cache.end()) {
-            if (modMatchesRoot(it->second, canonical)) {
+            if (modForResourcesRoot(canonical) == it->second) {
                 return it->second;
             }
             cache.erase(it);
         }
 
-        geode::Mod* found = findModForRoot(canonical);
+        geode::Mod* found = modForResourcesRoot(canonical);
         if (found) {
             cache[key] = found;
         }

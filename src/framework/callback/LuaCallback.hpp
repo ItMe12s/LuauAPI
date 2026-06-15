@@ -2,6 +2,7 @@
 
 #include "framework/BindingHost.hpp"
 #include "framework/usertype/LuaRef.hpp"
+#include "require/VirtualChunk.hpp"
 
 #include <Geode/loader/Log.hpp>
 #include <functional>
@@ -11,6 +12,14 @@
 
 namespace luax {
     inline void logCallbackFailure(std::string_view context) {
+        auto* runtime = Runtime::getIfInitialized();
+        if (runtime) {
+            auto const& err = runtime->lastError();
+            if (!err.empty()) {
+                geode::log::error("[lua:{}] {}", context, err);
+                return;
+            }
+        }
         geode::log::warn("[lua:{}] callback failed", context);
     }
 
@@ -53,7 +62,8 @@ namespace luax {
                 pushArgs(L, pushCtx);
             }
             BindingHost::ResourcesRootScope scope(*host, m_ref->resourcesRoot());
-            auto result = host->protectedCall(nargs, nresults, context, deadlineMs);
+            auto enriched = enrichCallbackContext(m_ref->resourcesRoot(), context);
+            auto result = host->protectedCall(nargs, nresults, enriched, deadlineMs);
             if (result.isOk() && popResults && nresults > 0) {
                 popResults(L, popCtx);
             }

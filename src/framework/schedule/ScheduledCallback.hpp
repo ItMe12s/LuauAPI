@@ -2,6 +2,7 @@
 
 #include "core/Runtime.hpp"
 #include "framework/usertype/LuaRef.hpp"
+#include "require/VirtualChunk.hpp"
 
 #include <string_view>
 
@@ -14,7 +15,8 @@ namespace luax {
         int top = lua_gettop(L);
         if (!callback.push()) return false;
         Runtime::ResourcesRootScope scope(*runtime, callback.resourcesRoot());
-        bool ok = runtime->protectedCall(0, 0, context, deadlineMs).isOk();
+        auto enriched = enrichCallbackContext(callback.resourcesRoot(), context);
+        bool ok = runtime->protectedCall(0, 0, enriched, deadlineMs).isOk();
         lua_settop(L, top);
         return ok;
     }

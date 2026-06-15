@@ -3,6 +3,7 @@
 #include "core/Runtime.hpp"
 #include "require/BytecodeCacheKey.hpp"
 #include "require/PathSandbox.hpp"
+#include "require/VirtualChunk.hpp"
 #include "require/RequirePath.hpp"
 
 #include <Luau/CodeGen.h>
@@ -165,8 +166,8 @@ namespace luax {
         if (!requirer_chunkname || requirer_chunkname[0] != '@') {
             return NAVIGATE_NOT_FOUND;
         }
-        std::string_view rest = requirer_chunkname + 1;
-        auto validated = validateResourcePath(std::filesystem::path(rest), false);
+        auto scriptPath = virtualChunkScriptPath(requirer_chunkname);
+        auto validated = validateResourcePath(std::filesystem::path(scriptPath), false);
         if (validated.isErr()) {
             return NAVIGATE_NOT_FOUND;
         }
@@ -242,6 +243,9 @@ namespace luax {
         auto path = std::filesystem::path(name);
         if (!hasLuauExtension(path)) {
             name += ".luau";
+        }
+        if (auto modId = modIdForResourcesRoot(m_root)) {
+            return formatVirtualChunk(*modId, name);
         }
         return "@" + name;
     }
