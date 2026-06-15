@@ -15,10 +15,4 @@ namespace luax {
     private:
         std::shared_ptr<LuaCallback> m_callback;
     };
-
-    void anchorMenuHandler(cocos2d::CCObject* anchor, LuaMenuHandler* handler);
-    void registerOrphanMenuHandler(LuaMenuHandler* handler);
-    void evictMenuHandlersIfFinalRelease(cocos2d::CCObject* anchor);
-    void clearOrphanMenuHandlers();
-    void ensureMenuHandlerShutdownHook();
 } // namespace luax

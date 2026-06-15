@@ -38,32 +38,6 @@ def _map_key_value_cxx(info: TypeInfo) -> tuple[str, str]:
     return info.key_type.cxx_type, info.value_type.cxx_type
 
 
-def _map_check_call(info: TypeInfo) -> str:
-    if info.key_type is not None and info.key_type.kind == "pair":
-        if info.value_type is None:
-            raise ValueError("map container requires value type")
-        first, second = _pair_component_cxx(info.key_type)
-        value = info.value_type.cxx_type
-        if info.kind == "unordered_map":
-            return f"checkUnorderedPairKeyMap<{first}, {second}, {value}>"
-        return f"checkPairKeyMap<{first}, {second}, {value}>"
-    key, value = _map_key_value_cxx(info)
-    return f"{_MAP_CHECK_FNS[info.kind]}<{key}, {value}>"
-
-
-def _map_push_call(info: TypeInfo) -> str:
-    if info.key_type is not None and info.key_type.kind == "pair":
-        if info.value_type is None:
-            raise ValueError("map container requires value type")
-        first, second = _pair_component_cxx(info.key_type)
-        value = info.value_type.cxx_type
-        if info.kind == "unordered_map":
-            return f"pushUnorderedPairKeyMap<{first}, {second}, {value}>"
-        return f"pushPairKeyMap<{first}, {second}, {value}>"
-    key, value = _map_key_value_cxx(info)
-    return f"{_MAP_PUSH_FNS[info.kind]}<{key}, {value}>"
-
-
 def _set_elem_cxx(info: TypeInfo) -> str:
     if info.element_type is None:
         raise ValueError("set container requires element type")
@@ -76,10 +50,64 @@ def _pair_component_cxx(info: TypeInfo) -> tuple[str, str]:
     return info.key_type.cxx_type, info.value_type.cxx_type
 
 
-_MAP_CHECK_FNS = {"map": "checkMap", "unordered_map": "checkUnorderedMap"}
-_MAP_PUSH_FNS = {"map": "pushMap", "unordered_map": "pushUnorderedMap"}
-_SET_CHECK_FNS = {"set": "checkSet", "unordered_set": "checkUnorderedSet"}
-_SET_PUSH_FNS = {"set": "pushSet", "unordered_set": "pushUnorderedSet"}
+_MAP_CONTAINER_TYPES = {"map": "gd::map", "unordered_map": "gd::unordered_map"}
+_SET_CONTAINER_TYPES = {"set": "gd::set", "unordered_set": "gd::unordered_set"}
+
+
+def _map_container_type(info: TypeInfo, key: str, value: str) -> str:
+    container = _MAP_CONTAINER_TYPES[info.kind]
+    return f"{container}<{key}, {value}>"
+
+
+def _pair_key_map_type(info: TypeInfo, first: str, second: str, value: str) -> str:
+    container = _MAP_CONTAINER_TYPES[info.kind]
+    return f"{container}<std::pair<{first}, {second}>, {value}>"
+
+
+def _set_container_type(info: TypeInfo, elem: str) -> str:
+    return f"{_SET_CONTAINER_TYPES[info.kind]}<{elem}>"
+
+
+def _map_check_call(info: TypeInfo) -> str:
+    if info.key_type is not None and info.key_type.kind == "pair":
+        if info.value_type is None:
+            raise ValueError("map container requires value type")
+        first, second = _pair_component_cxx(info.key_type)
+        value = info.value_type.cxx_type
+        map_type = _pair_key_map_type(info, first, second, value)
+        return f"detail::checkPairKeyAssociativeMap<{first}, {second}, {value}, {map_type}>"
+    key, value = _map_key_value_cxx(info)
+    map_type = _map_container_type(info, key, value)
+    return f"detail::checkAssociativeMap<{key}, {value}, {map_type}>"
+
+
+def _map_push_call(info: TypeInfo) -> str:
+    if info.key_type is not None and info.key_type.kind == "pair":
+        if info.value_type is None:
+            raise ValueError("map container requires value type")
+        first, second = _pair_component_cxx(info.key_type)
+        value = info.value_type.cxx_type
+        map_type = _pair_key_map_type(info, first, second, value)
+        return f"detail::pushPairKeyAssociativeMap<{first}, {second}, {value}, {map_type}>"
+    key, value = _map_key_value_cxx(info)
+    map_type = _map_container_type(info, key, value)
+    if info.is_vector_ptr:
+        return f"detail::pushAssociativeMapPointer<{map_type}>"
+    return f"detail::pushAssociativeMap<{key}, {value}, {map_type}>"
+
+
+def _set_check_call(info: TypeInfo) -> str:
+    elem = _set_elem_cxx(info)
+    set_type = _set_container_type(info, elem)
+    return f"detail::checkSetFromTable<{elem}, {set_type}>"
+
+
+def _set_push_call(info: TypeInfo) -> str:
+    elem = _set_elem_cxx(info)
+    set_type = _set_container_type(info, elem)
+    if info.is_vector_ptr:
+        return f"detail::pushSetContainerPointer<{set_type}>"
+    return f"detail::pushSetAsTable<{elem}, {set_type}>"
 
 
 def _luax_numeric_check_type(cxx: str) -> str:
@@ -251,11 +279,8 @@ def emit_stack_check(
         check_fn = _map_check_call(info)
         return [f'        {_prefix(declare, var)} = luax::{check_fn}(L, {idx}, "{label}");\n']
     if info.kind in ("set", "unordered_set"):
-        elem = _set_elem_cxx(info)
-        check_fn = _SET_CHECK_FNS[info.kind]
-        return [
-            f'        {_prefix(declare, var)} = luax::{check_fn}<{elem}>(L, {idx}, "{label}");\n'
-        ]
+        check_fn = _set_check_call(info)
+        return [f'        {_prefix(declare, var)} = luax::{check_fn}(L, {idx}, "{label}");\n']
     if info.kind == "pair":
         first, second = _pair_component_cxx(info)
         return [
@@ -328,9 +353,8 @@ def _push_impl(
         push_fn = _map_push_call(info)
         return [f"{indent}luax::{push_fn}(L, {expr});\n"]
     if info.kind in ("set", "unordered_set"):
-        elem = _set_elem_cxx(info)
-        push_fn = _SET_PUSH_FNS[info.kind]
-        return [f"{indent}luax::{push_fn}<{elem}>(L, {expr});\n"]
+        push_fn = _set_push_call(info)
+        return [f"{indent}luax::{push_fn}(L, {expr});\n"]
     if info.kind == "pair":
         first, second = _pair_component_cxx(info)
         return [f"{indent}luax::pushPair<{first}, {second}>(L, {expr});\n"]

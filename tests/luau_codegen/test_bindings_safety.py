@@ -103,7 +103,7 @@ class GeneratedSafetyTests(unittest.TestCase):
         plan = collect_plan(root, "win")
         text = _emit_common_file(plan.emitted_classes, plan, "win")
 
-        self.assertIn("luax::evictMenuHandlersIfFinalRelease(self);", text)
+        self.assertIn("luax::evictTrampolinesIfFinalRelease(self);", text)
         self.assertIn('#include "framework/callback/LuaMenuHandler.hpp"', text)
         self.assertIn("geode::Result<void> installFieldsReleaseHook()", text)
         self.assertIn(
@@ -751,8 +751,8 @@ class GeneratedSafetyTests(unittest.TestCase):
             "win",
         )
 
-        self.assertIn("checkMap<int, bool>", text)
-        self.assertIn("luax::assignMap(self->m_values, std::move(value))", text)
+        self.assertIn("detail::checkAssociativeMap<int, bool, gd::map<int, bool>>", text)
+        self.assertIn("luax::detail::assignAssociativeMap(self->m_values, std::move(value))", text)
         self.assertNotIn("self->m_values = std::move", text)
 
     def test_set_field_setter_uses_assign_set(self) -> None:
@@ -775,8 +775,8 @@ class GeneratedSafetyTests(unittest.TestCase):
             "win",
         )
 
-        self.assertIn("checkSet<int>", text)
-        self.assertIn("luax::assignSet(self->m_ids, std::move(value))", text)
+        self.assertIn("detail::checkSetFromTable<int, gd::set<int>>", text)
+        self.assertIn("luax::detail::assignSetContainer(self->m_ids, std::move(value))", text)
         self.assertNotIn("self->m_ids = std::move", text)
 
     def test_object_set_field_setter_uses_assign_set(self) -> None:
@@ -803,8 +803,10 @@ class GeneratedSafetyTests(unittest.TestCase):
             "win",
         )
 
-        self.assertIn("checkSet<cocos2d::CCObject*>", text)
-        self.assertIn("luax::assignSet(self->m_objects, std::move(value))", text)
+        self.assertIn(
+            "detail::checkSetFromTable<cocos2d::CCObject*, gd::set<cocos2d::CCObject*>>", text
+        )
+        self.assertIn("luax::detail::assignSetContainer(self->m_objects, std::move(value))", text)
         self.assertNotIn("self->m_objects = std::move", text)
 
     def test_object_set_pointer_field_setter_dereferences(self) -> None:
@@ -831,8 +833,14 @@ class GeneratedSafetyTests(unittest.TestCase):
             "win",
         )
 
-        self.assertIn("checkSet<cocos2d::CCObject*>", text)
-        self.assertIn("luax::assignSet(*self->m_pSet, std::move(value))", text)
+        self.assertIn(
+            "detail::checkSetFromTable<cocos2d::CCObject*, gd::set<cocos2d::CCObject*>>", text
+        )
+        self.assertIn("luax::detail::assignSetContainer(*self->m_pSet, std::move(value))", text)
+        self.assertIn(
+            "luax::detail::pushSetContainerPointer<gd::set<cocos2d::CCObject*>>(L, self->m_pSet)",
+            text,
+        )
         self.assertIn("is_pointer_v", text)
         self.assertIn("field pointer is null", text)
 
@@ -860,7 +868,7 @@ class GeneratedSafetyTests(unittest.TestCase):
 
         text = _emit_class_file(cls, grouped, [], [], {}, set(), 1, "win")
 
-        self.assertIn("checkMap<int, bool>", text)
+        self.assertIn("detail::checkAssociativeMap<int, bool, gd::map<int, bool>>", text)
         self.assertIn("self->takeMap(arg0)", text)
 
     def test_method_map_return_pushes_table_copy(self) -> None:
@@ -879,7 +887,7 @@ class GeneratedSafetyTests(unittest.TestCase):
 
         text = _emit_class_file(cls, grouped, [], [], {}, set(), 1, "win")
 
-        self.assertIn("pushMap<int, bool>", text)
+        self.assertIn("detail::pushAssociativeMap<int, bool, gd::map<int, bool>>", text)
         self.assertIn("self->getMap()", text)
 
     def test_method_set_input_checks_lua_table(self) -> None:
@@ -898,7 +906,7 @@ class GeneratedSafetyTests(unittest.TestCase):
 
         text = _emit_class_file(cls, grouped, [], [], {}, set(), 1, "win")
 
-        self.assertIn("checkSet<int>", text)
+        self.assertIn("detail::checkSetFromTable<int, gd::set<int>>", text)
         self.assertIn("self->takeSet(arg0)", text)
 
     def test_free_function_unordered_map_return_pushes_table_copy(self) -> None:
@@ -911,7 +919,7 @@ class GeneratedSafetyTests(unittest.TestCase):
         kept, _ = group_supported_free_functions([fn], {}, "win")
         text = emit_free_functions_file(kept, {})
 
-        self.assertIn("pushUnorderedMap<int, int>", text)
+        self.assertIn("detail::pushAssociativeMap<int, int, gd::unordered_map<int, int>>", text)
         self.assertIn("geode::utils::values()", text)
 
     def test_field_plan_and_types_include_ccnode_m_fields_only(self) -> None:

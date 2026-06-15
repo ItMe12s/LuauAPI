@@ -114,8 +114,14 @@ class NestedContainerMarshallingTests(unittest.TestCase):
         )
         push_text = "".join(push_value(info, "labels"))
 
-        self.assertIn("luax::checkUnorderedMap<int, gd::vector<LabelGameObject*>>", check_text)
-        self.assertIn("luax::pushUnorderedMap<int, gd::vector<LabelGameObject*>>", push_text)
+        self.assertIn(
+            "luax::detail::checkAssociativeMap<int, gd::vector<LabelGameObject*>, gd::unordered_map<int, gd::vector<LabelGameObject*>>>",
+            check_text,
+        )
+        self.assertIn(
+            "luax::detail::pushAssociativeMap<int, gd::vector<LabelGameObject*>, gd::unordered_map<int, gd::vector<LabelGameObject*>>>",
+            push_text,
+        )
 
     def test_pair_key_map_nested_opaque_vector_marshalling(self) -> None:
         key = TypeInfo(
@@ -158,11 +164,11 @@ class NestedContainerMarshallingTests(unittest.TestCase):
         push_text = "".join(push_value(info, "groups"))
 
         self.assertIn(
-            "luax::checkPairKeyMap<int, int, gd::vector<GroupCommandObject2*>>",
+            "luax::detail::checkPairKeyAssociativeMap<int, int, gd::vector<GroupCommandObject2*>, gd::map<std::pair<int, int>, gd::vector<GroupCommandObject2*>>>",
             check_text,
         )
         self.assertIn(
-            "luax::pushPairKeyMap<int, int, gd::vector<GroupCommandObject2*>>",
+            "luax::detail::pushPairKeyAssociativeMap<int, int, gd::vector<GroupCommandObject2*>, gd::map<std::pair<int, int>, gd::vector<GroupCommandObject2*>>>",
             push_text,
         )
 
@@ -241,8 +247,13 @@ class NestedContainerFieldBindingTests(unittest.TestCase):
             "win",
         )
 
-        self.assertIn("checkUnorderedMap<int, gd::vector<LabelGameObject*>>", text)
-        self.assertIn("luax::assignUnorderedMap(*self->m_labelObjects, std::move(value))", text)
+        self.assertIn(
+            "detail::checkAssociativeMap<int, gd::vector<LabelGameObject*>, gd::unordered_map<int, gd::vector<LabelGameObject*>>>",
+            text,
+        )
+        self.assertIn(
+            "luax::detail::assignAssociativeMap(*self->m_labelObjects, std::move(value))", text
+        )
 
 
 class NestedMapValuePolicyUnitTests(unittest.TestCase):

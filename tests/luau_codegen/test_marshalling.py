@@ -395,7 +395,10 @@ class EmitStackCheckTests(unittest.TestCase):
             value_type=value,
         )
         check_text = "".join(emit_stack_check(info, 1, "map", "test"))
-        self.assertIn("luax::checkMap<gd::string, SmartPrefabResult>", check_text)
+        self.assertIn(
+            "luax::detail::checkAssociativeMap<gd::string, SmartPrefabResult, gd::map<gd::string, SmartPrefabResult>>",
+            check_text,
+        )
 
     def test_ccblendfunc_uses_check_specialization(self) -> None:
         info = TypeInfo(kind="value", cxx_type="cocos2d::ccBlendFunc", lua_type="BlendFunc")
@@ -659,8 +662,10 @@ class ContainerTableMarshallingTests(unittest.TestCase):
         )
         push_text = "".join(push_value(info, "values"))
 
-        self.assertIn("luax::checkMap<int, bool>", check_text)
-        self.assertIn("luax::pushMap<int, bool>", push_text)
+        self.assertIn(
+            "luax::detail::checkAssociativeMap<int, bool, gd::map<int, bool>>", check_text
+        )
+        self.assertIn("luax::detail::pushAssociativeMap<int, bool, gd::map<int, bool>>", push_text)
 
     def test_unordered_map_check_and_push_use_table_helpers(self) -> None:
         key = TypeInfo(kind="string", cxx_type="std::string", lua_type="string")
@@ -684,8 +689,14 @@ class ContainerTableMarshallingTests(unittest.TestCase):
         )
         push_text = "".join(push_value(info, "values"))
 
-        self.assertIn("luax::checkUnorderedMap<std::string, int>", check_text)
-        self.assertIn("luax::pushUnorderedMap<std::string, int>", push_text)
+        self.assertIn(
+            "luax::detail::checkAssociativeMap<std::string, int, gd::unordered_map<std::string, int>>",
+            check_text,
+        )
+        self.assertIn(
+            "luax::detail::pushAssociativeMap<std::string, int, gd::unordered_map<std::string, int>>",
+            push_text,
+        )
 
     def test_set_check_and_push_use_table_helpers(self) -> None:
         element = TypeInfo(kind="number", cxx_type="int", lua_type="number")
@@ -699,8 +710,8 @@ class ContainerTableMarshallingTests(unittest.TestCase):
         check_text = "".join(check_arg(Arg("gd::set<int>", "values"), info, 1, "arg0", "test"))
         push_text = "".join(push_value(info, "values"))
 
-        self.assertIn("luax::checkSet<int>", check_text)
-        self.assertIn("luax::pushSet<int>", push_text)
+        self.assertIn("luax::detail::checkSetFromTable<int, gd::set<int>>", check_text)
+        self.assertIn("luax::detail::pushSetAsTable<int, gd::set<int>>", push_text)
 
     def test_unordered_set_check_and_push_use_table_helpers(self) -> None:
         element = TypeInfo(kind="number", cxx_type="int", lua_type="number")
@@ -722,8 +733,8 @@ class ContainerTableMarshallingTests(unittest.TestCase):
         )
         push_text = "".join(push_value(info, "values"))
 
-        self.assertIn("luax::checkUnorderedSet<int>", check_text)
-        self.assertIn("luax::pushUnorderedSet<int>", push_text)
+        self.assertIn("luax::detail::checkSetFromTable<int, gd::unordered_set<int>>", check_text)
+        self.assertIn("luax::detail::pushSetAsTable<int, gd::unordered_set<int>>", push_text)
 
     def test_object_set_check_and_push_use_table_helpers(self) -> None:
         element = TypeInfo(
@@ -744,8 +755,14 @@ class ContainerTableMarshallingTests(unittest.TestCase):
         )
         push_text = "".join(push_value(info, "values"))
 
-        self.assertIn("luax::checkSet<cocos2d::CCObject*>", check_text)
-        self.assertIn("luax::pushSet<cocos2d::CCObject*>", push_text)
+        self.assertIn(
+            "luax::detail::checkSetFromTable<cocos2d::CCObject*, gd::set<cocos2d::CCObject*>>",
+            check_text,
+        )
+        self.assertIn(
+            "luax::detail::pushSetAsTable<cocos2d::CCObject*, gd::set<cocos2d::CCObject*>>",
+            push_text,
+        )
 
     def test_object_unordered_set_check_and_push_use_table_helpers(self) -> None:
         element = TypeInfo(
@@ -772,8 +789,14 @@ class ContainerTableMarshallingTests(unittest.TestCase):
         )
         push_text = "".join(push_value(info, "values"))
 
-        self.assertIn("luax::checkUnorderedSet<cocos2d::CCObject*>", check_text)
-        self.assertIn("luax::pushUnorderedSet<cocos2d::CCObject*>", push_text)
+        self.assertIn(
+            "luax::detail::checkSetFromTable<cocos2d::CCObject*, gd::unordered_set<cocos2d::CCObject*>>",
+            check_text,
+        )
+        self.assertIn(
+            "luax::detail::pushSetAsTable<cocos2d::CCObject*, gd::unordered_set<cocos2d::CCObject*>>",
+            push_text,
+        )
 
     def test_pair_check_and_push_use_record_helpers(self) -> None:
         first = TypeInfo(kind="number", cxx_type="int", lua_type="number")
@@ -824,8 +847,14 @@ class ContainerTableMarshallingTests(unittest.TestCase):
         )
         push_text = "".join(push_value(info, "groups"))
 
-        self.assertIn("luax::checkUnorderedMap<int, std::pair<int, int>>", check_text)
-        self.assertIn("luax::pushUnorderedMap<int, std::pair<int, int>>", push_text)
+        self.assertIn(
+            "luax::detail::checkAssociativeMap<int, std::pair<int, int>, gd::unordered_map<int, std::pair<int, int>>>",
+            check_text,
+        )
+        self.assertIn(
+            "luax::detail::pushAssociativeMap<int, std::pair<int, int>, gd::unordered_map<int, std::pair<int, int>>>",
+            push_text,
+        )
 
     def test_map_pair_key_check_and_push_use_entry_list_helpers(self) -> None:
         first = TypeInfo(kind="number", cxx_type="int", lua_type="number")
@@ -857,8 +886,14 @@ class ContainerTableMarshallingTests(unittest.TestCase):
         )
         push_text = "".join(push_value(info, "accounts"))
 
-        self.assertIn("luax::checkPairKeyMap<int, int, int>", check_text)
-        self.assertIn("luax::pushPairKeyMap<int, int, int>", push_text)
+        self.assertIn(
+            "luax::detail::checkPairKeyAssociativeMap<int, int, int, gd::map<std::pair<int, int>, int>>",
+            check_text,
+        )
+        self.assertIn(
+            "luax::detail::pushPairKeyAssociativeMap<int, int, int, gd::map<std::pair<int, int>, int>>",
+            push_text,
+        )
 
 
 class FmodMarshallingTests(unittest.TestCase):

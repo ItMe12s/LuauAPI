@@ -61,7 +61,7 @@ class SelMenuHandlerBindingTests(unittest.TestCase):
         self.assertIn("LuaMenuHandler::create", text)
         self.assertIn("menu_selector(luax::LuaMenuHandler::onCallback)", text)
         self.assertNotIn("arg2 = luax::Usertype<cocos2d::CCObject>", text)
-        self.assertIn("anchorMenuHandler(self, sel3_handler)", text)
+        self.assertIn("anchorTrampoline(self, sel3_handler)", text)
 
     def test_orphan_sel_mid_args_uses_handler_in_call(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")
@@ -113,7 +113,7 @@ class SelMenuHandlerBindingTests(unittest.TestCase):
             text,
         )
         self.assertNotIn("getButton(arg0, arg1, arg2, arg3)", text)
-        self.assertIn("anchorMenuHandler(result, sel2_handler)", text)
+        self.assertIn("anchorTrampoline(result, sel2_handler)", text)
 
     def test_static_create_orphan_sel_uses_handler_in_call(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")
@@ -157,7 +157,7 @@ class SelMenuHandlerBindingTests(unittest.TestCase):
             "Slider::create(arg0, menu_selector(luax::LuaMenuHandler::onCallback))",
             text,
         )
-        self.assertIn("anchorMenuHandler(result, sel1_handler)", text)
+        self.assertIn("anchorTrampoline(result, sel1_handler)", text)
 
 
 class CCNodeScheduleBindingTests(unittest.TestCase):
@@ -443,4 +443,4 @@ class FreeFunctionSelMenuHandlerBindingTests(unittest.TestCase):
         self.assertIn("LuaMenuHandler::create", text)
         self.assertIn("menu_selector(luax::LuaMenuHandler::onCallback)", text)
         self.assertNotIn("arg0 = luax::Usertype<cocos2d::CCObject>", text)
-        self.assertIn("anchorMenuHandler(result, sel1_handler)", text)
+        self.assertIn("anchorTrampoline(result, sel1_handler)", text)

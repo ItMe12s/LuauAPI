@@ -54,7 +54,7 @@ class DelegateGeneratorTests(unittest.TestCase):
             methods=[DelegateMethod("getSongFileName", "gd::string", [])],
         )
         text = emit_override(spec, spec.methods[0])
-        self.assertIn("invokeTableString", text)
+        self.assertIn("invokeTableValue<std::string>", text)
         self.assertIn("getSongFileName", text)
 
     def test_object_pointer_return_emits_invoke_table_object(self) -> None:

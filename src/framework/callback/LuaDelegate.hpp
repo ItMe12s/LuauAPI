@@ -2,6 +2,7 @@
 
 #include "core/Config.hpp"
 #include "framework/callback/LuaCallback.hpp"
+#include "framework/stack/Stack.hpp"
 #include "framework/usertype/LuaRef.hpp"
 #include "framework/usertype/Usertype.hpp"
 
@@ -22,23 +23,30 @@ namespace luax {
             LuaCallback::PushArgsFn push = nullptr, void* pushCtx = nullptr
         );
 
-        static bool invokeTableBool(
-            std::shared_ptr<LuaRef> const& table, char const* field, bool defaultValue,
+        template <class T>
+        static T invokeTableValue(
+            std::shared_ptr<LuaRef> const& table, char const* field, T defaultValue,
             char const* context, int nargs, LuaCallback::PushArgsFn push = nullptr,
             void* pushCtx = nullptr
-        );
-
-        static int invokeTableInt(
-            std::shared_ptr<LuaRef> const& table, char const* field, int defaultValue,
-            char const* context, int nargs, LuaCallback::PushArgsFn push = nullptr,
-            void* pushCtx = nullptr
-        );
-
-        static std::string invokeTableString(
-            std::shared_ptr<LuaRef> const& table, char const* field, std::string defaultValue,
-            char const* context, int nargs, LuaCallback::PushArgsFn push = nullptr,
-            void* pushCtx = nullptr
-        );
+        ) {
+            T result = defaultValue;
+            if (!invokeTableField(
+                    table,
+                    field,
+                    context,
+                    nargs,
+                    1,
+                    push,
+                    pushCtx,
+                    +[](lua_State* L, void* raw) {
+                        *static_cast<T*>(raw) = luax::check<T>(L, -1, "delegate callback return");
+                    },
+                    &result
+                )) {
+                return defaultValue;
+            }
+            return result;
+        }
 
         template <class T>
         static T* invokeTableObject(

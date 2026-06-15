@@ -610,21 +610,21 @@ def emit_override(spec: DelegateSpec, m: DelegateMethod) -> str:
         return textwrap.dedent(
             f"""\
             bool {m.name}({params}) override {{
-                {ctx_block}return LuaDelegateBase::invokeTableBool(m_table, "{m.name}", false, "{spec.lua_name}.{m.name}", {len(args)}{push_args});
+                {ctx_block}return LuaDelegateBase::invokeTableValue<bool>(m_table, "{m.name}", false, "{spec.lua_name}.{m.name}", {len(args)}{push_args});
             }}"""
         )
     if m.ret == "int":
         return textwrap.dedent(
             f"""\
             int {m.name}({params}) override {{
-                {ctx_block}return LuaDelegateBase::invokeTableInt(m_table, "{m.name}", 0, "{spec.lua_name}.{m.name}", {len(args)}{push_args});
+                {ctx_block}return LuaDelegateBase::invokeTableValue<int>(m_table, "{m.name}", 0, "{spec.lua_name}.{m.name}", {len(args)}{push_args});
             }}"""
         )
     if nret in ("gd::string", "char const*", "const char*", "std::string"):
         return textwrap.dedent(
             f"""\
             gd::string {m.name}({params}) override {{
-                {ctx_block}return gd::string(LuaDelegateBase::invokeTableString(m_table, "{m.name}", std::string(), "{spec.lua_name}.{m.name}", {len(args)}{push_args}).c_str());
+                {ctx_block}return gd::string(LuaDelegateBase::invokeTableValue<std::string>(m_table, "{m.name}", std::string(), "{spec.lua_name}.{m.name}", {len(args)}{push_args}).c_str());
             }}"""
         )
     if nret.endswith("*"):

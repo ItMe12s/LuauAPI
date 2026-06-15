@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import dataclasses
 from typing import TYPE_CHECKING, Dict, List, Set
 
 if TYPE_CHECKING:
@@ -21,6 +22,8 @@ from luau_codegen.convert.marshalling import (
     check_arg,
     check_sel_handler,
     push_value,
+    _map_push_call,
+    _set_push_call,
 )
 from luau_codegen.convert.sel_args import iter_lua_method_args
 from luau_codegen.model.domain import cxx_name, lua_namespace, short_name
@@ -212,18 +215,24 @@ def _emit_invoke(
 
 _CONTAINER_FIELD_ASSIGN_FNS = {
     "primitive_vector": "assignPrimitiveVector",
-    "map": "assignMap",
-    "unordered_map": "assignUnorderedMap",
-    "set": "assignSet",
-    "unordered_set": "assignUnorderedSet",
+    "map": "detail::assignAssociativeMap",
+    "unordered_map": "detail::assignAssociativeMap",
+    "set": "detail::assignSetContainer",
+    "unordered_set": "detail::assignSetContainer",
 }
 
 
 def _container_field_assign_fn(info: TypeInfo) -> str | None:
     if info.kind in ("map", "unordered_map") and info.key_type is not None:
         if info.key_type.kind == "pair":
-            return "assignPairKeyMap" if info.kind == "map" else "assignUnorderedPairKeyMap"
+            return "detail::assignPairKeyAssociativeMap"
     return _CONTAINER_FIELD_ASSIGN_FNS.get(info.kind)
+
+
+def _field_push_info(arg_info: TypeInfo, ret_info: TypeInfo) -> TypeInfo:
+    if arg_info.is_vector_ptr and ret_info.kind in _CONTAINER_KINDS:
+        return dataclasses.replace(ret_info, is_vector_ptr=True)
+    return ret_info
 
 
 def _emit_std_array_field_assign_lines(field: Field, label: str, info: TypeInfo) -> list[str]:
@@ -263,6 +272,34 @@ def _emit_container_field_assign_lines(field: Field, label: str, info: TypeInfo)
     ]
 
 
+def _emit_container_field_push_lines(field: Field, info: TypeInfo) -> list[str]:
+    name = field.name
+    expr = f"self->{name}"
+    if info.kind in ("set", "unordered_set"):
+        value_fn = _set_push_call(dataclasses.replace(info, is_vector_ptr=False))
+        ptr_fn = _set_push_call(dataclasses.replace(info, is_vector_ptr=True))
+    elif info.kind in ("map", "unordered_map"):
+        value_fn = _map_push_call(dataclasses.replace(info, is_vector_ptr=False))
+        ptr_fn = _map_push_call(dataclasses.replace(info, is_vector_ptr=True))
+    else:
+        raise ValueError(f"unsupported container field push: {info.kind}")
+    return [
+        "            if constexpr (std::is_pointer_v<std::remove_reference_t<decltype("
+        f"self->{name})>>) {{\n",
+        f"                luax::{ptr_fn}(L, {expr});\n",
+        "            } else {\n",
+        f"                luax::{value_fn}(L, {expr});\n",
+        "            }\n",
+    ]
+
+
+def _emit_field_push_lines(field: Field, arg_info: TypeInfo, ret_info: TypeInfo) -> list[str]:
+    if ret_info.kind in ("map", "unordered_map", "set", "unordered_set"):
+        return _emit_container_field_push_lines(field, ret_info)
+    push_info = _field_push_info(arg_info, ret_info)
+    return push_value(push_info, f"self->{field.name}", False)
+
+
 def _emit_field_accessors(
     cls: Class,
     field: Field,
@@ -288,7 +325,12 @@ def _emit_field_accessors(
         out.append(f"        if constexpr (requires(T* obj) {{ obj->{field.name}; }}) {{\n")
         out.extend(
             f"    {line}"
-            for line in push_value(ret_info, f"self->{field.name}", False, owner_expr="self")
+            for line in push_value(
+                _field_push_info(arg_info, ret_info),
+                f"self->{field.name}",
+                False,
+                owner_expr="self",
+            )
         )
         out.append("            return 1;\n")
         out.append("        } else {\n")
@@ -317,7 +359,7 @@ def _emit_field_accessors(
     out = ["    template <class T>\n"]
     out.append(f"    int {getter_impl}(lua_State* L, T* self) {{\n")
     out.append(f"        if constexpr (requires(T* obj) {{ obj->{field.name}; }}) {{\n")
-    out.extend(f"    {line}" for line in push_value(ret_info, f"self->{field.name}", False))
+    out.extend(f"    {line}" for line in _emit_field_push_lines(field, arg_info, ret_info))
     out.append("            return 1;\n")
     out.append("        } else {\n")
     out.append(

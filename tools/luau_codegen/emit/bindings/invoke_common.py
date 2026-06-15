@@ -89,14 +89,10 @@ def emit_vector_return_push(
 
 
 def _anchor_handler(handler: str, variant: str, anchor: str) -> str:
-    if variant == "menu":
-        return f"luax::anchorMenuHandler({anchor}, {handler});\n"
     return f"luax::anchorTrampoline({anchor}, {handler});\n"
 
 
 def _orphan_handler(handler: str, variant: str) -> str:
-    if variant == "menu":
-        return f"luax::registerOrphanMenuHandler({handler});\n"
     return f"luax::registerOrphanTrampoline({handler});\n"
 
 

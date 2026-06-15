@@ -2,7 +2,6 @@
 
 #include "core/Config.hpp"
 #include "core/Runtime.hpp"
-#include "framework/callback/LuaTrampolineRegistry.hpp"
 #include "framework/usertype/Usertype.hpp"
 
 namespace luax {
@@ -35,25 +34,5 @@ namespace luax {
             )) {
             logCallbackFailure("menu callback");
         }
-    }
-
-    void anchorMenuHandler(cocos2d::CCObject* anchor, LuaMenuHandler* handler) {
-        anchorTrampoline(anchor, handler);
-    }
-
-    void registerOrphanMenuHandler(LuaMenuHandler* handler) {
-        registerOrphanTrampoline(handler);
-    }
-
-    void evictMenuHandlersIfFinalRelease(cocos2d::CCObject* anchor) {
-        evictTrampolinesIfFinalRelease(anchor);
-    }
-
-    void clearOrphanMenuHandlers() {
-        clearOrphanTrampolines();
-    }
-
-    void ensureMenuHandlerShutdownHook() {
-        ensureTrampolineShutdownHook();
     }
 } // namespace luax
