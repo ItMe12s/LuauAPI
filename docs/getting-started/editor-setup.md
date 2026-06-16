@@ -2,7 +2,7 @@
 
 ## Summary
 
-Set up VSCode so your `.luau` files get autocomplete and type checks for `geode`, `cocos2d`, `gd`, `task`, and `time`.
+Set up VSCode so your `.luau` files get autocomplete and type checks.
 You get the `geode.d.luau` type stub, place it in your mod, then point the Luau language server at it.
 
 ## Step 1: install the extension
