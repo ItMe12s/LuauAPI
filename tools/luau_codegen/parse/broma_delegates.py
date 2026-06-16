@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+import sys
 from pathlib import Path
 
 from luau_codegen.convert.type_normalization import normalize_type
@@ -24,19 +25,17 @@ def _delegate_ptr_base(type_text: str, norm) -> str | None:
     return None
 
 
-def _method_to_delegate(method, norm) -> tuple[str, str, list[tuple[str, str]]] | None:
-    from luau_codegen.emit.delegates import DelegateMethod, lua_for
+def _delegate_bindability(method, norm=normalize_type) -> tuple[bool, str | None]:
+    from luau_codegen.emit.delegates import lua_for
 
-    if not method.is_virtual:
-        return None
-    if method.is_ctor or method.is_dtor or method.name.startswith("~"):
-        return None
+    if not method.is_virtual or method.is_ctor or method.is_dtor or method.name.startswith("~"):
+        return False, None
     if lua_for(method.ret) is None:
-        return None
-    args = [(normalize_type(a.type), a.name or f"arg{i}") for i, a in enumerate(method.args)]
-    if any(lua_for(t) is None for t, _ in args):
-        return None
-    return method.name, method.ret, args
+        return False, f"unsupported-return:{method.ret}"
+    for arg in method.args:
+        if lua_for(normalize_type(arg.type)) is None:
+            return False, f"unsupported-arg:{arg.type}"
+    return True, None
 
 
 def parse_delegate_classes(
@@ -44,6 +43,7 @@ def parse_delegate_classes(
     *,
     norm,
     delegate_method_cls,
+    warn_skipped: bool = True,
 ) -> dict[str, list]:
     out: dict[str, list] = {}
     root_dir = Path(bindings_dir)
@@ -55,11 +55,18 @@ def parse_delegate_classes(
                 continue
             methods = []
             for method in cls.methods:
-                parsed = _method_to_delegate(method, norm)
-                if parsed is None:
+                ok, reason = _delegate_bindability(method, norm)
+                if not ok:
+                    if warn_skipped and reason:
+                        print(
+                            f"warning: skipped Broma delegate method {qname}.{method.name}: {reason}",
+                            file=sys.stderr,
+                        )
                     continue
-                name, ret, args = parsed
-                methods.append(delegate_method_cls(name, ret, args))
+                args = [
+                    (normalize_type(a.type), a.name or f"arg{i}") for i, a in enumerate(method.args)
+                ]
+                methods.append(delegate_method_cls(method.name, method.ret, args))
             if methods:
                 out[qname] = methods
     return out

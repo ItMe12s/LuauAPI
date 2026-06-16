@@ -28,6 +28,9 @@ The target id is `namespace.Class:method/argCount`.
 
 Examples: `geode.gd.MenuLayer:init/0`, `geode.gd.GameManager:setIntGameVariable/2`.
 
+The id uses argument count only, not argument types. C++ overloads that share the same arity hook the same target,
+codegen rejects ambiguous same-arity overloads at build time.
+
 ## HookCallbackTable
 
 ```lua

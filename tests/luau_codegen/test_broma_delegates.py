@@ -103,3 +103,39 @@ class CustomSongDelegate {
         specs = collect_delegate_specs(fallback_bindings_dir())
         self.assertIn("cocos2d::CCDirectorDelegate", specs)
         self.assertIn("CustomSongDelegate", specs)
+
+    def test_unsupported_delegate_method_not_parsed(self) -> None:
+        bro = """
+class SampleDelegate {
+    virtual std::function<void(std::pair<int, int>)> onPair(std::vector<int> const& ids) = inline;
+};
+"""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = os.path.join(tmpdir, "Sample.bro")
+            with open(path, "w", encoding="utf-8") as f:
+                f.write(bro)
+            parsed = parse_broma(tmpdir)
+        self.assertNotIn("SampleDelegate", parsed)
+
+    def test_parse_delegate_warns_skipped_methods(self) -> None:
+        bro = """
+class NestedDelegate {
+    virtual std::vector<int> getValues() = inline;
+    virtual void onEvent(int id) = inline;
+};
+"""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = os.path.join(tmpdir, "Nested.bro")
+            with open(path, "w", encoding="utf-8") as f:
+                f.write(bro)
+            import contextlib
+            import io
+
+            stderr = io.StringIO()
+            with contextlib.redirect_stderr(stderr):
+                parsed = parse_broma(tmpdir)
+            self.assertIn("NestedDelegate", parsed)
+            self.assertEqual([m.name for m in parsed["NestedDelegate"]], ["onEvent"])
+            err = stderr.getvalue()
+            self.assertIn("skipped Broma delegate method NestedDelegate.getValues", err)
+            self.assertIn("unsupported-return", err)

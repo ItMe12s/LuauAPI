@@ -203,7 +203,20 @@ class GeneratedSafetyTests(unittest.TestCase):
         self.assertIn("continue;", text)
         self.assertNotIn('returned invalid skip value", targetId', text)
 
-    def test_invalid_post_hook_return_override_rejects_and_continues_chain(self) -> None:
+    def test_remove_hook_callbacks_keeps_sorted_list_tombstones(self) -> None:
+        text = emit_hook_support()
+        self.assertIn("// removeFromSortedLists(state, callback);", text)
+        self.assertIn("Do not uncomment removeFromSortedLists", text)
+        self.assertNotIn(
+            "removeFromSortedLists(state, callback);",
+            text.replace("// removeFromSortedLists(state, callback);", ""),
+        )
+        self.assertIn("callback->removed = true;", text)
+        self.assertIn("callback->removed ||", emit_internal_hpp())
+
+    def test_invalid_post_hook_return_override_rejects_and_continues_chain(
+        self,
+    ) -> None:
         text = emit_internal_hpp()
         post_hooks = text.split("void runLuaPostHooks")[1].split("} // namespace luauapi_gen")[0]
 
@@ -814,7 +827,8 @@ class GeneratedSafetyTests(unittest.TestCase):
         )
 
         self.assertIn(
-            "detail::checkSetFromTable<cocos2d::CCObject*, gd::set<cocos2d::CCObject*>>", text
+            "detail::checkSetFromTable<cocos2d::CCObject*, gd::set<cocos2d::CCObject*>>",
+            text,
         )
         self.assertIn("luax::detail::assignSetContainer(self->m_objects, std::move(value))", text)
         self.assertNotIn("self->m_objects = std::move", text)
@@ -844,7 +858,8 @@ class GeneratedSafetyTests(unittest.TestCase):
         )
 
         self.assertIn(
-            "detail::checkSetFromTable<cocos2d::CCObject*, gd::set<cocos2d::CCObject*>>", text
+            "detail::checkSetFromTable<cocos2d::CCObject*, gd::set<cocos2d::CCObject*>>",
+            text,
         )
         self.assertIn("luax::detail::assignSetContainer(*self->m_pSet, std::move(value))", text)
         self.assertIn(

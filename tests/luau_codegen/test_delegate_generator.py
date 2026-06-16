@@ -127,6 +127,24 @@ class DelegateGeneratorTests(unittest.TestCase):
         self.assertIn(f"unregisterInterface({cast}", hpp)
         self.assertIn(f"registerInterface({cast}", cpp)
 
+    def test_float_return_emits_invoke_table_value(self) -> None:
+        spec = DelegateSpec(
+            cxx_type="TableViewDelegate",
+            lua_name="TableViewDelegate",
+            cpp_class="LuaTableViewDelegate",
+            methods=[
+                DelegateMethod(
+                    "cellHeightForRowAtIndexPath",
+                    "float",
+                    [("CCIndexPath&", "indexPath"), ("TableView*", "tableView")],
+                )
+            ],
+        )
+        self.assertTrue(cpp_emit_supported(spec, spec.methods[0]))
+        text = emit_override(spec, spec.methods[0])
+        self.assertIn("invokeTableValue<float>", text)
+        self.assertIn("0.f", text)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -578,3 +578,22 @@ class HookCodegenTests(unittest.TestCase):
         )[0]
         self.assertRegex(hook_body, r"if \(!skipOriginal\) \{[\s\S]*runLuaPostHooks")
         self.assertEqual(hook_body.count("runLuaPostHooks"), 1)
+
+    def test_hook_target_id_uses_arity_only(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        cls = Class(
+            name="CCNode",
+            namespace="cocos2d",
+            bases=["CCObject"],
+            methods=[
+                Method(
+                    name="setTag",
+                    ret="void",
+                    args=[Arg("int", "tag")],
+                    platforms=all_platforms("0x1"),
+                )
+            ],
+        )
+        from luau_codegen.emit.hooks import hook_id  # type: ignore[import-unresolved]
+
+        self.assertEqual(hook_id(cls, cls.methods[0]), "geode.cocos2d.CCNode:setTag/1")

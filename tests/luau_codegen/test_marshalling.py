@@ -248,6 +248,71 @@ class CallbackMarshallingTests(unittest.TestCase):
         self.assertIn("callback failed", text)
         self.assertIn("return false", text)
 
+    def test_callback_object_return_allows_nil(self) -> None:
+        sender = TypeInfo(
+            kind="object",
+            cxx_type="cocos2d::CCObject*",
+            lua_type="CCObject?",
+            class_name="CCObject",
+        )
+        ret = TypeInfo(
+            kind="object",
+            cxx_type="cocos2d::CCObject*",
+            lua_type="CCObject?",
+            class_name="CCObject",
+        )
+        info = TypeInfo(
+            kind="callback",
+            cxx_type="std::function<cocos2d::CCObject*(cocos2d::CCObject*)>",
+            lua_type="(arg1: CCObject) -> CCObject?",
+            callback_args=(sender,),
+            callback_ret=ret,
+        )
+        text = "".join(
+            check_arg(
+                Arg("std::function<cocos2d::CCObject*(cocos2d::CCObject*)>", "cb"),
+                info,
+                2,
+                "cb",
+                "Test.method",
+            )
+        )
+        self.assertIn("if (lua_isnil(L, -1))", text)
+        self.assertIn("*slot = nullptr", text)
+
+    def test_callback_string_return_emits_check(self) -> None:
+        ret = TypeInfo(kind="string", cxx_type="gd::string", lua_type="string")
+        info = TypeInfo(
+            kind="callback",
+            cxx_type="std::function<gd::string()>",
+            lua_type="() -> string",
+            callback_args=(),
+            callback_ret=ret,
+        )
+        text = "".join(
+            check_arg(
+                Arg("std::function<gd::string()>", "cb"),
+                info,
+                2,
+                "cb",
+                "Test.method",
+            )
+        )
+        self.assertIn("check<std::string>", text)
+        self.assertIn("return std::string()", text)
+
+    def test_unknown_sel_variant_fails_codegen(self) -> None:
+        from luau_codegen.convert.marshalling import _sel_variant  # type: ignore[import-unresolved]
+
+        info = TypeInfo(
+            kind="sel",
+            cxx_type="SEL_Unknown",
+            lua_type="() -> ()",
+            class_name="unknown",
+        )
+        with self.assertRaisesRegex(ValueError, "unknown SEL variant"):
+            _sel_variant(info)
+
     def test_cc_director_delegate_arg_emits_trampoline(self) -> None:
         info = TypeInfo(
             kind="delegate",

@@ -6,6 +6,8 @@ from luau_codegen.convert.type_map import (
     UNSIGNED_NUMERIC_TYPES,
     VALUE_CHECK_CXX_TYPES,
     WIDE_INTEGER_TYPES,
+    is_sel_type,
+    sel_variant as sel_variant_name,
 )
 from luau_codegen.model import delegate_specs as _delegate_specs
 
@@ -405,19 +407,47 @@ def _emit_callback_pop(var: str, ret: TypeInfo) -> list[str]:
         obj = ret.cxx_type[:-1]
         return [
             "                +[](lua_State* L, void* raw) {\n",
-            f'                    *static_cast<{ret.cxx_type}*>(raw) = luax::Usertype<{obj}>::check(L, -1, "{var} callback return");\n',
+            f"                    auto* slot = static_cast<{ret.cxx_type}*>(raw);\n",
+            f"                    if (lua_isnil(L, -1)) {{\n",
+            f"                        *slot = nullptr;\n",
+            f"                    }} else {{\n",
+            f'                        *slot = luax::Usertype<{obj}>::check(L, -1, "{var} callback return");\n',
+            f"                    }}\n",
+            "                },\n",
+        ]
+    if ret.kind == "opaque_handle":
+        pointee = ret.cxx_type[:-1] if ret.cxx_type.endswith("*") else ret.cxx_type
+        return [
+            "                +[](lua_State* L, void* raw) {\n",
+            f"                    auto* slot = static_cast<{ret.cxx_type}*>(raw);\n",
+            f"                    if (lua_isnil(L, -1)) {{\n",
+            f"                        *slot = nullptr;\n",
+            f"                    }} else {{\n",
+            f'                        *slot = luax::checkOpaqueHandle<{pointee}>(L, -1, "{var} callback return");\n',
+            f"                    }}\n",
+            "                },\n",
+        ]
+    if ret.kind == "string":
+        store = "std::string" if ret.cxx_type in ("char const*", "const char*") else ret.cxx_type
+        return [
+            "                +[](lua_State* L, void* raw) {\n",
+            f'                    *static_cast<{store}*>(raw) = luax::check<std::string>(L, -1, "{var} callback return");\n',
             "                },\n",
         ]
     if ret.kind == "value":
         check_type = VALUE_CHECK_CXX_TYPES.get(ret.lua_type)
         if check_type is None:
-            raise ValueError(f"unsupported callback return value: {ret.lua_type}")
+            raise ValueError(
+                f"unsupported callback return value type {ret.lua_type!r} ({ret.cxx_type})"
+            )
         return [
             "                +[](lua_State* L, void* raw) {\n",
             f'                    *static_cast<{ret.cxx_type}*>(raw) = luax::check<{check_type}>(L, -1, "{var} callback return");\n',
             "                },\n",
         ]
-    raise ValueError(f"unsupported callback return kind: {ret.kind}")
+    raise ValueError(
+        f"unsupported callback return kind {ret.kind!r} for {ret.cxx_type} ({ret.lua_type})"
+    )
 
 
 def _emit_invoke_failure_return(ret: TypeInfo) -> str:
@@ -437,7 +467,11 @@ def _emit_invoke_failure_return(ret: TypeInfo) -> str:
         return f"static_cast<{ret.cxx_type}>(0)"
     if ret.kind == "value":
         return "{}"
-    raise ValueError(f"unsupported callback return kind: {ret.kind}")
+    if ret.kind == "string":
+        return "std::string()"
+    raise ValueError(
+        f"unsupported callback return kind {ret.kind!r} for {ret.cxx_type} ({ret.lua_type})"
+    )
 
 
 def _emit_invoke_failure_handler(label: str, ret: TypeInfo) -> list[str]:
@@ -535,12 +569,17 @@ _SEL_VARIANTS: dict[str, tuple[str, str, str]] = {
         "callfuncO_selector(luax::LuaCallFuncOHandler::onCallFuncO)",
     ),
 }
-_DEFAULT_SEL_VARIANT = "menu"
 
 
 def _sel_variant(info: TypeInfo) -> tuple[str, str, str]:
-    variant = info.class_name or _DEFAULT_SEL_VARIANT
-    return _SEL_VARIANTS.get(variant, _SEL_VARIANTS[_DEFAULT_SEL_VARIANT])
+    variant = info.class_name or (
+        sel_variant_name(info.cxx_type) if is_sel_type(info.cxx_type) else None
+    )
+    if not variant or variant not in _SEL_VARIANTS:
+        raise ValueError(
+            f"unknown SEL variant for {info.cxx_type!r} (class_name={info.class_name!r})"
+        )
+    return _SEL_VARIANTS[variant]
 
 
 def check_sel_handler(idx: int, var: str, info: TypeInfo, label: str) -> list[str]:

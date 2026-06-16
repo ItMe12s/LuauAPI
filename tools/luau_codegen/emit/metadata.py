@@ -197,7 +197,7 @@ def emit_report(
         "- userdata tag budget assert remains generated-class based, runtime distinct-type tightening is deferred\n"
     )
     lines.append(
-        "- removed hook callback slots compact on later registry operations, eager compaction is deferred\n"
+        "- removed hook callbacks stay in sorted lists as tombstones until compact, avoids vector erase during hook iteration\n"
     )
     lines.append(
         "- CCObject::release hook evicts Lua menu/selector handlers on final release, unresolved hook address is non-fatal\n"

@@ -32,7 +32,7 @@ layer:registerWithTouchDispatcher({
 
 When a callback errors or times out, LuauAPI logs the failure and returns the method default.
 When a method is missing from the table, LuauAPI returns the method default without logging.
-`bool` returns `false`, `int` returns `0`, `string` returns empty, and object methods return `nil`.
+`bool` returns `false`, `int` and `float`/`double` return `0`, `string` returns empty, and object methods return `nil`.
 Method names and argument types match the C++ interface. Multi-touch variants use `CCSet`.
 
 ## Keyboard delegate

@@ -418,7 +418,7 @@ def cpp_emit_supported(spec: DelegateSpec, m: DelegateMethod) -> bool:
     if not should_emit_method(spec, m):
         return False
     nret = strip_ref(m.ret)
-    if m.ret in ("void", "bool", "int"):
+    if nret in ("void", "bool", "int", "float", "double"):
         return True
     if nret in ("gd::string", "char const*", "const char*", "std::string"):
         return True
@@ -619,6 +619,14 @@ def emit_override(spec: DelegateSpec, m: DelegateMethod) -> str:
             f"""\
             int {m.name}({params}) override {{
                 {ctx_block}return LuaDelegateBase::invokeTableValue<int>(m_table, "{m.name}", 0, "{spec.lua_name}.{m.name}", {len(args)}{push_args});
+            }}"""
+        )
+    if nret in ("float", "double"):
+        default = "0.f" if nret == "float" else "0.0"
+        return textwrap.dedent(
+            f"""\
+            {nret} {m.name}({params}) override {{
+                {ctx_block}return LuaDelegateBase::invokeTableValue<{nret}>(m_table, "{m.name}", {default}, "{spec.lua_name}.{m.name}", {len(args)}{push_args});
             }}"""
         )
     if nret in ("gd::string", "char const*", "const char*", "std::string"):
