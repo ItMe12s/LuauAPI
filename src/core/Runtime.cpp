@@ -249,10 +249,10 @@ namespace luax {
     }
 
     void Runtime::runShutdownHooks() {
-        for (auto it = m_shutdownHooks.rbegin(); it != m_shutdownHooks.rend(); ++it) {
+        auto hooks = std::move(m_shutdownHooks);
+        for (auto it = hooks.rbegin(); it != hooks.rend(); ++it) {
             (*it)();
         }
-        m_shutdownHooks.clear();
     }
 
     void Runtime::registerShutdownHook(std::function<void()> fn) {
@@ -310,6 +310,10 @@ namespace luax {
 
     void Runtime::setStatusForTests(imes::luauapi::RuntimeStatus status) {
         m_status.store(status, std::memory_order_release);
+    }
+
+    void Runtime::runShutdownHooksForTests() {
+        runShutdownHooks();
     }
 #endif
 

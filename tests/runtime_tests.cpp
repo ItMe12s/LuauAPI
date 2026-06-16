@@ -12,6 +12,7 @@
 #include <optional>
 #include <string>
 #include <thread>
+#include <vector>
 
 namespace {
     struct RuntimeGuard {
@@ -303,6 +304,47 @@ TEST_CASE("protectedCall works from sandbox thread") {
     REQUIRE(lua_tointeger(SL, -1) == 42);
     lua_pop(SL, 1);
     lua_pop(GL, 1);
+}
+
+TEST_CASE("shutdown hooks run in LIFO order") {
+    std::vector<int> order;
+    {
+        RuntimeGuard guard;
+        auto* runtime = luax::Runtime::getOrCreate();
+        runtime->registerShutdownHook([&] {
+            order.push_back(1);
+        });
+        runtime->registerShutdownHook([&] {
+            order.push_back(2);
+        });
+        runtime->registerShutdownHook([&] {
+            order.push_back(3);
+        });
+        runtime->runShutdownHooksForTests();
+    }
+
+    REQUIRE(order == std::vector<int>{3, 2, 1});
+}
+
+TEST_CASE("shutdown hooks registered during shutdown defer to next runShutdownHooks") {
+    RuntimeGuard guard;
+    auto* runtime = luax::Runtime::getOrCreate();
+    bool outerRan = false;
+    bool nestedRan = false;
+
+    runtime->registerShutdownHook([&] {
+        outerRan = true;
+        runtime->registerShutdownHook([&] {
+            nestedRan = true;
+        });
+    });
+
+    runtime->runShutdownHooksForTests();
+    REQUIRE(outerRan);
+    REQUIRE_FALSE(nestedRan);
+
+    runtime->runShutdownHooksForTests();
+    REQUIRE(nestedRan);
 }
 
 TEST_CASE("protectedCall from sandbox thread restores stack on failure") {
