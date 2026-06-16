@@ -6,7 +6,11 @@ from luau_codegen.parse.broma import Class, Function, Method
 
 if TYPE_CHECKING:
     from luau_codegen.model.codegen_context import CodegenContext
-from luau_codegen.emit.luau_types.method_types import _DUMMY_CLS, _method_type
+from luau_codegen.emit.luau_types.method_types import (
+    _DUMMY_CLS,
+    _method_type,
+    _widened_method_type,
+)
 
 
 def _new_node() -> dict:
@@ -49,7 +53,11 @@ def _emit_function_tree(
             Method(name=fn.name, ret=fn.ret, args=fn.args, is_static=True)
             for fn in node["functions"][name]
         ]
-        lines.append(f"{pad}{name}: {_method_type(_DUMMY_CLS, methods, objects, ctx=ctx)},\n")
+        if len(methods) > 1:
+            type_str = _widened_method_type(_DUMMY_CLS, methods, objects, static=True, ctx=ctx)
+        else:
+            type_str = _method_type(_DUMMY_CLS, methods, objects, ctx=ctx)
+        lines.append(f"{pad}{name}: {type_str},\n")
     for field in sorted(node.get("manual", [])):
         lines.append(f"{pad}{field},\n")
     for seg in sorted(node["children"]):

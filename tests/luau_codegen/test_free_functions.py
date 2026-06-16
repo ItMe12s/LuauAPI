@@ -222,6 +222,30 @@ class GetEnvironmentVariableExclusionTests(unittest.TestCase):
         self.assertEqual(skipped, [])
 
 
+class FreeFunctionWideningTests(unittest.TestCase):
+    def test_types_emit_widens_multi_arity_free_function(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        functions = [
+            Function(
+                name="doThing",
+                namespace="geode::utils::test",
+                ret="void",
+                args=[Arg("int", "a")],
+            ),
+            Function(
+                name="doThing",
+                namespace="geode::utils::test",
+                ret="void",
+                args=[Arg("int", "a"), Arg("int", "b")],
+            ),
+        ]
+        out = types_text(emit_luau_types(Root(classes=[ccobject], functions=functions)))
+        geode = out[out.index("export type GeodeNamespace") : out.index("declare geode:")]
+        do_thing = next(line for line in geode.splitlines() if "doThing:" in line)
+        self.assertNotIn(" & ", do_thing)
+        self.assertIn("doThing: (arg1: number, ...any) -> ()", do_thing)
+
+
 class FreeFunctionIntersectionTests(unittest.TestCase):
     def _restart(self, arity: int) -> Function:
         args = [Arg("bool", f"a{i}") for i in range(arity)]

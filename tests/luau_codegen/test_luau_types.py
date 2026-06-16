@@ -6,6 +6,7 @@ from helpers import (
     Arg,  # type: ignore[import-unresolved]
     Class,  # type: ignore[import-unresolved]
     Field,  # type: ignore[import-unresolved]
+    Function,  # type: ignore[import-unresolved]
     Method,  # type: ignore[import-unresolved]
     Root,  # type: ignore[import-unresolved]
     TYPES_FILE,  # type: ignore[import-unresolved]
@@ -742,6 +743,50 @@ class LuauOverloadWideningTests(unittest.TestCase):
             methods=list(methods),
         )
         return types_text(emit_luau_types(Root(classes=[ccobject, bar])))
+
+    def _free_fn(self, *functions: Function) -> str:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        return types_text(emit_luau_types(Root(classes=[ccobject], functions=list(functions))))
+
+    def test_free_fn_multi_overload_no_intersection(self) -> None:
+        text = self._free_fn(
+            Function(
+                name="doThing",
+                namespace="geode::utils::test",
+                ret="void",
+                args=[Arg("int", "a")],
+            ),
+            Function(
+                name="doThing",
+                namespace="geode::utils::test",
+                ret="void",
+                args=[Arg("int", "a"), Arg("int", "b")],
+            ),
+        )
+        geode = text[text.index("export type GeodeNamespace") : text.index("declare geode:")]
+        do_thing = next(line for line in geode.splitlines() if "doThing:" in line)
+        self.assertNotIn(" & ", do_thing)
+        self.assertIn("doThing: (arg1: number, ...any) -> ()", do_thing)
+
+    def test_free_fn_divergent_arg1_widens_to_varargs(self) -> None:
+        text = self._free_fn(
+            Function(
+                name="doThing",
+                namespace="geode::utils::test",
+                ret="void",
+                args=[Arg("int", "a")],
+            ),
+            Function(
+                name="doThing",
+                namespace="geode::utils::test",
+                ret="void",
+                args=[Arg("bool", "a"), Arg("int", "b")],
+            ),
+        )
+        geode = text[text.index("export type GeodeNamespace") : text.index("declare geode:")]
+        do_thing = next(line for line in geode.splitlines() if "doThing:" in line)
+        self.assertNotIn(" & ", do_thing)
+        self.assertIn("doThing: (...any) -> ()", do_thing)
 
     def test_factory_multi_overload_no_intersection(self) -> None:
         text = self._factory(
