@@ -33,6 +33,8 @@ _FS_BINDING = "src/bindings/geode/GeodeFsBinding.cpp"
 _WEBSOCKET_CONNECTION = "src/bindings/websocket/WebSocketConnection.cpp"
 _WEBSOCKET_SERVER = "src/bindings/websocket/WebSocketServer.cpp"
 _WEBSOCKET_INTERNAL = "src/bindings/websocket/WebSocketInternal.hpp"
+_RENDERER3D_LIFETIME = "src/render3d/gpu/Renderer3DResourceLifetime.cpp"
+_RENDERER3D = "src/render3d/gpu/Renderer3D.cpp"
 _COCOS_BINDING = "src/bindings/geode/GeodeCocosBinding.cpp"
 _TASK_SCHEDULER = "src/bindings/task/TaskScheduler.cpp"
 _TASK_BINDING = "src/bindings/task/TaskBinding.cpp"
@@ -557,6 +559,22 @@ class WebSocketGuardTests(unittest.TestCase):
         body = _inline_function_body(source, "inline void clearWebState()")
         self.assertIn("activeTasks().clearAll", body)
         self.assertIn("activeListeners().clearAll", body)
+
+
+class Render3DGuardTests(unittest.TestCase):
+    def test_renderer3d_shutdown_hook_destroys_gl_resources(self) -> None:
+        lifetime = _read_repo_file(_RENDERER3D_LIFETIME)
+        self.assertIn("destroyGlResources", lifetime)
+        self.assertIn("ensureShutdownHook(renderer3DShutdownHookRegistered()", lifetime)
+        clear_body = _function_body(lifetime, "clearRenderer3DGlState", ret="void")
+        self.assertIn("Renderer3D::instance().destroyGlResources()", clear_body)
+
+        renderer = _read_repo_file(_RENDERER3D)
+        self.assertGreaterEqual(
+            renderer.count("ensureRenderer3DShutdownHook()"),
+            3,
+            "Renderer3D GPU entry points must register the shutdown hook on first use",
+        )
 
 
 class ManualFieldsBindingGuardTests(unittest.TestCase):

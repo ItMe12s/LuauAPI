@@ -27,10 +27,12 @@ namespace luax::render3d {
     }
 
     void Renderer3D::releaseMeshGpu(std::uint64_t meshId) {
+        ensureRenderer3DShutdownHook();
         m_meshCache.releaseMeshGpu(meshId);
     }
 
     void Renderer3D::releaseTextureGpu(std::uint64_t textureId) {
+        ensureRenderer3DShutdownHook();
         m_meshCache.releaseTextureGpu(textureId);
     }
 
@@ -42,6 +44,7 @@ namespace luax::render3d {
         if (fbo == 0 || pixelWidth <= 0 || pixelHeight <= 0) {
             return;
         }
+        ensureRenderer3DShutdownHook();
         if (!m_programs.ensureLambertProgram()) {
             return;
         }
