@@ -301,7 +301,7 @@ class BindingGuardTests(unittest.TestCase):
             "response listeners must reject oversized responses before pushResponse",
         )
 
-    def test_off_thread_request_intercept_warns_before_skip(self) -> None:
+    def test_off_thread_request_intercept_fails_closed(self) -> None:
         source = _read_repo_file("src/bindings/geode/web/GeodeWebListeners.cpp")
         body = _function_body(source, "invokeRequestEvent", ret="bool")
         self.assertIn(
@@ -310,14 +310,30 @@ class BindingGuardTests(unittest.TestCase):
             "invokeRequestEvent must detect off-thread intercept events",
         )
         self.assertIn(
-            "off-thread intercept skipped",
+            "off-thread intercept blocked",
             body,
-            "off-thread intercept skip must log a one-time warning",
+            "off-thread intercept must log a one-time block warning",
         )
         self.assertIn(
-            "loggedOffThreadSkip",
+            "loggedOffThreadBlock",
             body,
             "off-thread intercept warning must only fire once",
+        )
+        off_thread = body.split("!Runtime::isMainThread()")[1].split("struct Ctx")[0]
+        self.assertIn(
+            "return true",
+            off_thread,
+            "off-thread intercept must fail closed and block the request",
+        )
+
+    def test_request_intercept_callback_failure_fails_closed(self) -> None:
+        source = _read_repo_file("src/bindings/geode/web/GeodeWebListeners.cpp")
+        body = _function_body(source, "invokeRequestEvent", ret="bool")
+        failure = body.split("if (!ok)")[1]
+        self.assertIn(
+            "return true",
+            failure,
+            "intercept callback failures must fail closed and block the request",
         )
 
     def test_off_thread_response_listener_is_side_effects_only(self) -> None:

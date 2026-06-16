@@ -195,7 +195,8 @@ Status checks:
 - `:cancelled()` - request was cancelled.
 
 `saveTo` accepts `"save"`, `"config"`, and `"persistent"`.
-Response bodies are capped.
+Response bodies are capped in the Lua binding after download completes.
+Geode does not expose a pre-download or streaming size cap to LuauAPI, so an oversized body may be fully transferred before Luau rejects it.
 `:text()`, `:bytes()`, `:json()`, and `:saveTo()` return `nil` and an error when the body is too large.
 Async callbacks and response listeners receive `(response?, err?)`.
 
@@ -272,7 +273,8 @@ Use [tasks](tasks.md) to schedule work around callbacks.
 Request intercept:
 
 - `onRequestIntercept*` runs on the main thread so Lua can change the request before send.
-- Off the main thread, intercept is skipped. Geode logs a one-time warning.
+- Off the main thread, a registered intercept cannot run and the request is blocked. Geode logs a one-time warning.
+- If an intercept callback errors, the request is blocked.
 
 Response listeners:
 
@@ -367,9 +369,9 @@ See [Limits and errors](../cpp/limits-and-errors.md).
 
 ## Security
 
-HTTP requests are not sandboxed.
-Any script can call any URL or host the Geode web stack supports.
-There is no URL or host allowlist.
+HTTP requests are not sandboxed. LuauAPI is not an egress firewall.
+Any script can call any URL the Geode web stack accepts, including public hosts, private IPs, and localhost.
+LuauAPI does not block schemes beyond what Geode allows. There is no URL or host allowlist or blocklist in LuauAPI.
 
 File I/O stays inside mod sandbox roots:
 
@@ -379,7 +381,8 @@ File I/O stays inside mod sandbox roots:
 TLS:
 
 - Setting `certVerification` to false disables certificate verification for that request.
-- Use this only for trusted dev servers, for example self-signed certificates.
+- Scripts may disable TLS verification for development, for example self-signed certificates.
+- Disabling verification is unsafe for production traffic and should not be used outside trusted dev setups.
 
 Listeners:
 

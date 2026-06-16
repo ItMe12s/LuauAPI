@@ -25,15 +25,16 @@ namespace luax::webdetail {
             std::shared_ptr<LuaCallback> const& cb, char const* context,
             std::optional<std::string_view> modID, web::WebRequest& request
         ) {
-            if (!Runtime::isMainThread()) {
-                static bool loggedOffThreadSkip = false;
-                if (!loggedOffThreadSkip) {
-                    loggedOffThreadSkip = true;
-                    geode::log::warn("[lua:{}] off-thread intercept skipped", context);
-                }
-                return false;
-            }
             if (!cb || !cb->valid()) return false;
+
+            if (!Runtime::isMainThread()) {
+                static bool loggedOffThreadBlock = false;
+                if (!loggedOffThreadBlock) {
+                    loggedOffThreadBlock = true;
+                    geode::log::warn("[lua:{}] off-thread intercept blocked", context);
+                }
+                return true;
+            }
 
             struct Ctx {
                 std::optional<std::string_view> modID;
@@ -60,8 +61,9 @@ namespace luax::webdetail {
             );
             if (!ok) {
                 logCallbackFailure(context);
+                return true;
             }
-            return ok && ctx.stop;
+            return ctx.stop;
         }
 
         bool invokeResponseEventNow(

@@ -170,7 +170,7 @@ Execution errors update both `Result` and `lastError()`.
 
 | Constant | Value | Meaning |
 | --- | --- | --- |
-| `kMaxWebResponseBytes` | `32 MiB` | Max HTTP response body in Lua |
+| `kMaxWebResponseBytes` | `32 MiB` | Max HTTP response body in Lua (enforced after download) |
 | `kMaxWebRequestBytes` | `32 MiB` | Max HTTP request or multipart body |
 | `kMaxWebConcurrentRequests` | `16` | Max in-flight HTTP requests |
 
