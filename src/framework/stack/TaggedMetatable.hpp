@@ -37,11 +37,15 @@ namespace luax {
         }
 
         lua_getuserdatametatable(L, *tag);
-        if (!lua_isnil(L, -1)) {
-            lua_pop(L, 1);
+        bool tagAlreadyBound = !lua_isnil(L, -1);
+        lua_pop(L, 1);
+
+        if (tagAlreadyBound) {
+            if (dtor) {
+                lua_setuserdatadtor(L, *tag, *dtor);
+            }
             return;
         }
-        lua_pop(L, 1);
 
         luaL_getmetatable(L, meta);
         lua_setuserdatametatable(L, *tag);

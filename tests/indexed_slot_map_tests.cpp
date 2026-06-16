@@ -101,3 +101,18 @@ TEST_CASE("IndexedSlotMap clear resets storage and lookup") {
     REQUIRE(map.empty());
     REQUIRE(map.find(1) == nullptr);
 }
+
+TEST_CASE("IndexedSlotMap insertWithId replaces duplicate id in place") {
+    luax::IndexedSlotMap<SlotValue> map;
+
+    std::size_t firstIndex = map.insertWithId(7, SlotValue{.id = 7, .payload = 10});
+    map.insertWithId(8, SlotValue{.id = 8, .payload = 20});
+
+    std::size_t replacedIndex = map.insertWithId(7, SlotValue{.id = 7, .payload = 99});
+    REQUIRE(replacedIndex == firstIndex);
+    REQUIRE(map.size() == 2);
+    REQUIRE(map.find(7) != nullptr);
+    REQUIRE(map.find(7)->payload == 99);
+    REQUIRE(map.find(8) != nullptr);
+    REQUIRE(map.indexOf(7) == firstIndex);
+}

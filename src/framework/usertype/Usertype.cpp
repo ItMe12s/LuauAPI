@@ -297,14 +297,17 @@ namespace luax::detail {
         return nullptr;
     }
 
-    void assignUsertypeMetatable(lua_State* L, TypeInfo const& info) {
+    bool assignUsertypeMetatable(lua_State* L, TypeInfo const& info) {
         luaL_getmetatable(L, info.mtName.c_str());
         if (lua_istable(L, -1)) {
             lua_setmetatable(L, -2);
+            return true;
         }
-        else {
-            lua_pop(L, 1);
-        }
+        lua_pop(L, 1);
+        geode::log::error(
+            "assignUsertypeMetatable: missing metatable '{}' for type '{}'", info.mtName, info.name
+        );
+        return false;
     }
 
     void initUserdataBlock(lua_State* L, cocos2d::CCObject* obj, TypeInfo const& info, bool owned) {
@@ -320,7 +323,11 @@ namespace luax::detail {
             block->flags = 0u;
         }
         block->typeTag = info.tag;
-        assignUsertypeMetatable(L, info);
+        if (!assignUsertypeMetatable(L, info)) {
+            block->~UserdataBlock();
+            lua_pop(L, 1);
+            lua_pushnil(L);
+        }
     }
 
     void pushUserdataOwned(lua_State* L, cocos2d::CCObject* obj, TypeInfo const& info) {

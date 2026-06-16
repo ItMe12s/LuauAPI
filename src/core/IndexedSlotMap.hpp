@@ -22,6 +22,14 @@ namespace luax {
             if constexpr (HasSlotId<T>) {
                 value.id = id;
             }
+            if (auto it = m_index.find(id); it != m_index.end()) {
+                std::size_t const index = it->second;
+                if (index < m_values.size() && m_values[index].id == id) {
+                    m_values[index].value = std::move(value);
+                    return index;
+                }
+                m_index.erase(it);
+            }
             std::size_t const index = m_values.size();
             m_index[id] = index;
             m_values.push_back(Entry{id, std::move(value)});

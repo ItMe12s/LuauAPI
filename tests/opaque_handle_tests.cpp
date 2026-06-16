@@ -58,6 +58,24 @@ TEST_CASE("OpaqueHandle push and check round-trip") {
     lua_pop(L, 1);
 }
 
+TEST_CASE("OpaqueHandle __gc is a no-op and does not clear the pointee") {
+    RuntimeGuard guard;
+    auto* runtime = luax::Runtime::getOrCreate();
+    auto* L = runtime->state();
+    REQUIRE(luax::registerOpaqueHandle(L).isOk());
+
+    int payload = 99;
+    luax::pushOpaqueHandle(L, &payload);
+    lua_getmetatable(L, -1);
+    lua_getfield(L, -1, "__gc");
+    REQUIRE(lua_isfunction(L, -1));
+    lua_pushvalue(L, -3);
+    REQUIRE(lua_pcall(L, 1, 0, 0) == 0);
+    REQUIRE(payload == 99);
+    REQUIRE(luax::checkOpaqueHandle<int>(L, -2, "test") == &payload);
+    lua_pop(L, 2);
+}
+
 TEST_CASE("OpaqueHandle rejects light userdata") {
     RuntimeGuard guard;
     auto* runtime = luax::Runtime::getOrCreate();

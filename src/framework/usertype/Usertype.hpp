@@ -125,6 +125,10 @@ namespace luax {
             info.mtName = std::string("luax:") + nm;
             info.isNode = std::is_base_of_v<cocos2d::CCNode, T>;
 
+            if (baseTags.size() > 1) {
+                return geode::Err(fmt::format("{} supports at most one direct base tag", nm));
+            }
+
             info.baseClosure.clear();
             info.baseClosure.push_back(info.tag);
             for (std::uint32_t b : baseTags) {

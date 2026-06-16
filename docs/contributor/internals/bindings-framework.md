@@ -88,12 +88,18 @@ The handlers search methods first, then fields, then the per-node field table fo
 `UsertypeRegistry` maps each bound C++ type to an internal type id. Examples: `CCNode`, `CCLayer`.
 Ids stay fixed for the whole runtime. This is not a mod count. One id per usertype class, no matter how many mods load.
 
+The registry is process-lifetime. It is not reset when the runtime is recreated.
+Do not expect a clean registry after restart in production. Host tests may call `resetForTests()` under `LUAUAPI_HOST_TESTS` only.
+
 Each record holds:
 
 - Tag (internal type id)
 - Name
 - Metatable name
 - Base tags (for inheritance)
+
+`registerType` takes one direct base tag. Its closure fills `baseClosure` for `hasBase` and method lookup
+ More than one direct base is an error.
 
 ### Luau tag vs internal type id
 
@@ -226,7 +232,15 @@ locks `__metatable`, and optionally adds:
 Pass `std::nullopt` for `tag` when userdata is plain `lua_newuserdata` without a reserved tag.
 Some handles (for example texture and mesh) also expose `__gc` in the method table in addition to a tag destructor.
 
-`Usertype<T>` skips this path. It uses `kSharedUsertypeTag`, stores the id in `UserdataBlock::typeTag`, and sets the metatable on push.
+Repeat calls with the same tag still set the tag destructor when one is provided.
+
+## OpaqueHandle
+
+`OpaqueHandle` wraps a borrowed C++ pointer. `__gc` does not free the pointee.
+Keep storage alive while Lua uses it. `ReadOnlyOpaqueVectorView` holds a weak owner ref.
+
+`Usertype<T>` uses `kSharedUsertypeTag` instead.
+`pushOwned` and `pushBorrowed` push `nil` if the metatable was never registered.
 
 `ScheduledHandleBinding` uses the same helper for task and imgui draw handles.
 

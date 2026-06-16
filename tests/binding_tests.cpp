@@ -105,6 +105,31 @@ TEST_CASE("applyAllBindings preserves stable order for equal priority") {
     REQUIRE(luax::applyAllBindings(L) == std::nullopt);
 }
 
+TEST_CASE("registerTaggedMetatable applies tag dtor on repeat registration") {
+    g_dtorCalled = false;
+
+    LuaStateGuard guard;
+    auto* L = guard.L;
+    REQUIRE(L != nullptr);
+
+    constexpr char const* kMeta = "luax.test.RepeatTaggedPayload";
+    constexpr int kTag = 98;
+
+    luaL_Reg methods[] = {
+        {nullptr, nullptr},
+    };
+
+    luax::registerTaggedMetatable(L, kMeta, kTag, methods);
+    luax::registerTaggedMetatable(L, kMeta, kTag, methods, std::nullopt, &taggedDtor);
+
+    auto* payload =
+        static_cast<TestPayload*>(lua_newuserdatataggedwithmetatable(L, sizeof(TestPayload), kTag));
+    payload->value = 0;
+
+    collectGarbage(L);
+    REQUIRE(g_dtorCalled);
+}
+
 TEST_CASE("registerTaggedMetatable tagged round-trip") {
     g_dtorCalled = false;
 

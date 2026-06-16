@@ -8,6 +8,10 @@
 namespace luax {
     namespace {
         constexpr char const* kOpaqueHandleMetatable = "luax:OpaqueHandle";
+
+        int opaqueHandleGc(lua_State*) {
+            return 0;
+        }
     } // namespace
 
     namespace detail {
@@ -20,6 +24,8 @@ namespace luax {
 
         void ensureOpaqueHandleMetatable(lua_State* L) {
             if (luaL_newmetatable(L, kOpaqueHandleMetatable)) {
+                lua_pushcfunction(L, &opaqueHandleGc, "__gc");
+                lua_setfield(L, -2, "__gc");
                 lua_pushstring(L, "locked");
                 lua_setfield(L, -2, "__metatable");
                 lua_pushstring(L, "OpaqueHandle");

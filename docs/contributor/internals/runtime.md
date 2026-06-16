@@ -72,6 +72,9 @@ The requirer uses this root to resolve modules.
 A `LuaRef` records the generation it was created in.
 After a restart, an old reference sees a generation mismatch and reports itself as invalid.
 
+Recreating the runtime does not reset `UsertypeRegistry`. Usertype tags and metatable names stay for the process.
+See [Bindings framework](bindings-framework.md).
+
 ## Shutdown
 
 `registerShutdownHook` adds a cleanup callback.

@@ -132,6 +132,44 @@ TEST_CASE("Usertype registerType rejects invalid base tag") {
     REQUIRE(result.isErr());
 }
 
+TEST_CASE("Usertype registerType rejects multiple direct base tags") {
+    RuntimeGuard guard;
+    auto* runtime = luax::Runtime::getOrCreate();
+    auto* L = runtime->state();
+
+    REQUIRE(luax::Usertype<cocos2d::CCObject>::registerType(L, "CCObject").isOk());
+    auto ccNodeTag = luax::Usertype<cocos2d::CCNode>::registerType(
+        L, "CCNode", {luax::Usertype<cocos2d::CCObject>::tag()}
+    );
+    REQUIRE(ccNodeTag.isOk());
+
+    auto result = luax::Usertype<TestNode>::registerType(
+        L,
+        "TestNode",
+        {luax::Usertype<cocos2d::CCObject>::tag(), luax::Usertype<cocos2d::CCNode>::tag()}
+    );
+    REQUIRE(result.isErr());
+}
+
+TEST_CASE("Usertype pushBorrowed returns nil when metatable was never created") {
+    RuntimeGuard guard;
+    auto* runtime = luax::Runtime::getOrCreate();
+    auto* L = runtime->state();
+
+    auto& reg = luax::detail::UsertypeRegistry::get();
+    auto infoResult = reg.ensureInfo(std::type_index(typeid(TestNode)));
+    REQUIRE(infoResult.isOk());
+    auto& info = *infoResult.unwrap();
+    info.name = "TestNodeUnregisteredMt";
+    info.mtName = "luax:TestNodeUnregisteredMt";
+
+    auto* node = new TestNode();
+    luax::Usertype<TestNode>::pushBorrowed(L, node);
+    REQUIRE(lua_isnil(L, -1));
+    lua_pop(L, 1);
+    node->release();
+}
+
 TEST_CASE("Usertype pushBorrowed returns nil when type is not registered") {
     RuntimeGuard guard;
     auto* runtime = luax::Runtime::getOrCreate();

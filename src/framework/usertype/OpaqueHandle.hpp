@@ -7,6 +7,7 @@
 #include <lua.h>
 
 namespace luax {
+    // Borrowed pointer. C++ keeps it alive. __gc does nothing ig.
     struct OpaqueHandleBlock {
         void* ptr = nullptr;
     };
