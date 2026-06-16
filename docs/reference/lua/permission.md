@@ -25,7 +25,8 @@ Returns whether the permission is granted.
 geode.utils.permission.requestPermission(permission: number, callback: (granted: boolean) -> ()) -> ()
 ```
 
-Asks the system for the permission. The callback runs later, on the main thread, with the result.
+Asks the system for the permission. The callback runs later on the main thread with the result.
+See [Getting started](../../getting-started/overview.md) for the shared runtime threading rule.
 
 ## Permission
 
@@ -52,8 +53,8 @@ end
 - [geode.utils](utils.md)
 - [base64](base64.md)
 - [clipboard](clipboard.md)
-- [Callbacks](callbacks.md)
-- [Globals](globals.md)
+- [callbacks](callbacks.md)
+- [globals](globals.md)
 
 ## Source
 

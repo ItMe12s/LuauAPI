@@ -56,7 +56,7 @@ print(token)
 
 ## Related
 
-- [Getting started overview](../../getting-started/overview.md)
+- [Getting started](../../getting-started/overview.md)
 - [geode.utils](utils.md)
 - [globals](globals.md)
 

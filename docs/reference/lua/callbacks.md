@@ -12,7 +12,7 @@ The supported callback shapes are:
 - Delegate tables
 
 Callbacks run on the main thread under the script budget.
-See [Getting started overview](../../getting-started/overview.md).
+See [Getting started](../../getting-started/overview.md) and [Limits and errors](../cpp/limits-and-errors.md).
 If a callback raises an error, LuauAPI logs the failure and applies the callback site's fallback.
 Selector, menu, delegate, setting, web, and permission callbacks keep their registration lifetime.
 Task intervals and ImGui draw callbacks are removed after an error to avoid log spam.
@@ -77,7 +77,7 @@ Pass the function alone, and the handler object is used as the target.
 
 ## Delegate tables
 
-Virtual interfaces passed as delegate pointers take a Luau table. See [Delegates](delegates.md).
+Virtual interfaces passed as delegate pointers take a Luau table. See [delegates](delegates.md).
 
 ## Lifetime
 
@@ -99,23 +99,21 @@ See [Runtime](../../contributor/internals/runtime.md) Shutdown for LIFO hook ord
 
 ## Limits
 
-Callbacks run under a script budget with a soft orphan-handler cap.
-
-See [Limits and errors](../cpp/limits-and-errors.md).
+See [Limits and errors](../cpp/limits-and-errors.md) for callback budgets and orphan-handler caps.
 
 ## Related
 
-- [Getting started overview](../../getting-started/overview.md)
+- [Getting started](../../getting-started/overview.md)
 - [Examples](../../getting-started/examples.md)
-- [Delegates](delegates.md)
+- [delegates](delegates.md)
 - [hooks](hooks.md)
-- [Tasks and time](tasks.md)
-- [Enums](enums.md)
+- [tasks and time](tasks.md)
+- [enums](enums.md)
 - [game objects](game-objects.md)
 - [mod](mod.md)
 - [web](web.md)
 - [imgui](imgui.md)
-- [Globals](globals.md)
+- [globals](globals.md)
 - [Limits and errors](../cpp/limits-and-errors.md)
 
 ## Source

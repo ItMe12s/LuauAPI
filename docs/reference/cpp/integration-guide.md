@@ -3,8 +3,10 @@
 ## Summary
 
 How another Geode mod uses LuauAPI to run scripts from C++.
-You depend on the mod, include the header, and call the sync run functions on the main thread.
-Async variants may be called from a worker thread.
+You depend on the mod, include the header, and call the sync run functions.
+See [Getting started](../../getting-started/overview.md) for the main-thread rule
+and [C++ API reference](api-reference.md) Threading for per-function thread rules.
+Async variants may be called from a worker thread when the runtime is not shutting down.
 
 ## Before you start
 
@@ -21,28 +23,28 @@ See [Architecture](../../contributor/architecture.md).
 
 ## Run scripts
 
-Call `runFile` or `runScript` on the main thread with your resources directory.
-See [API reference](api-reference.md) for signatures.
+Call `runFile` or `runScript` with your resources directory.
+See [C++ API reference](api-reference.md) Run functions and Threading.
 
-Async variants validate paths and read files on the calling thread, then run on the main thread.
-They return `arc::Future<geode::Result<void>>`.
-You can call them from a worker thread when the runtime is not shutting down.
+Async variants return `arc::Future<geode::Result<void>>`.
+See [C++ API reference](api-reference.md) Async run functions.
 
 ## Status and errors
 
-Check `status()` on the main thread before running scripts.
+See [C++ API reference](api-reference.md) Status functions before running scripts.
 When a sync run fails, read the message from `Result` and optionally `lastError()`.
 
 Async preparation errors (bad path, file too large) appear only in the future `Result`.
 Execution errors appear in both the future `Result` and `lastError()`.
+See [C++ API reference](api-reference.md) Threading for where each error is reported.
 
 See [Limits and errors](limits-and-errors.md) for caps and error strings.
 
 ## Related
 
-- [Getting started overview](../../getting-started/overview.md)
+- [Getting started](../../getting-started/overview.md)
 - [Your first script](../../getting-started/first-script.md)
-- [API reference](api-reference.md)
+- [C++ API reference](api-reference.md)
 - [Limits and errors](limits-and-errors.md)
 - [Architecture](../../contributor/architecture.md)
 

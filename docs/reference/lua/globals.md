@@ -16,7 +16,7 @@ This page covers signatures for the core globals plus error shapes.
 
 ## Script basics
 
-Runtime rules live in [Getting started overview](../../getting-started/overview.md).
+Runtime rules live in [Getting started](../../getting-started/overview.md).
 Caps and error strings live in [Limits and errors](../cpp/limits-and-errors.md).
 
 ## All modules
@@ -25,8 +25,8 @@ Caps and error strings live in [Limits and errors](../cpp/limits-and-errors.md).
 | --- | --- | --- |
 | Core | [hooks](hooks.md) | Hook game functions |
 | Core | [modules](modules.md) | Sandboxed `require` |
-| Core | [Sharing APIs between mods](sharing-apis.md) | `_G` mod APIs |
-| Core | [Tasks and time](tasks.md) | `task` and `time` |
+| Core | [sharing APIs between mods](sharing-apis.md) | `_G` mod APIs |
+| Core | [tasks and time](tasks.md) | `task` and `time` |
 | Core | [callbacks](callbacks.md) | C++ callback lifetime |
 | Core | [delegates](delegates.md) | Virtual interface tables |
 | Game | [enums](enums.md) | GD and Geode enum constants |
@@ -116,11 +116,12 @@ _G: { [string]: any }
 
 The shared global table for every script in the runtime.
 There is one runtime and one global table, so values you set on `_G` are visible to other scripts and to other mods.
-Read shared values through `_G[key]` rather than as a bare global name. See [Sharing APIs between mods](sharing-apis.md).
+Read shared values through `_G[key]` rather than as a bare global name. See [sharing APIs between mods](sharing-apis.md).
 
 ## Other globals
 
-Standard Luau libraries and LuauAPI namespaces (`task`, `geode`, `imgui`, `gd3d`, and others) are listed in [Type stubs](type-stubs.md).
+Standard Luau libraries and LuauAPI namespaces (`task`, `geode`, `imgui`, `gd3d`, and others) are listed in [type stubs](type-stubs.md).
+Hook helpers such as `geode.skip` are documented in [hooks](hooks.md).
 
 ## Limits
 
@@ -130,10 +131,10 @@ See [Limits and errors](../cpp/limits-and-errors.md).
 
 ## Related
 
-- [Getting started overview](../../getting-started/overview.md)
+- [Getting started](../../getting-started/overview.md)
 - [Examples](../../getting-started/examples.md)
 - [modules](modules.md)
-- [Sharing APIs between mods](sharing-apis.md)
+- [sharing APIs between mods](sharing-apis.md)
 - [geode.utils](utils.md)
 - [type stubs](type-stubs.md)
 - [Limits and errors](../cpp/limits-and-errors.md)

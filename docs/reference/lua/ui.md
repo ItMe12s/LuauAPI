@@ -8,7 +8,7 @@ For signatures, use editor autocomplete. For class behavior, see the [Geode docs
 
 ## Which UI to use
 
-Use [`imgui`](imgui.md) for player mod menus you can rebuild every frame.
+Use [imgui](imgui.md) for player mod menus you can rebuild every frame.
 Settings, toggles, tabs, lists, color edits, and confirm popups fit well there.
 
 Use `geode.*` Cocos UI when you need native game nodes, sprites, persistent layers, or layout objects.
@@ -95,17 +95,17 @@ See [imgui](imgui.md) and [src/scripts/_modmenudemo.luau](../../../src/scripts/_
 
 These classes are generated from the Geode bindings.
 The authoritative argument lists live in the generated type stubs, surfaced as editor autocomplete.
-See [Type stubs](type-stubs.md). For class behavior, read the upstream [Geode UI docs](https://docs.geode-sdk.org/).
+See [type stubs](type-stubs.md). For class behavior, read the upstream [Geode UI docs](https://docs.geode-sdk.org/).
 
 ## Related
 
-- [Getting started overview](../../getting-started/overview.md)
+- [Getting started](../../getting-started/overview.md)
 - [Examples](../../getting-started/examples.md)
 - [LuauAPI mod guidelines](../../mod_guidelines.md)
 - [game objects](game-objects.md)
-- [Callbacks](callbacks.md)
+- [callbacks](callbacks.md)
 - [imgui](imgui.md)
-- [Type stubs](type-stubs.md)
+- [type stubs](type-stubs.md)
 - [gd3d](gd3d.md)
 
 ## Source

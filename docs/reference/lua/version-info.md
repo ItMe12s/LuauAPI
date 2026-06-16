@@ -4,7 +4,7 @@
 
 `geode.VersionInfo` parses and compares version strings. It uses a small part of semver.
 A version looks like `v1.2.3` or `v1.2.3-beta.1`. The functions take strings, so you do not build a version by hand.
-They return `nil` and an error message on a bad version, so you can handle them without `pcall`.
+Bad inputs use the recoverable error shape. See [globals](globals.md) Error shapes.
 
 ## parse
 
@@ -46,9 +46,9 @@ print(v.matches(">=v1.2.0", "v1.3.0")) -- true
 
 ## Related
 
-- [Globals](globals.md)
+- [globals](globals.md)
 - [mod](mod.md)
-- [Sharing APIs between mods](sharing-apis.md)
+- [sharing APIs between mods](sharing-apis.md)
 
 ## Source
 

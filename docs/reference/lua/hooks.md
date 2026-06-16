@@ -43,6 +43,12 @@ type HookCallbackTable = {
 
 Provide at least one of `before` or `after`. `priority` orders callbacks on the same target, default `0`.
 
+## Nil object arguments
+
+Normal API calls reject nil object pointers.
+Hook `before` and `after` callbacks may pass nil for object pointer arguments when you need to observe or rewrite a call with a missing object.
+This does not apply to regular method calls outside hooks.
+
 ## The before callback
 
 `before` receives `self` and the method arguments. Its return decides what happens:
@@ -130,7 +136,7 @@ See [game objects](game-objects.md) for usage and node placement rules.
 
 A hook is a sharp tool. Reach for a built-in API first when one exists.
 
-- Per frame work: do not hook `CCScheduler::update`. Use [Tasks](tasks.md) (`task.every`) or a node's `schedule` selector.
+- Per frame work: do not hook `CCScheduler::update`. Use [tasks and time](tasks.md) (`task.every`) or a node's `schedule` selector.
 - Nodes that survive scene changes: do not re-add them from each layer's `init`. Use `OverlayManager`.
 - Reading another mod's effect: check for the node or value it produces instead of hooking.
 
@@ -142,19 +148,18 @@ so they compose with C++ `$modify` mods on the same method.
 
 ## Limits
 
-Hooks run on the main thread with per-target and global callback caps.
-
-See [Limits and errors](../cpp/limits-and-errors.md).
+See [Getting started](../../getting-started/overview.md) for the main-thread rule.
+See [Limits and errors](../cpp/limits-and-errors.md) for callback caps and deadlines.
 
 ## Related
 
-- [Getting started overview](../../getting-started/overview.md)
+- [Getting started](../../getting-started/overview.md)
 - [Examples](../../getting-started/examples.md)
 - [LuauAPI mod guidelines](../../mod_guidelines.md)
-- [Tasks and time](tasks.md)
-- [Callbacks](callbacks.md)
+- [tasks and time](tasks.md)
+- [callbacks](callbacks.md)
 - [game objects](game-objects.md)
-- [Globals](globals.md)
+- [globals](globals.md)
 
 ## Source
 

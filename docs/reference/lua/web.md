@@ -4,6 +4,7 @@
 
 `geode.utils.web` exposes Geode async web requests to Lua.
 Requests run on the web worker. Callbacks run on the main thread.
+See [Getting started](../../getting-started/overview.md) for the shared runtime threading rule.
 See Threading below for intercept and listener rules.
 This binding does not expose `openLinkUnsafe` or any `*Sync` request method.
 File writes stay inside mod sandbox roots.
@@ -94,7 +95,7 @@ geode.utils.web.fetch(options: RequestOptions, callback: (response: WebResponse?
 ```
 
 The shortcut request functions also accept `callback` as the second argument when no options are needed.
-See [Globals](globals.md) Error shapes.
+See [globals](globals.md) Error shapes.
 
 `fetch` has three forms:
 
@@ -266,9 +267,10 @@ handle:disconnect()
 ## Threading
 
 HTTP work runs on Geode's web worker. Lua callbacks run on the main thread.
+See [Getting started](../../getting-started/overview.md) for the shared runtime threading rule.
 
-Web callbacks share the hook callback budget (30000 ms). See [Limits and errors](../cpp/limits-and-errors.md).
-Use [tasks](tasks.md) to schedule work around callbacks.
+Web callbacks share the hook callback budget. See [Limits and errors](../cpp/limits-and-errors.md).
+Use [tasks and time](tasks.md) to schedule work around callbacks.
 
 Request intercept:
 
@@ -361,12 +363,9 @@ Request and response bodies are capped. These body sources count toward the requ
 - `WebRequest:body`, `bodyString`, `bodyJson`, `bodyMultipart`
 - `MultipartForm:param`, `file`, `fileFrom`, `getBody()`
 
-Over the cap, the call returns `nil` and an error, or raises while parsing options.
+Over the cap, failure follows [globals](globals.md) Error shapes.
 
-At most 16 HTTP requests may be in flight at once.
-Additional starts raise `too many concurrent web requests` before the request is sent.
-
-See [Limits and errors](../cpp/limits-and-errors.md).
+See [Limits and errors](../cpp/limits-and-errors.md) for body, request, and concurrency caps.
 
 ## Security
 
@@ -398,15 +397,15 @@ See [LuauAPI mod guidelines](../../mod_guidelines.md) for loadstring and network
 
 ## Related
 
-- [Getting started overview](../../getting-started/overview.md)
+- [Getting started](../../getting-started/overview.md)
 - [Examples](../../getting-started/examples.md)
 - [LuauAPI mod guidelines](../../mod_guidelines.md)
 - [geode.utils](utils.md)
 - [websocket](websocket.md)
 - [json](json.md)
 - [fs](fs.md)
-- [Tasks and time](tasks.md)
-- [Globals](globals.md)
+- [tasks and time](tasks.md)
+- [globals](globals.md)
 - [Limits and errors](../cpp/limits-and-errors.md)
 
 ## Source

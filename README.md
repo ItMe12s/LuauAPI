@@ -10,13 +10,11 @@
 </p>
 
 <p align="center">
-  The documentation is organized by audience.<br>
-  Choose the section that matches how you plan to use,<br>
-  extend, or contribute to the project.
+  Read the docs by audience.<br>
+  Start with the docs index.
 </p>
 
 **Heads up: LuauAPI is still in beta, so expect things to change.**
-
 **LuauAPI development will NOT support older versions of GD, Geode SDK, bindings, and dependencies.**
 
 ## Before you start
@@ -29,90 +27,19 @@ You are expected to already have:
 
 *Optionally, you can learn these along the way.*
 
-## Getting started
+## Docs
 
-For mod authors building a Geode mod using Luau scripting.
+Read the [documentation index](docs/README.md).
+It links getting started, reference, and contributor docs.
 
-Runnable samples: [Examples](docs/getting-started/examples.md).
-
-Kindly read this: [LuauAPI mod guidelines](docs/mod_guidelines.md).
+Start here if you are new:
 
 - [Overview](docs/getting-started/overview.md)
-- [Installation](docs/getting-started/installation.md)
-- [Editor setup](docs/getting-started/editor-setup.md)
-- [Your first script](docs/getting-started/first-script.md)
 - [Examples](docs/getting-started/examples.md)
+- [Lua module index](docs/reference/lua/globals.md)
 - [LuauAPI mod guidelines](docs/mod_guidelines.md)
 
-Join the [Discord](https://discord.gg/E8f6D6XqbW) for help!
-
-## Reference
-
-API reference for everything a script or host can call.
-Start at [globals](docs/reference/lua/globals.md) for the full module index.
-
-- Lua
-  - Core
-    - [globals](docs/reference/lua/globals.md)
-    - [modules](docs/reference/lua/modules.md)
-    - [Sharing APIs between mods](docs/reference/lua/sharing-apis.md)
-    - [hooks](docs/reference/lua/hooks.md)
-    - [Tasks and time](docs/reference/lua/tasks.md)
-    - [callbacks](docs/reference/lua/callbacks.md)
-    - [delegates](docs/reference/lua/delegates.md)
-    - [type stubs](docs/reference/lua/type-stubs.md)
-  - Game
-    - [enums](docs/reference/lua/enums.md)
-    - [game objects](docs/reference/lua/game-objects.md)
-    - [cocos](docs/reference/lua/cocos.md)
-    - [ColorProvider](docs/reference/lua/color-provider.md)
-    - [Keybind](docs/reference/lua/keybind.md)
-    - [Keyboard input](docs/reference/lua/keyboard-input.md)
-  - UI
-    - [UI and layouts](docs/reference/lua/ui.md)
-    - [imgui](docs/reference/lua/imgui.md)
-    - [gd3d](docs/reference/lua/gd3d.md)
-  - IO
-    - [mod](docs/reference/lua/mod.md)
-    - [fs](docs/reference/lua/fs.md)
-    - [json](docs/reference/lua/json.md)
-  - Network
-    - [web](docs/reference/lua/web.md)
-    - [websocket](docs/reference/lua/websocket.md)
-  - Utils
-    - [geode.utils](docs/reference/lua/utils.md)
-    - [clipboard](docs/reference/lua/clipboard.md)
-    - [string](docs/reference/lua/string.md)
-    - [random](docs/reference/lua/random.md)
-    - [game](docs/reference/lua/game.md)
-    - [base64](docs/reference/lua/base64.md)
-    - [permission](docs/reference/lua/permission.md)
-    - [VersionInfo](docs/reference/lua/version-info.md)
-- C++
-  - [C++ API reference](docs/reference/cpp/api-reference.md)
-  - [C++ integration guide](docs/reference/cpp/integration-guide.md)
-  - [Limits and errors](docs/reference/cpp/limits-and-errors.md)
-
-## Contributor
-
-For anyone working on LuauAPI itself.
-
-- [Architecture](docs/contributor/architecture.md)
-- [Building from source](docs/contributor/building.md)
-- [Testing](docs/contributor/testing.md)
-- Internals
-  - [Bindings framework](docs/contributor/internals/bindings-framework.md)
-  - [ImGui draw scheduler](docs/contributor/internals/imgui-draw-scheduler.md)
-  - [Module system](docs/contributor/internals/module-system.md)
-  - [Runtime](docs/contributor/internals/runtime.md)
-  - [Task scheduler](docs/contributor/internals/task-scheduler.md)
-- Codegen
-  - [CCArray methods](docs/contributor/codegen/cc-array.md)
-  - [ccCArray fields](docs/contributor/codegen/cc-c-array.md)
-  - [Codegen](docs/contributor/codegen/codegen.md)
-  - [Nested containers](docs/contributor/codegen/nested-containers.md)
-  - [Pair containers](docs/contributor/codegen/pair-containers.md)
-  - [Platform parity](docs/contributor/codegen/platform-parity.md)
+Join the [Discord](https://discord.gg/E8f6D6XqbW) for help.
 
 ## Project
 

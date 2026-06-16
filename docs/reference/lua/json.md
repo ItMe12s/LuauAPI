@@ -6,8 +6,8 @@
 using the same JSON model as `geode.Mod.getSavedValue` and `setSavedValue`.
 
 JSON types map to Lua as boolean, number, string, `nil` (null), array table, and object table.
-Past depth and size limits, tuple APIs return `nil` and an error message, and `dump` raises.
-See [Globals](globals.md) Error shapes.
+Past depth and size limits, tuple APIs fail recoverably and `dump` raises.
+See [globals](globals.md) Error shapes and [Limits and errors](../cpp/limits-and-errors.md).
 Unsupported Luau types serialize as JSON `null`.
 
 ## parse
@@ -17,7 +17,7 @@ geode.json.parse(text: string) -> (any?, string?)
 ```
 
 Parses a JSON string into a Luau value.
-On success returns the value. On failure returns `nil` and an error message.
+On success returns the value. On failure uses [globals](globals.md) Error shapes.
 
 ```lua
 local value, err = geode.json.parse('{"a":[1,2,3]}')
@@ -54,11 +54,11 @@ See [Limits and errors](../cpp/limits-and-errors.md).
 
 ## Related
 
-- [Getting started overview](../../getting-started/overview.md)
+- [Getting started](../../getting-started/overview.md)
 - [Examples](../../getting-started/examples.md)
 - [mod](mod.md)
 - [fs](fs.md)
-- [Globals](globals.md)
+- [globals](globals.md)
 - [Limits and errors](../cpp/limits-and-errors.md)
 
 ## Source

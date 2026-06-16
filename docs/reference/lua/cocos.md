@@ -53,7 +53,7 @@ Colors use plain tables:
 | `cc4bFromHexString(hex: string, requireAlpha: boolean?, permissive: boolean?) -> (RGBAColor?, string?)` | Parse a hex string with alpha. |
 | `ccDrawColor4B(color: RGBAColor) -> ()` | Set the draw color, only valid inside a draw call. |
 
-The hex parse functions return `nil` and an error message on a bad string, so you can handle them without `pcall`.
+The hex parse functions use the recoverable error shape. See [globals](globals.md) Error shapes.
 With `permissive` true, a short string like `"f"` reads as white.
 
 ## enumKeyCodes
@@ -66,7 +66,7 @@ geode.cocos.enumKeyCodes.MOUSE_4
 
 `geode.cocos.enumKeyCodes` contains the full cocos `enumKeyCodes` table.
 Use these values with keyboard delegates, [Keyboard input](keyboard-input.md), and [Keybind](keybind.md).
-See [Enums](enums.md) for how enum values compare at runtime.
+See [enums](enums.md) for how enum values compare at runtime.
 
 ## Example
 
@@ -82,8 +82,8 @@ print(cc.lighten3B(red, 20).r) -- 255
 
 ## Related
 
-- [Globals](globals.md)
-- [Enums](enums.md)
+- [globals](globals.md)
+- [enums](enums.md)
 - [game objects](game-objects.md)
 - [ColorProvider](color-provider.md)
 - [Keyboard input](keyboard-input.md)

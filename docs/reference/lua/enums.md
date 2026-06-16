@@ -47,8 +47,8 @@ Runtime is plain integers. Named constants may be missing. Listed as `unscannedG
 
 - [game objects](game-objects.md)
 - [cocos](cocos.md)
-- [Callbacks](callbacks.md)
-- [Type stubs](type-stubs.md)
+- [callbacks](callbacks.md)
+- [type stubs](type-stubs.md)
 - [Codegen](../../contributor/codegen/codegen.md)
 
 ## Source

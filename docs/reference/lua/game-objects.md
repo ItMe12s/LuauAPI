@@ -99,6 +99,30 @@ label:setPosition({ x = 100, y = 200 })
 bg:setContentSize({ width = 170, height = 84 })
 ```
 
+## Container-shaped values
+
+Some fields and method arguments use Geode containers. LuauAPI converts them to plain tables.
+
+- Scalar-key map: `{ [number]: value }` or `{ [string]: value }`.
+- Number or string vector or set: `{ number }` or `{ string }`.
+- Object vector: `{ Object? }`. Entries can be nil.
+- Pair record: `{ first = T1, second = T2 }`. Always use `first` and `second`.
+- Pair-key map: entry list `{ { first = k1, second = k2, value = v } }` because Lua cannot use tables as map keys.
+- Nested map values and some size fields use other shapes. See the contributor container pages below.
+
+Writing a container field clears it and re-inserts your entries. Whole-container assignment is not used.
+Some nested primitive vector fields are read-only getters.
+
+Read-only handler queues on input dispatchers use `{ Handler? }` sequences. Index with `1`, not `0`.
+
+Binding details for pair, nested, and ccCArray shapes:
+
+- [Pair containers](../../contributor/codegen/pair-containers.md)
+- [Nested containers](../../contributor/codegen/nested-containers.md)
+- [ccCArray read-only fields](../../contributor/codegen/cc-c-array.md)
+
+Use [type stubs](type-stubs.md) for the exact stub type on each member.
+
 ## Per-object fields
 
 Store your own data on an object with `geode.fields(node)` or the `m_fields` property.
@@ -111,25 +135,25 @@ fields.count = (fields.count or 0) + 1
 
 ## Enums
 
-GD and Geode enums are integer constant tables on `geode.gd` and `geode`. See [Enums](enums.md).
+GD and Geode enums are integer constant tables on `geode.gd` and `geode`. See [enums](enums.md).
 
 ## Ownership
 
 The runtime tracks whether an object is owned by Lua or only borrowed and handles it for you.
-You do not manage retain or release by hand. See the [bindings framework](../../contributor/internals/bindings-framework.md).
+You do not manage retain or release by hand. See the [Bindings framework](../../contributor/internals/bindings-framework.md).
 
 ## Related
 
-- [Getting started overview](../../getting-started/overview.md)
+- [Getting started](../../getting-started/overview.md)
 - [Examples](../../getting-started/examples.md)
 - [LuauAPI mod guidelines](../../mod_guidelines.md)
 - [hooks](hooks.md)
-- [Callbacks](callbacks.md)
+- [callbacks](callbacks.md)
 - [cocos](cocos.md)
 - [mod](mod.md)
 - [UI and layouts](ui.md)
-- [Enums](enums.md)
-- [Type stubs](type-stubs.md)
+- [enums](enums.md)
+- [type stubs](type-stubs.md)
 
 ## Source
 

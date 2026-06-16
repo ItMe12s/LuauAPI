@@ -69,7 +69,7 @@ The `intersection` block lists:
 
 ## Platform-scoped fields
 
-Broma bindings may wrap members in platform blocks such as `android, ios { int m_spawnCount; }`.
+Broma bindings may wrap members in platform blocks.
 The parser attaches a `platforms` set to such fields. Per-platform plans only consider fields that apply on that platform,
 and the intersected stub omits platform-only members entirely.
 

@@ -14,7 +14,7 @@ Use the `Variant` table for the values.
 | `UrlWithPad` | 3 | url safe alphabet, with padding |
 
 A bad variant value raises a Lua error.
-The decode functions return `nil` and an error message on bad input, so you can handle them without `pcall`.
+The decode functions use the recoverable error shape. See [globals](globals.md) Error shapes.
 
 ## encode
 
@@ -68,7 +68,7 @@ print(back) -- hello
 - [geode.utils](utils.md)
 - [clipboard](clipboard.md)
 - [permission](permission.md)
-- [Globals](globals.md)
+- [globals](globals.md)
 
 ## Source
 

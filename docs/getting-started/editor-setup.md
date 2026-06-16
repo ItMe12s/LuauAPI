@@ -16,7 +16,7 @@ It sits next to the `.geode` mod file. No build is needed.
 If you build LuauAPI from source instead, the stub is written to `types/` after a build.
 See [Building from source](../contributor/building.md).
 
-For what the stub contains, see [Type stubs](../reference/lua/type-stubs.md).
+For what the stub contains, see [type stubs](../reference/lua/type-stubs.md).
 
 ## Step 3: place the stub
 
@@ -84,9 +84,9 @@ The `definitionFiles` entry is a fixed single path, so you only reload after a s
 
 ## Related
 
-- [Getting started overview](overview.md)
+- [Getting started](overview.md)
 - [Examples](examples.md)
-- [Type stubs](../reference/lua/type-stubs.md)
+- [type stubs](../reference/lua/type-stubs.md)
 - [Building from source](../contributor/building.md)
 
 ## Source

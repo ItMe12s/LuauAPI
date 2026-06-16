@@ -16,7 +16,7 @@ A path that escapes the root (for example with `..`) or an absolute path is reje
 
 An unknown root raises a Lua error.
 
-Recoverable failures return `nil` and an error string. See [Globals](globals.md) Error shapes.
+Recoverable failures return `nil` and an error string. See [globals](globals.md) Error shapes.
 
 ### Symlinks
 
@@ -99,11 +99,11 @@ end
 
 ## Related
 
-- [Getting started overview](../../getting-started/overview.md)
+- [Getting started](../../getting-started/overview.md)
 - [Examples](../../getting-started/examples.md)
 - [json](json.md)
 - [mod](mod.md)
-- [Globals](globals.md)
+- [globals](globals.md)
 - [Limits and errors](../cpp/limits-and-errors.md)
 
 ## Source

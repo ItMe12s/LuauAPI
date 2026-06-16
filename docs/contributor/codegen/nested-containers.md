@@ -10,7 +10,7 @@ Tests live in `tests/luau_codegen/test_nested_containers.py`.
 
 - Map with scalar key and vector value (normal dictionary):
   - `gd::unordered_map<int, gd::vector<LabelGameObject*>>` becomes `{ [number]: { LabelGameObject? } }`
-- Map with pair key and vector value (entry list, same as [pair containers](pair-containers.md)):
+- Map with pair key and vector value (entry list, same as [Pair containers](pair-containers.md)):
   - `gd::map<std::pair<int, int>, gd::vector<GroupCommandObject2*>>` becomes
     `{ { first: number, second: number, value: { GroupCommandObject2? } } }`
 - Nested primitive vector (read-only field getter):

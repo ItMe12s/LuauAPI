@@ -10,6 +10,7 @@ Types match `tools/luau_codegen/extra_bindings/imgui.dluau`.
 
 Register one draw callback with `imgui.onDraw`. Build all ImGui UI inside that callback.
 Widget calls must run on the main thread and inside `imgui.onDraw`.
+See [Getting started](../../getting-started/overview.md) for the shared runtime threading rule.
 
 ImGui is immediate mode. It does not store your widget state.
 Pass current values each frame and save returned values in Luau.
@@ -156,7 +157,7 @@ imgui.colorButton(label, color, opts?) -> boolean
 Indexes are zero-based. Colors use `{ x, y, z, w }` floats from 0 to 1.
 `comboPopup` is scoped and lets you build custom combo contents.
 
-## Trees, Tabs, Popups
+## Trees, tabs, popups
 
 ```lua
 imgui.collapsingHeader(label, opts?) -> boolean, boolean?
@@ -177,7 +178,7 @@ Use `openPopup` before `popup` or `popupModal`.
 `imgui.tooltip(fn)` shows a tooltip for the previous item only when it is hovered.
 Use `imgui.isItemHovered()` before `imgui.setTooltip(text)` when you need manual control.
 
-## Tables And Menus
+## Tables and menus
 
 ```lua
 imgui.table(id, columns, fn, opts?)
@@ -197,7 +198,7 @@ Call table row and column helpers inside `imgui.table`.
 `menuItem` returns clicked when no selected value is passed.
 When selected is passed, it returns the new selected value.
 
-## Style And Theme
+## Style and theme
 
 ```lua
 imgui.theme.apply("dark" | "light" | "classic")
@@ -246,7 +247,7 @@ See [UI and layouts](ui.md) for when to use ImGui vs Cocos UI.
 - [LuauAPI mod guidelines](../../mod_guidelines.md)
 - [ImGui draw scheduler](../../contributor/internals/imgui-draw-scheduler.md)
 - [Limits and errors](../cpp/limits-and-errors.md)
-- [Type stubs](type-stubs.md)
+- [type stubs](type-stubs.md)
 
 ## Source
 

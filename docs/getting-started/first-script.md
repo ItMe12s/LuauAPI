@@ -39,7 +39,8 @@ $on_mod(Loaded) {
 }
 ```
 
-`runFile` must run on the main thread. The example uses `queueInMainThread` to make sure of that.
+See [Getting started](overview.md) for the main-thread rule.
+The example uses `queueInMainThread` to satisfy it.
 LuauAPI owns the runtime, so you do not start it. Check `status()` is `Ready` first if you need to.
 
 ## The rules
@@ -51,7 +52,7 @@ See [modules](../reference/lua/modules.md) and [Limits and errors](../reference/
 
 LuauAPI ships built-in developer tools, such as a script executor.
 They load only when developer mode is on in mod settings.
-See [Installation Settings](installation.md).
+See [Installation](installation.md).
 
 ## Next
 
@@ -60,7 +61,7 @@ See [Installation Settings](installation.md).
 
 ## Related
 
-- [Getting started overview](overview.md)
+- [Getting started](overview.md)
 - [Examples](examples.md)
 - [globals](../reference/lua/globals.md)
 - [modules](../reference/lua/modules.md)

@@ -7,7 +7,7 @@ Tasks run on the game tick. They keep running when the game pauses. Speedhacks c
 Types match `tools/luau_codegen/extra_bindings/task.dluau`.
 
 `loadstring` is a global, not part of `task`.
-See [Globals](globals.md).
+See [globals](globals.md).
 
 ## Types
 
@@ -37,7 +37,7 @@ task.spawn(fn: (...any) -> ...any, ...any) -> ()
 ```
 
 Runs `fn` immediately under the callback budget. Extra arguments are passed to `fn`.
-Errors are logged rather than thrown, and the call returns nothing.
+Raises an error when the runtime is not ready. Errors inside `fn` are logged. The call returns nothing.
 
 ```lua
 task.spawn(function(name)
@@ -103,16 +103,15 @@ print(time.now(), time.unix())
 ## Limits
 
 Tasks use the game scheduler and share the main-thread callback budget.
-
-See [Limits and errors](../cpp/limits-and-errors.md).
+See [Getting started](../../getting-started/overview.md) and [Limits and errors](../cpp/limits-and-errors.md).
 
 ## Related
 
-- [Getting started overview](../../getting-started/overview.md)
+- [Getting started](../../getting-started/overview.md)
 - [Examples](../../getting-started/examples.md)
 - [Task scheduler](../../contributor/internals/task-scheduler.md)
-- [Globals](globals.md)
-- [Sharing APIs between mods](sharing-apis.md)
+- [globals](globals.md)
+- [sharing APIs between mods](sharing-apis.md)
 - [Limits and errors](../cpp/limits-and-errors.md)
 
 ## Source

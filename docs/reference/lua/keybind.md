@@ -13,7 +13,7 @@ Use `geode.cocos.enumKeyCodes.KEY_*` values for `key`.
 Use `geode.KeyboardModifier` constants for `modifiers`.
 
 `fromString` returns `nil` and an error message on a bad string.
-See [Globals](globals.md) Error shapes.
+See [globals](globals.md) Error shapes.
 
 ## fromString
 
@@ -55,7 +55,7 @@ if node then someMenu:addChild(node) end
 
 ## Related
 
-- [Globals](globals.md)
+- [globals](globals.md)
 - [Keyboard input](keyboard-input.md)
 - [delegates](delegates.md)
 - [UI and layouts](ui.md)

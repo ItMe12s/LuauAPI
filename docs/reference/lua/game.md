@@ -47,7 +47,7 @@ On iOS, Android, and macOS this call is unsupported and has no effect.
 
 ## Related
 
-- [Getting started overview](../../getting-started/overview.md)
+- [Getting started](../../getting-started/overview.md)
 - [LuauAPI mod guidelines](../../mod_guidelines.md)
 - [geode.utils](utils.md)
 - [globals](globals.md)

@@ -53,7 +53,7 @@ so early scheduled callbacks still run. Failures are logged once. `disarmTaskTic
 
 ## Limits
 
-Task count and callback budget caps are in limits-and-errors.
+Task count and callback budget caps are in [Limits and errors](../../reference/cpp/limits-and-errors.md).
 `task.every` rejects an interval that is not greater than zero.
 
 See [Limits and errors](../../reference/cpp/limits-and-errors.md).
@@ -61,7 +61,7 @@ See [Limits and errors](../../reference/cpp/limits-and-errors.md).
 ## Related
 
 - [Architecture](../architecture.md)
-- [Tasks and time reference](../../reference/lua/tasks.md)
+- [tasks and time](../../reference/lua/tasks.md)
 - [ImGui draw scheduler](imgui-draw-scheduler.md)
 - [Runtime](runtime.md)
 - [Limits and errors](../../reference/cpp/limits-and-errors.md)

@@ -3,7 +3,7 @@
 ## Summary
 
 Small runnable scripts for common tasks. Each block stands on its own.
-Full signatures live in the [Lua reference](../reference/lua/globals.md).
+Full signatures live in the [globals](../reference/lua/globals.md).
 
 ## Load a module with require
 
@@ -38,7 +38,7 @@ geode.hook("geode.gd.MenuLayer:init/0", {
 
 ## Schedule work with task
 
-Full API: [Tasks and time](../reference/lua/tasks.md).
+Full API: [tasks and time](../reference/lua/tasks.md).
 
 ```lua
 task.spawn(function()
@@ -83,7 +83,7 @@ end
 
 ## Share an API on _G
 
-Full API: [Sharing APIs between mods](../reference/lua/sharing-apis.md).
+Full API: [sharing APIs between mods](../reference/lua/sharing-apis.md).
 
 Publish from the provider mod. Read with `_G["other.mod.id"]` from consumers.
 Use `task` polling when load order is unknown.
@@ -165,13 +165,13 @@ geode.hook("geode.gd.MenuLayer:init/0", {
 
 ## Related
 
-- [Getting started overview](overview.md)
+- [Getting started](overview.md)
 - [LuauAPI mod guidelines](../mod_guidelines.md)
 - [globals](../reference/lua/globals.md)
 - [modules](../reference/lua/modules.md)
-- [Sharing APIs between mods](../reference/lua/sharing-apis.md)
+- [sharing APIs between mods](../reference/lua/sharing-apis.md)
 - [hooks](../reference/lua/hooks.md)
-- [Tasks and time](../reference/lua/tasks.md)
+- [tasks and time](../reference/lua/tasks.md)
 - [fs](../reference/lua/fs.md)
 - [json](../reference/lua/json.md)
 - [mod](../reference/lua/mod.md)

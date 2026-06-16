@@ -197,13 +197,13 @@ end)
 
 ## Related
 
-- [Getting started overview](../../getting-started/overview.md)
+- [Getting started](../../getting-started/overview.md)
 - [Examples](../../getting-started/examples.md)
-- [Callbacks](callbacks.md)
+- [callbacks](callbacks.md)
 - [Keybind](keybind.md)
 - [cocos](cocos.md)
 - [delegates](delegates.md)
-- [Globals](globals.md)
+- [globals](globals.md)
 
 ## Source
 

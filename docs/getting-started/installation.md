@@ -45,8 +45,9 @@ See [gd3d](../reference/lua/gd3d.md).
 ## Run from C++
 
 Most mods only need the dependency above.
-If your mod already has C++ entry points, call `imes::luauapi::runFile` or `runScript` on the main thread with your resources directory.
-See [Your first script](first-script.md) and the [C++ integration guide](../reference/cpp/integration-guide.md).
+If your mod already has C++ entry points, call `imes::luauapi::runFile` or `runScript` with your resources directory.
+See [Getting started](overview.md) for the main-thread rule, [Your first script](first-script.md),
+and the [C++ integration guide](../reference/cpp/integration-guide.md).
 
 ## Settings
 
@@ -69,7 +70,7 @@ LuauAPI ships two settings, both off by default:
 
 ## Related
 
-- [Overview](overview.md)
+- [Getting started](overview.md)
 - [Building from source](../contributor/building.md)
 
 ## Source

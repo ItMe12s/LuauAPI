@@ -126,11 +126,11 @@ gd3d.gltf.loadMeshFromBytes(bytes: buffer | string) -> (Mesh?, string?)
 `loadMeshFromBytes` loads glTF data already in memory. Pass a Luau `buffer` or raw `string`.
 Use GLB with embedded buffers and images only.
 External URI references fail with the loader's usual buffer or image errors.
-The same 32 MiB read cap as `loadMesh` applies.
+See [Limits and errors](../cpp/limits-and-errors.md) for the read cap.
 The first argument uses the same roots as [fs](fs.md): `"save"`, `"config"`, `"persistent"`, or `"resources"`.
 Shipped assets belong under `"resources"`.
 
-Returns a mesh handle, or `nil` and an error message.
+Returns a mesh handle, or `nil` and an error message. See [globals](globals.md) Error shapes.
 `addMesh` keeps the mesh alive. You do not need to keep the handle after adding.
 
 Supported content:
@@ -192,7 +192,8 @@ Builds a mesh from CPU-side geometry without a glTF file.
 Returns the same `Mesh` handle type as `gd3d.gltf.loadMesh`,
 so it works with `viewport:addMesh`, materials, and the rest of the gd3d pipeline.
 
-`positions` is required and must contain at least one vertex (maximum 200,000).
+`positions` is required and must contain at least one vertex.
+See [Limits and errors](../cpp/limits-and-errors.md) for the vertex cap.
 `indices` is required. Use 1-based vertex indices (Luau convention).
 Each group of three entries is one triangle. The count must be a multiple of three.
 
@@ -210,7 +211,7 @@ gd3d.texture.load(root: FsRoot, path: string) -> (Texture?, string?)
 
 Loads a PNG or JPEG image from a mod sandbox root.
 The first argument uses the same roots as [fs](fs.md).
-Returns a texture handle, or `nil` and an error message.
+Returns a texture handle, or `nil` and an error message. See [globals](globals.md) Error shapes.
 Texture data is released when the handle is collected and no material references it anymore.
 Materials that reference a texture keep it alive on their own.
 Viewport render targets from `viewport:texture()` are also `Texture` handles with the same methods.
@@ -333,14 +334,14 @@ See [Limits and errors](../cpp/limits-and-errors.md) for mesh, texture, and proc
 
 ## Related
 
-- [Getting started overview](../../getting-started/overview.md)
+- [Getting started](../../getting-started/overview.md)
 - [Examples](../../getting-started/examples.md)
 - [LuauAPI mod guidelines](../../mod_guidelines.md)
 - [fs](fs.md)
 - [hooks](hooks.md)
 - [game objects](game-objects.md)
 - [UI and layouts](ui.md)
-- [Tasks and time](tasks.md)
+- [tasks and time](tasks.md)
 - [Limits and errors](../cpp/limits-and-errors.md)
 
 ## Source

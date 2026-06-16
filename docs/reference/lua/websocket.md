@@ -4,6 +4,7 @@
 
 The `websocket` library provides WebSocket client connections and a local WebSocket server, backed by IXWebSocket.
 Sockets run on background threads and deliver all events to Lua on the main thread.
+See [Getting started](../../getting-started/overview.md) for the shared runtime threading rule.
 The client supports `ws://` and `wss://` (TLS via mbedTLS). The server is plain `ws://` only.
 
 ## Types
@@ -41,7 +42,7 @@ websocket.serve(port: number, options: WebSocketServeOptions?) -> (WebSocketServ
 
 `connect` starts the socket immediately and returns the connection.
 Events arrive on the next frame at the earliest, so attaching callbacks right after `connect` never misses events.
-`serve` binds and starts listening, or returns `nil` and an error message. See [Globals](globals.md) Error shapes.
+`serve` binds and starts listening, or returns `nil` and an error message. See [globals](globals.md) Error shapes.
 
 ## WebSocketConnection
 
@@ -152,12 +153,12 @@ Nothing closes them when an individual script run returns, so keep a reference f
 
 ## Related
 
-- [Getting started overview](../../getting-started/overview.md)
+- [Getting started](../../getting-started/overview.md)
 - [Examples](../../getting-started/examples.md)
 - [LuauAPI mod guidelines](../../mod_guidelines.md)
 - [web](web.md)
-- [Tasks and time](tasks.md)
-- [Globals](globals.md)
+- [tasks and time](tasks.md)
+- [globals](globals.md)
 - [Limits and errors](../cpp/limits-and-errors.md)
 
 ## Source

@@ -64,15 +64,15 @@ end)
 - This is a convention, not enforced. Key by your full mod id to avoid collisions.
 - Values stay for the life of the runtime. There is no auto cleanup.
 - The poll runs on the game tick. It keeps running when the game pauses. Speedhacks change poll timing because it uses frame delta.
-- `require` cannot reach another mod. It is sandboxed to your own resources. See [Modules](modules.md).
+- `require` cannot reach another mod. It is sandboxed to your own resources. See [modules](modules.md).
 
 ## Related
 
-- [Getting started overview](../../getting-started/overview.md)
+- [Getting started](../../getting-started/overview.md)
 - [Examples](../../getting-started/examples.md)
-- [Modules](modules.md)
-- [Tasks and time](tasks.md)
-- [Globals](globals.md)
+- [modules](modules.md)
+- [tasks and time](tasks.md)
+- [globals](globals.md)
 - [LuauAPI mod guidelines](../../mod_guidelines.md)
 
 ## Source

@@ -32,9 +32,7 @@ and applies all bindings. After this, `status` reports `Ready`.
 
 The state uses `boundedAlloc`, a custom allocator.
 It tracks current use in `m_memoryUsage` and caps it at `m_memoryLimit`.
-When an allocation would cross the cap, the allocator returns null and Lua reports an out of memory error.
-
-See [Limits and errors](../../reference/cpp/limits-and-errors.md).
+See [Limits and errors](../../reference/cpp/limits-and-errors.md) for the cap and out-of-memory behavior.
 The helper logic lives in `src/core/AllocatorAccounting.hpp`.
 
 ## Deadlines and budget
@@ -91,7 +89,7 @@ WebSocket uses this to close live connections and servers. See [Bindings framewo
 ## Related
 
 - [Architecture](../architecture.md)
-- [Getting started overview](../../getting-started/overview.md)
+- [Getting started](../../getting-started/overview.md)
 - [Bindings framework](bindings-framework.md)
 - [Module system](module-system.md)
 

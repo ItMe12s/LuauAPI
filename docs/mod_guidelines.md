@@ -55,7 +55,8 @@ local position = transform:position()
 
 Hooks and callbacks must return required values.
 
-A missing return can corrupt the call path. Some failures can crash outside normal Lua errors and may escape the Geode crash handler.
+A missing return can corrupt the call path.
+Some failures can crash outside normal Lua errors and may escape the Geode crash handler.
 See [hooks](reference/lua/hooks.md).
 
 Bad:
@@ -147,7 +148,7 @@ _G["your.modid"] = {
 ```
 
 Even this should be rare. Prefer modules and locals when you do not need a public API.
-See [Sharing APIs between mods](reference/lua/sharing-apis.md).
+See [sharing APIs between mods](reference/lua/sharing-apis.md).
 
 ### `reject-gpu-maxxing`
 
@@ -434,7 +435,7 @@ geode.hook("geode.gd.MenuLayer:init/0", {
 })
 ```
 
-See [Game objects](reference/lua/game-objects.md) and [hooks](reference/lua/hooks.md).
+See [game objects](reference/lua/game-objects.md) and [hooks](reference/lua/hooks.md).
 
 ### `other-remake`
 
@@ -469,16 +470,15 @@ These are allowed when done with care.
 ## Related
 
 - [Geode SDK Mod Guidelines](https://docs.geode-sdk.org/mods/guidelines/)
-- [Getting started overview](getting-started/overview.md)
+- [Getting started](getting-started/overview.md)
 - [globals](reference/lua/globals.md)
-- [Sharing APIs between mods](reference/lua/sharing-apis.md)
-- [Modules](reference/lua/modules.md)
+- [sharing APIs between mods](reference/lua/sharing-apis.md)
+- [modules](reference/lua/modules.md)
 - [hooks](reference/lua/hooks.md)
-- [Tasks and time](reference/lua/tasks.md)
+- [tasks and time](reference/lua/tasks.md)
 - [gd3d](reference/lua/gd3d.md)
 - [Limits and errors](reference/cpp/limits-and-errors.md)
 
 ## Source
 
 - `src/core/Config.hpp`
-- `docs/mod_guidelines.md`

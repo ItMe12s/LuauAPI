@@ -54,14 +54,14 @@ The default input mode stays in place, so the game keeps input unless an ImGui w
 
 ## Limits
 
-Draw callback count and per-callback deadline caps are in limits-and-errors.
+Draw callback count and per-callback deadline caps are in [Limits and errors](../../reference/cpp/limits-and-errors.md).
 
 See [Limits and errors](../../reference/cpp/limits-and-errors.md).
 
 ## Related
 
 - [Architecture](../architecture.md)
-- [imgui reference](../../reference/lua/imgui.md)
+- [imgui](../../reference/lua/imgui.md)
 - [Task scheduler](task-scheduler.md)
 - [Runtime](runtime.md)
 - [Limits and errors](../../reference/cpp/limits-and-errors.md)

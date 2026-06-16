@@ -120,27 +120,30 @@ See `CMakeLists.txt` for the full link list.
 
 ## The Python codegen tests
 
-The suite under `tests/luau_codegen/` covers:
-
-- Broma parsing
-- Filtering
-- C++ bindings
-- Luau type stubs
-- Plan and parity
-- CLI I/O
-- Free-function overrides
-- The Geode SDK scanner
-- Drift guards for handwritten bindings, extra-binding stubs, and the host public API header
-
-CTest registers it as `luauapi_codegen_tests` and runs it via `python -m unittest discover`.
+CTest registers the suite as `luauapi_codegen_tests` and runs it via `python -m unittest discover`.
 
 ```bash
 PYTHONPATH=tools python -m unittest discover -s tests/luau_codegen -p "test_*.py"
 ```
 
-Notable drift guards: `test_manual_fields_sync.py`, `test_extra_bindings_sync.py`,
-`test_public_api_header_sync.py`, and `test_binding_guards.py`.
-They prove the stub, handwritten bindings, and public header stay in sync, so docs sourced from them stay accurate.
+Compact map of `tests/luau_codegen/`:
+
+| Area | Test files | Coverage |
+| --- | --- | --- |
+| Broma parsing | `test_broma.py`, `test_broma_delegates.py`, `test_model.py` | `.bro` parse, link attrs, delegate class discovery |
+| Filtering and plan | `test_filtering.py`, `test_plan.py`, `test_constructors.py`, `test_denylist.py` | bindability, platform fields, constructors, denylist freshness |
+| Type map | `test_type_map.py`, `test_type_map_modules.py`, `test_value_struct_gate.py`, `test_cocos_enums.py` | C++ to Lua kinds, enums, value struct gate |
+| Containers | `test_nested_containers.py`, `test_pair_design.py`, `test_cc_c_array.py`, `test_object_vector_audit.py` | `gd` containers, pairs, `ccCArray`, object vectors |
+| Marshalling | `test_marshalling.py` | stack checks, callbacks, FMOD, containers |
+| Bindings emit | `test_bindings_handlers.py`, `test_bindings_overloads.py`, `test_bindings_safety.py`, `test_bindings_fmod.py`, `test_free_functions.py` | generated C++ handlers and free functions |
+| Hooks | `test_hooks.py` | hook runtime, offsets, SEL callbacks |
+| Luau stubs | `test_luau_types.py`, `test_types_binding.py`, `test_geode_enums_emit.py` | stub emission and cocos value descriptors |
+| Geode SDK scan | `test_geode_scanner.py`, `test_geode_ccnode.py`, `test_geode_ccarray.py`, `test_cpp_scan.py` | header scanner and cocos additions |
+| Delegates | `test_delegate_generator.py` | delegate spec and trampoline emit |
+| Parity and audit | `test_parity.py`, `test_audit.py` | `parity.json` and audit bucket rules |
+| CLI | `test_codegen_cli.py` | exit codes, list-all-outputs, standalone audit |
+| Drift guards | `test_manual_fields_sync.py`, `test_extra_bindings_sync.py`, `test_public_api_header_sync.py`, `test_binding_guards.py` | stub, binding, and public header sync |
+
 See [Codegen](codegen/codegen.md) for what the generator produces.
 
 ## Related

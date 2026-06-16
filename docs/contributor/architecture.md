@@ -7,7 +7,7 @@ This page names the main parts and traces how a script gets from a file to runni
 
 ## The parts
 
-- Public C++ API in `imes::luauapi`. The host-facing surface. See [API reference](../reference/cpp/api-reference.md).
+- Public C++ API in `imes::luauapi`. The host-facing surface. See [C++ API reference](../reference/cpp/api-reference.md).
 - Runtime. Owns the Lua state, memory, deadlines, and the bytecode cache. See [Runtime](internals/runtime.md).
 - Bindings framework. Exposes C++ types to Lua. See [Bindings framework](internals/bindings-framework.md).
 - Module system. Implements sandboxed `require`. See [Module system](internals/module-system.md).
@@ -68,11 +68,12 @@ See [gd3d](../reference/lua/gd3d.md) for the rendering model.
 ## Threading
 
 The runtime is single threaded. Almost every call must run on the main thread.
-See [Getting started Key concepts](../getting-started/overview.md) for the user-facing rule.
+See [Getting started](../getting-started/overview.md) for the user-facing rule
+and [C++ API reference](../reference/cpp/api-reference.md) Threading for host API rules.
 
 ## Related
 
-- [Getting started overview](../getting-started/overview.md)
+- [Getting started](../getting-started/overview.md)
 - [Runtime](internals/runtime.md)
 - [Bindings framework](internals/bindings-framework.md)
 - [Module system](internals/module-system.md)
@@ -81,11 +82,11 @@ See [Getting started Key concepts](../getting-started/overview.md) for the user-
 - [Codegen](codegen/codegen.md)
 - [Pair containers](codegen/pair-containers.md)
 - [Nested containers](codegen/nested-containers.md)
-- [ccCArray fields](codegen/cc-c-array.md)
+- [ccCArray read-only fields](codegen/cc-c-array.md)
 - [Platform parity](codegen/platform-parity.md)
 - [hooks](../reference/lua/hooks.md)
 - [gd3d](../reference/lua/gd3d.md)
-- [API reference](../reference/cpp/api-reference.md)
+- [C++ API reference](../reference/cpp/api-reference.md)
 
 ## Source
 

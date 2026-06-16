@@ -89,19 +89,17 @@ See [Codegen](../../contributor/codegen/codegen.md).
 
 ## Limits
 
-Delegate calls run under a script budget with a soft orphan-registry cap.
-
-See [Limits and errors](../cpp/limits-and-errors.md).
+See [Limits and errors](../cpp/limits-and-errors.md) for callback budgets and orphan-registry caps.
 
 ## Related
 
-- [Getting started overview](../../getting-started/overview.md)
-- [Callbacks](callbacks.md)
+- [Getting started](../../getting-started/overview.md)
+- [callbacks](callbacks.md)
 - [Keyboard input](keyboard-input.md)
 - [game objects](game-objects.md)
-- [Type stubs](type-stubs.md)
+- [type stubs](type-stubs.md)
 - [Codegen](../../contributor/codegen/codegen.md)
-- [Globals](globals.md)
+- [globals](globals.md)
 
 ## Source
 

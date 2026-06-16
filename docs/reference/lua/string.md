@@ -128,7 +128,7 @@ print(str.count("hello", string.byte("l"))) -- "2"
 
 ## Related
 
-- [Getting started overview](../../getting-started/overview.md)
+- [Getting started](../../getting-started/overview.md)
 - [geode.utils](utils.md)
 - [globals](globals.md)
 

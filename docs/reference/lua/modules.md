@@ -30,21 +30,20 @@ Breaking any rule returns an error at load time.
 ## Limits
 
 Modules share the script size limit and default deadline with entry scripts.
-
 See [Limits and errors](../cpp/limits-and-errors.md).
 
 ## What happens on load
 
 The runtime resolves the path, reads the file, compiles bytecode, runs it on a sandboxed thread, and returns the single value.
-For the full load pipeline, see [Module system internals](../../contributor/internals/module-system.md).
+For the full load pipeline, see [Module system](../../contributor/internals/module-system.md).
 
 ## Related
 
-- [Getting started overview](../../getting-started/overview.md)
+- [Getting started](../../getting-started/overview.md)
 - [Examples](../../getting-started/examples.md)
-- [Globals](globals.md)
-- [Sharing APIs between mods](sharing-apis.md)
-- [Module system internals](../../contributor/internals/module-system.md)
+- [globals](globals.md)
+- [sharing APIs between mods](sharing-apis.md)
+- [Module system](../../contributor/internals/module-system.md)
 
 ## Source
 

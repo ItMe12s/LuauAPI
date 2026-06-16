@@ -22,7 +22,7 @@ Values are JSON types:
 - array
 
 Returns `nil` when the key is missing or the read fails.
-Returns `nil` and an error message when the stored value is too deeply nested.
+Recoverable failures use [globals](globals.md) Error shapes.
 
 ## setSavedValue
 
@@ -75,7 +75,7 @@ geode.Mod.getVersion() -> string
 ```
 
 `getID` returns the mod id, for example `my.mod.id`.
-Use it as the prefix when you call `:setID()` on nodes you create. See [Game objects](game-objects.md).
+Use it as the prefix when you call `:setID()` on nodes you create. See [game objects](game-objects.md).
 
 ## getResourcesDir, getSaveDir, getConfigDir, getPersistentDir
 
@@ -92,8 +92,7 @@ Return the paths to the mod resources, save, config, and persistent folders. Scr
 
 Saved values and settings use the JSON model.
 Depth and parse size limits match [json](json.md).
-Saved values over the cap fail with `json exceeds maximum size` or `json exceeds maximum depth`.
-See [Limits and errors](../cpp/limits-and-errors.md) for the full table.
+See [Limits and errors](../cpp/limits-and-errors.md) for caps and error strings.
 
 ## Example
 
@@ -108,11 +107,11 @@ end)
 
 ## Related
 
-- [Getting started overview](../../getting-started/overview.md)
+- [Getting started](../../getting-started/overview.md)
 - [Examples](../../getting-started/examples.md)
 - [fs](fs.md)
 - [json](json.md)
-- [Globals](globals.md)
+- [globals](globals.md)
 - [Limits and errors](../cpp/limits-and-errors.md)
 
 ## Source

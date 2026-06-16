@@ -13,7 +13,7 @@ whether a brand new mod or one you already have.
    This is the common path and needs no build steps. Most mods using LuauAPI are built this way.
    See [Installation](installation.md) and [Your first script](first-script.md).
 2. Build LuauAPI from source if you want unreleased features or to work on the runtime itself.
-   That path lives in the contributor docs. See [Building](../contributor/building.md).
+   That path lives in the contributor docs. See [Building from source](../contributor/building.md).
 
 ## Key concepts
 
@@ -36,7 +36,6 @@ whether a brand new mod or one you already have.
 
 ## Related
 
-- [Getting started overview](overview.md)
 - [LuauAPI mod guidelines](../mod_guidelines.md)
 - [globals](../reference/lua/globals.md)
 - [C++ integration guide](../reference/cpp/integration-guide.md)

@@ -5,7 +5,7 @@
 Runtime limits and error strings. Values come from `src/core/Config.hpp` unless noted.
 This page is the canonical list of caps, deadlines, and error strings for LuauAPI.
 
-## Compilation and Bytecode
+## Compilation and bytecode
 
 | Constant | Value | Meaning |
 | --- | --- | --- |
@@ -13,14 +13,12 @@ This page is the canonical list of caps, deadlines, and error strings for LuauAP
 | `kMaxBytecodeCacheEntries` | `512` | Max cached compiled scripts |
 | `kMaxBytecodeCacheBytes` | `64 MiB` | Max total cached bytecode bytes |
 
-### Compilation and Bytecode errors
+### Compilation and bytecode errors
 
 | Message | When | Return shape |
 | --- | --- | --- |
 | `luau compile exceeded 15000 ms budget` | Compile over deadline | Internal. Cache insert fails. |
 | (none) | Cache over entry or byte cap | Oldest entries evicted. No Lua error. |
-
----
 
 ## Filesystem
 
@@ -40,8 +38,6 @@ This page is the canonical list of caps, deadlines, and error strings for LuauAP
 | `directory listing exceeds maximum entries` | List over entry cap | `nil, err` |
 | `directory listing exceeds maximum name bytes` | List over name byte cap | `nil, err` |
 
----
-
 ## Hooks, callbacks, tasks
 
 | Constant | Value | Meaning |
@@ -60,8 +56,6 @@ This page is the canonical list of caps, deadlines, and error strings for LuauAP
 | `task: too many scheduled tasks (limit 4096)` | Task cap hit | Lua error |
 | (log only) | Trampoline cap hit | Warn once. New trampolines dropped. No Lua error. |
 
----
-
 ## ImGui
 
 | Constant | Value | Meaning |
@@ -73,8 +67,6 @@ This page is the canonical list of caps, deadlines, and error strings for LuauAP
 | Message | When | Return shape |
 | --- | --- | --- |
 | `imgui.onDraw: too many draw callbacks (limit 256)` | Draw callback cap hit | Lua error |
-
----
 
 ## JSON limits
 
@@ -90,8 +82,6 @@ This page is the canonical list of caps, deadlines, and error strings for LuauAP
 | `json exceeds maximum size` | Parse input over cap | `nil, err` |
 | `json exceeds maximum depth` | Depth over cap | `nil, err` or Lua error on `dump` |
 
----
-
 ## Memory
 
 | Constant | Value | Meaning |
@@ -105,8 +95,6 @@ This page is the canonical list of caps, deadlines, and error strings for LuauAP
 | (OOM) | Allocation over cap | Lua out of memory error |
 | `luau memory limit exceeded` | Internal accounting failure | Log and C++ `Err` on some paths |
 
----
-
 ## Script deadlines for hooks and ImGui
 
 | Constant | Value | Meaning |
@@ -119,8 +107,6 @@ This page is the canonical list of caps, deadlines, and error strings for LuauAP
 | Message | When | Return shape |
 | --- | --- | --- |
 | `luax: script exceeded %d ms budget` | Run over deadline | Lua error |
-
----
 
 ## Script limits
 
@@ -138,8 +124,6 @@ This page is the canonical list of caps, deadlines, and error strings for LuauAP
 | `script exceeds maximum size` | Source over cap | C++ `Err`, `nil, err`, or Lua error |
 | `script file exceeds maximum size` | File over cap on C++ run | C++ `Err` |
 | `module '%s' exceeds maximum size or cannot be read` | Module file over cap | Lua error on `require` |
-
----
 
 ## C++ run API
 
@@ -164,8 +148,6 @@ Errors from `runFile`, `runScript`, and their async variants.
 Preparation errors do not update `lastError()`.
 Execution errors update both `Result` and `lastError()`.
 
----
-
 ## Web limits
 
 | Constant | Value | Meaning |
@@ -181,8 +163,6 @@ Execution errors update both `Result` and `lastError()`.
 | `response exceeds maximum size` | Response body over cap | `nil, err` on accessors and async callbacks |
 | `request body exceeds maximum size` | Request body over cap | `nil, err` or Lua error while parsing options |
 | `too many concurrent web requests` | In-flight request cap hit | Lua error on `get`, `post`, `fetch`, and `WebRequest:send` |
-
----
 
 ## WebSocket
 
@@ -210,8 +190,6 @@ Execution errors update both `Result` and `lastError()`.
 | (none) | Server client cap hit | Extra clients rejected silently |
 
 Lifecycle error strings are defined in `src/bindings/websocket/WebSocketInternal.hpp`.
-
----
 
 ## gd3d and glTF
 
@@ -252,8 +230,6 @@ Lifecycle error strings are defined in `src/bindings/websocket/WebSocketInternal
 
 Sandbox path errors from [fs](../lua/fs.md) also apply to `loadMesh` roots and paths.
 
----
-
 ## How errors reach you
 
 The run functions return `geode::Result<void>`. On failure they return `Err` with a message.
@@ -261,7 +237,7 @@ The run functions return `geode::Result<void>`. On failure they return `Err` wit
 Common cases include off-main-thread calls, shutdown, bad paths, oversized scripts, script errors, and deadline overruns.
 
 Read the message from `Result` and optionally `lastError()`.
-See [Your first script](../../getting-started/first-script.md) and [Integration guide](integration-guide.md).
+See [Your first script](../../getting-started/first-script.md) and [C++ integration guide](integration-guide.md).
 
 ## Deadlines and interrupts
 
@@ -280,14 +256,14 @@ When an allocation would cross the cap, it fails and Lua reports an out of memor
 
 ## Related
 
-- [Getting started overview](../../getting-started/overview.md)
+- [Getting started](../../getting-started/overview.md)
 - [LuauAPI mod guidelines](../../mod_guidelines.md)
-- [API reference](api-reference.md)
-- [Integration guide](integration-guide.md)
+- [C++ API reference](api-reference.md)
+- [C++ integration guide](integration-guide.md)
 - [imgui](../lua/imgui.md)
 - [gd3d](../lua/gd3d.md)
 - [hooks](../lua/hooks.md)
-- [Tasks and time](../lua/tasks.md)
+- [tasks and time](../lua/tasks.md)
 - [web](../lua/web.md)
 - [websocket](../lua/websocket.md)
 

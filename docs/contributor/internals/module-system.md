@@ -23,7 +23,7 @@ It keeps all loading inside the resources root.
 ## Path rules
 
 Path helpers live in `PathRules.hpp`, `PathSandbox.hpp`, and `RequirePath.hpp`.
-User-facing require rules are in [Modules reference](../../reference/lua/modules.md).
+User-facing require rules are in [modules](../../reference/lua/modules.md).
 
 - `validateResourcePath()` checks flat names and the `.luau` extension policy.
 - `resolveInsideRoot()` canonicalizes a path and enforces root containment.
@@ -33,7 +33,7 @@ User-facing require rules are in [Modules reference](../../reference/lua/modules
 `load` runs these steps:
 
 1. Resolve the module path inside the root, or raise an error.
-2. Check the file size against the [script size limit](../../reference/cpp/limits-and-errors.md).
+2. Check the file size against the [Limits and errors](../../reference/cpp/limits-and-errors.md).
 3. Read the file.
 4. Compile to bytecode, using the runtime cache.
 5. Create a new thread and sandbox it.
@@ -64,7 +64,7 @@ See [Limits and errors](../../reference/cpp/limits-and-errors.md).
 ## Related
 
 - [Architecture](../architecture.md)
-- [Modules](../../reference/lua/modules.md)
+- [modules](../../reference/lua/modules.md)
 - [Runtime](runtime.md)
 - [Limits and errors](../../reference/cpp/limits-and-errors.md)
 

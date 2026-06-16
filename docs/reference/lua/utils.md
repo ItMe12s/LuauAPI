@@ -66,7 +66,7 @@ Read or set the current thread name for debugging and logging.
 
 ## Related
 
-- [Getting started overview](../../getting-started/overview.md)
+- [Getting started](../../getting-started/overview.md)
 - [globals](globals.md)
 - [web](web.md)
 - [base64](base64.md)
