@@ -205,13 +205,9 @@ class GeneratedSafetyTests(unittest.TestCase):
 
     def test_remove_hook_callbacks_keeps_sorted_list_tombstones(self) -> None:
         text = emit_hook_support()
-        self.assertIn("// removeFromSortedLists(state, callback);", text)
-        self.assertIn("Do not uncomment removeFromSortedLists", text)
-        self.assertNotIn(
-            "removeFromSortedLists(state, callback);",
-            text.replace("// removeFromSortedLists(state, callback);", ""),
-        )
         self.assertIn("callback->removed = true;", text)
+        self.assertIn("rebuildSortedHookLists(state);", text)
+        self.assertNotIn("removeFromSortedLists", text)
         self.assertIn("callback->removed ||", emit_internal_hpp())
 
     def test_invalid_post_hook_return_override_rejects_and_continues_chain(

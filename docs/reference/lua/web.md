@@ -281,6 +281,7 @@ Response listeners:
 - `onResponse*` may fire on the web worker. Lua runs later on the main thread.
 - Off the main thread, listeners are side effects only. They cannot stop other listeners.
 - On the main thread, return `true` to stop the next listeners.
+- If a response listener callback errors, LuauAPI logs it and keeps response handling best-effort.
 
 Progress:
 

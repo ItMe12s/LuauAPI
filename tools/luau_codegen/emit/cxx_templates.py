@@ -287,12 +287,6 @@ def emit_hook_support() -> str:
         list.insert(it, callback);
     }
 
-    void removeFromSortedLists(LuaHookState& state, std::shared_ptr<LuaHookCallback> const& callback) {
-        if (!callback) return;
-        auto& list = callback->kind == 0 ? state.preSorted : state.postSorted;
-        list.erase(std::remove(list.begin(), list.end(), callback), list.end());
-    }
-
     void rebuildSortedHookLists(LuaHookState& state) {
         state.preSorted.clear();
         state.postSorted.clear();
@@ -313,8 +307,6 @@ def emit_hook_support() -> str:
                 if (callback && callback->id == callbackId && !callback->removed) {
                     callback->removed = true;
                     callback->ref.reset();
-                    // Do not uncomment removeFromSortedLists, this shit breaks hook cancel when multiple mods share the same hook target.
-                    // removeFromSortedLists(state, callback);
                     removed = true;
                 }
             }

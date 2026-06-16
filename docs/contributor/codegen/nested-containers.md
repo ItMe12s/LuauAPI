@@ -30,7 +30,7 @@ No whole-container `operator=`.
 
 ## Codegen
 
-In `convert/type_map.py`:
+In `model/nested_containers.py` and `convert/type_containers.py`:
 
 - `allow_nested_map_value()` gates map values that are `vector_view` with object or opaque elements.
 - `nested_primitive_vector_view` handles `gd::vector<gd::vector<int>*>`.

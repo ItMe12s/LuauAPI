@@ -98,8 +98,8 @@ Each record holds:
 - Metatable name
 - Base tags (for inheritance)
 
-`registerType` takes one direct base tag. Its closure fills `baseClosure` for `hasBase` and method lookup
- More than one direct base is an error.
+`registerType` takes one direct base tag. Its closure fills `baseClosure` for `hasBase` and method lookup.
+More than one direct base is an error.
 
 ### Luau tag vs internal type id
 
@@ -147,8 +147,8 @@ for subsystems that need runtime shutdown cleanup.
 - `compactAndCountLive` drops expired weak entries and returns the live count.
 - `clearAll` locks each live entry and runs a caller-supplied shutdown callback, then clears the pool.
 
-WebSocket connections and servers use this pool.
-On runtime shutdown, `clearWsState` shuts down every live socket and clears the pools.
+Web tasks/listeners and WebSocket connections/servers use this pool.
+On runtime shutdown, `clearWebState` clears web callbacks and `clearWsState` shuts down every live socket.
 
 ## Mod sandbox
 
