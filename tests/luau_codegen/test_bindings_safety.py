@@ -277,6 +277,41 @@ class GeneratedSafetyTests(unittest.TestCase):
         self.assertNotIn("self->setTag(arg0);", hook_body)
         self.assertNotIn("self->cocos2d::CCNode::setTag(arg0);", hook_body)
 
+    def test_hook_char_const_ptr_arg_override_uses_storage(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        cls = Class(
+            name="CCLabel",
+            namespace="cocos2d",
+            bases=["CCObject"],
+            methods=[
+                Method(
+                    name="setString",
+                    ret="void",
+                    args=[Arg("char const*", "text")],
+                    platforms=all_platforms("0x1"),
+                )
+            ],
+        )
+
+        text = _emit_class_file(
+            cls,
+            {"setString": cls.methods},
+            [(cls, cls.methods[0])],
+            [],
+            {"CCObject": ccobject, "CCLabel": cls},
+            set(),
+            1,
+            "win",
+        )
+
+        self.assertIn("std::string* arg0Storage;", text)
+        self.assertIn("char const** arg0;", text)
+        self.assertIn("std::string arg0Storage;", text)
+        self.assertIn('lua_getfield(L, idx, "text")', text)
+        self.assertIn("luax::check<std::string>", text)
+        self.assertIn("*ctx->arg0Storage = arg0Override_storage;", text)
+        self.assertIn("*ctx->arg0 = ctx->arg0Storage->c_str();", text)
+
     def test_hook_named_args_disabled_for_duplicate_names(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")
         cls = Class(

@@ -32,6 +32,12 @@ _SET_CFUNCTION = re.compile(r'setTableCFunction\(L,\s*[^,]+,\s*"([^"]+)"')
 _SET_FIELD = re.compile(r'lua_setfield\(L,\s*[^,]+,\s*"([^"]+)"\)')
 
 
+def _read_repo_file(rel_path: str) -> str:
+    path = os.path.join(_REPO_ROOT, rel_path)
+    with open(path, "r", encoding="utf-8") as f:
+        return f.read()
+
+
 def _register_body(source: str, namespace: str) -> str:
     marker = f'getOrCreateTable(L, "{namespace}")'
     start = source.find(marker)
@@ -90,6 +96,19 @@ class ManualFieldsSyncTests(unittest.TestCase):
                         text,
                         f"{namespace}: manual field missing from emitted stub: {field}",
                     )
+
+    def test_geode_utils_web_bridge_manual_field(self) -> None:
+        self.assertIn("web: WebNamespace", MANUAL_FREE_FN_FIELDS["geode.utils"])
+        cpp = _read_repo_file("src/bindings/geode/web/GeodeWebBinding.cpp")
+        self.assertIn('getOrCreateTable(L, "geode.utils.web")', cpp)
+
+        root = Root(classes=[Class(name="CCObject", namespace="cocos2d")])
+        text = emit_luau_types(root, manual_fields=MANUAL_FREE_FN_FIELDS)["geode.d.luau"]
+        utils_start = text.index("utils: {")
+        utils_end = text.index("},\n", utils_start)
+        utils = text[utils_start:utils_end]
+        self.assertIn("web: WebNamespace", utils)
+        self.assertNotRegex(utils, r"web:\s*\{[^}]*newRequest:")
 
     def test_schema_includes_manual_and_extra_binding_provenance(self) -> None:
         root = Root(classes=[Class(name="CCObject", namespace="cocos2d")])
