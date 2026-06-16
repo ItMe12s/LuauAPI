@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import glob
 import json
 import os
 
@@ -9,6 +10,26 @@ from luau_codegen.policy.fields import field_key
 from luau_codegen.policy.free_functions import free_function_key
 from luau_codegen.model.domain import object_classes, status_for
 from luau_codegen.cli.io import _write_if_changed
+from luau_codegen.convert.type_map import GD_ENUM_TYPES
+from luau_codegen.emit.luau_types.manual_fields import MANUAL_FREE_FN_FIELDS
+
+_PACKAGE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+_EXTRA_BINDINGS_DIR = os.path.join(_PACKAGE_DIR, "extra_bindings")
+
+
+def _extra_binding_sources() -> list[str]:
+    if not os.path.isdir(_EXTRA_BINDINGS_DIR):
+        return []
+    return sorted(
+        os.path.join("tools", "luau_codegen", "extra_bindings", name)
+        for name in os.listdir(_EXTRA_BINDINGS_DIR)
+        if name.endswith(".dluau")
+    )
+
+
+def _unscanned_gd_enums(plan: EmitPlan) -> list[str]:
+    scanned = set(plan.ctx.gd_enum_members)
+    return sorted(name for name in GD_ENUM_TYPES if name not in scanned)
 
 
 def emit_schema(root: Root, path: str, plan: EmitPlan) -> None:
@@ -70,6 +91,9 @@ def emit_schema(root: Root, path: str, plan: EmitPlan) -> None:
         }
         for fn in plan.supported_free_functions
     ]
+    unscanned_gd_enums = _unscanned_gd_enums(plan)
+    manual_fields = {lua_path: list(fields) for lua_path, fields in MANUAL_FREE_FN_FIELDS.items()}
+    extra_bindings = _extra_binding_sources()
     _write_if_changed(
         path,
         json.dumps(
@@ -77,6 +101,9 @@ def emit_schema(root: Root, path: str, plan: EmitPlan) -> None:
                 "classes": classes,
                 "ambiguousOverloads": ambiguous,
                 "supportedFreeFunctions": supported_free_functions,
+                "unscannedGdEnums": unscanned_gd_enums,
+                "manualFields": manual_fields,
+                "extraBindings": extra_bindings,
             },
             indent=2,
         )
@@ -181,6 +208,30 @@ def emit_report(
             lines.append(f"- {warning}\n")
     else:
         lines.append("- none\n")
+
+    unscanned_gd_enums = _unscanned_gd_enums(plan) if plan else []
+    lines.append("\n## Unscanned GD enum aliases\n\n")
+    lines.append(
+        "`GD_ENUM_TYPES` names with no scanned `geode.gd` member table. "
+        "Still marshal as `number`. Named constants missing.\n\n"
+    )
+    if unscanned_gd_enums:
+        for name in unscanned_gd_enums[:2000]:
+            lines.append(f"- {name}\n")
+        if len(unscanned_gd_enums) > 2000:
+            lines.append(f"- ... {len(unscanned_gd_enums) - 2000} more\n")
+    else:
+        lines.append("- none\n")
+
+    lines.append("\n## Handwritten stub provenance\n\n")
+    lines.append(
+        "- `manualFields`: entries from `tools/luau_codegen/emit/luau_types/manual_fields.py`\n"
+    )
+    for lua_path in sorted(MANUAL_FREE_FN_FIELDS):
+        lines.append(f"  - `{lua_path}`: {len(MANUAL_FREE_FN_FIELDS[lua_path])} fields\n")
+    lines.append("- `extraBindings`: appended from `tools/luau_codegen/extra_bindings/*.dluau`\n")
+    for rel_path in _extra_binding_sources():
+        lines.append(f"  - `{rel_path}`\n")
 
     # Pretty much not needed but I'll keep it for now.
     lines.append("\n## Operational notes\n\n")

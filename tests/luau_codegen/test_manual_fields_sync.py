@@ -1,14 +1,21 @@
 from __future__ import annotations
 
+import json
 import os
 import re
+import tempfile
 import unittest
 
+from luau_codegen.emit.luau_types import emit as emit_luau_types  # type: ignore[import-unresolved]
 from luau_codegen.emit.luau_types.manual_fields import (  # type: ignore[import-unresolved]
     MANUAL_FREE_FN_FIELDS,
 )
+from luau_codegen.emit.metadata import emit_schema  # type: ignore[import-unresolved]
+from luau_codegen.parse.broma import Class, Field, Root  # type: ignore[import-unresolved]
+from helpers import collect_plan  # type: ignore[import-unresolved]
 
 _REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+_EXTRA_BINDINGS_DIR = os.path.join(_REPO_ROOT, "tools", "luau_codegen", "extra_bindings")
 
 _NAMESPACE_SOURCES = {
     "geode.cocos": "src/bindings/geode/GeodeCocosBinding.cpp",
@@ -71,6 +78,36 @@ class ManualFieldsSyncTests(unittest.TestCase):
                     f"{namespace}: declared in manual_fields.py but not registered in C++: "
                     f"{sorted(missing_from_cpp)}",
                 )
+
+    def test_emitted_stub_includes_manual_fields(self) -> None:
+        root = Root(classes=[Class(name="CCObject", namespace="cocos2d")])
+        text = emit_luau_types(root, manual_fields=MANUAL_FREE_FN_FIELDS)["geode.d.luau"]
+        for namespace, fields in MANUAL_FREE_FN_FIELDS.items():
+            with self.subTest(namespace=namespace):
+                for field in fields:
+                    self.assertIn(
+                        field.strip(),
+                        text,
+                        f"{namespace}: manual field missing from emitted stub: {field}",
+                    )
+
+    def test_schema_includes_manual_and_extra_binding_provenance(self) -> None:
+        root = Root(classes=[Class(name="CCObject", namespace="cocos2d")])
+        plan = collect_plan(root, "win")
+        with tempfile.TemporaryDirectory() as tmp:
+            schema_path = os.path.join(tmp, "schema.json")
+            emit_schema(root, schema_path, plan)
+            with open(schema_path, "r", encoding="utf-8") as f:
+                schema = json.load(f)
+        self.assertEqual(schema["manualFields"], MANUAL_FREE_FN_FIELDS)
+        expected_extra = sorted(
+            os.path.join("tools", "luau_codegen", "extra_bindings", name)
+            for name in os.listdir(_EXTRA_BINDINGS_DIR)
+            if name.endswith(".dluau")
+        )
+        self.assertEqual(schema["extraBindings"], expected_extra)
+        self.assertIn("unscannedGdEnums", schema)
+        self.assertIsInstance(schema["unscannedGdEnums"], list)
 
 
 if __name__ == "__main__":

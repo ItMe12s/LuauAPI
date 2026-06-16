@@ -40,6 +40,9 @@ Only the integer value matters.
 
 Prefer named constants over magic numbers.
 
+Some `GD_ENUM_TYPES` names have no scanned `geode.gd` table. Stubs still use `number`.
+Runtime is plain integers. Named constants may be missing. Listed as `unscannedGdEnums` in `schema.json` and the codegen report.
+
 ## Related
 
 - [game objects](game-objects.md)

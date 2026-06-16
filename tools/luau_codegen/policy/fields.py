@@ -8,21 +8,34 @@ if TYPE_CHECKING:
 
 from luau_codegen.parse.broma import Class, Field
 from luau_codegen.model.denylist import INACCESSIBLE_CLASSES
+from luau_codegen.model.domain import short_name
 from luau_codegen.convert.type_map import (
     TypeInfo,
     classify_arg,
     classify_return,
     normalize_type,
 )
+from luau_codegen.policy.containers import (
+    _CONTAINER_KINDS,
+    container_supported_as_arg,
+    container_supported_as_return,
+)
 
 
-# Obfuscated or encrypted value fields (for example, SeedValue, SeedValueRR, SeedValueSFd) are not listed here.
-# These lack a marshallable type and follow the "unsupported-arg"/"unsupported-return" skip path below.
-# Don't bind encrypted fields, it's unsafe and unnecessary.
-# See docs/contributor/codegen/codegen.md "Field and encrypted-value policy".
+# Encrypted field type prefixes. See codegen.md field policy.
+ENCRYPTED_FIELD_TYPE_PREFIXES = ("SeedValue",)
+
 INACCESSIBLE_FIELDS = {
     ("CCObject", "m_nChildIndex"),
 }
+
+# Getter-only container fields skip setter arg gates.
+_READONLY_FIELD_CONTAINER_KINDS = frozenset(
+    {
+        "nested_primitive_vector_view",
+        "cc_c_array_view",
+    }
+)
 
 
 def field_key(cls: Class, field: Field) -> str:
@@ -39,6 +52,11 @@ def _is_function_pointer(t: str) -> bool:
     return bool(re.search(r"\(\s*\*", normalize_type(t)))
 
 
+def _is_encrypted_field_type(t: str) -> bool:
+    base = short_name(normalize_type(t))
+    return any(base.startswith(prefix) for prefix in ENCRYPTED_FIELD_TYPE_PREFIXES)
+
+
 def bindable_field(
     field: Field,
     objects: Dict[str, Class],
@@ -50,6 +68,8 @@ def bindable_field(
         return False, "inaccessible", None, None
     if cls and (cls.name, field.name) in INACCESSIBLE_FIELDS:
         return False, "inaccessible-field", None, None
+    if _is_encrypted_field_type(field.type):
+        return False, "encrypted-field", None, None
     if field.count > 1:
         return False, "array", None, None
     if "&" in normalized:
@@ -75,6 +95,15 @@ def bindable_field(
         return False, f"unsupported-arg:{field.type}", None, ret
     if ret is None:
         return False, f"unsupported-return:{field.type}", arg, None
+    if ret.kind in _CONTAINER_KINDS and not container_supported_as_return(ret):
+        return False, f"unsupported-return:{field.type}", arg, ret
+    readonly_container_field = ret.kind in _READONLY_FIELD_CONTAINER_KINDS
+    if (
+        arg.kind in _CONTAINER_KINDS
+        and not readonly_container_field
+        and not container_supported_as_arg(arg, ret.kind)
+    ):
+        return False, f"unsupported-arg:{field.type}", arg, ret
     if arg.kind == "string" and arg.cxx_type.endswith("*"):
         return False, "string-pointer", arg, ret
     if ret.kind == "object" and ret.class_name in INACCESSIBLE_CLASSES:

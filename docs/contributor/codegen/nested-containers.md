@@ -48,6 +48,9 @@ Nested primitive vector fields register as readonly getters.
 
 ## Baseline fields
 
+`BASELINE_NESTED_*` in `model/nested_containers.py` are coverage examples only.
+Codegen does not read them. Shape helpers gate binding.
+
 These shapes were skipped before nested support. After regen they should bind:
 
 | Field | Type | Notes |

@@ -87,6 +87,37 @@ protected:
         self.assertFalse(ok)
         self.assertEqual(reason, "inaccessible")
 
+    def test_encrypted_field_type_rejected(self) -> None:
+        from luau_codegen.parse.broma import Field  # type: ignore[import-unresolved]
+        from luau_codegen.policy.fields import bindable_field  # type: ignore[import-unresolved]
+
+        cls = Class(name="GameLevelManager")
+        field = Field(name="m_seed", type="SeedValueRR")
+
+        ok, reason, _, _ = bindable_field(field, {"GameLevelManager": cls}, cls)
+
+        self.assertFalse(ok)
+        self.assertEqual(reason, "encrypted-field")
+
+    def test_vector_ptr_field_rejected_by_container_gate(self) -> None:
+        from luau_codegen.parse.broma import Field  # type: ignore[import-unresolved]
+        from luau_codegen.policy.fields import bindable_field  # type: ignore[import-unresolved]
+
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        game_object = Class(name="GameObject", bases=["CCObject"])
+        cls = Class(name="PlayLayer", fields=[Field("m_objects", "gd::vector<GameObject*>*")])
+        objects = {
+            "CCObject": ccobject,
+            "GameObject": game_object,
+            "cocos2d::CCObject": ccobject,
+            "PlayLayer": cls,
+        }
+
+        ok, reason, _, _ = bindable_field(cls.fields[0], objects, cls)
+
+        self.assertFalse(ok)
+        self.assertTrue(reason.startswith("unsupported-return:"))
+
     def test_parse_protected_field_access_section(self) -> None:
         import tempfile
 

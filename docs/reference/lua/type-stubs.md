@@ -66,7 +66,9 @@ and merges the results into `types/geode.d.luau`. These are not in `MANUAL_FREE_
 Some Geode C++ wide integer types (`size_t`, `uint64_t`, and similar) appear as `string` in the stub.
 At runtime, pass decimal integer strings for those arguments and read wide integer results as decimal strings.
 
-`tests/luau_codegen/test_manual_fields_sync.py` guards drift between the Python map and emitted stubs.
+Return pointers use `?` in stubs. Arg pointers do not. Nil object args fail unless hook `allow_nil_object`.
+
+`tests/luau_codegen/test_manual_fields_sync.py` guards drift between the Python map, C++ registrars, and emitted stubs.
 
 ## Enums
 
@@ -76,7 +78,7 @@ Enum stubs use a `number` alias plus a `FooNamespace` table type for constants. 
 
 Methods and factories with several overloads are emitted as one widened signature that ends in `...any`.
 Leading arguments are typed where every overload agrees, then the rest fall back to `...any`.
-The runtime still selects an overload by argument count, so a matching call type checks and dispatches correctly.
+Runtime picks overload by arity only. One Lua key per C++ name. See [Codegen](../../contributor/codegen/codegen.md#overload-resolution).
 
 ## Regenerating the stub
 

@@ -119,7 +119,7 @@ so they must stay in sync. `test_manual_fields_sync.py` and `test_extra_bindings
 
 After generation, `build/luauapi-gen/` holds:
 
-- `schema.json`: the binding plan
+- `schema.json`: the binding plan, plus handwritten stub provenance (`manualFields`, `extraBindings`) and unscanned GD enum aliases
 - `report.md`: a summary
 - `parity.json`: overload and parity checks
 - `audit.md`: callback, delegate, container, and related skips by category
@@ -136,6 +136,14 @@ The generator keeps one only if `PREFERRED_OVERLOADS` lists its normalized arg s
 otherwise every colliding overload is skipped with `ambiguous-overload-arity:<arity>`.
 Ambiguous overloads cause codegen to exit with code 6 when building the emit plan.
 
+One Lua table key per method name. Runtime picks overload by arity only, not arg types.
+Stubs widen with `...any` where overloads disagree. See [Type stubs](../../reference/lua/type-stubs.md#overloaded-members).
+
+## Nullable pointer policy
+
+Return stubs use `?` on object and opaque pointers. Arg stubs do not.
+Runtime rejects nil object args unless `allow_nil_object` (hook overrides only).
+
 ## Field and container policy
 
 Class fields are filtered in `policy/fields.py` by `bindable_field()`.
@@ -146,9 +154,13 @@ A field is skipped when any of the following apply:
 - It is an array or reference
 - It is a function or string pointer
 - It is listed in `INACCESSIBLE_FIELDS`
-- It is an obfuscated or encrypted value field (such as `SeedValue`, which are not bound by policy)
+- Its type matches `ENCRYPTED_FIELD_TYPE_PREFIXES` (for example `SeedValue`)
+- Its encrypted type does not classify
 
 Skipped fields appear as `-- skipped <name>: <reason>` comments in the stub.
+
+`bindable_field()` uses the same container gates as methods, except getter-only
+container fields (`cc_c_array_view`, `nested_primitive_vector_view`).
 
 `gd::map` and `gd::set` field setters use `assignMap` / `assignSet` (clear plus per-entry insert)
 instead of whole-container `operator=`, because Geode gnustl on Android lacks `_Rb_tree::_M_move_assign`.
