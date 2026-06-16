@@ -67,8 +67,4 @@ MANUAL_FREE_FN_FIELDS: Dict[str, List[str]] = {
     "geode.KeyboardInputData": [
         "Action: { Press: number, Release: number, Repeat: number }",
     ],
-    "geode.KeyboardInputEvent": [
-        "listen: (callback: (data: KeyboardInputData) -> boolean?, priority: number?) -> KeyboardInputListenerHandle",
-        "listenFor: (key: number, callback: (data: KeyboardInputData) -> boolean?, priority: number?) -> KeyboardInputListenerHandle",
-    ],
 }

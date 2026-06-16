@@ -5,6 +5,12 @@ import os
 import re
 import unittest
 
+from luau_codegen.emit.luau_types import emit as emit_luau_types  # type: ignore[import-unresolved]
+from luau_codegen.emit.luau_types.manual_fields import (  # type: ignore[import-unresolved]
+    MANUAL_FREE_FN_FIELDS,
+)
+from luau_codegen.parse.broma import Class, Root  # type: ignore[import-unresolved]
+
 _REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 _EXTRA_BINDINGS_DIR = os.path.join(_REPO_ROOT, "tools", "luau_codegen", "extra_bindings")
 _TYPE_STUBS_DOC = os.path.join(_REPO_ROOT, "docs", "reference", "lua", "type-stubs.md")
@@ -206,6 +212,26 @@ class ExtraBindingsSyncTests(unittest.TestCase):
                     f"{binding}: declared in dluau but not registered in C++: "
                     f"{sorted(missing_from_cpp)}",
                 )
+
+    def test_keyboard_input_event_stub_single_source(self) -> None:
+        root = Root(classes=[Class(name="CCObject", namespace="cocos2d")])
+        text = emit_luau_types(root, manual_fields=MANUAL_FREE_FN_FIELDS)["geode.d.luau"]
+        geode = text[text.index("export type GeodeNamespace") : text.index("declare geode:")]
+        self.assertIn("KeyboardInputEvent: KeyboardInputEventNamespace", geode)
+        self.assertNotRegex(
+            geode,
+            r"KeyboardInputEvent:\s*\{[^}]*listen:",
+        )
+        listen_sig = (
+            "listen: (callback: (data: KeyboardInputData) -> boolean?, priority: number?) "
+            "-> KeyboardInputListenerHandle"
+        )
+        listen_for_sig = (
+            "listenFor: (key: number, callback: (data: KeyboardInputData) -> boolean?, "
+            "priority: number?) -> KeyboardInputListenerHandle"
+        )
+        self.assertEqual(text.count(listen_sig), 1)
+        self.assertEqual(text.count(listen_for_sig), 1)
 
 
 if __name__ == "__main__":

@@ -209,6 +209,7 @@ def emit(
     lines.append("    Mod: ModNamespace,\n")
     lines.append("    json: JsonNamespace,\n")
     lines.append("    fs: FsNamespace,\n")
+    lines.append("    KeyboardInputEvent: KeyboardInputEventNamespace,\n")
     geode_enum_fields = enum_namespace_field_lines(plan.ctx.geode_enum_members)
     geode_namespace_fields = sorted(
         _factory_field_lines(geode_factories) + geode_enum_fields,
