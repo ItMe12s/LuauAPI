@@ -32,6 +32,7 @@ Plus, you get fewer crashes and clear, easy-to-understand error logging.
 - Sprite and rig animator with keyframes
 - The remaining 0.1% of bindings and m_Fields
 - Argon support
+- Box2D support
 - Other quality of life features
 
 ---
