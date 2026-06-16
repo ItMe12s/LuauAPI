@@ -203,6 +203,16 @@ class GeneratedSafetyTests(unittest.TestCase):
         self.assertIn("continue;", text)
         self.assertNotIn('returned invalid skip value", targetId', text)
 
+    def test_invalid_post_hook_return_override_rejects_and_continues_chain(self) -> None:
+        text = emit_internal_hpp()
+        post_hooks = text.split("void runLuaPostHooks")[1].split("} // namespace luauapi_gen")[0]
+
+        self.assertRegex(
+            post_hooks,
+            r"if \(!lua_isnil\(L, -1\)\) \{[\s\S]*if \(!applyReturn\(L, -1\)\) \{[\s\S]*lua_settop\(L, top\);[\s\S]*continue;",
+        )
+        self.assertNotIn('returned invalid return override", targetId', post_hooks)
+
     def test_ui_button_config_decode_uses_check_specialization(self) -> None:
         info = TypeInfo(kind="value", cxx_type="UIButtonConfig", lua_type="UIButtonConfig")
         text = "".join(emit_stack_check(info, "-1", "config", "hook args"))
