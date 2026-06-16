@@ -26,3 +26,8 @@ TEST_CASE("websocket connection caps stay fixed") {
     REQUIRE(luax::kMaxWebSocketServers == 2);
     REQUIRE(luax::kMaxWebSocketServerClients == 32);
 }
+
+TEST_CASE("web concurrent request cap matches websocket connection cap") {
+    REQUIRE(luax::kMaxWebConcurrentRequests == 16);
+    REQUIRE(luax::kMaxWebConcurrentRequests == luax::kMaxWebSocketConnections);
+}

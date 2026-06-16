@@ -181,6 +181,32 @@ class BindingGuardTests(unittest.TestCase):
         config = _read_repo_file(_CONFIG_HEADER)
         self.assertIn("kMaxWebRequestBytes", config)
 
+    def test_start_request_enforces_concurrent_request_cap(self) -> None:
+        config = _read_repo_file(_CONFIG_HEADER)
+        self.assertIn("kMaxWebConcurrentRequests", config)
+
+        source = _web_binding_source()
+        body = _function_body(source, "startRequest", ret="std::shared_ptr<WebTask>")
+        self.assertIn(
+            "kMaxWebConcurrentRequests",
+            body,
+            "startRequest must enforce kMaxWebConcurrentRequests",
+        )
+        self.assertIn(
+            "countInflightWebRequests",
+            body,
+            "startRequest must count in-flight requests instead of stale handles",
+        )
+        send_pos = body.find("req.send(")
+        cap_pos = body.find("kMaxWebConcurrentRequests")
+        self.assertNotEqual(send_pos, -1, "startRequest must call req.send")
+        self.assertNotEqual(cap_pos, -1, "startRequest must reference kMaxWebConcurrentRequests")
+        self.assertLess(
+            cap_pos,
+            send_pos,
+            "startRequest must reject over-cap requests before req.send",
+        )
+
     def test_apply_options_enforces_request_body_cap(self) -> None:
         source = _web_binding_source()
         body = _function_body(source, "applyOptions", ret="void")

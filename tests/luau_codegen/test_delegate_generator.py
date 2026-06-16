@@ -97,6 +97,26 @@ class DelegateGeneratorTests(unittest.TestCase):
             text,
         )
 
+    def test_synthetic_delegate_emits_ccindexpath_by_value(self) -> None:
+        spec = DelegateSpec(
+            cxx_type="TableViewDelegate",
+            lua_name="TableViewDelegate",
+            cpp_class="LuaTableViewDelegate",
+            methods=[
+                DelegateMethod(
+                    "willCopyIndexPath",
+                    "void",
+                    [("CCIndexPath", "indexPath"), ("TableView*", "tableView")],
+                )
+            ],
+        )
+        text = emit_override(spec, spec.methods[0])
+        self.assertIn(
+            "void willCopyIndexPath(CCIndexPath indexPath, TableView* tableView) override",
+            text,
+        )
+        self.assertNotIn("CCIndexPath& indexPath", text)
+
     def test_register_unregister_cast_use_qualified_cxx_type(self) -> None:
         specs = collect_delegate_specs()
         cxx = "cocos2d::extension::CCEditBoxDelegate"

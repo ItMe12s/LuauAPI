@@ -19,6 +19,7 @@
 #include <string>
 #include <string_view>
 #include <thread>
+#include <vector>
 
 namespace luax {
     geode::Result<void> registerGeodeWeb(lua_State* L);
@@ -50,6 +51,7 @@ namespace {
 
         ~WebBindingGuard() {
             geode::utils::web::test::resetResponseFactory();
+            geode::utils::web::test::resetSendCount();
             clearWebState();
             invalidateCurrentModCache();
             geode::Mod::resetForTests();
@@ -401,6 +403,68 @@ TEST_CASE("MultipartForm fileFrom rejects sandbox escape") {
     );
     REQUIRE(err.has_value());
     REQUIRE(err->find("escapes") != std::string::npos);
+}
+
+TEST_CASE("countInflightWebRequests ignores completed tasks") {
+    WebBindingGuard guard;
+
+    auto pending = std::make_shared<WebTask>(1);
+    auto finished = std::make_shared<WebTask>(2);
+    finished->done = true;
+    activeTasks().track(pending);
+    activeTasks().track(finished);
+
+    REQUIRE(countInflightWebRequests() == 1);
+}
+
+TEST_CASE("geode.utils.web get rejects concurrent request cap before send") {
+    WebBindingGuard guard;
+    ModFixture fixture;
+
+    std::vector<std::shared_ptr<WebTask>> inflight;
+    inflight.reserve(kMaxWebConcurrentRequests);
+    for (std::size_t i = 0; i < kMaxWebConcurrentRequests; ++i) {
+        auto task = std::make_shared<WebTask>(i + 1);
+        activeTasks().track(task);
+        inflight.push_back(std::move(task));
+    }
+
+    geode::utils::web::test::resetSendCount();
+
+    auto err = runScriptReturnsString(
+        fixture.L,
+        R"(
+        local ok, pcallErr = pcall(function()
+            geode.utils.web.get("http://example.test", function() end)
+        end)
+        if ok then
+            return "expected pcall failure"
+        end
+        return pcallErr
+    )"
+    );
+    REQUIRE(err.has_value());
+    REQUIRE(err->find("too many concurrent web requests") != std::string::npos);
+    REQUIRE(geode::utils::web::test::sendCount() == 0);
+}
+
+TEST_CASE("completed web requests release concurrent request capacity") {
+    WebBindingGuard guard;
+    ModFixture fixture;
+
+    REQUIRE(runScriptReturnsBool(
+        fixture.L,
+        std::string(R"(
+        for i = 1, )") +
+            std::to_string(kMaxWebConcurrentRequests + 1) + R"( do
+            local handle = geode.utils.web.get("http://example.test", function() end)
+            if type(handle) ~= "userdata" then
+                return false
+            end
+        end
+        return true
+    )"
+    ));
 }
 
 TEST_CASE("geode.utils.web get without current mod errors before send") {

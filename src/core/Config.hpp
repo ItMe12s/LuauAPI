@@ -43,6 +43,7 @@ namespace luax {
     // Web limits
     constexpr std::size_t kMaxWebResponseBytes = 32 * 1024 * 1024;
     constexpr std::size_t kMaxWebRequestBytes = 32 * 1024 * 1024;
+    constexpr std::size_t kMaxWebConcurrentRequests = 16;
 
     // WebSocket
     constexpr std::size_t kMaxWebSocketConnections = 16;

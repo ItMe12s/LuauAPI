@@ -360,6 +360,9 @@ Request and response bodies are capped. These body sources count toward the requ
 
 Over the cap, the call returns `nil` and an error, or raises while parsing options.
 
+At most 16 HTTP requests may be in flight at once.
+Additional starts raise `too many concurrent web requests` before the request is sent.
+
 See [Limits and errors](../cpp/limits-and-errors.md).
 
 ## Security

@@ -6,6 +6,7 @@
 #include <matjson.hpp>
 
 #include <chrono>
+#include <atomic>
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
@@ -202,6 +203,15 @@ namespace geode::utils::web {
 
         inline void resetResponseFactory() {
             responseFactory() = {};
+        }
+
+        inline std::atomic<std::size_t>& sendCount() {
+            static std::atomic<std::size_t> count = 0;
+            return count;
+        }
+
+        inline void resetSendCount() {
+            sendCount() = 0;
         }
 
         WebResponse makeDefaultResponse();
@@ -502,6 +512,7 @@ namespace geode::utils::web {
         WebRequest& operator=(WebRequest&&) noexcept = default;
 
         WebFuture send(std::string method, std::string url, Mod* mod = geode::getMod()) {
+            test::sendCount().fetch_add(1, std::memory_order_relaxed);
             m_method = std::move(method);
             m_url = std::move(url);
             m_mod = mod;

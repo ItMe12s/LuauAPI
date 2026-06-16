@@ -110,6 +110,12 @@ namespace luax {
         activeListeners().compactAndCountLive();
     }
 
+    inline std::size_t countInflightWebRequests() {
+        return activeTasks().countLiveIf([](WebTask const& task) {
+            return !task.done;
+        });
+    }
+
     inline WebRequestBox* checkRequestBox(lua_State* L, int idx, [[maybe_unused]] char const* method) {
         return static_cast<WebRequestBox*>(luaL_checkudata(L, idx, kRequestMeta));
     }

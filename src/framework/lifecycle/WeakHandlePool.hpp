@@ -49,6 +49,19 @@ namespace luax {
             return items_.size();
         }
 
+        template <class Pred>
+        [[nodiscard]] std::size_t countLiveIf(Pred&& pred) const {
+            std::size_t count = 0;
+            for (auto const& weak : items_) {
+                if (auto item = weak.lock()) {
+                    if (pred(*item)) {
+                        ++count;
+                    }
+                }
+            }
+            return count;
+        }
+
     private:
         std::vector<std::weak_ptr<T>> items_;
     };

@@ -172,6 +172,7 @@ Execution errors update both `Result` and `lastError()`.
 | --- | --- | --- |
 | `kMaxWebResponseBytes` | `32 MiB` | Max HTTP response body in Lua |
 | `kMaxWebRequestBytes` | `32 MiB` | Max HTTP request or multipart body |
+| `kMaxWebConcurrentRequests` | `16` | Max in-flight HTTP requests |
 
 ### Web limits errors
 
@@ -179,6 +180,7 @@ Execution errors update both `Result` and `lastError()`.
 | --- | --- | --- |
 | `response exceeds maximum size` | Response body over cap | `nil, err` on accessors and async callbacks |
 | `request body exceeds maximum size` | Request body over cap | `nil, err` or Lua error while parsing options |
+| `too many concurrent web requests` | In-flight request cap hit | Lua error on `get`, `post`, `fetch`, and `WebRequest:send` |
 
 ---
 
