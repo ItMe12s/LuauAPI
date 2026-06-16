@@ -2,6 +2,7 @@
 
 #include "core/Config.hpp"
 #include "core/Runtime.hpp"
+#include "framework/lifecycle/ShutdownHook.hpp"
 
 #include <Geode/Geode.hpp>
 #include <unordered_map>
@@ -21,6 +22,29 @@ namespace luax {
 
         bool s_shutdownHookRegistered = false;
         bool s_orphanCapWarned = false;
+
+        void clearOrphanTrampolinesImpl() {
+            if (Runtime::isShuttingDown()) {
+                orphanTrampolines().clear();
+                anchorMap().clear();
+                return;
+            }
+            for (auto* trampoline : orphanTrampolines()) {
+                trampoline->release();
+            }
+            orphanTrampolines().clear();
+            for (auto& [_, trampolines] : anchorMap()) {
+                for (auto* trampoline : trampolines) {
+                    trampoline->release();
+                }
+            }
+            anchorMap().clear();
+        }
+
+        void clearOrphanTrampolinesOnShutdown() {
+            clearOrphanTrampolinesImpl();
+            s_shutdownHookRegistered = false;
+        }
     } // namespace
 
     void anchorTrampoline(cocos2d::CCObject* anchor, cocos2d::CCObject* trampoline) {
@@ -64,28 +88,10 @@ namespace luax {
     }
 
     void clearOrphanTrampolines() {
-        if (Runtime::isShuttingDown()) {
-            orphanTrampolines().clear();
-            anchorMap().clear();
-            return;
-        }
-        for (auto* trampoline : orphanTrampolines()) {
-            trampoline->release();
-        }
-        orphanTrampolines().clear();
-        for (auto& [_, trampolines] : anchorMap()) {
-            for (auto* trampoline : trampolines) {
-                trampoline->release();
-            }
-        }
-        anchorMap().clear();
+        clearOrphanTrampolinesImpl();
     }
 
     void ensureTrampolineShutdownHook() {
-        if (s_shutdownHookRegistered) return;
-        auto* runtime = Runtime::getIfInitialized();
-        if (!runtime) return;
-        runtime->registerShutdownHook(&clearOrphanTrampolines);
-        s_shutdownHookRegistered = true;
+        ensureShutdownHook(s_shutdownHookRegistered, &clearOrphanTrampolinesOnShutdown);
     }
 } // namespace luax

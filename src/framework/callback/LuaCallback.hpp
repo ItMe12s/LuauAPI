@@ -1,5 +1,6 @@
 #pragma once
 
+#include "core/Runtime.hpp"
 #include "framework/BindingHost.hpp"
 #include "framework/usertype/LuaRef.hpp"
 
@@ -42,6 +43,7 @@ namespace luax {
             PushArgsFn pushArgs = nullptr, void* pushCtx = nullptr,
             PopResultsFn popResults = nullptr, void* popCtx = nullptr
         ) const {
+            if (Runtime::isShuttingDown()) return false;
             auto* host = BindingHost::getIfInitialized();
             if (!host || !host->ready()) return false;
             auto* L = host->state();

@@ -154,13 +154,19 @@ On runtime shutdown, `clearWsState` shuts down every live socket and clears the 
 
 Used by `geode.fs`, `geode.utils.web` (`WebResponse:saveTo`, `MultipartForm:fileFrom`), and `gd3d` asset loaders.
 
-This is separate from `PathSandbox.hpp` in `src/require/`, which serves the public C++ `runFile` path and the `require` loader. Both enforce root containment, but mod sandbox roots come from the current mod directories while require paths stay inside the resources root passed at run time.
+This is separate from `PathSandbox.hpp` in `src/require/`,
+which serves the public C++ `runFile` path and the `require` loader. Both enforce root containment,
+but mod sandbox roots come from the current mod directories while require paths stay inside the resources root passed at run time.
 
 ## Shutdown hooks
 
 `ShutdownHook.hpp` provides `ensureShutdownHook(registered, clearFn)`.
 Subsystems call it once to register a runtime shutdown callback through `Runtime::registerShutdownHook`.
 WebSocket registers `clearWsState` this way so open connections and servers close before the Lua state is torn down.
+
+Shutdown hooks run in LIFO order (see [Runtime](runtime.md) Shutdown).
+The orphan trampoline registry resets its `registered` flag inside its shutdown hook wrapper so a later runtime can register cleanup again.
+`LuaCallback::invoke` returns `false` without calling Lua when `Runtime::isShuttingDown()` is true.
 
 ## Host-test binding split
 

@@ -35,6 +35,34 @@ namespace {
     };
 } // namespace
 
+TEST_CASE("Trampoline shutdown hook re-registers after runtime restart") {
+    struct Trampoline : cocos2d::CCObject {};
+
+    luax::Runtime::setMainThreadId(std::this_thread::get_id());
+    luax::resetBindingsForTests();
+
+    {
+        auto* runtime = luax::Runtime::getOrCreate();
+        luax::registerOrphanTrampoline(new Trampoline());
+        luax::Runtime::resetForTests();
+    }
+
+    {
+        auto* runtime = luax::Runtime::getOrCreate();
+        auto* orphan = new Trampoline();
+        luax::registerOrphanTrampoline(orphan);
+        REQUIRE(orphan->retainCount() == 2);
+
+        runtime->runShutdownHooksForTests();
+        REQUIRE(orphan->retainCount() == 1);
+
+        orphan->release();
+        luax::clearOrphanTrampolines();
+        luax::Runtime::resetForTests();
+    }
+    luax::resetBindingsForTests();
+}
+
 TEST_CASE("Orphan trampoline registry rejects registrations past cap") {
     RuntimeGuard guard;
     luax::clearOrphanTrampolines();

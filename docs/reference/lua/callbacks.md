@@ -91,6 +91,12 @@ When the anchor's retain count drops to one before `release`, all its handlers a
 like `geode.fields` tables. `std::function` wrappers are held for the duration of the C++ call that received them.
 Task and ImGui handles cancel their callback when you call `:cancel()` or when the handle userdata is collected.
 
+## Shutdown
+
+While the runtime is shutting down, `LuaCallback::invoke` returns `false` immediately and does not enter Lua.
+Orphan selector trampolines are released through a runtime shutdown hook.
+See [Runtime](../../contributor/internals/runtime.md) Shutdown for LIFO hook order.
+
 ## Limits
 
 Callbacks run under a script budget with a soft orphan-handler cap.

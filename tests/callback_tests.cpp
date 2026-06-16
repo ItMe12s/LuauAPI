@@ -106,3 +106,18 @@ TEST_CASE(
     REQUIRE(cb());
     REQUIRE(lua_gettop(L) == before);
 }
+
+TEST_CASE("LuaCallback invoke returns false during shutdown") {
+    RuntimeGuard guard;
+    auto* runtime = luax::Runtime::getOrCreate();
+    auto* L = runtime->state();
+
+    luauapi_test::loadFunction(L, "return 42");
+    luax::LuaCallback cb(L, -1);
+    lua_pop(L, 1);
+
+    luax::Runtime::setShuttingDownForTests(true);
+    REQUIRE_FALSE(cb.invoke(0, 1, "shutdown-test", luax::kHookScriptDeadlineMs));
+
+    luax::Runtime::setShuttingDownForTests(false);
+}
