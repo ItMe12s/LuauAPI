@@ -37,6 +37,18 @@ _READONLY_FIELD_CONTAINER_KINDS = frozenset(
     }
 )
 
+# Mutable pointer container fields bind getters/setters.
+_MUTABLE_POINTER_FIELD_CONTAINER_KINDS = frozenset(
+    {
+        "primitive_vector",
+        "std_array",
+        "map",
+        "unordered_map",
+        "set",
+        "unordered_set",
+    }
+)
+
 
 def field_key(cls: Class, field: Field) -> str:
     return f"{cls.qualified_name}.{field.name}:{field.type}"
@@ -55,6 +67,12 @@ def _is_function_pointer(t: str) -> bool:
 def _is_encrypted_field_type(t: str) -> bool:
     base = short_name(normalize_type(t))
     return any(base.startswith(prefix) for prefix in ENCRYPTED_FIELD_TYPE_PREFIXES)
+
+
+def _mutable_pointer_field_container(info: TypeInfo) -> bool:
+    return info.kind in _MUTABLE_POINTER_FIELD_CONTAINER_KINDS and (
+        info.is_out or info.is_vector_ptr
+    )
 
 
 def bindable_field(
@@ -96,12 +114,14 @@ def bindable_field(
     if ret is None:
         return False, f"unsupported-return:{field.type}", arg, None
     if ret.kind in _CONTAINER_KINDS and not container_supported_as_return(ret):
-        return False, f"unsupported-return:{field.type}", arg, ret
+        if not _mutable_pointer_field_container(ret):
+            return False, f"unsupported-return:{field.type}", arg, ret
     readonly_container_field = ret.kind in _READONLY_FIELD_CONTAINER_KINDS
     if (
         arg.kind in _CONTAINER_KINDS
         and not readonly_container_field
         and not container_supported_as_arg(arg, ret.kind)
+        and not _mutable_pointer_field_container(arg)
     ):
         return False, f"unsupported-arg:{field.type}", arg, ret
     if arg.kind == "string" and arg.cxx_type.endswith("*"):
