@@ -126,6 +126,7 @@ TEST_CASE("registerTaggedMetatable applies tag dtor on repeat registration") {
         static_cast<TestPayload*>(lua_newuserdatataggedwithmetatable(L, sizeof(TestPayload), kTag));
     payload->value = 0;
 
+    lua_pop(L, 1);
     collectGarbage(L);
     REQUIRE(g_dtorCalled);
 }
