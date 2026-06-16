@@ -35,6 +35,8 @@ _WEBSOCKET_SERVER = "src/bindings/websocket/WebSocketServer.cpp"
 _WEBSOCKET_INTERNAL = "src/bindings/websocket/WebSocketInternal.hpp"
 _RENDERER3D_LIFETIME = "src/render3d/gpu/Renderer3DResourceLifetime.cpp"
 _RENDERER3D = "src/render3d/gpu/Renderer3D.cpp"
+_RENDERER3D_MESH_CACHE = "src/render3d/gpu/Renderer3DMeshCache.cpp"
+_CC_VIEWPORT_FRAME = "src/render3d/viewport/CCViewportFrame.cpp"
 _COCOS_BINDING = "src/bindings/geode/GeodeCocosBinding.cpp"
 _TASK_SCHEDULER = "src/bindings/task/TaskScheduler.cpp"
 _TASK_BINDING = "src/bindings/task/TaskBinding.cpp"
@@ -575,6 +577,32 @@ class Render3DGuardTests(unittest.TestCase):
             3,
             "Renderer3D GPU entry points must register the shutdown hook on first use",
         )
+
+    def test_ensure_gpu_mesh_does_not_retain_failed_uploads(self) -> None:
+        source = _read_repo_file(_RENDERER3D_MESH_CACHE)
+        body = _function_body(source, "Renderer3DMeshCache::ensureGpuMesh", ret="GpuMesh*")
+        self.assertIn("hasDrawableGpuPrimitive", body)
+        self.assertIn("m_gpuMeshes.erase(meshId)", body)
+        self.assertIn("return nullptr", body)
+
+    def test_viewport_frame_destructor_releases_texture_registry(self) -> None:
+        source = _read_repo_file(_CC_VIEWPORT_FRAME)
+        dtor_match = re.search(
+            r"CCViewportFrame::~CCViewportFrame\(\)\s*\{([^}]+)\}",
+            source,
+            re.DOTALL,
+        )
+        assert dtor_match is not None, "CCViewportFrame destructor must exist"
+        dtor_body = dtor_match.group(1)
+        self.assertIn(
+            "releaseViewportTexture()",
+            dtor_body,
+            "viewport destruction must release TextureRegistry entries",
+        )
+        release_body = _function_body(source, "CCViewportFrame::releaseViewportTexture", ret="void")
+        self.assertIn("TextureRegistry::instance().release", release_body)
+        self.assertIn("Renderer3D::instance().releaseTextureGpu", release_body)
+        self.assertIn("m_viewportTextureId = 0", release_body)
 
 
 class ManualFieldsBindingGuardTests(unittest.TestCase):

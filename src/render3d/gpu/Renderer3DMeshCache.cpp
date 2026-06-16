@@ -106,11 +106,18 @@ namespace luax::render3d {
     }
 
     GpuMesh* Renderer3DMeshCache::ensureGpuMesh(std::uint64_t meshId, MeshAsset const& meshAsset) {
-        auto& gpuMesh = m_gpuMeshes[meshId];
-        if (!gpuMesh.primitives.empty()) {
-            return &gpuMesh;
+        auto it = m_gpuMeshes.find(meshId);
+        if (it != m_gpuMeshes.end()) {
+            if (hasDrawableGpuPrimitive(it->second)) {
+                return &it->second;
+            }
+            if (glContextAvailable()) {
+                deleteGpuMesh(it->second);
+            }
+            m_gpuMeshes.erase(it);
         }
 
+        auto& gpuMesh = m_gpuMeshes[meshId];
         auto const& srcPrimitives = meshAsset.primitives();
         gpuMesh.primitives.resize(srcPrimitives.size());
 
@@ -178,6 +185,14 @@ namespace luax::render3d {
         glBindBuffer(GL_ARRAY_BUFFER, 0);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
         glBindTexture(GL_TEXTURE_2D, 0);
+
+        if (!hasDrawableGpuPrimitive(gpuMesh)) {
+            if (glContextAvailable()) {
+                deleteGpuMesh(gpuMesh);
+            }
+            m_gpuMeshes.erase(meshId);
+            return nullptr;
+        }
         return &gpuMesh;
     }
 

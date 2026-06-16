@@ -33,6 +33,7 @@ namespace luax::render3d {
     CCViewportFrame::CCViewportFrame() = default;
 
     CCViewportFrame::~CCViewportFrame() {
+        releaseViewportTexture();
         destroyFramebuffer();
     }
 
@@ -278,6 +279,16 @@ namespace luax::render3d {
 
         m_fboPixelWidth = width;
         m_fboPixelHeight = height;
+    }
+
+    void CCViewportFrame::releaseViewportTexture() {
+        if (m_viewportTextureId == 0) {
+            return;
+        }
+        std::uint64_t const id = m_viewportTextureId;
+        m_viewportTextureId = 0;
+        TextureRegistry::instance().release(id);
+        Renderer3D::instance().releaseTextureGpu(id);
     }
 
     void CCViewportFrame::destroyFramebuffer() {

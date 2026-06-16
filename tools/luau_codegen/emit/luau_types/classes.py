@@ -12,6 +12,7 @@ from luau_codegen.policy.fields import (
     field_applies_on_platform,
     field_skipped_object_ref,
 )
+from luau_codegen.model.denylist import INACCESSIBLE_CLASSES
 from luau_codegen.model.domain import short_name
 
 from luau_codegen.emit.luau_types.method_types import (
@@ -32,12 +33,11 @@ def _should_emit_type_class(
 ) -> bool:
     if cls.name not in skipped_classes:
         return True
-    bound = {field.name for _, field in field_targets}
     for field in cls.fields:
         if not field_applies_on_platform(field, target_platform):
             continue
         ok, reason, _, ret = bindable_field(field, objects, cls, ctx=ctx)
-        if ok and field.name in bound and ret:
+        if ok and ret:
             return True
         if reason:
             return True
@@ -67,7 +67,6 @@ def _emit_class(
     instance_methods = {
         k: v for k, v in grouped.items() if not v[0].is_static and k not in LUAU_KEYWORDS
     }
-    bound_field_names = {field.name for _, field in field_targets}
     field_lines: List[str] = []
     if _is_ccnode_descendant(cls, objects, skipped_classes):
         field_lines.append("    m_fields: { [string]: any }\n")
@@ -76,11 +75,15 @@ def _emit_class(
             continue
         ok, reason, _, ret = bindable_field(field, objects, cls, ctx=ctx)
         skipped_ref = field_skipped_object_ref(field, objects, skipped_classes, cls, ctx=ctx)
-        if skipped_ref:
+        ref_cls = objects.get(skipped_ref) if skipped_ref else None
+        type_only_ref = (
+            ref_cls is not None and not ref_cls.methods and skipped_ref not in INACCESSIBLE_CLASSES
+        )
+        if skipped_ref and not type_only_ref:
             field_lines.append(
                 f"    -- skipped {field.name}: not-callable-type:{target_platform}:{skipped_ref}\n"
             )
-        elif ok and field.name in bound_field_names and ret:
+        elif ok and ret:
             field_lines.append(f"    {field.name}: {ret.lua_type}\n")
         elif reason:
             field_lines.append(f"    -- skipped {field.name}: {reason}\n")

@@ -29,6 +29,18 @@ namespace {
     }
 } // namespace
 
+TEST_CASE("hasDrawableGpuPrimitive distinguishes failed and partial mesh uploads") {
+    GpuMesh none{};
+    none.primitives.push_back(GpuPrimitive{});
+    none.primitives.push_back(GpuPrimitive{.vbo = 1});
+    REQUIRE_FALSE(hasDrawableGpuPrimitive(none));
+
+    GpuMesh partial{};
+    partial.primitives.push_back(GpuPrimitive{});
+    partial.primitives.push_back(GpuPrimitive{.vbo = 1, .ibo = 2, .indexCount = 3});
+    REQUIRE(hasDrawableGpuPrimitive(partial));
+}
+
 TEST_CASE("shaderAlphaCutoff returns cutoff only for mask mode") {
     REQUIRE(shaderAlphaCutoff(0, 0.5f) == Approx(0.0f));
     REQUIRE(shaderAlphaCutoff(1, 0.35f) == Approx(0.35f));

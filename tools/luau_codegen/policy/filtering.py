@@ -8,6 +8,7 @@ if TYPE_CHECKING:
     from luau_codegen.model.codegen_context import CodegenContext
 
 from luau_codegen.parse.broma import Class, Method
+from luau_codegen.policy.fields import bindable_field
 from luau_codegen.model.denylist import (
     BINDABLE_CONSTRUCTORS,
     INACCESSIBLE_CLASSES,
@@ -260,6 +261,15 @@ def linkless_class_names(
                     info = classify_arg(arg.type, objects, ctx=ctx)
                     if info and info.kind == "object":
                         referenced.add(info.class_name)
+
+    for cls in classes:
+        for field in cls.fields:
+            ok, _, _, ret = bindable_field(field, objects, cls, ctx=ctx)
+            if not ok or not ret or ret.kind != "object":
+                continue
+            ref_cls = objects.get(ret.class_name)
+            if ref_cls and not ref_cls.methods:
+                referenced.add(ret.class_name)
 
     out: set[str] = set()
     no_call = f"not-callable:{target_platform}"

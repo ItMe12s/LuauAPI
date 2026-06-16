@@ -62,6 +62,7 @@ namespace luax::render3d {
     private:
         void ensureFramebuffer();
         void destroyFramebuffer();
+        void releaseViewportTexture();
         bool hasGlContext() const;
         void invalidateFramebuffer();
 
