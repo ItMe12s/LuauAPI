@@ -11,6 +11,10 @@
 namespace luax::render3d {
 
     void Renderer3DMeshCache::deleteGpuPrimitive(GpuPrimitive& primitive) {
+        if (!glContextAvailable()) {
+            primitive = {};
+            return;
+        }
         deleteVao(primitive.vao);
         if (primitive.vbo != 0) {
             glDeleteBuffers(1, &primitive.vbo);
@@ -22,15 +26,18 @@ namespace luax::render3d {
     }
 
     void Renderer3DMeshCache::deleteGpuMesh(GpuMesh& mesh) {
+        if (!glContextAvailable()) {
+            mesh.primitives.clear();
+            mesh.textures.clear();
+            return;
+        }
         for (auto& primitive : mesh.primitives) {
             deleteGpuPrimitive(primitive);
         }
         mesh.primitives.clear();
-        if (glContextAvailable()) {
-            for (unsigned int texture : mesh.textures) {
-                if (texture != 0) {
-                    glDeleteTextures(1, &texture);
-                }
+        for (unsigned int texture : mesh.textures) {
+            if (texture != 0) {
+                glDeleteTextures(1, &texture);
             }
         }
         mesh.textures.clear();
@@ -62,9 +69,7 @@ namespace luax::render3d {
         if (it == m_gpuMeshes.end()) {
             return;
         }
-        if (glContextAvailable()) {
-            deleteGpuMesh(it->second);
-        }
+        deleteGpuMesh(it->second);
         m_gpuMeshes.erase(it);
     }
 
@@ -96,6 +101,9 @@ namespace luax::render3d {
         if (image.width <= 0 || image.height <= 0 || image.rgba.empty()) {
             return 0;
         }
+        if (!glContextAvailable()) {
+            return 0;
+        }
 
         unsigned int const texture = uploadRgbaTexture2D(image);
         if (texture == 0) {
@@ -111,10 +119,12 @@ namespace luax::render3d {
             if (hasDrawableGpuPrimitive(it->second)) {
                 return &it->second;
             }
-            if (glContextAvailable()) {
-                deleteGpuMesh(it->second);
-            }
+            deleteGpuMesh(it->second);
             m_gpuMeshes.erase(it);
+        }
+
+        if (!glContextAvailable()) {
+            return nullptr;
         }
 
         auto& gpuMesh = m_gpuMeshes[meshId];
@@ -187,9 +197,7 @@ namespace luax::render3d {
         glBindTexture(GL_TEXTURE_2D, 0);
 
         if (!hasDrawableGpuPrimitive(gpuMesh)) {
-            if (glContextAvailable()) {
-                deleteGpuMesh(gpuMesh);
-            }
+            deleteGpuMesh(gpuMesh);
             m_gpuMeshes.erase(meshId);
             return nullptr;
         }

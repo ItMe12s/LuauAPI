@@ -71,7 +71,7 @@ namespace luax::render3d {
 
     void deleteVao([[maybe_unused]] unsigned int vao) {
 #if defined(GL_VERTEX_ARRAY_BINDING)
-        if (vao != 0 && vaoSupported()) {
+        if (vao != 0 && glContextAvailable() && vaoSupported()) {
             glDeleteVertexArrays(1, &vao);
         }
 #endif

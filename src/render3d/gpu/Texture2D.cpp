@@ -14,7 +14,7 @@ namespace luax::render3d {
     unsigned int uploadRgbaTexture2D(
         int width, int height, std::uint8_t const* rgba, TextureWrapMode wrap, bool leaveBound
     ) {
-        if (width <= 0 || height <= 0) {
+        if (!glContextAvailable() || width <= 0 || height <= 0) {
             return 0;
         }
 

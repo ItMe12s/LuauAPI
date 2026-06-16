@@ -36,6 +36,8 @@ _WEBSOCKET_INTERNAL = "src/bindings/websocket/WebSocketInternal.hpp"
 _RENDERER3D_LIFETIME = "src/render3d/gpu/Renderer3DResourceLifetime.cpp"
 _RENDERER3D = "src/render3d/gpu/Renderer3D.cpp"
 _RENDERER3D_MESH_CACHE = "src/render3d/gpu/Renderer3DMeshCache.cpp"
+_RENDERER3D_GL_UTIL = "src/render3d/gpu/GlUtil.cpp"
+_RENDERER3D_TEXTURE2D = "src/render3d/gpu/Texture2D.cpp"
 _CC_VIEWPORT_FRAME = "src/render3d/viewport/CCViewportFrame.cpp"
 _COCOS_BINDING = "src/bindings/geode/GeodeCocosBinding.cpp"
 _TASK_SCHEDULER = "src/bindings/task/TaskScheduler.cpp"
@@ -610,6 +612,33 @@ class Render3DGuardTests(unittest.TestCase):
         self.assertIn("hasDrawableGpuPrimitive", body)
         self.assertIn("m_gpuMeshes.erase(meshId)", body)
         self.assertIn("return nullptr", body)
+
+    def test_render3d_gl_paths_guard_missing_context(self) -> None:
+        mesh_cache = _read_repo_file(_RENDERER3D_MESH_CACHE)
+        delete_mesh_body = _function_body(
+            mesh_cache, "Renderer3DMeshCache::deleteGpuMesh", ret="void"
+        )
+        self.assertIn("glContextAvailable()", delete_mesh_body)
+
+        ensure_mesh_body = _function_body(
+            mesh_cache, "Renderer3DMeshCache::ensureGpuMesh", ret="GpuMesh*"
+        )
+        self.assertIn("glContextAvailable()", ensure_mesh_body)
+
+        ensure_tex_body = _function_body(
+            mesh_cache, "Renderer3DMeshCache::ensureGpuTexture", ret="unsigned int"
+        )
+        self.assertIn("glContextAvailable()", ensure_tex_body)
+
+        texture_body = _function_body(
+            _read_repo_file(_RENDERER3D_TEXTURE2D), "uploadRgbaTexture2D", ret="unsigned int"
+        )
+        self.assertIn("glContextAvailable()", texture_body)
+
+        delete_vao_body = _function_body(
+            _read_repo_file(_RENDERER3D_GL_UTIL), "deleteVao", ret="void"
+        )
+        self.assertIn("glContextAvailable()", delete_vao_body)
 
     def test_viewport_frame_destructor_releases_texture_registry(self) -> None:
         source = _read_repo_file(_CC_VIEWPORT_FRAME)
