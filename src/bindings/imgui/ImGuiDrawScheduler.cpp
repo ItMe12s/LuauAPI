@@ -4,6 +4,8 @@
 #include "core/Runtime.hpp"
 #include "framework/schedule/ScheduledCallback.hpp"
 
+#include <thread>
+
 namespace luax {
     ImGuiDrawScheduler& ImGuiDrawScheduler::get() {
         static ImGuiDrawScheduler s_instance;
@@ -30,6 +32,19 @@ namespace luax {
     void ImGuiDrawScheduler::drawAll() {
         auto* runtime = Runtime::getIfInitialized();
         if (!runtime || m_store.empty()) return;
+#if defined(GEODE_IS_MACOS)
+        if (!Runtime::isMainThread()) {
+            // #region agent log
+            Runtime::debugThreadProbe(
+                "post-fix",
+                "H11,H12,H13",
+                "src/bindings/imgui/ImGuiDrawScheduler.cpp:drawAll",
+                "adopting ImGui draw thread before callbacks"
+            );
+            // #endregion
+            Runtime::setMainThreadId(std::this_thread::get_id());
+        }
+#endif
 
         m_inFrame = true;
 

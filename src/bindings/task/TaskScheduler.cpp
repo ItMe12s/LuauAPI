@@ -6,6 +6,7 @@
 
 #include <Geode/Geode.hpp>
 #include <atomic>
+#include <thread>
 
 namespace luax {
     TaskScheduler& TaskScheduler::get() {
@@ -167,6 +168,19 @@ namespace luax {
                     );
                     // #endregion
                 }
+    #if defined(GEODE_IS_MACOS)
+                if (!Runtime::isMainThread()) {
+                    // #region agent log
+                    Runtime::debugThreadProbe(
+                        "post-fix",
+                        "H11,H13",
+                        "src/bindings/task/TaskScheduler.cpp:TaskTickNode::update",
+                        "adopting Cocos task tick thread before runtime state"
+                    );
+                    // #endregion
+                    Runtime::setMainThreadId(std::this_thread::get_id());
+                }
+    #endif
                 auto* runtime = Runtime::getIfInitialized();
                 if (!runtime) return;
                 auto* L = runtime->state();
