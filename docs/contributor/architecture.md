@@ -41,8 +41,8 @@ This page names the main parts and traces how a script gets from a file to runni
 ## Lifecycle
 
 The runtime follows the mod and game lifecycle, wired in `src/main.cpp`.
-The main thread id is recorded at mod load, the runtime is created when the mod is loaded,
-and it shuts down when the game is exiting.
+The main thread id is recorded on the queued Cocos main thread when the mod loads,
+the runtime is created in that same queued startup, and it shuts down when the game is exiting.
 
 ## How a script runs
 

@@ -62,6 +62,7 @@ _JSON_CONVERT = "src/bindings/geode/JsonConvert.cpp"
 _GEODE_MOD = "src/bindings/geode/GeodeModBinding.cpp"
 _GEODE_PERMISSION = "src/bindings/geode/GeodeSmallBindings.cpp"
 _CONFIG_HEADER = "src/core/Config.hpp"
+_MAIN_CPP = "src/main.cpp"
 
 _COCOS_GENERATED_OWNERS = frozenset(
     {
@@ -467,6 +468,31 @@ class BindingGuardTests(unittest.TestCase):
         self.assertIn("queueInMainThread", production)
         self.assertIn("scheduleArmRetry", production)
         self.assertIn("s_armPending = false", production)
+
+    def test_mod_loaded_queues_startup_on_main_thread(self) -> None:
+        source = _read_repo_file(_MAIN_CPP)
+        loaded_start = source.find("$on_mod(Loaded)")
+        self.assertNotEqual(loaded_start, -1, "missing $on_mod(Loaded) handler")
+        loaded_body = source[loaded_start:]
+        queue_pos = loaded_body.find("queueInMainThread")
+        self.assertNotEqual(
+            queue_pos,
+            -1,
+            "mod load must queue startup on the main thread",
+        )
+        before_queue = loaded_body[:queue_pos]
+        after_queue = loaded_body[queue_pos:]
+        for symbol in ("setMainThreadId", "getOrCreate", "runFile"):
+            self.assertNotIn(
+                symbol,
+                before_queue,
+                f"{symbol} must not run before queueInMainThread",
+            )
+            self.assertIn(
+                symbol,
+                after_queue,
+                f"{symbol} must run inside queued startup",
+            )
 
 
 class WebSocketGuardTests(unittest.TestCase):
