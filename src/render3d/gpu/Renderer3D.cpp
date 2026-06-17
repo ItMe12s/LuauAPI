@@ -97,10 +97,10 @@ namespace luax::render3d {
         glClearColor(prevClearColor[0], prevClearColor[1], prevClearColor[2], prevClearColor[3]);
         glBindBuffer(GL_ARRAY_BUFFER, 0);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-        restoreVao(prevVao);
-        prevState.restore();
         ccGLUseProgram(0);
         ccGLEnableVertexAttribs(cocos2d::kCCVertexAttribFlag_None);
+        restoreVao(prevVao);
+        prevState.restore();
     }
 
 } // namespace luax::render3d
