@@ -10,6 +10,7 @@
 #include <lua.h>
 #include <memory>
 #include <string_view>
+#include <thread>
 
 namespace luax {
     inline void logCallbackFailure(std::string_view context) {
@@ -47,6 +48,19 @@ namespace luax {
             if (Runtime::isShuttingDown()) return false;
             auto* host = BindingHost::getIfInitialized();
             if (!host || !host->ready()) return false;
+#if defined(GEODE_IS_MACOS)
+            if (!Runtime::isMainThread()) {
+                // #region agent log
+                Runtime::debugThreadProbe(
+                    "post-fix",
+                    "H11,H12,H13",
+                    context,
+                    "adopting LuaCallback thread before host state"
+                );
+                // #endregion
+                Runtime::setMainThreadId(std::this_thread::get_id());
+            }
+#endif
             if (!Runtime::isMainThread()) {
                 static std::atomic_bool s_loggedOffThreadInvoke{false};
                 bool expected = false;
