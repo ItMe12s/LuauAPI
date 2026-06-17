@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <expected>
 #include <filesystem>
 #include <glm/vec2.hpp>
 #include <glm/vec3.hpp>
@@ -15,46 +16,6 @@
 struct cgltf_data;
 
 namespace luax::render3d {
-
-    template <class T>
-    class LoadResult {
-    public:
-        static LoadResult ok(T value) {
-            LoadResult result;
-            result.m_value = std::move(value);
-            return result;
-        }
-
-        static LoadResult err(std::string message) {
-            LoadResult result;
-            result.m_error = std::move(message);
-            return result;
-        }
-
-        bool isOk() const {
-            return m_value.has_value();
-        }
-
-        bool isErr() const {
-            return !isOk();
-        }
-
-        T& unwrap() {
-            return *m_value;
-        }
-
-        T const& unwrap() const {
-            return *m_value;
-        }
-
-        std::string const& unwrapErr() const {
-            return m_error;
-        }
-
-    private:
-        std::optional<T> m_value;
-        std::string m_error;
-    };
 
     struct ImageData {
         int width = 0;
@@ -88,14 +49,16 @@ namespace luax::render3d {
 
     class MeshAsset {
     public:
-        static LoadResult<std::shared_ptr<MeshAsset>> loadFromFile(std::filesystem::path const& path);
+        static std::expected<std::shared_ptr<MeshAsset>, std::string> loadFromFile(
+            std::filesystem::path const& path
+        );
 
-        static LoadResult<std::shared_ptr<MeshAsset>> loadFromBytes(
+        static std::expected<std::shared_ptr<MeshAsset>, std::string> loadFromBytes(
             std::span<std::uint8_t const> bytes, std::filesystem::path const& assetPath,
             std::filesystem::path const& sandboxRoot
         );
 
-        static LoadResult<std::shared_ptr<MeshAsset>> fromBuffers(
+        static std::expected<std::shared_ptr<MeshAsset>, std::string> fromBuffers(
             std::vector<glm::vec3> positions, std::vector<glm::vec3> normals,
             std::vector<glm::vec2> uvs, std::vector<std::uint32_t> indices
         );

@@ -66,11 +66,11 @@ namespace {
         return true;
     }
 
-    int pushNewMeshHandle(lua_State* L, LoadResult<std::shared_ptr<MeshAsset>> result) {
-        if (result.isErr()) {
-            return pushNilErr(L, result.unwrapErr());
+    int pushNewMeshHandle(lua_State* L, std::expected<std::shared_ptr<MeshAsset>, std::string> result) {
+        if (!result.has_value()) {
+            return pushNilErr(L, result.error());
         }
-        auto const id = MeshRegistry::instance().registerMesh(result.unwrap());
+        auto const id = MeshRegistry::instance().registerMesh(std::move(result).value());
         pushMeshHandle(L, id);
         return 1;
     }

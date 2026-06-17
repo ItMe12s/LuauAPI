@@ -16,11 +16,13 @@ namespace luax::render3d {
         std::string lastError;
     };
 
-    LoadResult<std::filesystem::path> canonicalSandboxRoot(std::filesystem::path const& root);
+    std::expected<std::filesystem::path, std::string> canonicalSandboxRoot(
+        std::filesystem::path const& root
+    );
 
     void configureSandboxFileIo(::cgltf_options& options, SandboxFileContext& context);
 
-    LoadResult<std::vector<std::uint8_t>> readImageEncodedBytes(
+    std::expected<std::vector<std::uint8_t>, std::string> readImageEncodedBytes(
         ::cgltf_image const* image, std::filesystem::path const& assetPath,
         std::filesystem::path const& sandboxRoot
     );

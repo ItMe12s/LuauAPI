@@ -7,6 +7,6 @@
 
 namespace luax::render3d {
 
-    LoadResult<ImageData> decodeImageRgba8(std::span<std::uint8_t const> encodedBytes);
+    std::expected<ImageData, std::string> decodeImageRgba8(std::span<std::uint8_t const> encodedBytes);
 
 } // namespace luax::render3d

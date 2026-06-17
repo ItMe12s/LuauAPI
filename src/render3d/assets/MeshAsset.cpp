@@ -42,38 +42,34 @@ namespace {
     }
 
     template <class VecT>
-    LoadResult<std::vector<VecT>> unpackVecAttribute(cgltf_accessor const* accessor, char const* label) {
+    std::expected<std::vector<VecT>, std::string> unpackVecAttribute(
+        cgltf_accessor const* accessor, char const* label
+    ) {
         constexpr std::size_t kComponents = static_cast<std::size_t>(VecT::length());
         constexpr cgltf_type kExpectedType = kComponents == 2 ? cgltf_type_vec2 : cgltf_type_vec3;
         char const* const kTypeName = kComponents == 2 ? "vec2" : "vec3";
 
         if (accessor == nullptr) {
-            return LoadResult<std::vector<VecT>>::err(std::string(label) + " accessor is missing");
+            return std::unexpected(std::string(label) + " accessor is missing");
         }
 
         if (accessor->is_sparse) {
-            return LoadResult<std::vector<VecT>>::err(
-                std::string(label) + " sparse accessors are not supported"
-            );
+            return std::unexpected(std::string(label) + " sparse accessors are not supported");
         }
 
         if (accessorUsesMeshopt(accessor)) {
-            return LoadResult<std::vector<VecT>>::err(
+            return std::unexpected(
                 std::string(label) + " meshopt-compressed accessors are not supported"
             );
         }
 
         if (accessor->type != kExpectedType) {
-            return LoadResult<std::vector<VecT>>::err(
-                std::string(label) + " accessor must be " + kTypeName
-            );
+            return std::unexpected(std::string(label) + " accessor must be " + kTypeName);
         }
 
         cgltf_size const floatCount = cgltf_accessor_unpack_floats(accessor, nullptr, 0);
         if (floatCount == 0 || floatCount % kComponents != 0) {
-            return LoadResult<std::vector<VecT>>::err(
-                std::string(label) + " accessor has no vertices"
-            );
+            return std::unexpected(std::string(label) + " accessor has no vertices");
         }
 
         std::vector<float> floats(floatCount);
@@ -86,41 +82,35 @@ namespace {
             }
         }
 
-        return LoadResult<std::vector<VecT>>::ok(std::move(values));
+        return values;
     }
 
-    LoadResult<std::vector<std::uint32_t>> unpackIndices(cgltf_primitive const& primitive) {
+    std::expected<std::vector<std::uint32_t>, std::string> unpackIndices(cgltf_primitive const& primitive) {
         if (primitive.indices == nullptr) {
             auto const* position = cgltf_find_accessor(&primitive, cgltf_attribute_type_position, 0);
             if (position == nullptr) {
-                return LoadResult<std::vector<std::uint32_t>>::err(
-                    "primitive is missing position data"
-                );
+                return std::unexpected("primitive is missing position data");
             }
 
             std::vector<std::uint32_t> indices(position->count);
             for (cgltf_size i = 0; i < position->count; ++i) {
                 indices[static_cast<std::size_t>(i)] = static_cast<std::uint32_t>(i);
             }
-            return LoadResult<std::vector<std::uint32_t>>::ok(std::move(indices));
+            return indices;
         }
 
         if (primitive.indices->is_sparse) {
-            return LoadResult<std::vector<std::uint32_t>>::err(
-                "sparse index accessors are not supported"
-            );
+            return std::unexpected("sparse index accessors are not supported");
         }
 
         if (accessorUsesMeshopt(primitive.indices)) {
-            return LoadResult<std::vector<std::uint32_t>>::err(
-                "meshopt-compressed index accessors are not supported"
-            );
+            return std::unexpected("meshopt-compressed index accessors are not supported");
         }
 
         cgltf_size const indexCount =
             cgltf_accessor_unpack_indices(primitive.indices, nullptr, sizeof(std::uint32_t), 0);
         if (indexCount == 0) {
-            return LoadResult<std::vector<std::uint32_t>>::err("primitive index accessor is empty");
+            return std::unexpected("primitive index accessor is empty");
         }
 
         std::vector<std::uint32_t> indices(indexCount);
@@ -128,31 +118,31 @@ namespace {
             primitive.indices, indices.data(), sizeof(std::uint32_t), indexCount
         );
         if (unpacked != indexCount) {
-            return LoadResult<std::vector<std::uint32_t>>::err("failed to unpack primitive indices");
+            return std::unexpected("failed to unpack primitive indices");
         }
 
-        return LoadResult<std::vector<std::uint32_t>>::ok(std::move(indices));
+        return indices;
     }
 
-    LoadResult<MeshPrimitive> extractPrimitive(
+    std::expected<MeshPrimitive, std::string> extractPrimitive(
         cgltf_data const* data, cgltf_primitive const& primitive, glm::mat4 const& worldMatrix
     ) {
         if (primitive.has_draco_mesh_compression) {
-            return LoadResult<MeshPrimitive>::err("Draco compressed primitives are not supported");
+            return std::unexpected("Draco compressed primitives are not supported");
         }
 
         if (primitive.type != cgltf_primitive_type_triangles) {
-            return LoadResult<MeshPrimitive>::err("only triangle primitives are supported");
+            return std::unexpected("only triangle primitives are supported");
         }
 
         auto const* positionAccessor =
             cgltf_find_accessor(&primitive, cgltf_attribute_type_position, 0);
         auto positionsResult = unpackVecAttribute<glm::vec3>(positionAccessor, "position");
-        if (positionsResult.isErr()) {
-            return LoadResult<MeshPrimitive>::err(positionsResult.unwrapErr());
+        if (!positionsResult.has_value()) {
+            return std::unexpected(positionsResult.error());
         }
 
-        auto positions = std::move(positionsResult.unwrap());
+        auto positions = std::move(positionsResult).value();
         glm::mat3 const normalMatrix = glm::transpose(glm::inverse(glm::mat3(worldMatrix)));
 
         for (auto& position : positions) {
@@ -164,15 +154,13 @@ namespace {
         auto const* normalAccessor = cgltf_find_accessor(&primitive, cgltf_attribute_type_normal, 0);
         if (normalAccessor != nullptr) {
             auto normalsResult = unpackVecAttribute<glm::vec3>(normalAccessor, "normal");
-            if (normalsResult.isErr()) {
-                return LoadResult<MeshPrimitive>::err(normalsResult.unwrapErr());
+            if (!normalsResult.has_value()) {
+                return std::unexpected(normalsResult.error());
             }
 
-            normals = std::move(normalsResult.unwrap());
+            normals = std::move(normalsResult).value();
             if (normals.size() != positions.size()) {
-                return LoadResult<MeshPrimitive>::err(
-                    "position and normal vertex counts do not match"
-                );
+                return std::unexpected("position and normal vertex counts do not match");
             }
 
             for (auto& normal : normals) {
@@ -184,8 +172,8 @@ namespace {
         }
 
         auto indicesResult = unpackIndices(primitive);
-        if (indicesResult.isErr()) {
-            return LoadResult<MeshPrimitive>::err(indicesResult.unwrapErr());
+        if (!indicesResult.has_value()) {
+            return std::unexpected(indicesResult.error());
         }
 
         std::vector<glm::vec2> texcoords;
@@ -193,27 +181,25 @@ namespace {
             cgltf_find_accessor(&primitive, cgltf_attribute_type_texcoord, 0);
         if (texcoordAccessor != nullptr) {
             auto texcoordsResult = unpackVecAttribute<glm::vec2>(texcoordAccessor, "texcoord");
-            if (texcoordsResult.isErr()) {
-                return LoadResult<MeshPrimitive>::err(texcoordsResult.unwrapErr());
+            if (!texcoordsResult.has_value()) {
+                return std::unexpected(texcoordsResult.error());
             }
 
-            texcoords = std::move(texcoordsResult.unwrap());
+            texcoords = std::move(texcoordsResult).value();
             if (texcoords.size() != positions.size()) {
-                return LoadResult<MeshPrimitive>::err(
-                    "position and texcoord vertex counts do not match"
-                );
+                return std::unexpected("position and texcoord vertex counts do not match");
             }
         }
 
         int materialIndex = -1;
         if (primitive.material != nullptr) {
             if (data->materials == nullptr || data->materials_count == 0) {
-                return LoadResult<MeshPrimitive>::err("primitive references a missing material");
+                return std::unexpected("primitive references a missing material");
             }
 
             materialIndex = static_cast<int>(primitive.material - data->materials);
             if (materialIndex < 0 || static_cast<cgltf_size>(materialIndex) >= data->materials_count) {
-                return LoadResult<MeshPrimitive>::err("primitive references an invalid material");
+                return std::unexpected("primitive references an invalid material");
             }
         }
 
@@ -221,35 +207,35 @@ namespace {
         meshPrimitive.positions = std::move(positions);
         meshPrimitive.normals = std::move(normals);
         meshPrimitive.texcoords = std::move(texcoords);
-        meshPrimitive.indices = std::move(indicesResult.unwrap());
+        meshPrimitive.indices = std::move(indicesResult).value();
         meshPrimitive.materialIndex = materialIndex;
-        return LoadResult<MeshPrimitive>::ok(std::move(meshPrimitive));
+        return meshPrimitive;
     }
 
-    LoadResult<int> resolveImageIndex(
+    std::expected<int, std::string> resolveImageIndex(
         cgltf_image const* image, std::filesystem::path const& assetPath,
         std::filesystem::path const& sandboxRoot, std::vector<ImageData>& images,
         std::unordered_map<cgltf_image const*, int>& imageIndices
     ) {
         auto const existing = imageIndices.find(image);
         if (existing != imageIndices.end()) {
-            return LoadResult<int>::ok(existing->second);
+            return existing->second;
         }
 
         auto encodedResult = readImageEncodedBytes(image, assetPath, sandboxRoot);
-        if (encodedResult.isErr()) {
-            return LoadResult<int>::err(encodedResult.unwrapErr());
+        if (!encodedResult.has_value()) {
+            return std::unexpected(encodedResult.error());
         }
 
-        auto decodeResult = decodeImageRgba8(encodedResult.unwrap());
-        if (decodeResult.isErr()) {
-            return LoadResult<int>::err(decodeResult.unwrapErr());
+        auto decodeResult = decodeImageRgba8(encodedResult.value());
+        if (!decodeResult.has_value()) {
+            return std::unexpected(decodeResult.error());
         }
 
         int const index = static_cast<int>(images.size());
-        images.push_back(std::move(decodeResult.unwrap()));
+        images.push_back(std::move(decodeResult).value());
         imageIndices.emplace(image, index);
-        return LoadResult<int>::ok(index);
+        return index;
     }
 
     void computeFlatNormals(
@@ -325,11 +311,11 @@ namespace luax::render3d {
                     auto imageIndexResult = resolveImageIndex(
                         texture->image, assetPath, sandboxRoot, asset.m_images, imageIndices
                     );
-                    if (imageIndexResult.isErr()) {
-                        return imageIndexResult.unwrapErr();
+                    if (!imageIndexResult.has_value()) {
+                        return imageIndexResult.error();
                     }
 
-                    materialData.imageIndex = imageIndexResult.unwrap();
+                    materialData.imageIndex = imageIndexResult.value();
                 }
             }
 
@@ -365,11 +351,11 @@ namespace luax::render3d {
                  ++primitiveIndex) {
                 auto const& primitive = node->mesh->primitives[primitiveIndex];
                 auto primitiveResult = extractPrimitive(data, primitive, worldMatrix);
-                if (primitiveResult.isErr()) {
-                    return primitiveResult.unwrapErr();
+                if (!primitiveResult.has_value()) {
+                    return primitiveResult.error();
                 }
 
-                auto meshPrimitive = std::move(primitiveResult.unwrap());
+                auto meshPrimitive = std::move(primitiveResult).value();
                 if (meshPrimitive.materialIndex >= 0 &&
                     static_cast<std::size_t>(meshPrimitive.materialIndex) < asset.m_materials.size()) {
                     auto const& material =
@@ -391,48 +377,46 @@ namespace luax::render3d {
         return std::nullopt;
     }
 
-    LoadResult<std::shared_ptr<MeshAsset>> MeshAsset::loadFromFile(std::filesystem::path const& path) {
+    std::expected<std::shared_ptr<MeshAsset>, std::string> MeshAsset::loadFromFile(
+        std::filesystem::path const& path
+    ) {
         std::error_code ec;
         auto const fileSize = std::filesystem::file_size(path, ec);
         if (ec) {
-            return LoadResult<std::shared_ptr<MeshAsset>>::err(
-                "glTF file cannot be read: " + filesystemPathString(path)
-            );
+            return std::unexpected("glTF file cannot be read: " + filesystemPathString(path));
         }
 
         if (fileSize > kMaxFsReadBytes) {
-            return LoadResult<std::shared_ptr<MeshAsset>>::err("glTF file exceeds maximum read size");
+            return std::unexpected("glTF file exceeds maximum read size");
         }
 
         auto bytesResult = geode::utils::file::readBinary(path);
         if (bytesResult.isErr()) {
-            return LoadResult<std::shared_ptr<MeshAsset>>::err(
-                "glTF file cannot be read: " + filesystemPathString(path)
-            );
+            return std::unexpected("glTF file cannot be read: " + filesystemPathString(path));
         }
 
         auto bytes = std::move(bytesResult.unwrap());
         return loadFromBytes(bytes, path, path.parent_path());
     }
 
-    LoadResult<std::shared_ptr<MeshAsset>> MeshAsset::loadFromBytes(
+    std::expected<std::shared_ptr<MeshAsset>, std::string> MeshAsset::loadFromBytes(
         std::span<std::uint8_t const> bytes, std::filesystem::path const& assetPath,
         std::filesystem::path const& sandboxRoot
     ) {
         if (bytes.empty()) {
-            return LoadResult<std::shared_ptr<MeshAsset>>::err("glTF data is empty");
+            return std::unexpected("glTF data is empty");
         }
 
         if (bytes.size() > kMaxFsReadBytes) {
-            return LoadResult<std::shared_ptr<MeshAsset>>::err("glTF data exceeds maximum read size");
+            return std::unexpected("glTF data exceeds maximum read size");
         }
 
         auto rootResult = canonicalSandboxRoot(sandboxRoot);
-        if (rootResult.isErr()) {
-            return LoadResult<std::shared_ptr<MeshAsset>>::err(rootResult.unwrapErr());
+        if (!rootResult.has_value()) {
+            return std::unexpected(rootResult.error());
         }
 
-        SandboxFileContext fileContext{rootResult.unwrap(), {}};
+        SandboxFileContext fileContext{rootResult.value(), {}};
 
         cgltf_options options{};
         configureSandboxFileIo(options, fileContext);
@@ -441,7 +425,7 @@ namespace luax::render3d {
         cgltf_result parseResult =
             cgltf_parse(&options, bytes.data(), static_cast<cgltf_size>(bytes.size()), &data);
         if (parseResult != cgltf_result_success) {
-            return LoadResult<std::shared_ptr<MeshAsset>>::err(
+            return std::unexpected(
                 std::string("failed to parse glTF: ") + cgltfResultMessage(parseResult)
             );
         }
@@ -453,61 +437,53 @@ namespace luax::render3d {
             message += fileContext.lastError.empty() ? cgltfResultMessage(bufferResult) :
                                                        fileContext.lastError;
             cgltf_free(data);
-            return LoadResult<std::shared_ptr<MeshAsset>>::err(std::move(message));
+            return std::unexpected(std::move(message));
         }
 
         auto mesh = std::shared_ptr<MeshAsset>(new MeshAsset());
-        auto materialError = MeshAsset::extractMaterials(data, *mesh, assetPath, rootResult.unwrap());
+        auto materialError = MeshAsset::extractMaterials(data, *mesh, assetPath, rootResult.value());
         if (materialError.has_value()) {
             cgltf_free(data);
-            return LoadResult<std::shared_ptr<MeshAsset>>::err(*materialError);
+            return std::unexpected(*materialError);
         }
 
         auto extractError = MeshAsset::extractSceneMeshes(data, *mesh);
         cgltf_free(data);
 
         if (extractError.has_value()) {
-            return LoadResult<std::shared_ptr<MeshAsset>>::err(*extractError);
+            return std::unexpected(*extractError);
         }
 
-        return LoadResult<std::shared_ptr<MeshAsset>>::ok(std::move(mesh));
+        return mesh;
     }
 
-    LoadResult<std::shared_ptr<MeshAsset>> MeshAsset::fromBuffers(
+    std::expected<std::shared_ptr<MeshAsset>, std::string> MeshAsset::fromBuffers(
         std::vector<glm::vec3> positions, std::vector<glm::vec3> normals,
         std::vector<glm::vec2> uvs, std::vector<std::uint32_t> indices
     ) {
         if (positions.empty()) {
-            return LoadResult<std::shared_ptr<MeshAsset>>::err("positions are empty");
+            return std::unexpected("positions are empty");
         }
 
         if (positions.size() > kMaxProceduralMeshVertices) {
-            return LoadResult<std::shared_ptr<MeshAsset>>::err(
-                "positions exceed maximum vertex count"
-            );
+            return std::unexpected("positions exceed maximum vertex count");
         }
 
         if (indices.empty() || indices.size() % 3 != 0) {
-            return LoadResult<std::shared_ptr<MeshAsset>>::err(
-                "indices must contain a multiple of three triangle indices"
-            );
+            return std::unexpected("indices must contain a multiple of three triangle indices");
         }
 
         if (!normals.empty() && normals.size() != positions.size()) {
-            return LoadResult<std::shared_ptr<MeshAsset>>::err(
-                "normals length must match positions or be omitted"
-            );
+            return std::unexpected("normals length must match positions or be omitted");
         }
 
         if (!uvs.empty() && uvs.size() != positions.size()) {
-            return LoadResult<std::shared_ptr<MeshAsset>>::err(
-                "uvs length must match positions or be omitted"
-            );
+            return std::unexpected("uvs length must match positions or be omitted");
         }
 
         for (auto const index : indices) {
             if (index >= positions.size()) {
-                return LoadResult<std::shared_ptr<MeshAsset>>::err("index out of range");
+                return std::unexpected("index out of range");
             }
         }
 
@@ -524,7 +500,7 @@ namespace luax::render3d {
 
         auto mesh = std::shared_ptr<MeshAsset>(new MeshAsset());
         mesh->addPrimitive(std::move(primitive));
-        return LoadResult<std::shared_ptr<MeshAsset>>::ok(std::move(mesh));
+        return mesh;
     }
 
     void MeshAsset::addPrimitive(MeshPrimitive primitive) {

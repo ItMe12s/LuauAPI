@@ -12,9 +12,9 @@ namespace {
         return glm::length(a - b) <= epsilon;
     }
 
-    std::shared_ptr<MeshAsset> requireMesh(LoadResult<std::shared_ptr<MeshAsset>> result) {
-        REQUIRE(result.isOk());
-        return result.unwrap();
+    std::shared_ptr<MeshAsset> requireMesh(std::expected<std::shared_ptr<MeshAsset>, std::string> result) {
+        REQUIRE(result.has_value());
+        return std::move(result).value();
     }
 } // namespace
 
@@ -66,8 +66,8 @@ TEST_CASE("MeshAsset fromBuffers rejects out-of-range indices") {
     std::vector<std::uint32_t> indices{0, 1, 3};
 
     auto result = MeshAsset::fromBuffers(positions, {}, {}, indices);
-    REQUIRE(result.isErr());
-    REQUIRE(result.unwrapErr() == "index out of range");
+    REQUIRE(!result.has_value());
+    REQUIRE(result.error() == "index out of range");
 }
 
 TEST_CASE("MeshAsset fromBuffers rejects unconverted one-based indices") {
@@ -79,8 +79,8 @@ TEST_CASE("MeshAsset fromBuffers rejects unconverted one-based indices") {
     std::vector<std::uint32_t> indices{1, 2, 3};
 
     auto result = MeshAsset::fromBuffers(positions, {}, {}, indices);
-    REQUIRE(result.isErr());
-    REQUIRE(result.unwrapErr() == "index out of range");
+    REQUIRE(!result.has_value());
+    REQUIRE(result.error() == "index out of range");
 }
 
 TEST_CASE("MeshAsset fromBuffers accepts indices after one-based conversion") {
@@ -103,8 +103,8 @@ TEST_CASE("MeshAsset fromBuffers accepts indices after one-based conversion") {
 TEST_CASE("MeshAsset fromBuffers rejects empty positions") {
     std::vector<std::uint32_t> indices{0, 1, 2};
     auto result = MeshAsset::fromBuffers({}, {}, {}, indices);
-    REQUIRE(result.isErr());
-    REQUIRE(result.unwrapErr() == "positions are empty");
+    REQUIRE(!result.has_value());
+    REQUIRE(result.error() == "positions are empty");
 }
 
 TEST_CASE("MeshAsset fromBuffers rejects index count not divisible by three") {
@@ -116,8 +116,8 @@ TEST_CASE("MeshAsset fromBuffers rejects index count not divisible by three") {
     std::vector<std::uint32_t> indices{0, 1, 2, 3};
 
     auto result = MeshAsset::fromBuffers(positions, {}, {}, indices);
-    REQUIRE(result.isErr());
-    REQUIRE(result.unwrapErr() == "indices must contain a multiple of three triangle indices");
+    REQUIRE(!result.has_value());
+    REQUIRE(result.error() == "indices must contain a multiple of three triangle indices");
 }
 
 TEST_CASE("MeshAsset fromBuffers rejects mismatched normals length") {
@@ -133,8 +133,8 @@ TEST_CASE("MeshAsset fromBuffers rejects mismatched normals length") {
     std::vector<std::uint32_t> indices{0, 1, 2};
 
     auto result = MeshAsset::fromBuffers(positions, normals, {}, indices);
-    REQUIRE(result.isErr());
-    REQUIRE(result.unwrapErr() == "normals length must match positions or be omitted");
+    REQUIRE(!result.has_value());
+    REQUIRE(result.error() == "normals length must match positions or be omitted");
 }
 
 TEST_CASE("MeshAsset fromBuffers rejects mismatched UV length") {
@@ -150,8 +150,8 @@ TEST_CASE("MeshAsset fromBuffers rejects mismatched UV length") {
     std::vector<std::uint32_t> indices{0, 1, 2};
 
     auto result = MeshAsset::fromBuffers(positions, {}, uvs, indices);
-    REQUIRE(result.isErr());
-    REQUIRE(result.unwrapErr() == "uvs length must match positions or be omitted");
+    REQUIRE(!result.has_value());
+    REQUIRE(result.error() == "uvs length must match positions or be omitted");
 }
 
 TEST_CASE("MeshAsset fromBuffers preserves supplied normals") {
@@ -204,8 +204,8 @@ TEST_CASE("MeshAsset fromBuffers rejects vertex count above limit") {
     std::vector<std::uint32_t> indices{0, 1, 2};
 
     auto result = MeshAsset::fromBuffers(positions, {}, {}, indices);
-    REQUIRE(result.isErr());
-    REQUIRE(result.unwrapErr() == "positions exceed maximum vertex count");
+    REQUIRE(!result.has_value());
+    REQUIRE(result.error() == "positions exceed maximum vertex count");
 }
 
 TEST_CASE("MeshRegistry register get release round trip") {

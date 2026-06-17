@@ -11,9 +11,9 @@ namespace {
     using namespace luax::render3d;
     using Catch::Approx;
 
-    std::shared_ptr<MeshAsset> requireMesh(LoadResult<std::shared_ptr<MeshAsset>> result) {
-        REQUIRE(result.isOk());
-        return result.unwrap();
+    std::shared_ptr<MeshAsset> requireMesh(std::expected<std::shared_ptr<MeshAsset>, std::string> result) {
+        REQUIRE(result.has_value());
+        return std::move(result).value();
     }
 
     GpuMesh makeGpuMesh(unsigned int vbo, unsigned int ibo, unsigned int indexCount, int materialIndex = -1) {

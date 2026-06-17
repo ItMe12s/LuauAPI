@@ -10,13 +10,13 @@
 
 namespace luax::render3d {
 
-    LoadResult<ImageData> decodeImageRgba8(std::span<std::uint8_t const> encodedBytes) {
+    std::expected<ImageData, std::string> decodeImageRgba8(std::span<std::uint8_t const> encodedBytes) {
         if (encodedBytes.empty()) {
-            return LoadResult<ImageData>::err("image data is empty");
+            return std::unexpected("image data is empty");
         }
 
         if (encodedBytes.size() > kMaxFsReadBytes) {
-            return LoadResult<ImageData>::err("encoded image exceeds maximum read size");
+            return std::unexpected("encoded image exceeds maximum read size");
         }
 
         stbi_set_flip_vertically_on_load(0);
@@ -29,7 +29,7 @@ namespace luax::render3d {
         );
         if (pixels == nullptr) {
             char const* reason = stbi_failure_reason();
-            return LoadResult<ImageData>::err(
+            return std::unexpected(
                 std::string("failed to decode image: ") +
                 (reason != nullptr ? reason : "unknown error")
             );
@@ -37,14 +37,14 @@ namespace luax::render3d {
 
         if (width <= 0 || height <= 0) {
             stbi_image_free(pixels);
-            return LoadResult<ImageData>::err("decoded image has invalid dimensions");
+            return std::unexpected("decoded image has invalid dimensions");
         }
 
         std::size_t const byteCount =
             static_cast<std::size_t>(width) * static_cast<std::size_t>(height) * 4;
         if (byteCount > kMaxFsReadBytes) {
             stbi_image_free(pixels);
-            return LoadResult<ImageData>::err("decoded image exceeds maximum size");
+            return std::unexpected("decoded image exceeds maximum size");
         }
 
         ImageData image;
@@ -52,7 +52,7 @@ namespace luax::render3d {
         image.height = height;
         image.rgba.assign(pixels, pixels + byteCount);
         stbi_image_free(pixels);
-        return LoadResult<ImageData>::ok(std::move(image));
+        return image;
     }
 
 } // namespace luax::render3d

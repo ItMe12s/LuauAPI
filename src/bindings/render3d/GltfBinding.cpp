@@ -18,21 +18,17 @@ namespace {
     using namespace luax::gd3d;
     using namespace luax::render3d;
 
-    LoadResult<std::span<std::uint8_t const>> readGltfBytesArg(lua_State* L, int idx) {
+    std::expected<std::span<std::uint8_t const>, std::string> readGltfBytesArg(lua_State* L, int idx) {
         if (lua_isbuffer(L, idx)) {
             size_t len = 0;
             void* data = lua_tobuffer(L, idx, &len);
             if (data == nullptr || len == 0) {
-                return LoadResult<std::span<std::uint8_t const>>::err("glTF data is empty");
+                return std::unexpected("glTF data is empty");
             }
             if (len > kMaxFsReadBytes) {
-                return LoadResult<std::span<std::uint8_t const>>::err(
-                    "glTF data exceeds maximum read size"
-                );
+                return std::unexpected("glTF data exceeds maximum read size");
             }
-            return LoadResult<std::span<std::uint8_t const>>::ok(
-                std::span<std::uint8_t const>(static_cast<std::uint8_t const*>(data), len)
-            );
+            return std::span<std::uint8_t const>(static_cast<std::uint8_t const*>(data), len);
         }
 
         size_t len = 0;
@@ -41,16 +37,12 @@ namespace {
             luaL_error(L, "gd3d.gltf.loadMeshFromBytes expected buffer or string at arg %d", idx);
         }
         if (len == 0) {
-            return LoadResult<std::span<std::uint8_t const>>::err("glTF data is empty");
+            return std::unexpected("glTF data is empty");
         }
         if (len > kMaxFsReadBytes) {
-            return LoadResult<std::span<std::uint8_t const>>::err(
-                "glTF data exceeds maximum read size"
-            );
+            return std::unexpected("glTF data exceeds maximum read size");
         }
-        return LoadResult<std::span<std::uint8_t const>>::ok(
-            std::span<std::uint8_t const>(reinterpret_cast<std::uint8_t const*>(text), len)
-        );
+        return std::span<std::uint8_t const>(reinterpret_cast<std::uint8_t const*>(text), len);
     }
 
     int gltfLoadMesh(lua_State* L) {
@@ -65,29 +57,29 @@ namespace {
         }
 
         auto result = MeshAsset::loadFromFile(target->path);
-        if (result.isErr()) {
-            return pushNilErr(L, result.unwrapErr());
+        if (!result.has_value()) {
+            return pushNilErr(L, result.error());
         }
 
-        auto const id = MeshRegistry::instance().registerMesh(result.unwrap());
+        auto const id = MeshRegistry::instance().registerMesh(std::move(result).value());
         pushMeshHandle(L, id);
         return 1;
     }
 
     int gltfLoadMeshFromBytes(lua_State* L) {
         auto bytesResult = readGltfBytesArg(L, 1);
-        if (bytesResult.isErr()) {
-            return pushNilErr(L, bytesResult.unwrapErr());
+        if (!bytesResult.has_value()) {
+            return pushNilErr(L, bytesResult.error());
         }
 
         auto result = MeshAsset::loadFromBytes(
-            bytesResult.unwrap(), std::filesystem::path{}, std::filesystem::path{}
+            bytesResult.value(), std::filesystem::path{}, std::filesystem::path{}
         );
-        if (result.isErr()) {
-            return pushNilErr(L, result.unwrapErr());
+        if (!result.has_value()) {
+            return pushNilErr(L, result.error());
         }
 
-        auto const id = MeshRegistry::instance().registerMesh(result.unwrap());
+        auto const id = MeshRegistry::instance().registerMesh(std::move(result).value());
         pushMeshHandle(L, id);
         return 1;
     }

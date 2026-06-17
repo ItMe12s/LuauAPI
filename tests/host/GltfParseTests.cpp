@@ -52,8 +52,8 @@ namespace {
             sandbox / "fixture.gltf",
             sandbox
         );
-        REQUIRE(result.isOk());
-        return result.unwrap();
+        REQUIRE(result.has_value());
+        return std::move(result).value();
     }
 
     void requireGltfError(std::string const& gltfJson, std::string const& messagePart) {
@@ -64,8 +64,8 @@ namespace {
             sandbox / "fixture.gltf",
             sandbox
         );
-        REQUIRE(result.isErr());
-        REQUIRE(result.unwrapErr().find(messagePart) != std::string::npos);
+        REQUIRE(!result.has_value());
+        REQUIRE(result.error().find(messagePart) != std::string::npos);
     }
 
     std::shared_ptr<MeshAsset> loadMaterialFlagsFixture(char const* materialsJson) {
@@ -86,9 +86,9 @@ TEST_CASE("MeshAsset parses resources/test_donut.glb") {
     REQUIRE(std::filesystem::exists(path));
 
     auto result = MeshAsset::loadFromFile(path);
-    REQUIRE(result.isOk());
+    REQUIRE(result.has_value());
 
-    auto const mesh = result.unwrap();
+    auto const mesh = result.value();
     REQUIRE(mesh != nullptr);
     REQUIRE(mesh->vertexCount() > 0);
     REQUIRE(mesh->primitiveCount() > 0);
@@ -117,9 +117,9 @@ TEST_CASE("MeshAsset parses glTF materials and textures from test_donut.glb") {
     REQUIRE(std::filesystem::exists(path));
 
     auto result = MeshAsset::loadFromFile(path);
-    REQUIRE(result.isOk());
+    REQUIRE(result.has_value());
 
-    auto const mesh = result.unwrap();
+    auto const mesh = result.value();
     REQUIRE(mesh->materialCount() == 1);
 
     auto const& materials = mesh->materials();
@@ -184,8 +184,8 @@ TEST_CASE("MeshAsset loadFromBytes rejects empty bytes") {
         sandbox / "empty.gltf",
         sandbox
     );
-    REQUIRE(result.isErr());
-    REQUIRE(result.unwrapErr() == "glTF data is empty");
+    REQUIRE(!result.has_value());
+    REQUIRE(result.error() == "glTF data is empty");
 }
 
 TEST_CASE("MeshAsset loadFromBytes rejects invalid JSON") {
@@ -199,8 +199,8 @@ TEST_CASE("MeshAsset loadFromFile rejects missing path") {
     REQUIRE_FALSE(std::filesystem::exists(path));
 
     auto result = MeshAsset::loadFromFile(path);
-    REQUIRE(result.isErr());
-    REQUIRE(result.unwrapErr().find("glTF file cannot be read") != std::string::npos);
+    REQUIRE(!result.has_value());
+    REQUIRE(result.error().find("glTF file cannot be read") != std::string::npos);
 }
 
 TEST_CASE("MeshAsset loadFromBytes rejects glTF with no mesh primitives") {
@@ -220,8 +220,8 @@ TEST_CASE("MeshAsset loadFromBytes parses test_donut.glb bytes") {
     REQUIRE_FALSE(bytes.empty());
 
     auto result = MeshAsset::loadFromBytes(bytes, path, path.parent_path());
-    REQUIRE(result.isOk());
-    REQUIRE(result.unwrap()->vertexCount() > 0);
+    REQUIRE(result.has_value());
+    REQUIRE(result.value()->vertexCount() > 0);
 }
 
 TEST_CASE("MeshAsset loadFromBytes parses baseColorFactor into material color") {
@@ -403,8 +403,8 @@ TEST_CASE("MeshAsset loadFromBytes rejects external buffer outside sandbox") {
 
     std::vector<std::uint8_t> bytes(gltfJson.begin(), gltfJson.end());
     auto result = MeshAsset::loadFromBytes(bytes, gltfPath, sandbox);
-    REQUIRE(result.isErr());
-    REQUIRE(result.unwrapErr().find("escapes sandbox root") != std::string::npos);
+    REQUIRE(!result.has_value());
+    REQUIRE(result.error().find("escapes sandbox root") != std::string::npos);
 
     std::filesystem::remove_all(base);
 }
