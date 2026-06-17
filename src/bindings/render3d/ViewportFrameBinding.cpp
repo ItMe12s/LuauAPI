@@ -205,19 +205,23 @@ namespace {
         return 0;
     }
 
+    ViewportInstance const* findViewportInstance(CCViewportFrame const* self, int instanceId) {
+        auto const it = self->instances().find(instanceId);
+        return it == self->instances().end() ? nullptr : &it->second;
+    }
+
     int viewportGetInstanceTransform(lua_State* L) {
         auto const* self =
             Usertype<CCViewportFrame>::check(L, 1, "ViewportFrame:getInstanceTransform");
         int const instanceId = check<int>(L, 2, "ViewportFrame:getInstanceTransform");
 
-        auto const& instances = self->instances();
-        auto const it = instances.find(instanceId);
-        if (it == instances.end()) {
+        auto const* instance = findViewportInstance(self, instanceId);
+        if (instance == nullptr) {
             lua_pushnil(L);
             return 1;
         }
 
-        pushTransform(L, it->second.transform);
+        pushTransform(L, instance->transform);
         return 1;
     }
 
@@ -225,14 +229,13 @@ namespace {
         auto const* self = Usertype<CCViewportFrame>::check(L, 1, "ViewportFrame:getInstanceColor");
         int const instanceId = check<int>(L, 2, "ViewportFrame:getInstanceColor");
 
-        auto const& instances = self->instances();
-        auto const it = instances.find(instanceId);
-        if (it == instances.end()) {
+        auto const* instance = findViewportInstance(self, instanceId);
+        if (instance == nullptr) {
             lua_pushnil(L);
             return 1;
         }
 
-        pushVec3(L, it->second.color);
+        pushVec3(L, instance->color);
         return 1;
     }
 
@@ -241,14 +244,13 @@ namespace {
             Usertype<CCViewportFrame>::check(L, 1, "ViewportFrame:getInstanceMaterial");
         int const instanceId = check<int>(L, 2, "ViewportFrame:getInstanceMaterial");
 
-        auto const& instances = self->instances();
-        auto const it = instances.find(instanceId);
-        if (it == instances.end() || !it->second.materialOverride) {
+        auto const* instance = findViewportInstance(self, instanceId);
+        if (instance == nullptr || !instance->materialOverride) {
             lua_pushnil(L);
             return 1;
         }
 
-        pushMaterial(L, it->second.materialOverride);
+        pushMaterial(L, instance->materialOverride);
         return 1;
     }
 
@@ -258,15 +260,14 @@ namespace {
         int const instanceId = check<int>(L, 2, "ViewportFrame:getInstancePrimitiveMaterial");
         int const primitiveIndex = check<int>(L, 3, "ViewportFrame:getInstancePrimitiveMaterial");
 
-        auto const& instances = self->instances();
-        auto const it = instances.find(instanceId);
-        if (it == instances.end()) {
+        auto const* instance = findViewportInstance(self, instanceId);
+        if (instance == nullptr) {
             lua_pushnil(L);
             return 1;
         }
 
-        auto const primIt = it->second.primitiveOverrides.find(primitiveIndex);
-        if (primIt == it->second.primitiveOverrides.end() || !primIt->second) {
+        auto const primIt = instance->primitiveOverrides.find(primitiveIndex);
+        if (primIt == instance->primitiveOverrides.end() || !primIt->second) {
             lua_pushnil(L);
             return 1;
         }
