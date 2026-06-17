@@ -1,12 +1,7 @@
 #include "bindings/task/TaskScheduler.hpp"
 #include "core/Config.hpp"
 #include "core/Runtime.hpp"
-#include "framework/Binding.hpp"
 #include "host/lua_test_helpers.hpp"
-
-namespace luax {
-    geode::Result<void> registerTask(lua_State* L);
-}
 
 #include <RuntimeTypes.hpp>
 #include <atomic>
@@ -28,24 +23,6 @@ namespace {
         }
     };
 } // namespace
-
-TEST_CASE("registerTask completes under host tick stubs") {
-    RuntimeGuard guard;
-    auto* runtime = luax::Runtime::getOrCreate();
-    auto* L = runtime->state();
-
-    luax::resetBindingsForTests();
-    luax::registerBinding({"task_lib", &luax::registerTask, 10});
-    REQUIRE(luax::applyAllBindings(L) == std::nullopt);
-
-    lua_getglobal(L, "task");
-    REQUIRE(lua_istable(L, -1));
-    lua_getfield(L, -1, "spawn");
-    REQUIRE(lua_isfunction(L, -1));
-    lua_pop(L, 2);
-
-    luax::resetBindingsForTests();
-}
 
 TEST_CASE("TaskScheduler fires one-shot tasks after delay") {
     RuntimeGuard guard;

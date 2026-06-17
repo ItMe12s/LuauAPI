@@ -9,18 +9,9 @@
 #include <functional>
 #include <lua.h>
 #include <memory>
-#include <thread>
 
 namespace {
-    struct RuntimeGuard {
-        RuntimeGuard() {
-            luax::Runtime::setMainThreadId(std::this_thread::get_id());
-        }
-
-        ~RuntimeGuard() {
-            luax::Runtime::resetForTests();
-        }
-    };
+    using RuntimeGuard = luauapi_test::RuntimeGuard;
 
     std::function<void()> makeCodegenVoidCallback(lua_State* L, int fnIndex) {
         auto cb_cb = std::make_shared<luax::LuaCallback>(L, fnIndex);

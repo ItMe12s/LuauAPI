@@ -1,24 +1,16 @@
 #include "core/Runtime.hpp"
 #include "framework/usertype/Usertype.hpp"
 #include "framework/view/ReadOnlyVectorView.hpp"
+#include "host/lua_test_helpers.hpp"
 
 #include <catch2/catch_test_macros.hpp>
 #include <lua.h>
-#include <thread>
 #include <vector>
 
 namespace {
+    using RuntimeGuard = luauapi_test::RuntimeGuard;
+
     struct TestObj : cocos2d::CCObject {};
-
-    struct RuntimeGuard {
-        RuntimeGuard() {
-            luax::Runtime::setMainThreadId(std::this_thread::get_id());
-        }
-
-        ~RuntimeGuard() {
-            luax::Runtime::resetForTests();
-        }
-    };
 
     void indexReadOnlyVectorView(lua_State* L, int viewIndex, int elementIndex) {
         viewIndex = lua_absindex(L, viewIndex);

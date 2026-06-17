@@ -11,6 +11,7 @@
 #include <memory>
 #include <string>
 #include <string_view>
+#include <thread>
 
 namespace luauapi_test {
     struct LuaStateDeleter {
@@ -43,6 +44,16 @@ namespace luauapi_test {
 
         ~BindingGuard() {
             luax::resetBindingsForTests();
+        }
+    };
+
+    struct RuntimeGuard {
+        RuntimeGuard() {
+            luax::Runtime::setMainThreadId(std::this_thread::get_id());
+        }
+
+        ~RuntimeGuard() {
+            luax::Runtime::resetForTests();
         }
     };
 

@@ -15,15 +15,7 @@
 #include <vector>
 
 namespace {
-    struct RuntimeGuard {
-        RuntimeGuard() {
-            luax::Runtime::setMainThreadId(std::this_thread::get_id());
-        }
-
-        ~RuntimeGuard() {
-            luax::Runtime::resetForTests();
-        }
-    };
+    using RuntimeGuard = luauapi_test::RuntimeGuard;
 
     void pushReturnValue(lua_State* L, int value) {
         luauapi_test::loadFunction(L, std::string("return ") + std::to_string(value));

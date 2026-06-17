@@ -1,4 +1,5 @@
 #include "core/Runtime.hpp"
+#include "host/lua_test_helpers.hpp"
 
 #include <LuauAPI.hpp>
 #include <catch2/catch_test_macros.hpp>
@@ -10,15 +11,7 @@
 #include <thread>
 
 namespace {
-    struct RuntimeGuard {
-        RuntimeGuard() {
-            luax::Runtime::setMainThreadId(std::this_thread::get_id());
-        }
-
-        ~RuntimeGuard() {
-            luax::Runtime::resetForTests();
-        }
-    };
+    using RuntimeGuard = luauapi_test::RuntimeGuard;
 
     std::filesystem::path makeTempDir() {
         auto root = std::filesystem::temp_directory_path() / "luauapi_api_tests";
