@@ -22,9 +22,7 @@
 #if !defined(LUAUAPI_HOST_TESTS)
     #include <Luau/Require.h>
 #endif
-#include <atomic>
 #include <cctype>
-#include <chrono>
 #include <cstdlib>
 #include <cstring>
 #include <fmt/format.h>
