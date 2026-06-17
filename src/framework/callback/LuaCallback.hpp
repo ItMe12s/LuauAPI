@@ -5,6 +5,7 @@
 #include "framework/usertype/LuaRef.hpp"
 
 #include <Geode/loader/Log.hpp>
+#include <atomic>
 #include <functional>
 #include <lua.h>
 #include <memory>
@@ -46,6 +47,20 @@ namespace luax {
             if (Runtime::isShuttingDown()) return false;
             auto* host = BindingHost::getIfInitialized();
             if (!host || !host->ready()) return false;
+            if (!Runtime::isMainThread()) {
+                static std::atomic_bool s_loggedOffThreadInvoke{false};
+                bool expected = false;
+                if (s_loggedOffThreadInvoke.compare_exchange_strong(expected, true)) {
+                    // #region agent log
+                    Runtime::debugThreadProbe(
+                        "next",
+                        "H6,H9",
+                        context,
+                        "first off-thread LuaCallback invoke before host state"
+                    );
+                    // #endregion
+                }
+            }
             auto* L = host->state();
             if (!L || !m_ref) return false;
 

@@ -2,6 +2,7 @@
 
 #include "core/Runtime.hpp"
 
+#include <atomic>
 #include <cstdint>
 #include <filesystem>
 #include <lua.h>
@@ -38,6 +39,20 @@ namespace luax {
         void reset() {
             if (m_state && m_ref != LUA_NOREF && m_ref != LUA_REFNIL) {
                 auto* runtime = Runtime::getIfInitialized();
+                if (runtime && m_generation == runtime->generation() && !Runtime::isMainThread()) {
+                    static std::atomic_bool s_loggedOffThreadReset{false};
+                    bool expected = false;
+                    if (s_loggedOffThreadReset.compare_exchange_strong(expected, true)) {
+                        // #region agent log
+                        Runtime::debugThreadProbe(
+                            "next",
+                            "H7",
+                            "src/framework/usertype/LuaRef.hpp:reset",
+                            "first off-thread LuaRef reset before lua_unref"
+                        );
+                        // #endregion
+                    }
+                }
                 if (runtime && m_generation == runtime->generation() && runtime->assertMainThread()) {
                     lua_unref(m_state, m_ref);
                 }

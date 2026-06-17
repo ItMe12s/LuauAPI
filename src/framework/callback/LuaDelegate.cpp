@@ -6,6 +6,7 @@
 #include "framework/stack/Stack.hpp"
 #include "framework/usertype/Usertype.hpp"
 
+#include <atomic>
 #include <lualib.h>
 
 namespace luax {
@@ -37,6 +38,17 @@ namespace luax {
         if (!table || !table->valid()) return false;
         auto* runtime = Runtime::getIfInitialized();
         if (!runtime || !runtime->ready()) return false;
+        if (!Runtime::isMainThread()) {
+            static std::atomic_bool s_loggedOffThreadDelegate{false};
+            bool expected = false;
+            if (s_loggedOffThreadDelegate.compare_exchange_strong(expected, true)) {
+                // #region agent log
+                Runtime::debugThreadProbe(
+                    "next", "H6,H9", context, "first off-thread delegate invoke before runtime state"
+                );
+                // #endregion
+            }
+        }
         auto* L = runtime->state();
         if (!L) return false;
 
