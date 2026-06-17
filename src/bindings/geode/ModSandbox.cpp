@@ -23,11 +23,25 @@ namespace {
         return geode::Ok();
     }
 
-    geode::Result<void> validateSandboxReadSize(std::size_t size) {
+    geode::Result<void> validateSandboxReadSize(std::uintmax_t size) {
         if (size > luax::kMaxFsReadBytes) {
             return geode::Err("file exceeds maximum read size");
         }
         return geode::Ok();
+    }
+
+    geode::Result<void> validateSandboxReadableFile(std::filesystem::path const& path) {
+        auto valid = validateSandboxRegularFile(path);
+        if (valid.isErr()) {
+            return geode::Err(valid.unwrapErr());
+        }
+
+        std::error_code ec;
+        auto size = std::filesystem::file_size(path, ec);
+        if (ec) {
+            return geode::Err("file cannot be read");
+        }
+        return validateSandboxReadSize(size);
     }
 
     bool rootDir(lua_State* L, std::string const& name, std::filesystem::path& out, bool& writable) {
@@ -88,7 +102,7 @@ namespace luax {
     }
 
     geode::Result<std::string> readSandboxTextFile(std::filesystem::path const& path) {
-        auto valid = validateSandboxRegularFile(path);
+        auto valid = validateSandboxReadableFile(path);
         if (valid.isErr()) {
             return geode::Err(valid.unwrapErr());
         }
@@ -106,7 +120,7 @@ namespace luax {
     }
 
     geode::Result<std::vector<std::uint8_t>> readSandboxBinaryFile(std::filesystem::path const& path) {
-        auto valid = validateSandboxRegularFile(path);
+        auto valid = validateSandboxReadableFile(path);
         if (valid.isErr()) {
             return geode::Err(valid.unwrapErr());
         }

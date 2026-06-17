@@ -123,6 +123,18 @@ namespace luauapi_test {
         return true;
     }
 
+    inline bool runScriptVoid(lua_State* L, std::string_view source, char const* chunk = "=test") {
+        auto bytecode = compile(source);
+        if (luau_load(L, chunk, bytecode.data(), bytecode.size(), 0) != 0) {
+            return false;
+        }
+        if (lua_pcall(L, 0, 0, 0) != 0) {
+            lua_pop(L, 1);
+            return false;
+        }
+        return true;
+    }
+
     inline bool runScriptReturnsBool(lua_State* L, std::string_view source, char const* chunk = "=test") {
         if (!runScriptPcall(L, source, chunk)) {
             return false;
@@ -166,5 +178,11 @@ namespace luauapi_test {
         double const value = lua_tonumber(L, -1);
         lua_pop(L, 1);
         return value;
+    }
+
+    inline void collectGarbage(lua_State* L) {
+        lua_gc(L, LUA_GCSTOP, 0);
+        lua_gc(L, LUA_GCCOLLECT, 0);
+        lua_gc(L, LUA_GCRESTART, 0);
     }
 } // namespace luauapi_test

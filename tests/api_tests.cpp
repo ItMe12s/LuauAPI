@@ -3,9 +3,7 @@
 
 #include <LuauAPI.hpp>
 #include <catch2/catch_test_macros.hpp>
-#include <chrono>
 #include <filesystem>
-#include <fstream>
 #include <lua.h>
 #include <lualib.h>
 #include <optional>
@@ -13,25 +11,12 @@
 
 namespace {
     using RuntimeGuard = luauapi_test::RuntimeGuard;
-
-    std::filesystem::path makeTempDir() {
-        auto dir = std::filesystem::temp_directory_path() /
-            ("luauapi_api_tests_" +
-             std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
-        REQUIRE(std::filesystem::create_directories(dir));
-        return dir;
-    }
-
-    void writeScript(std::filesystem::path const& path, std::string_view source) {
-        std::ofstream out(path, std::ios::binary | std::ios::trunc);
-        REQUIRE(out.good());
-        out.write(source.data(), static_cast<std::streamsize>(source.size()));
-    }
 } // namespace
 
 TEST_CASE("runScript executes source from resources root") {
     RuntimeGuard guard;
-    auto root = makeTempDir() / "run_script";
+    luauapi_test::ScopedTempDir temp{"luauapi_api_tests_"};
+    auto root = temp.path / "run_script";
     std::filesystem::create_directories(root);
 
     auto result = imes::luauapi::runScript(root, "return 17", "script.luau");
@@ -40,7 +25,8 @@ TEST_CASE("runScript executes source from resources root") {
 
 TEST_CASE("runScript rejects oversized source") {
     RuntimeGuard guard;
-    auto root = makeTempDir() / "run_script_oversized";
+    luauapi_test::ScopedTempDir temp{"luauapi_api_tests_"};
+    auto root = temp.path / "run_script_oversized";
     std::filesystem::create_directories(root);
 
     std::string source(luax::kMaxScriptBytes + 1, 'a');
@@ -51,9 +37,10 @@ TEST_CASE("runScript rejects oversized source") {
 
 TEST_CASE("runFile loads and executes a flat script resource") {
     RuntimeGuard guard;
-    auto root = makeTempDir() / "run_file";
+    luauapi_test::ScopedTempDir temp{"luauapi_api_tests_"};
+    auto root = temp.path / "run_file";
     std::filesystem::create_directories(root);
-    writeScript(root / "entry.luau", "return 42");
+    luauapi_test::writeTestFile(root / "entry.luau", "return 42");
 
     auto result = imes::luauapi::runFile(root, "entry.luau");
     REQUIRE(result.isOk());
@@ -61,7 +48,8 @@ TEST_CASE("runFile loads and executes a flat script resource") {
 
 TEST_CASE("runFile rejects missing script") {
     RuntimeGuard guard;
-    auto root = makeTempDir() / "run_file_missing";
+    luauapi_test::ScopedTempDir temp{"luauapi_api_tests_"};
+    auto root = temp.path / "run_file_missing";
     std::filesystem::create_directories(root);
 
     auto result = imes::luauapi::runFile(root, "missing.luau");
@@ -70,7 +58,8 @@ TEST_CASE("runFile rejects missing script") {
 
 TEST_CASE("api entry points require the main thread") {
     RuntimeGuard guard;
-    auto root = makeTempDir() / "main_thread";
+    luauapi_test::ScopedTempDir temp{"luauapi_api_tests_"};
+    auto root = temp.path / "main_thread";
     std::filesystem::create_directories(root);
 
     std::optional<geode::Result<void>> offThreadResult;
@@ -97,7 +86,8 @@ TEST_CASE("isReady reflects runtime initialization") {
 TEST_CASE("api rejects work while runtime is shutting down") {
     RuntimeGuard guard;
     luax::Runtime::getOrCreate();
-    auto root = makeTempDir() / "shutdown";
+    luauapi_test::ScopedTempDir temp{"luauapi_api_tests_"};
+    auto root = temp.path / "shutdown";
     std::filesystem::create_directories(root);
 
     luax::Runtime::shutdown();
@@ -107,7 +97,7 @@ TEST_CASE("api rejects work while runtime is shutting down") {
     REQUIRE(scriptResult.isErr());
     REQUIRE(scriptResult.unwrapErr() == "luau runtime shutting down");
 
-    writeScript(root / "entry.luau", "return 2");
+    luauapi_test::writeTestFile(root / "entry.luau", "return 2");
     auto fileResult = imes::luauapi::runFile(root, "entry.luau");
     REQUIRE(fileResult.isErr());
     REQUIRE(fileResult.unwrapErr() == "luau runtime shutting down");

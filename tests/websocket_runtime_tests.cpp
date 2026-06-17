@@ -21,6 +21,7 @@ namespace luax {
 namespace {
     using namespace luax;
     using Clock = std::chrono::steady_clock;
+    using luauapi_test::collectGarbage;
 
     std::atomic<int> g_portCounter{0};
 
@@ -68,43 +69,15 @@ namespace {
     }
 
     bool runScript(lua_State* L, std::string const& source) {
-        luauapi_test::loadFunction(L, source, "=websocket_runtime_test");
-        if (lua_pcall(L, 0, 0, 0) != 0) {
-            if (lua_isstring(L, -1)) {
-                INFO(lua_tostring(L, -1));
-            }
-            lua_pop(L, 1);
-            return false;
-        }
-        return true;
+        return luauapi_test::runScriptVoid(L, source, "=websocket_runtime_test");
     }
 
     bool runScriptReturnsBool(lua_State* L, std::string const& source) {
-        luauapi_test::loadFunction(L, source, "=websocket_runtime_test");
-        if (lua_pcall(L, 0, 1, 0) != 0) {
-            if (lua_isstring(L, -1)) {
-                INFO(lua_tostring(L, -1));
-            }
-            lua_pop(L, 1);
-            return false;
-        }
-        if (!lua_isboolean(L, -1)) {
-            lua_pop(L, 1);
-            return false;
-        }
-        bool const value = lua_toboolean(L, -1) != 0;
-        lua_pop(L, 1);
-        return value;
+        return luauapi_test::runScriptReturnsBool(L, source, "=websocket_runtime_test");
     }
 
     bool evalBool(lua_State* L, std::string const& expression) {
         return runScriptReturnsBool(L, "return " + expression);
-    }
-
-    void collectGarbage(lua_State* L) {
-        lua_gc(L, LUA_GCSTOP, 0);
-        lua_gc(L, LUA_GCCOLLECT, 0);
-        lua_gc(L, LUA_GCRESTART, 0);
     }
 
     std::string wsTestStateInit() {

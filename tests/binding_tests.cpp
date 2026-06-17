@@ -1,6 +1,7 @@
 #include "core/Runtime.hpp"
 #include "framework/Binding.hpp"
 #include "framework/stack/TaggedMetatable.hpp"
+#include "host/lua_test_helpers.hpp"
 
 #include <catch2/catch_test_macros.hpp>
 #include <lua.h>
@@ -42,22 +43,6 @@ namespace {
         auto* payload = static_cast<TestPayload*>(lua_touserdata(L, 1));
         lua_pushinteger(L, payload->value);
         return 1;
-    }
-
-    struct LuaStateGuard {
-        lua_State* L = luaL_newstate();
-
-        ~LuaStateGuard() {
-            if (L) {
-                lua_close(L);
-            }
-        }
-    };
-
-    void collectGarbage(lua_State* L) {
-        lua_gc(L, LUA_GCSTOP, 0);
-        lua_gc(L, LUA_GCCOLLECT, 0);
-        lua_gc(L, LUA_GCRESTART, 0);
     }
 
     geode::Result<void> registerOk(lua_State* L) {
@@ -108,8 +93,8 @@ TEST_CASE("applyAllBindings preserves stable order for equal priority") {
 TEST_CASE("registerTaggedMetatable applies tag dtor on repeat registration") {
     g_dtorCalled = false;
 
-    LuaStateGuard guard;
-    auto* L = guard.L;
+    auto guard = luauapi_test::makeLuaState();
+    auto* L = guard.get();
     REQUIRE(L != nullptr);
 
     constexpr char const* kMeta = "luax.test.RepeatTaggedPayload";
@@ -127,15 +112,15 @@ TEST_CASE("registerTaggedMetatable applies tag dtor on repeat registration") {
     payload->value = 0;
 
     lua_pop(L, 1);
-    collectGarbage(L);
+    luauapi_test::collectGarbage(L);
     REQUIRE(g_dtorCalled);
 }
 
 TEST_CASE("registerTaggedMetatable tagged round-trip") {
     g_dtorCalled = false;
 
-    LuaStateGuard guard;
-    auto* L = guard.L;
+    auto guard = luauapi_test::makeLuaState();
+    auto* L = guard.get();
     REQUIRE(L != nullptr);
 
     constexpr char const* kMeta = "luax.test.TaggedPayload";
@@ -169,15 +154,15 @@ TEST_CASE("registerTaggedMetatable tagged round-trip") {
     REQUIRE(lua_tointeger(L, -1) == 7);
     lua_pop(L, 2);
 
-    collectGarbage(L);
+    luauapi_test::collectGarbage(L);
     REQUIRE(g_dtorCalled);
 }
 
 TEST_CASE("registerTaggedMetatable untagged round-trip with metatable gc") {
     g_metatableGcCalled = false;
 
-    LuaStateGuard guard;
-    auto* L = guard.L;
+    auto guard = luauapi_test::makeLuaState();
+    auto* L = guard.get();
     REQUIRE(L != nullptr);
 
     constexpr char const* kMeta = "luax.test.UntaggedPayload";
