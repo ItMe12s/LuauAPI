@@ -69,6 +69,20 @@ namespace luax {
             geode::log::error("[lua:{}] expected CCObject", method);
             return false;
         }
+        if (!luax::Runtime::isMainThread()) {
+            static std::atomic_bool s_loggedOffThreadRetain{false};
+            bool expected = false;
+            if (s_loggedOffThreadRetain.compare_exchange_strong(expected, true)) {
+                // #region agent log
+                luax::Runtime::debugThreadProbe(
+                    "next",
+                    "H14",
+                    "src/framework/usertype/Ref.hpp:retainLuaRef",
+                    "off-thread retainLuaRef before assert"
+                );
+                // #endregion
+            }
+        }
         if (!assertMainThread()) return false;
         object->retain();
         luaRetains()[object] += 1;

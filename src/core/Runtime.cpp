@@ -396,6 +396,20 @@ namespace luax {
     }
 
     void Runtime::registerShutdownHook(std::function<void()> fn) {
+        if (!isMainThread()) {
+            static std::atomic_bool s_loggedOffThreadShutdownHook{false};
+            bool expected = false;
+            if (s_loggedOffThreadShutdownHook.compare_exchange_strong(expected, true)) {
+                // #region agent log
+                debugThreadProbe(
+                    "next",
+                    "H10",
+                    "src/core/Runtime.cpp:Runtime::registerShutdownHook",
+                    "off-thread registerShutdownHook before assert"
+                );
+                // #endregion
+            }
+        }
         if (!assertMainThread()) return;
         if (fn) m_shutdownHooks.push_back(std::move(fn));
     }
@@ -491,6 +505,20 @@ namespace luax {
     }
 
     lua_State* Runtime::state() {
+        if (!isMainThread()) {
+            static std::atomic_bool s_loggedOffThreadState{false};
+            bool expected = false;
+            if (s_loggedOffThreadState.compare_exchange_strong(expected, true)) {
+                // #region agent log
+                debugThreadProbe(
+                    "next",
+                    "H11",
+                    "src/core/Runtime.cpp:Runtime::state",
+                    "off-thread state access before assert"
+                );
+                // #endregion
+            }
+        }
         if (!assertMainThread()) return nullptr;
         if (!ready()) {
             if (m_lastError.empty()) {
@@ -533,6 +561,20 @@ namespace luax {
     }
 
     void Runtime::setResourcesRoot(std::filesystem::path const& root) {
+        if (!isMainThread()) {
+            static std::atomic_bool s_loggedOffThreadSetRoot{false};
+            bool expected = false;
+            if (s_loggedOffThreadSetRoot.compare_exchange_strong(expected, true)) {
+                // #region agent log
+                debugThreadProbe(
+                    "next",
+                    "H12",
+                    "src/core/Runtime.cpp:Runtime::setResourcesRoot",
+                    "off-thread setResourcesRoot before assert"
+                );
+                // #endregion
+            }
+        }
         if (!assertMainThread()) return;
         if (m_resourcesRoot == root) return;
         auto tmp = root;
@@ -540,6 +582,20 @@ namespace luax {
     }
 
     void Runtime::swapResourcesRoot(std::filesystem::path& root) {
+        if (!isMainThread()) {
+            static std::atomic_bool s_loggedOffThreadSwapRoot{false};
+            bool expected = false;
+            if (s_loggedOffThreadSwapRoot.compare_exchange_strong(expected, true)) {
+                // #region agent log
+                debugThreadProbe(
+                    "next",
+                    "H12",
+                    "src/core/Runtime.cpp:Runtime::swapResourcesRoot",
+                    "off-thread swapResourcesRoot before assert"
+                );
+                // #endregion
+            }
+        }
         if (!assertMainThread()) return;
         m_resourcesRoot.swap(root);
 #if !defined(LUAUAPI_HOST_TESTS)
@@ -785,6 +841,20 @@ namespace luax {
     }
 
     geode::Result<void> Runtime::ensureCallable(bool requireReady) {
+        if (!isMainThread()) {
+            static std::atomic_bool s_loggedOffThreadEnsureCallable{false};
+            bool expected = false;
+            if (s_loggedOffThreadEnsureCallable.compare_exchange_strong(expected, true)) {
+                // #region agent log
+                debugThreadProbe(
+                    "next",
+                    "H13",
+                    "src/core/Runtime.cpp:Runtime::ensureCallable",
+                    "off-thread ensureCallable before assert"
+                );
+                // #endregion
+            }
+        }
         if (!assertMainThread()) {
             return failWith("luau runtime accessed off main thread");
         }
