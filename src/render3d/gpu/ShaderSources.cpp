@@ -13,7 +13,8 @@ varying vec2 vTexCoord;
 varying vec3 vTint;
 
 void main() {
-    vNormal = mat3(uNormalMat) * aNormal;
+    // GLSL 110 (macOS GD) rejects mat3(mat4)
+    vNormal = mat3(uNormalMat[0].xyz, uNormalMat[1].xyz, uNormalMat[2].xyz) * aNormal;
     vTexCoord = aTexCoord;
     vTint = uTint;
     gl_Position = uMVP * vec4(aPos, 1.0);
@@ -35,7 +36,7 @@ varying vec3 vTint;
 
 void main() {
     mat4 model = mat4(aModel0, aModel1, aModel2, aModel3);
-    vNormal = mat3(model) * aNormal;
+    vNormal = mat3(model[0].xyz, model[1].xyz, model[2].xyz) * aNormal;
     vTexCoord = aTexCoord;
     vTint = aTint;
     gl_Position = uViewProj * model * vec4(aPos, 1.0);
