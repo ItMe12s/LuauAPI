@@ -146,6 +146,7 @@ def _registered_cocos_fields() -> set[str]:
     body = source[start:end]
     names = set(re.findall(r'setTableCFunction\(L,\s*[^,]+,\s*"([^"]+)"', body))
     names.update(re.findall(r'lua_setfield\(L,\s*[^,]+,\s*"([^"]+)"\)', body))
+    names.update(re.findall(r'registerIntEnumTable\(L,\s*[^,]+,\s*"([^"]+)"', body))
     return names
 
 

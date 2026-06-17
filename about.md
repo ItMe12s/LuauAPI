@@ -33,6 +33,7 @@ Plus, you get fewer crashes and clear, easy-to-understand error logging.
 - The remaining 0.1% of bindings and m_Fields
 - Argon support
 - Box2D support
+- SQLite support
 - Other quality of life features
 
 ---
@@ -63,7 +64,7 @@ Only download mods from the official [Geode SDK](https://geode-sdk.org/) index o
 2. Certain functionality may be sandboxed or restricted for security and stability.
 3. Requires the Luau Language Server VSCode extension by JohnnyMorganz with some setups.
 
-Limitations and when to use C++
+Current limitations and when to use C++
 
 - Heavy data processing and databases
 - Low-level functionality and optimizations

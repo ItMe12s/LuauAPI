@@ -30,6 +30,7 @@ _NAMESPACE_SOURCES = {
 
 _SET_CFUNCTION = re.compile(r'setTableCFunction\(L,\s*[^,]+,\s*"([^"]+)"')
 _SET_FIELD = re.compile(r'lua_setfield\(L,\s*[^,]+,\s*"([^"]+)"\)')
+_SET_INT_ENUM_TABLE = re.compile(r'registerIntEnumTable\(L,\s*[^,]+,\s*"([^"]+)"')
 
 
 def _read_repo_file(rel_path: str) -> str:
@@ -51,7 +52,11 @@ def _registered_fields(namespace: str) -> set[str]:
     path = os.path.join(_REPO_ROOT, _NAMESPACE_SOURCES[namespace])
     with open(path, "r", encoding="utf-8") as f:
         body = _register_body(f.read(), namespace)
-    return set(_SET_CFUNCTION.findall(body)) | set(_SET_FIELD.findall(body))
+    return (
+        set(_SET_CFUNCTION.findall(body))
+        | set(_SET_FIELD.findall(body))
+        | set(_SET_INT_ENUM_TABLE.findall(body))
+    )
 
 
 def _declared_fields(namespace: str) -> set[str]:
