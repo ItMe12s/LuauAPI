@@ -8,7 +8,7 @@
 	},
 	"id": "imes.luauapi",
 	"name": "LuauAPI",
-	"version": "v0.1.0-beta.1",
+	"version": "v0.1.0-beta.2",
 	"developer": "imes",
 	"early-load": true,
 	"load-priority": "first",
