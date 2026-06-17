@@ -469,30 +469,29 @@ class BindingGuardTests(unittest.TestCase):
         self.assertIn("scheduleArmRetry", production)
         self.assertIn("s_armPending = false", production)
 
-    def test_mod_loaded_queues_startup_on_main_thread(self) -> None:
+    def test_mod_loaded_runs_startup_inline(self) -> None:
         source = _read_repo_file(_MAIN_CPP)
         loaded_start = source.find("$on_mod(Loaded)")
         self.assertNotEqual(loaded_start, -1, "missing $on_mod(Loaded) handler")
-        loaded_body = source[loaded_start:]
-        queue_pos = loaded_body.find("queueInMainThread")
-        self.assertNotEqual(
-            queue_pos,
-            -1,
-            "mod load must queue startup on the main thread",
+        loaded_end = source.find("$on_game(", loaded_start)
+        self.assertNotEqual(loaded_end, -1, "missing $on_game handler after Loaded")
+        loaded_body = source[loaded_start:loaded_end]
+        self.assertNotIn(
+            "queueInMainThread",
+            loaded_body,
+            "Loaded already runs on the main thread, queue would defer startup",
         )
-        before_queue = loaded_body[:queue_pos]
-        after_queue = loaded_body[queue_pos:]
-        for symbol in ("setMainThreadId", "getOrCreate", "runFile"):
-            self.assertNotIn(
-                symbol,
-                before_queue,
-                f"{symbol} must not run before queueInMainThread",
-            )
-            self.assertIn(
-                symbol,
-                after_queue,
-                f"{symbol} must run inside queued startup",
-            )
+        set_pos = loaded_body.find("setMainThreadId")
+        create_pos = loaded_body.find("getOrCreate")
+        run_pos = loaded_body.find("runFile")
+        for symbol, pos in (
+            ("setMainThreadId", set_pos),
+            ("getOrCreate", create_pos),
+            ("runFile", run_pos),
+        ):
+            self.assertNotEqual(pos, -1, f"missing {symbol} in Loaded handler")
+        self.assertLess(set_pos, create_pos, "setMainThreadId must run before getOrCreate")
+        self.assertLess(create_pos, run_pos, "getOrCreate must run before runFile")
 
 
 class WebSocketGuardTests(unittest.TestCase):
@@ -674,7 +673,9 @@ class Render3DGuardTests(unittest.TestCase):
         self.assertIn("glContextAvailable()", ensure_tex_body)
 
         texture_body = _function_body(
-            _read_repo_file(_RENDERER3D_TEXTURE2D), "uploadRgbaTexture2D", ret="unsigned int"
+            _read_repo_file(_RENDERER3D_TEXTURE2D),
+            "uploadRgbaTexture2D",
+            ret="unsigned int",
         )
         self.assertIn("glContextAvailable()", texture_body)
 
