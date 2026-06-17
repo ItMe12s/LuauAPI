@@ -67,10 +67,10 @@ namespace luax::render3d {
         glDisableVertexAttribArray(cocos2d::kCCVertexAttrib_Color);
         glDisableVertexAttribArray(cocos2d::kCCVertexAttrib_TexCoords);
 
-        ccGLUseProgram(0);
-        ccGLEnableVertexAttribs(cocos2d::kCCVertexAttribFlag_None);
         restoreVao(prevVao);
         prevState.restore();
+        ccGLUseProgram(0);
+        ccGLEnableVertexAttribs(cocos2d::kCCVertexAttribFlag_None);
     }
 
 } // namespace luax::render3d
