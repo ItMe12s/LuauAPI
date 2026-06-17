@@ -6,15 +6,12 @@
 #include <Geode/loader/GameEvent.hpp>
 #include <thread>
 
-$execute {
-    luax::Runtime::setMainThreadId(std::this_thread::get_id());
-}
-
 namespace {
     constexpr char const* kBootstrapScript = "Bootstrap.luau";
 }
 
 $on_mod(Loaded) {
+    luax::Runtime::setMainThreadId(std::this_thread::get_id());
     luax::Runtime::getOrCreate();
 
     auto result = imes::luauapi::runFile(geode::Mod::get()->getResourcesDir(), kBootstrapScript);

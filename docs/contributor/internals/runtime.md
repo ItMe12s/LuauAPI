@@ -20,7 +20,8 @@ The runtime is a single shared instance, accessed through static functions:
 - `getIfInitialized` returns the instance only if it exists.
 - `isInitialized` and `isShuttingDown` report lifecycle state.
 - `shutdown` tears the instance down.
-- `setMainThreadId` and `isMainThread` handle main thread tracking.
+- `setMainThreadId` records the Geode mod-load thread in `$on_mod(Loaded)`,
+  and `isMainThread` guards runtime access after that.
 
 ## Construction
 
