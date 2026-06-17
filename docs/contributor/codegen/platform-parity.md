@@ -18,8 +18,9 @@ Per-platform plan:
 
 Intersection platforms:
 
-- The main platforms are `win`, `m1` (or `imac`), `ios`, `android32`, and `android64`.
+- The main platforms are `win`, `m1` (or `imac`, or both for universal `mac`), `ios`, `android32`, and `android64`.
 - These are defined in `policy/intersection.py` as `intersection_platforms`.
+- Universal macOS builds use platform `mac`, which intersects against both `imac` and `m1`.
 
 Forced intersection:
 

@@ -10,6 +10,8 @@ from luau_codegen.util.platforms import INTERSECTION_PLATFORMS
 
 
 def intersection_platforms(target_platform: str = "win") -> tuple[str, ...]:
+    if target_platform == "mac":
+        return ("win", "imac", "m1", "ios", "android32", "android64")
     mac = "imac" if target_platform == "imac" else "m1"
     return ("win", mac, "ios", "android32", "android64")
 

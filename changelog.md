@@ -5,6 +5,7 @@
 ## v0.1.0-beta.2
 
 - Fixed crash when `imgui.onDraw` runs before OpenGL is ready on macOS and other non-Windows platforms.
+- Fixed Luau hooks on Intel macOS (`imac`) builds by selecting the right mac hook addresses in universal builds.
 
 ## v0.1.0-beta.1
 

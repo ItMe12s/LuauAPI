@@ -208,6 +208,8 @@ def _intersection_summary(plan: EmitPlan, total_methods: int) -> dict[str, Any]:
 
 
 def _mac_platform_for(target_platform: str) -> str:
+    if target_platform == "mac":
+        return "mac"
     return "imac" if target_platform == "imac" else "m1"
 
 
@@ -233,13 +235,14 @@ def _collect_hints(
         and supported_elsewhere[key]
     ]
     ios_pruned = sorted(plans["ios"].skipped_classes) if "ios" in plans else []
-    mac_reasons = Counter(
-        info["skipReasons"].get(mac)
-        for info in methods.values()
-        if "android64" in info["supportedPlatforms"]
-        and mac not in info["supportedPlatforms"]
-        and info["skipReasons"].get(mac)
-    )
+    mac_axes = ("imac", "m1") if mac == "mac" else (mac,)
+    mac_reasons = Counter()
+    for info in methods.values():
+        if "android64" not in info["supportedPlatforms"]:
+            continue
+        for mac_axis in mac_axes:
+            if mac_axis not in info["supportedPlatforms"] and info["skipReasons"].get(mac_axis):
+                mac_reasons[info["skipReasons"][mac_axis]] += 1
     hook_only_gaps = [key for key, info in methods.items() if info["hookAddressMissingPlatforms"]]
     return {
         "winMissingCallableProof": win_missing[:200],

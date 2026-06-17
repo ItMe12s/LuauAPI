@@ -49,7 +49,30 @@ def hook_offset(m: Method, target_platform: str) -> str:
     return ""
 
 
+def _mac_universal_hook_address(imac_offset: str, m1_offset: str) -> str:
+    return (
+        "([]() -> void* {\n"
+        "#if defined(__x86_64__)\n"
+        f"        return reinterpret_cast<void*>(geode::base::get() + {imac_offset});\n"
+        "#elif defined(__aarch64__) || defined(__arm64__)\n"
+        f"        return reinterpret_cast<void*>(geode::base::get() + {m1_offset});\n"
+        "#else\n"
+        "        return nullptr;\n"
+        "#endif\n"
+        "    })()"
+    )
+
+
 def hook_address_expr(cls: Class, m: Method, target_platform: str) -> str:
+    if target_platform == "mac":
+        if _apple_linked(cls, target_platform):
+            symbol = android_symbol(cls, m)
+            return f'dlsym(RTLD_DEFAULT, "{symbol}")'
+        imac_offset = hook_offset(m, "imac")
+        m1_offset = hook_offset(m, "m1")
+        if imac_offset and m1_offset:
+            return _mac_universal_hook_address(imac_offset, m1_offset)
+        return ""
     offset = hook_offset(m, target_platform)
     if offset:
         return f"reinterpret_cast<void*>(geode::base::get() + {offset})"

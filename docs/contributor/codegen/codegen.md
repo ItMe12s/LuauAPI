@@ -40,8 +40,9 @@ See `cmake/Codegen.cmake` `luauapi_set_codegen_platform()`.
 | Android arm64-v8a | `android64` |
 | Android armeabi-v7a | `android32` |
 | iOS | `ios` |
-| macOS arm64 | `m1` |
-| macOS x86_64 | `imac` |
+| macOS universal (`arm64` + `x86_64`) | `mac` |
+| macOS arm64 only | `m1` |
+| macOS x86_64 only | `imac` |
 
 The GD bindings version comes from `mod.json` `gd.<key>`.
 The key follows the codegen platform.

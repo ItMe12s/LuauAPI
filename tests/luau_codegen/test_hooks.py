@@ -127,6 +127,42 @@ class HookOffsetTests(unittest.TestCase):
             method = Method(name="bad", ret="void", args=[], platforms={"win": token})
             self.assertEqual(hook_offset(method, "win"), "")
 
+    def test_mac_universal_hook_address_emits_arch_branches(self) -> None:
+        cls = Class(name="CCNode", namespace="cocos2d", attributes=["link(win)"])
+        method = Method(
+            name="setTag",
+            ret="void",
+            args=[Arg("int", "tag")],
+            platforms={"imac": "0x1000", "m1": "0x2000"},
+        )
+
+        expr = hook_address_expr(cls, method, "mac")
+        self.assertIn("__x86_64__", expr)
+        self.assertIn("__aarch64__", expr)
+        self.assertIn("geode::base::get() + 0x1000", expr)
+        self.assertIn("geode::base::get() + 0x2000", expr)
+        self.assertIn("nullptr", expr)
+
+    def test_mac_universal_hook_address_requires_both_offsets(self) -> None:
+        cls = Class(name="CCNode", namespace="cocos2d", attributes=["link(win)"])
+        method = Method(
+            name="setTag",
+            ret="void",
+            args=[Arg("int", "tag")],
+            platforms={"imac": "0x1000"},
+        )
+
+        self.assertEqual(hook_address_expr(cls, method, "mac"), "")
+
+    def test_mac_universal_linked_hook_uses_dlsym(self) -> None:
+        cls = Class(name="CCObject", namespace="cocos2d", attributes=["link(mac)"])
+        method = Method(name="getTag", ret="int", args=[])
+
+        self.assertIn(
+            'dlsym(RTLD_DEFAULT, "_ZN7cocos2d8CCObject6getTagEv")',
+            hook_address_expr(cls, method, "mac"),
+        )
+
     def test_android_symbol_uses_itanium_name(self) -> None:
         cls = Class(name="CCObject", namespace="cocos2d")
         method = Method(name="setTag", ret="void", args=[Arg("int", "tag")])

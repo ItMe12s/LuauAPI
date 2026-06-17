@@ -142,6 +142,12 @@ class PlanRegressionTests(unittest.TestCase):
             ("win", "m1", "ios", "android32", "android64"),
         )
 
+    def test_intersection_platforms_includes_both_mac_axes_for_universal(self) -> None:
+        self.assertEqual(
+            intersection_platforms("mac"),
+            ("win", "imac", "m1", "ios", "android32", "android64"),
+        )
+
     def test_collect_parity_uses_target_mac_axis(self) -> None:
         root = Root(classes=[Class(name="CCObject", namespace="cocos2d")])
         imac_data = collect_parity(root, target_platform="imac")
@@ -158,6 +164,15 @@ class PlanRegressionTests(unittest.TestCase):
         self.assertEqual(m1_data["hints"]["macPlatform"], "m1")
         self.assertIn("macGapReasons", imac_data["hints"])
         self.assertNotIn("m1GapReasons", imac_data["hints"])
+
+    def test_collect_parity_reports_mac_for_universal_target(self) -> None:
+        root = Root(classes=[Class(name="CCObject", namespace="cocos2d")])
+        mac_data = collect_parity(root, target_platform="mac")
+        self.assertIn("imac", mac_data["platforms"])
+        self.assertIn("m1", mac_data["platforms"])
+        self.assertIn("imac", mac_data["intersection"]["platforms"])
+        self.assertIn("m1", mac_data["intersection"]["platforms"])
+        self.assertEqual(mac_data["hints"]["macPlatform"], "mac")
 
     def test_imac_intersection_keeps_methods_without_m1_offset(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")
@@ -185,6 +200,33 @@ class PlanRegressionTests(unittest.TestCase):
         plan = collect_plan(root, "imac")
         grouped = plan.supported_by_class.get("IntelOnly", {})
         self.assertIn("intelMethod", grouped)
+
+    def test_mac_intersection_drops_methods_without_both_offsets(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        cls = Class(
+            name="IntelOnly",
+            namespace="gd",
+            bases=["cocos2d::CCObject"],
+            attributes=["link(win)"],
+        )
+        cls.methods = [
+            Method(
+                name="intelMethod",
+                ret="void",
+                args=[],
+                platforms={
+                    "win": "0x1",
+                    "imac": "0x2",
+                    "ios": "0x3",
+                    "android32": "0x4",
+                    "android64": "0x5",
+                },
+            )
+        ]
+        root = Root(classes=[ccobject, cls])
+        plan = collect_plan(root, "mac")
+        grouped = plan.supported_by_class.get("IntelOnly", {})
+        self.assertNotIn("intelMethod", grouped)
 
     def test_plan_outputs_matches_binding_emit(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")
