@@ -47,6 +47,7 @@ Only the host draw lambda calls `drawAll()`. There is no `CCNode` tick like the 
 `ImGuiHost.cpp` owns gd-imgui-cocos and is the only file that includes `<imgui-cocos.hpp>`.
 `initImGuiHost()` is idempotent. It sets up ImGuiCocos and registers the draw lambda that calls `drawAll()`.
 It runs lazily on the first `imgui.onDraw`, so a script that never uses ImGui pays nothing.
+If there's no OpenGL view yet, setup waits until available, making early `imgui.onDraw` safe.
 `shutdownImGuiHost()` clears the scheduler and tears down the backend.
 `src/main.cpp` calls it on game exit before `Runtime::shutdown()`, so the draw lambda detaches before the Lua state closes.
 The default input mode stays in place, so the game keeps input unless an ImGui window is hovered or focused.

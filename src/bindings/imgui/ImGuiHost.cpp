@@ -2,23 +2,38 @@
 
 #include "bindings/imgui/ImGuiDrawScheduler.hpp"
 
+#include <Geode/Geode.hpp>
 #include <imgui-cocos.hpp>
 
 namespace luax {
     namespace {
         bool s_initialized = false;
-    }
+        bool s_pendingInit = false;
+    } // namespace
 
     void initImGuiHost() {
         if (s_initialized) return;
-        s_initialized = true;
+
+        auto* director = cocos2d::CCDirector::sharedDirector();
+        if (!director || !director->getOpenGLView()) {
+            if (s_pendingInit) return;
+            s_pendingInit = true;
+            geode::queueInMainThread([] {
+                if (!s_pendingInit) return;
+                s_pendingInit = false;
+                initImGuiHost();
+            });
+            return;
+        }
 
         ImGuiCocos::get().setup([] {}).draw([] {
             ImGuiDrawScheduler::get().drawAll();
         });
+        s_initialized = true;
     }
 
     void shutdownImGuiHost() {
+        s_pendingInit = false;
         ImGuiDrawScheduler::get().clear();
         if (s_initialized && ImGuiCocos::get().isInitialized()) {
             ImGuiCocos::get().destroy();
