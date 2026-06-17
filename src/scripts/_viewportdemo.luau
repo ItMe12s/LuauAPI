@@ -52,6 +52,7 @@ if not vp then
 end
 
 vp:setID(modId .. "/viewport-demo")
+vp:setZOrder(67)
 
 local triMesh = gd3d.mesh.new({
     positions = {

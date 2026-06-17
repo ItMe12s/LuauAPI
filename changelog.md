@@ -8,6 +8,7 @@
 - Fixed Luau hooks on Intel macOS (`imac`) builds.
 - Fixed "luau runtime accessed off main thread" errors on macOS.
 - Fixed "GLSL 110 does not allow sub- or super-matrix constructors" errors on macOS.
+- Updated demo scripts (`_viewportdemo.luau`, `_helloworlddemo.luau`) and examples with proper Z order.
 
 ## v0.1.0-beta.1
 

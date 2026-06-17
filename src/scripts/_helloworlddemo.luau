@@ -10,6 +10,7 @@ local function helloWorld(self)
     local label = cocos.CCLabelBMFont.create("Hello, World!", "bigFont.fnt")
     if not label then return end
     label:setID(modId .. "/hello-label")
+    label:setZOrder(999)
     label:setPosition({ x = winSize.width / 2, y = winSize.height / 2 })
     self:addChild(label)
     if handle then

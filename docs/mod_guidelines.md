@@ -399,6 +399,7 @@ Place nodes by node id and layout, not by hardcoded coordinates or child index.
 
 Other mods add and reorder nodes in shared menus like `MenuLayer`, so fixed positions overlap their buttons.
 Find an anchor like `bottom-menu`, check it exists, then add to it. Prefix your own node ids with `modid/`.
+If your node has to sit above overlapping content, set an explicit z-order before adding it.
 For nodes that survive scene changes, use cocos `OverlayManager` instead of re-adding from a layer hook.
 
 Bad:
