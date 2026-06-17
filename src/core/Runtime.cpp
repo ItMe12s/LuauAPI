@@ -22,13 +22,19 @@
 #if !defined(LUAUAPI_HOST_TESTS)
     #include <Luau/Require.h>
 #endif
+#include <atomic>
 #include <cctype>
+#include <chrono>
+#include <cstdint>
 #include <cstdlib>
 #include <cstring>
 #include <fmt/format.h>
+#include <fstream>
+#include <functional>
 #include <lua.h>
 #include <lualib.h>
 #include <optional>
+#include <sstream>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -51,6 +57,89 @@ namespace luax {
             static std::thread::id id;
             return id;
         }
+
+        // #region agent log
+        std::string jsonEscape(std::string_view value) {
+            std::string out;
+            out.reserve(value.size());
+            for (char ch : value) {
+                switch (ch) {
+                    case '\\': out += "\\\\"; break;
+                    case '"': out += "\\\""; break;
+                    case '\n': out += "\\n"; break;
+                    case '\r': out += "\\r"; break;
+                    case '\t': out += "\\t"; break;
+                    default: out += ch; break;
+                }
+            }
+            return out;
+        }
+
+        std::string threadIdString(std::thread::id id) {
+            std::ostringstream out;
+            out << id;
+            return out.str();
+        }
+
+        std::size_t threadIdHash(std::thread::id id) {
+            return id == std::thread::id{} ? 0 : std::hash<std::thread::id>{}(id);
+        }
+
+        std::string boolJson(bool value) {
+            return value ? "true" : "false";
+        }
+
+        std::string makeThreadProbeData(
+            std::optional<std::thread::id> ownerThread, bool hasRuntime, bool ready
+        ) {
+            auto current = std::this_thread::get_id();
+            auto registered = mainThreadIdStorage();
+            bool registeredSet = registered != std::thread::id{};
+            bool ownerSet = ownerThread.has_value();
+
+            std::ostringstream data;
+            data << "{\"thread\":\"" << jsonEscape(threadIdString(current)) << "\","
+                 << "\"threadHash\":" << threadIdHash(current) << ","
+                 << "\"registeredSet\":" << boolJson(registeredSet) << ","
+                 << "\"registered\":\"" << jsonEscape(threadIdString(registered)) << "\","
+                 << "\"registeredHash\":" << threadIdHash(registered) << ","
+                 << "\"ownerSet\":" << boolJson(ownerSet) << ","
+                 << "\"owner\":\""
+                 << jsonEscape(threadIdString(ownerThread.value_or(std::thread::id{}))) << "\","
+                 << "\"ownerHash\":" << threadIdHash(ownerThread.value_or(std::thread::id{})) << ","
+                 << "\"hasRuntime\":" << boolJson(hasRuntime) << ","
+                 << "\"ready\":" << boolJson(ready) << ","
+                 << "\"isRegisteredThread\":" << boolJson(registeredSet && current == registered)
+                 << ","
+                 << "\"isOwnerThread\":" << boolJson(ownerSet && current == ownerThread.value());
+            data << "}";
+            return data.str();
+        }
+
+        void writeDebugThreadProbe(
+            std::string_view runId, std::string_view hypothesisId, std::string_view location,
+            std::string_view message, std::string_view dataJson
+        ) {
+            auto now = std::chrono::system_clock::now();
+            auto timestamp =
+                std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
+            auto micros =
+                std::chrono::duration_cast<std::chrono::microseconds>(now.time_since_epoch()).count();
+            static std::atomic_uint64_t counter{0};
+
+            std::ofstream out("debug-174777.log", std::ios::app);
+            if (!out) return;
+            out << "{\"sessionId\":\"174777\","
+                << "\"id\":\"log_" << micros << "_" << counter.fetch_add(1) << "\","
+                << "\"timestamp\":" << timestamp << ","
+                << "\"location\":\"" << jsonEscape(location) << "\","
+                << "\"message\":\"" << jsonEscape(message) << "\","
+                << "\"data\":" << dataJson << ","
+                << "\"runId\":\"" << jsonEscape(runId) << "\","
+                << "\"hypothesisId\":\"" << jsonEscape(hypothesisId) << "\"}\n";
+        }
+
+        // #endregion
 
         class StackGuard {
         public:
@@ -172,6 +261,15 @@ namespace luax {
             mainThreadIdStorage() == std::thread::id{} ? std::this_thread::get_id() :
                                                          mainThreadIdStorage()
         ) {
+        // #region agent log
+        writeDebugThreadProbe(
+            "initial",
+            "H1,H2",
+            "src/core/Runtime.cpp:Runtime::Runtime",
+            "runtime constructed and owner selected",
+            makeThreadProbeData(m_ownerThread, true, false)
+        );
+        // #endregion
         m_state = lua_newstate(&Runtime::boundedAlloc, this);
         if (!m_state) {
             m_initError = "luau lua_newstate failed";
@@ -319,11 +417,35 @@ namespace luax {
 
     void Runtime::setMainThreadId(std::thread::id id) {
         mainThreadIdStorage() = id;
+        // #region agent log
+        debugThreadProbe(
+            "initial",
+            "H1,H2",
+            "src/core/Runtime.cpp:Runtime::setMainThreadId",
+            "registered main thread id"
+        );
+        // #endregion
     }
 
     bool Runtime::isMainThread() {
         auto const& id = mainThreadIdStorage();
         return id != std::thread::id{} && std::this_thread::get_id() == id;
+    }
+
+    void Runtime::debugThreadProbe(
+        std::string_view runId, std::string_view hypothesisId, std::string_view location,
+        std::string_view message
+    ) {
+        auto& runtime = runtimeStorage();
+        std::optional<std::thread::id> owner;
+        bool ready = false;
+        if (runtime) {
+            owner = runtime->m_ownerThread;
+            ready = runtime->ready();
+        }
+        writeDebugThreadProbe(
+            runId, hypothesisId, location, message, makeThreadProbeData(owner, runtime.has_value(), ready)
+        );
     }
 
     lua_State* Runtime::state() {
@@ -797,6 +919,18 @@ namespace luax {
         }
         else if (std::this_thread::get_id() == m_ownerThread) {
             return true;
+        }
+        static std::atomic_bool s_loggedAssertFailure{false};
+        bool expected = false;
+        if (s_loggedAssertFailure.compare_exchange_strong(expected, true)) {
+            // #region agent log
+            debugThreadProbe(
+                "initial",
+                "H2,H4,H5",
+                "src/core/Runtime.cpp:Runtime::assertMainThread",
+                "first runtime main-thread assertion failure"
+            );
+            // #endregion
         }
         geode::log::error("luau runtime accessed off main thread");
         return false;

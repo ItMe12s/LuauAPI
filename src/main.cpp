@@ -11,15 +11,21 @@ namespace {
 }
 
 $on_mod(Loaded) {
-    geode::queueInMainThread([] {
-        luax::Runtime::setMainThreadId(std::this_thread::get_id());
-        luax::Runtime::getOrCreate();
+    // #region agent log
+    luax::Runtime::debugThreadProbe(
+        "initial",
+        "H1",
+        "src/main.cpp:$on_mod(Loaded)",
+        "mod loaded callback before queueInMainThread"
+    );
+    // #endregion
+    luax::Runtime::setMainThreadId(std::this_thread::get_id());
+    luax::Runtime::getOrCreate();
 
-        auto result = imes::luauapi::runFile(geode::Mod::get()->getResourcesDir(), kBootstrapScript);
-        if (result.isErr()) {
-            geode::log::error("LuauAPI Bootstrap script failed: {}", result.unwrapErr());
-        }
-    });
+    auto result = imes::luauapi::runFile(geode::Mod::get()->getResourcesDir(), kBootstrapScript);
+    if (result.isErr()) {
+        geode::log::error("LuauAPI Bootstrap script failed: {}", result.unwrapErr());
+    }
 }
 
 $on_game(Exiting) {
