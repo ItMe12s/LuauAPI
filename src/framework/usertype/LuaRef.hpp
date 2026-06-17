@@ -38,7 +38,8 @@ namespace luax {
         void reset() {
             if (m_state && m_ref != LUA_NOREF && m_ref != LUA_REFNIL) {
                 auto* runtime = Runtime::getIfInitialized();
-                if (runtime && m_generation == runtime->generation() && runtime->assertMainThread()) {
+                // off-thread reset skips lua_unref defer unref to owner thread if needed but I'm not doing allat rn.
+                if (runtime && m_generation == runtime->generation() && Runtime::isMainThread()) {
                     lua_unref(m_state, m_ref);
                 }
             }

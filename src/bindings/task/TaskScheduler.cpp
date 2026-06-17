@@ -5,6 +5,7 @@
 #include "framework/schedule/ScheduledCallback.hpp"
 
 #include <Geode/Geode.hpp>
+#include <thread>
 
 namespace luax {
     TaskScheduler& TaskScheduler::get() {
@@ -154,6 +155,11 @@ namespace luax {
         class TaskTickNode final : public cocos2d::CCNode {
         public:
             void update(float dt) override {
+    #if defined(GEODE_IS_MACOS)
+                if (!Runtime::isMainThread()) {
+                    Runtime::setMainThreadId(std::this_thread::get_id());
+                }
+    #endif
                 auto* runtime = Runtime::getIfInitialized();
                 if (!runtime) return;
                 auto* L = runtime->state();
