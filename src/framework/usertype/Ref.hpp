@@ -3,7 +3,6 @@
 #include "core/Runtime.hpp"
 
 #include <Geode/Geode.hpp>
-#include <atomic>
 #include <cocos2d.h>
 #include <unordered_map>
 
@@ -29,20 +28,6 @@ namespace luax {
 
     inline bool assertMainThread() {
         if (luax::Runtime::isShuttingDown()) return false;
-        if (!luax::Runtime::getIfInitialized()) {
-            static std::atomic_bool s_loggedPreInitAssert{false};
-            bool expected = false;
-            if (s_loggedPreInitAssert.compare_exchange_strong(expected, true)) {
-                // #region agent log
-                luax::Runtime::debugThreadProbe(
-                    "initial",
-                    "H5",
-                    "src/framework/usertype/Ref.hpp:assertMainThread",
-                    "usertype main-thread assertion would create runtime"
-                );
-                // #endregion
-            }
-        }
         auto* runtime = luax::Runtime::getOrCreate();
         return runtime && runtime->assertMainThread();
     }
@@ -68,20 +53,6 @@ namespace luax {
         if (!object) {
             geode::log::error("[lua:{}] expected CCObject", method);
             return false;
-        }
-        if (!luax::Runtime::isMainThread()) {
-            static std::atomic_bool s_loggedOffThreadRetain{false};
-            bool expected = false;
-            if (s_loggedOffThreadRetain.compare_exchange_strong(expected, true)) {
-                // #region agent log
-                luax::Runtime::debugThreadProbe(
-                    "next",
-                    "H14",
-                    "src/framework/usertype/Ref.hpp:retainLuaRef",
-                    "off-thread retainLuaRef before assert"
-                );
-                // #endregion
-            }
         }
         if (!assertMainThread()) return false;
         object->retain();

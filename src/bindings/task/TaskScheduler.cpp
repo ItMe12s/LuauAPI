@@ -5,7 +5,6 @@
 #include "framework/schedule/ScheduledCallback.hpp"
 
 #include <Geode/Geode.hpp>
-#include <atomic>
 #include <thread>
 
 namespace luax {
@@ -156,28 +155,8 @@ namespace luax {
         class TaskTickNode final : public cocos2d::CCNode {
         public:
             void update(float dt) override {
-                static std::atomic_bool s_loggedFirstTick{false};
-                bool expected = false;
-                if (s_loggedFirstTick.compare_exchange_strong(expected, true)) {
-                    // #region agent log
-                    Runtime::debugThreadProbe(
-                        "initial",
-                        "H2,H3",
-                        "src/bindings/task/TaskScheduler.cpp:TaskTickNode::update",
-                        "first Cocos task tick callback"
-                    );
-                    // #endregion
-                }
     #if defined(GEODE_IS_MACOS)
                 if (!Runtime::isMainThread()) {
-                    // #region agent log
-                    Runtime::debugThreadProbe(
-                        "post-fix",
-                        "H11,H13",
-                        "src/bindings/task/TaskScheduler.cpp:TaskTickNode::update",
-                        "adopting Cocos task tick thread before runtime state"
-                    );
-                    // #endregion
                     Runtime::setMainThreadId(std::this_thread::get_id());
                 }
     #endif

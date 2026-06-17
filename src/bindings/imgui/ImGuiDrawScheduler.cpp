@@ -34,14 +34,6 @@ namespace luax {
         if (!runtime || m_store.empty()) return;
 #if defined(GEODE_IS_MACOS)
         if (!Runtime::isMainThread()) {
-            // #region agent log
-            Runtime::debugThreadProbe(
-                "post-fix",
-                "H11,H12,H13",
-                "src/bindings/imgui/ImGuiDrawScheduler.cpp:drawAll",
-                "adopting ImGui draw thread before callbacks"
-            );
-            // #endregion
             Runtime::setMainThreadId(std::this_thread::get_id());
         }
 #endif

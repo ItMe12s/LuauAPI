@@ -45,10 +45,6 @@ namespace luax {
 #endif
         static void setMainThreadId(std::thread::id id);
         static bool isMainThread();
-        static void debugThreadProbe(
-            std::string_view runId, std::string_view hypothesisId, std::string_view location,
-            std::string_view message
-        );
 
         lua_State* state() override;
         bool ready() const override;

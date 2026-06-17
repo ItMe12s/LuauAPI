@@ -11,14 +11,6 @@ namespace {
 }
 
 $on_mod(Loaded) {
-    // #region agent log
-    luax::Runtime::debugThreadProbe(
-        "initial",
-        "H1",
-        "src/main.cpp:$on_mod(Loaded)",
-        "mod loaded callback before queueInMainThread"
-    );
-    // #endregion
     luax::Runtime::setMainThreadId(std::this_thread::get_id());
     luax::Runtime::getOrCreate();
 

@@ -5,12 +5,10 @@
 #include "framework/usertype/LuaRef.hpp"
 
 #include <Geode/loader/Log.hpp>
-#include <atomic>
 #include <functional>
 #include <lua.h>
 #include <memory>
 #include <string_view>
-#include <thread>
 
 namespace luax {
     inline void logCallbackFailure(std::string_view context) {
@@ -48,33 +46,6 @@ namespace luax {
             if (Runtime::isShuttingDown()) return false;
             auto* host = BindingHost::getIfInitialized();
             if (!host || !host->ready()) return false;
-#if defined(GEODE_IS_MACOS)
-            if (!Runtime::isMainThread()) {
-                // #region agent log
-                Runtime::debugThreadProbe(
-                    "post-fix",
-                    "H11,H12,H13",
-                    context,
-                    "adopting LuaCallback thread before host state"
-                );
-                // #endregion
-                Runtime::setMainThreadId(std::this_thread::get_id());
-            }
-#endif
-            if (!Runtime::isMainThread()) {
-                static std::atomic_bool s_loggedOffThreadInvoke{false};
-                bool expected = false;
-                if (s_loggedOffThreadInvoke.compare_exchange_strong(expected, true)) {
-                    // #region agent log
-                    Runtime::debugThreadProbe(
-                        "next",
-                        "H6,H9",
-                        context,
-                        "first off-thread LuaCallback invoke before host state"
-                    );
-                    // #endregion
-                }
-            }
             auto* L = host->state();
             if (!L || !m_ref) return false;
 

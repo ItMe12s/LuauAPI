@@ -16,14 +16,6 @@ namespace luax {
         if (!callback.push()) return false;
 #if defined(GEODE_IS_MACOS)
         if (!Runtime::isMainThread()) {
-            // #region agent log
-            Runtime::debugThreadProbe(
-                "post-fix",
-                "H11,H12,H13",
-                context,
-                "adopting scheduled callback thread before protected call"
-            );
-            // #endregion
             Runtime::setMainThreadId(std::this_thread::get_id());
         }
 #endif
