@@ -53,7 +53,9 @@ namespace luax {
                         // #endregion
                     }
                 }
-                if (runtime && m_generation == runtime->generation() && runtime->assertMainThread()) {
+                // ponytail: off-thread reset skips lua_unref; upgrade to owner-thread deferred
+                // unref if callback churn shows retained Lua refs growing.
+                if (runtime && m_generation == runtime->generation() && Runtime::isMainThread()) {
                     lua_unref(m_state, m_ref);
                 }
             }
