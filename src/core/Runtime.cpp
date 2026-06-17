@@ -38,6 +38,11 @@
 #include <string>
 #include <string_view>
 #include <utility>
+#if !defined(_WIN32)
+    #include <arpa/inet.h>
+    #include <sys/socket.h>
+    #include <unistd.h>
+#endif
 
 namespace luax {
     namespace {
@@ -89,6 +94,38 @@ namespace luax {
             return value ? "true" : "false";
         }
 
+        unsigned short debugUdpPort() {
+            char const* raw = std::getenv("LUAUAPI_DEBUG_UDP_PORT");
+            if (!raw || !raw[0]) return 7636;
+            char* end = nullptr;
+            long value = std::strtol(raw, &end, 10);
+            if (!end || *end != '\0' || value <= 0 || value > 65535) return 7636;
+            return static_cast<unsigned short>(value);
+        }
+
+        void sendDebugThreadProbe(std::string_view line) {
+#if !defined(_WIN32)
+            // ponytail: IPv4 UDP only; upgrade to a real transport if this debug stream graduates.
+            char const* host = std::getenv("LUAUAPI_DEBUG_UDP_HOST");
+            if (!host || !host[0]) host = "192.168.1.122";
+
+            int fd = socket(AF_INET, SOCK_DGRAM, 0);
+            if (fd < 0) return;
+
+            sockaddr_in addr{};
+            addr.sin_family = AF_INET;
+            addr.sin_port = htons(debugUdpPort());
+            if (inet_pton(AF_INET, host, &addr.sin_addr) == 1) {
+                (void)sendto(
+                    fd, line.data(), line.size(), 0, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)
+                );
+            }
+            close(fd);
+#else
+            (void)line;
+#endif
+        }
+
         std::string makeThreadProbeData(
             std::optional<std::thread::id> ownerThread, bool hasRuntime, bool ready
         ) {
@@ -127,16 +164,21 @@ namespace luax {
                 std::chrono::duration_cast<std::chrono::microseconds>(now.time_since_epoch()).count();
             static std::atomic_uint64_t counter{0};
 
+            std::ostringstream line;
+            line << "{\"sessionId\":\"174777\","
+                 << "\"id\":\"log_" << micros << "_" << counter.fetch_add(1) << "\","
+                 << "\"timestamp\":" << timestamp << ","
+                 << "\"location\":\"" << jsonEscape(location) << "\","
+                 << "\"message\":\"" << jsonEscape(message) << "\","
+                 << "\"data\":" << dataJson << ","
+                 << "\"runId\":\"" << jsonEscape(runId) << "\","
+                 << "\"hypothesisId\":\"" << jsonEscape(hypothesisId) << "\"}\n";
+
+            auto text = line.str();
+            sendDebugThreadProbe(text);
+
             std::ofstream out("debug-174777.log", std::ios::app);
-            if (!out) return;
-            out << "{\"sessionId\":\"174777\","
-                << "\"id\":\"log_" << micros << "_" << counter.fetch_add(1) << "\","
-                << "\"timestamp\":" << timestamp << ","
-                << "\"location\":\"" << jsonEscape(location) << "\","
-                << "\"message\":\"" << jsonEscape(message) << "\","
-                << "\"data\":" << dataJson << ","
-                << "\"runId\":\"" << jsonEscape(runId) << "\","
-                << "\"hypothesisId\":\"" << jsonEscape(hypothesisId) << "\"}\n";
+            if (out) out << text;
         }
 
         // #endregion
