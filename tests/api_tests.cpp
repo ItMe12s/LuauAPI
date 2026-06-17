@@ -3,6 +3,7 @@
 
 #include <LuauAPI.hpp>
 #include <catch2/catch_test_macros.hpp>
+#include <chrono>
 #include <filesystem>
 #include <fstream>
 #include <lua.h>
@@ -14,9 +15,11 @@ namespace {
     using RuntimeGuard = luauapi_test::RuntimeGuard;
 
     std::filesystem::path makeTempDir() {
-        auto root = std::filesystem::temp_directory_path() / "luauapi_api_tests";
-        std::filesystem::create_directories(root);
-        return root;
+        auto dir = std::filesystem::temp_directory_path() /
+            ("luauapi_api_tests_" +
+             std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
+        REQUIRE(std::filesystem::create_directories(dir));
+        return dir;
     }
 
     void writeScript(std::filesystem::path const& path, std::string_view source) {

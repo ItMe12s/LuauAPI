@@ -16,8 +16,9 @@ namespace luax {
 
 namespace {
     using namespace luax;
-    using luauapi_test::compile;
     using luauapi_test::makeLuaState;
+    using luauapi_test::runScriptReturnsBool;
+    using luauapi_test::runScriptReturnsString;
 
     struct WebSocketGuard {
         WebSocketGuard() {
@@ -34,42 +35,6 @@ namespace {
 
     void registerWebSocketBindings(lua_State* L) {
         REQUIRE(registerWebSocket(L).isOk());
-    }
-
-    bool runScriptReturnsBool(lua_State* L, std::string const& source) {
-        auto bytecode = compile(source);
-        if (luau_load(L, "=websocket_bounds_test", bytecode.data(), bytecode.size(), 0) != 0) {
-            return false;
-        }
-        if (lua_pcall(L, 0, 1, 0) != 0) {
-            return false;
-        }
-        if (!lua_isboolean(L, -1)) {
-            lua_pop(L, 1);
-            return false;
-        }
-        bool const value = lua_toboolean(L, -1) != 0;
-        lua_pop(L, 1);
-        return value;
-    }
-
-    std::optional<std::string> runScriptReturnsString(lua_State* L, std::string const& source) {
-        auto bytecode = compile(source);
-        if (luau_load(L, "=websocket_bounds_test", bytecode.data(), bytecode.size(), 0) != 0) {
-            return std::nullopt;
-        }
-        if (lua_pcall(L, 0, 1, 0) != 0) {
-            return std::nullopt;
-        }
-        if (!lua_isstring(L, -1)) {
-            lua_pop(L, 1);
-            return std::nullopt;
-        }
-        size_t len = 0;
-        char const* text = lua_tolstring(L, -1, &len);
-        std::string value(text ? text : "", len);
-        lua_pop(L, 1);
-        return value;
     }
 
     std::size_t countLiveConnections() {

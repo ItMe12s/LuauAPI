@@ -13,46 +13,13 @@ namespace luax {
 namespace {
     using Catch::Approx;
     using luauapi_test::BindingGuard;
-    using luauapi_test::compile;
     using luauapi_test::makeLuaState;
+    using luauapi_test::runScriptReturnsBool;
+    using luauapi_test::runScriptReturnsNumber;
 
     void registerGd3dBindings(lua_State* L) {
         luax::registerBinding({"gd3d", &luax::registerGd3d, 0});
         REQUIRE(luax::applyAllBindings(L) == std::nullopt);
-    }
-
-    bool runScriptReturnsBool(lua_State* L, std::string const& source) {
-        auto bytecode = compile(source);
-        if (luau_load(L, "=gd3d_transform_test", bytecode.data(), bytecode.size(), 0) != 0) {
-            return false;
-        }
-        if (lua_pcall(L, 0, 1, 0) != 0) {
-            return false;
-        }
-        if (!lua_isboolean(L, -1)) {
-            lua_pop(L, 1);
-            return false;
-        }
-        bool const value = lua_toboolean(L, -1) != 0;
-        lua_pop(L, 1);
-        return value;
-    }
-
-    std::optional<double> runScriptReturnsNumber(lua_State* L, std::string const& source) {
-        auto bytecode = compile(source);
-        if (luau_load(L, "=gd3d_transform_test", bytecode.data(), bytecode.size(), 0) != 0) {
-            return std::nullopt;
-        }
-        if (lua_pcall(L, 0, 1, 0) != 0) {
-            return std::nullopt;
-        }
-        if (!lua_isnumber(L, -1)) {
-            lua_pop(L, 1);
-            return std::nullopt;
-        }
-        double const value = lua_tonumber(L, -1);
-        lua_pop(L, 1);
-        return value;
     }
 
     bool gd3dFieldIsNil(lua_State* L, char const* field) {

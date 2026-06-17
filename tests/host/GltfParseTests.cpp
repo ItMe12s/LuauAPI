@@ -1,9 +1,9 @@
+#include "lua_test_helpers.hpp"
 #include "render3d/assets/MeshAsset.hpp"
 
 #include <array>
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
-#include <chrono>
 #include <filesystem>
 #include <fstream>
 #include <iterator>
@@ -355,25 +355,18 @@ TEST_CASE("MeshAsset loadFromBytes rejects sparse accessors") {
 }
 
 TEST_CASE("MeshAsset loadFromBytes rejects external buffer outside sandbox") {
-    auto const base = std::filesystem::temp_directory_path() /
-        ("luauapi_gltf_sandbox_" +
-         std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
-    auto const sandbox = base / "sandbox";
-    auto const outsideBuffer = base / "outside.bin";
+    luauapi_test::ScopedTempDir base("luauapi_gltf_sandbox_");
+    auto const sandbox = base.path / "sandbox";
+    auto const outsideBuffer = base.path / "outside.bin";
     auto const gltfPath = sandbox / "model.gltf";
 
     REQUIRE(std::filesystem::create_directories(sandbox));
 
-    {
-        std::ofstream outside(outsideBuffer, std::ios::binary);
-        REQUIRE(outside.good());
-        std::array<std::uint8_t, 42> const bufferBytes{
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 128, 63, 0, 0, 0, 0, 1, 0, 2, 0, 0, 0,
-        };
-        outside.write(reinterpret_cast<char const*>(bufferBytes.data()), bufferBytes.size());
-        REQUIRE(outside.good());
-    }
+    std::array<std::uint8_t, 42> const bufferBytes{
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 128, 63, 0, 0, 0, 0, 1, 0, 2, 0, 0, 0,
+    };
+    luauapi_test::writeTestFile(outsideBuffer, bufferBytes);
 
     std::string const gltfJson = R"({
   "asset": {"version": "2.0"},
@@ -394,17 +387,10 @@ TEST_CASE("MeshAsset loadFromBytes rejects external buffer outside sandbox") {
   "scene": 0
 })";
 
-    {
-        std::ofstream gltf(gltfPath);
-        REQUIRE(gltf.good());
-        gltf << gltfJson;
-        REQUIRE(gltf.good());
-    }
+    luauapi_test::writeTestFile(gltfPath, gltfJson);
 
     std::vector<std::uint8_t> bytes(gltfJson.begin(), gltfJson.end());
     auto result = MeshAsset::loadFromBytes(bytes, gltfPath, sandbox);
     REQUIRE(!result.has_value());
     REQUIRE(result.error().find("escapes sandbox root") != std::string::npos);
-
-    std::filesystem::remove_all(base);
 }

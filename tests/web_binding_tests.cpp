@@ -9,7 +9,6 @@
 #include <Geode/loader/Mod.hpp>
 #include <Geode/utils/web.hpp>
 #include <catch2/catch_test_macros.hpp>
-#include <chrono>
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
@@ -27,6 +26,8 @@ namespace luax {
 
 namespace {
     using namespace luax;
+    using luauapi_test::runScriptReturnsBool;
+    using luauapi_test::runScriptReturnsString;
 
     std::size_t multipartEncodedOverhead(std::string_view fieldName, std::size_t valueSize = 0) {
         geode::utils::web::MultipartForm form;
@@ -61,15 +62,12 @@ namespace {
     };
 
     struct ModFixture {
-        std::filesystem::path dir;
+        luauapi_test::ScopedTempDir temp{"luauapi_web_binding_"};
+        std::filesystem::path const& dir = temp.path;
         geode::Mod* mod = nullptr;
         lua_State* L = nullptr;
 
         ModFixture() {
-            dir = std::filesystem::temp_directory_path() /
-                ("luauapi_web_binding_" +
-                 std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
-            REQUIRE(std::filesystem::create_directories(dir));
             mod = geode::Mod::create(dir);
 
             auto* runtime = Runtime::getOrCreate();
@@ -79,9 +77,6 @@ namespace {
         }
 
         ~ModFixture() {
-            if (std::filesystem::exists(dir)) {
-                std::filesystem::remove_all(dir);
-            }
             if (mod) {
                 geode::Mod::destroy(mod);
             }
@@ -92,55 +87,6 @@ namespace {
             REQUIRE(applyAllBindings(state) == std::nullopt);
         }
     };
-
-    bool runScriptReturnsBool(lua_State* L, std::string const& source) {
-        luauapi_test::loadFunction(L, source, "=web_binding_test");
-        if (lua_pcall(L, 0, 1, 0) != 0) {
-            if (lua_isstring(L, -1)) {
-                INFO(lua_tostring(L, -1));
-            }
-            lua_pop(L, 1);
-            return false;
-        }
-        if (!lua_isboolean(L, -1)) {
-            lua_pop(L, 1);
-            return false;
-        }
-        bool const value = lua_toboolean(L, -1) != 0;
-        lua_pop(L, 1);
-        return value;
-    }
-
-    std::optional<std::string> runScriptReturnsString(lua_State* L, std::string const& source) {
-        luauapi_test::loadFunction(L, source, "=web_binding_test");
-        if (lua_pcall(L, 0, 1, 0) != 0) {
-            if (lua_isstring(L, -1)) {
-                return std::string(lua_tostring(L, -1));
-            }
-            lua_pop(L, 1);
-            return std::nullopt;
-        }
-        if (!lua_isstring(L, -1)) {
-            lua_pop(L, 1);
-            return std::nullopt;
-        }
-        size_t len = 0;
-        char const* text = lua_tolstring(L, -1, &len);
-        std::string value(text ? text : "", len);
-        lua_pop(L, 1);
-        return value;
-    }
-
-    void writeFileContents(std::filesystem::path const& path, std::string const& data) {
-        std::error_code ec;
-        auto parent = path.parent_path();
-        if (!parent.empty()) {
-            std::filesystem::create_directories(parent, ec);
-        }
-        std::ofstream out(path, std::ios::binary);
-        REQUIRE(out.good());
-        out << data;
-    }
 
     void setOversizedResponseFactory() {
         geode::utils::web::test::setResponseFactory(
@@ -153,20 +99,15 @@ namespace {
 
     std::optional<std::string> runWebScriptWithoutMod(std::string const& source) {
         WebBindingGuard guard;
-        auto dir = std::filesystem::temp_directory_path() /
-            ("luauapi_web_no_mod_" +
-             std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
-        REQUIRE(std::filesystem::create_directories(dir));
+        luauapi_test::ScopedTempDir temp{"luauapi_web_no_mod_"};
 
         auto* runtime = Runtime::getOrCreate();
-        runtime->setResourcesRoot(dir);
+        runtime->setResourcesRoot(temp.path);
         auto* L = runtime->state();
         registerBinding({"geode_web", &registerGeodeWeb, 0});
         REQUIRE(applyAllBindings(L) == std::nullopt);
 
-        auto result = runScriptReturnsString(L, source);
-        std::filesystem::remove_all(dir);
-        return result;
+        return luauapi_test::runScriptReturnsString(L, source);
     }
 } // namespace
 
@@ -391,7 +332,7 @@ TEST_CASE("MultipartForm fileFrom rejects sandbox escape") {
     WebBindingGuard guard;
     ModFixture fixture;
     REQUIRE(std::filesystem::create_directories(fixture.mod->getSaveDir()));
-    writeFileContents(fixture.mod->getSaveDir() / "payload.bin", "payload");
+    luauapi_test::writeTestFile(fixture.mod->getSaveDir() / "payload.bin", "payload");
 
     auto err = runScriptReturnsString(
         fixture.L,

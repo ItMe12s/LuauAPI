@@ -21,8 +21,10 @@ namespace {
     using namespace luax::gd3d;
     using namespace luax::render3d;
     using luauapi_test::BindingGuard;
-    using luauapi_test::compile;
     using luauapi_test::makeLuaState;
+    using luauapi_test::runScriptPcall;
+    using luauapi_test::runScriptReturnsBool;
+    using luauapi_test::runScriptReturnsString;
 
     std::filesystem::path repoRoot() {
         return std::filesystem::path(__FILE__).parent_path().parent_path().parent_path();
@@ -33,48 +35,8 @@ namespace {
         REQUIRE(applyAllBindings(L) == std::nullopt);
     }
 
-    bool runScriptReturnsBool(lua_State* L, std::string const& source) {
-        auto bytecode = compile(source);
-        if (luau_load(L, "=gd3d_mesh_test", bytecode.data(), bytecode.size(), 0) != 0) {
-            return false;
-        }
-        if (lua_pcall(L, 0, 1, 0) != 0) {
-            return false;
-        }
-        if (!lua_isboolean(L, -1)) {
-            lua_pop(L, 1);
-            return false;
-        }
-        bool const value = lua_toboolean(L, -1) != 0;
-        lua_pop(L, 1);
-        return value;
-    }
-
-    std::optional<std::string> runScriptReturnsString(lua_State* L, std::string const& source) {
-        auto bytecode = compile(source);
-        if (luau_load(L, "=gd3d_mesh_test", bytecode.data(), bytecode.size(), 0) != 0) {
-            return std::nullopt;
-        }
-        if (lua_pcall(L, 0, 1, 0) != 0) {
-            return std::nullopt;
-        }
-        if (!lua_isstring(L, -1)) {
-            lua_pop(L, 1);
-            return std::nullopt;
-        }
-        size_t len = 0;
-        char const* text = lua_tolstring(L, -1, &len);
-        std::string value(text ? text : "", len);
-        lua_pop(L, 1);
-        return value;
-    }
-
     bool runScriptLeavesMeshOnStack(lua_State* L, std::string const& source) {
-        auto bytecode = compile(source);
-        if (luau_load(L, "=gd3d_mesh_test", bytecode.data(), bytecode.size(), 0) != 0) {
-            return false;
-        }
-        if (lua_pcall(L, 0, 1, 0) != 0) {
+        if (!runScriptPcall(L, source)) {
             return false;
         }
         return lua_isuserdata(L, -1);
