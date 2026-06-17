@@ -26,7 +26,7 @@ namespace luax::render3d {
         prevState.capture();
         int const prevVao = captureAndUnbindVao();
 
-        ccGLBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        ccGLBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
         ccGLBindTexture2D(colorTexture);
 
         auto* shader =
