@@ -20,8 +20,7 @@ The runtime is a single shared instance, accessed through static functions:
 - `getIfInitialized` returns the instance only if it exists.
 - `isInitialized` and `isShuttingDown` report lifecycle state.
 - `shutdown` tears the instance down.
-- `setMainThreadId` records the Cocos main thread in `$on_mod(Loaded)` via
-  `geode::queueInMainThread`, and `isMainThread` guards runtime access after that.
+- `setMainThreadId` records the main thread in `$on_mod(Loaded)`, and `isMainThread` guards runtime access after that.
 
 ## Construction
 

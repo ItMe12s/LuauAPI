@@ -30,17 +30,15 @@ using namespace geode::prelude;
 namespace lua = imes::luauapi;
 
 $on_mod(Loaded) {
-    queueInMainThread([] {
-        auto result = lua::runFile(Mod::get()->getResourcesDir(), "Bootstrap.luau");
-        if (result.isErr()) {
-            log::error("script failed: {}", result.unwrapErr());
-        }
-    });
+    auto result = lua::runFile(Mod::get()->getResourcesDir(), "Bootstrap.luau");
+    if (result.isErr()) {
+        log::error("script failed: {}", result.unwrapErr());
+    }
 }
 ```
 
 See [Getting started](overview.md) for the main-thread rule.
-The example uses `queueInMainThread` to satisfy it.
+`$on_mod(Loaded)` already runs on the main thread, so call `runFile` directly there.
 LuauAPI owns the runtime, so you do not start it. Check `status()` is `Ready` first if you need to.
 
 ## The rules
