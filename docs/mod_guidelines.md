@@ -56,7 +56,7 @@ local position = transform:position()
 Hooks and callbacks must return required values.
 
 A missing return can corrupt the call path.
-Some failures can crash outside normal Lua errors and may escape the Geode crash handler.
+Some failures can crash outside normal Lua errors.
 See [hooks](reference/lua/hooks.md).
 
 Bad:
@@ -400,7 +400,7 @@ Place nodes by node id and layout, not by hardcoded coordinates or child index.
 Other mods add and reorder nodes in shared menus like `MenuLayer`, so fixed positions overlap their buttons.
 Find an anchor like `bottom-menu`, check it exists, then add to it. Prefix your own node ids with `modid/`.
 If your node has to sit above overlapping content, set an explicit z-order before adding it.
-For nodes that survive scene changes, use cocos `OverlayManager` instead of re-adding from a layer hook.
+For nodes that survive scene changes, use `OverlayManager` instead of re-adding from a layer hook.
 
 Bad:
 
