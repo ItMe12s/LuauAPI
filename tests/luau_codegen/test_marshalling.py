@@ -438,7 +438,7 @@ class EmitStackCheckTests(unittest.TestCase):
         self.assertIn("luax::Usertype<cocos2d::CCObject>::pushOwnedDynamic(L, result);", text)
         self.assertNotIn("pushOwned(L, result)", text)
 
-    def test_specific_object_push_unchanged(self) -> None:
+    def test_ccnode_push_uses_dynamic_borrowed(self) -> None:
         info = TypeInfo(
             kind="object",
             cxx_type="cocos2d::CCNode*",
@@ -446,7 +446,29 @@ class EmitStackCheckTests(unittest.TestCase):
             class_name="CCNode",
         )
         text = "".join(push_value(info, "result"))
-        self.assertIn("luax::Usertype<cocos2d::CCNode>::pushBorrowed(L, result);", text)
+        self.assertIn("luax::Usertype<cocos2d::CCObject>::pushBorrowedDynamic(L, result);", text)
+        self.assertNotIn("Usertype<cocos2d::CCNode>::pushBorrowed", text)
+
+    def test_ccnode_push_uses_dynamic_owned(self) -> None:
+        info = TypeInfo(
+            kind="object",
+            cxx_type="cocos2d::CCNode*",
+            lua_type="CCNode?",
+            class_name="CCNode",
+        )
+        text = "".join(push_return(info, "result", True))
+        self.assertIn("luax::Usertype<cocos2d::CCObject>::pushOwnedDynamic(L, result);", text)
+        self.assertNotIn("Usertype<cocos2d::CCNode>::pushOwned", text)
+
+    def test_specific_object_push_unchanged(self) -> None:
+        info = TypeInfo(
+            kind="object",
+            cxx_type="CCMenuItemSpriteExtra*",
+            lua_type="CCMenuItemSpriteExtra?",
+            class_name="CCMenuItemSpriteExtra",
+        )
+        text = "".join(push_value(info, "result"))
+        self.assertIn("luax::Usertype<CCMenuItemSpriteExtra>::pushBorrowed(L, result);", text)
         self.assertNotIn("pushBorrowedDynamic", text)
 
     def test_map_string_smart_prefab_result_marshalling(self) -> None:

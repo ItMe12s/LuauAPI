@@ -79,6 +79,7 @@ Luau types for these bindings come from `tools/luau_codegen/emit/luau_types/` or
 - `check(L, idx, method)` reads and validates the userdata or raises.
   `tryCheck(L, idx)` returns null on mismatch.
 - `pushOwned(L, obj)` pushes the object as Lua owned. `pushBorrowed(L, obj)` pushes a weak borrow.
+- `pushOwnedDynamic` and `pushBorrowedDynamic` pick the closest registered runtime type.
 
 The metatable holds a methods table, a fields table, and `__index` and `__newindex` handlers.
 The handlers search methods first, then fields, then the per-node field table for `CCNode` types.
@@ -97,6 +98,7 @@ Each record holds:
 - Name
 - Metatable name
 - Base tags (for inheritance)
+- Runtime matcher
 
 `registerType` takes one direct base tag. Its closure fills `baseClosure` for `hasBase` and method lookup.
 More than one direct base is an error.

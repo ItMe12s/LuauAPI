@@ -320,7 +320,7 @@ def _push_impl(
             f"{indent}luax::pushOpaqueHandle(L, {expr});\n",
         ]
     if info.kind == "object":
-        if info.class_name == "CCObject":
+        if info.class_name in ("CCObject", "CCNode"):
             push = "pushOwnedDynamic" if owned else "pushBorrowedDynamic"
             return [f"{indent}luax::Usertype<cocos2d::CCObject>::{push}(L, {expr});\n"]
         push = "pushOwned" if owned else "pushBorrowed"

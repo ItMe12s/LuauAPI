@@ -6,6 +6,7 @@
 
 - Switched to MIT license.
 - Added default executor theme.
+- Fixed dynamic userdata typing for `CCNode*` and `CCObject*` returns, so registered subclasses keep their methods.
 
 ## v0.1.0-beta.2
 

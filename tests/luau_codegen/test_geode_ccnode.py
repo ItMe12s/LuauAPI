@@ -213,6 +213,46 @@ public:
         self.assertIn("function setID(self, arg1: string)", luau)
         self.assertIn("function getID(self): string", luau)
 
+    def test_getchildbyid_binding_uses_dynamic_push(self) -> None:
+        ccobject = Class(
+            name="CCObject",
+            namespace="cocos2d",
+            attributes=["link(win, android, android32, android64, imac, m1, ios)"],
+        )
+        get_child = Method(
+            name="getChildByID",
+            ret="CCNode*",
+            args=[Arg("std::string_view", "id")],
+            platforms=all_platforms("link"),
+        )
+        ccnode = Class(
+            name="CCNode",
+            namespace="cocos2d",
+            bases=["CCObject"],
+            methods=[get_child],
+            attributes=["link(win, android, android32, android64, imac, m1, ios)"],
+        )
+        root = Root(classes=[ccobject, ccnode])
+        objects = {
+            "CCObject": ccobject,
+            "CCNode": ccnode,
+            "cocos2d::CCNode": ccnode,
+        }
+
+        cxx = _emit_class_file(
+            ccnode,
+            {"getChildByID": [get_child]},
+            [],
+            [],
+            objects,
+            set(),
+            1,
+            "win",
+        )
+        self.assertIn("self->getChildByID(arg0)", cxx)
+        self.assertIn("luax::Usertype<cocos2d::CCObject>::pushBorrowedDynamic(L, result);", cxx)
+        self.assertNotIn("Usertype<cocos2d::CCNode>::pushBorrowed", cxx)
+
     def test_unsupported_scanned_method_is_skipped_by_filter(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")
         unsupported = Method(

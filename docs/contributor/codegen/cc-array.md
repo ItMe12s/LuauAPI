@@ -38,7 +38,8 @@ Return values such as `getCreatedLists()` still return `CCArray?`, not a table v
 When pushing these to Lua, codegen tries to keep the object's right type,
 so if the element is a subclass like `GJLevelList` and it is registered, Lua gets that type.
 Generated stubs still use `CCObject?`, but you can annotate like `:: GJLevelList?` for type checking.
-If a runtime type is not registered, it falls back to `CCObject`.
+If an exact runtime type is not registered, LuauAPI uses the closest registered match.
+It falls back to `CCNode` for node objects, then `CCObject`.
 
 ## Rejected
 

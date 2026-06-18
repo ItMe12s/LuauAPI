@@ -40,7 +40,13 @@ namespace luax {
             std::string mtName;
             std::vector<std::uint32_t> baseClosure;
             bool isNode = false;
+            bool (*matches)(cocos2d::CCObject* obj) = nullptr;
         };
+
+        template <class T>
+        bool matchesRegisteredType(cocos2d::CCObject* obj) {
+            return geode::cast::typeinfo_cast<T*>(obj) != nullptr;
+        }
 
         struct UserdataCandidate {
             cocos2d::CCObject* obj = nullptr;
@@ -55,6 +61,13 @@ namespace luax {
             geode::Result<TypeInfo*> ensureInfo(std::type_index idx);
             TypeInfo const* findInfo(std::type_index idx) const;
             TypeInfo const* findByTag(std::uint32_t tag) const;
+
+            template <class Fn>
+            void forEachRegistered(Fn&& fn) const {
+                for (auto const& entry : m_byType) {
+                    fn(entry.second);
+                }
+            }
 #if defined(LUAUAPI_HOST_TESTS)
             void setNextTagForTests(std::uint32_t tag);
             void resetForTests();
@@ -124,6 +137,7 @@ namespace luax {
             info.name = nm;
             info.mtName = std::string("luax:") + nm;
             info.isNode = std::is_base_of_v<cocos2d::CCNode, T>;
+            info.matches = &detail::matchesRegisteredType<T>;
 
             if (baseTags.size() > 1) {
                 return geode::Err(fmt::format("{} supports at most one direct base tag", nm));
