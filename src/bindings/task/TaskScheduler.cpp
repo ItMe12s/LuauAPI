@@ -3,6 +3,7 @@
 #include "core/Config.hpp"
 #include "core/Runtime.hpp"
 #include "framework/schedule/ScheduledCallback.hpp"
+#include "framework/usertype/DeferredRelease.hpp"
 
 #include <Geode/Geode.hpp>
 #include <thread>
@@ -164,6 +165,7 @@ namespace luax {
                 if (!runtime) return;
                 auto* L = runtime->state();
                 if (!L) return;
+                drainDeferredReleases();
                 TaskScheduler::get().advance(static_cast<double>(dt), L);
             }
         };

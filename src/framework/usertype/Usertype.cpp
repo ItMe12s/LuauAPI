@@ -3,6 +3,7 @@
 #include "core/Config.hpp"
 #include "core/Runtime.hpp"
 #include "framework/BindingHost.hpp"
+#include "framework/usertype/DeferredRelease.hpp"
 #include "framework/usertype/Fields.hpp"
 #include "framework/usertype/OpaqueHandle.hpp"
 #include "framework/usertype/WeakRefShutdown.hpp"
@@ -153,11 +154,15 @@ namespace luax::detail {
         if (!block) return;
         if (block->flags & kUserdataOwnedFlag) {
             if (block->ptr && !Runtime::isShuttingDown()) {
-                releaseLuaRetain(block->ptr, "__gc", false);
+                untrackLuaRetain(block->ptr);
+                deferOwnedRelease(block->ptr);
             }
         }
         else if (Runtime::isShuttingDown()) {
             leakWeakRefDuringShutdown(std::move(block->weak));
+        }
+        else {
+            deferBorrowedRelease(std::move(block->weak));
         }
         block->~UserdataBlock();
     }

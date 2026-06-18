@@ -1,6 +1,7 @@
 #include "bindings/imgui/ImGuiHost.hpp"
 
 #include "bindings/imgui/ImGuiDrawScheduler.hpp"
+#include "framework/usertype/DeferredRelease.hpp"
 
 #include <Geode/Geode.hpp>
 #include <imgui-cocos.hpp>
@@ -27,6 +28,7 @@ namespace luax {
         }
 
         ImGuiCocos::get().setup([] {}).draw([] {
+            drainDeferredReleases();
             ImGuiDrawScheduler::get().drawAll();
         });
         s_initialized = true;

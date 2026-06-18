@@ -32,21 +32,15 @@ namespace luax {
         return runtime && runtime->assertMainThread();
     }
 
-    inline void releaseLuaRetain(cocos2d::CCObject* object, char const* method, bool explicitRelease) {
+    inline void untrackLuaRetain(cocos2d::CCObject* object) {
         if (!object) return;
         auto& retains = luaRetains();
         auto found = retains.find(object);
-        if (found == retains.end() || found->second == 0) {
-            if (explicitRelease) {
-                geode::log::error("[lua:{}] has no Lua-owned retain", method);
-            }
-            return;
-        }
+        if (found == retains.end() || found->second == 0) return;
         found->second -= 1;
         if (found->second == 0) {
             retains.erase(found);
         }
-        object->release();
     }
 
     inline bool retainLuaRef(cocos2d::CCObject* object, char const* method) {
