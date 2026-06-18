@@ -45,8 +45,9 @@ Join the [Discord](https://discord.gg/E8f6D6XqbW) for help.
 
 Special thanks to:
 
-- [Juniper](https://github.com/TreehouseFalcon) (Testing and debugging)
-- [YellowCat98](https://github.com/YellowCat98) (Pre-RC testing)
+- [Juniper](https://github.com/TreehouseFalcon) (Testing, Debugging)
+- [Erymanthus](https://github.com/RayDeeUx) (Testing, Debugging)
+- [YellowCat98](https://github.com/YellowCat98) (Testing)
 
 In-game:
 
