@@ -2,12 +2,15 @@
 
 [Check the GitHub commits for more details](https://github.com/ItMe12s/LuauAPI).
 
+## v0.1.0-beta.4
+
+- Fixed crashes when garbage-collecting node/object userdata.
+
 ## v0.1.0-beta.3
 
 - Switched to MIT license.
 - Updated default executor theme.
 - Fixed dynamic userdata typing for `CCNode*` and `CCObject*` returns.
-- Fixed crashes when garbage-collecting node/object userdata (e.g. around `LikeItemLayer`).
 
 ## v0.1.0-beta.2
 
