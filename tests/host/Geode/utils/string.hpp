@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cctype>
 #include <filesystem>
 #include <span>
 #include <string>
@@ -40,6 +41,18 @@ namespace geode::utils::string {
 
     inline bool startsWith(std::string_view str, std::string_view prefix) {
         return str.rfind(prefix, 0) == 0;
+    }
+
+    inline bool endsWith(std::string_view str, std::string_view suffix) {
+        return str.size() >= suffix.size()
+            && str.compare(str.size() - suffix.size(), suffix.size(), suffix) == 0;
+    }
+
+    inline std::string toLower(std::string str) {
+        for (auto& c : str) {
+            c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+        }
+        return str;
     }
 
     inline bool containsAny(std::string_view str, std::span<std::string const> subs) {
