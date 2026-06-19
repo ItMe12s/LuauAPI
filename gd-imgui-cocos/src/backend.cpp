@@ -278,18 +278,16 @@ void ImGuiCocos::reload() {
 	m_reloading = true;
 }
 
-ImVec2 ImGuiCocos::frameSizePixels() {
-	auto& inst = get();
-	if (inst.m_frameSize.x != 0.f && inst.m_frameSize.y != 0.f)
-		return inst.m_frameSize;
-	GLint vp[4];
-	glGetIntegerv(GL_VIEWPORT, vp);
-	return {static_cast<float>(vp[2]), static_cast<float>(vp[3])};
+static constexpr float kDisplayScale = 4.5f;
+
+ImVec2 ImGuiCocos::displaySize() {
+	const auto winSize = CCDirector::sharedDirector()->getWinSize();
+	return {winSize.width * kDisplayScale, winSize.height * kDisplayScale};
 }
 
 ImVec2 ImGuiCocos::cocosToFrame(const CCPoint& pos) {
 	auto* director = CCDirector::sharedDirector();
-	const auto frameSize = frameSizePixels();
+	const auto frameSize = displaySize();
 	const auto winSize = director->getWinSize();
 
 	return {
@@ -300,7 +298,7 @@ ImVec2 ImGuiCocos::cocosToFrame(const CCPoint& pos) {
 
 CCPoint ImGuiCocos::frameToCocos(const ImVec2& pos) {
 	auto* director = CCDirector::sharedDirector();
-	const auto frameSize = frameSizePixels();
+	const auto frameSize = displaySize();
 	const auto winSize = director->getWinSize();
 
 	return {
@@ -338,23 +336,7 @@ void ImGuiCocos::newFrame() {
 
 	// opengl2 new frame
 	auto* director = CCDirector::sharedDirector();
-	GLint vp[4];
-	glGetIntegerv(GL_VIEWPORT, vp);
-	m_frameSize = {static_cast<float>(vp[2]), static_cast<float>(vp[3])};
-	io.DisplaySize = m_frameSize;
-
-	// TEMP
-	static bool s_loggedScaling = false;
-	if (!s_loggedScaling && vp[2] > 0 && vp[3] > 0) {
-		s_loggedScaling = true;
-		const auto fs = director->getOpenGLView()->getFrameSize();
-		const auto ws = director->getWinSize();
-		geode::log::info(
-			"imgui-cocos diag frameSize=({}, {}) displayFactor={} viewport=(x{}, y{}, w{}, h{}) winSize=({}, {})",
-			fs.width, fs.height, geode::utils::getDisplayFactor(),
-			vp[0], vp[1], vp[2], vp[3], ws.width, ws.height
-		);
-	}
+	io.DisplaySize = displaySize();
 	if (director->getDeltaTime() > 0.f) {
 		io.DeltaTime = director->getDeltaTime();
 	} else {
