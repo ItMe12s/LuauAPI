@@ -63,6 +63,11 @@ namespace {
         requireMainThread(L, "imgui.font.add");
         requireNotFrame(L, "imgui.font.add");
 
+        float const size = check<float>(L, 3, "imgui.font.add");
+        if (size <= 0.f) {
+            luaL_error(L, "imgui.font.add: size must be greater than 0");
+        }
+
         auto target = resolveSandboxTarget(L, 1, 2, "imgui.font.add");
         if (!target) {
             return 2;
@@ -75,11 +80,6 @@ namespace {
         auto contents = readSandboxBinaryFile(target->path);
         if (contents.isErr()) {
             return pushNilErr(L, contents.unwrapErr());
-        }
-
-        float const size = check<float>(L, 3, "imgui.font.add");
-        if (size <= 0.f) {
-            luaL_error(L, "imgui.font.add: size must be greater than 0");
         }
 
         auto const id = imguiFontAdd(size, std::move(contents.unwrap()));
