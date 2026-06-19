@@ -278,25 +278,34 @@ void ImGuiCocos::reload() {
 	m_reloading = true;
 }
 
+ImVec2 ImGuiCocos::frameSizePixels() {
+	auto& inst = get();
+	if (inst.m_frameSize.x != 0.f && inst.m_frameSize.y != 0.f)
+		return inst.m_frameSize;
+	GLint vp[4];
+	glGetIntegerv(GL_VIEWPORT, vp);
+	return {static_cast<float>(vp[2]), static_cast<float>(vp[3])};
+}
+
 ImVec2 ImGuiCocos::cocosToFrame(const CCPoint& pos) {
 	auto* director = CCDirector::sharedDirector();
-	const auto frameSize = director->getOpenGLView()->getFrameSize();
+	const auto frameSize = frameSizePixels();
 	const auto winSize = director->getWinSize();
 
 	return {
-		pos.x / winSize.width * frameSize.width,
-		(1.f - pos.y / winSize.height) * frameSize.height,
+		pos.x / winSize.width * frameSize.x,
+		(1.f - pos.y / winSize.height) * frameSize.y,
 	};
 }
 
 CCPoint ImGuiCocos::frameToCocos(const ImVec2& pos) {
 	auto* director = CCDirector::sharedDirector();
-	const auto frameSize = director->getOpenGLView()->getFrameSize();
+	const auto frameSize = frameSizePixels();
 	const auto winSize = director->getWinSize();
 
 	return {
-		pos.x / frameSize.width * winSize.width,
-		(1.f - pos.y / frameSize.height) * winSize.height,
+		pos.x / frameSize.x * winSize.width,
+		(1.f - pos.y / frameSize.y) * winSize.height,
 	};
 }
 
@@ -329,10 +338,10 @@ void ImGuiCocos::newFrame() {
 
 	// opengl2 new frame
 	auto* director = CCDirector::sharedDirector();
-	const auto frameSize = director->getOpenGLView()->getFrameSize();
-
-	// glfw new frame
-	io.DisplaySize = ImVec2(frameSize.width, frameSize.height);
+	GLint vp[4];
+	glGetIntegerv(GL_VIEWPORT, vp);
+	m_frameSize = {static_cast<float>(vp[2]), static_cast<float>(vp[3])};
+	io.DisplaySize = m_frameSize;
 	if (director->getDeltaTime() > 0.f) {
 		io.DeltaTime = director->getDeltaTime();
 	} else {

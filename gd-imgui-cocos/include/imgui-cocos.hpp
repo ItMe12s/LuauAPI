@@ -21,6 +21,7 @@ private:
 	std::function<void()> m_setupCall, m_drawCall;
 	InputMode m_inputMode = InputMode::Default;
 	ImGuiMouseCursor m_lastCursor = ImGuiMouseCursor_COUNT;
+	ImVec2 m_frameSize{};
 #ifdef IMGUI_HAS_TEXTURES
 	void updateTexture(ImTextureData*) const;
 #else
@@ -31,6 +32,7 @@ private:
 	ImGuiCocos();
 
 	void newFrame();
+	static ImVec2 frameSizePixels();
 	void renderFrame() const;
 	void legacyRenderFrame() const; // uses OpenGL 2.0 for rendering, for compatibility with older devices
 public:
