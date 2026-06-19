@@ -2,8 +2,8 @@
 
 #include <Geode/utils/cocos.hpp>
 #include <cocos2d.h>
+#include <deque>
 #include <type_traits>
-#include <vector>
 
 namespace luax::detail {
     // I forgor :skull:
@@ -14,7 +14,7 @@ namespace luax::detail {
             "leakWeakRefDuringShutdown requires CCObject-derived T"
         );
         static auto* const leaked = [] {
-            return new std::vector<geode::WeakRef<T>>();
+            return new std::deque<geode::WeakRef<T>>();
         }();
         leaked->push_back(std::move(ref));
     }

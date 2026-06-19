@@ -6,13 +6,14 @@
 
 #include <Geode/utils/cocos.hpp>
 #include <cocos2d.h>
+#include <deque>
 #include <utility>
 #include <vector>
 
 namespace luax {
     namespace detail {
-        inline std::vector<geode::WeakRef<cocos2d::CCObject>>& deferredBorrowedReleases() {
-            static std::vector<geode::WeakRef<cocos2d::CCObject>> queue;
+        inline std::deque<geode::WeakRef<cocos2d::CCObject>>& deferredBorrowedReleases() {
+            static std::deque<geode::WeakRef<cocos2d::CCObject>> queue;
             return queue;
         }
 
@@ -56,7 +57,7 @@ namespace luax {
         auto& ownedQueue = detail::deferredOwnedReleases();
 
         while (!borrowedQueue.empty() || !ownedQueue.empty()) {
-            std::vector<geode::WeakRef<cocos2d::CCObject>> borrowed;
+            std::deque<geode::WeakRef<cocos2d::CCObject>> borrowed;
             borrowed.swap(borrowedQueue);
             std::vector<cocos2d::CCObject*> owned;
             owned.swap(ownedQueue);

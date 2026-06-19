@@ -5,16 +5,17 @@
 ## v0.1.0-beta.3
 
 - Switched to MIT license.
-- Added default executor theme.
-- Fixed dynamic userdata typing for `CCNode*` and `CCObject*` returns, so registered subclasses keep their methods.
+- Updated default executor theme.
+- Fixed dynamic userdata typing for `CCNode*` and `CCObject*` returns.
+- Fixed crashes when garbage-collecting node/object userdata (e.g. around `LikeItemLayer`).
 
 ## v0.1.0-beta.2
 
+- Updated demo scripts (`_viewportdemo.luau`, `_helloworlddemo.luau`) and examples with proper Z order.
 - Fixed crash when `imgui.onDraw` runs before OpenGL is ready on macOS and other non-Windows platforms.
 - Fixed Luau hooks on Intel macOS (`imac`) builds.
 - Fixed "luau runtime accessed off main thread" errors on macOS.
 - Fixed "GLSL 110 does not allow sub- or super-matrix constructors" errors on macOS.
-- Updated demo scripts (`_viewportdemo.luau`, `_helloworlddemo.luau`) and examples with proper Z order.
 
 ## v0.1.0-beta.1
 

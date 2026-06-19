@@ -1,9 +1,11 @@
 #include "core/Runtime.hpp"
 #include "framework/usertype/DeferredRelease.hpp"
 
+#include <Geode/utils/cocos.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <cocos2d.h>
 #include <thread>
+#include <vector>
 
 namespace {
     struct DeferGuard {
@@ -47,4 +49,28 @@ TEST_CASE("deferred release leaks instead of releasing during shutdown") {
     luax::Runtime::setShuttingDownForTests(false);
     obj->release();
     REQUIRE_FALSE(geode::detail::isLiveCocosObject(obj));
+}
+
+TEST_CASE("bulk deferred releases are all held until drain") {
+    DeferGuard guard;
+
+    constexpr int kCount = 256;
+    std::vector<cocos2d::CCObject*> objects;
+    objects.reserve(kCount);
+    for (int i = 0; i < kCount; ++i) {
+        auto* obj = new cocos2d::CCObject();
+        objects.push_back(obj);
+        luax::deferBorrowedRelease(geode::WeakRef<cocos2d::CCObject>(obj));
+        luax::deferOwnedRelease(obj);
+    }
+
+    for (auto* obj : objects) {
+        REQUIRE(geode::detail::isLiveCocosObject(obj));
+    }
+
+    luax::drainDeferredReleases();
+
+    for (auto* obj : objects) {
+        REQUIRE_FALSE(geode::detail::isLiveCocosObject(obj));
+    }
 }
