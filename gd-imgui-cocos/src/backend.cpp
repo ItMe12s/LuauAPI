@@ -280,21 +280,23 @@ void ImGuiCocos::reload() {
 
 ImVec2 ImGuiCocos::cocosToFrame(const CCPoint& pos) {
 	auto* director = CCDirector::sharedDirector();
+	const auto frameSize = director->getOpenGLView()->getFrameSize();
 	const auto winSize = director->getWinSize();
 
 	return {
-		pos.x,
-		(1.f - pos.y / winSize.height) * winSize.height,
+		pos.x / winSize.width * frameSize.width,
+		(1.f - pos.y / winSize.height) * frameSize.height,
 	};
 }
 
 CCPoint ImGuiCocos::frameToCocos(const ImVec2& pos) {
 	auto* director = CCDirector::sharedDirector();
+	const auto frameSize = director->getOpenGLView()->getFrameSize();
 	const auto winSize = director->getWinSize();
 
 	return {
-		pos.x,
-		(1.f - pos.y / winSize.height) * winSize.height,
+		pos.x / frameSize.width * winSize.width,
+		(1.f - pos.y / frameSize.height) * winSize.height,
 	};
 }
 
@@ -327,10 +329,10 @@ void ImGuiCocos::newFrame() {
 
 	// opengl2 new frame
 	auto* director = CCDirector::sharedDirector();
-	const auto winSize = director->getWinSize();
+	const auto frameSize = director->getOpenGLView()->getFrameSize();
 
 	// glfw new frame
-	io.DisplaySize = ImVec2(winSize.width, winSize.height);
+	io.DisplaySize = ImVec2(frameSize.width, frameSize.height);
 	if (director->getDeltaTime() > 0.f) {
 		io.DeltaTime = director->getDeltaTime();
 	} else {
