@@ -213,6 +213,31 @@ Use `imgui.style.with` for per-window or per-mod styling that does not affect ot
 Useful option fields include `alpha`, `windowPadding`, `windowRounding`, `framePadding`, `frameRounding`, `itemSpacing`, and `colors`.
 Color keys can be `imgui.Col.*` values or color names from `imgui.Col`.
 
+## Fonts
+
+```lua
+imgui.font.add(root, path, size) -> ImGuiFontHandle?, string?
+imgui.font.with(font, fn)
+```
+
+Register fonts before or outside `imgui.onDraw`.
+Use raw `.ttf` resource files, not GD bitmap fonts. `add` returns `nil, err` on bad path or load failure.
+Before ImGui init, `add` returns a handle and loads at first use.
+`with` must run inside `imgui.onDraw`. `with` always pops after `fn`, even when `fn` errors.
+
+```lua
+local font, err = imgui.font.add("resources", "assets/Inter.ttf", 18)
+if not font then
+    error(err)
+end
+
+imgui.onDraw(function()
+    imgui.font.with(font, function()
+        imgui.text("Custom font")
+    end)
+end)
+```
+
 ## Flags
 
 Use constants instead of magic numbers:
@@ -233,7 +258,7 @@ See `imgui.dluau` for all constant tables.
 
 Use one `imgui.onDraw` per mod when possible. Keep draw work under 20 ms.
 Do not do IO, web work, or heavy list rebuilds in `onDraw`.
-Image, texture, font, docking, viewport, and draw list APIs are not bound.
+Image, texture, docking, viewport, and draw list APIs are not bound.
 See [Limits and errors](../cpp/limits-and-errors.md) for hard caps and error strings.
 
 ## ImGui or Cocos UI
@@ -260,4 +285,5 @@ See [UI and layouts](ui.md) for when to use ImGui vs Cocos UI.
 - `src/bindings/imgui/ImGuiTables.cpp`
 - `src/bindings/imgui/ImGuiMenus.cpp`
 - `src/bindings/imgui/ImGuiStyle.cpp`
+- `src/bindings/imgui/ImGuiFontBinding.cpp`
 - `src/bindings/imgui/ImGuiConstants.cpp`

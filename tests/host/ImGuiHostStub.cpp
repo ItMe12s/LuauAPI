@@ -16,4 +16,10 @@ namespace luax {
     bool imguiHostIsVisible() {
         return false;
     }
+
+    bool imguiHostIsInitialized() {
+        return false;
+    }
+
+    void imguiHostRequestReload() {}
 } // namespace luax

@@ -13,7 +13,7 @@ varying vec2 vTexCoord;
 varying vec3 vTint;
 
 void main() {
-    // GLSL 110 (macOS GD) rejects mat3(mat4)
+    // GLSL 110 (macOS GD) rejects mat3(mat4).
     vNormal = mat3(uNormalMat[0].xyz, uNormalMat[1].xyz, uNormalMat[2].xyz) * aNormal;
     vTexCoord = aTexCoord;
     vTint = uTint;

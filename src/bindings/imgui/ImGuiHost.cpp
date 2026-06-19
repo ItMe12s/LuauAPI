@@ -1,6 +1,7 @@
 #include "bindings/imgui/ImGuiHost.hpp"
 
 #include "bindings/imgui/ImGuiDrawScheduler.hpp"
+#include "bindings/imgui/ImGuiFontRegistry.hpp"
 #include "framework/usertype/DeferredRelease.hpp"
 
 #include <Geode/Geode.hpp>
@@ -13,6 +14,16 @@ namespace luax {
         bool s_initialized = false;
         bool s_pendingInit = false;
     } // namespace
+
+    bool imguiHostIsInitialized() {
+        return s_initialized && ImGuiCocos::get().isInitialized();
+    }
+
+    void imguiHostRequestReload() {
+        if (imguiHostIsInitialized()) {
+            ImGuiCocos::get().reload();
+        }
+    }
 
     void initImGuiHost() {
         if (s_initialized) return;
@@ -43,13 +54,7 @@ namespace luax {
 
         ImGuiCocos::get()
             .setup([] {
-                float const density = geode::utils::getDisplayFactor();
-                if (density <= 1.f) return;
-
-                ImFontConfig cfg;
-                cfg.RasterizerDensity = density;
-                ImGui::GetIO().Fonts->Clear();
-                ImGui::GetIO().Fonts->AddFontDefault(&cfg);
+                imguiFontRebuildAtlas();
             })
             .draw([] {
                 drainDeferredReleases();
@@ -61,6 +66,7 @@ namespace luax {
     void shutdownImGuiHost() {
         s_pendingInit = false;
         ImGuiDrawScheduler::get().clear();
+        imguiFontClear();
         if (s_initialized && ImGuiCocos::get().isInitialized()) {
             ImGuiCocos::get().destroy();
         }

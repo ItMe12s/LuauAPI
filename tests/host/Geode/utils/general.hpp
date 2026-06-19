@@ -10,7 +10,7 @@ namespace geode::utils {
         return std::to_string(value);
     }
 
-    inline std::uint64_t hash(std::string_view value) {
-        return static_cast<std::uint64_t>(std::hash<std::string_view>{}(value));
+    inline float getDisplayFactor() {
+        return 1.f;
     }
 }

@@ -165,6 +165,8 @@ if(LUAUAPI_BUILD_TESTS)
         src/bindings/imgui/ImGuiConstants.cpp
         src/bindings/imgui/ImGuiDrawHandleBinding.cpp
         src/bindings/imgui/ImGuiDrawScheduler.cpp
+        src/bindings/imgui/ImGuiFontBinding.cpp
+        src/bindings/imgui/ImGuiFontRegistry.cpp
         src/bindings/imgui/ImGuiLayout.cpp
         src/bindings/imgui/ImGuiMenus.cpp
         src/bindings/imgui/ImGuiPopups.cpp
@@ -203,6 +205,8 @@ if(LUAUAPI_BUILD_TESTS)
         vendor
     )
     target_compile_definitions(luauapi_tests PRIVATE LUAUAPI_HOST_TESTS=1)
+    target_compile_definitions(luauapi_tests PRIVATE
+        "LUAUAPI_TEST_FONT_PATH=\"${imgui_headless_SOURCE_DIR}/misc/fonts/DroidSans.ttf\"")
     target_link_libraries(luauapi_tests PRIVATE
         Catch2::Catch2WithMain
         fmt::fmt

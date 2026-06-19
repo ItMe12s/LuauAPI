@@ -167,6 +167,14 @@ export type ImGuiThemeNamespace = {
     applyCustom: (opts: ImGuiThemeOpts) -> (),
 }
 
+export type ImGuiFontHandle = {
+}
+
+export type ImGuiFontNamespace = {
+    add: (root: "resources", path: string, size: number) -> ImGuiFontHandle?,
+    with: (font: ImGuiFontHandle, fn: () -> ()) -> (),
+}
+
 export type ImGuiNamespace = {
     onDraw: (fn: () -> ()) -> ImGuiDrawHandle,
     cancel: (handle: ImGuiDrawHandle) -> (),
@@ -241,6 +249,7 @@ export type ImGuiNamespace = {
     Cond: ImGuiIntEnumTable,
     style: ImGuiStyleNamespace,
     theme: ImGuiThemeNamespace,
+    font: ImGuiFontNamespace,
 }
 
 declare imgui: ImGuiNamespace

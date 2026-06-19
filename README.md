@@ -66,5 +66,6 @@ In-game:
 - [GLM](https://github.com/g-truc/glm/blob/master/copying.txt)
 - [Isocline](https://github.com/daanx/isocline/blob/main/LICENSE)
 - [IXWebSocket](https://github.com/machinezone/IXWebSocket/blob/master/LICENSE.txt)
+- [JetBrains Mono](https://www.jetbrains.com/lp/mono/#license)
 - [Luau](https://github.com/luau-lang/luau/blob/master/LICENSE.txt)
 - [stb](https://github.com/nothings/stb/blob/master/LICENSE)

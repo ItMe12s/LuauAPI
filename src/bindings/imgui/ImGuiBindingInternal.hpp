@@ -274,4 +274,5 @@ namespace luax {
     void registerImGuiPopups(lua_State* L);
     void registerImGuiTables(lua_State* L);
     void registerImGuiMenus(lua_State* L);
+    void registerImGuiFont(lua_State* L);
 } // namespace luax

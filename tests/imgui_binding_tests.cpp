@@ -1,11 +1,16 @@
+#include "bindings/geode/CurrentMod.hpp"
 #include "bindings/imgui/ImGuiDrawScheduler.hpp"
+#include "bindings/imgui/ImGuiFontRegistry.hpp"
 #include "core/Runtime.hpp"
 #include "framework/Binding.hpp"
 #include "host/ImGuiTestHarness.hpp"
 #include "host/lua_test_helpers.hpp"
 
+#include <Geode/loader/Mod.hpp>
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
+#include <chrono>
+#include <filesystem>
 #include <imgui.h>
 #include <initializer_list>
 #include <lua.h>
@@ -28,6 +33,9 @@ namespace {
 
         ~RuntimeGuard() {
             luax::ImGuiDrawScheduler::get().clear();
+            luax::imguiFontClear();
+            luax::invalidateCurrentModCache();
+            geode::Mod::resetForTests();
             luax::Runtime::resetForTests();
             luax::resetBindingsForTests();
         }
@@ -85,6 +93,86 @@ namespace {
             return true;
         }
         return false;
+    }
+
+    bool hasGlobalField(lua_State* L, std::initializer_list<char const*> path) {
+        lua_getglobal(L, path.begin()[0]);
+        if (!lua_istable(L, -1)) {
+            lua_pop(L, 1);
+            return false;
+        }
+        auto it = path.begin();
+        ++it;
+        for (; it != path.end(); ++it) {
+            lua_getfield(L, -1, *it);
+            lua_remove(L, -2);
+        }
+        bool const ok = !lua_isnil(L, -1);
+        lua_pop(L, 1);
+        return ok;
+    }
+
+    bool callFontAddBadSize(lua_State* L) {
+        lua_getglobal(L, "imgui");
+        lua_getfield(L, -1, "font");
+        lua_getfield(L, -1, "add");
+        lua_pushstring(L, "resources");
+        lua_pushstring(L, "assets/test.ttf");
+        lua_pushnumber(L, 0);
+        int const status = lua_pcall(L, 3, 0, 0);
+        if (status != 0) {
+            lua_settop(L, 0);
+            return true;
+        }
+        lua_settop(L, 0);
+        return false;
+    }
+
+    bool callFontWithOutsideDraw(lua_State* L) {
+        lua_settop(L, 0);
+        lua_getglobal(L, "imgui");
+        lua_getfield(L, -1, "font");
+        lua_getfield(L, -1, "with");
+        lua_pushnil(L);
+        lua_pushcfunction(
+            L,
+            [](lua_State*) -> int {
+                return 0;
+            },
+            "noop"
+        );
+        int const status = lua_pcall(L, 2, 0, 0);
+        if (status != 0) {
+            lua_settop(L, 0);
+            return true;
+        }
+        lua_settop(L, 0);
+        return false;
+    }
+
+    struct TestMod {
+        std::filesystem::path dir;
+        geode::Mod* mod = nullptr;
+
+        TestMod() {
+            dir = std::filesystem::temp_directory_path() /
+                ("luauapi_imgui_font_" +
+                 std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
+            REQUIRE(std::filesystem::create_directories(dir));
+            mod = geode::Mod::create(dir);
+        }
+
+        ~TestMod() {
+            if (mod) {
+                geode::Mod::destroy(mod);
+            }
+            std::error_code ec;
+            std::filesystem::remove_all(dir, ec);
+        }
+    };
+
+    void bindModResources(luax::Runtime* runtime, geode::Mod* mod) {
+        runtime->setResourcesRoot(mod->getResourcesDir());
     }
 } // namespace
 
@@ -245,3 +333,91 @@ TEST_CASE("imgui.child closes after closure error and allows another child") {
 
     REQUIRE(globalIsTrue(L, "recoveredChildOk"));
 }
+
+TEST_CASE("imgui.font namespace is registered") {
+    RuntimeGuard guard;
+    ImGuiContextGuard ctx;
+    auto* runtime = luax::Runtime::getOrCreate();
+    auto* L = runtime->state();
+    registerImGuiBinding(L);
+
+    REQUIRE(hasGlobalField(L, {"imgui", "font", "add"}));
+    REQUIRE(hasGlobalField(L, {"imgui", "font", "with"}));
+}
+
+TEST_CASE("imgui.font.add rejects non-positive size") {
+    RuntimeGuard guard;
+    ImGuiContextGuard ctx;
+    TestMod testMod;
+    auto* runtime = luax::Runtime::getOrCreate();
+    bindModResources(runtime, testMod.mod);
+    auto* L = runtime->state();
+    registerImGuiBinding(L);
+
+    REQUIRE(callFontAddBadSize(L));
+}
+
+TEST_CASE("imgui.font.with rejects calls outside onDraw") {
+    RuntimeGuard guard;
+    ImGuiContextGuard ctx;
+    auto* runtime = luax::Runtime::getOrCreate();
+    auto* L = runtime->state();
+    registerImGuiBinding(L);
+
+    REQUIRE(callFontWithOutsideDraw(L));
+}
+
+TEST_CASE("imgui.font.add rejects calls inside onDraw") {
+    RuntimeGuard guard;
+    ImGuiContextGuard ctx;
+    TestMod testMod;
+    auto* runtime = luax::Runtime::getOrCreate();
+    bindModResources(runtime, testMod.mod);
+    auto* L = runtime->state();
+    registerImGuiBinding(L);
+
+    runImGuiDraw(L, R"(
+        local ok, err = pcall(function()
+            imgui.font.add("resources", "assets/test.ttf", 16)
+        end)
+        _G.fontAddInsideDrawFailed = not ok
+    )");
+
+    REQUIRE(globalIsTrue(L, "fontAddInsideDrawFailed"));
+}
+
+#ifdef LUAUAPI_TEST_FONT_PATH
+TEST_CASE("imgui.font loads resource fonts and font.with pops after closure error") {
+    RuntimeGuard guard;
+    ImGuiContextGuard ctx;
+    TestMod testMod;
+    auto assets = testMod.dir / "assets";
+    REQUIRE(std::filesystem::create_directories(assets));
+    std::filesystem::copy_file(
+        LUAUAPI_TEST_FONT_PATH, assets / "DroidSans.ttf", std::filesystem::copy_options::overwrite_existing
+    );
+
+    auto* runtime = luax::Runtime::getOrCreate();
+    bindModResources(runtime, testMod.mod);
+    auto* L = runtime->state();
+    registerImGuiBinding(L);
+
+    REQUIRE(luauapi_test::runScriptReturnsBool(L, R"(
+        _G.testFont = imgui.font.add("resources", "assets/DroidSans.ttf", 16)
+        return _G.testFont ~= nil
+    )"));
+
+    runImGuiDraw(L, R"(
+        imgui.window("Fonts", function()
+            imgui.font.with(_G.testFont, function()
+                error("font.with failed")
+            end)
+            imgui.font.with(_G.testFont, function()
+                _G.recoveredFontWithOk = true
+            end)
+        end)
+    )");
+
+    REQUIRE(globalIsTrue(L, "recoveredFontWithOk"));
+}
+#endif

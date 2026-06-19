@@ -1,7 +1,7 @@
 local Executor = {}
 
 Executor.spacing = 10
-Executor.footer = 64
+Executor.footer = 72
 Executor.windowWidth = 460
 Executor.windowHeight = 360
 Executor.buttonColumns = 3
@@ -10,6 +10,7 @@ Executor.code = "print('hello from executor :3')"
 Executor.status = ""
 Executor.initialized = false
 Executor.drawHandle = nil :: ImGuiDrawHandle?
+Executor.font = nil :: ImGuiFontHandle?
 Executor.enabled = geode.Mod.getSettingValue("enable-executor")
 
 local function getThemeOpts(): ImGuiStyleOpts
@@ -86,40 +87,49 @@ function Executor.execute(code: string)
 end
 
 function Executor.draw()
-    imgui.style.with(getThemeOpts(), function()
-        imgui.window("Executor", function()
-            local avail = imgui.getContentRegionAvail()
-            local buttonWidth = math.max(avail.x / Executor.buttonColumns, 1) - Executor.spacing / 1.5
+    local function drawContent()
+        imgui.style.with(getThemeOpts(), function()
+            imgui.window("Executor", function()
+                local avail = imgui.getContentRegionAvail()
+                local buttonWidth = math.max(avail.x / Executor.buttonColumns, 1) - Executor.spacing / 1.5
 
-            Executor.code = imgui.inputTextMultiline("##code", Executor.code, { x = -1, y = -Executor.footer })
+                Executor.code = imgui.inputTextMultiline("##code", Executor.code, { x = -1, y = -Executor.footer })
 
-            if imgui.button("Execute", { size = { x = buttonWidth, y = 0 } }) then
-                Executor.execute(Executor.code)
-            end
-
-            imgui.sameLine()
-            if imgui.button("Paste", { size = { x = buttonWidth, y = 0 } }) then
-                local paste = geode.utils.clipboard.read()
-                if paste then
-                    Executor.code = paste
+                if imgui.button("Execute", { size = { x = buttonWidth, y = 0 } }) then
+                    Executor.execute(Executor.code)
                 end
-            end
 
-            imgui.sameLine()
-            if imgui.button("Clear", { size = { x = buttonWidth, y = 0 } }) then
-                Executor.code = ""
-                Executor.setStatus(true, "Code cleared")
-            end
+                imgui.sameLine()
+                if imgui.button("Paste", { size = { x = buttonWidth, y = 0 } }) then
+                    local paste = geode.utils.clipboard.read()
+                    if paste then
+                        Executor.code = paste
+                    end
+                end
 
-            imgui.text(Executor.status)
-        end, { size = { x = Executor.windowWidth, y = Executor.windowHeight } })
-    end)
+                imgui.sameLine()
+                if imgui.button("Clear", { size = { x = buttonWidth, y = 0 } }) then
+                    Executor.code = ""
+                    Executor.setStatus(true, "Code cleared")
+                end
+
+                imgui.text(Executor.status)
+            end, { size = { x = Executor.windowWidth, y = Executor.windowHeight } })
+        end)
+    end
+
+    if Executor.font then
+        imgui.font.with(Executor.font, drawContent)
+    else
+        drawContent()
+    end
 end
 
 function Executor.init()
     if Executor.initialized then return end
     Executor.initialized = true
 
+    Executor.font = imgui.font.add("resources", "JetBrainsMono-Regular.ttf", 16)
     Executor.drawHandle = imgui.onDraw(function()
         if not Executor.enabled then return end
         Executor.draw()

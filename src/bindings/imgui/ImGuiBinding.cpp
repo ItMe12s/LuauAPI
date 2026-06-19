@@ -233,6 +233,7 @@ namespace luax {
         registerImGuiMenus(L);
         registerImGuiConstants(L);
         registerImGuiStyleAndTheme(L);
+        registerImGuiFont(L);
         lua_setglobal(L, "imgui");
 
         if (auto* runtime = static_cast<Runtime*>(lua_callbacks(L)->userdata)) {
