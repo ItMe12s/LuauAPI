@@ -5,6 +5,7 @@
 
 #include <Geode/Geode.hpp>
 #include <imgui-cocos.hpp>
+#include <imgui.h>
 
 namespace luax {
     namespace {
@@ -27,10 +28,20 @@ namespace luax {
             return;
         }
 
-        ImGuiCocos::get().setup([] {}).draw([] {
-            drainDeferredReleases();
-            ImGuiDrawScheduler::get().drawAll();
-        });
+        ImGuiCocos::get()
+            .setup([] {
+                float const density = geode::utils::getDisplayFactor();
+                if (density <= 1.f) return;
+
+                ImFontConfig cfg;
+                cfg.RasterizerDensity = density;
+                ImGui::GetIO().Fonts->Clear();
+                ImGui::GetIO().Fonts->AddFontDefault(&cfg);
+            })
+            .draw([] {
+                drainDeferredReleases();
+                ImGuiDrawScheduler::get().drawAll();
+            });
         s_initialized = true;
     }
 

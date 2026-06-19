@@ -1,13 +1,16 @@
 include(${CMAKE_CURRENT_LIST_DIR}/ImGui.cmake)
 
-set(LUAUAPI_IMGUI_COCOS_GIT_TAG "b93f08ccef778a53ebba09b20c347f6a63980119"
-    CACHE STRING "Pinned gd-imgui-cocos commit")
+set(LUAUAPI_IMGUI_COCOS_SOURCE_DIR "${PROJECT_SOURCE_DIR}/gd-imgui-cocos"
+    CACHE PATH "Vendored gd-imgui-cocos source directory")
 set(IMGUI_VERSION ${LUAUAPI_IMGUI_VERSION} CACHE STRING "What imgui version to download and use" FORCE)
-FetchContent_Declare(
-    gd_imgui_cocos
-    GIT_REPOSITORY https://github.com/matcool/gd-imgui-cocos.git
-    GIT_TAG        ${LUAUAPI_IMGUI_COCOS_GIT_TAG}
+
+if (NOT EXISTS "${LUAUAPI_IMGUI_COCOS_SOURCE_DIR}/CMakeLists.txt")
+    message(FATAL_ERROR "gd-imgui-cocos not found at ${LUAUAPI_IMGUI_COCOS_SOURCE_DIR}")
+endif()
+
+add_subdirectory(
+    "${LUAUAPI_IMGUI_COCOS_SOURCE_DIR}"
+    "${CMAKE_CURRENT_BINARY_DIR}/gd-imgui-cocos"
 )
-FetchContent_MakeAvailable(gd_imgui_cocos)
-message(STATUS "LuauAPI imgui-cocos: ${LUAUAPI_IMGUI_COCOS_GIT_TAG}")
+message(STATUS "LuauAPI imgui-cocos: ${LUAUAPI_IMGUI_COCOS_SOURCE_DIR}")
 message(STATUS "LuauAPI Dear ImGui: ${LUAUAPI_IMGUI_VERSION}")
