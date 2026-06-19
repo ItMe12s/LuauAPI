@@ -49,13 +49,6 @@ If your mod already has C++ entry points, call `imes::luauapi::runFile` or `runS
 See [Getting started](overview.md) for the main-thread rule, [Your first script](first-script.md),
 and the [C++ integration guide](../reference/cpp/integration-guide.md).
 
-## Settings
-
-LuauAPI ships two settings, both off by default:
-
-- `enable-developer-mode` turns on the built-in developer tools.
-- `enable-executor` shows the script executor. It requires developer mode.
-
 ## Supported platforms
 
 - Windows

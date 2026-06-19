@@ -4,6 +4,7 @@
 #include "framework/usertype/DeferredRelease.hpp"
 
 #include <Geode/Geode.hpp>
+#include <Geode/loader/SettingV3.hpp>
 #include <imgui-cocos.hpp>
 #include <imgui.h>
 
@@ -26,6 +27,18 @@ namespace luax {
                 initImGuiHost();
             });
             return;
+        }
+
+        ImGuiCocos::get().setDisplayScale(
+            static_cast<float>(geode::Mod::get()->getSettingValue<double>("imgui-scale"))
+        );
+
+        static bool s_scaleListenerRegistered = false;
+        if (!s_scaleListenerRegistered) {
+            s_scaleListenerRegistered = true;
+            geode::listenForSettingChanges<double>("imgui-scale", [](double value) {
+                ImGuiCocos::get().setDisplayScale(static_cast<float>(value));
+            });
         }
 
         ImGuiCocos::get()

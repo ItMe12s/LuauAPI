@@ -278,11 +278,19 @@ void ImGuiCocos::reload() {
 	m_reloading = true;
 }
 
-static constexpr float kDisplayScale = 4.5f;
+void ImGuiCocos::setDisplayScale(float scale) {
+	if (scale > 0.f)
+		m_displayScale = scale;
+}
+
+float ImGuiCocos::getDisplayScale() const {
+	return m_displayScale;
+}
 
 ImVec2 ImGuiCocos::displaySize() {
+	const auto scale = get().m_displayScale;
 	const auto winSize = CCDirector::sharedDirector()->getWinSize();
-	return {winSize.width * kDisplayScale, winSize.height * kDisplayScale};
+	return {winSize.width * scale, winSize.height * scale};
 }
 
 ImVec2 ImGuiCocos::cocosToFrame(const CCPoint& pos) {

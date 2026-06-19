@@ -33,9 +33,27 @@
 		]
 	},
 	"settings": {
+		"title-user-settings": {
+			"type": "title",
+			"name": "User Settings"
+		},
+		"imgui-scale": {
+			"name": "ImGui Scale (Higher = Smaller)",
+			"description": "Scales the ImGui interface. Higher values make the UI smaller. Consistent across all platforms (including Retina display and SDL mod).",
+			"type": "float",
+			"default": 4.5,
+			"min": 2.0,
+			"max": 6.0,
+			"control": {
+				"slider": true,
+				"arrows": true,
+				"arrow-step": 0.25,
+				"input": true
+			}
+		},
 		"title-enable-developer-mode": {
 			"type": "title",
-			"name": "Developer Mode (Read Descriptions)"
+			"name": "Developer Settings"
 		},
 		"enable-developer-mode": {
 			"type": "bool",
@@ -43,10 +61,6 @@
 			"description": "Load built-in scripts and environment for developing mods on game startup. Only enable if you know what you're doing.",
 			"default": false,
 			"requires-restart": true
-		},
-		"title-developer-tools": {
-			"type": "title",
-			"name": "Developer Tools"
 		},
 		"enable-executor": {
 			"name": "Enable Script Executor",

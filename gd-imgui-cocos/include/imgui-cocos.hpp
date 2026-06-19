@@ -21,6 +21,7 @@ private:
 	std::function<void()> m_setupCall, m_drawCall;
 	InputMode m_inputMode = InputMode::Default;
 	ImGuiMouseCursor m_lastCursor = ImGuiMouseCursor_COUNT;
+	float m_displayScale = 4.0f;
 #ifdef IMGUI_HAS_TEXTURES
 	void updateTexture(ImTextureData*) const;
 #else
@@ -62,6 +63,10 @@ public:
 
 	void setForceLegacy(bool force);
 	[[nodiscard]] bool getForceLegacy() const;
+
+	// Higher = smaller UI.
+	void setDisplayScale(float scale);
+	[[nodiscard]] float getDisplayScale() const;
 
 	[[nodiscard]] bool isInitialized() const;
 	

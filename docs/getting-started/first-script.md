@@ -46,11 +46,12 @@ LuauAPI owns the runtime, so you do not start it. Check `status()` is `Ready` fi
 The file name must be a flat `.luau` resource name inside the resources directory you pass.
 See [modules](../reference/lua/modules.md) and [Limits and errors](../reference/cpp/limits-and-errors.md).
 
-## Developer mode
+## Using the executor
 
-LuauAPI ships built-in developer tools, such as a script executor.
-They load only when developer mode is on in mod settings.
-See [Installation](installation.md).
+LuauAPI ships a built-in script executor.
+It is an ImGui window where you write Luau and run it live in the game.
+Enable it in the mod settings under Developer Settings.
+Use it to test snippets without a build step.
 
 ## Next
 
