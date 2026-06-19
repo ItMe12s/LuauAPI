@@ -579,6 +579,8 @@ void ImGuiCocos::updateTexture(ImTextureData* tex) const {
 		// cocos has no function for this, do it manually with opengl
 		// copied from `imgui_impl_opengl3.cpp`
 	#ifdef GL_UNPACK_ALIGNMENT
+		GLint lastUnpackAlignment = 0;
+		glGetIntegerv(GL_UNPACK_ALIGNMENT, &lastUnpackAlignment);
 		// dont mess up odd widths
 		glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 	#endif
@@ -610,6 +612,9 @@ void ImGuiCocos::updateTexture(ImTextureData* tex) const {
 	#endif
 
 		glBindTexture(GL_TEXTURE_2D, lastTexture); // Restore state
+	#ifdef GL_UNPACK_ALIGNMENT
+		glPixelStorei(GL_UNPACK_ALIGNMENT, lastUnpackAlignment);
+	#endif
 
 		tex->SetStatus(ImTextureStatus_OK);
 	} else if (tex->Status == ImTextureStatus_WantDestroy) {
