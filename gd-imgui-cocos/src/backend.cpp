@@ -342,6 +342,19 @@ void ImGuiCocos::newFrame() {
 	glGetIntegerv(GL_VIEWPORT, vp);
 	m_frameSize = {static_cast<float>(vp[2]), static_cast<float>(vp[3])};
 	io.DisplaySize = m_frameSize;
+
+	// TEMP
+	static bool s_loggedScaling = false;
+	if (!s_loggedScaling && vp[2] > 0 && vp[3] > 0) {
+		s_loggedScaling = true;
+		const auto fs = director->getOpenGLView()->getFrameSize();
+		const auto ws = director->getWinSize();
+		geode::log::info(
+			"imgui-cocos diag frameSize=({}, {}) displayFactor={} viewport=(x{}, y{}, w{}, h{}) winSize=({}, {})",
+			fs.width, fs.height, geode::utils::getDisplayFactor(),
+			vp[0], vp[1], vp[2], vp[3], ws.width, ws.height
+		);
+	}
 	if (director->getDeltaTime() > 0.f) {
 		io.DeltaTime = director->getDeltaTime();
 	} else {
