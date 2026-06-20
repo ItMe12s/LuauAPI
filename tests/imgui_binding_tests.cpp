@@ -9,7 +9,6 @@
 #include <Geode/loader/Mod.hpp>
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
-#include <chrono>
 #include <filesystem>
 #include <imgui.h>
 #include <initializer_list>
@@ -137,14 +136,11 @@ namespace {
     }
 
     struct TestMod {
-        std::filesystem::path dir;
+        luauapi_test::ScopedTempDir temp{"luauapi_imgui_font_"};
+        std::filesystem::path const& dir = temp.path;
         geode::Mod* mod = nullptr;
 
         TestMod() {
-            dir = std::filesystem::temp_directory_path() /
-                ("luauapi_imgui_font_" +
-                 std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
-            REQUIRE(std::filesystem::create_directories(dir));
             mod = geode::Mod::create(dir);
         }
 
@@ -152,8 +148,6 @@ namespace {
             if (mod) {
                 geode::Mod::destroy(mod);
             }
-            std::error_code ec;
-            std::filesystem::remove_all(dir, ec);
         }
     };
 

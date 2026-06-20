@@ -4,7 +4,6 @@
 #include "framework/Binding.hpp"
 #include "host/lua_test_helpers.hpp"
 
-#include <Geode/utils/main_thread.hpp>
 #include <atomic>
 #include <catch2/catch_test_macros.hpp>
 #include <chrono>
@@ -29,20 +28,7 @@ namespace {
         return 59200 + (g_portCounter.fetch_add(1) % 800);
     }
 
-    struct WebSocketRuntimeGuard {
-        WebSocketRuntimeGuard() {
-            Runtime::setMainThreadId(std::this_thread::get_id());
-            geode::test::bindMainThreadToCurrent();
-            resetBindingsForTests();
-        }
-
-        ~WebSocketRuntimeGuard() {
-            clearWsState();
-            geode::test::clearMainThreadQueue();
-            Runtime::resetForTests();
-            resetBindingsForTests();
-        }
-    };
+    using WebSocketRuntimeGuard = luauapi_test::WebSocketRuntimeGuard;
 
     struct WsRuntimeFixture {
         lua_State* L = nullptr;

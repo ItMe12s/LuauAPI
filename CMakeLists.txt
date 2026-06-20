@@ -122,13 +122,6 @@ if(LUAUAPI_BUILD_TESTS)
     )
     FetchContent_MakeAvailable(Catch2)
 
-    FetchContent_Declare(
-        fmt
-        GIT_REPOSITORY https://github.com/fmtlib/fmt.git
-        GIT_TAG        12.1.0
-    )
-    FetchContent_MakeAvailable(fmt)
-
     file(GLOB LUAUAPI_TEST_SOURCES CONFIGURE_DEPENDS
         ${CMAKE_CURRENT_SOURCE_DIR}/tests/*.cpp)
 
@@ -196,7 +189,7 @@ if(LUAUAPI_BUILD_TESTS)
         tests/host/SceneDrawListTests.cpp
         ${LUAUAPI_TEST_SOURCES}
     )
-    luauapi_force_msvc_idl0(luauapi_tests Catch2 Catch2WithMain fmt luauapi_imgui_headless)
+    luauapi_force_msvc_idl0(luauapi_tests Catch2 Catch2WithMain luauapi_imgui_headless)
     target_compile_features(luauapi_tests PRIVATE cxx_std_23)
     target_include_directories(luauapi_tests PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/tests
@@ -211,7 +204,6 @@ if(LUAUAPI_BUILD_TESTS)
         "LUAUAPI_TEST_FONT_PATH=\"${imgui_headless_SOURCE_DIR}/misc/fonts/DroidSans.ttf\"")
     target_link_libraries(luauapi_tests PRIVATE
         Catch2::Catch2WithMain
-        fmt::fmt
         glm::glm
         Luau.VM
         Luau.Compiler

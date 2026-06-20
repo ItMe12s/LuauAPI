@@ -4,6 +4,7 @@
 #include "bindings/imgui/ImGuiDrawScheduler.hpp"
 #include "bindings/imgui/ImGuiFontRegistry.hpp"
 #include "bindings/task/TaskScheduler.hpp"
+#include "bindings/websocket/WebSocketInternal.hpp"
 #include "core/Runtime.hpp"
 #include "framework/Binding.hpp"
 #include "framework/callback/LuaTrampolineRegistry.hpp"
@@ -11,6 +12,7 @@
 #include "framework/usertype/LuaRef.hpp"
 
 #include <Geode/loader/Mod.hpp>
+#include <Geode/utils/main_thread.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <chrono>
 #include <cstdint>
@@ -166,6 +168,21 @@ namespace luauapi_test {
         ~ImGuiBindingRuntimeGuard() {
             luax::ImGuiDrawScheduler::get().clear();
             luax::imguiFontClear();
+        }
+    };
+
+    struct WebSocketRuntimeGuard {
+        WebSocketRuntimeGuard() {
+            luax::Runtime::setMainThreadId(std::this_thread::get_id());
+            geode::test::bindMainThreadToCurrent();
+            luax::resetBindingsForTests();
+        }
+
+        ~WebSocketRuntimeGuard() {
+            luax::clearWsState();
+            geode::test::clearMainThreadQueue();
+            luax::Runtime::resetForTests();
+            luax::resetBindingsForTests();
         }
     };
 

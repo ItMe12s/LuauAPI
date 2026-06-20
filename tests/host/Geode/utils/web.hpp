@@ -552,60 +552,32 @@ namespace geode::utils::web {
     inline void openLinkInBrowser(ZStringView /*url*/) {}
 
     namespace detail {
+        struct WebRequestInterceptEventTag {};
+        struct IDBasedWebRequestInterceptEventTag {};
+        struct WebResponseEventTag {};
+        struct IDBasedWebResponseEventTag {};
+
         template <class EventTag, class Cb>
         geode::ListenerHandle listenEvent(Cb&& cb, int /*priority*/) {
             auto handler = std::make_shared<std::decay_t<Cb>>(std::forward<Cb>(cb));
             return geode::ListenerHandle([handler]() mutable { handler.reset(); });
         }
+
+        template <class Tag>
+        struct WebEvent {
+            WebEvent() = default;
+            template <class T>
+            explicit WebEvent(T&&) {}
+
+            template <class Cb>
+            geode::ListenerHandle listen(Cb&& cb, int priority = 0) {
+                return listenEvent<Tag>(std::forward<Cb>(cb), priority);
+            }
+        };
     } // namespace detail
 
-    struct WebRequestInterceptEvent {
-        WebRequestInterceptEvent() = default;
-        explicit WebRequestInterceptEvent(std::string modID) : m_modID(std::move(modID)) {}
-        template <class Cb>
-        geode::ListenerHandle listen(Cb&& cb, int priority = 0) {
-            (void)m_modID;
-            return detail::listenEvent<WebRequestInterceptEvent>(std::forward<Cb>(cb), priority);
-        }
-
-    private:
-        std::optional<std::string> m_modID;
-    };
-
-    struct IDBasedWebRequestInterceptEvent {
-        explicit IDBasedWebRequestInterceptEvent(std::size_t requestID) : m_requestID(requestID) {}
-        template <class Cb>
-        geode::ListenerHandle listen(Cb&& cb, int priority = 0) {
-            (void)m_requestID;
-            return detail::listenEvent<IDBasedWebRequestInterceptEvent>(std::forward<Cb>(cb), priority);
-        }
-
-    private:
-        std::size_t m_requestID = 0;
-    };
-
-    struct WebResponseEvent {
-        WebResponseEvent() = default;
-        explicit WebResponseEvent(std::string modID) : m_modID(std::move(modID)) {}
-        template <class Cb>
-        geode::ListenerHandle listen(Cb&& cb, int priority = 0) {
-            (void)m_modID;
-            return detail::listenEvent<WebResponseEvent>(std::forward<Cb>(cb), priority);
-        }
-
-    private:
-        std::optional<std::string> m_modID;
-    };
-
-    struct IDBasedWebResponseEvent {
-        explicit IDBasedWebResponseEvent(std::size_t requestID) : m_requestID(requestID) {}
-        template <class Cb>
-        geode::ListenerHandle listen(Cb&& cb, int priority = 0) {
-            (void)m_requestID;
-            return detail::listenEvent<IDBasedWebResponseEvent>(std::forward<Cb>(cb), priority);
-        }
-
-    private:
-        std::size_t m_requestID = 0;
-    };
+    using WebRequestInterceptEvent = detail::WebEvent<detail::WebRequestInterceptEventTag>;
+    using IDBasedWebRequestInterceptEvent = detail::WebEvent<detail::IDBasedWebRequestInterceptEventTag>;
+    using WebResponseEvent = detail::WebEvent<detail::WebResponseEventTag>;
+    using IDBasedWebResponseEvent = detail::WebEvent<detail::IDBasedWebResponseEventTag>;
 } // namespace geode::utils::web

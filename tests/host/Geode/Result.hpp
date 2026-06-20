@@ -26,14 +26,7 @@ namespace geode {
         Result() = default;
 
         template <class U>
-        Result(impl::OkHolder<U> holder)
-            : m_value(static_cast<Stored>(std::move(holder.value))) {}
-
-        static Result ok(T value) {
-            Result result;
-            result.m_value = static_cast<Stored>(value);
-            return result;
-        }
+        Result(impl::OkHolder<U> holder) : m_value(static_cast<Stored>(std::move(holder.value))) {}
 
         static Result err(std::string message) {
             Result result;

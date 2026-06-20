@@ -1,6 +1,6 @@
 #pragma once
 
-#include <fmt/format.h>
+#include <format>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -28,7 +28,7 @@ namespace geode::log {
             return std::string(pattern);
         }
         else {
-            return fmt::format(fmt::runtime(pattern), std::forward<Args>(args)...);
+            return std::vformat(pattern, std::make_format_args(args...));
         }
     }
 

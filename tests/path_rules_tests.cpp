@@ -1,7 +1,7 @@
+#include "host/lua_test_helpers.hpp"
 #include "require/PathSandbox.hpp"
 
 #include <catch2/catch_test_macros.hpp>
-#include <chrono>
 #include <filesystem>
 #include <string>
 
@@ -55,18 +55,14 @@ TEST_CASE("root escape text check catches parent traversal") {
 }
 
 TEST_CASE("root containment rejects paths outside root") {
-    auto base = std::filesystem::temp_directory_path() /
-        ("luauapi_path_rules_" +
-         std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
-    auto root = base / "root";
+    luauapi_test::ScopedTempDir base{"luauapi_path_rules_"};
+    auto root = base.path / "root";
     auto child = root / "Bootstrap.luau";
-    auto outside = base / "outside" / "Bootstrap.luau";
+    auto outside = base.path / "outside" / "Bootstrap.luau";
 
     REQUIRE(std::filesystem::create_directories(root));
     REQUIRE(std::filesystem::create_directories(outside.parent_path()));
 
     REQUIRE(luax::pathInsideRootValue(child, root));
     REQUIRE_FALSE(luax::pathInsideRootValue(outside, root));
-
-    std::filesystem::remove_all(base);
 }
