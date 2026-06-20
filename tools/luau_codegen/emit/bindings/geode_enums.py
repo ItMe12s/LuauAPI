@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from luau_codegen.model.codegen_context import CodegenContext
 from luau_codegen.emit.cxx_templates import file_preamble
-from luau_codegen.util.identifiers import cxx_id
+from luau_codegen.util import cxx_id
 
 GEODE_ENUMS_MANIFEST = "bindings/geode/GeodeEnums.manifest.hpp"
 GEODE_ENUMS_BINDING = "bindings_geode_enums.cpp"

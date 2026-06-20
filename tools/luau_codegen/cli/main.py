@@ -6,7 +6,7 @@ from pathlib import Path
 import sys
 from typing import List
 
-from luau_codegen.util.platforms import VALID_PLATFORMS
+from luau_codegen.util import VALID_PLATFORMS
 from luau_codegen.policy.intersection import intersection_platforms
 from luau_codegen.emit import bindings as emit_bindings
 from luau_codegen.emit import luau_types as emit_types

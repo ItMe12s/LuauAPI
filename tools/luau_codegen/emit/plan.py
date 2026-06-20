@@ -38,7 +38,7 @@ from luau_codegen.model.domain import (
     resolve_base,
 )
 from luau_codegen.model.codegen_context import CodegenContext
-from luau_codegen.util.paths import binding_filename
+from luau_codegen.util import binding_filename
 
 from luau_codegen.emit.bindings.cocos_enums import ENUM_KEY_CODES_MANIFEST
 from luau_codegen.emit.bindings.geode_enums import GEODE_ENUMS_BINDING, GEODE_ENUMS_MANIFEST

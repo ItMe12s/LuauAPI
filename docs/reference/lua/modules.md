@@ -48,6 +48,5 @@ For the full load pipeline, see [Module system](../../contributor/internals/modu
 ## Source
 
 - `src/require/Requirer.cpp`
-- `src/require/RequirePath.hpp`
-- `src/require/PathRules.hpp`
+- `src/require/PathSandbox.hpp`
 - `src/core/Config.hpp`

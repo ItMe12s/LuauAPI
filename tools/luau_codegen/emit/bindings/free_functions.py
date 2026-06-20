@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 from luau_codegen.model.free_fn_sources import free_function_includes
 from luau_codegen.parse.broma import Class, Function
-from luau_codegen.util.identifiers import cxx_id
+from luau_codegen.util import cxx_id
 from luau_codegen.emit.bindings.invoke_common import (
     emit_invoke_return_tail,
     emit_invoke_void_tail,

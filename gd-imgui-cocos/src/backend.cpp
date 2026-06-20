@@ -14,8 +14,7 @@
 
 using namespace geode::prelude;
 
-// little helper function to convert ImTexture2D <=> GLuint,
-// supporting both versions of imgui where this was a void* and is now a u64
+// Cast ImTextureID (OpenGL texture name) to and from GLuint.
 
 static GLuint toGLTexture(ImTextureID tex) {
 	return static_cast<GLuint>(tex);

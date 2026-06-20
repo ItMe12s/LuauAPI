@@ -6,7 +6,7 @@ from typing import Any
 from luau_codegen.policy.fields import field_key
 from luau_codegen.policy.filtering import method_key
 from luau_codegen.policy.free_functions import free_function_key
-from luau_codegen.util.platforms import INTERSECTION_PLATFORMS
+from luau_codegen.util import INTERSECTION_PLATFORMS
 
 
 def intersection_platforms(target_platform: str = "win") -> tuple[str, ...]:

@@ -10,7 +10,7 @@ from luau_codegen.policy.hooks import hook_address_expr
 from luau_codegen.convert.marshalling import emit_stack_check, push_value
 from luau_codegen.model.domain import cxx_name, lua_namespace
 from luau_codegen.convert.type_map import TypeInfo, classify_arg, classify_return
-from luau_codegen.util.identifiers import cxx_id
+from luau_codegen.util import cxx_id
 
 
 def _cstr(value: str) -> str:

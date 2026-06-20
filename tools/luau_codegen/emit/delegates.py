@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING
 
 from luau_codegen.cli.io import _write_if_changed
 from luau_codegen.convert.type_map import is_reference_type, strip_ref
+from luau_codegen.model.value_types import VALUE_TYPES
 
 if TYPE_CHECKING:
     from luau_codegen.model import delegate_specs as delegate_specs_module
@@ -254,11 +255,6 @@ LUA_TYPES: dict[str, str] = {
     "const char*": "string",
     "gd::string": "string",
     "std::string": "string",
-    "cocos2d::ccColor3B": "RGBColor",
-    "cocos2d::ccColor4B": "RGBAColor",
-    "cocos2d::CCPoint": "CCPoint",
-    "cocos2d::CCSize": "CCSize",
-    "cocos2d::CCRect": "CCRect",
     "IconType": "number",
     "UnlockType": "number",
     "SearchType": "number",
@@ -273,11 +269,11 @@ LUA_TYPES: dict[str, str] = {
     "ColorSelectType": "number",
     "BoomListType": "number",
     "AudioGuidelinesType": "number",
-    "cocos2d::ccHSVValue": "HSVValue",
     "CCIndexPath": "CCIndexPath",
     "TableView": "TableView",
     "TableViewCell": "TableViewCell",
 }
+LUA_TYPES.update(VALUE_TYPES)
 
 ENUM_SUFFIXES = ("Type", "Error", "Action", "Command", "Mode")
 PRIMITIVE_POINTER_BASES = frozenset(

@@ -22,7 +22,7 @@ It keeps all loading inside the resources root.
 
 ## Path rules
 
-Path helpers live in `PathRules.hpp`, `PathSandbox.hpp`, and `RequirePath.hpp`.
+Path helpers live in `PathSandbox.hpp`.
 User-facing require rules are in [modules](../../reference/lua/modules.md).
 
 - `validateResourcePath()` checks flat names and the `.luau` extension policy.
@@ -72,7 +72,5 @@ See [Limits and errors](../../reference/cpp/limits-and-errors.md).
 
 - `src/require/Requirer.cpp`
 - `src/require/Requirer.hpp`
-- `src/require/RequirePath.hpp`
-- `src/require/PathRules.hpp`
 - `src/require/PathSandbox.hpp`
 - `src/require/BytecodeCacheKey.hpp`

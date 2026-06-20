@@ -5,7 +5,7 @@ import re
 from typing import TYPE_CHECKING, Dict, List, Optional
 
 from luau_codegen.parse.text import strip_comments
-from luau_codegen.util.platforms import INTERSECTION_PLATFORMS
+from luau_codegen.util import INTERSECTION_PLATFORMS
 
 if TYPE_CHECKING:
     from luau_codegen.model.codegen_context import CodegenContext

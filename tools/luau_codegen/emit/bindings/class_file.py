@@ -33,7 +33,7 @@ from luau_codegen.convert.type_map import (
     require_classify_arg,
     require_classify_return,
 )
-from luau_codegen.util.identifiers import cxx_id
+from luau_codegen.util import cxx_id
 
 
 def _classify_method_args(

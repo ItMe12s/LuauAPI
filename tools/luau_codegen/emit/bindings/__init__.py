@@ -25,7 +25,7 @@ def emit(
 ) -> tuple[dict[str, str], list[tuple[str, str, str]]]:
     from luau_codegen.emit.plan import collect_plan
     from luau_codegen.emit.cxx_templates import emit_internal_hpp
-    from luau_codegen.util.paths import binding_filename
+    from luau_codegen.util import binding_filename
     from luau_codegen.emit.bindings.class_file import _emit_class_file
     from luau_codegen.emit.bindings.common import _emit_common_file
     from luau_codegen.emit.bindings.cocos_enums import (
