@@ -242,7 +242,6 @@ _G.viewportdemo_imguiHandle = imgui.onDraw(function()
                 state.posY = winSize.height / 2
             end
         end
-        applyViewportNode()
 
         imgui.separator()
         imgui.text("Camera")
@@ -251,12 +250,10 @@ _G.viewportdemo_imguiHandle = imgui.onDraw(function()
         state.fov = imgui.sliderFloat("FOV", state.fov, 10, 120)
         state.near = imgui.sliderFloat("Near", state.near, 0.01, 10, "%.2f")
         state.far = imgui.sliderFloat("Far", state.far, 10, 500)
-        applyCamera()
 
         imgui.separator()
         imgui.text("Background")
         sliderRgba("BG", state.bg)
-        applyBackground()
 
         imgui.separator()
         imgui.text("Lighting")
@@ -264,34 +261,28 @@ _G.viewportdemo_imguiHandle = imgui.onDraw(function()
         sliderVec3("Light color", state.lightColor, 0, 2)
         state.intensity = imgui.sliderFloat("Intensity", state.intensity, 0, 4)
         state.ambient = imgui.sliderFloat("Ambient", state.ambient, 0, 4)
-        applyLight()
 
         imgui.separator()
         imgui.text("Donut instance")
         state.autoSpin = imgui.checkbox("Auto spin", state.autoSpin)
         state.spinSpeed = imgui.sliderFloat("Spin speed", state.spinSpeed, 0, 0.1, "%.3f")
+        state.pitch = imgui.sliderFloat("Pitch", state.pitch, -math.pi, math.pi, "%.2f")
         if not state.autoSpin then
-            state.pitch = imgui.sliderFloat("Pitch", state.pitch, -math.pi, math.pi, "%.2f")
             state.yaw = imgui.sliderFloat("Yaw", state.yaw, -math.pi, math.pi, "%.2f")
             state.roll = imgui.sliderFloat("Roll", state.roll, -math.pi, math.pi, "%.2f")
         else
-            state.pitch = imgui.sliderFloat("Pitch", state.pitch, -math.pi, math.pi, "%.2f")
             imgui.text("Yaw driven by auto spin")
         end
         state.autoColor = imgui.checkbox("Auto color", state.autoColor)
         if not state.autoColor then
             sliderVec3("Color", state.color, 0, 2)
         end
-        applyDonutTransform()
-        applyDonutColor()
 
         imgui.separator()
         imgui.text("Triangle instance")
         if state.triId then
             sliderVec3("Tri pos", state.triPos, -5, 5)
             sliderRgba("Tri mat", state.triMat)
-            applyTriTransform()
-            applyTriMaterial()
         else
             imgui.text("Triangle mesh unavailable")
         end
@@ -301,7 +292,8 @@ _G.viewportdemo_imguiHandle = imgui.onDraw(function()
         sliderVec3("From", state.lineFrom, -3, 3)
         sliderVec3("To", state.lineTo, -3, 3)
         sliderVec3("Line color", state.lineColor, 0, 2)
-        syncDebugLine()
+
+        applyAll()
 
         imgui.separator()
         imgui.text("Info")

@@ -44,27 +44,43 @@ local state = {
     selectedRow = 1,
     -- Settings
     showFloaters = true,
-    -- Floating panels
-    primary = {
-        optionA = false,
-        optionB = false,
-        optionC = false,
-        optionD = true,
-        amount = 0.5,
-    },
-    secondary = {
-        optionA = false,
-        optionB = false,
-        optionC = false,
-        optionD = true,
-        rate = 1.2,
-    },
-    tertiary = {
-        optionA = false,
-        optionB = false,
-        optionC = false,
-        optionD = true,
-        blend = 0.85,
+    panels = {
+        {
+            title = "Panel A",
+            pos = { x = 560, y = 60 },
+            optionA = false,
+            optionB = false,
+            optionC = false,
+            optionD = true,
+            sliderLabel = "Amount",
+            sliderValue = 0.5,
+            sliderMin = 0,
+            sliderMax = 1,
+        },
+        {
+            title = "Panel B",
+            pos = { x = 40, y = 480 },
+            optionA = false,
+            optionB = false,
+            optionC = false,
+            optionD = true,
+            sliderLabel = "Rate",
+            sliderValue = 1.2,
+            sliderMin = 0.5,
+            sliderMax = 3,
+        },
+        {
+            title = "Panel C",
+            pos = { x = 560, y = 360 },
+            optionA = false,
+            optionB = false,
+            optionC = false,
+            optionD = true,
+            sliderLabel = "Blend",
+            sliderValue = 0.85,
+            sliderMin = 0,
+            sliderMax = 1,
+        },
     },
 }
 
@@ -316,29 +332,21 @@ local function drawMainWindow()
     end)
 end
 
-local FLOATING_PANELS = {
-    { title = "Panel A", pos = { x = 560, y = 60 }, key = "primary" },
-    { title = "Panel B", pos = { x = 40, y = 480 }, key = "secondary" },
-    { title = "Panel C", pos = { x = 560, y = 360 }, key = "tertiary" },
-}
-
-local function drawFloater(panel: { title: string, pos: { x: number, y: number }, key: string })
-    local panelState = state[panel.key]
+local function drawFloater(panel: typeof(state.panels[1]))
     imgui.style.with({
         alpha = state.menuAnim * 0.95,
     }, function()
         imgui.window(panel.title, function()
-            panelState.optionA = imgui.checkbox("Option A", panelState.optionA)
-            panelState.optionB = imgui.checkbox("Option B", panelState.optionB)
-            panelState.optionC = imgui.checkbox("Option C", panelState.optionC)
-            panelState.optionD = imgui.checkbox("Option D", panelState.optionD)
-            if panel.key == "primary" then
-                panelState.amount = imgui.sliderFloat("Amount", panelState.amount, 0, 1)
-            elseif panel.key == "secondary" then
-                panelState.rate = imgui.sliderFloat("Rate", panelState.rate, 0.5, 3)
-            else
-                panelState.blend = imgui.sliderFloat("Blend", panelState.blend, 0, 1)
-            end
+            panel.optionA = imgui.checkbox("Option A", panel.optionA)
+            panel.optionB = imgui.checkbox("Option B", panel.optionB)
+            panel.optionC = imgui.checkbox("Option C", panel.optionC)
+            panel.optionD = imgui.checkbox("Option D", panel.optionD)
+            panel.sliderValue = imgui.sliderFloat(
+                panel.sliderLabel,
+                panel.sliderValue,
+                panel.sliderMin,
+                panel.sliderMax
+            )
         end, {
             pos = panel.pos,
             posCond = imgui.Cond.FirstUseEver,
@@ -354,7 +362,7 @@ local function drawFloatingPanels()
     if not state.showFloaters then
         return
     end
-    for _, panel in FLOATING_PANELS do
+    for _, panel in state.panels do
         drawFloater(panel)
     end
 end
