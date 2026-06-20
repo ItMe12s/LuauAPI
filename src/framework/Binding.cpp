@@ -2,7 +2,7 @@
 
 #include <Geode/Geode.hpp>
 #include <algorithm>
-#include <format>
+#include <fmt/format.h>
 #include <vector>
 
 namespace luax {
@@ -26,7 +26,7 @@ namespace luax {
         for (auto const& binding : ordered) {
             auto result = binding.fn(L);
             if (result.isErr()) {
-                auto msg = std::format("[lua:bind:{}] {}", binding.name, result.unwrapErr());
+                auto msg = fmt::format("[lua:bind:{}] {}", binding.name, result.unwrapErr());
                 geode::log::error("{}", msg);
                 return msg;
             }

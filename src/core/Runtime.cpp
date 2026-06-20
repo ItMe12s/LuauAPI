@@ -24,7 +24,7 @@
 #include <cctype>
 #include <cstdlib>
 #include <cstring>
-#include <format>
+#include <fmt/format.h>
 #include <lua.h>
 #include <lualib.h>
 #include <optional>
@@ -632,7 +632,7 @@ namespace luax {
         std::string const& key, std::string compiled, long long compileMs
     ) {
         if (!compileTimeWithinBudget(compileMs, kMaxCompileDeadlineMs)) {
-            setLastError(std::format("luau compile exceeded {} ms budget", kMaxCompileDeadlineMs));
+            setLastError(fmt::format("luau compile exceeded {} ms budget", kMaxCompileDeadlineMs));
             geode::log::warn(
                 "luau compile [{}] exceeded {}ms budget ({}ms)", key, kMaxCompileDeadlineMs, compileMs
             );
@@ -816,7 +816,7 @@ namespace luax {
             int const invokeTop = lua_gettop(invokeL);
             int const funcIdx = invokeTop - nargs;
             if (nargs < 0 || funcIdx < 1 || !lua_isfunction(invokeL, funcIdx)) {
-                auto err = std::format("[{}] luau protectedCall missing function", context);
+                auto err = fmt::format("[{}] luau protectedCall missing function", context);
                 geode::log::error("{}", err);
                 return failWith(std::move(err));
             }
@@ -825,7 +825,7 @@ namespace luax {
         else {
             int baseTop = lua_gettop(m_state) - nargs;
             if (nargs < 0 || baseTop < 1 || !lua_isfunction(m_state, baseTop)) {
-                auto err = std::format("[{}] luau protectedCall missing function", context);
+                auto err = fmt::format("[{}] luau protectedCall missing function", context);
                 geode::log::error("{}", err);
                 return failWith(std::move(err));
             }
