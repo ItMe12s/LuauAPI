@@ -7,6 +7,7 @@
 #include <Geode/modify/CCKeyboardDispatcher.hpp>
 
 #include <imgui.h>
+#include <string>
 
 using namespace geode::prelude;
 
@@ -28,43 +29,22 @@ class $modify(ImGuiCocosCCMouseDispatcher, CCMouseDispatcher) {
 };
 #endif
 
-// 2.2 adds some new arguments to the dispatchers
-#if GEODE_COMP_GD_VERSION >= 22000
-	#define IF_2_2(...) __VA_ARGS__
-#else
-	#define IF_2_2(...)
-#endif
-
-#if GEODE_COMP_GD_VERSION >= 22070
-	#define IF_2_207(...) __VA_ARGS__
-#else
-	#define IF_2_207(...)
-#endif
-
-#if GEODE_COMP_GD_VERSION >= 22080
-	#define IF_2_208(...) __VA_ARGS__
-#else
-	#define IF_2_208(...)
-#endif
-
 class $modify(ImGuiCocosCCIMEDispatcher, CCIMEDispatcher) {
-	void dispatchInsertText(const char* text, int len IF_2_2(, enumKeyCodes keys)) {
+	void dispatchInsertText(const char* text, int len, enumKeyCodes keys) {
 		if (!ImGuiCocos::get().isInitialized())
-			return CCIMEDispatcher::dispatchInsertText(text, len IF_2_2(, keys));
+			return CCIMEDispatcher::dispatchInsertText(text, len, keys);
 
 		auto& io = ImGui::GetIO();
 		if (!io.WantCaptureKeyboard) {
-			CCIMEDispatcher::dispatchInsertText(text, len IF_2_2(, keys));
+			CCIMEDispatcher::dispatchInsertText(text, len, keys);
 		}
 
-#if GEODE_COMP_GD_VERSION >= 22000
 		switch (keys) {
 			case KEY_Left:
 			case KEY_Right:
 				return; // cocos sends 'a' text alongside the keycode
 			default: break;
 		}
-#endif
 
 		std::string str(text, len);
 		io.AddInputCharactersUTF8(str.c_str());
@@ -78,7 +58,6 @@ class $modify(ImGuiCocosCCIMEDispatcher, CCIMEDispatcher) {
 		if (!io.WantCaptureKeyboard) {
 			CCIMEDispatcher::dispatchDeleteBackward();
 		}
-		// is this really how youre supposed to do this
 		io.AddKeyEvent(ImGuiKey_Backspace, true);
 		io.AddKeyEvent(ImGuiKey_Backspace, false);
 	}
@@ -125,10 +104,6 @@ bool shouldBlockInput() {
 	auto& inst = ImGuiCocos::get();
 	return inst.isVisible() && inst.getInputMode() == ImGuiCocos::InputMode::Blocking;
 }
-
-// Use Geode 5.0.0 keyboard event system
-// would use a geode version check here, but there is no macro for it..
-#if GEODE_COMP_GD_VERSION >= 22080
 
 #ifdef GEODE_IS_MACOS
 // this is a workaround for ListenerResult::Stop preventing dispatchInsertText from getting called on macOS
@@ -177,30 +152,6 @@ $execute {
 	#endif
 	}).leak();
 }
-#else
-// otherwise, hook dispatchKeyboardMSG
-#ifndef GEODE_IS_IOS
-class $modify(ImGuiCocosCCKeyboardDispatcher, CCKeyboardDispatcher) {
-	bool dispatchKeyboardMSG(enumKeyCodes key, bool down IF_2_2(, bool repeat) IF_2_208(, double time)) {
-		if (!ImGuiCocos::get().isInitialized())
-			return CCKeyboardDispatcher::dispatchKeyboardMSG(key, down IF_2_2(, repeat) IF_2_208(, time));
-
-		const bool shouldEatInput = ImGui::GetIO().WantCaptureKeyboard || shouldBlockInput();
-		if (shouldEatInput || !down) {
-			const auto imKey = cocosToImGuiKey(key);
-			if (imKey != ImGuiKey_None) {
-				ImGui::GetIO().AddKeyEvent(imKey, down);
-			}
-		}
-		if (shouldEatInput) {
-			return false;
-		} else {
-			return CCKeyboardDispatcher::dispatchKeyboardMSG(key, down IF_2_2(, repeat) IF_2_208(, time));
-		}
-	}
-};
-#endif
-#endif
 
 class $modify(ImGuiCocosCCTouchDispatcher, CCTouchDispatcher) {
 	void touches(CCSet* touches, CCEvent* event, unsigned int type) {
@@ -255,7 +206,7 @@ class $modify(ImGuiCocosCCTouchDispatcher, CCTouchDispatcher) {
 
 #include <Geode/modify/CCEGLView.hpp>
 
-class $modify(ImGuiCocosCCEGLView, CCEGLView) {
+class $modify(ImGuiCocosCCEGLView, cocos2d::CCEGLView) {
 #ifdef IMGUI_COCOS_HOOK_EARLY
 	static void onModify(auto& self) {
 		if (!self.setHookPriorityPre("cocos2d::CCEGLView::swapBuffers", Priority::Early)) {
@@ -265,22 +216,12 @@ class $modify(ImGuiCocosCCEGLView, CCEGLView) {
 #endif
 
 	void swapBuffers() {
-		if (ImGuiCocos::get().isInitialized())
+		if (ImGuiCocos::get().isInitialized()) {
 			ImGuiCocos::get().drawFrame();
-
-		CCEGLView::swapBuffers();
+		}
+		cocos2d::CCEGLView::swapBuffers();
 	}
 
-#ifdef GEODE_IS_WINDOWS
-	void toggleFullScreen(bool value IF_2_2(, bool borderless) IF_2_207(, bool fix)) {
-		if (!ImGuiCocos::get().isInitialized())
-			return CCEGLView::toggleFullScreen(value IF_2_2(, borderless) IF_2_207(, fix));
-
-		ImGuiCocos::get().destroy();
-		CCEGLView::toggleFullScreen(value IF_2_2(, borderless) IF_2_207(, fix));
-		ImGuiCocos::get().setup();
-	}
-#endif
 };
 
 #else

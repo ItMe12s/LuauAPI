@@ -3,11 +3,11 @@
 #include "bindings/imgui/ImGuiDrawScheduler.hpp"
 #include "bindings/imgui/ImGuiFontRegistry.hpp"
 #include "framework/usertype/DeferredRelease.hpp"
+#include "render3d/gpu/GlUtil.hpp"
 
 #include <Geode/Geode.hpp>
 #include <Geode/loader/SettingV3.hpp>
 #include <imgui-cocos.hpp>
-#include <imgui.h>
 
 namespace luax {
     namespace {
@@ -20,13 +20,16 @@ namespace luax {
     }
 
     void imguiHostRequestReload() {
+        if (render3d::gpuFeaturesDisabled()) {
+            return;
+        }
         if (imguiHostIsInitialized()) {
             ImGuiCocos::get().reload();
         }
     }
 
     void initImGuiHost() {
-        if (s_initialized) return;
+        if (render3d::gpuFeaturesDisabled() || s_initialized) return;
 
         auto* director = cocos2d::CCDirector::sharedDirector();
         if (!director || !director->getOpenGLView()) {
@@ -74,14 +77,19 @@ namespace luax {
     }
 
     void imguiHostSetVisible(bool visible) {
+        if (render3d::gpuFeaturesDisabled()) return;
         ImGuiCocos::get().setVisible(visible);
     }
 
     void imguiHostToggle() {
+        if (render3d::gpuFeaturesDisabled()) return;
         ImGuiCocos::get().toggle();
     }
 
     bool imguiHostIsVisible() {
+        if (render3d::gpuFeaturesDisabled()) {
+            return false;
+        }
         return ImGuiCocos::get().isVisible();
     }
 } // namespace luax

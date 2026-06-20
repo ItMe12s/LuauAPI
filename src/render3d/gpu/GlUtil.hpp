@@ -8,6 +8,12 @@ namespace luax::render3d {
 
     bool glContextAvailable();
 
+    unsigned glContextGeneration();
+    void bumpGlContextGeneration();
+
+    bool gpuFeaturesDisabled();
+    void disableGpuFeaturesForSession();
+
     bool vaoSupported();
 
     bool instancingSupported();
@@ -27,10 +33,16 @@ namespace luax::render3d {
         GLboolean scissorEnabled = GL_FALSE;
         GLint blendSrc = GL_ONE;
         GLint blendDst = GL_ZERO;
+        GLint program = 0;
+        GLint activeTexture = GL_TEXTURE0;
         int boundTexture = 0;
+        int arrayBuffer = 0;
+        int elementArrayBuffer = 0;
         int framebufferBinding = 0;
+        int vao = 0;
         int viewport[4]{0, 0, 0, 0};
         int scissorBox[4]{0, 0, 0, 0};
+        float clearColor[4]{0.0f, 0.0f, 0.0f, 0.0f};
 
         void capture();
         void restore() const;

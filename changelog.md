@@ -6,10 +6,11 @@
 
 - Added user settings for ImGui scaling.
 - Added ImGui font API (`imgui.font`).
+- Added disabling all GPU features/APIs when changing Fullscreen/Windowed mode.
+- Switched 3D viewport backend from CCNode to CCSprite.
 - Updated default executor font.
 - Fixed crashes when garbage-collecting node/object userdata.
 - Fixed tiny ImGui on macOS Retina with improved scaling and fonts (forked matcool/gd-imgui-cocos).
-- Fixed texture corruption when toggling Fullscreen/Windowed while ImGui is being rendered.
 
 ## v0.1.0-beta.3
 

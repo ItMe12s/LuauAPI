@@ -8,7 +8,9 @@
 
 namespace luax::render3d {
 
-    class CCViewportFrame final : public cocos2d::CCNode {
+    void abandonLiveViewports();
+
+    class CCViewportFrame final : public cocos2d::CCSprite {
     public:
         static CCViewportFrame* create(float width, float height);
 
@@ -51,7 +53,7 @@ namespace luax::render3d {
         std::uint64_t ensureViewportTextureId();
 
         void draw() override;
-        void setContentSize(cocos2d::CCSize const& size) override;
+        void abandonGpuResources();
 
     protected:
         CCViewportFrame();
@@ -60,11 +62,16 @@ namespace luax::render3d {
         bool initWithSize(float width, float height);
 
     private:
+        bool gpuHandlesValid() const;
+
         void ensureFramebuffer();
+        bool createFramebuffer(int pixelWidth, int pixelHeight);
+        cocos2d::CCTexture2D* buildFramebufferTexture(int pixelWidth, int pixelHeight);
         void destroyFramebuffer();
+        void refreshSpriteTexture(cocos2d::CCSize const& points);
+        void detachSpriteTexture();
         void releaseViewportTexture();
         bool hasGlContext() const;
-        void invalidateFramebuffer();
 
         Camera3D m_camera{};
         RenderSettings m_settings{};
@@ -74,8 +81,10 @@ namespace luax::render3d {
         unsigned int m_fbo = 0;
         unsigned int m_colorTexture = 0;
         unsigned int m_depthRenderbuffer = 0;
+        cocos2d::CCTexture2D* m_framebufferTexture = nullptr;
         int m_fboPixelWidth = 0;
         int m_fboPixelHeight = 0;
+        unsigned m_gen = 0;
 
         bool m_compositeEnabled = true;
         std::uint64_t m_viewportTextureId = 0;

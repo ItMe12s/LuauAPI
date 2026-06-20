@@ -33,8 +33,11 @@ namespace luax::render3d {
         Renderer3D(Renderer3D const&) = delete;
         Renderer3D& operator=(Renderer3D const&) = delete;
 
+        void syncContextGen();
+
         Renderer3DPrograms m_programs;
         Renderer3DMeshCache m_meshCache;
+        unsigned m_gen = 0;
     };
 
 } // namespace luax::render3d

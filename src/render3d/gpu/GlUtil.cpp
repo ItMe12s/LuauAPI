@@ -2,7 +2,19 @@
 
 #include <Geode/Geode.hpp>
 
+namespace {
+    static unsigned s_glContextGeneration = 0;
+} // namespace
+
 namespace luax::render3d {
+
+    unsigned glContextGeneration() {
+        return s_glContextGeneration;
+    }
+
+    void bumpGlContextGeneration() {
+        ++s_glContextGeneration;
+    }
 
     bool glContextAvailable() {
         auto* director = cocos2d::CCDirector::sharedDirector();
@@ -85,10 +97,20 @@ namespace luax::render3d {
         glGetBooleanv(GL_SCISSOR_TEST, &scissorEnabled);
         glGetIntegerv(GL_BLEND_SRC_RGB, &blendSrc);
         glGetIntegerv(GL_BLEND_DST_RGB, &blendDst);
+        glGetIntegerv(GL_CURRENT_PROGRAM, &program);
+        glGetIntegerv(GL_ACTIVE_TEXTURE, &activeTexture);
+        glActiveTexture(GL_TEXTURE0);
         glGetIntegerv(GL_TEXTURE_BINDING_2D, &boundTexture);
+        glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &arrayBuffer);
+        glGetIntegerv(GL_ELEMENT_ARRAY_BUFFER_BINDING, &elementArrayBuffer);
         glGetIntegerv(GL_FRAMEBUFFER_BINDING, &framebufferBinding);
+#if defined(GL_VERTEX_ARRAY_BINDING)
+        glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &vao);
+#endif
         glGetIntegerv(GL_VIEWPORT, viewport);
         glGetIntegerv(GL_SCISSOR_BOX, scissorBox);
+        glGetFloatv(GL_COLOR_CLEAR_VALUE, clearColor);
+        glActiveTexture(static_cast<GLenum>(activeTexture));
     }
 
     void DrawStateSnapshot::restore() const {
@@ -114,15 +136,34 @@ namespace luax::render3d {
         else {
             glDisable(GL_CULL_FACE);
         }
+        cocos2d::ccGLBlendFunc(static_cast<GLenum>(blendSrc), static_cast<GLenum>(blendDst));
+        glBlendFunc(static_cast<GLenum>(blendSrc), static_cast<GLenum>(blendDst));
         if (blendEnabled == GL_TRUE) {
             glEnable(GL_BLEND);
-            glBlendFunc(static_cast<GLenum>(blendSrc), static_cast<GLenum>(blendDst));
         }
         else {
             glDisable(GL_BLEND);
         }
+        cocos2d::ccGLUseProgram(static_cast<GLuint>(program));
+        glUseProgram(static_cast<GLuint>(program));
+        glActiveTexture(GL_TEXTURE0);
         cocos2d::ccGLBindTexture2D(static_cast<GLuint>(boundTexture));
         glBindTexture(GL_TEXTURE_2D, static_cast<GLuint>(boundTexture));
+#if defined(GL_VERTEX_ARRAY_BINDING)
+        if (vaoSupported()) {
+            glBindVertexArray(0);
+        }
+#endif
+        cocos2d::ccGLEnableVertexAttribs(cocos2d::kCCVertexAttribFlag_None);
+#if defined(GL_VERTEX_ARRAY_BINDING)
+        if (vaoSupported()) {
+            glBindVertexArray(static_cast<GLuint>(vao));
+        }
+#endif
+        glBindBuffer(GL_ARRAY_BUFFER, static_cast<GLuint>(arrayBuffer));
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, static_cast<GLuint>(elementArrayBuffer));
+        glClearColor(clearColor[0], clearColor[1], clearColor[2], clearColor[3]);
+        glActiveTexture(static_cast<GLenum>(activeTexture));
     }
 
     unsigned int compileShader(unsigned int type, char const* source) {

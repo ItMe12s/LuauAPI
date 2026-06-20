@@ -4,23 +4,73 @@
 #include "render3d/gpu/GlUtil.hpp"
 #include "render3d/gpu/Renderer3D.hpp"
 #include "render3d/gpu/Texture2D.hpp"
-#include "render3d/gpu/ViewportComposite.hpp"
 
 #include <Geode/Geode.hpp>
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
+#include <unordered_set>
+#include <utility>
+
+// Viewport FBO composite adapted from 3D-API (https://github.com/undefined06855/3D-API)
+// Thank you Undefined!!!
 
 namespace luax::render3d {
-    using cocos2d::CCNode;
     using cocos2d::CCSize;
+    using cocos2d::CCSprite;
+    using cocos2d::CCTexture2D;
 
     namespace {
-        int pixelDimension(float points, float scale) {
-            return std::max(1, static_cast<int>(std::lround(points * scale)));
+        std::pair<int, int> pixelSize(CCSize const& points) {
+            float const scale = cocos2d::CCDirector::sharedDirector()->getContentScaleFactor();
+            auto dim = [scale](float pts) {
+                return std::max(1, static_cast<int>(std::lround(pts * scale)));
+            };
+            return {dim(points.width), dim(points.height)};
+        }
+
+        struct HackCCTexture2D : cocos2d::CCTexture2D {
+            bool initWithGLName(GLuint name, int pixelsWide, int pixelsHigh, CCSize const& contentSize) {
+                m_uName = name;
+                m_tContentSize = contentSize;
+                m_uPixelsWide = static_cast<unsigned int>(pixelsWide);
+                m_uPixelsHigh = static_cast<unsigned int>(pixelsHigh);
+                m_ePixelFormat = cocos2d::kCCTexture2DPixelFormat_RGBA8888;
+                m_fMaxS = pixelsWide > 0 ? contentSize.width / static_cast<float>(pixelsWide) : 1.0f;
+                m_fMaxT = pixelsHigh > 0 ? contentSize.height / static_cast<float>(pixelsHigh) : 1.0f;
+                m_bHasPremultipliedAlpha = false;
+                m_bHasMipmaps = false;
+                setShaderProgram(
+                    cocos2d::CCShaderCache::sharedShaderCache()->programForKey(kCCShader_PositionTexture)
+                );
+                return true;
+            }
+
+            void detach() {
+                m_uName = 0;
+            }
+        };
+
+        std::unordered_set<CCViewportFrame*>& liveViewports() {
+            static std::unordered_set<CCViewportFrame*> s_viewports;
+            return s_viewports;
+        }
+
+        void abandonAllLiveViewports() {
+            for (auto* viewport : liveViewports()) {
+                viewport->abandonGpuResources();
+            }
         }
     } // namespace
 
+    void abandonLiveViewports() {
+        abandonAllLiveViewports();
+    }
+
     CCViewportFrame* CCViewportFrame::create(float width, float height) {
+        if (gpuFeaturesDisabled()) {
+            return nullptr;
+        }
         auto* node = new CCViewportFrame();
         if (node != nullptr && node->initWithSize(width, height)) {
             node->autorelease();
@@ -30,20 +80,36 @@ namespace luax::render3d {
         return nullptr;
     }
 
-    CCViewportFrame::CCViewportFrame() = default;
+    CCViewportFrame::CCViewportFrame() {
+        liveViewports().insert(this);
+    }
 
     CCViewportFrame::~CCViewportFrame() {
+        liveViewports().erase(this);
         releaseViewportTexture();
+        if (gpuFeaturesDisabled() || !hasGlContext() || m_gen != glContextGeneration()) {
+            detachSpriteTexture();
+        }
         destroyFramebuffer();
     }
 
     bool CCViewportFrame::initWithSize(float width, float height) {
-        if (!CCNode::init()) {
+        if (!hasGlContext()) {
             return false;
         }
+        CCSize const points = CCSizeMake(width, height);
+        auto const [pw, ph] = pixelSize(points);
+
+        CCTexture2D* tex = buildFramebufferTexture(pw, ph);
+        if (tex == nullptr || !CCSprite::initWithTexture(tex)) {
+            return false;
+        }
+        m_framebufferTexture = tex;
+
+        setContentSize(points);
         setAnchorPoint(ccp(0.5f, 0.5f));
         ignoreAnchorPointForPosition(false);
-        setContentSize(CCSizeMake(width, height));
+        refreshSpriteTexture(points);
         return true;
     }
 
@@ -128,19 +194,19 @@ namespace luax::render3d {
     }
 
     unsigned int CCViewportFrame::framebuffer() const {
-        return m_fbo;
+        return gpuHandlesValid() ? m_fbo : 0;
     }
 
     unsigned int CCViewportFrame::colorTexture() const {
-        return m_colorTexture;
+        return gpuHandlesValid() ? m_colorTexture : 0;
     }
 
     int CCViewportFrame::framebufferPixelWidth() const {
-        return m_fboPixelWidth;
+        return gpuHandlesValid() ? m_fboPixelWidth : 0;
     }
 
     int CCViewportFrame::framebufferPixelHeight() const {
-        return m_fboPixelHeight;
+        return gpuHandlesValid() ? m_fboPixelHeight : 0;
     }
 
     void CCViewportFrame::setCompositeEnabled(bool enabled) {
@@ -178,6 +244,9 @@ namespace luax::render3d {
     }
 
     std::uint64_t CCViewportFrame::ensureViewportTextureId() {
+        if (gpuFeaturesDisabled()) {
+            return 0;
+        }
         if (m_viewportTextureId != 0) {
             if (TextureRegistry::instance().get(m_viewportTextureId) != nullptr) {
                 return m_viewportTextureId;
@@ -191,17 +260,14 @@ namespace luax::render3d {
         return m_viewportTextureId;
     }
 
-    void CCViewportFrame::setContentSize(CCSize const& size) {
-        CCNode::setContentSize(size);
-        invalidateFramebuffer();
-    }
-
     void CCViewportFrame::draw() {
+        if (gpuFeaturesDisabled()) {
+            return;
+        }
         if (!isVisible()) {
             return;
         }
-
-        CCSize const& size = getContentSize();
+        CCSize const size = getContentSize();
         if (size.width <= 0.0f || size.height <= 0.0f) {
             return;
         }
@@ -210,12 +276,37 @@ namespace luax::render3d {
             return;
         }
 
-        auto& renderer = Renderer3D::instance();
-        renderer.renderToFramebuffer(
+        Renderer3D::instance().renderToFramebuffer(
             m_fbo, m_fboPixelWidth, m_fboPixelHeight, m_camera, m_instances, m_settings, m_debugLines, m_debugBounds
         );
+
         if (m_compositeEnabled) {
-            drawViewportComposite(m_colorTexture, size.width, size.height);
+            auto* live = cocos2d::CCShaderCache::sharedShaderCache()->programForKey(
+                kCCShader_PositionTextureColor
+            );
+            if (live == nullptr) {
+                return;
+            }
+            if (live != getShaderProgram()) {
+                setShaderProgram(live);
+            }
+
+            GLuint const spProg = live->getProgram();
+            GLint const mvpLoc = spProg != 0 ? glGetUniformLocation(spProg, "CC_MVPMatrix") : -1;
+            if (spProg == 0 || glIsProgram(spProg) != GL_TRUE || mvpLoc < 0) {
+                return;
+            }
+
+            DrawStateSnapshot compositeState{};
+            compositeState.capture();
+            glUseProgram(spProg);
+            kmMat4 kmP, kmMV, kmMVP;
+            kmGLGetMatrix(KM_GL_PROJECTION, &kmP);
+            kmGLGetMatrix(KM_GL_MODELVIEW, &kmMV);
+            kmMat4Multiply(&kmMVP, &kmP, &kmMV);
+            glUniformMatrix4fv(mvpLoc, 1, GL_FALSE, kmMVP.mat);
+            CCSprite::draw();
+            compositeState.restore();
         }
     }
 
@@ -223,39 +314,103 @@ namespace luax::render3d {
         return glContextAvailable();
     }
 
-    void CCViewportFrame::invalidateFramebuffer() {
-        destroyFramebuffer();
+    bool CCViewportFrame::gpuHandlesValid() const {
+        return !gpuFeaturesDisabled() && m_gen == glContextGeneration();
+    }
+
+    void CCViewportFrame::refreshSpriteTexture(CCSize const& points) {
+        setTextureRect(cocos2d::CCRectMake(0.0f, 0.0f, points.width, points.height));
+        setFlipY(true);
+    }
+
+    CCTexture2D* CCViewportFrame::buildFramebufferTexture(int pixelWidth, int pixelHeight) {
+        if (!createFramebuffer(pixelWidth, pixelHeight)) {
+            return nullptr;
+        }
+        auto* tex = new HackCCTexture2D();
+        tex->initWithGLName(
+            m_colorTexture,
+            pixelWidth,
+            pixelHeight,
+            CCSizeMake(
+                static_cast<float>(pixelWidth) /
+                    cocos2d::CCDirector::sharedDirector()->getContentScaleFactor(),
+                static_cast<float>(pixelHeight) /
+                    cocos2d::CCDirector::sharedDirector()->getContentScaleFactor()
+            )
+        );
+        tex->autorelease();
+        return tex;
+    }
+
+    void CCViewportFrame::detachSpriteTexture() {
+        if (m_framebufferTexture != nullptr && getTexture() == m_framebufferTexture) {
+            static_cast<HackCCTexture2D*>(m_framebufferTexture)->detach();
+        }
+        m_framebufferTexture = nullptr;
     }
 
     void CCViewportFrame::ensureFramebuffer() {
-        if (!hasGlContext()) {
+        if (gpuFeaturesDisabled() || !hasGlContext()) {
             return;
         }
 
-        float const scale = cocos2d::CCDirector::sharedDirector()->getContentScaleFactor();
-        int const width = pixelDimension(getContentSize().width, scale);
-        int const height = pixelDimension(getContentSize().height, scale);
+        if (m_gen != glContextGeneration()) {
+            detachSpriteTexture();
+
+            m_fbo = 0;
+            m_colorTexture = 0;
+            m_depthRenderbuffer = 0;
+            m_fboPixelWidth = 0;
+            m_fboPixelHeight = 0;
+            m_gen = glContextGeneration();
+        }
+
+        CCSize const points = getContentSize();
+        auto const [width, height] = pixelSize(points);
         if (m_fbo != 0 && width == m_fboPixelWidth && height == m_fboPixelHeight) {
             return;
+        }
+
+        CCTexture2D* tex = buildFramebufferTexture(width, height);
+        if (tex == nullptr) {
+            return;
+        }
+        setTexture(tex);
+        m_framebufferTexture = tex;
+        refreshSpriteTexture(points);
+    }
+
+    bool CCViewportFrame::createFramebuffer(int width, int height) {
+        if (gpuFeaturesDisabled() || !hasGlContext() || width <= 0 || height <= 0) {
+            return false;
         }
 
         GLint prevFbo = 0;
         glGetIntegerv(GL_FRAMEBUFFER_BINDING, &prevFbo);
 
-        destroyFramebuffer();
+        if (m_fbo != 0) {
+            glDeleteFramebuffers(1, &m_fbo);
+        }
+        if (m_depthRenderbuffer != 0) {
+            glDeleteRenderbuffers(1, &m_depthRenderbuffer);
+        }
+        m_fbo = 0;
+        m_depthRenderbuffer = 0;
 
         glGenFramebuffers(1, &m_fbo);
         glBindFramebuffer(GL_FRAMEBUFFER, m_fbo);
 
-        m_colorTexture =
+        unsigned int const color =
             uploadRgbaTexture2D(width, height, nullptr, TextureWrapMode::ClampToEdge, true);
-        if (m_colorTexture == 0) {
+        if (color == 0) {
             glBindFramebuffer(GL_FRAMEBUFFER, static_cast<GLuint>(prevFbo));
             glBindTexture(GL_TEXTURE_2D, 0);
-            destroyFramebuffer();
-            return;
+            glDeleteFramebuffers(1, &m_fbo);
+            m_fbo = 0;
+            return false;
         }
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_colorTexture, 0);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, color, 0);
 
         glGenRenderbuffers(1, &m_depthRenderbuffer);
         glBindRenderbuffer(GL_RENDERBUFFER, m_depthRenderbuffer);
@@ -273,12 +428,19 @@ namespace luax::render3d {
             geode::log::error(
                 "CCViewportFrame: framebuffer incomplete (status={:#x})", static_cast<unsigned>(status)
             );
-            destroyFramebuffer();
-            return;
+            glDeleteTextures(1, &color);
+            glDeleteFramebuffers(1, &m_fbo);
+            glDeleteRenderbuffers(1, &m_depthRenderbuffer);
+            m_fbo = 0;
+            m_depthRenderbuffer = 0;
+            return false;
         }
 
+        m_colorTexture = color;
         m_fboPixelWidth = width;
         m_fboPixelHeight = height;
+        m_gen = glContextGeneration();
+        return true;
     }
 
     void CCViewportFrame::releaseViewportTexture() {
@@ -292,29 +454,30 @@ namespace luax::render3d {
     }
 
     void CCViewportFrame::destroyFramebuffer() {
-        if (m_fbo == 0 && m_colorTexture == 0 && m_depthRenderbuffer == 0) {
-            m_fboPixelWidth = 0;
-            m_fboPixelHeight = 0;
-            return;
-        }
-
-        if (hasGlContext()) {
+        bool const canDelete = gpuHandlesValid() && hasGlContext();
+        if (canDelete) {
             if (m_fbo != 0) {
                 glDeleteFramebuffers(1, &m_fbo);
-            }
-            if (m_colorTexture != 0) {
-                glDeleteTextures(1, &m_colorTexture);
             }
             if (m_depthRenderbuffer != 0) {
                 glDeleteRenderbuffers(1, &m_depthRenderbuffer);
             }
         }
+        m_fbo = 0;
+        m_depthRenderbuffer = 0;
+        m_fboPixelWidth = 0;
+        m_fboPixelHeight = 0;
+    }
 
+    void CCViewportFrame::abandonGpuResources() {
+        releaseViewportTexture();
+        detachSpriteTexture();
         m_fbo = 0;
         m_colorTexture = 0;
         m_depthRenderbuffer = 0;
         m_fboPixelWidth = 0;
         m_fboPixelHeight = 0;
+        m_gen = glContextGeneration();
     }
 
 } // namespace luax::render3d

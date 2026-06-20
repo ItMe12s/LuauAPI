@@ -13,7 +13,7 @@ local state = {
     debugBounds = false,
     camPos = { x = 0, y = 1, z = 3 },
     lookAt = { x = 0, y = 0, z = 0 },
-    fov = 90,
+    fov = 70,
     near = 0.1,
     far = 100,
     bg = { r = 0.05, g = 0.06, b = 0.1, a = 0.85 },

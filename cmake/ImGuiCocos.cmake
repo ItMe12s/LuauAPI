@@ -12,5 +12,6 @@ add_subdirectory(
     "${LUAUAPI_IMGUI_COCOS_SOURCE_DIR}"
     "${CMAKE_CURRENT_BINARY_DIR}/gd-imgui-cocos"
 )
+target_include_directories(imgui-cocos INTERFACE "${PROJECT_SOURCE_DIR}/src")
 message(STATUS "LuauAPI imgui-cocos: ${LUAUAPI_IMGUI_COCOS_SOURCE_DIR}")
 message(STATUS "LuauAPI Dear ImGui: ${LUAUAPI_IMGUI_VERSION}")

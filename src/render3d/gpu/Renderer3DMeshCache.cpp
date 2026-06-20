@@ -9,9 +9,15 @@
 #include <glm/glm.hpp>
 
 namespace luax::render3d {
+    namespace {
+        bool canDeleteGpuResources(unsigned cacheGen) {
+            return !gpuFeaturesDisabled() && glContextAvailable() &&
+                cacheGen == glContextGeneration();
+        }
+    } // namespace
 
     void Renderer3DMeshCache::deleteGpuPrimitive(GpuPrimitive& primitive) {
-        if (!glContextAvailable()) {
+        if (!canDeleteGpuResources(m_gen)) {
             primitive = {};
             return;
         }
@@ -26,7 +32,7 @@ namespace luax::render3d {
     }
 
     void Renderer3DMeshCache::deleteGpuMesh(GpuMesh& mesh) {
-        if (!glContextAvailable()) {
+        if (!canDeleteGpuResources(m_gen)) {
             mesh.primitives.clear();
             mesh.textures.clear();
             return;
@@ -44,7 +50,8 @@ namespace luax::render3d {
     }
 
     void Renderer3DMeshCache::destroyAllGpuResources() {
-        if (!glContextAvailable()) {
+        if (!canDeleteGpuResources(m_gen)) {
+            clear();
             return;
         }
         for (auto& [meshId, mesh] : m_gpuMeshes) {
@@ -57,11 +64,13 @@ namespace luax::render3d {
                 glDeleteTextures(1, &texture);
             }
         }
+        clear();
     }
 
     void Renderer3DMeshCache::clear() {
         m_gpuMeshes.clear();
         m_gpuTextures.clear();
+        m_gen = glContextGeneration();
     }
 
     void Renderer3DMeshCache::releaseMeshGpu(std::uint64_t meshId) {
@@ -78,7 +87,7 @@ namespace luax::render3d {
         if (it == m_gpuTextures.end()) {
             return;
         }
-        if (glContextAvailable() && it->second != 0) {
+        if (canDeleteGpuResources(m_gen) && it->second != 0) {
             glDeleteTextures(1, &it->second);
         }
         m_gpuTextures.erase(it);
@@ -87,6 +96,12 @@ namespace luax::render3d {
     unsigned int Renderer3DMeshCache::ensureGpuTexture(
         std::uint64_t textureId, TextureAsset const& textureAsset
     ) {
+        if (gpuFeaturesDisabled()) {
+            return 0;
+        }
+        if (m_gen != glContextGeneration()) {
+            clear();
+        }
         unsigned int const viewportTexture = textureAsset.viewportColorTexture();
         if (viewportTexture != 0) {
             return viewportTexture;
@@ -110,10 +125,17 @@ namespace luax::render3d {
             return 0;
         }
         m_gpuTextures[textureId] = texture;
+        m_gen = glContextGeneration();
         return texture;
     }
 
     GpuMesh* Renderer3DMeshCache::ensureGpuMesh(std::uint64_t meshId, MeshAsset const& meshAsset) {
+        if (gpuFeaturesDisabled()) {
+            return nullptr;
+        }
+        if (m_gen != glContextGeneration()) {
+            clear();
+        }
         auto it = m_gpuMeshes.find(meshId);
         if (it != m_gpuMeshes.end()) {
             if (hasDrawableGpuPrimitive(it->second)) {
@@ -128,6 +150,7 @@ namespace luax::render3d {
         }
 
         auto& gpuMesh = m_gpuMeshes[meshId];
+        m_gen = glContextGeneration();
         auto const& srcPrimitives = meshAsset.primitives();
         gpuMesh.primitives.resize(srcPrimitives.size());
 

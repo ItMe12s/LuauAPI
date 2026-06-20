@@ -39,7 +39,3 @@ if (NOT HAS_IMGUI)
         ${imgui_SOURCE_DIR}/misc/cpp/imgui_stdlib.cpp
     )
 endif()
-
-if (PROJECT_IS_TOP_LEVEL)
-    add_subdirectory(test)
-endif()

@@ -2,6 +2,9 @@
 #include <imgui-cocos.hpp>
 #include <imgui_internal.h>
 #include <imgui.h>
+#include "render3d/gpu/GlUtil.hpp"
+#include <cstdint>
+#include <string>
 #include <utility>
 
 #ifdef GEODE_IS_WINDOWS
@@ -29,8 +32,7 @@ static ImTextureID fromGLTexture(GLuint tex) {
 #endif
 }
 
-// make sure this doesn't break in some future version
-#if defined(GEODE_IS_WINDOWS) && GEODE_COMP_GD_VERSION >= 22060
+#ifdef GEODE_IS_WINDOWS
 
 #define MAT_SUPPORTS_CURSOR
 
@@ -256,26 +258,38 @@ ImGuiCocos& ImGuiCocos::setup() {
 	return *this;
 }
 
-void ImGuiCocos::destroy() {
+void ImGuiCocos::destroy(bool abandonTextures) {
 	if (!m_initialized) return;
 
 	ImGui::GetIO().BackendPlatformUserData = nullptr;
 #ifdef IMGUI_HAS_TEXTURES
 	for (auto* tex : ImGui::GetPlatformIO().Textures) {
-		if (tex->RefCount == 1) {
-			tex->SetStatus(ImTextureStatus_WantDestroy);
-			this->updateTexture(tex);
+		if (tex->BackendUserData != nullptr) {
+			if (abandonTextures) {
+				tex->SetTexID(ImTextureID_Invalid);
+				tex->BackendUserData = nullptr;
+				tex->SetStatus(ImTextureStatus_Destroyed);
+				continue;
+			}
+			if (tex->RefCount == 1) {
+				tex->SetStatus(ImTextureStatus_WantDestroy);
+				this->updateTexture(tex);
+			}
 		}
 	}
 #else
-	delete m_fontTexture;
+	if (!abandonTextures) {
+		delete m_fontTexture;
+	}
+	m_fontTexture = nullptr;
 #endif
 	ImGui::DestroyContext();
 	m_initialized = false;
 }
 
-void ImGuiCocos::reload() {
+void ImGuiCocos::reload(bool abandonTextures) {
 	m_reloading = true;
+	m_abandonReloadTextures = m_abandonReloadTextures || abandonTextures;
 }
 
 void ImGuiCocos::setDisplayScale(float scale) {
@@ -316,27 +330,33 @@ CCPoint ImGuiCocos::frameToCocos(const ImVec2& pos) {
 }
 
 void ImGuiCocos::drawFrame() {
+	auto reloadIfNeeded = [this] {
+		if (!m_reloading) return;
+		bool const abandonTextures = m_abandonReloadTextures;
+		this->destroy(abandonTextures);
+		this->setup();
+		m_reloading = false;
+		m_abandonReloadTextures = false;
+	};
+
+	reloadIfNeeded();
 	if (!m_initialized || !m_visible) return;
 
-	ccGLBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	luax::render3d::DrawStateSnapshot prevState{};
+	prevState.capture();
 
-	// starts a new frame for imgui
+	ccGLBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glEnable(GL_BLEND);
+
 	this->newFrame();
 	ImGui::NewFrame();
-
-	// actually draws stuff with imgui functions
 	m_drawCall();
-
-	// renders the triangles onto the screen
 	ImGui::Render();
 	this->renderFrame();
 
-	// reload imgui context if requested
-	if (m_reloading) {
-		this->destroy();
-		this->setup();
-		m_reloading = false;
-	}
+	prevState.restore();
+	reloadIfNeeded();
 }
 
 void ImGuiCocos::newFrame() {
@@ -424,7 +444,8 @@ void ImGuiCocos::legacyRenderFrame() const {
 		auto* idxBuffer = list->IdxBuffer.Data;
 		auto* vtxBuffer = list->VtxBuffer.Data;
 		for (auto& cmd : list->CmdBuffer) {
-			ccGLBindTexture2D(toGLTexture(cmd.GetTexID()));
+			GLuint const cmdTexture = toGLTexture(cmd.GetTexID());
+			ccGLBindTexture2D(cmdTexture);
 
 			const auto rect = cmd.ClipRect;
 			const auto orig = frameToCocos(ImVec2(rect.x, rect.y));
@@ -462,8 +483,6 @@ void ImGuiCocos::legacyRenderFrame() const {
 			}
 		}
 	}
-
-	glDisable(GL_SCISSOR_TEST);
 }
 
 void ImGuiCocos::renderFrame() const {
@@ -533,7 +552,8 @@ void ImGuiCocos::renderFrame() const {
 				continue;
 			}
 
-			ccGLBindTexture2D(toGLTexture(cmd.GetTexID()));
+			GLuint const cmdTexture = toGLTexture(cmd.GetTexID());
+			ccGLBindTexture2D(cmdTexture);
 
 			const auto rect = cmd.ClipRect;
 			const auto orig = frameToCocos(ImVec2(rect.x, rect.y));
@@ -560,8 +580,6 @@ void ImGuiCocos::renderFrame() const {
 
 	glDeleteBuffers(2, &vbos[0]);
 	glDeleteVertexArrays(1, &vao);
-
-	glDisable(GL_SCISSOR_TEST);
 }
 
 #ifdef IMGUI_HAS_TEXTURES
@@ -619,7 +637,9 @@ void ImGuiCocos::updateTexture(ImTextureData* tex) const {
 		tex->SetStatus(ImTextureStatus_OK);
 	} else if (tex->Status == ImTextureStatus_WantDestroy) {
 		auto* ccTexture = static_cast<CCTexture2D*>(tex->BackendUserData);
-		delete ccTexture;
+		if (ccTexture != nullptr) {
+			delete ccTexture;
+		}
 
 		tex->SetTexID(ImTextureID_Invalid);
 		tex->BackendUserData = nullptr;

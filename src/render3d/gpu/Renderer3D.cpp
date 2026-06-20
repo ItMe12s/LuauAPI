@@ -10,9 +10,6 @@
 #include <glm/mat4x4.hpp>
 
 namespace luax::render3d {
-    using cocos2d::ccGLEnableVertexAttribs;
-    using cocos2d::ccGLUseProgram;
-
     Renderer3D& Renderer3D::instance() {
         static Renderer3D s_renderer;
         return s_renderer;
@@ -22,17 +19,28 @@ namespace luax::render3d {
         destroyGlResources();
     }
 
+    void Renderer3D::syncContextGen() {
+        if (m_gen != glContextGeneration()) {
+            m_programs.reset();
+            m_meshCache.clear();
+            m_gen = glContextGeneration();
+        }
+    }
+
     void Renderer3D::destroyGlResources() {
+        syncContextGen();
         destroyRenderer3DGlResources(m_programs, m_meshCache);
     }
 
     void Renderer3D::releaseMeshGpu(std::uint64_t meshId) {
         ensureRenderer3DShutdownHook();
+        syncContextGen();
         m_meshCache.releaseMeshGpu(meshId);
     }
 
     void Renderer3D::releaseTextureGpu(std::uint64_t textureId) {
         ensureRenderer3DShutdownHook();
+        syncContextGen();
         m_meshCache.releaseTextureGpu(textureId);
     }
 
@@ -41,20 +49,18 @@ namespace luax::render3d {
         std::map<int, ViewportInstance> const& instances, RenderSettings const& settings,
         std::map<int, DebugLine> const& debugLines, bool debugBounds
     ) {
-        if (fbo == 0 || pixelWidth <= 0 || pixelHeight <= 0) {
+        if (gpuFeaturesDisabled() || fbo == 0 || pixelWidth <= 0 || pixelHeight <= 0) {
             return;
         }
         ensureRenderer3DShutdownHook();
+        syncContextGen();
         if (!m_programs.ensureLambertProgram()) {
             return;
         }
 
-        float prevClearColor[4]{};
         DrawStateSnapshot prevState{};
         prevState.capture();
 
-        glGetFloatv(GL_COLOR_CLEAR_VALUE, prevClearColor);
-        int const prevVao = captureAndUnbindVao();
         bool const useVao = vaoSupported();
 
         glBindFramebuffer(GL_FRAMEBUFFER, fbo);
@@ -94,13 +100,7 @@ namespace luax::render3d {
             glDisableVertexAttribArray(2);
         }
 
-        glClearColor(prevClearColor[0], prevClearColor[1], prevClearColor[2], prevClearColor[3]);
-        glBindBuffer(GL_ARRAY_BUFFER, 0);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-        restoreVao(prevVao);
         prevState.restore();
-        ccGLUseProgram(0);
-        ccGLEnableVertexAttribs(cocos2d::kCCVertexAttribFlag_None);
     }
 
 } // namespace luax::render3d

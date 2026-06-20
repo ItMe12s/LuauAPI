@@ -17,6 +17,7 @@ private:
 	bool m_initialized = false;
 	bool m_visible = true;
 	bool m_reloading = false;
+	bool m_abandonReloadTextures = false;
 	bool m_forceLegacy = false;
 	std::function<void()> m_setupCall, m_drawCall;
 	InputMode m_inputMode = InputMode::Default;
@@ -42,7 +43,7 @@ public:
 	static ImGuiCocos& get();
 
 	// called on mod unloaded
-	void destroy();
+	void destroy(bool abandonTextures = false);
 	// called on swapBuffers
 	void drawFrame();
 
@@ -52,7 +53,7 @@ public:
 	ImGuiCocos& draw(std::function<void()> fun);
 
 	// used to reinitialize imgui context
-	void reload();
+	void reload(bool abandonTextures = false);
 
 	void toggle();
 	[[nodiscard]] bool isVisible() const;
