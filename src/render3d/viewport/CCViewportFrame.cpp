@@ -256,7 +256,7 @@ namespace luax::render3d {
 
         auto asset = std::make_shared<TextureAsset>();
         asset->setViewportSourceNode(this);
-        m_viewportTextureId = TextureRegistry::instance().registerTexture(asset);
+        m_viewportTextureId = TextureRegistry::instance().registerAsset(asset);
         return m_viewportTextureId;
     }
 

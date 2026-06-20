@@ -1,14 +1,10 @@
 #pragma once
 
 #include "core/Runtime.hpp"
-#include "framework/BindingHost.hpp"
 #include "framework/usertype/LuaRef.hpp"
 
-#include <Geode/loader/Log.hpp>
-#include <functional>
-#include <lua.h>
-#include <memory>
 #include <string_view>
+#include <thread>
 
 namespace luax {
     inline void logCallbackFailure(std::string_view context) {
@@ -38,15 +34,33 @@ namespace luax {
             return m_ref && m_ref->valid();
         }
 
+        static bool fire(LuaRef& callback, std::string_view context, int deadlineMs) {
+            auto* runtime = Runtime::getIfInitialized();
+            if (!runtime) return false;
+            auto* L = callback.luaState();
+            if (!L) return false;
+            int top = lua_gettop(L);
+            if (!callback.push()) return false;
+#if defined(GEODE_IS_MACOS)
+            if (!Runtime::isMainThread()) {
+                Runtime::setMainThreadId(std::this_thread::get_id());
+            }
+#endif
+            Runtime::ResourcesRootScope scope(*runtime, callback.resourcesRoot());
+            bool ok = runtime->protectedCall(L, 0, 0, context, deadlineMs).isOk();
+            lua_settop(L, top);
+            return ok;
+        }
+
         bool invoke(
             int nargs, int nresults, std::string_view context, int deadlineMs,
             PushArgsFn pushArgs = nullptr, void* pushCtx = nullptr,
             PopResultsFn popResults = nullptr, void* popCtx = nullptr
         ) const {
             if (Runtime::isShuttingDown()) return false;
-            auto* host = BindingHost::getIfInitialized();
-            if (!host || !host->ready()) return false;
-            auto* L = host->state();
+            auto* runtime = Runtime::getIfInitialized();
+            if (!runtime || !runtime->ready()) return false;
+            auto* L = runtime->state();
             if (!L || !m_ref) return false;
 
             int top = lua_gettop(L);
@@ -54,8 +68,8 @@ namespace luax {
             if (pushArgs) {
                 pushArgs(L, pushCtx);
             }
-            BindingHost::ResourcesRootScope scope(*host, m_ref->resourcesRoot());
-            auto result = host->protectedCall(L, nargs, nresults, context, deadlineMs);
+            Runtime::ResourcesRootScope scope(*runtime, m_ref->resourcesRoot());
+            auto result = runtime->protectedCall(L, nargs, nresults, context, deadlineMs);
             if (result.isOk() && popResults && nresults > 0) {
                 popResults(L, popCtx);
             }

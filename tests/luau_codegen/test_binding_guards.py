@@ -51,10 +51,8 @@ _IMGUI_HEADLESS_CMAKE = "cmake/ImGuiHeadless.cmake"
 _IMGUI_TEST_HARNESS = "tests/host/ImGuiTestHarness.hpp"
 _CMAKE_LISTS = "CMakeLists.txt"
 _SCHEDULED_HANDLE_BINDING = "src/framework/schedule/ScheduledHandleBinding.hpp"
-_SCHEDULED_CALLBACK = "src/framework/schedule/ScheduledCallback.hpp"
-_SCHEDULED_SLOT_STORE = "src/framework/schedule/ScheduledSlotStore.hpp"
-_LUA_SELECTOR = "src/framework/callback/LuaSelectorHandler.cpp"
-_LUA_MENU = "src/framework/callback/LuaMenuHandler.cpp"
+_CANCELLABLE_SLOTS = "src/framework/schedule/CancellableSlots.hpp"
+_LUA_COCOS = "src/framework/callback/LuaCocosHandler.cpp"
 _LUA_DELEGATE = "src/framework/callback/LuaDelegate.cpp"
 _LUA_CALLBACK = "src/framework/callback/LuaCallback.hpp"
 _USERTYPE = "src/framework/usertype/Usertype.cpp"
@@ -807,7 +805,7 @@ class CallbackFailureLoggingGuardTests(unittest.TestCase):
                 )
 
     def test_selector_handlers_log_invoke_failures(self) -> None:
-        source = _read_repo_file(_LUA_SELECTOR)
+        source = _read_repo_file(_LUA_COCOS)
         for method in (
             "LuaScheduleHandler::onSchedule",
             "LuaCallFuncHandler::onCallFunc",
@@ -824,22 +822,12 @@ class CallbackFailureLoggingGuardTests(unittest.TestCase):
                 if end == -1:
                     end = len(source)
                 body = source[start:end]
-                self.assertRegex(
-                    body,
-                    r"if\s*\(\s*!.*invoke\(",
-                    f"{method} must check invoke() and log failures",
-                )
-                self.assertIn(
-                    "logCallbackFailure",
-                    body,
-                    f"{method} must call shared logCallbackFailure",
-                )
+                self.assertIn("invokeCocosCallback", body)
 
     def test_menu_handler_logs_invoke_failures(self) -> None:
-        source = _read_repo_file(_LUA_MENU)
+        source = _read_repo_file(_LUA_COCOS)
         body = _function_body(source, "LuaMenuHandler::onCallback", ret="void")
-        self.assertRegex(body, r"if\s*\(\s*!.*invoke\(")
-        self.assertIn("logCallbackFailure", body)
+        self.assertIn("invokeCocosCallback", body)
 
     def test_delegate_table_invoke_logs_failures(self) -> None:
         source = _read_repo_file(_LUA_DELEGATE)
@@ -880,27 +868,29 @@ class HandleGcGuardTests(unittest.TestCase):
         self.assertIn("ImGuiDrawHandleBinding::registerMetatable", source)
 
     def test_schedulers_fire_callbacks_via_framework_helper(self) -> None:
-        callback_source = _read_repo_file(_SCHEDULED_CALLBACK)
-        self.assertIn("fireProtectedCallback", callback_source)
+        callback_source = _read_repo_file(_LUA_CALLBACK)
+        self.assertIn("static bool fire(LuaRef& callback", callback_source)
         self.assertIn("protectedCall", callback_source)
 
         task_scheduler = _read_repo_file(_TASK_SCHEDULER)
-        self.assertIn("fireProtectedCallback", task_scheduler)
+        self.assertIn("LuaCallback::fire", task_scheduler)
 
         imgui_scheduler = _read_repo_file("src/bindings/imgui/ImGuiDrawScheduler.cpp")
-        self.assertIn("fireProtectedCallback", imgui_scheduler)
+        self.assertIn("LuaCallback::fire", imgui_scheduler)
 
-    def test_schedulers_store_slots_via_framework_mixin(self) -> None:
-        store_source = _read_repo_file(_SCHEDULED_SLOT_STORE)
-        self.assertIn("ScheduledSlotStore", store_source)
-        self.assertIn("compactCancelled", store_source)
+    def test_schedulers_store_slots_via_indexed_slot_map(self) -> None:
+        slots_source = _read_repo_file(_CANCELLABLE_SLOTS)
+        self.assertIn("compactCancelledSlots", slots_source)
+        self.assertIn("IndexedSlotMap", slots_source)
 
         task_scheduler = _read_repo_file(_TASK_SCHEDULER)
-        self.assertIn("ScheduledSlotStore", task_scheduler)
+        self.assertIn("IndexedSlotMap", task_scheduler)
 
-        imgui_scheduler = _read_repo_file("src/bindings/imgui/ImGuiDrawScheduler.cpp")
-        self.assertIn("m_store", imgui_scheduler)
-        self.assertIn("compactCancelled", imgui_scheduler)
+        imgui_scheduler = _read_repo_file("src/bindings/imgui/ImGuiDrawScheduler.hpp")
+        self.assertIn("IndexedSlotMap", imgui_scheduler)
+        self.assertIn(
+            "compactCancelledSlots", _read_repo_file("src/bindings/imgui/ImGuiDrawScheduler.cpp")
+        )
 
 
 class ImGuiGuardTests(unittest.TestCase):

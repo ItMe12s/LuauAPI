@@ -2,7 +2,7 @@
 
 #include "core/Config.hpp"
 #include "core/Runtime.hpp"
-#include "framework/schedule/ScheduledCallback.hpp"
+#include "framework/callback/LuaCallback.hpp"
 
 #include <thread>
 
@@ -18,15 +18,15 @@ namespace luax {
         }
         DrawCb cb;
         cb.callback = std::move(callback);
-        return m_store.insert(std::move(cb));
+        return insertSlot(m_store, std::move(cb), m_nextId);
     }
 
     void ImGuiDrawScheduler::cancel(std::uint64_t id) {
-        m_store.cancel(id);
+        cancelSlot(m_store, id);
     }
 
     bool ImGuiDrawScheduler::fire(DrawCb& cb) {
-        return fireProtectedCallback(cb.callback, "imgui.draw", kImGuiScriptDeadlineMs);
+        return LuaCallback::fire(cb.callback, "imgui.draw", kImGuiScriptDeadlineMs);
     }
 
     void ImGuiDrawScheduler::drawAll() {
@@ -50,22 +50,22 @@ namespace luax {
         });
 
         m_inFrame = false;
-        m_store.compactCancelled();
+        compactCancelledSlots(m_store);
     }
 
     void ImGuiDrawScheduler::clear() {
-        m_store.clear();
+        clearSlots(m_store);
     }
 
     bool ImGuiDrawScheduler::full() const {
-        return m_store.full(kMaxImGuiDrawCallbacks);
+        return slotMapFull(m_store, kMaxImGuiDrawCallbacks);
     }
 
     std::size_t ImGuiDrawScheduler::activeCount() const {
-        return m_store.activeCount();
+        return activeSlotCount(m_store);
     }
 
     bool ImGuiDrawScheduler::isScheduled(std::uint64_t id) const {
-        return m_store.isScheduled(id);
+        return isActiveSlot(m_store, id);
     }
 } // namespace luax

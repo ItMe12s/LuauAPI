@@ -1,4 +1,5 @@
 #include "core/Config.hpp"
+#include "core/Runtime.hpp"
 #include "framework/Binding.hpp"
 #include "framework/callback/LuaCallback.hpp"
 #include "framework/lifecycle/ShutdownHook.hpp"
@@ -164,9 +165,9 @@ namespace {
             &ctx
         );
 
-        auto* host = BindingHost::getIfInitialized();
-        if (ctx.dataRef != LUA_NOREF && ctx.dataRef != LUA_REFNIL && host && host->state()) {
-            lua_unref(host->state(), ctx.dataRef);
+        auto* runtime = Runtime::getIfInitialized();
+        if (ctx.dataRef != LUA_NOREF && ctx.dataRef != LUA_REFNIL && runtime && runtime->state()) {
+            lua_unref(runtime->state(), ctx.dataRef);
         }
         if (!ok) {
             logCallbackFailure(context);

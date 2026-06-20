@@ -2,7 +2,6 @@
 
 #include "core/Config.hpp"
 #include "core/Runtime.hpp"
-#include "framework/BindingHost.hpp"
 #include "framework/usertype/DeferredRelease.hpp"
 #include "framework/usertype/Fields.hpp"
 #include "framework/usertype/OpaqueHandle.hpp"
@@ -18,16 +17,16 @@
 namespace luax::detail {
     namespace {
         bool invokeFieldAccessor(
-            lua_State* L, BindingHost* host, int nargs, int nresults, std::string_view context,
+            lua_State* L, Runtime* runtime, int nargs, int nresults, std::string_view context,
             int deadlineMs
         ) {
-            if (!host) {
+            if (!runtime) {
                 return false;
             }
-            if (host->ready()) {
-                return host->protectedCall(L, nargs, nresults, context, deadlineMs).isOk();
+            if (runtime->ready()) {
+                return runtime->protectedCall(L, nargs, nresults, context, deadlineMs).isOk();
             }
-            return host->protectedCallWithTraceback(L, nargs, nresults, context).isOk();
+            return runtime->protectedCallWithTraceback(L, nargs, nresults, context).isOk();
         }
 
         bool tryInvokeFieldAccessor(
@@ -44,8 +43,8 @@ namespace luax::detail {
             if (nargs >= 2) {
                 lua_pushvalue(L, 3);
             }
-            if (auto* host = BindingHost::getIfInitialized()) {
-                if (invokeFieldAccessor(L, host, nargs, nresults, context, kHookScriptDeadlineMs)) {
+            if (auto* runtime = Runtime::getIfInitialized()) {
+                if (invokeFieldAccessor(L, runtime, nargs, nresults, context, kHookScriptDeadlineMs)) {
                     return true;
                 }
                 lua_settop(L, top);

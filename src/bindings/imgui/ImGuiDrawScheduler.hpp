@@ -1,6 +1,7 @@
 #pragma once
 
-#include "framework/schedule/ScheduledSlotStore.hpp"
+#include "core/IndexedSlotMap.hpp"
+#include "framework/schedule/CancellableSlots.hpp"
 #include "framework/usertype/LuaRef.hpp"
 
 #include <cstddef>
@@ -33,7 +34,8 @@ namespace luax {
 
         bool fire(DrawCb& cb);
 
-        ScheduledSlotStore<DrawCb> m_store;
+        IndexedSlotMap<DrawCb> m_store;
+        std::uint64_t m_nextId = 1;
         bool m_inFrame = false;
     };
 } // namespace luax

@@ -101,7 +101,7 @@ namespace {
 
         auto asset = std::make_shared<TextureAsset>();
         asset->cpu = std::move(result).value();
-        auto const id = TextureRegistry::instance().registerTexture(asset);
+        auto const id = TextureRegistry::instance().registerAsset(asset);
         pushTextureHandle(L, id);
         return 1;
     }

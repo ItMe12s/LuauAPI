@@ -39,6 +39,9 @@ if (NOT LUAUAPI_HOST_ONLY)
     add_subdirectory($ENV{GEODE_SDK} ${CMAKE_CURRENT_BINARY_DIR}/geode)
 
     include(cmake/ImGuiCocos.cmake)
+endif()
+
+if(NOT LUAUAPI_HOST_ONLY OR LUAUAPI_BUILD_TESTS)
     include(cmake/WebSocketDeps.cmake)
 endif()
 
@@ -109,7 +112,6 @@ if (NOT LUAUAPI_HOST_ONLY)
 endif()
 
 if(LUAUAPI_BUILD_TESTS)
-    include(cmake/WebSocketDeps.cmake)
     include(cmake/ImGuiHeadless.cmake)
     enable_testing()
 
@@ -133,7 +135,7 @@ if(LUAUAPI_BUILD_TESTS)
     add_executable(luauapi_tests
         src/api.cpp
         src/framework/Binding.cpp
-        src/framework/BindingHost.cpp
+        src/framework/callback/LuaCocosHandler.cpp
         src/framework/usertype/Fields.cpp
         src/framework/usertype/OpaqueHandle.cpp
         src/framework/usertype/Usertype.cpp

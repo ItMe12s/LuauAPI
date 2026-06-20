@@ -1,7 +1,6 @@
 #include "render3d/assets/GltfIo.hpp"
 
 #include "core/Config.hpp"
-#include "require/PathRules.hpp"
 #include "require/PathSandbox.hpp"
 
 #include <Geode/utils/base64.hpp>

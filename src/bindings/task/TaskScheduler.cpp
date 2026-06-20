@@ -2,7 +2,7 @@
 
 #include "core/Config.hpp"
 #include "core/Runtime.hpp"
-#include "framework/schedule/ScheduledCallback.hpp"
+#include "framework/callback/LuaCallback.hpp"
 #include "framework/usertype/DeferredRelease.hpp"
 
 #include <Geode/Geode.hpp>
@@ -41,12 +41,12 @@ namespace luax {
     }
 
     void TaskScheduler::cancel(std::uint64_t id) {
-        m_timed.cancel(id);
-        m_deferred.cancel(id);
+        cancelSlot(m_timed, id);
+        cancelSlot(m_deferred, id);
     }
 
     bool TaskScheduler::fire(Task& task) {
-        return fireProtectedCallback(task.callback, "task", kHookScriptDeadlineMs);
+        return LuaCallback::fire(task.callback, "task", kHookScriptDeadlineMs);
     }
 
     void TaskScheduler::fireDeferred() {
@@ -80,13 +80,13 @@ namespace luax {
         }
     }
 
-    void TaskScheduler::eraseTaskAt(ScheduledSlotStore<Task>& store, std::size_t index) {
-        std::uint64_t const id = store.slots().idAt(index);
-        store.slots().eraseAt(index);
+    void TaskScheduler::eraseTaskAt(IndexedSlotMap<Task>& store, std::size_t index) {
+        std::uint64_t const id = store.idAt(index);
+        store.eraseAt(index);
         m_deferredIds.erase(id);
     }
 
-    void TaskScheduler::compact(ScheduledSlotStore<Task>& store) {
+    void TaskScheduler::compact(IndexedSlotMap<Task>& store) {
         for (std::size_t i = 0; i < store.size();) {
             if (!store[i].cancelled) {
                 ++i;
@@ -127,8 +127,8 @@ namespace luax {
     }
 
     void TaskScheduler::clear() {
-        m_timed.clear();
-        m_deferred.clear();
+        clearSlots(m_timed);
+        clearSlots(m_deferred);
         m_deferredIds.clear();
     }
 
@@ -137,7 +137,7 @@ namespace luax {
     }
 
     std::size_t TaskScheduler::activeCount() const {
-        return m_timed.activeCount() + m_deferred.activeCount();
+        return activeSlotCount(m_timed) + activeSlotCount(m_deferred);
     }
 
 #if defined(LUAUAPI_HOST_TESTS)
@@ -147,7 +147,7 @@ namespace luax {
             return false;
         }
         auto const& store = it->second ? m_deferred : m_timed;
-        return store.isScheduled(id);
+        return isActiveSlot(store, id);
     }
 #endif
 

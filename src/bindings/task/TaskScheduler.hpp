@@ -1,6 +1,7 @@
 #pragma once
 
-#include "framework/schedule/ScheduledSlotStore.hpp"
+#include "core/IndexedSlotMap.hpp"
+#include "framework/schedule/CancellableSlots.hpp"
 #include "framework/usertype/LuaRef.hpp"
 
 #include <cstddef>
@@ -40,11 +41,11 @@ namespace luax {
         bool fire(Task& task);
         void fireDeferred();
         void fireTimedDue(std::vector<std::size_t> const& due);
-        void compact(ScheduledSlotStore<Task>& store);
-        void eraseTaskAt(ScheduledSlotStore<Task>& store, std::size_t index);
+        void compact(IndexedSlotMap<Task>& store);
+        void eraseTaskAt(IndexedSlotMap<Task>& store, std::size_t index);
 
-        ScheduledSlotStore<Task> m_timed;
-        ScheduledSlotStore<Task> m_deferred;
+        IndexedSlotMap<Task> m_timed;
+        IndexedSlotMap<Task> m_deferred;
         std::unordered_map<std::uint64_t, bool> m_deferredIds;
         std::uint64_t m_nextId = 1;
     };

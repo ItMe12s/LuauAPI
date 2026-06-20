@@ -550,27 +550,4 @@ namespace luax::render3d {
         return m_images;
     }
 
-    MeshRegistry& MeshRegistry::instance() {
-        static MeshRegistry registry;
-        return registry;
-    }
-
-    std::uint64_t MeshRegistry::registerMesh(std::shared_ptr<MeshAsset> mesh) {
-        auto const id = m_nextId++;
-        m_meshes.emplace(id, std::move(mesh));
-        return id;
-    }
-
-    void MeshRegistry::release(std::uint64_t id) {
-        m_meshes.erase(id);
-    }
-
-    std::shared_ptr<MeshAsset> MeshRegistry::get(std::uint64_t id) const {
-        auto const it = m_meshes.find(id);
-        if (it == m_meshes.end()) {
-            return nullptr;
-        }
-        return it->second;
-    }
-
 } // namespace luax::render3d

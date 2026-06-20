@@ -282,6 +282,11 @@ namespace luax {
         return &*runtime;
     }
 
+    Runtime* Runtime::fromState(lua_State* L) {
+        if (!L) return nullptr;
+        return static_cast<Runtime*>(lua_callbacks(L)->userdata);
+    }
+
     void Runtime::shutdown() {
         shuttingDownStorage().store(true, std::memory_order_release);
         invalidateCurrentModCache();
@@ -383,6 +388,24 @@ namespace luax {
             m_requirer->setResourcesRoot(m_resourcesRoot);
         }
 #endif
+    }
+
+    Runtime::ResourcesRootScope::ResourcesRootScope(Runtime& runtime, std::filesystem::path const& root) :
+        m_runtime(runtime) {
+        if (runtime.resourcesRoot() == root) {
+            return;
+        }
+        std::filesystem::path next = root;
+        runtime.swapResourcesRoot(next);
+        m_saved.emplace(std::move(next));
+    }
+
+    Runtime::ResourcesRootScope::~ResourcesRootScope() {
+        if (!m_saved) {
+            return;
+        }
+        std::filesystem::path restore = std::move(*m_saved);
+        m_runtime.swapResourcesRoot(restore);
     }
 
     void Runtime::installTraceback() {

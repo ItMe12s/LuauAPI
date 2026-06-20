@@ -96,7 +96,7 @@ class GeneratedSafetyTests(unittest.TestCase):
         text = _emit_common_file(plan.emitted_classes, plan, "win")
 
         self.assertIn("luax::evictTrampolinesIfFinalRelease(self);", text)
-        self.assertIn('#include "framework/callback/LuaMenuHandler.hpp"', text)
+        self.assertIn('#include "framework/callback/LuaCocosHandler.hpp"', text)
         self.assertIn("geode::Result<void> installFieldsReleaseHook()", text)
         self.assertIn(
             "if (auto hookResult = installFieldsReleaseHook(); hookResult.isErr())",
@@ -147,16 +147,14 @@ class GeneratedSafetyTests(unittest.TestCase):
         self.assertIn("luax::kHookScriptDeadlineMs", text)
         self.assertNotIn("targetId, 50", text)
 
-    def test_generated_hooks_use_binding_host(self) -> None:
+    def test_generated_hooks_use_runtime(self) -> None:
         text = emit_internal_hpp()
 
-        self.assertIn("luax::BindingHost::getIfInitialized()", text)
-        self.assertIn("luax::BindingHost::ResourcesRootScope", text)
-        self.assertNotIn("luax::Runtime::getIfInitialized()", text)
-        self.assertNotIn("lua/runtime/Runtime.hpp", text)
-        self.assertIn('#include "framework/BindingHost.hpp"', text)
+        self.assertIn("luax::Runtime::getIfInitialized()", text)
+        self.assertIn("luax::Runtime::ResourcesRootScope", text)
+        self.assertIn('#include "core/Runtime.hpp"', text)
 
-    def test_common_bind_registers_shutdown_hooks_via_binding_host(self) -> None:
+    def test_common_bind_registers_shutdown_hooks_via_runtime(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")
         ccnode = Class(
             name="CCNode",
@@ -175,7 +173,7 @@ class GeneratedSafetyTests(unittest.TestCase):
         plan = collect_plan(root, "win")
         text = _emit_common_file(plan.emitted_classes, plan, "win")
 
-        self.assertIn("luax::BindingHost::fromState(L)", text)
+        self.assertIn("luax::Runtime::fromState(L)", text)
         self.assertNotIn("static_cast<luax::Runtime*>", text)
 
     def test_hook_api_is_table_only_with_skip_fields(self) -> None:

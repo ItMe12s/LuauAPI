@@ -70,7 +70,7 @@ namespace {
         if (!result.has_value()) {
             return pushNilErr(L, result.error());
         }
-        auto const id = MeshRegistry::instance().registerMesh(std::move(result).value());
+        auto const id = MeshRegistry::instance().registerAsset(std::move(result).value());
         pushMeshHandle(L, id);
         return 1;
     }

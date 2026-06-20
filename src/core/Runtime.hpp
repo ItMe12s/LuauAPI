@@ -1,7 +1,6 @@
 #pragma once
 
 #include "core/Config.hpp"
-#include "framework/BindingHost.hpp"
 
 #include <Geode/Geode.hpp>
 #include <RuntimeTypes.hpp>
@@ -24,7 +23,7 @@
 namespace luax {
     class Requirer;
 
-    class Runtime final : public BindingHost {
+    class Runtime final {
     public:
         Runtime();
         ~Runtime();
@@ -35,6 +34,7 @@ namespace luax {
         static Runtime* getOrCreate();
         static bool isInitialized();
         static Runtime* getIfInitialized();
+        static Runtime* fromState(lua_State* L);
         static void shutdown();
         static bool isShuttingDown();
 #if defined(LUAUAPI_HOST_TESTS)
@@ -46,8 +46,8 @@ namespace luax {
         static void setMainThreadId(std::thread::id id);
         static bool isMainThread();
 
-        lua_State* state() override;
-        bool ready() const override;
+        lua_State* state();
+        bool ready() const;
         imes::luauapi::RuntimeStatus status() const;
         bool assertMainThread() const;
 
@@ -57,10 +57,10 @@ namespace luax {
         geode::Result<void> protectedCall(
             lua_State* L, int nargs, int nresults, std::string_view context,
             int deadlineMs = kDefaultScriptDeadlineMs
-        ) override;
+        );
         geode::Result<void> protectedCallWithTraceback(
             lua_State* L, int nargs, int nresults, std::string_view context
-        ) override;
+        );
         static std::string compileSource(std::string_view source);
 
         class ScriptBudgetGuard final {
@@ -78,12 +78,23 @@ namespace luax {
             std::chrono::steady_clock::time_point m_previousDeadline{};
         };
 
-        using ResourcesRootScope = BindingHost::ResourcesRootScope;
+        class ResourcesRootScope final {
+        public:
+            ResourcesRootScope(Runtime& runtime, std::filesystem::path const& root);
+            ~ResourcesRootScope();
 
-        void setResourcesRoot(std::filesystem::path const& root) override;
-        void swapResourcesRoot(std::filesystem::path& root) override;
+            ResourcesRootScope(ResourcesRootScope const&) = delete;
+            ResourcesRootScope& operator=(ResourcesRootScope const&) = delete;
 
-        std::filesystem::path const& resourcesRoot() const override {
+        private:
+            Runtime& m_runtime;
+            std::optional<std::filesystem::path> m_saved;
+        };
+
+        void setResourcesRoot(std::filesystem::path const& root);
+        void swapResourcesRoot(std::filesystem::path& root);
+
+        std::filesystem::path const& resourcesRoot() const {
             return m_resourcesRoot;
         }
 
@@ -95,7 +106,7 @@ namespace luax {
             return m_lastError;
         }
 
-        void registerShutdownHook(std::function<void()> fn) override;
+        void registerShutdownHook(std::function<void()> fn);
 
         geode::Result<std::reference_wrapper<std::string const>> getOrCompileBytecode(
             std::string const& key, std::string_view source

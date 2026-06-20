@@ -1,7 +1,6 @@
 #pragma once
 
 #include "core/Config.hpp"
-#include "require/PathRules.hpp"
 
 #if defined(LUAUAPI_HOST_TESTS)
     #include <Geode/utils/string.hpp>
@@ -14,12 +13,85 @@
     #include <Geode/utils/string.hpp>
 #endif
 
+#include <array>
 #include <filesystem>
 #include <string>
 #include <string_view>
+#include <system_error>
 #include <utility>
 
 namespace luax {
+    inline bool escapedRelativePathText(std::string_view text) {
+        return text == ".." || text.starts_with("../") || text.starts_with("..\\");
+    }
+
+    inline bool escapedRelativePathValue(std::filesystem::path const& rel) {
+        return rel.empty() || escapedRelativePathText(rel.generic_string());
+    }
+
+    inline bool pathInsideRootValue(std::filesystem::path const& path, std::filesystem::path const& root) {
+        std::error_code ec;
+        auto rel = std::filesystem::relative(path, root, ec);
+        return !ec && !escapedRelativePathValue(rel);
+    }
+
+    inline bool isFlatResourcePathValue(std::filesystem::path const& path) {
+        auto normalized = path.lexically_normal();
+        return normalized == normalized.filename() && normalized != "." && normalized != ".." &&
+            !normalized.empty();
+    }
+
+    inline bool hasLuauExtensionValue(std::filesystem::path const& path) {
+        return path.extension() == ".luau";
+    }
+
+    inline bool hasUnsupportedExtensionValue(std::filesystem::path const& path) {
+        auto ext = path.extension();
+        return !ext.empty() && ext != ".luau";
+    }
+
+    inline bool isValidResourcePathValue(std::filesystem::path const& path, bool addLuauExtension = true) {
+        if (path.empty() || path.is_absolute()) {
+            return false;
+        }
+
+        auto normalized = path.lexically_normal();
+        if (!isFlatResourcePathValue(normalized) || hasUnsupportedExtensionValue(normalized)) {
+            return false;
+        }
+
+        if (!addLuauExtension) {
+            return true;
+        }
+
+        auto withExtension = normalized;
+        if (!hasLuauExtensionValue(withExtension)) {
+            withExtension += ".luau";
+        }
+        return isFlatResourcePathValue(withExtension);
+    }
+
+    inline bool canRequireFromChunk(std::string_view requirerChunkname) {
+        return geode::utils::string::startsWith(requirerChunkname, "@");
+    }
+
+    inline bool isRequireChildNameAllowed(std::string_view name) {
+        if (name.empty() || name == "..") {
+            return false;
+        }
+        if (geode::utils::string::containsAny(name, std::array<std::string, 2>{"/", "\\"})) {
+            return false;
+        }
+        return isValidResourcePathValue(std::filesystem::path(name), false);
+    }
+
+    inline std::filesystem::path requireModulePath(std::filesystem::path current) {
+        if (!hasLuauExtensionValue(current)) {
+            current += ".luau";
+        }
+        return current;
+    }
+
 #if defined(LUAUAPI_HOST_TESTS)
     template <class T>
     class HostResult {
@@ -174,25 +246,12 @@ namespace luax {
         return scriptOk(path);
     }
 
-    inline bool escapesRoot(std::filesystem::path const& rel) {
-        auto s = normalizedPathString(rel);
-        return rel.empty() || escapedRelativePathText(s);
-    }
-
     inline bool pathInsideRoot(std::filesystem::path const& path, std::filesystem::path const& root) {
         return pathInsideRootValue(path, root);
     }
 
     inline bool hasLuauExtension(std::filesystem::path const& path) {
         return hasLuauExtensionValue(path);
-    }
-
-    inline bool hasUnsupportedExtension(std::filesystem::path const& path) {
-        return hasUnsupportedExtensionValue(path);
-    }
-
-    inline bool isFlatResourcePath(std::filesystem::path const& path) {
-        return isFlatResourcePathValue(path);
     }
 
     inline ScriptResult<std::filesystem::path> validateResourcePath(
@@ -207,19 +266,19 @@ namespace luax {
         }
 
         path = path.lexically_normal();
-        if (!isFlatResourcePath(path)) {
+        if (!isFlatResourcePathValue(path)) {
             return scriptErr<std::filesystem::path>("resource path must be a flat resource name");
         }
 
-        if (hasUnsupportedExtension(path)) {
+        if (hasUnsupportedExtensionValue(path)) {
             return scriptErr<std::filesystem::path>("resource path extension must be .luau");
         }
 
-        if (addLuauExtension && !hasLuauExtension(path)) {
+        if (addLuauExtension && !hasLuauExtensionValue(path)) {
             path += ".luau";
         }
 
-        if (!isFlatResourcePath(path)) {
+        if (!isFlatResourcePathValue(path)) {
             return scriptErr<std::filesystem::path>("resource path must be a flat resource name");
         }
 

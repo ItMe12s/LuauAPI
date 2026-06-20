@@ -2,6 +2,14 @@
 
 [Check the GitHub commits for more details](https://github.com/ItMe12s/LuauAPI).
 
+## v0.1.0-beta.5
+
+- Refactored bindings to call `Runtime` directly instead of `BindingHost`.
+- Consolidated cocos callback handlers into shared code.
+- Consolidated mesh and texture asset registries.
+- Consolidated task and ImGui scheduler internals.
+- Merged path validation helpers into `PathSandbox.hpp`.
+
 ## v0.1.0-beta.4
 
 - Added user settings for ImGui scaling.

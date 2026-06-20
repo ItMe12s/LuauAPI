@@ -1,5 +1,7 @@
 #pragma once
 
+#include "render3d/assets/AssetRegistry.hpp"
+
 #include <cstdint>
 #include <expected>
 #include <filesystem>
@@ -88,19 +90,6 @@ namespace luax::render3d {
         std::size_t m_vertexCount = 0;
     };
 
-    class MeshRegistry {
-    public:
-        static MeshRegistry& instance();
-
-        std::uint64_t registerMesh(std::shared_ptr<MeshAsset> mesh);
-        void release(std::uint64_t id);
-        std::shared_ptr<MeshAsset> get(std::uint64_t id) const;
-
-    private:
-        MeshRegistry() = default;
-
-        std::uint64_t m_nextId = 1;
-        std::unordered_map<std::uint64_t, std::shared_ptr<MeshAsset>> m_meshes;
-    };
+    using MeshRegistry = AssetRegistry<MeshAsset>;
 
 } // namespace luax::render3d

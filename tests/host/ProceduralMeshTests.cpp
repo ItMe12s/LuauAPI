@@ -218,7 +218,7 @@ TEST_CASE("MeshRegistry register get release round trip") {
     auto mesh = requireMesh(MeshAsset::fromBuffers(positions, {}, {}, indices));
 
     auto& registry = MeshRegistry::instance();
-    auto const id = registry.registerMesh(mesh);
+    auto const id = registry.registerAsset(mesh);
     REQUIRE(registry.get(id) == mesh);
 
     registry.release(id);
@@ -241,8 +241,8 @@ TEST_CASE("MeshRegistry ids are monotonic") {
     auto meshB = requireMesh(MeshAsset::fromBuffers(positions, {}, {}, indices));
 
     auto& registry = MeshRegistry::instance();
-    auto const idA = registry.registerMesh(meshA);
-    auto const idB = registry.registerMesh(meshB);
+    auto const idA = registry.registerAsset(meshA);
+    auto const idB = registry.registerAsset(meshB);
     REQUIRE(idB > idA);
 
     registry.release(idA);
