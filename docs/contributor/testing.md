@@ -45,7 +45,7 @@ CTest discovers the cases at build time. The files are:
 | `tests/host/ProceduralMeshTests.cpp` | Procedural mesh build and validation |
 | `tests/host/Render3DMathTests.cpp` | Transform math and helpers |
 | `tests/host/SceneDrawListTests.cpp` | Scene draw list sorting and batching |
-| `tests/imgui_binding_tests.cpp` | ImGui widget binding smoke |
+| `tests/imgui_binding_tests.cpp` | ImGui widget binding smoke and font API guards |
 | `tests/imgui_scheduler_tests.cpp` | ImGui draw scheduler registration |
 | `tests/indexed_slot_map_tests.cpp` | Indexed slot map used by the schedulers |
 | `tests/loadstring_tests.cpp` | `loadstring` compile and runtime behavior |

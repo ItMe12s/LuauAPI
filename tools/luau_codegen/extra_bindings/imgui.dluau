@@ -171,7 +171,7 @@ export type ImGuiFontHandle = {
 }
 
 export type ImGuiFontNamespace = {
-    add: (root: "resources", path: string, size: number) -> ImGuiFontHandle?,
+    add: (root: FsRoot, path: string, size: number) -> (ImGuiFontHandle?, string?),
     with: (font: ImGuiFontHandle, fn: () -> ()) -> (),
 }
 

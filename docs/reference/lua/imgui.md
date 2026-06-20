@@ -213,6 +213,13 @@ Use `imgui.style.with` for per-window or per-mod styling that does not affect ot
 Useful option fields include `alpha`, `windowPadding`, `windowRounding`, `framePadding`, `frameRounding`, `itemSpacing`, and `colors`.
 Color keys can be `imgui.Col.*` values or color names from `imgui.Col`.
 
+## Display scale
+
+LuauAPI exposes an ImGui scale slider in its Geode mod settings under User Settings.
+Higher values make the UI smaller. Default is 4.5. Range is 2.0 to 6.0.
+The value applies at backend init and updates live when you change the setting.
+There is no Lua API for this. It is consistent across Retina, SDL, and other display setups.
+
 ## Fonts
 
 ```lua
@@ -221,9 +228,10 @@ imgui.font.with(font, fn)
 ```
 
 Register fonts before or outside `imgui.onDraw`.
-Use raw `.ttf` resource files, not GD bitmap fonts. `add` returns `nil, err` on bad path or load failure.
+Use raw `.ttf` resource files, not GD bitmap fonts. The first argument uses the same roots as [fs](fs.md).
 Before ImGui init, `add` returns a handle and loads at first use.
 `with` must run inside `imgui.onDraw`. `with` always pops after `fn`, even when `fn` errors.
+See [Limits and errors](../cpp/limits-and-errors.md) for font error strings.
 
 ```lua
 local font, err = imgui.font.add("resources", "assets/Inter.ttf", 18)
@@ -259,7 +267,7 @@ See `imgui.dluau` for all constant tables.
 Use one `imgui.onDraw` per mod when possible. Keep draw work under 20 ms.
 Do not do IO, web work, or heavy list rebuilds in `onDraw`.
 Image, texture, docking, viewport, and draw list APIs are not bound.
-See [Limits and errors](../cpp/limits-and-errors.md) for hard caps and error strings.
+See [Limits and errors](../cpp/limits-and-errors.md) for hard caps and GPU session disable.
 
 ## ImGui or Cocos UI
 
@@ -286,4 +294,6 @@ See [UI and layouts](ui.md) for when to use ImGui vs Cocos UI.
 - `src/bindings/imgui/ImGuiMenus.cpp`
 - `src/bindings/imgui/ImGuiStyle.cpp`
 - `src/bindings/imgui/ImGuiFontBinding.cpp`
+- `src/bindings/imgui/ImGuiFontRegistry.cpp`
+- `src/bindings/imgui/ImGuiHost.cpp`
 - `src/bindings/imgui/ImGuiConstants.cpp`

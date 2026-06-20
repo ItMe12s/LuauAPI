@@ -3,7 +3,7 @@
 ## Summary
 
 `gd3d` provides lightweight 3D rendering inside the cocos2d scene graph.
-Load glTF meshes, place them in a `ViewportFrame` node, and attach that node like any other `CCNode`.
+Load glTF meshes, place them in a `ViewportFrame` sprite, and attach that node like any other scene node.
 
 The namespace has six parts:
 
@@ -12,7 +12,7 @@ The namespace has six parts:
 - `gd3d.mesh` for building meshes from vertex data
 - `gd3d.texture` for loading standalone image textures
 - `gd3d.Material` for solid-color, textured, or glTF-derived materials
-- `gd3d.ViewportFrame` for the render target node
+- `gd3d.ViewportFrame` for the render target sprite
 
 Vec3 values are plain tables `{ x, y, z }`.
 
@@ -52,7 +52,7 @@ type Mesh = {
     getMaterial: (self: Mesh, index: number) -> Material?,
 }
 
-type ViewportFrame = CCNode & {
+type ViewportFrame = CCSprite & {
     setCamera: (self: ViewportFrame, transform: Transform, fovDeg: number, near: number, far: number) -> (),
     getCamera: (self: ViewportFrame) -> { transform: Transform, fovY: number, near: number, far: number },
     setBackgroundColor: (self: ViewportFrame, color: Vec3 | { r: number, g: number, b: number, a: number? }) -> (),
@@ -82,7 +82,7 @@ type ViewportFrame = CCNode & {
 }
 ```
 
-`ViewportFrame` inherits all `CCNode` methods (`addChild`, `setPosition`, `setContentSize`, and so on).
+`ViewportFrame` inherits `CCNode` layout methods (`addChild`, `setPosition`, `setContentSize`, and so on).
 
 ## Transform
 
@@ -261,7 +261,7 @@ Per-primitive overrides beat the instance-wide override.
 gd3d.ViewportFrame.new(width: number, height: number) -> (ViewportFrame?, string?)
 ```
 
-Creates a `CCNode` that renders its 3D scene into an off-screen buffer, then draws that texture over its content rect.
+Renders its 3D scene into an off-screen buffer, then draws that texture over its content rect.
 Set the node size with `setContentSize` or pass width and height to `new`.
 The node uses a centered anchor point (`0.5, 0.5`), so `setPosition` places the middle of the viewport at the given point.
 
@@ -320,6 +320,7 @@ Debug lines read depth but do not write it. Full mesh wireframe is not supported
 Drawing needs an active OpenGL context. If it is not ready, framebuffer setup and draws are skipped.
 
 The viewport renders to an off-screen framebuffer at the cocos content scale.
+When compositing is enabled, the sprite draws that framebuffer texture into the scene.
 Opaque and mask draws run first. Blend draws run second, sorted back to front.
 `doubleSided` disables culling. Off-screen instances are frustum culled.
 Opaque draws are sorted by texture and mesh. VAOs and GPU instancing are used when supported.
@@ -330,7 +331,7 @@ See [Examples](../../getting-started/examples.md) and [src/scripts/_viewportdemo
 
 ## Limits
 
-See [Limits and errors](../cpp/limits-and-errors.md) for mesh, texture, and procedural caps.
+See [Limits and errors](../cpp/limits-and-errors.md) for mesh, texture, procedural caps, and GPU session disable.
 
 ## Related
 
@@ -364,5 +365,6 @@ See [Limits and errors](../cpp/limits-and-errors.md) for mesh, texture, and proc
 - `src/render3d/assets/GltfIo.hpp`
 - `src/render3d/assets/ImageDecode.hpp`
 - `src/render3d/gpu/GlUtil.hpp`
+- `src/render3d/gpu/GpuSessionDisable.cpp`
 - `src/render3d/viewport/CCViewportFrame.hpp`
 - `src/render3d/gpu/Renderer3D.hpp`

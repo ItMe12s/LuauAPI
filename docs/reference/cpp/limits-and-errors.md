@@ -67,6 +67,26 @@ This page is the canonical list of caps, deadlines, and error strings for LuauAP
 | Message | When | Return shape |
 | --- | --- | --- |
 | `imgui.onDraw: too many draw callbacks (limit 256)` | Draw callback cap hit | Lua error |
+| `imgui.font.add must not run inside an imgui.onDraw callback` | `add` inside draw | Lua error |
+| `imgui.font.add must run on the main thread` | `add` off main thread | Lua error |
+| `imgui.font.add: size must be greater than 0` | Non-positive size | Lua error |
+| `font path must use a .ttf extension` | Non-`.ttf` path | `nil, err` |
+| `font file could not be loaded` | Invalid TTF data | `nil, err` |
+| `imgui.font.with: font handle is invalid` | Bad or stale handle | Lua error |
+
+## GPU session disable
+
+LuauAPI disables all GPU features for the rest of the game session when the OpenGL context is torn down.
+This affects ImGui and `gd3d`.
+
+| Trigger | Effect |
+| --- | --- |
+| Fullscreen or windowed toggle on Windows | ImGui backend destroyed, live viewports abandoned |
+| `TexturesUnloaded` game event | Same as above |
+
+While disabled, ImGui draw callbacks do not run and `gd3d.ViewportFrame` skips draws.
+A restart popup appears on the next menu layer. Restart the game to restore GPU features.
+There is no Lua error for this path.
 
 ## JSON limits
 
@@ -270,6 +290,8 @@ When an allocation would cross the cap, it fails and Lua reports an out of memor
 ## Source
 
 - `src/core/Config.hpp`
+- `src/bindings/imgui/ImGuiFontBinding.cpp`
+- `src/render3d/gpu/GpuSessionDisable.cpp`
 - `src/bindings/geode/web/WebCaps.hpp`
 - `src/bindings/websocket/WebSocketInternal.hpp`
 - `src/render3d/assets/MeshAsset.hpp`

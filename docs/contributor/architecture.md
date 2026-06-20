@@ -15,7 +15,7 @@ This page names the main parts and traces how a script gets from a file to runni
 - ImGui draw scheduler. Drives `imgui.onDraw` callbacks each frame.
   See [ImGui draw scheduler](internals/imgui-draw-scheduler.md).
 - WebSocket. Client and local server bindings backed by IXWebSocket. See [websocket](../reference/lua/websocket.md).
-- 3D rendering. Loads glTF meshes and draws them through `gd3d.ViewportFrame` nodes. See [gd3d](../reference/lua/gd3d.md).
+- 3D rendering. Loads glTF meshes and draws them through `gd3d.ViewportFrame` sprites. See [gd3d](../reference/lua/gd3d.md).
 - Codegen. Generates the game bindings and the type stubs. See [Codegen](codegen/codegen.md).
 
 ## Repository layout
@@ -32,7 +32,7 @@ This page names the main parts and traces how a script gets from a file to runni
 - `src/bindings/imgui/`: ImGui binding and draw scheduler.
 - `src/bindings/task/`: task scheduler bindings.
 - `src/bindings/render3d/`: handwritten `gd3d` bindings.
-- `src/render3d/`: glTF loading, GPU rendering, and the `CCViewportFrame` node.
+- `src/render3d/`: glTF loading, GPU rendering, and the `CCViewportFrame` sprite.
 - `src/require/`: the requirer and the path rules.
 - `build/luauapi-gen/src/`: generated C++ bindings from codegen.
 - `tools/luau_codegen/`: the Python code generator.
@@ -62,7 +62,7 @@ See [ImGui draw scheduler](internals/imgui-draw-scheduler.md).
 
 ## How a ViewportFrame draws
 
-Scripts load meshes, add them to `gd3d.ViewportFrame`, and parent the node in the scene graph.
+Scripts load meshes, add them to `gd3d.ViewportFrame`, and parent the sprite in the scene graph.
 See [gd3d](../reference/lua/gd3d.md) for the rendering model.
 
 ## Threading
@@ -94,6 +94,7 @@ and [C++ API reference](../reference/cpp/api-reference.md) Threading for host AP
 - `src/api.cpp`
 - `src/core/Runtime.cpp`
 - `src/render3d/viewport/CCViewportFrame.cpp`
+- `src/render3d/gpu/GpuSessionDisable.cpp`
 - `src/render3d/gpu/Renderer3D.cpp`
 - `tools/luau_codegen/emit/cxx_templates.py`
 - `src/bindings/imgui/ImGuiDrawScheduler.cpp`

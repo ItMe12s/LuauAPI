@@ -128,6 +128,12 @@ def _function_body(source: str, name: str, *, ret: str = "int") -> str:
     return source[start:end]
 
 
+def _assert_gl_context_guard(body: str, *, fn: str) -> None:
+    assert "glContextAvailable()" in body or "canDeleteGpuResources(" in body, (
+        f"{fn} must guard missing GL context"
+    )
+
+
 def _inline_function_body(source: str, signature: str) -> str:
     start = source.find(signature)
     assert start != -1, f"missing inline function {signature!r}"
@@ -660,7 +666,7 @@ class Render3DGuardTests(unittest.TestCase):
         delete_mesh_body = _function_body(
             mesh_cache, "Renderer3DMeshCache::deleteGpuMesh", ret="void"
         )
-        self.assertIn("glContextAvailable()", delete_mesh_body)
+        _assert_gl_context_guard(delete_mesh_body, fn="deleteGpuMesh")
 
         ensure_mesh_body = _function_body(
             mesh_cache, "Renderer3DMeshCache::ensureGpuMesh", ret="GpuMesh*"

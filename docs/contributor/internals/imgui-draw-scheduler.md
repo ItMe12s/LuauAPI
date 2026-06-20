@@ -30,6 +30,7 @@ The binding is split by feature:
 - `ImGuiTables.cpp` has table helpers.
 - `ImGuiMenus.cpp` has menu helpers.
 - `ImGuiStyle.cpp` has style and theme helpers.
+- `ImGuiFontBinding.cpp` and `ImGuiFontRegistry.cpp` register TTF fonts and rebuild the atlas.
 - `ImGuiConstants.cpp` has enum tables.
 
 ## The scheduler
@@ -45,19 +46,21 @@ Only the host draw lambda calls `drawAll()`. There is no `CCNode` tick like the 
 ## The host
 
 `ImGuiHost.cpp` owns gd-imgui-cocos and is the only file that includes `<imgui-cocos.hpp>`.
-`initImGuiHost()` is idempotent. It sets up ImGuiCocos and registers the draw lambda that calls `drawAll()`.
+`initImGuiHost()` is idempotent. It reads the `imgui-scale` mod setting (see [imgui](../../reference/lua/imgui.md)) and listens for live changes.
+It sets up ImGuiCocos and registers the draw lambda that calls `drawAll()`.
+The setup callback rebuilds the font atlas through `imguiFontRebuildAtlas()` after each ImGui init or reload.
 It runs lazily on the first `imgui.onDraw`, so a script that never uses ImGui pays nothing.
 If there's no OpenGL view yet, setup waits until available, making early `imgui.onDraw` safe.
-`shutdownImGuiHost()` clears the scheduler and tears down the backend.
+All host entry points return early when `gpuFeaturesDisabled()` is true. See [Limits and errors](../../reference/cpp/limits-and-errors.md).
+`shutdownImGuiHost()` clears the scheduler, font registry, and tears down the backend.
 `src/main.cpp` calls it on game exit before `Runtime::shutdown()`, so the draw lambda detaches before the Lua state closes.
 The default input mode stays in place, so the game keeps input unless an ImGui window is hovered or focused.
 `imgui.setVisible`, `imgui.toggle`, and `imgui.isVisible` forward to `ImGuiCocos`.
+gd-imgui-cocos is vendored in `gd-imgui-cocos/`. See [Building from source](../building.md).
 
 ## Limits
 
-Draw callback count and per-callback deadline caps are in [Limits and errors](../../reference/cpp/limits-and-errors.md).
-
-See [Limits and errors](../../reference/cpp/limits-and-errors.md).
+Draw callback count, per-callback deadlines, font errors, and GPU session disable are in [Limits and errors](../../reference/cpp/limits-and-errors.md).
 
 ## Related
 
@@ -77,8 +80,12 @@ See [Limits and errors](../../reference/cpp/limits-and-errors.md).
 - `src/bindings/imgui/ImGuiTables.cpp`
 - `src/bindings/imgui/ImGuiMenus.cpp`
 - `src/bindings/imgui/ImGuiStyle.cpp`
+- `src/bindings/imgui/ImGuiFontBinding.cpp`
+- `src/bindings/imgui/ImGuiFontRegistry.cpp`
 - `src/bindings/imgui/ImGuiConstants.cpp`
 - `src/bindings/imgui/ImGuiDrawScheduler.hpp`
 - `src/bindings/imgui/ImGuiDrawScheduler.cpp`
 - `src/bindings/imgui/ImGuiHost.cpp`
+- `src/render3d/gpu/GpuSessionDisable.cpp`
+- `gd-imgui-cocos/src/backend.cpp`
 - `src/core/Config.hpp`
