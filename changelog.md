@@ -4,6 +4,7 @@
 
 ## v0.1.0-beta.5
 
+- Added Luau read/write for encrypted stat fields (SeedValue) as plain numbers.
 - Improved cleanup when the mod unloads for `geode.utils.web`, keyboard listeners, `websocket`, and `imgui.onDraw`.
 - Updated runtime internals for bindings, memory limits, and module loading.
 - Fixed crash in deferred CCObject release drain when an owned object is freed before the next tick.

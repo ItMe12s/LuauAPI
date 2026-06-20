@@ -8,7 +8,6 @@ if TYPE_CHECKING:
 
 from luau_codegen.parse.broma import Class, Field
 from luau_codegen.model.denylist import INACCESSIBLE_CLASSES
-from luau_codegen.model.domain import short_name
 from luau_codegen.convert.type_map import (
     TypeInfo,
     classify_arg,
@@ -21,9 +20,6 @@ from luau_codegen.policy.containers import (
     container_supported_as_return,
 )
 
-
-# Encrypted field type prefixes. See codegen.md field policy.
-ENCRYPTED_FIELD_TYPE_PREFIXES = ("SeedValue",)
 
 INACCESSIBLE_FIELDS = {
     ("CCObject", "m_nChildIndex"),
@@ -64,11 +60,6 @@ def _is_function_pointer(t: str) -> bool:
     return bool(re.search(r"\(\s*\*", normalize_type(t)))
 
 
-def _is_encrypted_field_type(t: str) -> bool:
-    base = short_name(normalize_type(t))
-    return any(base.startswith(prefix) for prefix in ENCRYPTED_FIELD_TYPE_PREFIXES)
-
-
 def _mutable_pointer_field_container(info: TypeInfo) -> bool:
     return info.kind in _MUTABLE_POINTER_FIELD_CONTAINER_KINDS and (
         info.is_out or info.is_vector_ptr
@@ -86,8 +77,6 @@ def bindable_field(
         return False, "inaccessible", None, None
     if cls and (cls.name, field.name) in INACCESSIBLE_FIELDS:
         return False, "inaccessible-field", None, None
-    if _is_encrypted_field_type(field.type):
-        return False, "encrypted-field", None, None
     if field.count > 1:
         return False, "array", None, None
     if "&" in normalized:

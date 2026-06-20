@@ -373,11 +373,14 @@ def _emit_field_accessors(
     out.append(f'        auto self = luax::Usertype<{cxx_name(cls)}>::check(L, 1, "{label}");\n')
     out.append(f"        return {getter_impl}(L, self);\n")
     out.append("    }\n\n")
+    setter_value_type = "int" if arg_info.kind == "seed_value" else arg_info.cxx_type
     out.append("    template <class T>\n")
-    out.append(f"    int {setter_impl}(lua_State* L, T* self, {arg_info.cxx_type} value) {{\n")
+    out.append(f"    int {setter_impl}(lua_State* L, T* self, {setter_value_type} value) {{\n")
     out.append(f"        if constexpr (requires(T* obj) {{ obj->{field.name}; }}) {{\n")
     if arg_info.kind == "std_array":
         out.extend(_emit_std_array_field_assign_lines(field, label, arg_info))
+    elif arg_info.kind == "seed_value":
+        out.append(f"            self->{field.name} = value;\n")
     elif _container_field_assign_fn(arg_info) is not None:
         out.extend(_emit_container_field_assign_lines(field, label, arg_info))
     elif arg_info.is_vector_ptr:

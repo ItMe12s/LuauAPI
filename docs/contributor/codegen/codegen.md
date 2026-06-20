@@ -247,8 +247,12 @@ A field is skipped when any of the following apply:
 - It is an array or reference
 - It is a function or string pointer
 - It is listed in `INACCESSIBLE_FIELDS`
-- Its type matches `ENCRYPTED_FIELD_TYPE_PREFIXES` (for example `SeedValue`)
-- Its encrypted type does not classify
+- Its type cannot be marshalled as a `SeedValue*` field (see below)
+
+`SeedValue*` fields (for example `geode::SeedValueRSV`) bind as Lua `number`.
+Classification uses kind `seed_value`. Getters decode with `static_cast<int>`.
+Setters assign with `operator=(int)`, not `static_cast<SeedValue>(int)`.
+All eight `SeedValue` variant names share this policy.
 
 Skipped fields appear as `-- skipped <name>: <reason>` comments in the stub.
 
@@ -313,7 +317,8 @@ See [delegates](../../reference/lua/delegates.md) for how scripts use delegate t
 
 ## Related
 
-- [enums](../../reference/lua/enums.md)
+- [Codegen](../../contributor/codegen/codegen.md)
+- [game objects](game-objects.md)
 - [Platform parity](platform-parity.md)
 - [Pair containers](pair-containers.md)
 - [Nested containers](nested-containers.md)
@@ -342,6 +347,7 @@ See [delegates](../../reference/lua/delegates.md) for how scripts use delegate t
 - `tools/luau_codegen/emit/audit.py`
 - `tools/luau_codegen/emit/parity.py`
 - `tools/luau_codegen/policy/filtering.py`
+- `tools/luau_codegen/policy/fields.py`
 - `tools/luau_codegen/model/denylist.py`
 - `tools/luau_codegen/emit/hooks.py`
 - `tools/luau_codegen/emit/cxx_templates.py`

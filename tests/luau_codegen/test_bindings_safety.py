@@ -698,6 +698,39 @@ class GeneratedSafetyTests(unittest.TestCase):
         self.assertIn("luax::assignPrimitiveVector(self->m_flags, std::move(value))", text)
         self.assertNotIn("self->m_flags = std::move", text)
 
+    def test_seed_value_field_setter_assigns_int(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        ccnode = Class(name="CCNode", namespace="cocos2d", bases=["CCObject"])
+        level = Class(
+            name="GJGameLevel",
+            namespace="",
+            bases=["CCNode"],
+            fields=[Field("m_attempts", "geode::SeedValueRSV")],
+        )
+        objects = {
+            "CCObject": ccobject,
+            "CCNode": ccnode,
+            "cocos2d::CCObject": ccobject,
+            "cocos2d::CCNode": ccnode,
+            "GJGameLevel": level,
+        }
+        grouped, _ = group_supported(level, objects, "win")
+        text = _emit_class_file(
+            level,
+            grouped,
+            [],
+            [(level, level.fields[0])],
+            objects,
+            set(),
+            1,
+            "win",
+        )
+
+        self.assertIn("int value)", text)
+        self.assertIn("self->m_attempts = value;", text)
+        self.assertNotIn("static_cast<decltype(self->m_attempts)>(value)", text)
+        self.assertIn("static_cast<int>(self->m_attempts)", text)
+
     def test_std_array_int_field_setter_uses_assign_std_array(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")
         foo = Class(

@@ -656,6 +656,8 @@ def _classify_core(
             key_type=pair_type.key_type,
             value_type=pair_type.value_type,
         )
+    if base.startswith("SeedValue"):
+        return TypeInfo("seed_value", n, "number", is_ref=is_ref, is_out=is_out)
     if n == "bool":
         return TypeInfo("bool", n, "boolean", is_ref=is_ref, is_out=is_out)
     if n in WIDE_INTEGER_TYPES:

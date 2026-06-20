@@ -133,6 +133,21 @@ local fields = geode.fields(self)
 fields.count = (fields.count or 0) + 1
 ```
 
+## Encrypted stat fields
+
+Some GD stats on level and manager objects are encrypted ints in the game
+(`m_attempts`, `m_stars`, `m_levelID`, and others on [GJGameLevel](https://docs.geode-sdk.org/classes/GJGameLevel/)).
+In Luau they appear as `number` fields. Read and write them like any other number field.
+You can also use wrapper methods when the class has them (`setAttempts`, `setLevelID`, and similar).
+
+```lua
+print(level.m_levelID)
+print(level.m_objectCount)
+level:setAttempts(level.m_attempts + 1) -- level.m_attempts += 1
+```
+
+See [Codegen](../../contributor/codegen/codegen.md) for binding policy.
+
 ## Enums
 
 GD and Geode enums are integer constant tables on `geode.gd` and `geode`. See [enums](enums.md).
@@ -160,3 +175,4 @@ You do not manage retain or release by hand. See the [Bindings framework](../../
 - `src/framework/stack/Types.hpp`
 - `src/framework/usertype/Fields.cpp`
 - `tools/luau_codegen/emit/luau_types/`
+- `tools/luau_codegen/policy/fields.py`

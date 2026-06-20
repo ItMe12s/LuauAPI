@@ -63,6 +63,20 @@ class F6NumericMarshallingTests(unittest.TestCase):
         text = "".join(lines)
         self.assertIn("check<int>", text)
 
+    def test_seed_value_uses_int_marshalling(self) -> None:
+        info = TypeInfo(
+            kind="seed_value",
+            lua_type="number",
+            cxx_type="geode::SeedValueRSV",
+        )
+        arg = Arg(type="geode::SeedValueRSV", name="attempts")
+        check_text = "".join(check_arg(arg, info, 1, "v", "test"))
+        push_text = "".join(push_value(info, "self->m_attempts"))
+        self.assertIn("check<int>", check_text)
+        self.assertNotIn("check<geode::SeedValueRSV>", check_text)
+        self.assertIn("static_cast<int>(self->m_attempts)", push_text)
+        self.assertIn("lua_pushnumber", push_text)
+
 
 class CallbackMarshallingTests(unittest.TestCase):
     def test_callback_arg_emits_lua_callback_helper(self) -> None:

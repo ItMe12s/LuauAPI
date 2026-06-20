@@ -180,6 +180,10 @@ def emit_stack_check(
         return []
     if info.kind == "bool":
         return [f'        {_prefix(declare, var)} = luax::check<bool>(L, {idx}, "{label}");\n']
+    if info.kind == "seed_value":
+        return [
+            f'        {_prefix(declare, var)} = luax::check<int>(L, {idx}, "{label}");\n'
+        ]
     if info.kind in ("number", "enum"):
         check_type = _luax_numeric_check_type(cxx)
         if check_type in ("float", "double"):
@@ -302,6 +306,10 @@ def _push_impl(
 ) -> list[str]:
     if info.kind == "bool":
         return [f"{indent}luax::push(L, {expr});\n"]
+    if info.kind == "seed_value":
+        return [
+            f"{indent}lua_pushnumber(L, static_cast<double>(static_cast<int>({expr})));\n"
+        ]
     if info.kind == "number":
         return [f"{indent}lua_pushnumber(L, static_cast<double>({expr}));\n"]
     if info.kind == "wideint":
@@ -389,6 +397,13 @@ def _emit_callback_pop(var: str, ret: TypeInfo) -> list[str]:
             f'                    *static_cast<bool*>(raw) = luax::check<bool>(L, -1, "{var} callback return");\n',
             "                },\n",
         ]
+    if ret.kind == "seed_value":
+        cxx = ret.cxx_type
+        return [
+            "                +[](lua_State* L, void* raw) {\n",
+            f'                    *static_cast<{cxx}*>(raw) = luax::check<int>(L, -1, "{var} callback return");\n',
+            "                },\n",
+        ]
     if ret.kind == "number":
         cxx = ret.cxx_type
         check = _luax_numeric_check_type(cxx)
@@ -465,6 +480,8 @@ def _emit_invoke_failure_return(ret: TypeInfo) -> str:
         return f"static_cast<{cxx}>(0)"
     if ret.kind == "enum":
         return f"static_cast<{ret.cxx_type}>(0)"
+    if ret.kind == "seed_value":
+        return f"{ret.cxx_type}{{}}"
     if ret.kind == "value":
         return "{}"
     if ret.kind == "string":

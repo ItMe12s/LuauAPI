@@ -82,17 +82,28 @@ protected:
         self.assertFalse(ok)
         self.assertEqual(reason, "inaccessible")
 
-    def test_encrypted_field_type_rejected(self) -> None:
+    def test_seed_value_field_bindable(self) -> None:
         from luau_codegen.parse.broma import Field  # type: ignore[import-unresolved]
         from luau_codegen.policy.fields import bindable_field  # type: ignore[import-unresolved]
 
-        cls = Class(name="GameLevelManager")
-        field = Field(name="m_seed", type="SeedValueRR")
+        cls = Class(name="GJGameLevel", bases=["CCNode"])
+        field = Field(name="m_attempts", type="geode::SeedValueRSV")
 
-        ok, reason, _, _ = bindable_field(field, {"GameLevelManager": cls}, cls)
+        ok, reason, arg, ret = bindable_field(
+            field,
+            {"CCNode": Class(name="CCNode"), "GJGameLevel": cls},
+            cls,
+        )
 
-        self.assertFalse(ok)
-        self.assertEqual(reason, "encrypted-field")
+        self.assertTrue(ok)
+        self.assertEqual(reason, "")
+        self.assertIsNotNone(arg)
+        self.assertIsNotNone(ret)
+        assert arg is not None
+        assert ret is not None
+        self.assertEqual(arg.kind, "seed_value")
+        self.assertEqual(ret.kind, "seed_value")
+        self.assertEqual(ret.lua_type, "number")
 
     def test_vector_ptr_field_rejected_by_container_gate(self) -> None:
         from luau_codegen.parse.broma import Field  # type: ignore[import-unresolved]
