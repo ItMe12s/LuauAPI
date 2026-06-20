@@ -20,7 +20,7 @@ Versions come from `CMakeLists.txt`.
 
 CMake downloads these during configuration, so you do not install them by hand.
 
-- Luau, pinned to tag `0.725`
+- Luau, pinned to tag `0.726`
 - Geode bindings, pinned through `LUAUAPI_BINDINGS_GIT_TAG` in `cmake/GeodeBindings.cmake`
 - GLM `1.0.3`, used by the 3D math and glTF loader
 - IXWebSocket `v12.0.0` and mbedTLS `v3.6.6`, fetched for websocket support
