@@ -112,6 +112,7 @@ if (NOT LUAUAPI_HOST_ONLY)
 endif()
 
 if(LUAUAPI_BUILD_TESTS)
+    include(cmake/TestSources.cmake)
     include(cmake/ImGuiHeadless.cmake)
     enable_testing()
 
@@ -133,55 +134,7 @@ if(LUAUAPI_BUILD_TESTS)
         ${CMAKE_CURRENT_SOURCE_DIR}/tests/*.cpp)
 
     add_executable(luauapi_tests
-        src/api.cpp
-        src/framework/Binding.cpp
-        src/framework/callback/LuaCocosHandler.cpp
-        src/framework/usertype/Fields.cpp
-        src/framework/usertype/OpaqueHandle.cpp
-        src/framework/usertype/Usertype.cpp
-        src/framework/usertype/UsertypeRegistry.cpp
-        src/framework/callback/LuaDelegate.cpp
-        src/framework/callback/LuaTrampolineRegistry.cpp
-        src/bindings/task/TaskBinding.cpp
-        src/bindings/render3d/Gd3dRegister.cpp
-        src/bindings/render3d/TransformBinding.cpp
-        src/bindings/render3d/ProceduralMeshBinding.cpp
-        src/bindings/render3d/GltfBinding.cpp
-        src/bindings/render3d/internal/MeshHandleBinding.cpp
-        src/bindings/websocket/WebSocketBinding.cpp
-        src/bindings/websocket/WebSocketConnection.cpp
-        src/bindings/websocket/WebSocketServer.cpp
-        src/bindings/geode/CurrentMod.cpp
-        src/bindings/geode/ModSandbox.cpp
-        src/bindings/geode/GeodeFsBinding.cpp
-        src/bindings/geode/GeodeSmallBindings.cpp
-        src/bindings/geode/web/GeodeWebCore.cpp
-        src/bindings/geode/web/GeodeWebApi.cpp
-        src/bindings/geode/web/GeodeWebListeners.cpp
-        src/bindings/geode/JsonConvert.cpp
-        src/bindings/imgui/ImGuiCore.cpp
-        src/bindings/imgui/ImGuiWidgetsLayout.cpp
-        src/bindings/imgui/ImGuiPopupsTablesMenus.cpp
-        src/bindings/imgui/ImGuiStyleFonts.cpp
-        tests/host/ImGuiHostStub.cpp
-        src/bindings/task/TaskScheduler.cpp
-        src/require/BytecodeCacheKey.cpp
-        src/require/Requirer.cpp
-        src/core/Loadstring.cpp
-        src/core/Runtime.cpp
-        src/render3d/assets/MeshAsset.cpp
-        src/render3d/assets/TextureAsset.cpp
-        src/render3d/assets/GltfIo.cpp
-        src/render3d/assets/ImageDecode.cpp
-        src/render3d/gpu/SceneDrawList.cpp
-        tests/host/Render3DMathTests.cpp
-        tests/host/GltfParseTests.cpp
-        tests/host/ImageDecodeTests.cpp
-        tests/host/ProceduralMeshTests.cpp
-        tests/host/Gd3dTransformBindingTests.cpp
-        tests/host/Gd3dMeshBindingTests.cpp
-        tests/host/FrustumTests.cpp
-        tests/host/SceneDrawListTests.cpp
+        ${LUAUAPI_HOST_TEST_SOURCES}
         ${LUAUAPI_TEST_SOURCES}
     )
     luauapi_force_msvc_idl0(luauapi_tests Catch2 Catch2WithMain luauapi_imgui_headless)

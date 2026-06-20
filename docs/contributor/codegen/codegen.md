@@ -94,7 +94,7 @@ The custom command depends on the following. A change to any reruns codegen:
 - Free functions from the manifest in `model/free_fn_sources.py` (`FREE_FUNCTION_SOURCES`).
 
 The manifest is the single source for both the scanner and the generated `#include` list.
-`test_binding_guards.py` `FreeFnManifestSyncTests` fails on drift.
+`test_binding_guards_framework.py` `FreeFnManifestSyncTests` fails on drift.
 
 | SDK header | Namespaces | Name filter |
 | --- | --- | --- |
@@ -143,7 +143,7 @@ so they must stay in sync. `test_manual_fields_sync.py` and `test_extra_bindings
   - color helpers
   - `ccDrawColor4B`
   - hex parsers
-- `test_binding_guards.py` enforces that split
+- `test_binding_guards_*.py` enforces that split
 
 ## Metadata outputs
 

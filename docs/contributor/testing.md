@@ -166,7 +166,7 @@ Compact map of `tests/luau_codegen/`:
 | Delegates | `test_delegate_generator.py` | delegate spec and trampoline emit |
 | Parity and audit | `test_parity.py`, `test_audit.py` | `parity.json` and audit bucket rules |
 | CLI | `test_codegen_cli.py` | exit codes, list-all-outputs, standalone audit |
-| Drift guards | `test_manual_fields_sync.py`, `test_extra_bindings_sync.py`, `test_public_api_header_sync.py`, `test_binding_guards.py` | stub, binding, and public header sync |
+| Drift guards | `test_manual_fields_sync.py`, `test_extra_bindings_sync.py`, `test_public_api_header_sync.py`, `test_binding_guards_*.py` | stub, binding, and public header sync |
 
 See [Codegen](codegen/codegen.md) for what the generator produces.
 

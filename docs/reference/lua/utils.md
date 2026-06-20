@@ -12,12 +12,6 @@ Some Geode C++ integer sizes appear as `string` in the stub and use integer-stri
 
 | Module | Page | Role |
 | --- | --- | --- |
-| `geode.utils` | Top-level helpers | Error text, display factor, env vars, input time, safe area |
-| `geode.utils.platform` | platform | Platform label and Wine detection |
-| `geode.utils.thread` | thread | Thread name for logging |
-| `geode.utils.clipboard` | clipboard | Clipboard read and write |
-| `geode.utils.random` | random | UUIDs and random strings |
-| `geode.utils.string` | string | Trim, case, search, replace helpers |
 | `geode.utils.web` | [web](web.md) | Async HTTP requests |
 | `geode.utils.base64` | [base64](base64.md) | Base64 encode and decode |
 | `geode.utils.permission` | [permission](permission.md) | OS permission checks |
