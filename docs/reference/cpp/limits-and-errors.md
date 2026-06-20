@@ -257,7 +257,7 @@ The run functions return `geode::Result<void>`. On failure they return `Err` wit
 Common cases include off-main-thread calls, shutdown, bad paths, oversized scripts, script errors, and deadline overruns.
 
 Read the message from `Result` and optionally `lastError()`.
-See [Your first script](../../getting-started/first-script.md) and [C++ integration guide](integration-guide.md).
+See [Your first script](../../getting-started/first-script.md) and [C++ API reference](api-reference.md).
 
 ## Deadlines and interrupts
 
@@ -279,7 +279,6 @@ When an allocation would cross the cap, it fails and Lua reports an out of memor
 - [Getting started](../../getting-started/overview.md)
 - [LuauAPI mod guidelines](../../mod_guidelines.md)
 - [C++ API reference](api-reference.md)
-- [C++ integration guide](integration-guide.md)
 - [imgui](../lua/imgui.md)
 - [gd3d](../lua/gd3d.md)
 - [hooks](../lua/hooks.md)

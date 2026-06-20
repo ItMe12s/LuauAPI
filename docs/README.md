@@ -14,11 +14,13 @@ For mod authors who depend on LuauAPI and run `.luau` scripts from a Geode mod.
 
 Read [LuauAPI mod guidelines](mod_guidelines.md) before you ship.
 
-- [Getting started](getting-started/overview.md)
-- [Installation](getting-started/installation.md)
-- [Editor setup](getting-started/editor-setup.md)
-- [Your first script](getting-started/first-script.md)
-- [Examples](getting-started/examples.md)
+| Page | Role |
+| --- | --- |
+| [Getting started](getting-started/overview.md) | Runtime basics and threading |
+| [Installation](getting-started/installation.md) | Dependency and platform setup |
+| [Editor setup](getting-started/editor-setup.md) | Autocomplete and stubs |
+| [Your first script](getting-started/first-script.md) | First `runFile` from C++ |
+| [Examples](getting-started/examples.md) | Runnable script samples |
 
 ## Reference
 
@@ -27,89 +29,60 @@ Start at [globals](reference/lua/globals.md) for the full Lua module index.
 
 ### Lua
 
-Core:
-
-- [globals](reference/lua/globals.md)
-- [modules](reference/lua/modules.md)
-- [sharing APIs between mods](reference/lua/sharing-apis.md)
-- [hooks](reference/lua/hooks.md)
-- [tasks and time](reference/lua/tasks.md)
-- [callbacks](reference/lua/callbacks.md)
-- [delegates](reference/lua/delegates.md)
-- [type stubs](reference/lua/type-stubs.md)
-
-Game:
-
-- [enums](reference/lua/enums.md)
-- [game objects](reference/lua/game-objects.md)
-- [cocos](reference/lua/cocos.md)
-- [ColorProvider](reference/lua/color-provider.md)
-- [Keybind](reference/lua/keybind.md)
-- [Keyboard input](reference/lua/keyboard-input.md)
-
-UI:
-
-- [UI and layouts](reference/lua/ui.md)
-- [imgui](reference/lua/imgui.md)
-- [gd3d](reference/lua/gd3d.md)
-
-IO:
-
-- [mod](reference/lua/mod.md)
-- [fs](reference/lua/fs.md)
-- [json](reference/lua/json.md)
-
-Network:
-
-- [web](reference/lua/web.md)
-- [websocket](reference/lua/websocket.md)
-
-Utils:
-
-- [geode.utils](reference/lua/utils.md)
-- [clipboard](reference/lua/clipboard.md)
-- [string](reference/lua/string.md)
-- [random](reference/lua/random.md)
-- [game](reference/lua/game.md)
-- [base64](reference/lua/base64.md)
-- [permission](reference/lua/permission.md)
-- [VersionInfo](reference/lua/version-info.md)
+| Page | Role |
+| --- | --- |
+| [globals](reference/lua/globals.md) | Full module index and error shapes |
+| [UI and layouts](reference/lua/ui.md) | Cocos UI factories and layouts |
+| [imgui](reference/lua/imgui.md) | Dear ImGui overlay |
+| [gd3d](reference/lua/gd3d.md) | 3D viewport rendering |
+| [web](reference/lua/web.md) | HTTP client |
+| [websocket](reference/lua/websocket.md) | WebSocket client and server |
+| [geode.utils](reference/lua/utils.md) | Clipboard, string, random, and other small helpers |
 
 ### C++
 
-- [C++ API reference](reference/cpp/api-reference.md)
-- [C++ integration guide](reference/cpp/integration-guide.md)
-- [Limits and errors](reference/cpp/limits-and-errors.md)
+| Page | Role |
+| --- | --- |
+| [C++ API reference](reference/cpp/api-reference.md) | Run functions, threading, and integration |
+| [Limits and errors](reference/cpp/limits-and-errors.md) | Caps, deadlines, and error strings |
 
 ## Contributor
 
 For people who build LuauAPI from source or work on the runtime and codegen.
 
-- [Architecture](contributor/architecture.md)
-- [Building from source](contributor/building.md)
-- [Testing](contributor/testing.md)
+| Page | Role |
+| --- | --- |
+| [Architecture](contributor/architecture.md) | Runtime layout |
+| [Building from source](contributor/building.md) | Build steps |
+| [Testing](contributor/testing.md) | Test map |
 
 Internals:
 
-- [Bindings framework](contributor/internals/bindings-framework.md)
-- [ImGui draw scheduler](contributor/internals/imgui-draw-scheduler.md)
-- [Module system](contributor/internals/module-system.md)
-- [Runtime](contributor/internals/runtime.md)
-- [Task scheduler](contributor/internals/task-scheduler.md)
+| Page | Role |
+| --- | --- |
+| [Bindings framework](contributor/internals/bindings-framework.md) | Binding layer |
+| [ImGui draw scheduler](contributor/internals/imgui-draw-scheduler.md) | ImGui frame scheduling |
+| [Module system](contributor/internals/module-system.md) | `require` and sandboxes |
+| [Runtime](contributor/internals/runtime.md) | Lua runtime lifecycle |
+| [Task scheduler](contributor/internals/task-scheduler.md) | Main-thread tasks |
 
 Codegen:
 
-- [Codegen](contributor/codegen/codegen.md)
-- [CCArray methods](contributor/codegen/cc-array.md)
-- [ccCArray read-only fields](contributor/codegen/cc-c-array.md)
-- [Nested containers](contributor/codegen/nested-containers.md)
-- [Pair containers](contributor/codegen/pair-containers.md)
-- [Platform parity](contributor/codegen/platform-parity.md)
+| Page | Role |
+| --- | --- |
+| [Codegen](contributor/codegen/codegen.md) | Codegen overview |
+| [CCArray methods](contributor/codegen/cc-array.md) | CCArray binding rules |
+| [ccCArray read-only fields](contributor/codegen/cc-c-array.md) | ccCArray field rules |
+| [Nested containers](contributor/codegen/nested-containers.md) | Nested container codegen |
+| [Pair containers](contributor/codegen/pair-containers.md) | Pair container codegen |
+| [Platform parity](contributor/codegen/platform-parity.md) | Cross-platform stubs |
 
 ## Policy and style
 
-- [LuauAPI mod guidelines](mod_guidelines.md)
-- [Documentation style](STYLE.md)
+| Page | Role |
+| --- | --- |
+| [LuauAPI mod guidelines](mod_guidelines.md) | Mod author policy |
+| [Documentation style](STYLE.md) | How to write docs |
 
 ## Related
 

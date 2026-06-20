@@ -3,21 +3,24 @@
 ## Summary
 
 `geode.utils` groups small helper libraries under the `geode.utils` prefix.
-Large modules have their own reference page. Smaller ones are documented below.
+Large modules have their own reference page. Smaller ones are documented on this page.
 
-Signatures match the generated stub at `types/geode.d.luau` after build.
+For signatures, use editor autocomplete from [type stubs](type-stubs.md).
 Some Geode C++ integer sizes appear as `string` in the stub and use integer-string arguments at runtime.
 
 ## Libraries
 
 | Module | Page | Role |
 | --- | --- | --- |
+| `geode.utils` | Top-level helpers | Error text, display factor, env vars, input time, safe area |
+| `geode.utils.platform` | platform | Platform label and Wine detection |
+| `geode.utils.thread` | thread | Thread name for logging |
+| `geode.utils.clipboard` | clipboard | Clipboard read and write |
+| `geode.utils.random` | random | UUIDs and random strings |
+| `geode.utils.string` | string | Trim, case, search, replace helpers |
 | `geode.utils.web` | [web](web.md) | Async HTTP requests |
 | `geode.utils.base64` | [base64](base64.md) | Base64 encode and decode |
 | `geode.utils.permission` | [permission](permission.md) | OS permission checks |
-| `geode.utils.clipboard` | [clipboard](clipboard.md) | System clipboard text |
-| `geode.utils.string` | [string](string.md) | String helpers |
-| `geode.utils.random` | [random](random.md) | Random strings and UUIDs |
 | `geode.utils.game` | [game](game.md) | Exit, restart, uninstaller |
 
 Related top-level helpers outside this prefix:
@@ -29,40 +32,101 @@ Related top-level helpers outside this prefix:
 
 These functions sit directly on `geode.utils`, not in a child table.
 
-```lua
-geode.utils.formatSystemError(code: number) -> string
-geode.utils.getDisplayFactor() -> number
-geode.utils.getEnvironmentVariable(name: string) -> string
-geode.utils.getInputTimestamp() -> number
-geode.utils.getSafeAreaRect() -> CCRect
-```
-
-`formatSystemError` turns a system error code into text.
-`getDisplayFactor` returns the ratio of physical pixels to logical pixels on one axis.
-`getEnvironmentVariable` reads a process environment variable by name. Not available on iOS.
-`getInputTimestamp` returns the latest input timestamp in seconds.
-`getSafeAreaRect` returns the safe area rectangle relative to the window size.
+| Function | Role |
+| --- | --- |
+| `formatSystemError` | Turn a system error code into text |
+| `getDisplayFactor` | Ratio of physical pixels to logical pixels on one axis |
+| `getEnvironmentVariable` | Read a process environment variable by name. Not available on iOS |
+| `getInputTimestamp` | Latest input timestamp in seconds |
+| `getSafeAreaRect` | Safe area rectangle relative to the window size |
 
 ## platform
 
-```lua
-geode.utils.platform.getString() -> string
-geode.utils.platform.isWine() -> boolean
-```
-
-`getString` returns a human-readable platform label used in crash logs and compatibility checks.
-`isWine` returns whether the Windows build is running under Wine. It is always false on other platforms.
+| Function | Role |
+| --- | --- |
+| `getString` | Human-readable platform label for crash logs and compatibility checks |
+| `isWine` | Whether the Windows build runs under Wine. Always false on other platforms |
 
 ## thread
 
+Read or set the current thread name for debugging and logging.
+
+| Function | Role |
+| --- | --- |
+| `getDefaultName` | Default thread name |
+| `getName` | Current name, or the default when no custom name was set |
+| `setName` | Assign a custom name |
+
+## clipboard
+
+`geode.utils.clipboard` reads and writes the system clipboard as plain text.
+Use it for paste into a text field or copy a result for the user.
+
+| Function | Role |
+| --- | --- |
+| `read` | Current clipboard text. Empty string when empty or read fails |
+| `write` | Copy text to the clipboard. Returns success as a boolean |
+
 ```lua
-geode.utils.thread.getDefaultName() -> string
-geode.utils.thread.getName() -> string
-geode.utils.thread.setName(name: string) -> ()
+local clip = geode.utils.clipboard
+
+local paste = clip.read()
+if paste ~= "" then
+    print("clipboard:", paste)
+end
+
+clip.write("copied from Luau")
 ```
 
-Read or set the current thread name for debugging and logging.
-`getName` returns the default thread name when no custom name was set.
+## random
+
+`geode.utils.random` generates random strings and UUIDs from Geode's PRNG.
+These are not cryptographically secure OS random bytes unless Geode says otherwise elsewhere.
+
+Length arguments use the wide-integer binding rule. The stub types them as `string`.
+At runtime you must pass a decimal integer string such as `"16"`, not a bare number.
+
+| Function | Role |
+| --- | --- |
+| `generateUUID` | Random UUID v4 string |
+| `generateHexString` | Random lowercase hex string with the given length |
+| `generateAlphanumericString` | Random string using `[0-9A-Za-z]` |
+| `generateString` | Random string from a custom alphabet. `alphabet` must not be empty |
+
+```lua
+local rand = geode.utils.random
+
+local id = rand.generateUUID()
+print(id)
+
+local token = rand.generateHexString("16")
+print(token)
+```
+
+## string
+
+`geode.utils.string` holds small string helpers from Geode.
+They do not replace Luau's built-in string library.
+
+| Function | Role |
+| --- | --- |
+| `trim`, `trimLeft`, `trimRight` | Remove whitespace or a custom character set from ends |
+| `toLower`, `toUpper` | Case-changed copy |
+| `contains`, `startsWith`, `endsWith` | Substring tests |
+| `replace` | Swap every occurrence of one substring for another |
+| `remove` | Delete every occurrence of a substring |
+| `filter` | Keep only characters in a given set |
+| `normalize` | Collapse repeated spaces per Geode rules |
+| `count` | Count byte occurrences. Pass `c` as a byte value such as `string.byte("e")`. Result is a decimal integer string |
+
+```lua
+local str = geode.utils.string
+
+local id = str.trim("  hello  ")
+print(str.startsWith(id, "hel"))            -- true
+print(str.replace(id, "hello", "world"))    -- world
+print(str.count("hello", string.byte("l"))) -- "2"
+```
 
 ## Related
 
@@ -71,9 +135,6 @@ Read or set the current thread name for debugging and logging.
 - [web](web.md)
 - [base64](base64.md)
 - [permission](permission.md)
-- [clipboard](clipboard.md)
-- [string](string.md)
-- [random](random.md)
 - [game](game.md)
 
 ## Source

@@ -64,7 +64,7 @@ Use it to test snippets without a build step.
 - [Examples](examples.md)
 - [globals](../reference/lua/globals.md)
 - [modules](../reference/lua/modules.md)
-- [C++ integration guide](../reference/cpp/integration-guide.md)
+- [C++ API reference](../reference/cpp/api-reference.md)
 
 ## Source
 

@@ -38,7 +38,7 @@ whether a brand new mod or one you already have.
 
 - [LuauAPI mod guidelines](../mod_guidelines.md)
 - [globals](../reference/lua/globals.md)
-- [C++ integration guide](../reference/cpp/integration-guide.md)
+- [C++ API reference](../reference/cpp/api-reference.md)
 - [Limits and errors](../reference/cpp/limits-and-errors.md)
 
 ## Source

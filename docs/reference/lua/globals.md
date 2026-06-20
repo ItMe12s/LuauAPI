@@ -44,9 +44,9 @@ Caps and error strings live in [Limits and errors](../cpp/limits-and-errors.md).
 | Network | [web](web.md) | HTTP client |
 | Network | [websocket](websocket.md) | WebSocket client and server |
 | Utils | [geode.utils](utils.md) | Utils namespace index |
-| Utils | [clipboard](clipboard.md) | System clipboard |
-| Utils | [string](string.md) | String helpers |
-| Utils | [random](random.md) | Random strings and UUIDs |
+| Utils | [clipboard](utils.md) | System clipboard |
+| Utils | [string](utils.md) | String helpers |
+| Utils | [random](utils.md) | Random strings and UUIDs |
 | Utils | [game](game.md) | Game process control |
 | Utils | [base64](base64.md) | Base64 encode and decode |
 | Utils | [permission](permission.md) | OS permissions |

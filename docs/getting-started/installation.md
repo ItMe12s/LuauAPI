@@ -48,7 +48,7 @@ Include `.ttf` files when you use custom ImGui fonts. See [gd3d](../reference/lu
 Most mods only need the dependency above.
 If your mod already has C++ entry points, call `imes::luauapi::runFile` or `runScript` with your resources directory.
 See [Getting started](overview.md) for the main-thread rule, [Your first script](first-script.md),
-and the [C++ integration guide](../reference/cpp/integration-guide.md).
+and the [C++ API reference](../reference/cpp/api-reference.md).
 
 ## Supported platforms
 

@@ -52,7 +52,7 @@ end
 
 - [geode.utils](utils.md)
 - [base64](base64.md)
-- [clipboard](clipboard.md)
+- [geode.utils](utils.md)
 - [callbacks](callbacks.md)
 - [globals](globals.md)
 

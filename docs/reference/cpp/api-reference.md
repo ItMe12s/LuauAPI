@@ -3,9 +3,40 @@
 ## Summary
 
 The public C++ API in `imes::luauapi`. Signatures match `include/LuauAPI.hpp`.
-Sync run functions and status queries must run on the main thread.
-Async run functions prepare on the calling thread and execute on the main thread.
+
+| Call style | Caller thread | Execution |
+| --- | --- | --- |
+| Sync run and status | Main only | Full work on main |
+| Async run | Any (not shutting down) | Prepare on caller, run on main |
+
 See [Getting started](../../getting-started/overview.md) for the user-facing threading rule.
+
+## Integration
+
+Another Geode mod uses LuauAPI like this:
+
+1. Add the LuauAPI mod dependency.
+2. Include `include/LuauAPI.hpp` (exported through `api.include` in `mod.json`).
+3. Call `runFile` or `runScript` with your resources directory.
+
+Make sure your Geode SDK is up to date.
+See [Your first script](../../getting-started/first-script.md) and [Installation](../../getting-started/installation.md) for setup.
+
+Runtime ownership:
+
+- LuauAPI owns the runtime lifecycle.
+- Your mod does not create or destroy the runtime.
+- See [Architecture](../../contributor/architecture.md).
+
+When a run fails, check these surfaces:
+
+| Error kind | `Result` | `lastError()` |
+| --- | --- | --- |
+| Sync run failure | Message on `Err` | Updated |
+| Async preparation (bad path, oversized file, shutdown) | `Err` on future | Not updated |
+| Async execution | `Err` on future | Updated |
+
+See Threading below for per-function thread rules.
 
 ## Threading
 
@@ -16,7 +47,7 @@ See [Getting started](../../getting-started/overview.md) for the user-facing thr
 | `isReady`, `status`, `lastError` | Main only | Off main thread or during shutdown return safe defaults |
 | `memoryUsage`, `memoryLimit`, `codegenEnabled` | Main only | Return zeros or false off main thread |
 
-Preparation errors (bad path, oversized file, shutdown) return `Err` on the caller thread for async calls and do not update `lastError()`.
+Preparation errors return `Err` on the caller thread for async calls and do not update `lastError()`.
 Execution errors populate both the async `Result` and `lastError()`.
 
 ## Run functions
@@ -36,11 +67,13 @@ geode::Result<void> runScript(
 );
 ```
 
-`runFile` reads and runs a `.luau` file.
-`relativePath` must be a flat `.luau` name inside `resourcesRoot`.
-See [Limits and errors](limits-and-errors.md) for path and size rules.
-`runScript` runs inline source. `chunkName` names the chunk in logs and errors.
+| Function | Role |
+| --- | --- |
+| `runFile` | Read and run a `.luau` file. `relativePath` must be a flat `.luau` name inside `resourcesRoot` |
+| `runScript` | Run inline source. `chunkName` names the chunk in logs and errors |
+
 Both return `Ok` or `Err` with a message.
+See [Limits and errors](limits-and-errors.md) for path and size rules.
 
 ## Async run functions
 
@@ -71,9 +104,11 @@ RuntimeStatus status();
 std::string lastError();
 ```
 
-`isReady` is true only on the main thread when the runtime is initialized and not shutting down.
-`status` returns the runtime status, or `NotReady` off the main thread or while shutting down.
-`lastError` returns a copy of the last runtime error string, empty off the main thread or while shutting down.
+| Function | Role |
+| --- | --- |
+| `isReady` | True only on the main thread when the runtime is initialized and not shutting down |
+| `status` | Runtime status, or `NotReady` off the main thread or while shutting down |
+| `lastError` | Copy of the last runtime error string. Empty off the main thread or while shutting down |
 
 ## Resource functions
 
@@ -83,9 +118,11 @@ std::size_t memoryLimit();
 bool codegenEnabled();
 ```
 
-`memoryUsage` and `memoryLimit` return current Lua memory use and the cap in bytes.
-Both return `0` off the main thread or while shutting down.
-`codegenEnabled` is true when native code generation is on.
+| Function | Role |
+| --- | --- |
+| `memoryUsage` | Current Lua memory use in bytes. Returns `0` off the main thread or while shutting down |
+| `memoryLimit` | Memory cap in bytes. Returns `0` off the main thread or while shutting down |
+| `codegenEnabled` | True when native code generation is on |
 
 ## RuntimeStatus
 
@@ -98,21 +135,25 @@ enum class RuntimeStatus {
 };
 ```
 
-- `NotReady`: off the main thread, not initialized, or shutting down.
-- `Ready`: runtime is up and scripts can run.
-- `InitFailed`: startup failed.
-- `Panicked`: an unrecoverable Lua panic. The runtime will not run scripts again.
+| Value | Meaning |
+| --- | --- |
+| `NotReady` | Off the main thread, not initialized, or shutting down |
+| `Ready` | Runtime is up and scripts can run |
+| `InitFailed` | Startup failed |
+| `Panicked` | Unrecoverable Lua panic. The runtime will not run scripts again |
 
 ## Defaults and caps
 
-`kDefaultScriptDeadlineMs`, memory caps, and script size limits are defined in `include/RuntimeTypes.hpp` and `src/core/Config.hpp`.
+`kDefaultScriptDeadlineMs`, memory caps, and script size limits are defined in:
+
+- `include/RuntimeTypes.hpp`
+- `src/core/Config.hpp`
 
 See [Limits and errors](limits-and-errors.md).
 
 ## Related
 
 - [Getting started](../../getting-started/overview.md)
-- [C++ integration guide](integration-guide.md)
 - [Your first script](../../getting-started/first-script.md)
 - [Limits and errors](limits-and-errors.md)
 - [Architecture](../../contributor/architecture.md)
@@ -122,3 +163,4 @@ See [Limits and errors](limits-and-errors.md).
 - `include/LuauAPI.hpp`
 - `include/RuntimeTypes.hpp`
 - `src/api.cpp`
+- `mod.json`

@@ -54,12 +54,12 @@ and merges the results into `types/geode.d.luau`. These are not in `MANUAL_FREE_
 | Namespace | Source header | Doc page |
 | --- | --- | --- |
 | `geode.utils` (top-level) | `utils/general.hpp` | [geode.utils](utils.md) |
-| `geode.utils.clipboard` | `utils/general.hpp` | [clipboard](clipboard.md) |
+| `geode.utils.clipboard` | `utils/general.hpp` | [geode.utils](utils.md) |
 | `geode.utils.game` | `utils/general.hpp` | [game](game.md) |
 | `geode.utils.platform` | `utils/general.hpp` | [geode.utils](utils.md) |
 | `geode.utils.thread` | `utils/general.hpp` | [geode.utils](utils.md) |
-| `geode.utils.string` | `utils/string.hpp` | [string](string.md) |
-| `geode.utils.random` | `utils/random.hpp` | [random](random.md) |
+| `geode.utils.string` | `utils/string.hpp` | [geode.utils](utils.md) |
+| `geode.utils.random` | `utils/random.hpp` | [geode.utils](utils.md) |
 | `geode.cocos` (codegen portion) | `utils/cocos.hpp` | [cocos](cocos.md) |
 | `geode` UI free functions | `ui/Popup.hpp`, `ui/GeodeUI.hpp` | [UI and layouts](ui.md) |
 
