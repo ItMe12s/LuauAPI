@@ -8,92 +8,15 @@ See [Getting started](../../getting-started/overview.md) for the shared runtime 
 See Threading below for intercept and listener rules.
 This binding does not expose `openLinkUnsafe` or any `*Sync` request method.
 File writes stay inside mod sandbox roots.
+For signatures, use editor autocomplete from [type stubs](type-stubs.md).
 See [Examples](../../getting-started/examples.md).
 
-## Types
+## Entry points
 
-```lua
-type ProxyOpts = {
-    address: string,
-    port: number?,
-    type: number?, -- ProxyType
-    auth: number?, -- HttpAuth
-    username: string?,
-    password: string?,
-    tunneling: boolean?,
-    certVerification: boolean?,
-}
+`geode.utils.web.openLinkInBrowser(url)` opens a URL in the system browser.
 
-type RequestTimings = {
-    queueWait: number,
-    nameLookup: number,
-    connect: number,
-    tlsHandshake: number,
-    requestSend: number,
-    firstByte: number,
-    download: number,
-    total: number,
-}
-
-type WebProgress = {
-    downloaded: number,
-    downloadTotal: number,
-    downloadProgress: number?,
-    uploaded: number,
-    uploadTotal: number,
-    uploadProgress: number?,
-}
-
-type RequestOptions = {
-    url: string?,
-    method: string?,
-    headers: { [string]: string }?,
-    params: { [string]: string }?,
-    userAgent: string?,
-    acceptEncoding: string?,
-    timeout: number?,
-    downloadRange: { number }?,
-    certVerification: boolean?,
-    transferBody: boolean?,
-    followRedirects: boolean?,
-    ignoreContentLength: boolean?,
-    caBundle: string?,
-    proxy: ProxyOpts?,
-    version: number?, -- HttpVersion
-    body: string?,
-    bodyString: string?,
-    bodyJson: any?,
-    bodyMultipart: MultipartForm?,
-    onProgress: ((progress: WebProgress) -> ())?,
-}
-```
-
-Userdata types:
-
-- `WebRequest`
-- `WebResponse`
-- `WebHandle`
-- `MultipartForm`
-- `WebListenerHandle`
-
-Timings are in milliseconds.
-See Security for `certVerification` and TLS behavior.
-
-## Functions
-
-```lua
-geode.utils.web.openLinkInBrowser(url: string) -> ()
-geode.utils.web.newRequest() -> WebRequest
-geode.utils.web.multipart() -> MultipartForm
-geode.utils.web.get(url: string, options: RequestOptions?, callback: (response: WebResponse?, err: string?) -> ()) -> WebHandle
-geode.utils.web.post(url: string, options: RequestOptions?, callback: (response: WebResponse?, err: string?) -> ()) -> WebHandle
-geode.utils.web.put(url: string, options: RequestOptions?, callback: (response: WebResponse?, err: string?) -> ()) -> WebHandle
-geode.utils.web.patch(url: string, options: RequestOptions?, callback: (response: WebResponse?, err: string?) -> ()) -> WebHandle
-geode.utils.web.fetch(url: string, callback: (response: WebResponse?, err: string?) -> ()) -> WebHandle
-geode.utils.web.fetch(url: string, options: RequestOptions, callback: (response: WebResponse?, err: string?) -> ()) -> WebHandle
-geode.utils.web.fetch(options: RequestOptions, callback: (response: WebResponse?, err: string?) -> ()) -> WebHandle
-```
-
+`newRequest()` returns a chainable `WebRequest` builder.
+Shortcut helpers `get`, `post`, `put`, `patch`, and `fetch` accept a URL, optional `RequestOptions`, and a callback.
 The shortcut request functions also accept `callback` as the second argument when no options are needed.
 See [globals](globals.md) Error shapes.
 
@@ -103,53 +26,16 @@ See [globals](globals.md) Error shapes.
 2. `fetch(url, options, callback)` - apply `options`, then send. `method` defaults to `GET`.
 3. `fetch(options, callback)` - read `url` from `options` (required). `method` defaults to `GET`.
 
+`multipart()` returns a `MultipartForm` builder for file uploads.
+
+Userdata types include `WebRequest`, `WebResponse`, `WebHandle`, `MultipartForm`, and `WebListenerHandle`.
+Request timings are in milliseconds.
+See Security for `certVerification` and TLS behavior.
+
 ## WebRequest
 
-```lua
-request:header(name: string, value: string) -> WebRequest
-request:removeHeader(name: string) -> WebRequest
-request:param(name: string, value: string) -> WebRequest
-request:removeParam(name: string) -> WebRequest
-request:method(method: string) -> WebRequest
-request:url(url: string) -> WebRequest
-request:userAgent(name: string) -> WebRequest
-request:acceptEncoding(encoding: string) -> WebRequest
-request:timeout(seconds: number) -> WebRequest
-request:downloadRange(start: number, stop: number) -> WebRequest
-request:certVerification(enabled: boolean) -> WebRequest
-request:transferBody(enabled: boolean) -> WebRequest
-request:followRedirects(enabled: boolean) -> WebRequest
-request:ignoreContentLength(enabled: boolean) -> WebRequest
-request:caBundle(content: string) -> WebRequest
-request:proxy(opts: ProxyOpts) -> WebRequest
-request:version(version: number) -> WebRequest
-request:body(data: string) -> (WebRequest?, string?)
-request:bodyString(data: string) -> (WebRequest?, string?)
-request:bodyJson(value: any) -> (WebRequest?, string?)
-request:bodyMultipart(form: MultipartForm) -> (WebRequest?, string?)
-request:onProgress(callback: (progress: WebProgress) -> ()) -> WebRequest
-request:send(method: string, url: string, callback: (response: WebResponse?, err: string?) -> ()) -> WebHandle
-request:send(method: string, url: string, options: RequestOptions, callback: (response: WebResponse?, err: string?) -> ()) -> WebHandle
-request:get(url: string, callback: (response: WebResponse?, err: string?) -> ()) -> WebHandle
-request:get(url: string, options: RequestOptions, callback: (response: WebResponse?, err: string?) -> ()) -> WebHandle
-request:post(url: string, callback: (response: WebResponse?, err: string?) -> ()) -> WebHandle
-request:post(url: string, options: RequestOptions, callback: (response: WebResponse?, err: string?) -> ()) -> WebHandle
-request:put(url: string, callback: (response: WebResponse?, err: string?) -> ()) -> WebHandle
-request:put(url: string, options: RequestOptions, callback: (response: WebResponse?, err: string?) -> ()) -> WebHandle
-request:patch(url: string, callback: (response: WebResponse?, err: string?) -> ()) -> WebHandle
-request:patch(url: string, options: RequestOptions, callback: (response: WebResponse?, err: string?) -> ()) -> WebHandle
-request:getID() -> number
-request:getMethod() -> string
-request:getUrl() -> string
-request:getHeaders() -> { [string]: { string } }
-request:getUrlParams() -> { [string]: string }
-request:getBody() -> string?
-request:getTimeout() -> number?
-request:getVersion() -> number
-request:getProgress() -> WebProgress
-```
-
 `WebRequest` is a chainable builder.
+Set headers, params, method, URL, body, proxy, timeout, progress callback, and other options through fluent methods.
 Send methods are async and return a `WebHandle`.
 Drop the handle or call `:cancel()` to cancel a pending request.
 
@@ -164,27 +50,6 @@ req:header("Accept", "application/json")
 
 ## WebResponse
 
-```lua
-response:info() -> boolean
-response:ok() -> boolean
-response:redirected() -> boolean
-response:badClient() -> boolean
-response:badServer() -> boolean
-response:error() -> boolean
-response:cancelled() -> boolean
-response:code() -> number
-response:text() -> (string?, string?)
-response:json() -> (any?, string?)
-response:bytes() -> (string?, string?)
-response:saveTo(root: FsRoot, path: string) -> (boolean?, string?)
-response:headers() -> { string }
-response:header(name: string) -> string?
-response:headersNamed(name: string) -> { string }?
-response:errorMessage() -> string
-response:verboseLogs() -> string
-response:timings() -> RequestTimings
-```
-
 Status checks:
 
 - `:info()` - 1xx response.
@@ -195,7 +60,10 @@ Status checks:
 - `:error()` - network or transfer error.
 - `:cancelled()` - request was cancelled.
 
-`saveTo` accepts `"save"`, `"config"`, and `"persistent"`.
+Read the body with `:text()`, `:json()`, or `:bytes()`.
+`:saveTo(root, path)` writes to a sandbox root (`"save"`, `"config"`, or `"persistent"`).
+`:timings()` returns per-phase timing in milliseconds.
+
 Response bodies are capped in the Lua binding after download completes.
 Geode does not expose a pre-download or streaming size cap to LuauAPI, so an oversized body may be fully transferred before Luau rejects it.
 `:text()`, `:bytes()`, `:json()`, and `:saveTo()` return `nil` and an error when the body is too large.
@@ -203,25 +71,12 @@ Async callbacks and response listeners receive `(response?, err?)`.
 
 ## WebHandle
 
-```lua
-handle:cancel() -> boolean
-handle:id() -> number?
-```
-
 `:cancel()` returns true if the request was still pending.
 `:id()` returns the Geode request id, or `nil` if there is no active task.
 
 ## MultipartForm
 
-```lua
-form:param(name: string, value: string) -> (MultipartForm?, string?)
-form:file(name: string, data: string, filename: string, mime: string?) -> (MultipartForm?, string?)
-form:fileFrom(name: string, root: FsRoot, path: string, mime: string?) -> (MultipartForm?, string?)
-form:getBoundary() -> string
-form:getHeader() -> string
-form:getBody() -> (string?, string?)
-```
-
+Build multipart bodies with `:param`, `:file`, and `:fileFrom`.
 `fileFrom` uses sandbox roots only. Raw paths are not allowed.
 
 ```lua
@@ -231,30 +86,15 @@ form:file("upload", bytes, "upload.bin", "application/octet-stream")
 form:fileFrom("config", "config", "data.json", "application/json")
 ```
 
-## WebListenerHandle
-
-```lua
-handle:disconnect() -> ()
-```
-
-Disconnects a listener registered by `onRequestIntercept`, `onResponse`, or the `For` / `ById` variants.
-
 ## Listeners
 
-```lua
-geode.utils.web.onRequestIntercept(callback: (modID: string, request: WebRequest) -> boolean?, priority: number?) -> WebListenerHandle
-geode.utils.web.onRequestInterceptFor(modID: string, callback: (request: WebRequest) -> boolean?, priority: number?) -> WebListenerHandle
-geode.utils.web.onRequestInterceptById(requestID: number, callback: (request: WebRequest) -> boolean?, priority: number?) -> WebListenerHandle
-geode.utils.web.onResponse(callback: (modID: string, response: WebResponse?, err: string?) -> boolean?, priority: number?) -> WebListenerHandle
-geode.utils.web.onResponseFor(modID: string, callback: (response: WebResponse?, err: string?) -> boolean?, priority: number?) -> WebListenerHandle
-geode.utils.web.onResponseById(requestID: number, callback: (response: WebResponse?, err: string?) -> boolean?, priority: number?) -> WebListenerHandle
-```
-
+Register intercept and response listeners with `onRequestIntercept`, `onResponse`, and the `For` / `ById` variants.
+Each registrar takes an optional `priority` (higher runs first).
 Return `true` to stop other listeners on the main thread.
 See Threading below for off-thread behavior.
 
-Each registrar takes an optional `priority` (higher runs first).
 `onResponse*` callbacks receive `(response?, err?)`, or `(modID, response?, err?)` for the global listener.
+Disconnect with `WebListenerHandle:disconnect()`.
 
 ```lua
 local handle = geode.utils.web.onRequestIntercept(function(modID, request)
@@ -289,80 +129,10 @@ Progress:
 
 - `:onProgress` runs on the main thread. Worker events are queued first.
 
-## HttpVersion
-
-```lua
-geode.utils.web.HttpVersion -> {
-    DEFAULT: number,
-    VERSION_1_0: number,
-    VERSION_1_1: number,
-    VERSION_2_0: number,
-    VERSION_2TLS: number,
-    VERSION_2_PRIOR_KNOWLEDGE: number,
-    VERSION_3: number,
-    VERSION_3ONLY: number,
-}
-```
-
-HTTP version constants from Geode `utils/web.hpp`.
-
-## ProxyType
-
-```lua
-geode.utils.web.ProxyType -> {
-    HTTP: number,
-    HTTPS: number,
-    HTTPS2: number,
-    SOCKS4: number,
-    SOCKS4A: number,
-    SOCKS5: number,
-    SOCKS5H: number,
-}
-```
-
-Proxy type constants from Geode `utils/web.hpp`.
-
-## Error
-
-```lua
-geode.utils.web.Error -> {
-    CURL_INITIALIZATION_ERROR: number,
-    REQUEST_CANCELLED: number,
-    QUEUE_FULL: number,
-    CHANNEL_CLOSED: number,
-}
-```
-
-Web worker error constants from Geode `utils/web.hpp`.
-
-## HttpAuth
-
-```lua
-geode.utils.web.HttpAuth -> {
-    BASIC: number,
-    DIGEST: number,
-    DIGEST_IE: number,
-    BEARER: number,
-    NEGOTIATE: number,
-    NTLM: number,
-    NTLM_WB: number,
-    ANY: number,
-    ANYSAFE: number,
-    ONLY: number,
-    AWS_SIGV4: number,
-}
-```
-
-HTTP auth scheme constants from Geode `utils/web.hpp`.
-
 ## Limits
 
-Request and response bodies are capped. These body sources count toward the request cap:
-
-- `RequestOptions.body`, `bodyString`, `bodyJson`, `bodyMultipart`
-- `WebRequest:body`, `bodyString`, `bodyJson`, `bodyMultipart`
-- `MultipartForm:param`, `file`, `fileFrom`, `getBody()`
-
+Request and response bodies are capped.
+These body sources count toward the request cap: `RequestOptions` body fields, `WebRequest` body methods, and `MultipartForm` builders.
 Over the cap, failure follows [globals](globals.md) Error shapes.
 
 See [Limits and errors](../cpp/limits-and-errors.md) for body, request, and concurrency caps.
@@ -395,17 +165,23 @@ Listeners:
 For WebSocket LAN exposure with `host = "0.0.0.0"`, see [websocket](websocket.md).
 See [LuauAPI mod guidelines](../../mod_guidelines.md) for loadstring and network abuse rules.
 
+## Finding signatures
+
+The authoritative argument lists live in the generated type stubs, surfaced as editor autocomplete.
+See [type stubs](type-stubs.md).
+Handwritten extras are in `tools/luau_codegen/extra_bindings/web.dluau`.
+
 ## Related
 
+- [geode.utils](utils.md)
+- [type stubs](type-stubs.md)
+- [websocket](websocket.md)
+- [fs](fs.md)
 - [Getting started](../../getting-started/overview.md)
 - [Examples](../../getting-started/examples.md)
-- [LuauAPI mod guidelines](../../mod_guidelines.md)
-- [geode.utils](utils.md)
-- [websocket](websocket.md)
-- [json](json.md)
-- [fs](fs.md)
-- [tasks and time](tasks.md)
 - [globals](globals.md)
+- [tasks and time](tasks.md)
+- [LuauAPI mod guidelines](../../mod_guidelines.md)
 - [Limits and errors](../cpp/limits-and-errors.md)
 
 ## Source

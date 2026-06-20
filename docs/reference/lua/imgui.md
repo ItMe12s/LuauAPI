@@ -4,7 +4,7 @@
 
 `imgui` draws Dear ImGui UI over the game through gd-imgui-cocos.
 Use it for player mod menus, settings panels, tabs, popups, and debug tools.
-Types match `tools/luau_codegen/extra_bindings/imgui.dluau`.
+For signatures, use editor autocomplete from [type stubs](type-stubs.md).
 
 ## Model
 
@@ -17,6 +17,31 @@ Pass current values each frame and save returned values in Luau.
 
 The game keeps input when ImGui is not hovered or focused.
 Focused ImGui windows capture the input they need.
+
+`onDraw` starts the backend on first use. `cancel` removes a callback.
+Dropping the handle cancels it on GC. A callback that errors is removed.
+Use `setVisible`, `toggle`, and `isVisible` to show or hide the overlay without unregistering.
+
+Scoped wrappers (`window`, `child`, `group`, `tabBar`, `tabItem`, `popup`, `popupModal`, `table`, `menuBar`, `menu`, `style.with`, `font.with`)
+always close their ImGui region after `fn`, even when `fn` errors.
+`window` returns false when its close button is pressed. You don't have to name the window with your mod name or ID.
+Use `sizeCond` or `posCond` with `imgui.Cond.Always` for animated windows.
+
+Text is drawn as raw text, so percent signs are safe.
+Input text uses a shared per-thread buffer. Default max length is 16384 and the cap is 65536.
+Combo and list indexes are zero-based. Colors use `{ x, y, z, w }` floats from 0 to 1.
+
+`treeNode` returns a tracked open value only when `opts.open` is set.
+`tabItem` and `popupModal` return a close state only when `closable` is true.
+Use `openPopup` before `popup` or `popupModal`.
+`imgui.tooltip(fn)` shows a tooltip for the previous item only when it is hovered.
+
+Call table row and column helpers inside `imgui.table`.
+`menuItem` returns clicked when no selected value is passed. When selected is passed, it returns the new selected value.
+
+Use one `imgui.onDraw` per mod when possible.
+Do not do IO, web work, or heavy list rebuilds in `onDraw`.
+Image, texture, docking, viewport, and draw list APIs are not bound.
 
 ## Example
 
@@ -77,139 +102,10 @@ end)
 
 See [Examples](../../getting-started/examples.md) and [src/scripts/_modmenudemo.luau](../../../src/scripts/_modmenudemo.luau).
 
-## Lifecycle
-
-```lua
-imgui.onDraw(fn) -> ImGuiDrawHandle
-imgui.cancel(handle)
-imgui.setVisible(visible)
-imgui.toggle()
-imgui.isVisible() -> boolean
-imgui.isItemHovered(flags: number?) -> boolean
-imgui.isItemClicked(mouseButton: number?) -> boolean
-imgui.isWindowHovered(flags: number?) -> boolean
-imgui.setNextWindowFocus() -> ()
-imgui.setWindowFocus(name: string?) -> ()
-```
-
-`onDraw` starts the backend on first use. `cancel` removes a callback.
-Dropping the handle cancels it on GC. A callback that errors is removed.
-
-## Windows and layout
-
-```lua
-imgui.window(title, fn, opts?) -> boolean
-imgui.child(id, fn, opts?)
-imgui.group(fn)
-imgui.sameLine(offset?, spacing?)
-imgui.separator()
-imgui.separatorText(label)
-imgui.spacing()
-imgui.indent(width?)
-imgui.unindent(width?)
-imgui.dummy(size)
-imgui.newLine()
-imgui.getContentRegionAvail() -> ImGuiVec2
-```
-
-Scoped wrappers always close their ImGui region after `fn`. This also happens when `fn` errors.
-`window` returns false when its close button is pressed. You don't have to name the window with your mod name or ID.
-Use `sizeCond` or `posCond` with `imgui.Cond.Always` for animated windows.
-
-## Widgets
-
-```lua
-imgui.text(text)
-imgui.textWrapped(text)
-imgui.bulletText(text)
-imgui.button(label, opts?) -> boolean
-imgui.checkbox(label, value) -> boolean
-imgui.checkboxFlags(label, flags, flagValue) -> number
-imgui.radioButton(label, active) -> boolean
-imgui.sliderFloat(label, value, min, max, fmt?) -> number
-imgui.sliderInt(label, value, min, max) -> number
-imgui.dragFloat(label, value, opts?) -> number
-imgui.dragInt(label, value, opts?) -> number
-imgui.inputText(label, value, maxLen?) -> string
-imgui.inputTextMultiline(label, value, size?, maxLen?) -> string
-imgui.inputFloat(label, value, opts?) -> number
-imgui.inputInt(label, value, opts?) -> number
-imgui.inputDouble(label, value, opts?) -> number
-imgui.progressBar(fraction, opts?)
-```
-
-Text is drawn as raw text, so percent signs are safe.
-Input text uses a shared per-thread buffer.
-Default max length is 16384 and the cap is 65536.
-
-## Lists and colors
-
-```lua
-imgui.combo(label, index, items, opts?) -> number
-imgui.comboPopup(label, preview, fn, opts?) -> boolean
-imgui.selectable(label, selected, opts?) -> boolean
-imgui.listBox(label, index, items, opts?) -> number
-imgui.colorEdit3(label, color, opts?) -> ImGuiVec3
-imgui.colorEdit4(label, color, opts?) -> ImGuiVec4
-imgui.colorButton(label, color, opts?) -> boolean
-```
-
-Indexes are zero-based. Colors use `{ x, y, z, w }` floats from 0 to 1.
-`comboPopup` is scoped and lets you build custom combo contents.
-
-## Trees, tabs, popups
-
-```lua
-imgui.collapsingHeader(label, opts?) -> boolean, boolean?
-imgui.treeNode(label, fn, opts?) -> boolean?
-imgui.tabBar(id, fn, opts?)
-imgui.tabItem(label, fn, opts?) -> boolean?
-imgui.openPopup(id, flags?)
-imgui.closeCurrentPopup()
-imgui.popup(id, fn, opts?) -> boolean
-imgui.popupModal(title, fn, opts?) -> boolean?
-imgui.setTooltip(text)
-imgui.tooltip(fn)
-```
-
-`treeNode` returns a tracked open value only when `opts.open` is set.
-`tabItem` and `popupModal` return a close state only when `closable` is true.
-Use `openPopup` before `popup` or `popupModal`.
-`imgui.tooltip(fn)` shows a tooltip for the previous item only when it is hovered.
-Use `imgui.isItemHovered()` before `imgui.setTooltip(text)` when you need manual control.
-
-## Tables and menus
-
-```lua
-imgui.table(id, columns, fn, opts?)
-imgui.tableSetupColumn(label, opts?)
-imgui.tableHeadersRow()
-imgui.tableNextRow(flags?)
-imgui.tableNextColumn() -> boolean
-imgui.tableSetColumnIndex(column) -> boolean
-imgui.columns(count?, opts?)
-imgui.nextColumn()
-imgui.menuBar(fn)
-imgui.menu(label, fn, opts?)
-imgui.menuItem(label, selected?, opts?) -> boolean
-```
-
-Call table row and column helpers inside `imgui.table`.
-`menuItem` returns clicked when no selected value is passed.
-When selected is passed, it returns the new selected value.
-
 ## Style and theme
 
-```lua
-imgui.theme.apply("dark" | "light" | "classic")
-imgui.theme.applyCustom(opts)
-imgui.style.with(opts, fn)
-```
-
-`imgui.theme.apply` and `imgui.theme.applyCustom` change global ImGui style until changed again.
-Use `imgui.style.with` for per-window or per-mod styling that does not affect other `onDraw` callbacks.
-`style.with` is scoped to `fn` and pops colors and style vars even when `fn` errors.
-
+`imgui.theme.apply("dark" | "light" | "classic")` and `imgui.theme.applyCustom(opts)` change global ImGui style until changed again.
+Use `imgui.style.with(opts, fn)` for per-window or per-mod styling that does not affect other `onDraw` callbacks.
 Useful option fields include `alpha`, `windowPadding`, `windowRounding`, `framePadding`, `frameRounding`, `itemSpacing`, and `colors`.
 Color keys can be `imgui.Col.*` values or color names from `imgui.Col`.
 
@@ -222,15 +118,10 @@ There is no Lua API for this. It is consistent across Retina, SDL, and other dis
 
 ## Fonts
 
-```lua
-imgui.font.add(root, path, size) -> ImGuiFontHandle?, string?
-imgui.font.with(font, fn)
-```
-
-Register fonts before or outside `imgui.onDraw`.
+Register fonts before or outside `imgui.onDraw` with `imgui.font.add(root, path, size)`.
 Use raw `.ttf` resource files, not GD bitmap fonts. The first argument uses the same roots as [fs](fs.md).
 Before ImGui init, `add` returns a handle and loads at first use.
-`with` must run inside `imgui.onDraw`. `with` always pops after `fn`, even when `fn` errors.
+`imgui.font.with(font, fn)` must run inside `imgui.onDraw` and always pops after `fn`, even when `fn` errors.
 See [Limits and errors](../cpp/limits-and-errors.md) for font error strings.
 
 ```lua
@@ -246,41 +137,39 @@ imgui.onDraw(function()
 end)
 ```
 
-## Flags
+## Constants
 
 Use constants instead of magic numbers:
 
-```lua
-imgui.Flag.Window.NoResize
-imgui.Flag.Combo.HeightLarge
-imgui.Flag.Table.Borders
-imgui.Flag.Selectable.SpanAllColumns
-imgui.Col.Text
-imgui.StyleVar.Alpha
-imgui.Cond.FirstUseEver
-```
+- `imgui.Flag.Window.*`
+- `imgui.Flag.Combo.*`
+- `imgui.Flag.Table.*`
+- `imgui.Col.*`
+- `imgui.StyleVar.*`
+- `imgui.Cond.*`
 
-See `imgui.dluau` for all constant tables.
+See Finding signatures below for the full constant tables.
 
 ## Limits
 
-Use one `imgui.onDraw` per mod when possible. Keep draw work under 20 ms.
-Do not do IO, web work, or heavy list rebuilds in `onDraw`.
-Image, texture, docking, viewport, and draw list APIs are not bound.
-See [Limits and errors](../cpp/limits-and-errors.md) for hard caps and GPU session disable.
+See [Limits and errors](../cpp/limits-and-errors.md) for draw callback caps, script deadlines, font errors, and GPU session disable.
 
-## ImGui or Cocos UI
+## Finding signatures
 
-See [UI and layouts](ui.md) for when to use ImGui vs Cocos UI.
+The authoritative argument lists live in the generated type stubs, surfaced as editor autocomplete.
+See [type stubs](type-stubs.md).
+Handwritten extras are in `tools/luau_codegen/extra_bindings/imgui.dluau`.
 
 ## Related
 
 - [UI and layouts](ui.md)
+- [type stubs](type-stubs.md)
 - [Examples](../../getting-started/examples.md)
+- [Getting started](../../getting-started/overview.md)
+- [globals](globals.md)
 - [LuauAPI mod guidelines](../../mod_guidelines.md)
 - [ImGui draw scheduler](../../contributor/internals/imgui-draw-scheduler.md)
 - [Limits and errors](../cpp/limits-and-errors.md)
-- [type stubs](type-stubs.md)
 
 ## Source
 
