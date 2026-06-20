@@ -6,6 +6,7 @@
 
 - Improved cleanup when the mod unloads for `geode.utils.web`, keyboard listeners, `websocket`, and `imgui.onDraw`.
 - Updated runtime internals for bindings, memory limits, and module loading.
+- Fixed crash in deferred CCObject release drain when an owned object is freed before the next tick.
 
 ## v0.1.0-beta.4
 

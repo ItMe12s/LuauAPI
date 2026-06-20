@@ -88,3 +88,14 @@ TEST_CASE("duplicate owned deferred releases do not double-free") {
     luax::drainDeferredReleases();
     REQUIRE_FALSE(geode::detail::isLiveCocosObject(obj));
 }
+
+TEST_CASE("deferred owned release skips stale object at drain") {
+    DeferGuard guard;
+
+    auto* obj = new cocos2d::CCObject();
+    luax::deferOwnedRelease(obj);
+    obj->release();
+    REQUIRE_FALSE(geode::detail::isLiveCocosObject(obj));
+
+    REQUIRE_NOTHROW(luax::drainDeferredReleases());
+}

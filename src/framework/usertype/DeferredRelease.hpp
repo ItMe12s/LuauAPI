@@ -12,13 +12,18 @@
 
 namespace luax {
     namespace detail {
+        struct OwnedDefer {
+            cocos2d::CCObject* ptr;
+            geode::WeakRef<cocos2d::CCObject> weak;
+        };
+
         inline std::deque<geode::WeakRef<cocos2d::CCObject>>& deferredBorrowedReleases() {
             static std::deque<geode::WeakRef<cocos2d::CCObject>> queue;
             return queue;
         }
 
-        inline std::vector<cocos2d::CCObject*>& deferredOwnedReleases() {
-            static std::vector<cocos2d::CCObject*> queue;
+        inline std::vector<OwnedDefer>& deferredOwnedReleases() {
+            static std::vector<OwnedDefer> queue;
             return queue;
         }
     } // namespace detail
@@ -44,12 +49,14 @@ namespace luax {
 
     inline void deferOwnedRelease(cocos2d::CCObject* obj) {
         if (!obj) return;
+        auto weak = geode::WeakRef<cocos2d::CCObject>(obj);
+        if (!weak.valid()) return;
         ensureDeferredReleaseShutdownHook();
         auto& queue = detail::deferredOwnedReleases();
-        for (auto* existing : queue) {
-            if (existing == obj) return;
+        for (auto const& existing : queue) {
+            if (existing.ptr == obj) return;
         }
-        queue.push_back(obj);
+        queue.push_back({obj, std::move(weak)});
     }
 
     inline void drainDeferredReleases() {
@@ -63,11 +70,13 @@ namespace luax {
         while (!borrowedQueue.empty() || !ownedQueue.empty()) {
             std::deque<geode::WeakRef<cocos2d::CCObject>> borrowed;
             borrowed.swap(borrowedQueue);
-            std::vector<cocos2d::CCObject*> owned;
+            std::vector<detail::OwnedDefer> owned;
             owned.swap(ownedQueue);
 
-            for (auto* obj : owned) {
-                if (obj) obj->release();
+            for (auto& entry : owned) {
+                if (entry.ptr && entry.weak.valid()) {
+                    entry.ptr->release();
+                }
             }
             borrowed.clear();
         }

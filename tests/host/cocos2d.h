@@ -133,6 +133,8 @@ namespace geode {
             return Lock{m_ptr};
         }
 
+        bool valid() const { return static_cast<bool>(lock()); }
+
     private:
         void forget() {
             if (!m_ptr || !detail::isLiveCocosObject(m_ptr)) {

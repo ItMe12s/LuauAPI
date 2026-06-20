@@ -167,6 +167,7 @@ namespace luax {
                 if (!L) return;
                 drainDeferredReleases();
                 TaskScheduler::get().advance(static_cast<double>(dt), L);
+                drainDeferredReleases();
             }
         };
 
