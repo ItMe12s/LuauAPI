@@ -181,9 +181,7 @@ def emit_stack_check(
     if info.kind == "bool":
         return [f'        {_prefix(declare, var)} = luax::check<bool>(L, {idx}, "{label}");\n']
     if info.kind == "seed_value":
-        return [
-            f'        {_prefix(declare, var)} = luax::check<int>(L, {idx}, "{label}");\n'
-        ]
+        return [f'        {_prefix(declare, var)} = luax::check<int>(L, {idx}, "{label}");\n']
     if info.kind in ("number", "enum"):
         check_type = _luax_numeric_check_type(cxx)
         if check_type in ("float", "double"):
@@ -307,9 +305,7 @@ def _push_impl(
     if info.kind == "bool":
         return [f"{indent}luax::push(L, {expr});\n"]
     if info.kind == "seed_value":
-        return [
-            f"{indent}lua_pushnumber(L, static_cast<double>(static_cast<int>({expr})));\n"
-        ]
+        return [f"{indent}lua_pushnumber(L, static_cast<double>(static_cast<int>({expr})));\n"]
     if info.kind == "number":
         return [f"{indent}lua_pushnumber(L, static_cast<double>({expr}));\n"]
     if info.kind == "wideint":
