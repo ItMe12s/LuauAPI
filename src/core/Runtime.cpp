@@ -170,7 +170,7 @@ namespace luax {
                 if (rootResult.isOk()) {
                     std::error_code ec;
                     auto resolved = std::filesystem::weakly_canonical(filePath, ec);
-                    if (!ec && pathInsideRoot(resolved, rootResult.unwrap())) {
+                    if (!ec && pathInsideRootValue(resolved, rootResult.unwrap())) {
                         auto rel = resolved.lexically_relative(rootResult.unwrap());
                         return "@" + normalizedPathString(rel);
                     }

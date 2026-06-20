@@ -11,11 +11,11 @@ TEST_CASE("fs path resolution accepts paths inside the root") {
 
     auto flat = luax::resolveInsideRoot(dir.path, "data.json");
     REQUIRE(flat.isOk());
-    REQUIRE(luax::pathInsideRoot(flat.unwrap(), luax::canonicalRoot(dir.path).unwrap()));
+    REQUIRE(luax::pathInsideRootValue(flat.unwrap(), luax::canonicalRoot(dir.path).unwrap()));
 
     auto nested = luax::resolveInsideRoot(dir.path, "sub/dir/data.json");
     REQUIRE(nested.isOk());
-    REQUIRE(luax::pathInsideRoot(nested.unwrap(), luax::canonicalRoot(dir.path).unwrap()));
+    REQUIRE(luax::pathInsideRootValue(nested.unwrap(), luax::canonicalRoot(dir.path).unwrap()));
 
     auto normalized = luax::resolveInsideRoot(dir.path, "sub/../data.json");
     REQUIRE(normalized.isOk());

@@ -185,7 +185,7 @@ namespace luax {
         }
         if (m_current == m_root) return NAVIGATE_NOT_FOUND;
         auto parent = m_current.parent_path();
-        if (!pathInsideRoot(parent, m_root)) return NAVIGATE_NOT_FOUND;
+        if (!pathInsideRootValue(parent, m_root)) return NAVIGATE_NOT_FOUND;
         m_current = parent;
         clearPendingLoad();
         return NAVIGATE_SUCCESS;
@@ -239,7 +239,7 @@ namespace luax {
         auto rel = std::filesystem::relative(m_current, m_root, ec);
         std::string name = normalizedPathString(ec ? m_current : rel);
         auto path = std::filesystem::path(name);
-        if (!hasLuauExtension(path)) {
+        if (!hasLuauExtensionValue(path)) {
             name += ".luau";
         }
         return "@" + name;

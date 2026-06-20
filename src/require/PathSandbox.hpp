@@ -246,14 +246,6 @@ namespace luax {
         return scriptOk(path);
     }
 
-    inline bool pathInsideRoot(std::filesystem::path const& path, std::filesystem::path const& root) {
-        return pathInsideRootValue(path, root);
-    }
-
-    inline bool hasLuauExtension(std::filesystem::path const& path) {
-        return hasLuauExtensionValue(path);
-    }
-
     inline ScriptResult<std::filesystem::path> validateResourcePath(
         std::filesystem::path path, bool addLuauExtension = true
     ) {
