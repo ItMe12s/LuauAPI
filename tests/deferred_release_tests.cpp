@@ -74,3 +74,15 @@ TEST_CASE("bulk deferred releases are all held until drain") {
         REQUIRE_FALSE(geode::detail::isLiveCocosObject(obj));
     }
 }
+
+TEST_CASE("duplicate owned deferred releases do not double-free") {
+    DeferGuard guard;
+
+    auto* obj = new cocos2d::CCObject();
+    luax::deferOwnedRelease(obj);
+    luax::deferOwnedRelease(obj);
+    REQUIRE(geode::detail::isLiveCocosObject(obj));
+
+    luax::drainDeferredReleases();
+    REQUIRE_FALSE(geode::detail::isLiveCocosObject(obj));
+}

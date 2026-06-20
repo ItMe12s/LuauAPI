@@ -62,10 +62,12 @@ namespace luax {
             std::vector<cocos2d::CCObject*> owned;
             owned.swap(ownedQueue);
 
-            borrowed.clear();
             for (auto* obj : owned) {
-                if (obj) obj->release();
+                if (obj && geode::detail::isLiveCocosObject(obj)) {
+                    obj->release();
+                }
             }
+            borrowed.clear();
         }
     }
 } // namespace luax

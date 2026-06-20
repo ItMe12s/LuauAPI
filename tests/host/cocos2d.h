@@ -96,6 +96,28 @@ namespace geode {
         WeakRef() = default;
         explicit WeakRef(T* ptr) : m_ptr(ptr), m_objectId(ptr ? ptr->objectId() : 0) {}
 
+        WeakRef(WeakRef&& other) noexcept
+            : m_ptr(other.m_ptr), m_objectId(other.m_objectId) {
+            other.m_ptr = nullptr;
+            other.m_objectId = 0;
+        }
+
+        WeakRef& operator=(WeakRef&& other) noexcept {
+            if (this != &other) {
+                forget();
+                m_ptr = other.m_ptr;
+                m_objectId = other.m_objectId;
+                other.m_ptr = nullptr;
+                other.m_objectId = 0;
+            }
+            return *this;
+        }
+
+        WeakRef(WeakRef const&) = delete;
+        WeakRef& operator=(WeakRef const&) = delete;
+
+        ~WeakRef() { forget(); }
+
         Lock lock() const {
             if (!m_ptr || !detail::isLiveCocosObject(m_ptr)) {
                 return Lock{};
@@ -107,6 +129,23 @@ namespace geode {
         }
 
     private:
+        void forget() {
+            if (!m_ptr || !detail::isLiveCocosObject(m_ptr)) {
+                m_ptr = nullptr;
+                m_objectId = 0;
+                return;
+            }
+            if (m_ptr->objectId() != m_objectId) {
+                m_ptr = nullptr;
+                m_objectId = 0;
+                return;
+            }
+
+            m_ptr->release();
+            m_ptr = nullptr;
+            m_objectId = 0;
+        }
+
         T* m_ptr = nullptr;
         std::uint64_t m_objectId = 0;
     };
