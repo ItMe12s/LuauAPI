@@ -45,7 +45,11 @@ namespace luax {
     inline void deferOwnedRelease(cocos2d::CCObject* obj) {
         if (!obj) return;
         ensureDeferredReleaseShutdownHook();
-        detail::deferredOwnedReleases().push_back(obj);
+        auto& queue = detail::deferredOwnedReleases();
+        for (auto* existing : queue) {
+            if (existing == obj) return;
+        }
+        queue.push_back(obj);
     }
 
     inline void drainDeferredReleases() {
@@ -63,9 +67,7 @@ namespace luax {
             owned.swap(ownedQueue);
 
             for (auto* obj : owned) {
-                if (obj && geode::detail::isLiveCocosObject(obj)) {
-                    obj->release();
-                }
+                if (obj) obj->release();
             }
             borrowed.clear();
         }
