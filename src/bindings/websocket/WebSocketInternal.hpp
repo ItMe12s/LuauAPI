@@ -2,8 +2,7 @@
 
 #include "core/Config.hpp"
 #include "framework/callback/LuaCallback.hpp"
-#include "framework/lifecycle/ShutdownHook.hpp"
-#include "framework/lifecycle/WeakHandlePool.hpp"
+#include "framework/lifecycle/Lifecycle.hpp"
 #include "framework/stack/Stack.hpp"
 #include "framework/stack/UserdataTags.hpp"
 

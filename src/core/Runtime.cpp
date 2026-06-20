@@ -1,8 +1,7 @@
 #include "core/Runtime.hpp"
 
 #include "bindings/geode/CurrentMod.hpp"
-#include "core/AllocatorAccounting.hpp"
-#include "core/BytecodeCacheAccounting.hpp"
+#include "core/Config.hpp"
 #include "core/Loadstring.hpp"
 #if !defined(LUAUAPI_HOST_TESTS)
     #include "framework/Binding.hpp"
@@ -25,7 +24,7 @@
 #include <cctype>
 #include <cstdlib>
 #include <cstring>
-#include <fmt/format.h>
+#include <format>
 #include <lua.h>
 #include <lualib.h>
 #include <optional>
@@ -83,6 +82,76 @@ namespace luax {
                 if (std::tolower(a) != std::tolower(b)) return false;
             }
             return true;
+        }
+
+        std::size_t bytecodeEntryBytes(std::string const& bytecode) {
+            return bytecode.size();
+        }
+
+        std::size_t bytecodeCacheUsageAfterInsert(std::size_t usage, std::size_t entryBytes) {
+            return usage + entryBytes;
+        }
+
+        std::size_t bytecodeCacheUsageAfterRemove(std::size_t usage, std::size_t entryBytes) {
+            return entryBytes <= usage ? usage - entryBytes : 0;
+        }
+
+        bool bytecodeCacheNeedsEviction(
+            std::size_t usage, std::size_t limit, std::size_t incomingBytes, std::size_t entryCount,
+            std::size_t maxEntries
+        ) {
+            if (entryCount >= maxEntries) {
+                return entryCount > 0;
+            }
+            if (incomingBytes > limit) {
+                return false;
+            }
+            return usage + incomingBytes > limit && entryCount > 0;
+        }
+
+        bool memoryBudgetAllows(std::size_t usage, std::size_t limit, std::size_t additional) {
+            return additional <= limit && usage <= limit - additional;
+        }
+
+        bool bytecodeCacheInsertNeedsEviction(
+            std::size_t cacheUsage, std::size_t cacheLimit, std::size_t incomingBytes,
+            std::size_t entryCount, std::size_t maxEntries, std::size_t memoryUsage,
+            std::size_t memoryLimit
+        ) {
+            if (entryCount == 0) {
+                return false;
+            }
+            if (bytecodeCacheNeedsEviction(
+                    cacheUsage, cacheLimit, incomingBytes, entryCount, maxEntries
+                )) {
+                return true;
+            }
+            return !memoryBudgetAllows(memoryUsage, memoryLimit, incomingBytes);
+        }
+
+        bool compileTimeWithinBudget(long long compileMs, int budgetMs) {
+            return budgetMs <= 0 || compileMs <= budgetMs;
+        }
+
+        bool allocatorCanReallocate(
+            std::size_t usage, std::size_t limit, std::size_t osize, std::size_t nsize
+        ) {
+            if (nsize <= osize) {
+                return true;
+            }
+            auto delta = nsize - osize;
+            return usage <= limit && delta <= limit - usage;
+        }
+
+        std::size_t allocatorUsageAfterReallocate(std::size_t usage, std::size_t osize, std::size_t nsize) {
+            if (osize <= usage) {
+                return usage - osize + nsize;
+            }
+            return nsize;
+        }
+
+        std::size_t allocatorUsageAfterFree(std::size_t usage, std::size_t osize) {
+            return osize <= usage ? usage - osize : 0;
         }
 
         std::string formatDebugSource(char const* source, std::filesystem::path const& resourcesRoot) {
@@ -563,7 +632,7 @@ namespace luax {
         std::string const& key, std::string compiled, long long compileMs
     ) {
         if (!compileTimeWithinBudget(compileMs, kMaxCompileDeadlineMs)) {
-            setLastError(fmt::format("luau compile exceeded {} ms budget", kMaxCompileDeadlineMs));
+            setLastError(std::format("luau compile exceeded {} ms budget", kMaxCompileDeadlineMs));
             geode::log::warn(
                 "luau compile [{}] exceeded {}ms budget ({}ms)", key, kMaxCompileDeadlineMs, compileMs
             );
@@ -747,7 +816,7 @@ namespace luax {
             int const invokeTop = lua_gettop(invokeL);
             int const funcIdx = invokeTop - nargs;
             if (nargs < 0 || funcIdx < 1 || !lua_isfunction(invokeL, funcIdx)) {
-                auto err = fmt::format("[{}] luau protectedCall missing function", context);
+                auto err = std::format("[{}] luau protectedCall missing function", context);
                 geode::log::error("{}", err);
                 return failWith(std::move(err));
             }
@@ -756,7 +825,7 @@ namespace luax {
         else {
             int baseTop = lua_gettop(m_state) - nargs;
             if (nargs < 0 || baseTop < 1 || !lua_isfunction(m_state, baseTop)) {
-                auto err = fmt::format("[{}] luau protectedCall missing function", context);
+                auto err = std::format("[{}] luau protectedCall missing function", context);
                 geode::log::error("{}", err);
                 return failWith(std::move(err));
             }

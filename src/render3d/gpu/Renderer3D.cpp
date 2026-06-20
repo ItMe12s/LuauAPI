@@ -1,15 +1,29 @@
 #include "render3d/gpu/Renderer3D.hpp"
 
 #include "render3d/gpu/GlUtil.hpp"
-#include "render3d/gpu/Renderer3DDebugOverlay.hpp"
-#include "render3d/gpu/Renderer3DResourceLifetime.hpp"
-#include "render3d/gpu/Renderer3DScenePass.hpp"
+#include "render3d/gpu/Renderer3DMeshCache.hpp"
+#include "render3d/gpu/Renderer3DPrograms.hpp"
+#include "render3d/types/SceneTypes.hpp"
 
 #include <Geode/Geode.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/mat4x4.hpp>
+#include <map>
 
 namespace luax::render3d {
+    void destroyRenderer3DGlResources(Renderer3DPrograms& programs, Renderer3DMeshCache& meshCache);
+    void ensureRenderer3DShutdownHook();
+    void runRenderer3DScenePass(
+        Renderer3DPrograms& programs, Renderer3DMeshCache& meshCache, int pixelWidth,
+        int pixelHeight, Camera3D const& camera, std::map<int, ViewportInstance> const& instances,
+        RenderSettings const& settings, int selfColorTexture
+    );
+    void drawDebugOverlay(
+        Renderer3DPrograms& programs, glm::mat4 const& projection, glm::mat4 const& view,
+        std::map<int, DebugLine> const& debugLines, bool debugBounds,
+        std::map<int, ViewportInstance> const& instances
+    );
+
     Renderer3D& Renderer3D::instance() {
         static Renderer3D s_renderer;
         return s_renderer;

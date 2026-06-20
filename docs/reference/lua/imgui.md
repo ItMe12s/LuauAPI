@@ -285,15 +285,8 @@ See [UI and layouts](ui.md) for when to use ImGui vs Cocos UI.
 ## Source
 
 - `tools/luau_codegen/extra_bindings/imgui.dluau`
-- `src/bindings/imgui/ImGuiBinding.cpp`
+- `src/bindings/imgui/ImGuiCore.cpp`
+- `src/bindings/imgui/ImGuiWidgetsLayout.cpp`
+- `src/bindings/imgui/ImGuiPopupsTablesMenus.cpp`
+- `src/bindings/imgui/ImGuiStyleFonts.cpp`
 - `src/bindings/imgui/ImGuiBindingInternal.hpp`
-- `src/bindings/imgui/ImGuiWidgets.cpp`
-- `src/bindings/imgui/ImGuiLayout.cpp`
-- `src/bindings/imgui/ImGuiPopups.cpp`
-- `src/bindings/imgui/ImGuiTables.cpp`
-- `src/bindings/imgui/ImGuiMenus.cpp`
-- `src/bindings/imgui/ImGuiStyle.cpp`
-- `src/bindings/imgui/ImGuiFontBinding.cpp`
-- `src/bindings/imgui/ImGuiFontRegistry.cpp`
-- `src/bindings/imgui/ImGuiHost.cpp`
-- `src/bindings/imgui/ImGuiConstants.cpp`

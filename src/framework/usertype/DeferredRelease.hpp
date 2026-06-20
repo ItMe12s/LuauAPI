@@ -1,7 +1,7 @@
 #pragma once
 
 #include "core/Runtime.hpp"
-#include "framework/lifecycle/ShutdownHook.hpp"
+#include "framework/lifecycle/Lifecycle.hpp"
 #include "framework/usertype/WeakRefShutdown.hpp"
 
 #include <Geode/utils/cocos.hpp>

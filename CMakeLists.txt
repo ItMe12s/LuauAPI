@@ -148,26 +148,14 @@ if(LUAUAPI_BUILD_TESTS)
         src/bindings/geode/ModSandbox.cpp
         src/bindings/geode/GeodeFsBinding.cpp
         src/bindings/geode/GeodeSmallBindings.cpp
-        src/bindings/geode/web/GeodeWebBinding.cpp
-        src/bindings/geode/web/GeodeWebApply.cpp
-        src/bindings/geode/web/GeodeWebOptions.cpp
-        src/bindings/geode/web/GeodeWebRequest.cpp
-        src/bindings/geode/web/GeodeWebResponse.cpp
-        src/bindings/geode/web/GeodeWebMultipart.cpp
+        src/bindings/geode/web/GeodeWebCore.cpp
+        src/bindings/geode/web/GeodeWebApi.cpp
         src/bindings/geode/web/GeodeWebListeners.cpp
         src/bindings/geode/JsonConvert.cpp
-        src/bindings/imgui/ImGuiBinding.cpp
-        src/bindings/imgui/ImGuiConstants.cpp
-        src/bindings/imgui/ImGuiDrawHandleBinding.cpp
-        src/bindings/imgui/ImGuiDrawScheduler.cpp
-        src/bindings/imgui/ImGuiFontBinding.cpp
-        src/bindings/imgui/ImGuiFontRegistry.cpp
-        src/bindings/imgui/ImGuiLayout.cpp
-        src/bindings/imgui/ImGuiMenus.cpp
-        src/bindings/imgui/ImGuiPopups.cpp
-        src/bindings/imgui/ImGuiStyle.cpp
-        src/bindings/imgui/ImGuiTables.cpp
-        src/bindings/imgui/ImGuiWidgets.cpp
+        src/bindings/imgui/ImGuiCore.cpp
+        src/bindings/imgui/ImGuiWidgetsLayout.cpp
+        src/bindings/imgui/ImGuiPopupsTablesMenus.cpp
+        src/bindings/imgui/ImGuiStyleFonts.cpp
         tests/host/ImGuiHostStub.cpp
         src/bindings/task/TaskScheduler.cpp
         src/require/BytecodeCacheKey.cpp

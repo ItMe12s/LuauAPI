@@ -2,8 +2,8 @@
 
 #include "bindings/geode/web/WebCaps.hpp"
 #include "framework/callback/LuaCallback.hpp"
-#include "framework/lifecycle/ShutdownHook.hpp"
-#include "framework/lifecycle/WeakHandlePool.hpp"
+#include "framework/lifecycle/GeodeListenerState.hpp"
+#include "framework/lifecycle/Lifecycle.hpp"
 
 #include <Geode/Geode.hpp>
 #include <Geode/utils/web.hpp>
@@ -57,20 +57,7 @@ namespace luax {
         std::shared_ptr<WebTask> task;
     };
 
-    struct WebListenerState {
-        geode::ListenerHandle handle;
-        bool connected = true;
-
-        ~WebListenerState() {
-            disconnect();
-        }
-
-        void disconnect() {
-            if (!connected) return;
-            handle = geode::ListenerHandle();
-            connected = false;
-        }
-    };
+    struct WebListenerState : GeodeListenerState {};
 
     struct WebListenerBox {
         std::shared_ptr<WebListenerState> state;

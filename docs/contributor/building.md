@@ -24,7 +24,7 @@ CMake downloads these during configuration, so you do not install them by hand.
 - Geode bindings, pinned through `LUAUAPI_BINDINGS_GIT_TAG` in `cmake/GeodeBindings.cmake`
 - GLM `1.0.3`, used by the 3D math and glTF loader
 - IXWebSocket `v12.0.0` and mbedTLS `v3.6.6`, fetched for websocket support
-- Catch2 `v3.15.0` and fmt `12.1.0`, fetched only when tests are on
+- Catch2 `v3.15.0`, fetched only when tests are on
 
 ## Vendored dependencies
 

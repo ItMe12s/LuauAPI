@@ -1,5 +1,7 @@
 #pragma once
 
+#include "core/Runtime.hpp"
+
 #include <algorithm>
 #include <cstddef>
 #include <memory>
@@ -65,4 +67,12 @@ namespace luax {
     private:
         std::vector<std::weak_ptr<T>> items_;
     };
+
+    inline void ensureShutdownHook(bool& registered, void (*clearFn)()) {
+        if (registered) return;
+        auto* rt = Runtime::getIfInitialized();
+        if (!rt) return;
+        rt->registerShutdownHook(clearFn);
+        registered = true;
+    }
 } // namespace luax

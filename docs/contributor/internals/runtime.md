@@ -33,7 +33,7 @@ and applies all bindings. After this, `status` reports `Ready`.
 The state uses `boundedAlloc`, a custom allocator.
 It tracks current use in `m_memoryUsage` and caps it at `m_memoryLimit`.
 See [Limits and errors](../../reference/cpp/limits-and-errors.md) for the cap and out-of-memory behavior.
-The helper logic lives in `src/core/AllocatorAccounting.hpp`.
+The helper logic lives in private helpers inside `src/core/Runtime.cpp`.
 
 ## Deadlines and budget
 
@@ -83,7 +83,7 @@ Subsystems that register during startup therefore shut down in reverse registrat
 Hooks registered while a shutdown pass is already running are deferred until the next `runShutdownHooks` call.
 Tests in `tests/runtime_tests.cpp` preserve this contract.
 
-Subsystems register hooks through `ensureShutdownHook` in `src/framework/lifecycle/ShutdownHook.hpp`.
+Subsystems register hooks through `ensureShutdownHook` in `src/framework/lifecycle/Lifecycle.hpp`.
 WebSocket uses this to close live connections and servers. See [Bindings framework](bindings-framework.md) Shutdown hooks.
 
 ## Related
@@ -97,6 +97,5 @@ WebSocket uses this to close live connections and servers. See [Bindings framewo
 
 - `src/core/Runtime.hpp`
 - `src/core/Runtime.cpp`
-- `src/core/AllocatorAccounting.hpp`
 - `src/core/Config.hpp`
-- `src/framework/lifecycle/ShutdownHook.hpp`
+- `src/framework/lifecycle/Lifecycle.hpp`

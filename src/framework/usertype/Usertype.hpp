@@ -8,7 +8,7 @@
 #include <algorithm>
 #include <cocos2d.h>
 #include <cstdint>
-#include <fmt/format.h>
+#include <format>
 #include <initializer_list>
 #include <lua.h>
 #include <lualib.h>
@@ -132,7 +132,7 @@ namespace luax {
             }
             auto& info = *infoResult.unwrap();
             if (!detail::isValidUserdataTag(info.tag)) {
-                return geode::Err(fmt::format("{} invalid userdata tag {}", nm, info.tag));
+                return geode::Err(std::format("{} invalid userdata tag {}", nm, info.tag));
             }
             info.name = nm;
             info.mtName = std::string("luax:") + nm;
@@ -140,14 +140,14 @@ namespace luax {
             info.matches = &detail::matchesRegisteredType<T>;
 
             if (baseTags.size() > 1) {
-                return geode::Err(fmt::format("{} supports at most one direct base tag", nm));
+                return geode::Err(std::format("{} supports at most one direct base tag", nm));
             }
 
             info.baseClosure.clear();
             info.baseClosure.push_back(info.tag);
             for (std::uint32_t b : baseTags) {
                 if (!detail::isValidUserdataTag(b)) {
-                    return geode::Err(fmt::format("{} invalid base userdata tag {}", nm, b));
+                    return geode::Err(std::format("{} invalid base userdata tag {}", nm, b));
                 }
                 if (auto const* base = reg.findByTag(b)) {
                     for (std::uint32_t x : base->baseClosure) {
@@ -158,7 +158,7 @@ namespace luax {
                     }
                 }
                 else {
-                    return geode::Err(fmt::format("{} unknown base userdata tag {}", nm, b));
+                    return geode::Err(std::format("{} unknown base userdata tag {}", nm, b));
                 }
             }
 

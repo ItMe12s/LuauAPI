@@ -1,13 +1,15 @@
-#include "render3d/gpu/Renderer3DScenePass.hpp"
-
 #include "render3d/assets/MeshAsset.hpp"
 #include "render3d/assets/TextureAsset.hpp"
 #include "render3d/gpu/GlUtil.hpp"
+#include "render3d/gpu/Renderer3DMeshCache.hpp"
+#include "render3d/gpu/Renderer3DPrograms.hpp"
 #include "render3d/gpu/SceneDrawList.hpp"
 #include "render3d/gpu/VertexLayout.hpp"
 #include "render3d/types/Frustum.hpp"
+#include "render3d/types/SceneTypes.hpp"
 
 #include <cstddef>
+#include <cstdint>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/mat4x4.hpp>

@@ -11,14 +11,10 @@ from luau_codegen.model.free_fn_sources import FREE_FUNCTION_SOURCES  # type: ig
 
 _REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-_WEB_BINDING = "src/bindings/geode/web/GeodeWebBinding.cpp"
+_WEB_BINDING = "src/bindings/geode/web/GeodeWebCore.cpp"
 _WEB_BINDING_SOURCES = (
-    "src/bindings/geode/web/GeodeWebBinding.cpp",
-    "src/bindings/geode/web/GeodeWebApply.cpp",
-    "src/bindings/geode/web/GeodeWebOptions.cpp",
-    "src/bindings/geode/web/GeodeWebRequest.cpp",
-    "src/bindings/geode/web/GeodeWebResponse.cpp",
-    "src/bindings/geode/web/GeodeWebMultipart.cpp",
+    "src/bindings/geode/web/GeodeWebCore.cpp",
+    "src/bindings/geode/web/GeodeWebApi.cpp",
     "src/bindings/geode/web/GeodeWebListeners.cpp",
 )
 
@@ -42,10 +38,10 @@ _CC_VIEWPORT_FRAME = "src/render3d/viewport/CCViewportFrame.cpp"
 _COCOS_BINDING = "src/bindings/geode/GeodeCocosBinding.cpp"
 _TASK_SCHEDULER = "src/bindings/task/TaskScheduler.cpp"
 _TASK_BINDING = "src/bindings/task/TaskBinding.cpp"
-_IMGUI_BINDING = "src/bindings/imgui/ImGuiDrawHandleBinding.cpp"
-_IMGUI_BINDING_CPP = "src/bindings/imgui/ImGuiBinding.cpp"
+_IMGUI_BINDING = "src/bindings/imgui/ImGuiCore.cpp"
+_IMGUI_BINDING_CPP = "src/bindings/imgui/ImGuiCore.cpp"
 _IMGUI_HOST_STUB = "tests/host/ImGuiHostStub.cpp"
-_IMGUI_STYLE = "src/bindings/imgui/ImGuiStyle.cpp"
+_IMGUI_STYLE = "src/bindings/imgui/ImGuiStyleFonts.cpp"
 _IMGUI_BINDING_TESTS = "tests/imgui_binding_tests.cpp"
 _IMGUI_HEADLESS_CMAKE = "cmake/ImGuiHeadless.cmake"
 _IMGUI_TEST_HARNESS = "tests/host/ImGuiTestHarness.hpp"
@@ -371,7 +367,7 @@ class BindingGuardTests(unittest.TestCase):
         self.assertNotIn(
             "luaL_register",
             source,
-            "GeodeWebBinding must register metatable methods without luaL_register",
+            "GeodeWebCore must register metatable methods without luaL_register",
         )
 
     def test_web_internal_has_no_dead_checkudata_null_checks(self) -> None:
@@ -875,7 +871,7 @@ class HandleGcGuardTests(unittest.TestCase):
         task_scheduler = _read_repo_file(_TASK_SCHEDULER)
         self.assertIn("LuaCallback::fire", task_scheduler)
 
-        imgui_scheduler = _read_repo_file("src/bindings/imgui/ImGuiDrawScheduler.cpp")
+        imgui_scheduler = _read_repo_file(_IMGUI_BINDING_CPP)
         self.assertIn("LuaCallback::fire", imgui_scheduler)
 
     def test_schedulers_store_slots_via_indexed_slot_map(self) -> None:
@@ -888,9 +884,7 @@ class HandleGcGuardTests(unittest.TestCase):
 
         imgui_scheduler = _read_repo_file("src/bindings/imgui/ImGuiDrawScheduler.hpp")
         self.assertIn("IndexedSlotMap", imgui_scheduler)
-        self.assertIn(
-            "compactCancelledSlots", _read_repo_file("src/bindings/imgui/ImGuiDrawScheduler.cpp")
-        )
+        self.assertIn("compactCancelledSlots", _read_repo_file(_IMGUI_BINDING_CPP))
 
 
 class ImGuiGuardTests(unittest.TestCase):
@@ -925,10 +919,8 @@ class ImGuiGuardTests(unittest.TestCase):
     def test_scoped_imgui_wrappers_use_end_guards(self) -> None:
         scoped_sources = (
             _IMGUI_BINDING_CPP,
-            "src/bindings/imgui/ImGuiPopups.cpp",
-            "src/bindings/imgui/ImGuiTables.cpp",
-            "src/bindings/imgui/ImGuiMenus.cpp",
-            "src/bindings/imgui/ImGuiLayout.cpp",
+            "src/bindings/imgui/ImGuiPopupsTablesMenus.cpp",
+            "src/bindings/imgui/ImGuiWidgetsLayout.cpp",
         )
         for source_path in scoped_sources:
             with self.subTest(source=source_path):
@@ -961,10 +953,9 @@ class ImGuiGuardTests(unittest.TestCase):
         self.assertIn("imgui_impl_null.cpp", headless)
         self.assertIn("host/ImGuiTestHarness.hpp", _read_repo_file(_IMGUI_BINDING_TESTS))
         for source in (
-            "src/bindings/imgui/ImGuiBinding.cpp",
-            "src/bindings/imgui/ImGuiConstants.cpp",
-            "src/bindings/imgui/ImGuiStyle.cpp",
-            "src/bindings/imgui/ImGuiWidgets.cpp",
+            "src/bindings/imgui/ImGuiCore.cpp",
+            "src/bindings/imgui/ImGuiStyleFonts.cpp",
+            "src/bindings/imgui/ImGuiWidgetsLayout.cpp",
         ):
             with self.subTest(source=source):
                 self.assertIn(source, cmake)

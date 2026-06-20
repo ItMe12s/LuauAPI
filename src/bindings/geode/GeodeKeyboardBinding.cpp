@@ -2,8 +2,8 @@
 #include "core/Runtime.hpp"
 #include "framework/Binding.hpp"
 #include "framework/callback/LuaCallback.hpp"
-#include "framework/lifecycle/ShutdownHook.hpp"
-#include "framework/lifecycle/WeakHandlePool.hpp"
+#include "framework/lifecycle/GeodeListenerState.hpp"
+#include "framework/lifecycle/Lifecycle.hpp"
 #include "framework/stack/Stack.hpp"
 #include "framework/stack/TableUtil.hpp"
 #include "framework/stack/TaggedMetatable.hpp"
@@ -23,20 +23,7 @@ namespace {
 
     inline constexpr char const* kKeyboardListenerMeta = "luax.KeyboardInputListenerHandle";
 
-    struct KeyboardListenerState {
-        geode::ListenerHandle handle;
-        bool connected = true;
-
-        ~KeyboardListenerState() {
-            disconnect();
-        }
-
-        void disconnect() {
-            if (!connected) return;
-            handle = geode::ListenerHandle();
-            connected = false;
-        }
-    };
+    struct KeyboardListenerState : GeodeListenerState {};
 
     struct KeyboardListenerBox {
         std::shared_ptr<KeyboardListenerState> state;

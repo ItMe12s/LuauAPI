@@ -1,6 +1,4 @@
-#include "render3d/gpu/Renderer3DResourceLifetime.hpp"
-
-#include "framework/lifecycle/ShutdownHook.hpp"
+#include "framework/lifecycle/Lifecycle.hpp"
 #include "render3d/gpu/GlUtil.hpp"
 #include "render3d/gpu/Renderer3D.hpp"
 #include "render3d/gpu/Renderer3DMeshCache.hpp"

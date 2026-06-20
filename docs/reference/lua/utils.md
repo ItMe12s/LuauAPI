@@ -79,7 +79,7 @@ Read or set the current thread name for debugging and logging.
 ## Source
 
 - `src/bindings/geode/GeodeSmallBindings.cpp`
-- `src/bindings/geode/web/GeodeWebBinding.cpp`
+- `src/bindings/geode/web/GeodeWebCore.cpp`
 - `tools/luau_codegen/extra_bindings/web.dluau`
 - `tools/luau_codegen/model/free_fn_sources.py`
 - `tools/luau_codegen/emit/luau_types/manual_fields.py`

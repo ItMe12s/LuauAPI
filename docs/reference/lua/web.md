@@ -410,11 +410,7 @@ See [LuauAPI mod guidelines](../../mod_guidelines.md) for loadstring and network
 
 ## Source
 
-- `src/bindings/geode/web/GeodeWebBinding.cpp`
-- `src/bindings/geode/web/GeodeWebApply.cpp`
-- `src/bindings/geode/web/GeodeWebOptions.cpp`
-- `src/bindings/geode/web/GeodeWebRequest.cpp`
-- `src/bindings/geode/web/GeodeWebResponse.cpp`
-- `src/bindings/geode/web/GeodeWebMultipart.cpp`
+- `src/bindings/geode/web/GeodeWebCore.cpp`
+- `src/bindings/geode/web/GeodeWebApi.cpp`
 - `src/bindings/geode/web/GeodeWebListeners.cpp`
 - `tools/luau_codegen/extra_bindings/web.dluau`

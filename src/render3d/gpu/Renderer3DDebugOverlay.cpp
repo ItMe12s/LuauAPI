@@ -1,10 +1,12 @@
-#include "render3d/gpu/Renderer3DDebugOverlay.hpp"
-
 #include "render3d/assets/MeshAsset.hpp"
 #include "render3d/gpu/GlUtil.hpp"
+#include "render3d/gpu/Renderer3DPrograms.hpp"
+#include "render3d/types/SceneTypes.hpp"
 
 #include <algorithm>
 #include <glm/gtc/type_ptr.hpp>
+#include <glm/mat4x4.hpp>
+#include <map>
 #include <vector>
 
 namespace luax::render3d {

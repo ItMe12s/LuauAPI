@@ -91,7 +91,6 @@ The host tests must not link the following game libraries:
 The `luauapi_tests` target links:
 
 - Catch2
-- fmt
 - Luau libraries
 - glm
 - luauapi_imgui_headless

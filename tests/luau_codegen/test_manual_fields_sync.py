@@ -105,7 +105,7 @@ class ManualFieldsSyncTests(unittest.TestCase):
 
     def test_geode_utils_web_bridge_manual_field(self) -> None:
         self.assertIn("web: WebNamespace", MANUAL_FREE_FN_FIELDS["geode.utils"])
-        cpp = _read_repo_file("src/bindings/geode/web/GeodeWebBinding.cpp")
+        cpp = _read_repo_file("src/bindings/geode/web/GeodeWebCore.cpp")
         self.assertIn('getOrCreateTable(L, "geode.utils.web")', cpp)
 
         root = Root(classes=[Class(name="CCObject", namespace="cocos2d")])

@@ -2,7 +2,7 @@
 
 #include "core/Config.hpp"
 #include "core/Runtime.hpp"
-#include "framework/lifecycle/ShutdownHook.hpp"
+#include "framework/lifecycle/Lifecycle.hpp"
 
 #include <Geode/Geode.hpp>
 #include <unordered_map>

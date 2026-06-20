@@ -26,10 +26,10 @@ A few libraries are handwritten in C++ under `src/bindings/geode/` and `src/fram
 | `GeodeModBinding.cpp` | `geode.Mod` |
 | `GeodeSmallBindings.cpp` | `geode.json`, `geode.utils.base64`, `geode.utils.permission`, `geode.ColorProvider`,`geode.Keybind`, `geode.VersionInfo` (see host-test split below) |
 | `GeodeKeyboardBinding.cpp` | `geode.KeyboardModifier`, `geode.KeyboardInputData`, `geode.KeyboardInputEvent` |
-| `GeodeWebBinding.cpp` and siblings under `web/` | `geode.utils.web` |
+| `GeodeWebCore.cpp` and siblings under `web/` | `geode.utils.web` |
 | `GeodeCocosBinding.cpp` | Handwritten `geode.cocos` helpers |
 | `task/TaskBinding.cpp` | `task` and `time` |
-| `imgui/ImGuiBinding.cpp` | `imgui` |
+| `imgui/ImGuiCore.cpp` | `imgui` |
 | `render3d/Gd3dRegister.cpp` | `gd3d` entry (`registerGd3d`) |
 | `render3d/TransformBinding.cpp` | `gd3d.Transform` |
 | `render3d/GltfBinding.cpp` | `gd3d.gltf` |
@@ -44,16 +44,12 @@ A few libraries are handwritten in C++ under `src/bindings/geode/` and `src/fram
 The `gd3d` Lua module lives in `src/bindings/render3d/`.
 Rendering and asset code lives in `src/render3d/`.
 
-The web binding is split across several translation units:
+The web binding is split across three translation units:
 
 | File | Role |
 | --- | --- |
-| `GeodeWebBinding.cpp` | Entry registration and userdata metatables |
-| `GeodeWebApply.cpp` | Shared `apply*` helpers for request options and body caps |
-| `GeodeWebOptions.cpp` | Options-table parsing |
-| `GeodeWebRequest.cpp` | Fluent `WebRequest` chain methods and `send` |
-| `GeodeWebResponse.cpp` | `WebResponse` accessors |
-| `GeodeWebMultipart.cpp` | `MultipartForm` builders |
+| `GeodeWebCore.cpp` | Entry registration, userdata metatables, request options, and multipart builders |
+| `GeodeWebApi.cpp` | Fluent `WebRequest` chain methods, `send`, and `WebResponse` accessors |
 | `GeodeWebListeners.cpp` | Request intercept and response listeners |
 
 The websocket binding lives under `src/bindings/websocket/`:
@@ -142,7 +138,7 @@ Codegen picks the next free internal id at registration. That id goes in `Userda
 
 ## Handle pools
 
-`WeakHandlePool` in `src/framework/lifecycle/WeakHandlePool.hpp` tracks live handles
+`WeakHandlePool` in `src/framework/lifecycle/Lifecycle.hpp` tracks live handles
 for subsystems that need runtime shutdown cleanup.
 
 - `track` stores a `shared_ptr` or `weak_ptr`.
@@ -150,6 +146,7 @@ for subsystems that need runtime shutdown cleanup.
 - `clearAll` locks each live entry and runs a caller-supplied shutdown callback, then clears the pool.
 
 Web tasks/listeners and WebSocket connections/servers use this pool.
+Web and keyboard listeners share `GeodeListenerState` in `GeodeListenerState.hpp`.
 On runtime shutdown, `clearWebState` clears web callbacks and `clearWsState` shuts down every live socket.
 
 ## Mod sandbox
@@ -168,7 +165,7 @@ but mod sandbox roots come from the current mod directories while require paths 
 
 ## Shutdown hooks
 
-`ShutdownHook.hpp` provides `ensureShutdownHook(registered, clearFn)`.
+`Lifecycle.hpp` provides `ensureShutdownHook(registered, clearFn)`.
 Subsystems call it once to register a runtime shutdown callback through `Runtime::registerShutdownHook`.
 WebSocket registers `clearWsState` this way so open connections and servers close before the Lua state is torn down.
 
@@ -182,7 +179,7 @@ When `LUAUAPI_HOST_TESTS` is defined, several bindings compile a reduced surface
 
 - `GeodeSmallBindings.cpp` registers only `geode.json`.
   Base64, permission, `ColorProvider`, `Keybind`, and `VersionInfo` are omitted.
-- `GeodeWebBinding.cpp`, websocket entry registration,
+- `GeodeWebCore.cpp`, websocket entry registration,
   and several gd3d viewport or GPU paths are wrapped in `#if !defined(LUAUAPI_HOST_TESTS)`.
 - Host tests use stubs under `tests/host/` for web async behavior.
 
@@ -307,8 +304,8 @@ In practice most game types are generated. See [Codegen](../codegen/codegen.md).
 - `src/framework/stack/Types.hpp`
 - `src/framework/stack/ContainerTables.hpp`
 - `src/framework/usertype/Fields.cpp`
-- `src/framework/lifecycle/WeakHandlePool.hpp`
-- `src/framework/lifecycle/ShutdownHook.hpp`
+- `src/framework/lifecycle/Lifecycle.hpp`
+- `src/framework/lifecycle/GeodeListenerState.hpp`
 - `src/bindings/geode/ModSandbox.hpp`
 - `src/require/PathSandbox.hpp`
 - `src/framework/stack/UserdataTags.hpp`

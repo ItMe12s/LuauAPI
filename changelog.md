@@ -4,11 +4,8 @@
 
 ## v0.1.0-beta.5
 
-- Refactored bindings to call `Runtime` directly instead of `BindingHost`.
-- Consolidated cocos callback handlers into shared code.
-- Consolidated mesh and texture asset registries.
-- Consolidated task and ImGui scheduler internals.
-- Merged path validation helpers into `PathSandbox.hpp`.
+- Improved cleanup when the mod unloads for `geode.utils.web`, keyboard listeners, `websocket`, and `imgui.onDraw`.
+- Updated runtime internals for bindings, memory limits, and module loading.
 
 ## v0.1.0-beta.4
 

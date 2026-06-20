@@ -184,6 +184,6 @@ geode.hook("geode.gd.MenuLayer:init/0", {
 
 - `src/core/Runtime.cpp`
 - `src/bindings/task/TaskBinding.cpp`
-- `src/bindings/geode/web/GeodeWebBinding.cpp`
+- `src/bindings/geode/web/GeodeWebCore.cpp`
 - `src/bindings/websocket/WebSocketBinding.cpp`
-- `src/bindings/imgui/ImGuiBinding.cpp`
+- `src/bindings/imgui/ImGuiCore.cpp`

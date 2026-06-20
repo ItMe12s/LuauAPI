@@ -8,7 +8,7 @@ The binding exposes the `imgui` library, the host wires the backend, and the sch
 
 ## The binding
 
-`ImGuiBinding.cpp` builds the `imgui` global table and registers it.
+`ImGuiCore.cpp` builds the `imgui` global table and registers it.
 It registers the handle metatable and adds a shutdown hook that clears the scheduler.
 Each callback stores its Lua function as a `LuaRef`.
 The handle returned to Lua is a small userdata that holds a draw id and a `cancel` method.
@@ -24,14 +24,10 @@ There are no bare `begin` or `end` functions on purpose.
 The binding is split by feature:
 
 - `ImGuiBindingInternal.hpp` has shared guards and argument helpers.
-- `ImGuiWidgets.cpp` has common widgets and input helpers.
-- `ImGuiLayout.cpp` has layout, groups, and tree nodes.
-- `ImGuiPopups.cpp` has tabs, popups, and tooltips.
-- `ImGuiTables.cpp` has table helpers.
-- `ImGuiMenus.cpp` has menu helpers.
-- `ImGuiStyle.cpp` has style and theme helpers.
-- `ImGuiFontBinding.cpp` and `ImGuiFontRegistry.cpp` register TTF fonts and rebuild the atlas.
-- `ImGuiConstants.cpp` has enum tables.
+- `ImGuiCore.cpp` has entry registration, the draw handle, the scheduler, and the gd-imgui-cocos host.
+- `ImGuiWidgetsLayout.cpp` has common widgets, input helpers, and layout or tree helpers.
+- `ImGuiPopupsTablesMenus.cpp` has tabs, popups, tooltips, tables, and menus.
+- `ImGuiStyleFonts.cpp` has style, theme, enum constants, and font registration.
 
 ## The scheduler
 
@@ -45,7 +41,7 @@ Only the host draw lambda calls `drawAll()`. There is no `CCNode` tick like the 
 
 ## The host
 
-`ImGuiHost.cpp` owns gd-imgui-cocos and is the only file that includes `<imgui-cocos.hpp>`.
+`ImGuiCore.cpp` owns gd-imgui-cocos and is the only binding file that includes `<imgui-cocos.hpp>`.
 `initImGuiHost()` is idempotent. It reads the `imgui-scale` mod setting (see [imgui](../../reference/lua/imgui.md)) and listens for live changes.
 It sets up ImGuiCocos and registers the draw lambda that calls `drawAll()`.
 The setup callback rebuilds the font atlas through `imguiFontRebuildAtlas()` after each ImGui init or reload.
@@ -72,20 +68,14 @@ Draw callback count, per-callback deadlines, font errors, and GPU session disabl
 
 ## Source
 
-- `src/bindings/imgui/ImGuiBinding.cpp`
+- `src/bindings/imgui/ImGuiCore.cpp`
+- `src/bindings/imgui/ImGuiWidgetsLayout.cpp`
+- `src/bindings/imgui/ImGuiPopupsTablesMenus.cpp`
+- `src/bindings/imgui/ImGuiStyleFonts.cpp`
 - `src/bindings/imgui/ImGuiBindingInternal.hpp`
-- `src/bindings/imgui/ImGuiWidgets.cpp`
-- `src/bindings/imgui/ImGuiLayout.cpp`
-- `src/bindings/imgui/ImGuiPopups.cpp`
-- `src/bindings/imgui/ImGuiTables.cpp`
-- `src/bindings/imgui/ImGuiMenus.cpp`
-- `src/bindings/imgui/ImGuiStyle.cpp`
-- `src/bindings/imgui/ImGuiFontBinding.cpp`
-- `src/bindings/imgui/ImGuiFontRegistry.cpp`
-- `src/bindings/imgui/ImGuiConstants.cpp`
 - `src/bindings/imgui/ImGuiDrawScheduler.hpp`
-- `src/bindings/imgui/ImGuiDrawScheduler.cpp`
-- `src/bindings/imgui/ImGuiHost.cpp`
+- `src/bindings/imgui/ImGuiFontRegistry.hpp`
+- `src/bindings/imgui/ImGuiHost.hpp`
 - `src/render3d/gpu/GpuSessionDisable.cpp`
 - `gd-imgui-cocos/src/backend.cpp`
 - `src/core/Config.hpp`

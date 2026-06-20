@@ -1,5 +1,6 @@
 #include "bindings/imgui/ImGuiBindingInternal.hpp"
 #include "bindings/imgui/ImGuiDrawHandleBinding.hpp"
+#include "bindings/imgui/ImGuiDrawScheduler.hpp"
 #include "bindings/imgui/ImGuiHost.hpp"
 #include "core/Runtime.hpp"
 #include "framework/Binding.hpp"
@@ -202,6 +203,228 @@ namespace {
         return 1;
     }
 } // namespace
+
+#include "bindings/imgui/ImGuiFontRegistry.hpp"
+#include "framework/usertype/DeferredRelease.hpp"
+#include "render3d/gpu/GlUtil.hpp"
+
+#include <Geode/Geode.hpp>
+#include <Geode/loader/SettingV3.hpp>
+#include <imgui-cocos.hpp>
+
+namespace luax {
+    namespace {
+        bool s_initialized = false;
+        bool s_pendingInit = false;
+    } // namespace
+
+    bool imguiHostIsInitialized() {
+        return s_initialized && ImGuiCocos::get().isInitialized();
+    }
+
+    void imguiHostRequestReload() {
+        if (render3d::gpuFeaturesDisabled()) {
+            return;
+        }
+        if (imguiHostIsInitialized()) {
+            ImGuiCocos::get().reload();
+        }
+    }
+
+    void initImGuiHost() {
+        if (render3d::gpuFeaturesDisabled() || s_initialized) return;
+
+        auto* director = cocos2d::CCDirector::sharedDirector();
+        if (!director || !director->getOpenGLView()) {
+            if (s_pendingInit) return;
+            s_pendingInit = true;
+            geode::queueInMainThread([] {
+                if (!s_pendingInit) return;
+                s_pendingInit = false;
+                initImGuiHost();
+            });
+            return;
+        }
+
+        ImGuiCocos::get().setDisplayScale(
+            static_cast<float>(geode::Mod::get()->getSettingValue<double>("imgui-scale"))
+        );
+
+        static bool s_scaleListenerRegistered = false;
+        if (!s_scaleListenerRegistered) {
+            s_scaleListenerRegistered = true;
+            geode::listenForSettingChanges<double>("imgui-scale", [](double value) {
+                ImGuiCocos::get().setDisplayScale(static_cast<float>(value));
+            });
+        }
+
+        ImGuiCocos::get()
+            .setup([] {
+                imguiFontRebuildAtlas();
+            })
+            .draw([] {
+                drainDeferredReleases();
+                ImGuiDrawScheduler::get().drawAll();
+            });
+        s_initialized = true;
+    }
+
+    void shutdownImGuiHost() {
+        s_pendingInit = false;
+        ImGuiDrawScheduler::get().clear();
+        imguiFontClear();
+        if (s_initialized && ImGuiCocos::get().isInitialized()) {
+            ImGuiCocos::get().destroy();
+        }
+        s_initialized = false;
+    }
+
+    void imguiHostSetVisible(bool visible) {
+        if (render3d::gpuFeaturesDisabled()) return;
+        ImGuiCocos::get().setVisible(visible);
+    }
+
+    void imguiHostToggle() {
+        if (render3d::gpuFeaturesDisabled()) return;
+        ImGuiCocos::get().toggle();
+    }
+
+    bool imguiHostIsVisible() {
+        if (render3d::gpuFeaturesDisabled()) {
+            return false;
+        }
+        return ImGuiCocos::get().isVisible();
+    }
+} // namespace luax
+
+#include "bindings/imgui/ImGuiDrawScheduler.hpp"
+#include "bindings/imgui/ImGuiHost.hpp"
+#include "core/Config.hpp"
+#include "framework/schedule/ScheduledHandleBinding.hpp"
+#include "framework/stack/TableUtil.hpp"
+#include "framework/stack/UserdataTags.hpp"
+#include "framework/usertype/LuaRef.hpp"
+
+#include <cstdint>
+#include <lua.h>
+#include <lualib.h>
+
+namespace luax {
+    namespace {
+        struct ImGuiDrawHandleTraits {
+            using Scheduler = ImGuiDrawScheduler;
+            static constexpr char const* kMeta = "luax.ImGuiDrawHandle";
+            static constexpr char const* kTypeName = "ImGuiDrawHandle";
+
+            static constexpr int userdataTag() noexcept {
+                return detail::imguiDrawHandleTag();
+            }
+        };
+
+        using ImGuiDrawHandleBinding = ScheduledHandleBinding<ImGuiDrawHandleTraits>;
+
+        void pushHandle(lua_State* L, std::uint64_t id) {
+            ImGuiDrawHandleBinding::push(L, id);
+        }
+    } // namespace
+
+    int imguiCancel(lua_State* L) {
+        return ImGuiDrawHandleBinding::luaCancel(L);
+    }
+
+    int imguiOnDraw(lua_State* L) {
+        luaL_checktype(L, 1, LUA_TFUNCTION);
+        if (ImGuiDrawScheduler::get().full()) {
+            luaL_error(
+                L,
+                "imgui.onDraw: too many draw callbacks (limit %d)",
+                static_cast<int>(kMaxImGuiDrawCallbacks)
+            );
+        }
+        LuaRef ref;
+        ref.reset(L, 1);
+        std::uint64_t id = ImGuiDrawScheduler::get().add(std::move(ref));
+#if !defined(LUAUAPI_HOST_TESTS)
+        initImGuiHost();
+#endif
+        pushHandle(L, id);
+        return 1;
+    }
+
+    void registerImGuiDrawHandleMetatable(lua_State* L) {
+        ImGuiDrawHandleBinding::registerMetatable(L);
+    }
+} // namespace luax
+
+#include "core/Config.hpp"
+#include "core/Runtime.hpp"
+#include "framework/callback/LuaCallback.hpp"
+
+#include <thread>
+
+namespace luax {
+    ImGuiDrawScheduler& ImGuiDrawScheduler::get() {
+        static ImGuiDrawScheduler s_instance;
+        return s_instance;
+    }
+
+    std::uint64_t ImGuiDrawScheduler::add(LuaRef callback) {
+        if (full()) {
+            return 0;
+        }
+        DrawCb cb;
+        cb.callback = std::move(callback);
+        return insertSlot(m_store, std::move(cb), m_nextId);
+    }
+
+    void ImGuiDrawScheduler::cancel(std::uint64_t id) {
+        cancelSlot(m_store, id);
+    }
+
+    bool ImGuiDrawScheduler::fire(DrawCb& cb) {
+        return LuaCallback::fire(cb.callback, "imgui.draw", kImGuiScriptDeadlineMs);
+    }
+
+    void ImGuiDrawScheduler::drawAll() {
+        auto* runtime = Runtime::getIfInitialized();
+        if (!runtime || m_store.empty()) return;
+#if defined(GEODE_IS_MACOS)
+        if (!Runtime::isMainThread()) {
+            Runtime::setMainThreadId(std::this_thread::get_id());
+        }
+#endif
+
+        m_inFrame = true;
+
+        m_store.forEachIndexSnapshot([&](std::size_t, DrawCb& cb) {
+            if (cb.cancelled) {
+                return;
+            }
+            if (!fire(cb)) {
+                cb.cancelled = true;
+            }
+        });
+
+        m_inFrame = false;
+        compactCancelledSlots(m_store);
+    }
+
+    void ImGuiDrawScheduler::clear() {
+        clearSlots(m_store);
+    }
+
+    bool ImGuiDrawScheduler::full() const {
+        return slotMapFull(m_store, kMaxImGuiDrawCallbacks);
+    }
+
+    std::size_t ImGuiDrawScheduler::activeCount() const {
+        return activeSlotCount(m_store);
+    }
+
+    bool ImGuiDrawScheduler::isScheduled(std::uint64_t id) const {
+        return isActiveSlot(m_store, id);
+    }
+} // namespace luax
 
 namespace luax {
     geode::Result<void> registerImGui(lua_State* L) {

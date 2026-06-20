@@ -39,7 +39,7 @@ _EXTRA_BINDING_SOURCES = {
     },
     "web": {
         "dluau": "tools/luau_codegen/extra_bindings/web.dluau",
-        "cpp": "src/bindings/geode/web/GeodeWebBinding.cpp",
+        "cpp": "src/bindings/geode/web/GeodeWebCore.cpp",
         "type_name": "WebNamespace",
         "start_marker": "registerGeodeWeb(lua_State* L)",
         "end_marker": "registerConstants(L)",
@@ -61,12 +61,9 @@ _EXTRA_BINDING_SOURCES = {
     "imgui": {
         "dluau": "tools/luau_codegen/extra_bindings/imgui.dluau",
         "cpp": [
-            "src/bindings/imgui/ImGuiBinding.cpp",
-            "src/bindings/imgui/ImGuiWidgets.cpp",
-            "src/bindings/imgui/ImGuiLayout.cpp",
-            "src/bindings/imgui/ImGuiPopups.cpp",
-            "src/bindings/imgui/ImGuiTables.cpp",
-            "src/bindings/imgui/ImGuiMenus.cpp",
+            "src/bindings/imgui/ImGuiCore.cpp",
+            "src/bindings/imgui/ImGuiWidgetsLayout.cpp",
+            "src/bindings/imgui/ImGuiPopupsTablesMenus.cpp",
         ],
         "type_name": "ImGuiNamespace",
         "start_marker": "registerImGui(lua_State* L)",
