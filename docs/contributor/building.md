@@ -22,17 +22,18 @@ CMake downloads these during configuration, so you do not install them by hand.
 
 - Luau, pinned to tag `0.726`
 - Geode bindings, pinned through `LUAUAPI_BINDINGS_GIT_TAG` in `cmake/GeodeBindings.cmake`
+- Dear ImGui `v1.92.8`, pinned in `cmake/ImGui.cmake` for `imgui-cocos` and headless tests
 - GLM `1.0.3`, used by the 3D math and glTF loader
 - IXWebSocket `v12.0.0` and mbedTLS `v3.6.6`, fetched for websocket support
 - Catch2 `v3.15.0`, fetched only when tests are on
 
 ## Vendored dependencies
 
-These live in the repository and are not fetched by CMake.
+These live in the repository.
 
-- gd-imgui-cocos in `gd-imgui-cocos/`, vendored from [matcool/gd-imgui-cocos](https://github.com/matcool/gd-imgui-cocos).
-  Which includes the Retina display fix and additional features.
-  Dear ImGui `v1.92.8` is still pinned through `LUAUAPI_IMGUI_VERSION` in `cmake/ImGui.cmake`.
+- `gd-imgui-cocos/` is a LuauAPI fork of [matcool/gd-imgui-cocos](https://github.com/matcool/gd-imgui-cocos).
+  It is not a standalone library. LuauAPI wires it through `cmake/ImGuiCocos.cmake`.
+  See [gd-imgui-cocos](../gd-imgui-cocos/README.md).
 
 Vendored headers in `vendor/` are not fetched by CMake:
 
@@ -109,6 +110,8 @@ See [Testing](testing.md) for CI jobs, how to run tests, and the host test list.
 ## Source
 
 - `CMakeLists.txt`
+- `cmake/ImGui.cmake`
+- `cmake/ImGuiCocos.cmake`
 - `mod.json`
 - `scripts/ci/format.ps1`
 - `tools/luau_codegen/cli/main.py`

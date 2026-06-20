@@ -196,7 +196,7 @@ if(LUAUAPI_BUILD_TESTS)
     )
     target_compile_definitions(luauapi_tests PRIVATE LUAUAPI_HOST_TESTS=1)
     target_compile_definitions(luauapi_tests PRIVATE
-        "LUAUAPI_TEST_FONT_PATH=\"${imgui_headless_SOURCE_DIR}/misc/fonts/DroidSans.ttf\"")
+        "LUAUAPI_TEST_FONT_PATH=\"${imgui_SOURCE_DIR}/misc/fonts/DroidSans.ttf\"")
     target_link_libraries(luauapi_tests PRIVATE
         Catch2::Catch2WithMain
         fmt::fmt-header-only

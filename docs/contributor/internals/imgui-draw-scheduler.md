@@ -78,4 +78,8 @@ Draw callback count, per-callback deadlines, font errors, and GPU session disabl
 - `src/bindings/imgui/ImGuiHost.hpp`
 - `src/render3d/gpu/GpuSessionDisable.cpp`
 - `gd-imgui-cocos/src/backend.cpp`
+- `gd-imgui-cocos/src/hooks.cpp`
+- `gd-imgui-cocos/CMakeLists.txt`
+- `cmake/ImGui.cmake`
+- `cmake/ImGuiCocos.cmake`
 - `src/core/Config.hpp`

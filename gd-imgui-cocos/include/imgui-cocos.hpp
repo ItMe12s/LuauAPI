@@ -6,29 +6,15 @@
 
 class ImGuiCocos {
 public:
-	enum class InputMode {
-		// This is the default behavior, which will let clicks go through to gd,
-		// and keyboard inputs too as long as imgui isn't using it.
-		Default,
-		// This mode blocks any input from going through as long as imgui is toggled on.
-		Blocking,
-	};
 private:
 	bool m_initialized = false;
 	bool m_visible = true;
 	bool m_reloading = false;
 	bool m_abandonReloadTextures = false;
-	bool m_forceLegacy = false;
 	std::function<void()> m_setupCall, m_drawCall;
-	InputMode m_inputMode = InputMode::Default;
 	ImGuiMouseCursor m_lastCursor = ImGuiMouseCursor_COUNT;
 	float m_displayScale = 4.0f;
-#ifdef IMGUI_HAS_TEXTURES
 	void updateTexture(ImTextureData*) const;
-#else
-	// will remove this some day.. maybe
-	cocos2d::CCTexture2D* m_fontTexture = nullptr;
-#endif
 
 	ImGuiCocos();
 
@@ -58,12 +44,6 @@ public:
 	void toggle();
 	[[nodiscard]] bool isVisible() const;
 	void setVisible(bool v);
-
-	void setInputMode(InputMode mode);
-	InputMode getInputMode();
-
-	void setForceLegacy(bool force);
-	[[nodiscard]] bool getForceLegacy() const;
 
 	// Higher = smaller UI.
 	void setDisplayScale(float scale);

@@ -18,18 +18,10 @@ using namespace geode::prelude;
 // supporting both versions of imgui where this was a void* and is now a u64
 
 static GLuint toGLTexture(ImTextureID tex) {
-#if IMGUI_VERSION_NUM >= 19140
 	return static_cast<GLuint>(tex);
-#else
-	return static_cast<GLuint>(reinterpret_cast<std::uintptr_t>(tex));
-#endif
 }
 static ImTextureID fromGLTexture(GLuint tex) {
-#if IMGUI_VERSION_NUM >= 19140
 	return static_cast<ImTextureID>(tex);
-#else
-	return reinterpret_cast<ImTextureID>(tex);
-#endif
 }
 
 #ifdef GEODE_IS_WINDOWS
@@ -166,22 +158,6 @@ bool ImGuiCocos::isVisible() const {
 	return m_visible;
 }
 
-void ImGuiCocos::setInputMode(InputMode mode) {
-	m_inputMode = mode;
-}
-
-ImGuiCocos::InputMode ImGuiCocos::getInputMode() {
-	return m_inputMode;
-}
-
-void ImGuiCocos::setForceLegacy(bool force) {
-	m_forceLegacy = force;
-}
-
-bool ImGuiCocos::getForceLegacy() const {
-	return m_forceLegacy;
-}
-
 bool ImGuiCocos::isInitialized() const {
 	return m_initialized;
 }
@@ -220,16 +196,12 @@ ImGuiCocos& ImGuiCocos::setup() {
 	if (glVersion >= 320) {
 		io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;
 	}
-#ifdef IMGUI_HAS_TEXTURES
 	io.BackendFlags |= ImGuiBackendFlags_RendererHasTextures;
-#endif
 
 	// use static since imgui does not own the pointer!
 	static const auto iniPath = (Mod::get()->getSaveDir() / "imgui.ini").string();
 	io.IniFilename = iniPath.c_str();
 
-#if IMGUI_VERSION_NUM >= 19110
-	// define geode's clipboard funcs for imgui
 	ImGui::GetPlatformIO().Platform_GetClipboardTextFn = [](ImGuiContext*) {
 		static std::string text;
 		text = geode::utils::clipboard::read();
@@ -238,22 +210,10 @@ ImGuiCocos& ImGuiCocos::setup() {
 	ImGui::GetPlatformIO().Platform_SetClipboardTextFn = [](ImGuiContext*, const char* text) {
 		geode::utils::clipboard::write(text);
 	};
-#endif
 
 	m_initialized = true;
 
 	m_setupCall();
-
-#ifndef IMGUI_HAS_TEXTURES
-	unsigned char* pixels;
-	int width, height;
-	io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
-
-	m_fontTexture = new CCTexture2D;
-	m_fontTexture->initWithData(pixels, kCCTexture2DPixelFormat_RGBA8888, width, height, CCSize(static_cast<float>(width), static_cast<float>(height)));
-
-	io.Fonts->SetTexID(fromGLTexture(m_fontTexture->getName()));
-#endif
 
 	return *this;
 }
@@ -262,7 +222,6 @@ void ImGuiCocos::destroy(bool abandonTextures) {
 	if (!m_initialized) return;
 
 	ImGui::GetIO().BackendPlatformUserData = nullptr;
-#ifdef IMGUI_HAS_TEXTURES
 	for (auto* tex : ImGui::GetPlatformIO().Textures) {
 		if (tex->BackendUserData != nullptr) {
 			if (abandonTextures) {
@@ -277,12 +236,6 @@ void ImGuiCocos::destroy(bool abandonTextures) {
 			}
 		}
 	}
-#else
-	if (!abandonTextures) {
-		delete m_fontTexture;
-	}
-	m_fontTexture = nullptr;
-#endif
 	ImGui::DestroyContext();
 	m_initialized = false;
 }
@@ -429,7 +382,6 @@ void ImGuiCocos::legacyRenderFrame() const {
 
 	auto* drawData = ImGui::GetDrawData();
 
-#ifdef IMGUI_HAS_TEXTURES
 	if (drawData->Textures != nullptr) {
 		for (auto* tex : *drawData->Textures) {
 			if (tex->Status != ImTextureStatus_OK) {
@@ -437,7 +389,6 @@ void ImGuiCocos::legacyRenderFrame() const {
 			}
 		}
 	}
-#endif
 
 	for (int i = 0; i < drawData->CmdListsCount; ++i) {
 		auto* list = drawData->CmdLists[i];
@@ -491,14 +442,13 @@ void ImGuiCocos::renderFrame() const {
 #else
 	static bool hasVAO = hasExtension("GL_ARB_vertex_array_object");
 #endif
-	if (!hasVAO || m_forceLegacy)
+	if (!hasVAO)
 		return legacyRenderFrame();
 
 	auto* drawData = ImGui::GetDrawData();
 
 	const bool hasVtxOffset = (ImGui::GetIO().BackendFlags & ImGuiBackendFlags_RendererHasVtxOffset) != 0;
 
-#ifdef IMGUI_HAS_TEXTURES
 	if (drawData->Textures != nullptr) {
 		for (auto* tex : *drawData->Textures) {
 			if (tex->Status != ImTextureStatus_OK) {
@@ -506,7 +456,6 @@ void ImGuiCocos::renderFrame() const {
 			}
 		}
 	}
-#endif
 
 	glEnable(GL_SCISSOR_TEST);
 
@@ -582,7 +531,6 @@ void ImGuiCocos::renderFrame() const {
 	glDeleteVertexArrays(1, &vao);
 }
 
-#ifdef IMGUI_HAS_TEXTURES
 void ImGuiCocos::updateTexture(ImTextureData* tex) const {
 	if (tex->Status == ImTextureStatus_WantCreate) {
 		IM_ASSERT(tex->Format == ImTextureFormat_RGBA32);
@@ -646,4 +594,3 @@ void ImGuiCocos::updateTexture(ImTextureData* tex) const {
 		tex->SetStatus(ImTextureStatus_Destroyed);
 	}
 }
-#endif

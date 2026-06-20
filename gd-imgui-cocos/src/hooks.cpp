@@ -100,11 +100,6 @@ ImGuiKey cocosToImGuiKey(cocos2d::enumKeyCodes key) {
 	}
 }
 
-bool shouldBlockInput() {
-	auto& inst = ImGuiCocos::get();
-	return inst.isVisible() && inst.getInputMode() == ImGuiCocos::InputMode::Blocking;
-}
-
 #ifdef GEODE_IS_MACOS
 // this is a workaround for ListenerResult::Stop preventing dispatchInsertText from getting called on macOS
 static bool s_shouldEatInput = false;
@@ -124,7 +119,7 @@ $execute {
 		if (!ImGuiCocos::get().isInitialized())
 			return ListenerResult::Propagate;
 
-		const bool shouldEatInput = ImGui::GetIO().WantCaptureKeyboard || shouldBlockInput();
+		const bool shouldEatInput = ImGui::GetIO().WantCaptureKeyboard;
 		const bool isDown = evt.action != KeyboardInputData::Action::Release;
 		if (shouldEatInput || !isDown) {
 			const auto imKey = cocosToImGuiKey(evt.key);
@@ -171,7 +166,7 @@ class $modify(ImGuiCocosCCTouchDispatcher, CCTouchDispatcher) {
 			io.AddMousePosEvent(pos.x, pos.y);
 		}
 
-		if (io.WantCaptureMouse || shouldBlockInput()) {
+		if (io.WantCaptureMouse) {
 			if (type == CCTOUCHBEGAN) {
 				io.AddMouseSourceEvent(ImGuiMouseSource_TouchScreen);
 				io.AddMouseButtonEvent(0, true);
