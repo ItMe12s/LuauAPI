@@ -12,11 +12,13 @@ namespace {
         DeferGuard() {
             luax::Runtime::setMainThreadId(std::this_thread::get_id());
             luax::Runtime::setShuttingDownForTests(false);
+            geode::detail::weakRefSimulateForgetForTests() = true;
             luax::drainDeferredReleases();
         }
 
         ~DeferGuard() {
             luax::Runtime::setShuttingDownForTests(false);
+            geode::detail::weakRefSimulateForgetForTests() = false;
             luax::drainDeferredReleases();
             luax::Runtime::resetForTests();
         }

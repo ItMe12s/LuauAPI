@@ -28,6 +28,11 @@ namespace geode::detail {
     inline bool isLiveCocosObject(cocos2d::CCObject const* object) {
         return object && liveCocosObjects().contains(object);
     }
+
+    inline bool& weakRefSimulateForgetForTests() {
+        static bool enabled = false;
+        return enabled;
+    }
 }
 
 namespace cocos2d {
@@ -140,8 +145,9 @@ namespace geode {
                 m_objectId = 0;
                 return;
             }
-
-            m_ptr->release();
+            if (detail::weakRefSimulateForgetForTests()) {
+                m_ptr->release();
+            }
             m_ptr = nullptr;
             m_objectId = 0;
         }
