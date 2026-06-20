@@ -34,7 +34,11 @@ namespace luax {
             detail::leakWeakRefDuringShutdown(std::move(weak));
         }
         borrowed.clear();
-        detail::deferredOwnedReleases().clear();
+        auto& owned = detail::deferredOwnedReleases();
+        for (auto& entry : owned) {
+            detail::leakWeakRefDuringShutdown(std::move(entry.weak));
+        }
+        owned.clear();
     }
 
     inline void ensureDeferredReleaseShutdownHook() {
@@ -49,13 +53,13 @@ namespace luax {
 
     inline void deferOwnedRelease(cocos2d::CCObject* obj) {
         if (!obj) return;
-        auto weak = geode::WeakRef<cocos2d::CCObject>(obj);
-        if (!weak.valid()) return;
-        ensureDeferredReleaseShutdownHook();
         auto& queue = detail::deferredOwnedReleases();
         for (auto const& existing : queue) {
             if (existing.ptr == obj) return;
         }
+        auto weak = geode::WeakRef<cocos2d::CCObject>(obj);
+        if (!weak.valid()) return;
+        ensureDeferredReleaseShutdownHook();
         queue.push_back({obj, std::move(weak)});
     }
 

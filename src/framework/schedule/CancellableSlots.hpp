@@ -69,7 +69,9 @@ namespace luax {
 
     template <CancellableSlotEntry Entry>
     inline std::uint64_t insertSlot(IndexedSlotMap<Entry>& slots, Entry value, std::uint64_t& nextId) {
-        return slots.insertWithId(nextId++, std::move(value));
+        std::uint64_t const id = nextId++;
+        slots.insertWithId(id, std::move(value));
+        return id;
     }
 
     template <CancellableSlotEntry Entry>
