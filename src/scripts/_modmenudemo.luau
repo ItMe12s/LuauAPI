@@ -22,21 +22,17 @@ local state = {
     menuOpen = false,
     menuAnim = 0,
     activeTab = 1,
-    prevTab = 1,
     tabSlide = 0,
     tabAnim = 1,
     lastFrameTime = os.clock(),
     accent = { x = 0.45, y = 0.55, z = 0.95, w = 1.0 },
     -- Theme
-    brightness = 0.6,
-    contrast = 1.0,
     preset = 1,
     surfaceColor = { x = 0.9, y = 0.4, z = 0.7, w = 1.0 },
     -- Controls
     enabled = false,
     sensitivity = 1.0,
     stepSize = 0,
-    controlMode = 1,
     progress = 0.72,
     -- Data
     showBorders = true,
@@ -111,7 +107,6 @@ end
 
 local function beginTab(index: number)
     if state.activeTab ~= index then
-        state.prevTab = state.activeTab
         state.tabSlide = if index > state.activeTab then 1 else -1
         state.activeTab = index
         state.tabAnim = 0
@@ -131,8 +126,6 @@ local function drawThemeTab()
     beginTab(1)
     drawAnimatedTabBody(function()
         imgui.separatorText("Colors")
-        state.brightness = imgui.sliderFloat("Brightness", state.brightness, 0, 1)
-        state.contrast = imgui.sliderFloat("Contrast", state.contrast, 0, 2)
         state.preset = imgui.combo("Layout preset", state.preset, presetItems)
         state.surfaceColor = imgui.colorEdit4("Surface color", state.surfaceColor)
         imgui.tooltip(function()
@@ -149,18 +142,6 @@ local function drawControlsTab()
         state.sensitivity = imgui.dragFloat("Sensitivity", state.sensitivity, { speed = 0.05, min = 0.5, max = 5 })
         state.stepSize = imgui.dragInt("Step size", state.stepSize, { speed = 1, min = 0, max = 20 })
         imgui.progressBar(state.progress, { overlay = string.format("%.0f%%", state.progress * 100) })
-        imgui.text("Mode")
-        if imgui.radioButton("Basic", state.controlMode == 1) then
-            state.controlMode = 1
-        end
-        imgui.sameLine()
-        if imgui.radioButton("Advanced", state.controlMode == 2) then
-            state.controlMode = 2
-        end
-        imgui.sameLine()
-        if imgui.radioButton("Custom", state.controlMode == 3) then
-            state.controlMode = 3
-        end
     end)
 end
 
@@ -231,8 +212,6 @@ local function drawListsTab()
 end
 
 local function resetDefaults()
-    state.brightness = 0.6
-    state.contrast = 1.0
     state.preset = 1
     state.enabled = false
     state.sensitivity = 1.0
