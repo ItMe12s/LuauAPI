@@ -47,6 +47,7 @@ namespace cocos2d {
         }
 
         void retain() { ++m_retainCount; }
+        CCObject* autorelease() { return this; }
         void release() {
             if (m_retainCount > 0) {
                 --m_retainCount;

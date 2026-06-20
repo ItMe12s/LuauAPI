@@ -1,4 +1,3 @@
-#include "bindings/imgui/ImGuiDrawHandleBinding.hpp"
 #include "bindings/imgui/ImGuiDrawScheduler.hpp"
 #include "bindings/task/TaskScheduler.hpp"
 #include "core/Runtime.hpp"
@@ -13,7 +12,8 @@
 
 namespace luax {
     geode::Result<void> registerTask(lua_State* L);
-}
+    geode::Result<void> registerImGui(lua_State* L);
+} // namespace luax
 
 namespace {
     using RuntimeGuard = luauapi_test::HandleGcRuntimeGuard;
@@ -23,8 +23,8 @@ namespace {
         REQUIRE(luax::applyAllBindings(L) == std::nullopt);
     }
 
-    void registerImGuiDrawHandleBinding(lua_State* L) {
-        luax::registerBinding({"imgui_draw", &luax::registerImGuiDrawHandle, 10});
+    void registerImGuiBinding(lua_State* L) {
+        luax::registerBinding({"imgui_lib", &luax::registerImGui, 10});
         REQUIRE(luax::applyAllBindings(L) == std::nullopt);
     }
 
@@ -105,7 +105,7 @@ TEST_CASE("ImGui draw handle __gc cancels scheduled draw callback") {
     RuntimeGuard guard;
     auto* runtime = luax::Runtime::getOrCreate();
     auto* L = runtime->state();
-    registerImGuiDrawHandleBinding(L);
+    registerImGuiBinding(L);
 
     lua_getglobal(L, "imgui");
     lua_getfield(L, -1, "onDraw");

@@ -204,13 +204,14 @@ namespace {
     }
 } // namespace
 
-#include "bindings/imgui/ImGuiFontRegistry.hpp"
-#include "framework/usertype/DeferredRelease.hpp"
-#include "render3d/gpu/GlUtil.hpp"
+#if !defined(LUAUAPI_HOST_TESTS)
+    #include "bindings/imgui/ImGuiFontRegistry.hpp"
+    #include "framework/usertype/DeferredRelease.hpp"
+    #include "render3d/gpu/GlUtil.hpp"
 
-#include <Geode/Geode.hpp>
-#include <Geode/loader/SettingV3.hpp>
-#include <imgui-cocos.hpp>
+    #include <Geode/Geode.hpp>
+    #include <Geode/loader/SettingV3.hpp>
+    #include <imgui-cocos.hpp>
 
 namespace luax {
     namespace {
@@ -296,6 +297,7 @@ namespace luax {
         return ImGuiCocos::get().isVisible();
     }
 } // namespace luax
+#endif
 
 #include "bindings/imgui/ImGuiDrawScheduler.hpp"
 #include "bindings/imgui/ImGuiHost.hpp"

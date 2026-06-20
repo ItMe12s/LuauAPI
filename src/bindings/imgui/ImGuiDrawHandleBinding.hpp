@@ -9,6 +9,4 @@ namespace luax {
     int imguiCancel(lua_State* L);
 
     void registerImGuiDrawHandleMetatable(lua_State* L);
-
-    geode::Result<void> registerImGuiDrawHandle(lua_State* L);
 } // namespace luax
