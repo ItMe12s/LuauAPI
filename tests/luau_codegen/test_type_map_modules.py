@@ -4,8 +4,6 @@ import unittest
 
 from luau_codegen.convert import type_map as facade  # type: ignore[import-unresolved]
 from luau_codegen.convert import type_classification  # type: ignore[import-unresolved]
-from luau_codegen.convert import type_containers  # type: ignore[import-unresolved]
-from luau_codegen.convert import type_normalization  # type: ignore[import-unresolved]
 
 
 class TypeMapModuleSplitTests(unittest.TestCase):
@@ -13,12 +11,12 @@ class TypeMapModuleSplitTests(unittest.TestCase):
         self.assertIs(facade.classify_arg, type_classification.classify_arg)
         self.assertIs(facade.classify_return, type_classification.classify_return)
 
-    def test_normalization_module_own_normalize_type(self) -> None:
+    def test_normalization_lives_on_type_map(self) -> None:
         self.assertEqual(
-            type_normalization.normalize_type("  const  int  &  "),
+            facade.normalize_type("  const  int  &  "),
             "int&",
         )
-        self.assertTrue(type_normalization.is_reference_type("int const&"))
+        self.assertTrue(facade.is_reference_type("int const&"))
 
     def test_strip_ref_delegate_classifier_samples(self) -> None:
         for raw, expected in (
@@ -29,10 +27,10 @@ class TypeMapModuleSplitTests(unittest.TestCase):
             ("gd::string &", "gd::string"),
         ):
             with self.subTest(raw=raw):
-                self.assertEqual(type_normalization.strip_ref(raw), expected)
+                self.assertEqual(facade.strip_ref(raw), expected)
 
-    def test_container_module_exports_std_array_cap(self) -> None:
-        self.assertEqual(type_containers.STD_ARRAY_MAX_SIZE, facade.STD_ARRAY_MAX_SIZE)
+    def test_container_cap_on_classification_module(self) -> None:
+        self.assertEqual(type_classification.STD_ARRAY_MAX_SIZE, facade.STD_ARRAY_MAX_SIZE)
 
     def test_classify_via_submodule_matches_facade(self) -> None:
         info = facade.classify_arg("bool", {})

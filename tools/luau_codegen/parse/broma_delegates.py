@@ -4,7 +4,7 @@ import re
 import sys
 from pathlib import Path
 
-from luau_codegen.convert.type_normalization import normalize_type
+from luau_codegen.convert.type_map import normalize_type
 from luau_codegen.parse.broma import parse_file
 from luau_codegen.parse.text import strip_comments
 

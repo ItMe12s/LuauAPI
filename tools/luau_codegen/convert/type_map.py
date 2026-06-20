@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Dict, Optional, Set, Tuple
 
 from luau_codegen.model.domain import short_name
-from luau_codegen.model.value_struct_gate import GATED_VALUE_STRUCTS
+from luau_codegen.model.value_types import VALUE_CHECK_CXX_TYPES, VALUE_TYPES
 from luau_codegen.parse.broma import Class
 
 if TYPE_CHECKING:
@@ -67,43 +68,6 @@ STRING_TYPES = {
     "ZStringView",
     "geode::ZStringView",
 }
-VALUE_CHECK_CXX_TYPES: dict[str, str] = {
-    "CCPoint": "cocos2d::CCPoint",
-    "CCSize": "cocos2d::CCSize",
-    "CCRect": "cocos2d::CCRect",
-    "RGBColor": "cocos2d::ccColor3B",
-    "RGBAColor": "cocos2d::ccColor4B",
-    "RGBAFloatColor": "cocos2d::ccColor4F",
-    "BlendFunc": "cocos2d::ccBlendFunc",
-    "HSVValue": "cocos2d::ccHSVValue",
-    "CCAffineTransform": "cocos2d::CCAffineTransform",
-    "UIButtonConfig": "UIButtonConfig",
-    **GATED_VALUE_STRUCTS,
-}
-
-VALUE_TYPES = {
-    "cocos2d::CCPoint": "CCPoint",
-    "CCPoint": "CCPoint",
-    "cocos2d::CCSize": "CCSize",
-    "CCSize": "CCSize",
-    "cocos2d::CCRect": "CCRect",
-    "CCRect": "CCRect",
-    "cocos2d::ccColor3B": "RGBColor",
-    "ccColor3B": "RGBColor",
-    "cocos2d::ccColor4B": "RGBAColor",
-    "ccColor4B": "RGBAColor",
-    "cocos2d::ccColor4F": "RGBAFloatColor",
-    "ccColor4F": "RGBAFloatColor",
-    "cocos2d::ccBlendFunc": "BlendFunc",
-    "ccBlendFunc": "BlendFunc",
-    "cocos2d::ccHSVValue": "HSVValue",
-    "ccHSVValue": "HSVValue",
-    "cocos2d::CCAffineTransform": "CCAffineTransform",
-    "CCAffineTransform": "CCAffineTransform",
-    "UIButtonConfig": "UIButtonConfig",
-    **GATED_VALUE_STRUCTS,
-}
-
 CALLBACK_ALIASES: dict[str, str] = {
     "Callback": "std::function<void()>",
 }
@@ -258,17 +222,96 @@ def enum_lua_names(namespace: str, ctx: CodegenContext | None = None) -> Set[str
     return _resolve_ctx(ctx).enum_lua_names(namespace)
 
 
-from luau_codegen.convert.type_containers import STD_ARRAY_MAX_SIZE  # noqa: E402
-from luau_codegen.convert.type_normalization import (  # noqa: E402
-    callback_inner,
-    is_const_reference,
-    is_out_reference,
-    is_reference_type,
-    normalize_type,
-    strip_ref,
-    template_inner,
-    without_pointer,
+def normalize_type(t: str) -> str:
+    s = re.sub(r"\s+", " ", t.strip())
+    s = s.replace(" *", "*").replace("* ", "*")
+    s = s.replace(" &", "&").replace("& ", "&")
+    s = s.replace(" :: ", "::").replace(":: ", "::").replace(" ::", "::")
+    if s.startswith("const ") and s.endswith("*"):
+        s = s[6:].strip()
+        return f"{s[:-1].strip()} const*"
+    while s.startswith("const "):
+        s = s[6:].strip()
+    while s.endswith(" const"):
+        s = s[:-6].strip()
+    return s
+
+
+def strip_ref(t: str) -> str:
+    s = normalize_type(t)
+    if s.endswith("&"):
+        s = s[:-1].strip()
+    while s.startswith("const "):
+        s = s[6:].strip()
+    while s.endswith(" const"):
+        s = s[:-6].strip()
+    return s
+
+
+def is_reference_type(t: str) -> bool:
+    return normalize_type(t).endswith("&")
+
+
+def is_const_reference(t: str) -> bool:
+    s = re.sub(r"\s+", " ", t.strip())
+    s = s.replace(" *", "*").replace("* ", "*")
+    s = s.replace(" &", "&").replace("& ", "&")
+    s = s.replace(" :: ", "::").replace(":: ", "::").replace(" ::", "::")
+    if not s.endswith("&"):
+        return False
+    inner = s[:-1].strip()
+    return inner.startswith("const ") or inner.endswith(" const")
+
+
+def is_out_reference(t: str) -> bool:
+    return is_reference_type(t) and not is_const_reference(t)
+
+
+def without_pointer(t: str) -> str:
+    s = strip_ref(t)
+    return s[:-1].strip() if s.endswith("*") else s
+
+
+_CALLBACK_PREFIXES = (
+    "geode::Function<",
+    "Function<",
+    "std::function<",
+    "geode::utils::MiniFunction<",
+    "utils::MiniFunction<",
+    "MiniFunction<",
+    "std::move_only_function<",
 )
+
+
+def callback_inner(n: str) -> str | None:
+    start = n.find("<")
+    if start == -1 or (n[:start] + "<") not in _CALLBACK_PREFIXES:
+        return None
+    depth = 0
+    for i in range(start, len(n)):
+        c = n[i]
+        if c == "<":
+            depth += 1
+        elif c == ">":
+            depth -= 1
+            if depth == 0:
+                return n[start + 1 : i]
+    return None
+
+
+def template_inner(n: str, prefix: str) -> str | None:
+    marker = f"{prefix}<"
+    if not n.startswith(marker) or not n.endswith(">"):
+        return None
+    depth = 0
+    for i, c in enumerate(n[len(prefix) :], start=len(prefix)):
+        if c == "<":
+            depth += 1
+        elif c == ">":
+            depth -= 1
+            if depth == 0 and i == len(n) - 1:
+                return n[len(marker) : i]
+    return None
 
 
 def cxx_class_name(cls: Class) -> str:
@@ -298,6 +341,7 @@ def sel_lua_type(t: str) -> str:
 
 
 from luau_codegen.convert.type_classification import (  # noqa: E402
+    STD_ARRAY_MAX_SIZE,
     classify_arg,
     classify_return,
     method_input_arg_count,

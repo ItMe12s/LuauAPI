@@ -4,7 +4,7 @@ import os
 import tempfile
 import unittest
 
-from luau_codegen.convert.type_normalization import strip_ref  # type: ignore[import-unresolved]
+from luau_codegen.convert.type_map import strip_ref  # type: ignore[import-unresolved]
 from luau_codegen.emit.delegates import (  # type: ignore[import-unresolved]
     parse_broma,
 )

@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from luau_codegen.cli.io import _write_if_changed
-from luau_codegen.convert.type_normalization import is_reference_type, strip_ref
+from luau_codegen.convert.type_map import is_reference_type, strip_ref
 
 if TYPE_CHECKING:
     from luau_codegen.model import delegate_specs as delegate_specs_module

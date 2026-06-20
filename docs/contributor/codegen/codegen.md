@@ -185,6 +185,7 @@ See `tests/luau_codegen/test_audit.py` for bucket rules.
 ## Type classification
 
 `convert/type_classification.py` maps each C++ arg or return to a `TypeInfo` kind.
+Container parsing lives in the same module. Normalization helpers live in `convert/type_map.py`.
 Binding, hook, delegate, and stub emit all call `classify_arg()` or `classify_return()`.
 
 Resolution order in `_classify_core()`:
@@ -192,7 +193,7 @@ Resolution order in `_classify_core()`:
 1. Out-pointer containers, primitive vectors, std arrays, nested views, and `ccCArray` views
 2. `gd` containers and `std::pair`
 3. Primitives: `bool`, wide integers as string, numeric, string
-4. Value structs from `VALUE_TYPES` in `convert/type_map.py`
+4. Value structs from `VALUE_TYPES` in `model/value_types.py` (via `convert/type_map.py`)
 5. Enums from `CodegenContext`
 6. Opaque handles from `OPAQUE_HANDLE_TYPES`
 7. `geode::Result<>` as boolean or string
@@ -219,15 +220,16 @@ Stubs widen with `...any` where overloads disagree. See [type stubs](../../refer
 ## Value struct gate
 
 Cocos value types such as `CCPoint`, `RGBColor`, and `BlendFunc` are always bound.
-They live in `VALUE_TYPES` and `VALUE_CHECK_CXX_TYPES` in `convert/type_map.py`.
+They live in `model/value_types.py` (single registry for classify, C++ check/push, and Luau stubs).
+`convert/type_map.py` re-exports `VALUE_TYPES` and `VALUE_CHECK_CXX_TYPES` derived from that table.
 
 `model/value_struct_gate.py` holds two opt-in lists:
 
 - `DENIED_VALUE_STRUCTS`: explicit deny with a reason (for example `ChanceObject`)
 - `GATED_VALUE_STRUCTS`: extra structs that need a custom stub body (for example `SmartPrefabResult`)
 
-Gated names merge into `VALUE_TYPES` at import time.
-`emit/luau_types/references.py` emits export types for gated structs.
+Gated names are entries in `model/value_types.py` tagged via `GATED_VALUE_STRUCTS`.
+`emit/luau_types/references.py` emits export types from the same registry.
 See `tests/luau_codegen/test_value_struct_gate.py`.
 
 ## Nullable pointer policy

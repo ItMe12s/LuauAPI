@@ -11,59 +11,11 @@ from luau_codegen.policy.fields import bindable_field
 from luau_codegen.model.domain import short_name
 from luau_codegen.convert.type_map import TypeInfo, classify_arg, classify_return
 from luau_codegen.model import delegate_specs as _delegate_specs
-
-_VALUE_STUB_BODY: Dict[str, str] = {
-    "RGBColor": "export type RGBColor = { r: number, g: number, b: number }\n",
-    "RGBAColor": "export type RGBAColor = { r: number, g: number, b: number, a: number }\n",
-    "RGBAFloatColor": (
-        "export type RGBAFloatColor = { r: number, g: number, b: number, a: number }\n"
-    ),
-    "BlendFunc": "export type BlendFunc = { src: number, dst: number }\n",
-    "HSVValue": (
-        "export type HSVValue = {\n"
-        "    h: number,\n"
-        "    s: number,\n"
-        "    v: number,\n"
-        "    absoluteSaturation: boolean,\n"
-        "    absoluteBrightness: boolean,\n"
-        "}\n"
-    ),
-    "CCAffineTransform": (
-        "export type CCAffineTransform = { a: number, b: number, c: number, d: number, tx: number, ty: number }\n"
-    ),
-    "CCSize": "export type CCSize = { width: number, height: number }\n",
-    "CCPoint": "export type CCPoint = { x: number, y: number }\n",
-    "CCRect": "export type CCRect = { origin: CCPoint, size: CCSize }\n",
-    "UIButtonConfig": (
-        "export type UIButtonConfig = {\n"
-        "    width: number,\n"
-        "    height: number,\n"
-        "    deadzone: number,\n"
-        "    scale: number,\n"
-        "    opacity: number,\n"
-        "    radius: number,\n"
-        "    modeB: boolean,\n"
-        "    snap: boolean,\n"
-        "    position: CCPoint,\n"
-        "    oneButton: boolean,\n"
-        "    player2: boolean,\n"
-        "    split: boolean,\n"
-        "}\n"
-    ),
-    "SmartPrefabResult": (
-        "export type SmartPrefabResult = {\n"
-        "    smartPrefab: GJSmartPrefab?,\n"
-        "    binaryKey: string,\n"
-        "    prefabKey: string,\n"
-        "    prefabCount: number,\n"
-        "    unrequired: boolean,\n"
-        "    rotation: number,\n"
-        "    flipX: boolean,\n"
-        "    flipY: boolean,\n"
-        "    ignoreCorners: boolean,\n"
-        "}\n"
-    ),
-}
+from luau_codegen.model.value_types import (
+    VALUE_STUB_BODY as _VALUE_STUB_BODY,
+    VALUE_STUB_DEPS as _VALUE_STUB_DEPS,
+    VALUE_STUB_ORDER as _VALUE_STUB_ORDER,
+)
 
 _OPAQUE_STUB_BODY: Dict[str, str] = {
     "FMODChannel": "--- @type-only: opaque FMOD handle\ndeclare class FMODChannel end\n\n",
@@ -81,19 +33,6 @@ _OPAQUE_STUB_BODY: Dict[str, str] = {
     ),
 }
 
-_VALUE_STUB_ORDER = (
-    "CCPoint",
-    "CCSize",
-    "RGBColor",
-    "RGBAColor",
-    "RGBAFloatColor",
-    "BlendFunc",
-    "HSVValue",
-    "CCAffineTransform",
-    "CCRect",
-    "UIButtonConfig",
-    "SmartPrefabResult",
-)
 _OPAQUE_STUB_ORDER = (
     "FMODChannel",
     "FMODSound",
@@ -104,12 +43,6 @@ _OPAQUE_STUB_ORDER = (
     "DelayedSpawnNode",
 )
 _TYPE_STUB_ORDER = _VALUE_STUB_ORDER + _OPAQUE_STUB_ORDER
-
-_VALUE_STUB_DEPS: Dict[str, Tuple[str, ...]] = {
-    "CCRect": ("CCPoint", "CCSize"),
-    "UIButtonConfig": ("CCPoint",),
-    "SmartPrefabResult": ("GJSmartPrefab",),
-}
 
 
 def _expand_value_refs(names: set[str]) -> set[str]:
