@@ -15,8 +15,8 @@ The namespace has six parts:
 - `gd3d.Material` for solid-color, textured, or glTF-derived materials
 - `gd3d.ViewportFrame` for the render target sprite
 
-Vec3 values are plain tables `{ x, y, z }`.
-`ViewportFrame` inherits `CCNode` layout methods (`addChild`, `setPosition`, `setContentSize`, and so on).
+Vec3 values are plain tables `{ x, y, z }`. `ViewportFrame` is a `CCSprite` subclass.
+It still exposes `CCNode` layout methods (`addChild`, `setPosition`, `setContentSize`, and so on).
 
 ## Transform
 

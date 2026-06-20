@@ -289,7 +289,8 @@ When an allocation would cross the cap, it fails and Lua reports an out of memor
 ## Source
 
 - `src/core/Config.hpp`
-- `src/bindings/imgui/ImGuiFontBinding.cpp`
+- `src/bindings/imgui/ImGuiStyleFonts.cpp`
+- `src/bindings/imgui/ImGuiFontRegistry.hpp`
 - `src/render3d/gpu/GpuSessionDisable.cpp`
 - `src/bindings/geode/web/WebCaps.hpp`
 - `src/bindings/websocket/WebSocketInternal.hpp`

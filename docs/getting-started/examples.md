@@ -26,6 +26,7 @@ print(Math.add(2, 3))
 ## Hook a game function
 
 Full API: [hooks](../reference/lua/hooks.md).
+Demo: [src/scripts/_helloworlddemo.luau](../../src/scripts/_helloworlddemo.luau).
 
 ```lua
 geode.hook("geode.gd.MenuLayer:init/0", {
@@ -34,6 +35,39 @@ geode.hook("geode.gd.MenuLayer:init/0", {
         return result
     end,
 })
+```
+
+## Read and write encrypted stat fields
+
+Full API: [game objects](../reference/lua/game-objects.md) (Encrypted stat fields).
+Demo: [src/scripts/_seedvaluedemo.luau](../../src/scripts/_seedvaluedemo.luau).
+
+SeedValue fields such as `m_levelID` and `m_attempts` bind as plain Lua numbers.
+Run the demo from the in-game executor or your mod's `runFile` call.
+
+```lua
+local level = nil
+
+geode.hook("geode.gd.LevelInfoLayer:init/2", {
+    after = function(self, _, _, result)
+        if result then
+            level = self.m_level
+        end
+        return result
+    end,
+})
+
+imgui.onDraw(function()
+    imgui.window("Stats", function()
+        if not level then
+            return
+        end
+        imgui.text(string.format("attempts: %d", level.m_attempts))
+        if imgui.button("+1") then
+            level.m_attempts += 1
+        end
+    end)
+end)
 ```
 
 ## Schedule work with task
@@ -171,6 +205,7 @@ geode.hook("geode.gd.MenuLayer:init/0", {
 - [modules](../reference/lua/modules.md)
 - [sharing APIs between mods](../reference/lua/sharing-apis.md)
 - [hooks](../reference/lua/hooks.md)
+- [game objects](../reference/lua/game-objects.md)
 - [tasks and time](../reference/lua/tasks.md)
 - [fs](../reference/lua/fs.md)
 - [json](../reference/lua/json.md)
@@ -183,6 +218,10 @@ geode.hook("geode.gd.MenuLayer:init/0", {
 ## Source
 
 - `src/core/Runtime.cpp`
+- `src/scripts/_helloworlddemo.luau`
+- `src/scripts/_seedvaluedemo.luau`
+- `src/scripts/_modmenudemo.luau`
+- `src/scripts/_viewportdemo.luau`
 - `src/bindings/task/TaskBinding.cpp`
 - `src/bindings/geode/web/GeodeWebCore.cpp`
 - `src/bindings/websocket/WebSocketBinding.cpp`

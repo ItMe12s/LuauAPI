@@ -33,7 +33,7 @@ These live in the repository.
 
 - `gd-imgui-cocos/` is a LuauAPI fork of [matcool/gd-imgui-cocos](https://github.com/matcool/gd-imgui-cocos).
   It is not a standalone library. LuauAPI wires it through `cmake/ImGuiCocos.cmake`.
-  See [gd-imgui-cocos](../gd-imgui-cocos/README.md).
+  See [gd-imgui-cocos](../../gd-imgui-cocos/README.md).
 
 Vendored headers in `vendor/` are not fetched by CMake:
 

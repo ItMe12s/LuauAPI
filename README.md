@@ -35,6 +35,7 @@ It links getting started, reference, and contributor docs.
 Start here if you are new:
 
 - [Overview](docs/getting-started/overview.md)
+- [Installation](docs/getting-started/installation.md)
 - [Examples](docs/getting-started/examples.md)
 - [Lua module index](docs/reference/lua/globals.md)
 - [LuauAPI mod guidelines](docs/mod_guidelines.md)
@@ -68,4 +69,5 @@ In-game:
 - [IXWebSocket](https://github.com/machinezone/IXWebSocket/blob/master/LICENSE.txt)
 - [JetBrains Mono](https://www.jetbrains.com/lp/mono/#license)
 - [Luau](https://github.com/luau-lang/luau/blob/master/LICENSE.txt)
+- [mbedTLS](https://github.com/Mbed-TLS/mbedtls/blob/development/LICENSE)
 - [stb](https://github.com/nothings/stb/blob/master/LICENSE)

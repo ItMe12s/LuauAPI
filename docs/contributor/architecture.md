@@ -97,4 +97,5 @@ and [C++ API reference](../reference/cpp/api-reference.md) Threading for host AP
 - `src/render3d/gpu/GpuSessionDisable.cpp`
 - `src/render3d/gpu/Renderer3D.cpp`
 - `tools/luau_codegen/emit/cxx_templates.py`
-- `src/bindings/imgui/ImGuiDrawScheduler.cpp`
+- `src/bindings/imgui/ImGuiCore.cpp`
+- `src/bindings/imgui/ImGuiDrawScheduler.hpp`

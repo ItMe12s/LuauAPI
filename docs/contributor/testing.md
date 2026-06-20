@@ -26,14 +26,13 @@ CTest discovers the cases at build time. The files are:
 
 | Test file | Coverage |
 | --- | --- |
-| `tests/allocator_accounting_tests.cpp` | Bounded allocator math and limits |
 | `tests/api_tests.cpp` | Public C++ API surface |
 | `tests/binding_tests.cpp` | Binding registration and dispatch |
-| `tests/bytecode_cache_accounting_tests.cpp` | Bytecode cache accounting limits |
 | `tests/bytecode_cache_key_tests.cpp` | Cache key over size, modify time, and content |
 | `tests/callback_tests.cpp` | Callback registration and invocation |
 | `tests/config_bounds_tests.cpp` | Resource byte caps stay aligned |
 | `tests/current_mod_tests.cpp` | Current-mod path helpers against a resources root |
+| `tests/deferred_release_tests.cpp` | Deferred CCObject release queue, shutdown skip, and drain |
 | `tests/fields_tests.cpp` | `m_fields` and release eviction |
 | `tests/geode_fs_path_tests.cpp` | Geode filesystem binding path resolution |
 | `tests/handle_gc_tests.cpp` | Task and ImGui draw handle `__gc` cancellation |
