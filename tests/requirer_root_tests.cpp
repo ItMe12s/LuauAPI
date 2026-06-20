@@ -3,7 +3,6 @@
 #include "require/Requirer.hpp"
 
 #include <catch2/catch_test_macros.hpp>
-#include <chrono>
 #include <filesystem>
 #include <fstream>
 #include <lua.h>
@@ -11,14 +10,6 @@
 
 namespace {
     using RuntimeGuard = luauapi_test::RuntimeGuard;
-
-    std::filesystem::path makeTempDir() {
-        auto dir = std::filesystem::temp_directory_path() /
-            ("luauapi_requirer_root_" +
-             std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
-        REQUIRE(std::filesystem::create_directories(dir));
-        return dir;
-    }
 
     void writeFile(std::filesystem::path const& path, std::string const& contents) {
         std::ofstream out(path, std::ios::binary);
@@ -68,11 +59,11 @@ TEST_CASE("Requirer resolves modules under a valid canonical root") {
     auto* runtime = luax::Runtime::getOrCreate();
     REQUIRE(runtime != nullptr);
 
-    auto dir = makeTempDir();
-    writeFile(dir / "Child.luau", "return 1");
+    luauapi_test::ScopedTempDir dir{"luauapi_requirer_root_"};
+    writeFile(dir.path / "Child.luau", "return 1");
 
     luax::Requirer req(*runtime);
-    req.setResourcesRoot(dir);
+    req.setResourcesRoot(dir.path);
     REQUIRE_FALSE(req.resourcesRoot().empty());
     REQUIRE(req.toChild("Child") == NAVIGATE_SUCCESS);
 
@@ -84,8 +75,6 @@ TEST_CASE("Requirer resolves modules under a valid canonical root") {
     REQUIRE_FALSE(chunk.empty());
     REQUIRE(chunk.starts_with("@"));
     REQUIRE(chunk.find("Child") != std::string::npos);
-
-    std::filesystem::remove_all(dir);
 }
 
 TEST_CASE("Requirer loadModule honors primed pending contents") {
@@ -95,11 +84,11 @@ TEST_CASE("Requirer loadModule honors primed pending contents") {
     lua_State* L = runtime->state();
     REQUIRE(L != nullptr);
 
-    auto dir = makeTempDir();
-    writeFile(dir / "Mod.luau", "return 42");
+    luauapi_test::ScopedTempDir dir{"luauapi_requirer_root_"};
+    writeFile(dir.path / "Mod.luau", "return 42");
 
     luax::Requirer req(*runtime);
-    req.setResourcesRoot(dir);
+    req.setResourcesRoot(dir.path);
     REQUIRE(req.toChild("Mod") == NAVIGATE_SUCCESS);
 
     char cacheKeyBuffer[1024];
@@ -119,6 +108,4 @@ TEST_CASE("Requirer loadModule honors primed pending contents") {
     REQUIRE(lua_isnumber(L, -1));
     REQUIRE(lua_tonumber(L, -1) == 42.0);
     lua_settop(L, base);
-
-    std::filesystem::remove_all(dir);
 }

@@ -9,17 +9,7 @@
 #include <string>
 
 namespace {
-    struct RuntimeGuard {
-        RuntimeGuard() {
-            luax::Runtime::setMainThreadId(std::this_thread::get_id());
-            luax::resetBindingsForTests();
-        }
-
-        ~RuntimeGuard() {
-            luax::Runtime::resetForTests();
-            luax::resetBindingsForTests();
-        }
-    };
+    using RuntimeGuard = luauapi_test::BindingRuntimeGuard;
 
     struct TestPayload {
         int value = 0;

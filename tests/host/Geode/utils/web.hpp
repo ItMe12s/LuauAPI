@@ -5,12 +5,11 @@
 #include <Geode/utils/async.hpp>
 #include <matjson.hpp>
 
-#include <chrono>
 #include <atomic>
+#include <chrono>
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
-#include <iterator>
 #include <functional>
 #include <memory>
 #include <optional>
@@ -31,18 +30,12 @@ namespace geode {
     class ListenerHandle {
     public:
         ListenerHandle() = default;
-
-        explicit ListenerHandle(std::function<void()> disconnect)
-            : m_disconnect(std::move(disconnect)) {}
-
+        explicit ListenerHandle(std::function<void()> disconnect) : m_disconnect(std::move(disconnect)) {}
         ListenerHandle(ListenerHandle&&) = default;
         ListenerHandle& operator=(ListenerHandle&&) = default;
         ListenerHandle(ListenerHandle const&) = delete;
         ListenerHandle& operator=(ListenerHandle const&) = delete;
-
-        ~ListenerHandle() {
-            disconnect();
-        }
+        ~ListenerHandle() { disconnect(); }
 
         void disconnect() {
             if (m_disconnect) {
@@ -55,9 +48,7 @@ namespace geode {
         std::function<void()> m_disconnect;
     };
 
-    inline Mod* getMod() {
-        return Mod::get();
-    }
+    inline Mod* getMod() { return Mod::get(); }
 } // namespace geode
 
 namespace geode::utils {
@@ -69,11 +60,9 @@ namespace asp {
     class Duration {
     public:
         Duration() = default;
-
         template <class Rep, class Period>
         Duration(std::chrono::duration<Rep, Period> value)
             : m_value(std::chrono::duration_cast<std::chrono::milliseconds>(value)) {}
-
         template <class Rep = double>
         Rep millis() const {
             return std::chrono::duration_cast<std::chrono::duration<Rep, std::milli>>(m_value).count();
@@ -88,8 +77,7 @@ namespace geode::utils::web {
     using geode::Err;
     using geode::Ok;
     using geode::Result;
-
-    using ByteVector = geode::ByteVector;
+    using geode::ByteVector;
 
     namespace http_auth {
         constexpr static long BASIC = 0x0001;
@@ -116,15 +104,7 @@ namespace geode::utils::web {
         VERSION_3ONLY = 31,
     };
 
-    enum class ProxyType {
-        HTTP,
-        HTTPS,
-        HTTPS2,
-        SOCKS4,
-        SOCKS4A,
-        SOCKS5,
-        SOCKS5H,
-    };
+    enum class ProxyType { HTTP, HTTPS, HTTPS2, SOCKS4, SOCKS4A, SOCKS5, SOCKS5H };
 
     enum class GeodeWebError {
         CURL_INITIALIZATION_ERROR = -999,
@@ -157,8 +137,6 @@ namespace geode::utils::web {
 
     class WebProgress final {
     public:
-        WebProgress() = default;
-
         std::size_t downloaded() const { return m_downloadCurrent; }
         std::size_t downloadTotal() const { return m_downloadTotal; }
         std::optional<float> downloadProgress() const {
@@ -166,7 +144,6 @@ namespace geode::utils::web {
                 std::optional<float>(static_cast<float>(downloaded()) * 100.f / static_cast<float>(downloadTotal())) :
                 std::nullopt;
         }
-
         std::size_t uploaded() const { return m_uploadCurrent; }
         std::size_t uploadTotal() const { return m_uploadTotal; }
         std::optional<float> uploadProgress() const {
@@ -177,7 +154,6 @@ namespace geode::utils::web {
 
     private:
         friend class WebRequest;
-
         std::size_t m_downloadCurrent = 0;
         std::size_t m_downloadTotal = 0;
         std::size_t m_uploadCurrent = 0;
@@ -197,22 +173,15 @@ namespace geode::utils::web {
             return factory;
         }
 
-        inline void setResponseFactory(ResponseFactory factory) {
-            responseFactory() = std::move(factory);
-        }
-
-        inline void resetResponseFactory() {
-            responseFactory() = {};
-        }
+        inline void setResponseFactory(ResponseFactory factory) { responseFactory() = std::move(factory); }
+        inline void resetResponseFactory() { responseFactory() = {}; }
 
         inline std::atomic<std::size_t>& sendCount() {
             static std::atomic<std::size_t> count = 0;
             return count;
         }
 
-        inline void resetSendCount() {
-            sendCount() = 0;
-        }
+        inline void resetSendCount() { sendCount() = 0; }
 
         WebResponse makeDefaultResponse();
         WebResponse makeResponseWithBody(ByteVector data);
@@ -220,8 +189,6 @@ namespace geode::utils::web {
 
     class WebResponse final {
     public:
-        WebResponse() = default;
-
         bool info() const { return m_hasInfo; }
         bool ok() const { return m_code >= 200 && m_code < 300; }
         bool redirected() const { return m_code >= 300 && m_code < 400; }
@@ -232,17 +199,13 @@ namespace geode::utils::web {
         int code() const { return m_code; }
 
         Result<std::string> string() const {
-            if (m_stringError) {
-                return Err(*m_stringError);
-            }
+            if (m_stringError) return Err(*m_stringError);
             return Ok(std::string(reinterpret_cast<char const*>(m_data.data()), m_data.size()));
         }
 
         Result<matjson::Value> json() const {
             auto text = string();
-            if (text.isErr()) {
-                return Err(text.unwrapErr());
-            }
+            if (text.isErr()) return Err(text.unwrapErr());
             return matjson::Value::parse(text.unwrap());
         }
 
@@ -254,49 +217,34 @@ namespace geode::utils::web {
             auto parent = path.parent_path();
             if (!parent.empty()) {
                 std::filesystem::create_directories(parent, ec);
-                if (ec) {
-                    return Err("failed to create parent directory");
-                }
+                if (ec) return Err("failed to create parent directory");
             }
-
             std::ofstream out(path, std::ios::binary);
-            if (!out) {
-                return Err("failed to open output file");
-            }
+            if (!out) return Err("failed to open output file");
             if (!m_data.empty()) {
                 out.write(reinterpret_cast<char const*>(m_data.data()), static_cast<std::streamsize>(m_data.size()));
             }
-            if (!out) {
-                return Err("failed to write output file");
-            }
-            return Ok();
+            return out ? Ok() : Err("failed to write output file");
         }
 
         std::vector<std::string> headers() const {
             std::vector<std::string> flat;
             flat.reserve(m_headers.size());
             for (auto const& [name, values] : m_headers) {
-                for (auto const& value : values) {
-                    flat.push_back(name + ": " + value);
-                }
+                for (auto const& value : values) flat.push_back(name + ": " + value);
             }
             return flat;
         }
 
         std::optional<std::string> header(std::string_view name) const {
             auto it = m_headers.find(std::string(name));
-            if (it == m_headers.end() || it->second.empty()) {
-                return std::nullopt;
-            }
+            if (it == m_headers.end() || it->second.empty()) return std::nullopt;
             return it->second.front();
         }
 
         std::optional<std::vector<std::string>> getAllHeadersNamed(std::string_view name) const {
             auto it = m_headers.find(std::string(name));
-            if (it == m_headers.end()) {
-                return std::nullopt;
-            }
-            return it->second;
+            return it == m_headers.end() ? std::nullopt : std::optional<std::vector<std::string>>{it->second};
         }
 
         std::string_view errorMessage() const { return m_errorMessage; }
@@ -322,7 +270,6 @@ namespace geode::utils::web {
 
     inline WebResponse test::makeDefaultResponse() {
         WebResponse response;
-        response.m_hasInfo = true;
         response.m_code = 200;
         response.m_data = {'O', 'K'};
         response.m_headers["content-type"] = {"text/plain"};
@@ -331,22 +278,29 @@ namespace geode::utils::web {
 
     inline WebResponse test::makeResponseWithBody(ByteVector data) {
         WebResponse response;
-        response.m_hasInfo = true;
-        response.m_code = 200;
         response.m_data = std::move(data);
         response.m_headers["content-type"] = {"application/octet-stream"};
         return response;
     }
 
-    struct WebFuture;
+    struct WebFuture {
+        explicit WebFuture(std::function<WebResponse()> producer = {}) : m_producer(std::move(producer)) {}
+        WebFuture(WebFuture&&) noexcept = default;
+        WebFuture& operator=(WebFuture&&) noexcept = delete;
+        WebFuture(WebFuture const&) = delete;
+        WebFuture& operator=(WebFuture const&) = delete;
+
+        WebResponse resolve() && { return m_producer ? m_producer() : test::makeDefaultResponse(); }
+
+    private:
+        std::function<WebResponse()> m_producer;
+    };
 
     class MultipartForm final {
     public:
-        MultipartForm() = default;
-
         MultipartForm& param(std::string name, std::string value) {
-            ensureOpen();
-            m_fields.push_back(Field{std::move(name), std::move(value), {}, {}, {}});
+            m_dirty = true;
+            m_fields.push_back({std::move(name), std::move(value), {}, {}, {}});
             return *this;
         }
 
@@ -354,46 +308,22 @@ namespace geode::utils::web {
             std::string name, std::span<std::uint8_t const> data, std::string filename,
             std::string mime = "application/octet-stream"
         ) {
-            ensureOpen();
-            m_fields.push_back(Field{
-                std::move(name),
-                {},
-                std::move(filename),
-                std::move(mime),
-                ByteVector(data.begin(), data.end()),
-            });
+            m_dirty = true;
+            m_fields.push_back({std::move(name), {}, std::move(filename), std::move(mime), ByteVector(data.begin(), data.end())});
             return *this;
         }
 
-        Result<void> file(
-            std::string name, std::filesystem::path const& path, std::string mime = "application/octet-stream"
-        ) {
+        Result<void> file(std::string name, std::filesystem::path const& path, std::string mime = "application/octet-stream") {
             std::ifstream in(path, std::ios::binary);
-            if (!in) {
-                return Err("failed to read multipart file");
-            }
-            ByteVector bytes(
-                (std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>()
-            );
-            auto filename = path.filename().string();
-            file(std::move(name), std::span<std::uint8_t const>(bytes.data(), bytes.size()), std::move(filename), std::move(mime));
+            if (!in) return Err("failed to read multipart file");
+            ByteVector bytes((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+            file(std::move(name), std::span<std::uint8_t const>(bytes.data(), bytes.size()), path.filename().string(), std::move(mime));
             return Ok();
         }
 
-        std::string_view getBoundary() const {
-            finalize();
-            return m_boundary;
-        }
-
-        std::string getHeader() const {
-            finalize();
-            return "multipart/form-data; boundary=" + m_boundary;
-        }
-
-        ByteVector getBody() const {
-            finalize();
-            return m_body;
-        }
+        std::string_view getBoundary() const { rebuild(); return m_boundary; }
+        std::string getHeader() const { rebuild(); return "multipart/form-data; boundary=" + m_boundary; }
+        ByteVector getBody() const { rebuild(); return m_body; }
 
     private:
         struct Field {
@@ -404,112 +334,35 @@ namespace geode::utils::web {
             ByteVector bytes;
         };
 
-        void ensureOpen() const {
-            if (m_finalized) {
-                m_finalized = false;
-                m_body.clear();
-            }
-        }
-
-        void finalize() const {
-            if (m_finalized) {
-                return;
-            }
-            if (m_boundary.empty()) {
-                m_boundary = "----LuauAPIHostStubBoundary";
-            }
-
+        void rebuild() const {
+            if (!m_dirty) return;
+            if (m_boundary.empty()) m_boundary = "----LuauAPIHostStubBoundary";
             std::string body;
             for (auto const& field : m_fields) {
-                body += "--";
-                body += m_boundary;
-                body += "\r\n";
+                body += "--" + m_boundary + "\r\n";
                 if (field.filename.empty()) {
-                    body += "Content-Disposition: form-data; name=\"";
-                    body += field.name;
-                    body += "\"\r\n\r\n";
-                    body += field.value;
-                }
-                else {
-                    body += "Content-Disposition: form-data; name=\"";
-                    body += field.name;
-                    body += "\"; filename=\"";
-                    body += field.filename;
-                    body += "\"\r\nContent-Type: ";
-                    body += field.mime;
-                    body += "\r\n\r\n";
+                    body += "Content-Disposition: form-data; name=\"" + field.name + "\"\r\n\r\n" + field.value;
+                } else {
+                    body += "Content-Disposition: form-data; name=\"" + field.name + "\"; filename=\"" + field.filename +
+                        "\"\r\nContent-Type: " + field.mime + "\r\n\r\n";
                     body.append(reinterpret_cast<char const*>(field.bytes.data()), field.bytes.size());
                 }
                 body += "\r\n";
             }
-            body += "--";
-            body += m_boundary;
-            body += "--\r\n";
-
+            body += "--" + m_boundary + "--\r\n";
             m_body.assign(body.begin(), body.end());
-            m_finalized = true;
+            m_dirty = false;
         }
 
         mutable std::string m_boundary;
         mutable ByteVector m_body;
-        mutable bool m_finalized = false;
+        mutable bool m_dirty = false;
         std::vector<Field> m_fields;
-    };
-
-    struct WebFuture {
-        WebFuture() = default;
-
-        explicit WebFuture(std::function<WebResponse()> producer)
-            : m_producer(std::move(producer)) {}
-
-        WebFuture(WebFuture&&) noexcept = default;
-        WebFuture& operator=(WebFuture&&) noexcept = delete;
-        WebFuture(WebFuture const&) = delete;
-        WebFuture& operator=(WebFuture const&) = delete;
-
-        ~WebFuture() = default;
-
-        WebResponse resolve() && {
-            if (m_producer) {
-                return m_producer();
-            }
-            return test::makeDefaultResponse();
-        }
-
-    private:
-        std::function<WebResponse()> m_producer;
     };
 
     class WebRequest final {
     public:
         WebRequest() : m_id(nextID()) {}
-
-        WebRequest(WebRequest const& other)
-            : m_id(nextID())
-            , m_method(other.m_method)
-            , m_url(other.m_url)
-            , m_userAgent(other.m_userAgent)
-            , m_acceptEncoding(other.m_acceptEncoding)
-            , m_caBundle(other.m_caBundle)
-            , m_headers(other.m_headers)
-            , m_params(other.m_params)
-            , m_timeout(other.m_timeout)
-            , m_downloadRange(other.m_downloadRange)
-            , m_certVerification(other.m_certVerification)
-            , m_transferBody(other.m_transferBody)
-            , m_followRedirects(other.m_followRedirects)
-            , m_ignoreContentLength(other.m_ignoreContentLength)
-            , m_proxy(other.m_proxy)
-            , m_httpVersion(other.m_httpVersion)
-            , m_body(other.m_body)
-            , m_bodyString(other.m_bodyString)
-            , m_bodyJson(other.m_bodyJson)
-            , m_bodyMultipart(other.m_bodyMultipart)
-            , m_progress(other.m_progress)
-            , m_mod(other.m_mod) {}
-
-        WebRequest(WebRequest&&) noexcept = default;
-        WebRequest& operator=(WebRequest&&) noexcept = default;
 
         WebFuture send(std::string method, std::string url, Mod* mod = geode::getMod()) {
             test::sendCount().fetch_add(1, std::memory_order_relaxed);
@@ -519,107 +372,79 @@ namespace geode::utils::web {
             return makeFuture();
         }
 
-        WebFuture post(std::string url, Mod* mod = geode::getMod()) {
-            return send("POST", std::move(url), mod);
-        }
-
-        WebFuture get(std::string url, Mod* mod = geode::getMod()) {
-            return send("GET", std::move(url), mod);
-        }
-
-        WebFuture put(std::string url, Mod* mod = geode::getMod()) {
-            return send("PUT", std::move(url), mod);
-        }
-
-        WebFuture patch(std::string url, Mod* mod = geode::getMod()) {
-            return send("PATCH", std::move(url), mod);
-        }
+        WebFuture post(std::string url, Mod* mod = geode::getMod()) { return send("POST", std::move(url), mod); }
+        WebFuture get(std::string url, Mod* mod = geode::getMod()) { return send("GET", std::move(url), mod); }
+        WebFuture put(std::string url, Mod* mod = geode::getMod()) { return send("PUT", std::move(url), mod); }
+        WebFuture patch(std::string url, Mod* mod = geode::getMod()) { return send("PATCH", std::move(url), mod); }
 
         WebRequest& header(std::string name, std::string value) {
             m_headers[std::move(name)].push_back(std::move(value));
             return *this;
         }
-
         WebRequest& removeHeader(std::string_view name) {
             m_headers.erase(std::string(name));
             return *this;
         }
-
         WebRequest& param(std::string name, std::string value) {
             m_params[std::move(name)] = std::move(value);
             return *this;
         }
-
         WebRequest& removeParam(std::string_view name) {
             m_params.erase(std::string(name));
             return *this;
         }
-
-        WebRequest& method(std::string method) {
-            m_method = std::move(method);
+        WebRequest& method(std::string value) {
+            m_method = std::move(value);
             return *this;
         }
-
-        WebRequest& url(std::string url) {
-            m_url = std::move(url);
+        WebRequest& url(std::string value) {
+            m_url = std::move(value);
             return *this;
         }
-
-        WebRequest& userAgent(std::string name) {
-            m_userAgent = std::move(name);
+        WebRequest& userAgent(std::string value) {
+            m_userAgent = std::move(value);
             return *this;
         }
-
-        WebRequest& acceptEncoding(std::string encodingType) {
-            m_acceptEncoding = std::move(encodingType);
+        WebRequest& acceptEncoding(std::string value) {
+            m_acceptEncoding = std::move(value);
             return *this;
         }
-
         WebRequest& timeout(std::chrono::seconds time) {
             m_timeout = time;
             return *this;
         }
-
         WebRequest& downloadRange(std::pair<std::uint64_t, std::uint64_t> byteRange) {
             m_downloadRange = byteRange;
             return *this;
         }
-
         WebRequest& certVerification(bool enabled) {
             m_certVerification = enabled;
             return *this;
         }
-
         WebRequest& transferBody(bool enabled) {
             m_transferBody = enabled;
             return *this;
         }
-
         WebRequest& followRedirects(bool enabled) {
             m_followRedirects = enabled;
             return *this;
         }
-
         WebRequest& ignoreContentLength(bool enabled) {
             m_ignoreContentLength = enabled;
             return *this;
         }
-
         WebRequest& CABundleContent(std::string content) {
             m_caBundle = std::move(content);
             return *this;
         }
-
         WebRequest& proxyOpts(ProxyOpts proxyOpts) {
             m_proxy = std::move(proxyOpts);
             return *this;
         }
-
         WebRequest& version(HttpVersion httpVersion) {
             m_httpVersion = httpVersion;
             return *this;
         }
-
         WebRequest& body(ByteVector raw) {
             m_body = std::move(raw);
             m_bodyString.reset();
@@ -627,7 +452,6 @@ namespace geode::utils::web {
             m_bodyMultipart.reset();
             return *this;
         }
-
         WebRequest& bodyString(std::string_view str) {
             m_bodyString = std::string(str);
             m_body.reset();
@@ -635,7 +459,6 @@ namespace geode::utils::web {
             m_bodyMultipart.reset();
             return *this;
         }
-
         WebRequest& bodyJSON(matjson::Value const& json) {
             m_bodyJson = json;
             m_body.reset();
@@ -643,7 +466,6 @@ namespace geode::utils::web {
             m_bodyMultipart.reset();
             return *this;
         }
-
         WebRequest& bodyMultipart(MultipartForm const& form) {
             m_bodyMultipart = form.getBody();
             m_body.reset();
@@ -651,7 +473,6 @@ namespace geode::utils::web {
             m_bodyJson.reset();
             return *this;
         }
-
         WebRequest& onProgress(Function<void(WebProgress const&)> callback) {
             m_progress = std::move(callback);
             return *this;
@@ -665,19 +486,13 @@ namespace geode::utils::web {
         utils::StringMap<std::string> const& getUrlParams() const { return m_params; }
 
         std::optional<ByteVector> getBody() const {
-            if (m_body) {
-                return m_body;
-            }
-            if (m_bodyString) {
-                return ByteVector(m_bodyString->begin(), m_bodyString->end());
-            }
+            if (m_body) return m_body;
+            if (m_bodyString) return ByteVector(m_bodyString->begin(), m_bodyString->end());
             if (m_bodyJson) {
                 auto text = m_bodyJson->dump(matjson::NO_INDENTATION);
                 return ByteVector(text.begin(), text.end());
             }
-            if (m_bodyMultipart) {
-                return m_bodyMultipart;
-            }
+            if (m_bodyMultipart) return m_bodyMultipart;
             return std::nullopt;
         }
 
@@ -702,9 +517,7 @@ namespace geode::utils::web {
         WebFuture makeFuture() {
             auto snapshot = std::make_shared<WebRequest>(*this);
             return WebFuture([snapshot]() {
-                if (snapshot->m_progress) {
-                    snapshot->m_progress(snapshot->getProgress());
-                }
+                if (snapshot->m_progress) snapshot->m_progress(snapshot->getProgress());
                 if (auto const& factory = test::responseFactory()) {
                     return factory(*snapshot, snapshot->m_method, snapshot->m_url, snapshot->m_mod);
                 }
@@ -739,42 +552,16 @@ namespace geode::utils::web {
     inline void openLinkInBrowser(ZStringView /*url*/) {}
 
     namespace detail {
-        template <class EventTag>
-        struct EventRegistry {
-            struct Entry {
-                std::function<void()> disconnect;
-            };
-
-            static std::vector<std::shared_ptr<Entry>>& entries() {
-                static std::vector<std::shared_ptr<Entry>> storage;
-                return storage;
-            }
-        };
-
         template <class EventTag, class Cb>
         geode::ListenerHandle listenEvent(Cb&& cb, int /*priority*/) {
-            using Handler = std::decay_t<Cb>;
-            auto handler = std::make_shared<Handler>(std::forward<Cb>(cb));
-            auto entry = std::make_shared<typename EventRegistry<EventTag>::Entry>();
-            entry->disconnect = [handler]() mutable {
-                handler.reset();
-            };
-            EventRegistry<EventTag>::entries().push_back(entry);
-            return geode::ListenerHandle([weak = std::weak_ptr<typename EventRegistry<EventTag>::Entry>(entry)]() {
-                if (auto locked = weak.lock()) {
-                    if (locked->disconnect) {
-                        locked->disconnect();
-                        locked->disconnect = nullptr;
-                    }
-                }
-            });
+            auto handler = std::make_shared<std::decay_t<Cb>>(std::forward<Cb>(cb));
+            return geode::ListenerHandle([handler]() mutable { handler.reset(); });
         }
     } // namespace detail
 
     struct WebRequestInterceptEvent {
         WebRequestInterceptEvent() = default;
         explicit WebRequestInterceptEvent(std::string modID) : m_modID(std::move(modID)) {}
-
         template <class Cb>
         geode::ListenerHandle listen(Cb&& cb, int priority = 0) {
             (void)m_modID;
@@ -787,7 +574,6 @@ namespace geode::utils::web {
 
     struct IDBasedWebRequestInterceptEvent {
         explicit IDBasedWebRequestInterceptEvent(std::size_t requestID) : m_requestID(requestID) {}
-
         template <class Cb>
         geode::ListenerHandle listen(Cb&& cb, int priority = 0) {
             (void)m_requestID;
@@ -801,7 +587,6 @@ namespace geode::utils::web {
     struct WebResponseEvent {
         WebResponseEvent() = default;
         explicit WebResponseEvent(std::string modID) : m_modID(std::move(modID)) {}
-
         template <class Cb>
         geode::ListenerHandle listen(Cb&& cb, int priority = 0) {
             (void)m_modID;
@@ -814,7 +599,6 @@ namespace geode::utils::web {
 
     struct IDBasedWebResponseEvent {
         explicit IDBasedWebResponseEvent(std::size_t requestID) : m_requestID(requestID) {}
-
         template <class Cb>
         geode::ListenerHandle listen(Cb&& cb, int priority = 0) {
             (void)m_requestID;

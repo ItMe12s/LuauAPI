@@ -3,38 +3,19 @@
 #include "core/Config.hpp"
 #include "core/Runtime.hpp"
 #include "framework/stack/Stack.hpp"
+#include "host/lua_test_helpers.hpp"
 #include "require/PathSandbox.hpp"
 
 #include <Geode/loader/Mod.hpp>
 #include <catch2/catch_test_macros.hpp>
-#include <chrono>
 #include <filesystem>
 #include <fstream>
 #include <lua.h>
 #include <lualib.h>
 #include <string_view>
-#include <thread>
 
 namespace {
-    struct RuntimeGuard {
-        RuntimeGuard() {
-            luax::Runtime::setMainThreadId(std::this_thread::get_id());
-        }
-
-        ~RuntimeGuard() {
-            luax::invalidateCurrentModCache();
-            geode::Mod::resetForTests();
-            luax::Runtime::resetForTests();
-        }
-    };
-
-    std::filesystem::path makeTempDir() {
-        auto dir = std::filesystem::temp_directory_path() /
-            ("luauapi_mod_sandbox_" +
-             std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
-        REQUIRE(std::filesystem::create_directories(dir));
-        return dir;
-    }
+    using RuntimeGuard = luauapi_test::ModRuntimeGuard;
 
     struct ResolveArgs {
         std::string root;
@@ -90,11 +71,11 @@ namespace {
 
 TEST_CASE("resolveSandboxTarget maps writable mod roots") {
     RuntimeGuard guard;
-    auto dir = makeTempDir();
-    auto* mod = geode::Mod::create(dir);
+    luauapi_test::ScopedTempDir dir{"luauapi_mod_sandbox_"};
+    auto* mod = geode::Mod::create(dir.path);
 
     auto* runtime = luax::Runtime::getOrCreate();
-    runtime->setResourcesRoot(dir);
+    runtime->setResourcesRoot(dir.path);
     auto* L = runtime->state();
     ensureWritableRoots(mod);
 
@@ -111,17 +92,16 @@ TEST_CASE("resolveSandboxTarget maps writable mod roots") {
         lua_pop(L, results);
     }
 
-    std::filesystem::remove_all(dir);
     geode::Mod::destroy(mod);
 }
 
 TEST_CASE("resolveSandboxTarget maps read-only resources root") {
     RuntimeGuard guard;
-    auto dir = makeTempDir();
-    auto* mod = geode::Mod::create(dir);
+    luauapi_test::ScopedTempDir dir{"luauapi_mod_sandbox_"};
+    auto* mod = geode::Mod::create(dir.path);
 
     auto* runtime = luax::Runtime::getOrCreate();
-    runtime->setResourcesRoot(dir);
+    runtime->setResourcesRoot(dir.path);
     auto* L = runtime->state();
 
     ResolveArgs args{"resources", "asset.txt", false};
@@ -135,17 +115,16 @@ TEST_CASE("resolveSandboxTarget maps read-only resources root") {
     REQUIRE(std::string(lua_tostring(L, 1)) == luax::filesystemPathString(expected));
     lua_pop(L, results);
 
-    std::filesystem::remove_all(dir);
     geode::Mod::destroy(mod);
 }
 
 TEST_CASE("resolveSandboxTarget rejects writable requests against resources") {
     RuntimeGuard guard;
-    auto dir = makeTempDir();
-    auto* mod = geode::Mod::create(dir);
+    luauapi_test::ScopedTempDir dir{"luauapi_mod_sandbox_"};
+    auto* mod = geode::Mod::create(dir.path);
 
     auto* runtime = luax::Runtime::getOrCreate();
-    runtime->setResourcesRoot(dir);
+    runtime->setResourcesRoot(dir.path);
     auto* L = runtime->state();
 
     ResolveArgs args{"resources", "blocked.txt", true};
@@ -157,17 +136,16 @@ TEST_CASE("resolveSandboxTarget rejects writable requests against resources") {
     REQUIRE(std::string(lua_tostring(L, 2)) == "root is read-only");
     lua_pop(L, results);
 
-    std::filesystem::remove_all(dir);
     geode::Mod::destroy(mod);
 }
 
 TEST_CASE("resolveSandboxTarget rejects path escapes") {
     RuntimeGuard guard;
-    auto dir = makeTempDir();
-    auto* mod = geode::Mod::create(dir);
+    luauapi_test::ScopedTempDir dir{"luauapi_mod_sandbox_"};
+    auto* mod = geode::Mod::create(dir.path);
 
     auto* runtime = luax::Runtime::getOrCreate();
-    runtime->setResourcesRoot(dir);
+    runtime->setResourcesRoot(dir.path);
     auto* L = runtime->state();
     REQUIRE(std::filesystem::create_directories(mod->getSaveDir()));
 
@@ -180,16 +158,15 @@ TEST_CASE("resolveSandboxTarget rejects path escapes") {
     REQUIRE(std::string(lua_tostring(L, 2)).find("escapes") != std::string::npos);
     lua_pop(L, results);
 
-    std::filesystem::remove_all(dir);
     geode::Mod::destroy(mod);
 }
 
 TEST_CASE("resolveSandboxTarget errors when no current mod matches runtime resources root") {
     RuntimeGuard guard;
-    auto dir = makeTempDir();
+    luauapi_test::ScopedTempDir dir{"luauapi_mod_sandbox_"};
 
     auto* runtime = luax::Runtime::getOrCreate();
-    runtime->setResourcesRoot(dir);
+    runtime->setResourcesRoot(dir.path);
     auto* L = runtime->state();
 
     ResolveArgs args{"save", "file.txt", false};
@@ -199,21 +176,19 @@ TEST_CASE("resolveSandboxTarget errors when no current mod matches runtime resou
     REQUIRE(lua_isstring(L, 1));
     REQUIRE(std::string(lua_tostring(L, 1)) == "current mod is unavailable");
     lua_pop(L, results);
-
-    std::filesystem::remove_all(dir);
 }
 
 TEST_CASE("resolveSandboxTarget rejects absolute relative paths") {
     RuntimeGuard guard;
-    auto dir = makeTempDir();
-    auto* mod = geode::Mod::create(dir);
+    luauapi_test::ScopedTempDir dir{"luauapi_mod_sandbox_"};
+    auto* mod = geode::Mod::create(dir.path);
 
     auto* runtime = luax::Runtime::getOrCreate();
-    runtime->setResourcesRoot(dir);
+    runtime->setResourcesRoot(dir.path);
     auto* L = runtime->state();
     REQUIRE(std::filesystem::create_directories(mod->getSaveDir()));
 
-    auto absolutePath = dir.root_path() / "absolute" / "path.txt";
+    auto absolutePath = dir.path.root_path() / "absolute" / "path.txt";
     ResolveArgs args{"save", luax::filesystemPathString(absolutePath), false};
     int results = 0;
     REQUIRE(callResolve(L, args, results));
@@ -223,17 +198,16 @@ TEST_CASE("resolveSandboxTarget rejects absolute relative paths") {
     REQUIRE(std::string(lua_tostring(L, 2)) == "path must be relative");
     lua_pop(L, results);
 
-    std::filesystem::remove_all(dir);
     geode::Mod::destroy(mod);
 }
 
 TEST_CASE("resolveSandboxTarget rejects empty relative paths") {
     RuntimeGuard guard;
-    auto dir = makeTempDir();
-    auto* mod = geode::Mod::create(dir);
+    luauapi_test::ScopedTempDir dir{"luauapi_mod_sandbox_"};
+    auto* mod = geode::Mod::create(dir.path);
 
     auto* runtime = luax::Runtime::getOrCreate();
-    runtime->setResourcesRoot(dir);
+    runtime->setResourcesRoot(dir.path);
     auto* L = runtime->state();
     REQUIRE(std::filesystem::create_directories(mod->getSaveDir()));
 
@@ -246,64 +220,55 @@ TEST_CASE("resolveSandboxTarget rejects empty relative paths") {
     REQUIRE(std::string(lua_tostring(L, 2)) == "path is empty");
     lua_pop(L, results);
 
-    std::filesystem::remove_all(dir);
     geode::Mod::destroy(mod);
 }
 
 TEST_CASE("readSandboxTextFile reads a regular file within size limits") {
-    auto dir = makeTempDir();
-    auto file = dir / "note.txt";
+    luauapi_test::ScopedTempDir dir{"luauapi_mod_sandbox_"};
+    auto file = dir.path / "note.txt";
     writeFileContents(file, "hello sandbox");
 
     auto result = luax::readSandboxTextFile(file);
     REQUIRE(result.isOk());
     REQUIRE(result.unwrap() == "hello sandbox");
-
-    std::filesystem::remove_all(dir);
 }
 
 TEST_CASE("readSandboxTextFile rejects directories") {
-    auto dir = makeTempDir();
-    auto nested = dir / "nested";
+    luauapi_test::ScopedTempDir dir{"luauapi_mod_sandbox_"};
+    auto nested = dir.path / "nested";
     REQUIRE(std::filesystem::create_directories(nested));
 
     auto result = luax::readSandboxTextFile(nested);
     REQUIRE(result.isErr());
     REQUIRE(result.unwrapErr() == "path is not a regular file");
-
-    std::filesystem::remove_all(dir);
 }
 
 TEST_CASE("readSandboxTextFile rejects files above kMaxFsReadBytes") {
-    auto dir = makeTempDir();
-    auto file = dir / "oversized.bin";
+    luauapi_test::ScopedTempDir dir{"luauapi_mod_sandbox_"};
+    auto file = dir.path / "oversized.bin";
     writeFileContents(file, std::string(luax::kMaxFsReadBytes + 1, 'x'));
 
     auto result = luax::readSandboxTextFile(file);
     REQUIRE(result.isErr());
     REQUIRE(result.unwrapErr() == "file exceeds maximum read size");
-
-    std::filesystem::remove_all(dir);
 }
 
 TEST_CASE("readSandboxTextFile propagates read failures") {
-    auto dir = makeTempDir();
-    auto missing = dir / "missing.txt";
+    luauapi_test::ScopedTempDir dir{"luauapi_mod_sandbox_"};
+    auto missing = dir.path / "missing.txt";
 
     auto result = luax::readSandboxTextFile(missing);
     REQUIRE(result.isErr());
     REQUIRE(result.unwrapErr() == "path is not a regular file");
-
-    std::filesystem::remove_all(dir);
 }
 
 TEST_CASE("resolveSandboxTarget errors on unknown root") {
     RuntimeGuard guard;
-    auto dir = makeTempDir();
-    auto* mod = geode::Mod::create(dir);
+    luauapi_test::ScopedTempDir dir{"luauapi_mod_sandbox_"};
+    auto* mod = geode::Mod::create(dir.path);
 
     auto* runtime = luax::Runtime::getOrCreate();
-    runtime->setResourcesRoot(dir);
+    runtime->setResourcesRoot(dir.path);
     auto* L = runtime->state();
 
     ResolveArgs args{"unknown", "file.txt", false};
@@ -316,6 +281,5 @@ TEST_CASE("resolveSandboxTarget errors on unknown root") {
     REQUIRE(err.find("unknown") != std::string::npos);
     lua_pop(L, results);
 
-    std::filesystem::remove_all(dir);
     geode::Mod::destroy(mod);
 }

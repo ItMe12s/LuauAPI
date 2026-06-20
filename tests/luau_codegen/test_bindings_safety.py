@@ -3,27 +3,19 @@ from __future__ import annotations
 import os
 import tempfile
 import unittest
-from helpers import (
-    Arg,  # type: ignore[import-unresolved]
-    Class,  # type: ignore[import-unresolved]
-    Field,  # type: ignore[import-unresolved]
-    Function,  # type: ignore[import-unresolved]
-    Method,  # type: ignore[import-unresolved]
-    Root,  # type: ignore[import-unresolved]
-    TypeInfo,  # type: ignore[import-unresolved]
-    _emit_class_file,  # type: ignore[import-unresolved]
-    _emit_common_file,  # type: ignore[import-unresolved]
-    all_platforms,  # type: ignore[import-unresolved]
-    collect_plan,  # type: ignore[import-unresolved]
-    emit_free_functions_file,  # type: ignore[import-unresolved]
-    emit_hook_support,  # type: ignore[import-unresolved]
-    emit_internal_hpp,  # type: ignore[import-unresolved]
-    emit_luau_types,  # type: ignore[import-unresolved]
-    emit_stack_check,  # type: ignore[import-unresolved]
-    group_supported,  # type: ignore[import-unresolved]
-    group_supported_free_functions,  # type: ignore[import-unresolved]
-    types_text,  # type: ignore[import-unresolved]
-)
+
+from test_support import all_platforms, types_text
+from luau_codegen.convert.marshalling import emit_stack_check  # type: ignore[import-unresolved]
+from luau_codegen.convert.type_map import TypeInfo  # type: ignore[import-unresolved]
+from luau_codegen.emit.bindings import emit_free_functions_file  # type: ignore[import-unresolved]
+from luau_codegen.emit.bindings.class_file import _emit_class_file  # type: ignore[import-unresolved]
+from luau_codegen.emit.bindings.common import _emit_common_file  # type: ignore[import-unresolved]
+from luau_codegen.emit.cxx_templates import emit_hook_support, emit_internal_hpp  # type: ignore[import-unresolved]
+from luau_codegen.emit.luau_types import emit as emit_luau_types  # type: ignore[import-unresolved]
+from luau_codegen.emit.plan import collect_plan  # type: ignore[import-unresolved]
+from luau_codegen.parse.broma import Arg, Class, Field, Function, Method, Root  # type: ignore[import-unresolved]
+from luau_codegen.policy.filtering import group_supported  # type: ignore[import-unresolved]
+from luau_codegen.policy.free_functions import group_supported_free_functions  # type: ignore[import-unresolved]
 from luau_codegen.emit.metadata import emit_report  # type: ignore[import-unresolved]
 
 

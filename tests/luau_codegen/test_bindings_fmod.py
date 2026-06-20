@@ -1,13 +1,10 @@
 from __future__ import annotations
 
 import unittest
-from helpers import (
-    Arg,  # type: ignore[import-unresolved]
-    Class,  # type: ignore[import-unresolved]
-    Method,  # type: ignore[import-unresolved]
-    _emit_class_file,  # type: ignore[import-unresolved]
-    all_platforms,  # type: ignore[import-unresolved]
-)
+
+from test_support import all_platforms
+from luau_codegen.emit.bindings.class_file import _emit_class_file  # type: ignore[import-unresolved]
+from luau_codegen.parse.broma import Arg, Class, Method  # type: ignore[import-unresolved]
 
 
 class FmodBindingTests(unittest.TestCase):

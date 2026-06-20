@@ -3,10 +3,8 @@ from __future__ import annotations
 import unittest
 import warnings
 
-from helpers import (  # type: ignore[import-unresolved]
-    collect_bindings_root,  # type: ignore[import-unresolved]
-    resolve_test_bindings_dir,  # type: ignore[import-unresolved]
-)
+from test_support import resolve_test_bindings_dir
+from luau_codegen.parse.collect import collect_bindings_root  # type: ignore[import-unresolved]
 
 from luau_codegen.convert.type_map import (  # type: ignore[import-unresolved]
     OPAQUE_HANDLE_TYPES,

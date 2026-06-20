@@ -84,7 +84,8 @@ class GeodeEnumEmitTests(unittest.TestCase):
         )
 
     def test_emit_includes_geode_enum_outputs(self) -> None:
-        from helpers import Class, Root, emit_luau_bindings  # type: ignore[import-unresolved]
+        from luau_codegen.emit.bindings import emit as emit_luau_bindings  # type: ignore[import-unresolved]
+        from luau_codegen.parse.broma import Class, Root  # type: ignore[import-unresolved]
 
         root = Root(classes=[Class(name="CCObject", namespace="cocos2d")])
         root.codegen_ctx = CodegenContext.with_geode_enums(

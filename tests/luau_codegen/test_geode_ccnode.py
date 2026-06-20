@@ -4,22 +4,16 @@ import os
 import shutil
 import tempfile
 import unittest
-from helpers import (
-    Arg,  # type: ignore[import-unresolved]
-    Class,  # type: ignore[import-unresolved]
-    Method,  # type: ignore[import-unresolved]
-    Root,  # type: ignore[import-unresolved]
-    _emit_class_file,  # type: ignore[import-unresolved]
-    all_platforms,  # type: ignore[import-unresolved]
-    class_link_platforms,  # type: ignore[import-unresolved]
-    classify_arg,  # type: ignore[import-unresolved]
-    collect_bindings_root,  # type: ignore[import-unresolved]
-    collect_plan,  # type: ignore[import-unresolved]
-    emit_luau_types,  # type: ignore[import-unresolved]
-    group_supported,  # type: ignore[import-unresolved]
-    register_geode_enums,  # type: ignore[import-unresolved]
-    types_text,  # type: ignore[import-unresolved]
-)
+
+from test_support import all_platforms, types_text
+from luau_codegen.convert.type_map import classify_arg, register_geode_enums  # type: ignore[import-unresolved]
+from luau_codegen.emit.bindings.class_file import _emit_class_file  # type: ignore[import-unresolved]
+from luau_codegen.emit.luau_types import emit as emit_luau_types  # type: ignore[import-unresolved]
+from luau_codegen.emit.plan import collect_plan  # type: ignore[import-unresolved]
+from luau_codegen.parse.broma import Arg, Class, Method, Root  # type: ignore[import-unresolved]
+from luau_codegen.parse.collect import collect_bindings_root  # type: ignore[import-unresolved]
+from luau_codegen.policy.filtering import group_supported  # type: ignore[import-unresolved]
+from luau_codegen.policy.link_attrs import class_link_platforms  # type: ignore[import-unresolved]
 
 
 def _write(path: str, text: str) -> None:

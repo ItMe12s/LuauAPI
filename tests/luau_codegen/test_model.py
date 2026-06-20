@@ -1,13 +1,10 @@
 from __future__ import annotations
 
 import unittest
-from helpers import (
-    Class,  # type: ignore[import-unresolved]
-    Root,  # type: ignore[import-unresolved]
-    build_class_lookup,  # type: ignore[import-unresolved]
-    codegen_object_map,  # type: ignore[import-unresolved]
-    resolve_base,  # type: ignore[import-unresolved]
-)
+
+import test_support  # noqa: F401
+from luau_codegen.model.domain import build_class_lookup, codegen_object_map, resolve_base  # type: ignore[import-unresolved]
+from luau_codegen.parse.broma import Class, Root  # type: ignore[import-unresolved]
 
 
 class F4ClassLookupCollisionTests(unittest.TestCase):

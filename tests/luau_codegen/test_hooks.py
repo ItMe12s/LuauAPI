@@ -3,19 +3,13 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 import unittest
-from helpers import (
-    Arg,  # type: ignore[import-unresolved]
-    Class,  # type: ignore[import-unresolved]
-    Method,  # type: ignore[import-unresolved]
-    _emit_class_file,  # type: ignore[import-unresolved]
-    all_platforms,  # type: ignore[import-unresolved]
-    android_symbol,  # type: ignore[import-unresolved]
-    emit_hook_support,  # type: ignore[import-unresolved]
-    emit_internal_hpp,  # type: ignore[import-unresolved]
-    hook_address_expr,  # type: ignore[import-unresolved]
-    hook_offset,  # type: ignore[import-unresolved]
-    hookable,  # type: ignore[import-unresolved]
-)
+
+from test_support import all_platforms
+from luau_codegen.convert.symbols import android_symbol  # type: ignore[import-unresolved]
+from luau_codegen.emit.bindings.class_file import _emit_class_file  # type: ignore[import-unresolved]
+from luau_codegen.emit.cxx_templates import emit_hook_support, emit_internal_hpp  # type: ignore[import-unresolved]
+from luau_codegen.parse.broma import Arg, Class, Method  # type: ignore[import-unresolved]
+from luau_codegen.policy.hooks import hook_address_expr, hook_offset, hookable  # type: ignore[import-unresolved]
 
 
 @dataclass(frozen=True)

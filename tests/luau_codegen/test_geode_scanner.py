@@ -5,11 +5,11 @@ import shutil
 import tempfile
 import unittest
 from unittest import mock
-from helpers import (
-    Class,  # type: ignore[import-unresolved]
-    class_link_platforms,  # type: ignore[import-unresolved]
-    supported,  # type: ignore[import-unresolved]
-)
+
+import test_support  # noqa: F401
+from luau_codegen.parse.broma import Class  # type: ignore[import-unresolved]
+from luau_codegen.policy.filtering import supported  # type: ignore[import-unresolved]
+from luau_codegen.policy.link_attrs import class_link_platforms  # type: ignore[import-unresolved]
 
 
 class M1ScannerWarningTests(unittest.TestCase):

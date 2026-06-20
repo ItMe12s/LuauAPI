@@ -2,22 +2,13 @@ from __future__ import annotations
 
 import unittest
 from unittest import mock
-from helpers import (
-    Arg,  # type: ignore[import-unresolved]
-    Class,  # type: ignore[import-unresolved]
-    Function,  # type: ignore[import-unresolved]
-    Method,  # type: ignore[import-unresolved]
-    Root,  # type: ignore[import-unresolved]
-    all_platforms,  # type: ignore[import-unresolved]
-    collect_parity,  # type: ignore[import-unresolved]
-    collect_plan,  # type: ignore[import-unresolved]
-    collect_platform_plan,  # type: ignore[import-unresolved]
-    emit_luau_types,  # type: ignore[import-unresolved]
-    emit_markdown,  # type: ignore[import-unresolved]
-    free_function_key,  # type: ignore[import-unresolved]
-    plan_outputs,  # type: ignore[import-unresolved]
-    types_text,  # type: ignore[import-unresolved]
-)
+
+from test_support import all_platforms, types_text
+from luau_codegen.emit.luau_types import emit as emit_luau_types  # type: ignore[import-unresolved]
+from luau_codegen.emit.parity import collect_parity, emit_markdown  # type: ignore[import-unresolved]
+from luau_codegen.emit.plan import collect_plan, collect_platform_plan, plan_outputs  # type: ignore[import-unresolved]
+from luau_codegen.parse.broma import Arg, Class, Function, Method, Root  # type: ignore[import-unresolved]
+from luau_codegen.policy.free_functions import free_function_key  # type: ignore[import-unresolved]
 
 
 class F12ParityReportTests(unittest.TestCase):

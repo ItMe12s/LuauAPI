@@ -4,21 +4,19 @@ import os
 import shutil
 import tempfile
 import unittest
-from helpers import (
-    Arg,  # type: ignore[import-unresolved]
-    COCOS_ENUM_TYPES,  # type: ignore[import-unresolved]
-    Class,  # type: ignore[import-unresolved]
-    GD_ENUM_TYPES,  # type: ignore[import-unresolved]
-    Method,  # type: ignore[import-unresolved]
-    Root,  # type: ignore[import-unresolved]
-    _input_arg_count,  # type: ignore[import-unresolved]
-    STD_ARRAY_MAX_SIZE,  # type: ignore[import-unresolved]
-    classify_arg,  # type: ignore[import-unresolved]
-    classify_return,  # type: ignore[import-unresolved]
-    codegen_object_map,  # type: ignore[import-unresolved]
-    object_classes,  # type: ignore[import-unresolved]
-    register_geode_enums,  # type: ignore[import-unresolved]
+
+import test_support  # noqa: F401
+from luau_codegen.convert.type_map import (  # type: ignore[import-unresolved]
+    COCOS_ENUM_TYPES,
+    GD_ENUM_TYPES,
+    STD_ARRAY_MAX_SIZE,
+    classify_arg,
+    classify_return,
+    method_input_arg_count as _input_arg_count,
+    register_geode_enums,
 )
+from luau_codegen.model.domain import codegen_object_map, object_classes  # type: ignore[import-unresolved]
+from luau_codegen.parse.broma import Arg, Class, Method, Root  # type: ignore[import-unresolved]
 from luau_codegen.model.codegen_context import CodegenContext  # type: ignore[import-unresolved]
 from luau_codegen.model.geode_enums import EnumInfo, EnumMember  # type: ignore[import-unresolved]
 from luau_codegen.parse.collect import collect_bindings_root  # type: ignore[import-unresolved]

@@ -11,16 +11,7 @@
 #include <vector>
 
 namespace {
-    struct RuntimeGuard {
-        RuntimeGuard() {
-            luax::Runtime::setMainThreadId(std::this_thread::get_id());
-        }
-
-        ~RuntimeGuard() {
-            luax::ImGuiDrawScheduler::get().clear();
-            luax::Runtime::resetForTests();
-        }
-    };
+    using RuntimeGuard = luauapi_test::ImGuiRuntimeGuard;
 } // namespace
 
 TEST_CASE("ImGuiDrawScheduler fires registered draw callbacks") {

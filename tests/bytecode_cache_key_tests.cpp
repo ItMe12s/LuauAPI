@@ -1,3 +1,4 @@
+#include "host/lua_test_helpers.hpp"
 #include "require/BytecodeCacheKey.hpp"
 #include "require/PathSandbox.hpp"
 
@@ -6,34 +7,8 @@
 #include <filesystem>
 #include <fstream>
 #include <string>
-#include <system_error>
 
 namespace {
-    struct TempDir {
-        std::filesystem::path path;
-
-        TempDir() :
-            path(
-                std::filesystem::temp_directory_path() /
-                ("luauapi_bytecode_cache_key_" +
-                 std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()))
-            ) {
-            REQUIRE(std::filesystem::create_directories(path));
-        }
-
-        TempDir(TempDir const&) = delete;
-        TempDir& operator=(TempDir const&) = delete;
-
-        ~TempDir() {
-            std::error_code ec;
-            std::filesystem::remove_all(path, ec);
-        }
-    };
-
-    TempDir makeTempDir() {
-        return {};
-    }
-
     void writeFile(std::filesystem::path const& path, std::string const& contents) {
         std::ofstream out(path, std::ios::binary);
         REQUIRE(out.good());
@@ -47,7 +22,7 @@ namespace {
 } // namespace
 
 TEST_CASE("file cache key includes path and metadata tokens") {
-    auto dir = makeTempDir();
+    auto dir = luauapi_test::ScopedTempDir{"luauapi_bytecode_cache_key_"};
     auto file = dir.path / "Module.luau";
     writeFile(file, "return 1");
 
@@ -60,7 +35,7 @@ TEST_CASE("file cache key includes path and metadata tokens") {
 }
 
 TEST_CASE("file cache key changes when contents change") {
-    auto dir = makeTempDir();
+    auto dir = luauapi_test::ScopedTempDir{"luauapi_bytecode_cache_key_"};
     auto file = dir.path / "Module.luau";
     writeFile(file, "return 1");
 
@@ -71,7 +46,7 @@ TEST_CASE("file cache key changes when contents change") {
 }
 
 TEST_CASE("run script bytecode key uses filesystem root text") {
-    auto dir = makeTempDir();
+    auto dir = luauapi_test::ScopedTempDir{"luauapi_bytecode_cache_key_"};
     auto key = luax::runScriptBytecodeKey(dir.path, "@Bootstrap.luau", "return 1");
 
     REQUIRE(contains(key, luax::filesystemPathString(dir.path)));
@@ -85,7 +60,7 @@ TEST_CASE("run script bytecode key omits empty resources root") {
 }
 
 TEST_CASE("file cache key changes when file mtime changes") {
-    auto dir = makeTempDir();
+    auto dir = luauapi_test::ScopedTempDir{"luauapi_bytecode_cache_key_"};
     auto file = dir.path / "Module.luau";
     writeFile(file, "return 1");
 

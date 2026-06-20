@@ -2,18 +2,12 @@ from __future__ import annotations
 
 import unittest
 from unittest import mock
-from helpers import (
-    Arg,  # type: ignore[import-unresolved]
-    Class,  # type: ignore[import-unresolved]
-    Method,  # type: ignore[import-unresolved]
-    Root,  # type: ignore[import-unresolved]
-    _emit_class_file,  # type: ignore[import-unresolved]
-    all_platforms,  # type: ignore[import-unresolved]
-    emit_luau_types,  # type: ignore[import-unresolved]
-    group_supported,  # type: ignore[import-unresolved]
-    supported,  # type: ignore[import-unresolved]
-    types_text,  # type: ignore[import-unresolved]
-)
+
+from test_support import all_platforms, types_text
+from luau_codegen.emit.bindings.class_file import _emit_class_file  # type: ignore[import-unresolved]
+from luau_codegen.emit.luau_types import emit as emit_luau_types  # type: ignore[import-unresolved]
+from luau_codegen.parse.broma import Arg, Class, Method, Root  # type: ignore[import-unresolved]
+from luau_codegen.policy.filtering import group_supported, supported  # type: ignore[import-unresolved]
 
 _ALLOWLIST_PATH = "luau_codegen.model.denylist.BINDABLE_CONSTRUCTORS"
 

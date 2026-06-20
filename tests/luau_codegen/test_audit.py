@@ -1,17 +1,11 @@
 from __future__ import annotations
 
 import unittest
-from helpers import (
-    Arg,  # type: ignore[import-unresolved]
-    Class,  # type: ignore[import-unresolved]
-    Function,  # type: ignore[import-unresolved]
-    Method,  # type: ignore[import-unresolved]
-    Root,  # type: ignore[import-unresolved]
-    all_platforms,  # type: ignore[import-unresolved]
-    collect_audit,  # type: ignore[import-unresolved]
-    collect_plan,  # type: ignore[import-unresolved]
-    emit_audit_markdown,  # type: ignore[import-unresolved]
-)
+
+from test_support import all_platforms
+from luau_codegen.emit.audit import collect_audit, emit_markdown as emit_audit_markdown  # type: ignore[import-unresolved]
+from luau_codegen.emit.plan import collect_plan  # type: ignore[import-unresolved]
+from luau_codegen.parse.broma import Arg, Class, Function, Method, Root  # type: ignore[import-unresolved]
 
 from luau_codegen.emit.plan import EmitPlan  # type: ignore[import-unresolved]
 

@@ -1,3 +1,4 @@
+#include "host/lua_test_helpers.hpp"
 #include "require/PathSandbox.hpp"
 
 #include <catch2/catch_test_macros.hpp>
@@ -8,14 +9,6 @@
 #include <string>
 
 namespace {
-    std::filesystem::path makeTempDir() {
-        auto dir = std::filesystem::temp_directory_path() /
-            ("luauapi_path_sandbox_" +
-             std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
-        REQUIRE(std::filesystem::create_directories(dir));
-        return dir;
-    }
-
     void writeFile(std::filesystem::path const& path, std::string const& contents) {
         std::ofstream out(path, std::ios::binary);
         REQUIRE(out.good());
@@ -41,15 +34,13 @@ TEST_CASE("path string helpers keep virtual and filesystem text distinct") {
     REQUIRE(virtualText.find('\\') == std::string::npos);
     REQUIRE(virtualText == "sub/Bootstrap.luau");
 
-    auto dir = makeTempDir();
-    auto file = dir / "Module.luau";
+    luauapi_test::ScopedTempDir dir{"luauapi_path_sandbox_"};
+    auto file = dir.path / "Module.luau";
     writeFile(file, "return 1");
 
     auto fsText = luax::filesystemPathString(file);
     REQUIRE_FALSE(fsText.empty());
-    REQUIRE(luax::readScriptFile(dir / "missing.luau").isErr());
-
-    std::filesystem::remove_all(dir);
+    REQUIRE(luax::readScriptFile(dir.path / "missing.luau").isErr());
 }
 
 TEST_CASE("validateResourcePath normalizes flat luau resources") {
@@ -100,15 +91,13 @@ TEST_CASE("virtual chunk paths reject unsafe or unsupported names") {
 }
 
 TEST_CASE("canonical root accepts directories and rejects empty roots") {
-    auto dir = makeTempDir();
+    luauapi_test::ScopedTempDir dir{"luauapi_path_sandbox_"};
 
-    auto root = luax::canonicalRoot(dir);
+    auto root = luax::canonicalRoot(dir.path);
     REQUIRE(root.isOk());
     REQUIRE(std::filesystem::is_directory(root.unwrap()));
 
     REQUIRE(luax::canonicalRoot({}).isErr());
-
-    std::filesystem::remove_all(dir);
 }
 
 TEST_CASE("canonical root rejects missing directories") {
@@ -120,26 +109,24 @@ TEST_CASE("canonical root rejects missing directories") {
 }
 
 TEST_CASE("script path resolution fails when resources root is not configured") {
-    auto dir = makeTempDir();
-    auto insideFile = dir / "Inside.luau";
+    luauapi_test::ScopedTempDir dir{"luauapi_path_sandbox_"};
+    auto insideFile = dir.path / "Inside.luau";
     writeFile(insideFile, "return 1");
 
     REQUIRE(luax::resolveScriptFileInsideRoot({}, insideFile).isErr());
-
-    std::filesystem::remove_all(dir);
 }
 
 TEST_CASE("script path resolution rejects root escapes") {
-    auto dir = makeTempDir();
-    auto outsideDir = makeTempDir();
-    auto insideFile = dir / "Inside.luau";
-    auto outsideFile = outsideDir / "Outside.luau";
-    auto linkFile = dir / "Link.luau";
+    luauapi_test::ScopedTempDir dir{"luauapi_path_sandbox_"};
+    luauapi_test::ScopedTempDir outsideDir{"luauapi_path_sandbox_"};
+    auto insideFile = dir.path / "Inside.luau";
+    auto outsideFile = outsideDir.path / "Outside.luau";
+    auto linkFile = dir.path / "Link.luau";
 
     writeFile(insideFile, "return 1");
     writeFile(outsideFile, "return 2");
 
-    auto root = luax::canonicalRoot(dir);
+    auto root = luax::canonicalRoot(dir.path);
     REQUIRE(root.isOk());
     auto canonicalRoot = root.unwrap();
 
@@ -151,15 +138,12 @@ TEST_CASE("script path resolution rejects root escapes") {
     if (!ec) {
         REQUIRE(luax::resolveScriptFileInsideRoot(canonicalRoot, linkFile).isErr());
     }
-
-    std::filesystem::remove_all(dir);
-    std::filesystem::remove_all(outsideDir);
 }
 
 TEST_CASE("script file read enforces maximum source size") {
-    auto dir = makeTempDir();
-    auto smallFile = dir / "Small.luau";
-    auto large = dir / "Large.luau";
+    luauapi_test::ScopedTempDir dir{"luauapi_path_sandbox_"};
+    auto smallFile = dir.path / "Small.luau";
+    auto large = dir.path / "Large.luau";
 
     writeFile(smallFile, "return 1");
     writeOversizedFile(large);
@@ -169,6 +153,4 @@ TEST_CASE("script file read enforces maximum source size") {
     REQUIRE(smallRead.unwrap() == "return 1");
 
     REQUIRE(luax::readScriptFile(large).isErr());
-
-    std::filesystem::remove_all(dir);
 }

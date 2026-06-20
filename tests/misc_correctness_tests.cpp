@@ -20,19 +20,7 @@ namespace luax {
 namespace {
     struct TestNode : cocos2d::CCNode {};
 
-    struct RuntimeGuard {
-        RuntimeGuard() {
-            luax::Runtime::setMainThreadId(std::this_thread::get_id());
-            luax::resetBindingsForTests();
-        }
-
-        ~RuntimeGuard() {
-            luax::TaskScheduler::get().clear();
-            luax::clearOrphanTrampolines();
-            luax::Runtime::resetForTests();
-            luax::resetBindingsForTests();
-        }
-    };
+    using RuntimeGuard = luauapi_test::MiscCorrectnessRuntimeGuard;
 } // namespace
 
 TEST_CASE("Trampoline shutdown hook re-registers after runtime restart") {

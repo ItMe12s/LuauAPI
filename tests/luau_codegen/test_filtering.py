@@ -1,15 +1,11 @@
 from __future__ import annotations
 
 import unittest
-from helpers import (
-    Arg,  # type: ignore[import-unresolved]
-    Class,  # type: ignore[import-unresolved]
-    Function,  # type: ignore[import-unresolved]
-    Method,  # type: ignore[import-unresolved]
-    all_platforms,  # type: ignore[import-unresolved]
-    free_function_unsupported_reason,  # type: ignore[import-unresolved]
-    supported,  # type: ignore[import-unresolved]
-)
+
+from test_support import all_platforms
+from luau_codegen.parse.broma import Arg, Class, Function, Method  # type: ignore[import-unresolved]
+from luau_codegen.policy.filtering import supported  # type: ignore[import-unresolved]
+from luau_codegen.policy.free_functions import free_function_unsupported_reason  # type: ignore[import-unresolved]
 
 
 class LinkClassFilterTests(unittest.TestCase):

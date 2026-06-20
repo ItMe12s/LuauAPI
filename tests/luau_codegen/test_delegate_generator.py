@@ -2,15 +2,15 @@ from __future__ import annotations
 
 import unittest
 
-from helpers import (
-    DELEGATE_SPECS,  # type: ignore[import-unresolved]
-    DelegateMethod,  # type: ignore[import-unresolved]
-    DelegateSpec,  # type: ignore[import-unresolved]
-    collect_delegate_specs,  # type: ignore[import-unresolved]
-    cpp_emit_supported,  # type: ignore[import-unresolved]
-    emit_gen_cpp,  # type: ignore[import-unresolved]
-    emit_gen_hpp,  # type: ignore[import-unresolved]
-    emit_override,  # type: ignore[import-unresolved]
+from test_support import DELEGATE_SPECS
+from luau_codegen.emit.delegates import (  # type: ignore[import-unresolved]
+    DelegateMethod,
+    DelegateSpec,
+    collect as collect_delegate_specs,
+    cpp_emit_supported,
+    emit_gen_cpp,
+    emit_gen_hpp,
+    emit_override,
 )
 
 

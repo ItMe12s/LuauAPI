@@ -1,52 +1,38 @@
+#include "host/lua_test_helpers.hpp"
 #include "require/PathSandbox.hpp"
 
 #include <catch2/catch_test_macros.hpp>
-#include <chrono>
 #include <filesystem>
 #include <fstream>
 #include <string>
 
-namespace {
-    std::filesystem::path makeTempDir() {
-        auto dir = std::filesystem::temp_directory_path() /
-            ("luauapi_fs_path_" +
-             std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
-        REQUIRE(std::filesystem::create_directories(dir));
-        return dir;
-    }
-} // namespace
-
 TEST_CASE("fs path resolution accepts paths inside the root") {
-    auto dir = makeTempDir();
+    luauapi_test::ScopedTempDir dir{"luauapi_fs_path_"};
 
-    auto flat = luax::resolveInsideRoot(dir, "data.json");
+    auto flat = luax::resolveInsideRoot(dir.path, "data.json");
     REQUIRE(flat.isOk());
-    REQUIRE(luax::pathInsideRoot(flat.unwrap(), luax::canonicalRoot(dir).unwrap()));
+    REQUIRE(luax::pathInsideRoot(flat.unwrap(), luax::canonicalRoot(dir.path).unwrap()));
 
-    auto nested = luax::resolveInsideRoot(dir, "sub/dir/data.json");
+    auto nested = luax::resolveInsideRoot(dir.path, "sub/dir/data.json");
     REQUIRE(nested.isOk());
-    REQUIRE(luax::pathInsideRoot(nested.unwrap(), luax::canonicalRoot(dir).unwrap()));
+    REQUIRE(luax::pathInsideRoot(nested.unwrap(), luax::canonicalRoot(dir.path).unwrap()));
 
-    auto normalized = luax::resolveInsideRoot(dir, "sub/../data.json");
+    auto normalized = luax::resolveInsideRoot(dir.path, "sub/../data.json");
     REQUIRE(normalized.isOk());
-    REQUIRE(normalized.unwrap() == luax::canonicalRoot(dir).unwrap() / "data.json");
-
-    std::filesystem::remove_all(dir);
+    REQUIRE(normalized.unwrap() == luax::canonicalRoot(dir.path).unwrap() / "data.json");
 }
 
 TEST_CASE("fs path resolution rejects traversal and absolute paths") {
-    auto dir = makeTempDir();
+    luauapi_test::ScopedTempDir dir{"luauapi_fs_path_"};
 
-    REQUIRE(luax::resolveInsideRoot(dir, "../escape").isErr());
-    REQUIRE(luax::resolveInsideRoot(dir, "../../etc/passwd").isErr());
-    REQUIRE(luax::resolveInsideRoot(dir, "sub/../../escape").isErr());
-    REQUIRE(luax::resolveInsideRoot(dir, "").isErr());
+    REQUIRE(luax::resolveInsideRoot(dir.path, "../escape").isErr());
+    REQUIRE(luax::resolveInsideRoot(dir.path, "../../etc/passwd").isErr());
+    REQUIRE(luax::resolveInsideRoot(dir.path, "sub/../../escape").isErr());
+    REQUIRE(luax::resolveInsideRoot(dir.path, "").isErr());
 
     auto absolute =
         luax::normalizedPathString(std::filesystem::temp_directory_path() / "outside.json");
-    REQUIRE(luax::resolveInsideRoot(dir, absolute).isErr());
-
-    std::filesystem::remove_all(dir);
+    REQUIRE(luax::resolveInsideRoot(dir.path, absolute).isErr());
 }
 
 TEST_CASE("fs path resolution rejects a non-existent root") {
@@ -56,8 +42,8 @@ TEST_CASE("fs path resolution rejects a non-existent root") {
 }
 
 TEST_CASE("fs path resolution reports canonicalization failures") {
-    auto dir = makeTempDir();
-    auto file = dir / "not_a_directory.txt";
+    luauapi_test::ScopedTempDir dir{"luauapi_fs_path_"};
+    auto file = dir.path / "not_a_directory.txt";
     {
         std::ofstream out(file);
         REQUIRE(out.good());
@@ -67,6 +53,4 @@ TEST_CASE("fs path resolution reports canonicalization failures") {
     auto failed = luax::resolveInsideRoot(file, "data.json");
     REQUIRE(failed.isErr());
     REQUIRE(failed.unwrapErr().find("directory") != std::string::npos);
-
-    std::filesystem::remove_all(dir);
 }

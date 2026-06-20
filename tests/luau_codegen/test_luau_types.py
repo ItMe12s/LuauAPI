@@ -2,25 +2,18 @@ from __future__ import annotations
 
 import re
 import unittest
-from helpers import (
-    Arg,  # type: ignore[import-unresolved]
-    Class,  # type: ignore[import-unresolved]
-    Field,  # type: ignore[import-unresolved]
-    Function,  # type: ignore[import-unresolved]
-    Method,  # type: ignore[import-unresolved]
-    Root,  # type: ignore[import-unresolved]
-    TYPES_FILE,  # type: ignore[import-unresolved]
-    _emit_dispatcher,  # type: ignore[import-unresolved]
-    _input_arg_count,  # type: ignore[import-unresolved]
-    all_platforms,  # type: ignore[import-unresolved]
-    classify_arg,  # type: ignore[import-unresolved]
-    collect_platform_plan,  # type: ignore[import-unresolved]
-    emit_luau_types,  # type: ignore[import-unresolved]
-    is_const_reference,  # type: ignore[import-unresolved]
-    is_out_reference,  # type: ignore[import-unresolved]
-    parse_file,  # type: ignore[import-unresolved]
-    types_text,  # type: ignore[import-unresolved]
+
+from test_support import all_platforms, types_text
+from luau_codegen.convert.type_map import (  # type: ignore[import-unresolved]
+    classify_arg,
+    is_const_reference,
+    is_out_reference,
+    method_input_arg_count as _input_arg_count,
 )
+from luau_codegen.emit.bindings.class_file import _emit_dispatcher  # type: ignore[import-unresolved]
+from luau_codegen.emit.luau_types import TYPES_FILE, emit as emit_luau_types  # type: ignore[import-unresolved]
+from luau_codegen.emit.plan import collect_platform_plan  # type: ignore[import-unresolved]
+from luau_codegen.parse.broma import Arg, Class, Field, Function, Method, Root, parse_file  # type: ignore[import-unresolved]
 from luau_codegen.model.codegen_context import CodegenContext  # type: ignore[import-unresolved]
 from luau_codegen.model.geode_enums import EnumInfo, EnumMember  # type: ignore[import-unresolved]
 from luau_codegen.emit.luau_types.manual_fields import (  # type: ignore[import-unresolved]

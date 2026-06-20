@@ -2,10 +2,10 @@
 #include "core/Config.hpp"
 #include "core/Runtime.hpp"
 #include "framework/Binding.hpp"
+#include "host/lua_test_helpers.hpp"
 
 #include <Geode/loader/Mod.hpp>
 #include <catch2/catch_test_macros.hpp>
-#include <chrono>
 #include <filesystem>
 #include <fstream>
 #include <iterator>
@@ -13,7 +13,6 @@
 #include <lualib.h>
 #include <optional>
 #include <string>
-#include <thread>
 
 namespace luax {
     geode::Result<void> registerGeodeFs(lua_State* L);
@@ -21,27 +20,7 @@ namespace luax {
 } // namespace luax
 
 namespace {
-    struct RuntimeGuard {
-        RuntimeGuard() {
-            luax::Runtime::setMainThreadId(std::this_thread::get_id());
-            luax::resetBindingsForTests();
-        }
-
-        ~RuntimeGuard() {
-            luax::invalidateCurrentModCache();
-            geode::Mod::resetForTests();
-            luax::Runtime::resetForTests();
-            luax::resetBindingsForTests();
-        }
-    };
-
-    std::filesystem::path makeTempDir() {
-        auto dir = std::filesystem::temp_directory_path() /
-            ("luauapi_resource_bounds_" +
-             std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
-        REQUIRE(std::filesystem::create_directories(dir));
-        return dir;
-    }
+    using RuntimeGuard = luauapi_test::BindingModRuntimeGuard;
 
     void registerResourceBindings(lua_State* L) {
         luax::registerBinding({"geode_fs", &luax::registerGeodeFs, 0});
@@ -149,15 +128,15 @@ TEST_CASE("Runtime bytecode cache hits bypass compile budget checks") {
 
 TEST_CASE("geode.fs.read rejects directories") {
     RuntimeGuard guard;
-    auto dir = makeTempDir();
-    auto* mod = geode::Mod::create(dir);
+    luauapi_test::ScopedTempDir dir{"luauapi_resource_bounds_"};
+    auto* mod = geode::Mod::create(dir.path);
 
     auto* runtime = luax::Runtime::getOrCreate();
-    runtime->setResourcesRoot(dir);
+    runtime->setResourcesRoot(dir.path);
     auto* L = runtime->state();
     registerResourceBindings(L);
 
-    auto nested = dir / "save" / "nested";
+    auto nested = dir.path / "save" / "nested";
     REQUIRE(std::filesystem::create_directories(nested));
 
     REQUIRE(callFsRead(L, "nested") == 0);
@@ -167,21 +146,20 @@ TEST_CASE("geode.fs.read rejects directories") {
     REQUIRE(err.find("regular file") != std::string::npos);
     lua_pop(L, 2);
 
-    std::filesystem::remove_all(dir);
     geode::Mod::destroy(mod);
 }
 
 TEST_CASE("geode.fs.list rejects directories with too many name bytes") {
     RuntimeGuard guard;
-    auto dir = makeTempDir();
-    auto* mod = geode::Mod::create(dir);
+    luauapi_test::ScopedTempDir dir{"luauapi_resource_bounds_"};
+    auto* mod = geode::Mod::create(dir.path);
 
     auto* runtime = luax::Runtime::getOrCreate();
-    runtime->setResourcesRoot(dir);
+    runtime->setResourcesRoot(dir.path);
     auto* L = runtime->state();
     registerResourceBindings(L);
 
-    auto listDir = dir / "save" / "long_names";
+    auto listDir = dir.path / "save" / "long_names";
     REQUIRE(std::filesystem::create_directories(listDir));
 
     for (std::size_t i = 0; i < luax::kMaxFsListEntries; ++i) {
@@ -200,21 +178,20 @@ TEST_CASE("geode.fs.list rejects directories with too many name bytes") {
     REQUIRE(err.find("name bytes") != std::string::npos);
     lua_pop(L, 2);
 
-    std::filesystem::remove_all(dir);
     geode::Mod::destroy(mod);
 }
 
 TEST_CASE("geode.fs.list rejects directories with too many entries") {
     RuntimeGuard guard;
-    auto dir = makeTempDir();
-    auto* mod = geode::Mod::create(dir);
+    luauapi_test::ScopedTempDir dir{"luauapi_resource_bounds_"};
+    auto* mod = geode::Mod::create(dir.path);
 
     auto* runtime = luax::Runtime::getOrCreate();
-    runtime->setResourcesRoot(dir);
+    runtime->setResourcesRoot(dir.path);
     auto* L = runtime->state();
     registerResourceBindings(L);
 
-    auto listDir = dir / "save" / "many";
+    auto listDir = dir.path / "save" / "many";
     REQUIRE(std::filesystem::create_directories(listDir));
     for (std::size_t i = 0; i <= luax::kMaxFsListEntries; ++i) {
         std::ofstream out(listDir / ("entry_" + std::to_string(i) + ".txt"));
@@ -228,7 +205,6 @@ TEST_CASE("geode.fs.list rejects directories with too many entries") {
     REQUIRE(err.find("maximum entries") != std::string::npos);
     lua_pop(L, 2);
 
-    std::filesystem::remove_all(dir);
     geode::Mod::destroy(mod);
 }
 
@@ -249,15 +225,15 @@ TEST_CASE("geode.json.parse rejects oversized input") {
 
 TEST_CASE("geode.fs.read rejects file size above kMaxFsReadBytes") {
     RuntimeGuard guard;
-    auto dir = makeTempDir();
-    auto* mod = geode::Mod::create(dir);
+    luauapi_test::ScopedTempDir dir{"luauapi_resource_bounds_"};
+    auto* mod = geode::Mod::create(dir.path);
 
     auto* runtime = luax::Runtime::getOrCreate();
-    runtime->setResourcesRoot(dir);
+    runtime->setResourcesRoot(dir.path);
     auto* L = runtime->state();
     registerResourceBindings(L);
 
-    auto saveDir = dir / "save";
+    auto saveDir = dir.path / "save";
     REQUIRE(std::filesystem::create_directories(saveDir));
     writeFileContents(saveDir / "oversized.bin", std::string(luax::kMaxFsReadBytes + 1, 'x'));
 
@@ -268,23 +244,22 @@ TEST_CASE("geode.fs.read rejects file size above kMaxFsReadBytes") {
     REQUIRE(err.find("maximum read size") != std::string::npos);
     lua_pop(L, 2);
 
-    std::filesystem::remove_all(dir);
     geode::Mod::destroy(mod);
 }
 
 TEST_CASE("geode.fs.read cap applies to save and config roots") {
     RuntimeGuard guard;
-    auto dir = makeTempDir();
-    auto* mod = geode::Mod::create(dir);
+    luauapi_test::ScopedTempDir dir{"luauapi_resource_bounds_"};
+    auto* mod = geode::Mod::create(dir.path);
 
     auto* runtime = luax::Runtime::getOrCreate();
-    runtime->setResourcesRoot(dir);
+    runtime->setResourcesRoot(dir.path);
     auto* L = runtime->state();
     registerResourceBindings(L);
 
     auto oversized = std::string(luax::kMaxFsReadBytes + 1, 'y');
     for (auto const* root : {"save", "config"}) {
-        auto rootDir = dir / root;
+        auto rootDir = dir.path / root;
         REQUIRE(std::filesystem::create_directories(rootDir));
         writeFileContents(rootDir / "oversized.bin", oversized);
 
@@ -304,21 +279,20 @@ TEST_CASE("geode.fs.read cap applies to save and config roots") {
         lua_pop(L, 2);
     }
 
-    std::filesystem::remove_all(dir);
     geode::Mod::destroy(mod);
 }
 
 TEST_CASE("geode.fs.write rejects payload size above kMaxFsWriteBytes") {
     RuntimeGuard guard;
-    auto dir = makeTempDir();
-    auto* mod = geode::Mod::create(dir);
+    luauapi_test::ScopedTempDir dir{"luauapi_resource_bounds_"};
+    auto* mod = geode::Mod::create(dir.path);
 
     auto* runtime = luax::Runtime::getOrCreate();
-    runtime->setResourcesRoot(dir);
+    runtime->setResourcesRoot(dir.path);
     auto* L = runtime->state();
     registerResourceBindings(L);
 
-    REQUIRE(std::filesystem::create_directories(dir / "save"));
+    REQUIRE(std::filesystem::create_directories(dir.path / "save"));
 
     auto oversized = std::string(luax::kMaxFsWriteBytes + 1, 'z');
     REQUIRE(callFs(L, "write", "save", "oversized.bin", oversized) == 0);
@@ -327,23 +301,22 @@ TEST_CASE("geode.fs.write rejects payload size above kMaxFsWriteBytes") {
     REQUIRE(lua_isstring(L, 2));
     std::string err(lua_tostring(L, 2));
     REQUIRE(err.find("maximum write size") != std::string::npos);
-    REQUIRE_FALSE(std::filesystem::exists(dir / "save" / "oversized.bin"));
+    REQUIRE_FALSE(std::filesystem::exists(dir.path / "save" / "oversized.bin"));
 
-    std::filesystem::remove_all(dir);
     geode::Mod::destroy(mod);
 }
 
 TEST_CASE("geode.fs.write stores a file inside the writable save root") {
     RuntimeGuard guard;
-    auto dir = makeTempDir();
-    auto* mod = geode::Mod::create(dir);
+    luauapi_test::ScopedTempDir dir{"luauapi_resource_bounds_"};
+    auto* mod = geode::Mod::create(dir.path);
 
     auto* runtime = luax::Runtime::getOrCreate();
-    runtime->setResourcesRoot(dir);
+    runtime->setResourcesRoot(dir.path);
     auto* L = runtime->state();
     registerResourceBindings(L);
 
-    auto saveDir = dir / "save";
+    auto saveDir = dir.path / "save";
     REQUIRE(std::filesystem::create_directories(saveDir));
 
     REQUIRE(callFs(L, "write", "save", "note.txt", "hello") == 0);
@@ -351,21 +324,20 @@ TEST_CASE("geode.fs.write stores a file inside the writable save root") {
     REQUIRE(lua_toboolean(L, 1));
     REQUIRE(readFileContents(saveDir / "note.txt") == "hello");
 
-    std::filesystem::remove_all(dir);
     geode::Mod::destroy(mod);
 }
 
 TEST_CASE("geode.fs.write rejects paths that escape the root") {
     RuntimeGuard guard;
-    auto dir = makeTempDir();
-    auto* mod = geode::Mod::create(dir);
+    luauapi_test::ScopedTempDir dir{"luauapi_resource_bounds_"};
+    auto* mod = geode::Mod::create(dir.path);
 
     auto* runtime = luax::Runtime::getOrCreate();
-    runtime->setResourcesRoot(dir);
+    runtime->setResourcesRoot(dir.path);
     auto* L = runtime->state();
     registerResourceBindings(L);
 
-    REQUIRE(std::filesystem::create_directories(dir / "save"));
+    REQUIRE(std::filesystem::create_directories(dir.path / "save"));
 
     REQUIRE(callFs(L, "write", "save", "../escape.txt", "nope") == 0);
     REQUIRE(lua_gettop(L) == 2);
@@ -373,19 +345,18 @@ TEST_CASE("geode.fs.write rejects paths that escape the root") {
     REQUIRE(lua_isstring(L, 2));
     std::string err(lua_tostring(L, 2));
     REQUIRE(err.find("escapes") != std::string::npos);
-    REQUIRE_FALSE(std::filesystem::exists(dir / "escape.txt"));
+    REQUIRE_FALSE(std::filesystem::exists(dir.path / "escape.txt"));
 
-    std::filesystem::remove_all(dir);
     geode::Mod::destroy(mod);
 }
 
 TEST_CASE("geode.fs.write rejects the read-only resources root") {
     RuntimeGuard guard;
-    auto dir = makeTempDir();
-    auto* mod = geode::Mod::create(dir);
+    luauapi_test::ScopedTempDir dir{"luauapi_resource_bounds_"};
+    auto* mod = geode::Mod::create(dir.path);
 
     auto* runtime = luax::Runtime::getOrCreate();
-    runtime->setResourcesRoot(dir);
+    runtime->setResourcesRoot(dir.path);
     auto* L = runtime->state();
     registerResourceBindings(L);
 
@@ -395,23 +366,22 @@ TEST_CASE("geode.fs.write rejects the read-only resources root") {
     REQUIRE(lua_isstring(L, 2));
     std::string err(lua_tostring(L, 2));
     REQUIRE(err.find("read-only") != std::string::npos);
-    REQUIRE_FALSE(std::filesystem::exists(dir / "blocked.txt"));
+    REQUIRE_FALSE(std::filesystem::exists(dir.path / "blocked.txt"));
 
-    std::filesystem::remove_all(dir);
     geode::Mod::destroy(mod);
 }
 
 TEST_CASE("geode.fs.exists reports whether a sandboxed path is present") {
     RuntimeGuard guard;
-    auto dir = makeTempDir();
-    auto* mod = geode::Mod::create(dir);
+    luauapi_test::ScopedTempDir dir{"luauapi_resource_bounds_"};
+    auto* mod = geode::Mod::create(dir.path);
 
     auto* runtime = luax::Runtime::getOrCreate();
-    runtime->setResourcesRoot(dir);
+    runtime->setResourcesRoot(dir.path);
     auto* L = runtime->state();
     registerResourceBindings(L);
 
-    auto saveDir = dir / "save";
+    auto saveDir = dir.path / "save";
     REQUIRE(std::filesystem::create_directories(saveDir));
     writeFileContents(saveDir / "present.txt", "x");
 
@@ -423,42 +393,40 @@ TEST_CASE("geode.fs.exists reports whether a sandboxed path is present") {
     REQUIRE(lua_gettop(L) == 1);
     REQUIRE_FALSE(lua_toboolean(L, 1));
 
-    std::filesystem::remove_all(dir);
     geode::Mod::destroy(mod);
 }
 
 TEST_CASE("geode.fs.mkdir creates a directory inside the writable root") {
     RuntimeGuard guard;
-    auto dir = makeTempDir();
-    auto* mod = geode::Mod::create(dir);
+    luauapi_test::ScopedTempDir dir{"luauapi_resource_bounds_"};
+    auto* mod = geode::Mod::create(dir.path);
 
     auto* runtime = luax::Runtime::getOrCreate();
-    runtime->setResourcesRoot(dir);
+    runtime->setResourcesRoot(dir.path);
     auto* L = runtime->state();
     registerResourceBindings(L);
 
-    REQUIRE(std::filesystem::create_directories(dir / "save"));
+    REQUIRE(std::filesystem::create_directories(dir.path / "save"));
 
     REQUIRE(callFs(L, "mkdir", "save", "made") == 0);
     REQUIRE(lua_gettop(L) == 1);
     REQUIRE(lua_toboolean(L, 1));
-    REQUIRE(std::filesystem::is_directory(dir / "save" / "made"));
+    REQUIRE(std::filesystem::is_directory(dir.path / "save" / "made"));
 
-    std::filesystem::remove_all(dir);
     geode::Mod::destroy(mod);
 }
 
 TEST_CASE("geode.fs.remove deletes an entry inside the writable root") {
     RuntimeGuard guard;
-    auto dir = makeTempDir();
-    auto* mod = geode::Mod::create(dir);
+    luauapi_test::ScopedTempDir dir{"luauapi_resource_bounds_"};
+    auto* mod = geode::Mod::create(dir.path);
 
     auto* runtime = luax::Runtime::getOrCreate();
-    runtime->setResourcesRoot(dir);
+    runtime->setResourcesRoot(dir.path);
     auto* L = runtime->state();
     registerResourceBindings(L);
 
-    auto saveDir = dir / "save";
+    auto saveDir = dir.path / "save";
     REQUIRE(std::filesystem::create_directories(saveDir));
     auto victim = saveDir / "gone.txt";
     writeFileContents(victim, "x");
@@ -469,7 +437,6 @@ TEST_CASE("geode.fs.remove deletes an entry inside the writable root") {
     REQUIRE(lua_toboolean(L, 1));
     REQUIRE_FALSE(std::filesystem::exists(victim));
 
-    std::filesystem::remove_all(dir);
     geode::Mod::destroy(mod);
 }
 

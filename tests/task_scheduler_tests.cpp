@@ -12,16 +12,7 @@
 #include <vector>
 
 namespace {
-    struct RuntimeGuard {
-        RuntimeGuard() {
-            luax::Runtime::setMainThreadId(std::this_thread::get_id());
-        }
-
-        ~RuntimeGuard() {
-            luax::TaskScheduler::get().clear();
-            luax::Runtime::resetForTests();
-        }
-    };
+    using RuntimeGuard = luauapi_test::TaskSchedulerRuntimeGuard;
 } // namespace
 
 TEST_CASE("TaskScheduler fires one-shot tasks after delay") {

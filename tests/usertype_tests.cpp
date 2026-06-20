@@ -1,6 +1,7 @@
 #include "core/Runtime.hpp"
 #include "framework/usertype/Fields.hpp"
 #include "framework/usertype/Usertype.hpp"
+#include "host/lua_test_helpers.hpp"
 
 #include <RuntimeTypes.hpp>
 #include <catch2/catch_test_macros.hpp>
@@ -16,16 +17,7 @@ namespace {
 
     struct OverflowNode : cocos2d::CCNode {};
 
-    struct RuntimeGuard {
-        RuntimeGuard() {
-            luax::Runtime::setMainThreadId(std::this_thread::get_id());
-        }
-
-        ~RuntimeGuard() {
-            luax::Fields::clear();
-            luax::Runtime::resetForTests();
-        }
-    };
+    using RuntimeGuard = luauapi_test::FieldsRuntimeGuard;
 
     int getTestField(lua_State* L) {
         lua_pushliteral(L, "value");

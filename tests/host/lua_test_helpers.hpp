@@ -1,9 +1,16 @@
 #pragma once
 
+#include "bindings/geode/CurrentMod.hpp"
+#include "bindings/imgui/ImGuiDrawScheduler.hpp"
+#include "bindings/imgui/ImGuiFontRegistry.hpp"
+#include "bindings/task/TaskScheduler.hpp"
 #include "core/Runtime.hpp"
 #include "framework/Binding.hpp"
+#include "framework/callback/LuaTrampolineRegistry.hpp"
+#include "framework/usertype/Fields.hpp"
 #include "framework/usertype/LuaRef.hpp"
 
+#include <Geode/loader/Mod.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <chrono>
 #include <cstdint>
@@ -61,6 +68,104 @@ namespace luauapi_test {
 
         ~RuntimeGuard() {
             luax::Runtime::resetForTests();
+        }
+    };
+
+    struct BindingRuntimeGuard {
+        BindingRuntimeGuard() {
+            luax::Runtime::setMainThreadId(std::this_thread::get_id());
+            luax::resetBindingsForTests();
+        }
+
+        ~BindingRuntimeGuard() {
+            luax::Runtime::resetForTests();
+            luax::resetBindingsForTests();
+        }
+    };
+
+    struct ModRuntimeGuard {
+        ModRuntimeGuard() {
+            luax::Runtime::setMainThreadId(std::this_thread::get_id());
+        }
+
+        ~ModRuntimeGuard() {
+            luax::invalidateCurrentModCache();
+            geode::Mod::resetForTests();
+            luax::Runtime::resetForTests();
+        }
+    };
+
+    struct BindingModRuntimeGuard {
+        BindingModRuntimeGuard() {
+            luax::Runtime::setMainThreadId(std::this_thread::get_id());
+            luax::resetBindingsForTests();
+        }
+
+        ~BindingModRuntimeGuard() {
+            luax::invalidateCurrentModCache();
+            geode::Mod::resetForTests();
+            luax::Runtime::resetForTests();
+            luax::resetBindingsForTests();
+        }
+    };
+
+    struct TaskSchedulerRuntimeGuard {
+        TaskSchedulerRuntimeGuard() {
+            luax::Runtime::setMainThreadId(std::this_thread::get_id());
+        }
+
+        ~TaskSchedulerRuntimeGuard() {
+            luax::TaskScheduler::get().clear();
+            luax::Runtime::resetForTests();
+        }
+    };
+
+    struct ImGuiRuntimeGuard {
+        ImGuiRuntimeGuard() {
+            luax::Runtime::setMainThreadId(std::this_thread::get_id());
+        }
+
+        ~ImGuiRuntimeGuard() {
+            luax::ImGuiDrawScheduler::get().clear();
+            luax::Runtime::resetForTests();
+        }
+    };
+
+    struct FieldsRuntimeGuard {
+        FieldsRuntimeGuard() {
+            luax::Runtime::setMainThreadId(std::this_thread::get_id());
+        }
+
+        ~FieldsRuntimeGuard() {
+            luax::Fields::clear();
+            luax::Runtime::resetForTests();
+        }
+    };
+
+    struct HandleGcRuntimeGuard {
+        BindingRuntimeGuard binding;
+
+        ~HandleGcRuntimeGuard() {
+            luax::ImGuiDrawScheduler::get().clear();
+            luax::TaskScheduler::get().clear();
+        }
+    };
+
+    struct MiscCorrectnessRuntimeGuard {
+        BindingRuntimeGuard binding;
+
+        ~MiscCorrectnessRuntimeGuard() {
+            luax::TaskScheduler::get().clear();
+            luax::clearOrphanTrampolines();
+        }
+    };
+
+    struct ImGuiBindingRuntimeGuard {
+        BindingModRuntimeGuard binding;
+
+        ~ImGuiBindingRuntimeGuard() {
+            luax::ImGuiDrawScheduler::get().clear();
+            luax::imguiFontClear();
         }
     };
 

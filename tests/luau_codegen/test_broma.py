@@ -2,17 +2,12 @@ from __future__ import annotations
 
 import os
 import unittest
-from helpers import (
-    Arg,  # type: ignore[import-unresolved]
-    Class,  # type: ignore[import-unresolved]
-    Method,  # type: ignore[import-unresolved]
-    Root,  # type: ignore[import-unresolved]
-    class_link_platforms,  # type: ignore[import-unresolved]
-    collect_plan,  # type: ignore[import-unresolved]
-    is_link_platform,  # type: ignore[import-unresolved]
-    parse_file,  # type: ignore[import-unresolved]
-    supported,  # type: ignore[import-unresolved]
-)
+
+import test_support  # noqa: F401
+from luau_codegen.emit.plan import collect_plan  # type: ignore[import-unresolved]
+from luau_codegen.parse.broma import Arg, Class, Method, Root, parse_file  # type: ignore[import-unresolved]
+from luau_codegen.policy.filtering import supported  # type: ignore[import-unresolved]
+from luau_codegen.policy.link_attrs import class_link_platforms, is_link_platform  # type: ignore[import-unresolved]
 
 
 class AccessLevelTests(unittest.TestCase):

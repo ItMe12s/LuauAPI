@@ -16,19 +16,7 @@ namespace luax {
 }
 
 namespace {
-    struct RuntimeGuard {
-        RuntimeGuard() {
-            luax::Runtime::setMainThreadId(std::this_thread::get_id());
-            luax::resetBindingsForTests();
-        }
-
-        ~RuntimeGuard() {
-            luax::ImGuiDrawScheduler::get().clear();
-            luax::TaskScheduler::get().clear();
-            luax::Runtime::resetForTests();
-            luax::resetBindingsForTests();
-        }
-    };
+    using RuntimeGuard = luauapi_test::HandleGcRuntimeGuard;
 
     void registerTaskBinding(lua_State* L) {
         luax::registerBinding({"task_lib", &luax::registerTask, 10});

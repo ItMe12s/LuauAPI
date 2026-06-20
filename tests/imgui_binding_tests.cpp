@@ -25,21 +25,7 @@ namespace luax {
 namespace {
     using Catch::Approx;
 
-    struct RuntimeGuard {
-        RuntimeGuard() {
-            luax::Runtime::setMainThreadId(std::this_thread::get_id());
-            luax::resetBindingsForTests();
-        }
-
-        ~RuntimeGuard() {
-            luax::ImGuiDrawScheduler::get().clear();
-            luax::imguiFontClear();
-            luax::invalidateCurrentModCache();
-            geode::Mod::resetForTests();
-            luax::Runtime::resetForTests();
-            luax::resetBindingsForTests();
-        }
-    };
+    using RuntimeGuard = luauapi_test::ImGuiBindingRuntimeGuard;
 
     struct ImGuiContextGuard : luauapi_test::ImGuiTestContext {};
 

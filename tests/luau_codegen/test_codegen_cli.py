@@ -8,12 +8,10 @@ import tempfile
 import unittest
 import warnings
 from unittest import mock
-from helpers import (
-    Class,  # type: ignore[import-unresolved]
-    ROOT,  # type: ignore[import-unresolved]
-    Root,  # type: ignore[import-unresolved]
-    collect_bindings_root,  # type: ignore[import-unresolved]
-)
+
+from test_support import ROOT
+from luau_codegen.parse.broma import Class, Root  # type: ignore[import-unresolved]
+from luau_codegen.parse.collect import collect_bindings_root  # type: ignore[import-unresolved]
 
 
 class CodegenIoTests(unittest.TestCase):

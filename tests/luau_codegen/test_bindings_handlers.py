@@ -1,15 +1,11 @@
 from __future__ import annotations
 
 import unittest
-from helpers import (
-    Arg,  # type: ignore[import-unresolved]
-    Class,  # type: ignore[import-unresolved]
-    Function,  # type: ignore[import-unresolved]
-    Method,  # type: ignore[import-unresolved]
-    _emit_class_file,  # type: ignore[import-unresolved]
-    all_platforms,  # type: ignore[import-unresolved]
-    emit_free_functions_file,  # type: ignore[import-unresolved]
-)
+
+from test_support import all_platforms
+from luau_codegen.emit.bindings import emit_free_functions_file  # type: ignore[import-unresolved]
+from luau_codegen.emit.bindings.class_file import _emit_class_file  # type: ignore[import-unresolved]
+from luau_codegen.parse.broma import Arg, Class, Function, Method  # type: ignore[import-unresolved]
 
 
 class SelMenuHandlerBindingTests(unittest.TestCase):

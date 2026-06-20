@@ -68,6 +68,8 @@ CTest discovers the cases at build time. The files are:
 | `tests/websocket_runtime_tests.cpp` | WebSocket loopback echo/binary, callbacks, close codes, send bounds |
 
 Host web tests use the in-memory stub in `tests/host/Geode/utils/web.hpp` (no network egress).
+The stub implements the Geode web request surface.
+`send()` resolves through `geode::utils::web::test::responseFactory` instead of opening sockets.
 Host websocket runtime tests drain `queueInMainThread` on the test main thread between polls.
 
 Deferred from host coverage:
@@ -103,6 +105,25 @@ The host test binary compiles part of the 3D stack for parse, math, and binding 
 It links gd3d transform, mesh, and glTF binding translation units, but not OpenGL, cocos2d, or `gd3d.ViewportFrame`.
 Viewport rendering and GPU framebuffer setup are tested in-game only.
 
+## Shared test helpers
+
+C++ tests share setup in `tests/host/lua_test_helpers.hpp`.
+
+- `RuntimeGuard` and variants reset the runtime and related subsystems after each case.
+  Examples include `ModRuntimeGuard`, `BindingModRuntimeGuard`, and `ImGuiBindingRuntimeGuard`.
+- `ScopedTempDir` creates a temp directory and removes it on scope exit.
+- Script helpers compile and run Luau snippets, such as `runScriptReturnsBool` and `runScriptReturnsString`.
+
+Python codegen tests import `luau_codegen` modules directly.
+Shared fixtures live in `tests/luau_codegen/test_support.py`:
+
+- `ROOT` and `DELEGATE_SPECS`
+- `resolve_test_bindings_dir()` for Broma fixture lookup
+- `all_platforms()` and `types_text()` for emit tests
+
+Import `test_support` when a test needs those fixtures.
+Do not add a re-export barrel under `tests/luau_codegen/helpers/`.
+
 ## CI
 
 GitHub Actions workflow `.github/workflows/multi-platform.yml` runs:
@@ -125,6 +146,10 @@ CTest registers the suite as `luauapi_codegen_tests` and runs it via `python -m 
 ```bash
 PYTHONPATH=tools python -m unittest discover -s tests/luau_codegen -p "test_*.py"
 ```
+
+Tests under `tests/luau_codegen/` import from `luau_codegen.*`.
+Import `test_support` for shared fixtures such as `ROOT` and `resolve_test_bindings_dir()`.
+Shared fixtures are listed in the Shared test helpers section above.
 
 Compact map of `tests/luau_codegen/`:
 
@@ -158,4 +183,6 @@ See [Codegen](codegen/codegen.md) for what the generator produces.
 - `CMakeLists.txt`
 - `tests/*.cpp`
 - `tests/host/`
+- `tests/host/lua_test_helpers.hpp`
 - `tests/luau_codegen/`
+- `tests/luau_codegen/test_support.py`

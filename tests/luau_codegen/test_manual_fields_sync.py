@@ -6,13 +6,14 @@ import re
 import tempfile
 import unittest
 
+import test_support  # noqa: F401
 from luau_codegen.emit.luau_types import emit as emit_luau_types  # type: ignore[import-unresolved]
 from luau_codegen.emit.luau_types.manual_fields import (  # type: ignore[import-unresolved]
     MANUAL_FREE_FN_FIELDS,
 )
 from luau_codegen.emit.metadata import emit_schema  # type: ignore[import-unresolved]
+from luau_codegen.emit.plan import collect_plan  # type: ignore[import-unresolved]
 from luau_codegen.parse.broma import Class, Field, Root  # type: ignore[import-unresolved]
-from helpers import collect_plan  # type: ignore[import-unresolved]
 
 _REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 _EXTRA_BINDINGS_DIR = os.path.join(_REPO_ROOT, "tools", "luau_codegen", "extra_bindings")

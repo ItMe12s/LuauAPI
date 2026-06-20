@@ -1,44 +1,23 @@
 #include "bindings/geode/CurrentMod.hpp"
 #include "core/Runtime.hpp"
 #include "framework/Binding.hpp"
+#include "host/lua_test_helpers.hpp"
 
 #include <Geode/loader/Mod.hpp>
 #include <catch2/catch_test_macros.hpp>
-#include <chrono>
 #include <filesystem>
 #include <fstream>
 #include <lua.h>
 #include <lualib.h>
 #include <optional>
 #include <string>
-#include <thread>
 
 namespace luax {
     geode::Result<void> registerGeodeFs(lua_State* L);
 } // namespace luax
 
 namespace {
-    struct RuntimeGuard {
-        RuntimeGuard() {
-            luax::Runtime::setMainThreadId(std::this_thread::get_id());
-            luax::resetBindingsForTests();
-        }
-
-        ~RuntimeGuard() {
-            luax::invalidateCurrentModCache();
-            geode::Mod::resetForTests();
-            luax::Runtime::resetForTests();
-            luax::resetBindingsForTests();
-        }
-    };
-
-    std::filesystem::path makeTempDir(std::string_view prefix) {
-        auto dir = std::filesystem::temp_directory_path() /
-            (std::string(prefix) +
-             std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
-        REQUIRE(std::filesystem::create_directories(dir));
-        return dir;
-    }
+    using RuntimeGuard = luauapi_test::BindingModRuntimeGuard;
 
     void registerFsBindings(lua_State* L) {
         luax::registerBinding({"geode_fs", &luax::registerGeodeFs, 0});
@@ -71,20 +50,18 @@ namespace {
     }
 
     struct ModPair {
-        std::filesystem::path parent;
+        luauapi_test::ScopedTempDir parent{"luauapi_mod_fs_isolation_"};
         geode::Mod* modA = nullptr;
         geode::Mod* modB = nullptr;
 
         ModPair() {
-            parent = makeTempDir("luauapi_mod_fs_isolation_");
-            modA = geode::Mod::create(parent / "modA");
-            modB = geode::Mod::create(parent / "modB");
+            modA = geode::Mod::create(parent.path / "modA");
+            modB = geode::Mod::create(parent.path / "modB");
             REQUIRE(std::filesystem::create_directories(modA->getSaveDir()));
             REQUIRE(std::filesystem::create_directories(modB->getSaveDir()));
         }
 
         ~ModPair() {
-            std::filesystem::remove_all(parent);
             if (modA) geode::Mod::destroy(modA);
             if (modB) geode::Mod::destroy(modB);
         }
