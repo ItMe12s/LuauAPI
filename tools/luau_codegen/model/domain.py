@@ -48,6 +48,16 @@ def resolve_base(lookup: Dict[str, Class], base: str) -> "Class | None":
     return lookup.get(base) or lookup.get(short_name(base))
 
 
+def is_ccobject_descendant(cls: Class, lookup: Dict[str, Class]) -> bool:
+    if cls.name == "CCObject":
+        return True
+    for base in cls.bases:
+        base_cls = resolve_base(lookup, base)
+        if base_cls and is_ccobject_descendant(base_cls, lookup):
+            return True
+    return False
+
+
 def object_classes(root: Root) -> List[Class]:
     lookup = build_class_lookup(root.classes)
     memo: Dict[str, bool] = {}

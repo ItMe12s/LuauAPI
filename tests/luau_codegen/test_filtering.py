@@ -142,6 +142,17 @@ class LinkClassFilterTests(unittest.TestCase):
             self.assertFalse(ok, f"{class_name}::{method_name}")
             self.assertEqual(reason, "inaccessible", f"{class_name}::{method_name}")
 
+    def test_ccobject_retain_release_denied(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        ccnode = Class(name="CCNode", namespace="cocos2d", bases=["CCObject"])
+        objects = {"CCObject": ccobject, "CCNode": ccnode}
+        for cls in (ccobject, ccnode):
+            for name in ("retain", "release"):
+                method = Method(name=name, ret="void", args=[], platforms=all_platforms("0x1"))
+                ok, reason = supported(cls, method, objects, "win")
+                self.assertFalse(ok, f"{cls.name}::{name}")
+                self.assertEqual(reason, "inaccessible", f"{cls.name}::{name}")
+
     def test_touch_handler_impl_classes_are_inaccessible(self) -> None:
         for name in ("CCStandardTouchHandler", "CCTargetedTouchHandler"):
             cls = Class(

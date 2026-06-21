@@ -12,10 +12,16 @@ from luau_codegen.policy.fields import bindable_field
 from luau_codegen.model.denylist import (
     BINDABLE_CONSTRUCTORS,
     INACCESSIBLE_CLASSES,
+    INACCESSIBLE_METHOD_NAMES,
     INACCESSIBLE_METHODS,
     PREFERRED_OVERLOADS,
 )
-from luau_codegen.model.domain import build_class_lookup, resolve_base, status_for
+from luau_codegen.model.domain import (
+    build_class_lookup,
+    is_ccobject_descendant,
+    resolve_base,
+    status_for,
+)
 from luau_codegen.policy.link_attrs import is_link_platform, platform_aliases
 from luau_codegen.convert.type_map import (
     classify_arg,
@@ -114,6 +120,8 @@ def supported(
     if cls.name in INACCESSIBLE_CLASSES:
         return False, "inaccessible-class"
     if (cls.name, m.name) in INACCESSIBLE_METHODS:
+        return False, "inaccessible"
+    if m.name in INACCESSIBLE_METHOD_NAMES and is_ccobject_descendant(cls, objects):
         return False, "inaccessible"
     if m.is_ctor and not _allowed_ctor(cls, m):
         return False, "constructor"

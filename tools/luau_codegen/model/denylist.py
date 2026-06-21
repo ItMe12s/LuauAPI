@@ -2,6 +2,14 @@ from __future__ import annotations
 
 # Manually maintained, you can try removing some but it would probably break.
 
+# CCObject ref counting is managed by LuauAPI owned/borrowed userdata. Mods use Luau refs instead.
+INACCESSIBLE_METHOD_NAMES = frozenset(
+    {
+        "retain",
+        "release",
+    }
+)
+
 INACCESSIBLE_METHODS = {
     ("CCActionManager", "update"),
     ("CCAnimationCache", "parseVersion1"),

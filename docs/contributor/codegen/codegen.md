@@ -266,12 +266,16 @@ See [Pair containers](pair-containers.md), [Nested containers](nested-containers
 
 ## Denylist maintenance
 
-`model/denylist.py` is hand-maintained with four structures:
+`model/denylist.py` is hand-maintained with five structures:
 
+- `INACCESSIBLE_METHOD_NAMES`
 - `INACCESSIBLE_METHODS`
 - `INACCESSIBLE_CLASSES`
 - `PREFERRED_OVERLOADS`
 - `BINDABLE_CONSTRUCTORS`
+
+`INACCESSIBLE_*` entries drop methods and classes from Luau bindings.
+Put mod-facing rationale in the reference docs, not here.
 
 Entries are conservative. `test_denylist.py` fails if any entry no longer resolves after a GD or SDK bump.
 

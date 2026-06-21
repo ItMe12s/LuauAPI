@@ -154,8 +154,12 @@ GD and Geode enums are integer constant tables on `geode.gd` and `geode`. See [e
 
 ## Ownership
 
-The runtime tracks whether an object is owned by Lua or only borrowed and handles it for you.
-You do not manage retain or release by hand. See the [Bindings framework](../../contributor/internals/bindings-framework.md).
+The runtime tracks whether an object is owned by Lua or only borrowed and handles C++ lifetime for you.
+Luau does not bind `retain()` or `release()`.
+Manual ref counting fights LuauAPI bookkeeping and can crash the game, leak nodes, or break callback and `geode.fields` cleanup.
+
+Keep a normal Luau reference when you need an object to stay alive. Use a local, a module table, or the scene graph.
+See the [Bindings framework](../../contributor/internals/bindings-framework.md).
 
 ## Related
 

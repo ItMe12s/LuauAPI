@@ -2,6 +2,10 @@
 
 [Check the GitHub commits for more details](https://github.com/ItMe12s/LuauAPI).
 
+## v0.1.0-beta.6
+
+- Removed `:retain()` and `:release()` bindings on game objects.
+
 ## v0.1.0-beta.5
 
 - Added Luau read/write for encrypted stat fields (SeedValue) as plain numbers.
