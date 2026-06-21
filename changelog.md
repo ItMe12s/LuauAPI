@@ -7,6 +7,7 @@
 - Added global `warn` for script logging at warn level.
 - Fixed macOS crash in ImGui render when scene changes disturbed GL state.
 - Fixed crash in the global `CCObject::release` hook when releasing objects with no Luau field or trampoline state.
+- Fixed macOS crash in deferred CCObject release drain when scene teardown frees objects before the drain tick.
 - Removed `:retain()` and `:release()` bindings on game objects.
 
 ## v0.1.0-beta.5

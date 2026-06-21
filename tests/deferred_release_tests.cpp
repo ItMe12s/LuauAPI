@@ -99,3 +99,14 @@ TEST_CASE("deferred owned release skips stale object at drain") {
 
     REQUIRE_NOTHROW(luax::drainDeferredReleases());
 }
+
+TEST_CASE("deferred owned release skips object freed by scene teardown at drain") {
+    DeferGuard guard;
+
+    auto* node = new cocos2d::CCNode();
+    luax::deferOwnedRelease(node);
+    node->release();
+    REQUIRE_FALSE(geode::detail::isLiveCocosObject(node));
+
+    REQUIRE_NOTHROW(luax::drainDeferredReleases());
+}

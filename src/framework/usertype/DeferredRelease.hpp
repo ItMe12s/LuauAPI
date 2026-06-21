@@ -78,8 +78,10 @@ namespace luax {
             owned.swap(ownedQueue);
 
             for (auto& entry : owned) {
-                if (entry.ptr && entry.weak.valid()) {
-                    entry.ptr->release();
+                if (auto lock = entry.weak.lock()) {
+                    if (auto* obj = lock.data()) {
+                        obj->release();
+                    }
                 }
             }
             borrowed.clear();
