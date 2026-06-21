@@ -10,6 +10,7 @@ Core script globals in every Luau chunk:
 - `require`
 - `_G`
 
+And other standard libraries are included too.
 LuauAPI also exposes namespaces such as `task`, `geode`, `imgui`, and `gd3d`.
 See Other globals below.
 

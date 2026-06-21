@@ -714,7 +714,12 @@ class LuauOverloadWideningTests(unittest.TestCase):
     @staticmethod
     def _class_slice(text: str, name: str) -> str:
         start = text.index(f"declare class {name}")
-        return text[start : text.index("end", start)]
+        rest = text[start:]
+        first_line = rest.split("\n", 1)[0]
+        if first_line.rstrip().endswith(" end"):
+            return first_line + "\n"
+        block_end = rest.index("\nend\n") + len("\nend\n")
+        return rest[:block_end]
 
     def _factory(self, *methods: Method) -> str:
         ccobject = Class(name="CCObject", namespace="cocos2d")

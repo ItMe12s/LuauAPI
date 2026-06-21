@@ -66,6 +66,33 @@ class EmitPlan:
     ctx: CodegenContext = field(default_factory=CodegenContext.static)
 
 
+def _type_needed_class_names(plan: EmitPlan) -> set[str]:
+    from luau_codegen.convert.type_map import classify_arg, classify_return
+
+    referenced: set[str] = set()
+    for grouped in plan.supported_by_class.values():
+        for methods in grouped.values():
+            for m in methods:
+                ret = classify_return(m.ret, plan.objects, ctx=plan.ctx)
+                if ret and ret.kind == "object":
+                    referenced.add(ret.class_name)
+                for arg in m.args:
+                    info = classify_arg(arg.type, plan.objects, ctx=plan.ctx)
+                    if info and info.kind == "object":
+                        referenced.add(info.class_name)
+
+    lookup = build_class_lookup(plan.classes)
+    keep_bases: set[str] = set()
+    for cls in plan.classes:
+        if cls.name in plan.skipped_classes:
+            continue
+        for base in cls.bases:
+            base_cls = resolve_base(lookup, base)
+            if base_cls:
+                keep_bases.add(base_cls.name)
+    return referenced | keep_bases
+
+
 def _inheritance_depth(cls: Class, lookup: Dict[str, Class], skipped_classes: Set[str]) -> int:
     if cls.name == "CCObject":
         return 0
@@ -345,10 +372,12 @@ def _apply_intersection(
     changed = True
     while changed:
         changed = False
+        type_needed = _type_needed_class_names(plan)
         outputless = {
             cls.name
             for cls in plan.classes
-            if not plan.supported_by_class[cls.name]
+            if cls.name not in type_needed
+            and not plan.supported_by_class[cls.name]
             and not plan.hook_targets_by_class[cls.name]
             and not plan.field_targets_by_class.get(cls.name, [])
         }
