@@ -59,10 +59,11 @@ namespace luax {
     }
 
     void evictTrampolinesIfFinalRelease(cocos2d::CCObject* anchor) {
-        if (!anchor || anchor->retainCount() > 1) return;
+        if (!anchor) return;
         auto& map = anchorMap();
         auto it = map.find(anchor);
         if (it == map.end()) return;
+        if (anchor->retainCount() > 1) return;
         for (auto* trampoline : it->second) {
             trampoline->release();
         }

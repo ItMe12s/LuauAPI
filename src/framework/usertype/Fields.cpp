@@ -116,8 +116,12 @@ namespace luax {
     }
 
     void Fields::evictIfFinalRelease(cocos2d::CCObject* object) {
-        if (!object || object->retainCount() > 1) return;
-        evict(object);
+        if (!object) return;
+        auto& tables = fieldTables();
+        auto it = tables.find(reinterpret_cast<cocos2d::CCNode*>(object));
+        if (it == tables.end() || !entryStillOwnsNode(it->second, it->first)) return;
+        if (object->retainCount() > 1) return;
+        evict(it->first);
     }
 
     void Fields::clear() {

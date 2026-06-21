@@ -58,6 +58,15 @@ TEST_CASE("Fields tryPush returns false without materializing a table") {
     node->release();
 }
 
+TEST_CASE("Fields evictIfFinalRelease is no-op without a field entry") {
+    RuntimeGuard guard;
+    auto* node = new TestNode();
+
+    REQUIRE_NOTHROW(luax::Fields::evictIfFinalRelease(node));
+
+    node->release();
+}
+
 TEST_CASE("Fields evictIfFinalRelease removes entry on final release") {
     RuntimeGuard guard;
     auto* runtime = luax::Runtime::getOrCreate();
