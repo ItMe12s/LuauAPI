@@ -263,6 +263,7 @@ namespace luax {
 
         installTraceback();
         installPrint();
+        installWarn();
         installLoadstring();
 
         auto* cb = lua_callbacks(m_state);
@@ -488,6 +489,11 @@ namespace luax {
         lua_setglobal(m_state, "print");
     }
 
+    void Runtime::installWarn() {
+        lua_pushcfunction(m_state, &Runtime::luaWarn, "warn");
+        lua_setglobal(m_state, "warn");
+    }
+
     void Runtime::installLoadstring() {
         lua_pushcfunction(m_state, &Runtime::luaLoadstring, "loadstring");
         lua_setglobal(m_state, "loadstring");
@@ -508,6 +514,24 @@ namespace luax {
         }
 
         geode::log::info("[lua] {}", out);
+        return 0;
+    }
+
+    int Runtime::luaWarn(lua_State* L) {
+        StackGuard stack(L);
+        int argc = lua_gettop(L);
+        std::string out;
+
+        auto* self = static_cast<Runtime*>(lua_callbacks(L)->userdata);
+        std::filesystem::path const& resourcesRoot =
+            self ? self->resourcesRoot() : std::filesystem::path{};
+
+        for (int i = 1; i <= argc; ++i) {
+            if (i > 1) out.push_back('\t');
+            out.append(redactHostPaths(stackValueToString(L, i), resourcesRoot));
+        }
+
+        geode::log::warn("[lua] {}", out);
         return 0;
     }
 

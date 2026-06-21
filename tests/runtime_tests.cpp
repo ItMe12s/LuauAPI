@@ -190,6 +190,31 @@ TEST_CASE("print output redacts resource-root paths") {
     REQUIRE(line.find("print_secret.luau") != std::string::npos);
 }
 
+TEST_CASE("warn output redacts resource-root paths") {
+    RuntimeGuard guard;
+    luauapi_test::ScopedTempDir dir{"luauapi_runtime_"};
+    auto scriptPath = dir.path / "warn_secret.luau";
+    {
+        std::ofstream file(scriptPath);
+        file << "warn path fixture";
+    }
+
+    auto* runtime = luax::Runtime::getOrCreate();
+    runtime->setResourcesRoot(dir.path);
+    geode::log::clearCapturedMessages();
+
+    auto pathText = luax::filesystemPathString(scriptPath);
+    auto source = std::string("warn([=[") + pathText + "]=])";
+    auto before = geode::log::capturedWarnMessages().size();
+    REQUIRE(runtime->runScript(source, "@warn.luau").isOk());
+
+    auto const& messages = geode::log::capturedWarnMessages();
+    REQUIRE(messages.size() == before + 1);
+    auto const& line = messages.back();
+    requireNoRootLeak(line, dir.path);
+    REQUIRE(line.find("warn_secret.luau") != std::string::npos);
+}
+
 TEST_CASE("Runtime rejects off-main-thread access") {
     RuntimeGuard guard;
     luax::Runtime::getOrCreate();

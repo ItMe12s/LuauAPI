@@ -5,6 +5,7 @@
 Core script globals in every Luau chunk:
 
 - `print`
+- `warn`
 - `loadstring`
 - `require`
 - `_G`
@@ -70,6 +71,18 @@ Writes a single line to the Geode log. Each argument is converted to text and jo
 
 ```lua
 print("value", 1, true)
+```
+
+## warn
+
+```lua
+warn(...any) -> ()
+```
+
+Same formatting and path redaction as `print`, but writes to the Geode log at warn level.
+
+```lua
+warn("deprecated path", featureName)
 ```
 
 ## loadstring

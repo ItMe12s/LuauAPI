@@ -12,6 +12,11 @@ namespace geode::log {
         return messages;
     }
 
+    inline std::vector<std::string>& capturedWarnMessages() {
+        static std::vector<std::string> messages;
+        return messages;
+    }
+
     inline std::vector<std::string>& capturedErrorMessages() {
         static std::vector<std::string> messages;
         return messages;
@@ -19,6 +24,7 @@ namespace geode::log {
 
     inline void clearCapturedMessages() {
         capturedInfoMessages().clear();
+        capturedWarnMessages().clear();
         capturedErrorMessages().clear();
     }
 
@@ -41,7 +47,9 @@ namespace geode::log {
     }
 
     template <class... Args>
-    inline void warn(std::string_view, Args&&...) {}
+    inline void warn(std::string_view pattern, Args&&... args) {
+        capturedWarnMessages().push_back(formatCapturedMessage(pattern, std::forward<Args>(args)...));
+    }
 
     template <class... Args>
     inline void error(std::string_view pattern, Args&&... args) {

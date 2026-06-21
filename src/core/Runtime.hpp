@@ -138,10 +138,12 @@ namespace luax {
         static void panicCallback(lua_State* L, int errcode);
         static int luaTraceback(lua_State* L);
         static int luaPrint(lua_State* L);
+        static int luaWarn(lua_State* L);
         static int luaLoadstring(lua_State* L);
 
         void installTraceback();
         void installPrint();
+        void installWarn();
         void installLoadstring();
 
         struct BytecodeCacheEntry {
