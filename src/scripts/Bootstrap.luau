@@ -1,5 +1,6 @@
 local isDeveloperModeEnabled = geode.Mod.getSettingValue("enable-developer-mode")
 if not isDeveloperModeEnabled then return end
+warn("Developer Mode enabled! use with care :3")
 
 geode.hook("geode.gd.MenuLayer:init/0", {
     after = function(self, result)

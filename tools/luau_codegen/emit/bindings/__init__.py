@@ -60,6 +60,7 @@ def emit(
         ),
     }
 
+    emitted_class_names = {cls.name for cls in plan.emitted_classes}
     for cls in plan.emitted_classes:
         files[binding_filename(cls.name)] = _emit_class_file(
             cls,
@@ -71,6 +72,7 @@ def emit(
             plan.depths[cls.name],
             target_platform,
             ctx=plan.ctx,
+            emitted_class_names=emitted_class_names,
         )
 
     return files, plan.skipped

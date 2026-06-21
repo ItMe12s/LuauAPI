@@ -449,6 +449,7 @@ def _emit_class_file(
     depth: int,
     target_platform: str,
     ctx: CodegenContext | None = None,
+    emitted_class_names: Set[str] | None = None,
 ) -> str:
     ns_name = cxx_id(cls.name)
     gen_ns = _gen_ns(cls)
@@ -498,8 +499,14 @@ def _emit_class_file(
     bases = []
     for base in cls.bases:
         base_cls = objects.get(short_name(base))
-        if base_cls and base_cls.name not in skipped_classes:
-            bases.append(f"luax::Usertype<{cxx_name(base_cls)}>::tag()")
+        if not base_cls:
+            continue
+        if emitted_class_names is not None:
+            if base_cls.name not in emitted_class_names:
+                continue
+        elif base_cls.name in skipped_classes:
+            continue
+        bases.append(f"luax::Usertype<{cxx_name(base_cls)}>::tag()")
     base_expr = "{ " + ", ".join(bases) + " }" if bases else "{}"
     out.append(
         f'    auto registerResult = luax::Usertype<{cxx_name(cls)}>::registerType(L, "{cls.name}", {base_expr});\n'

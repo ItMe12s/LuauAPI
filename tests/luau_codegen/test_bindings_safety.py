@@ -41,6 +41,71 @@ class GeneratedSafetyTests(unittest.TestCase):
             text,
         )
 
+    def test_type_only_base_omits_unregistered_ccobject_tag(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        layout_options = Class(
+            name="LayoutOptions",
+            namespace="geode",
+            bases=["CCObject"],
+            methods=[
+                Method(
+                    name="create",
+                    ret="LayoutOptions*",
+                    args=[],
+                    is_static=True,
+                    platforms=all_platforms("0x1"),
+                )
+            ],
+        )
+        anchor_layout_options = Class(
+            name="AnchorLayoutOptions",
+            namespace="geode",
+            bases=["LayoutOptions"],
+            methods=[
+                Method(
+                    name="create",
+                    ret="AnchorLayoutOptions*",
+                    args=[],
+                    is_static=True,
+                    platforms=all_platforms("0x2"),
+                )
+            ],
+        )
+        objects = {
+            "CCObject": ccobject,
+            "LayoutOptions": layout_options,
+            "AnchorLayoutOptions": anchor_layout_options,
+        }
+        emitted = {"LayoutOptions", "AnchorLayoutOptions"}
+
+        layout_text = _emit_class_file(
+            layout_options,
+            {"create": layout_options.methods},
+            [],
+            [],
+            objects,
+            set(),
+            1,
+            "win",
+            emitted_class_names=emitted,
+        )
+        anchor_text = _emit_class_file(
+            anchor_layout_options,
+            {"create": anchor_layout_options.methods},
+            [],
+            [],
+            objects,
+            set(),
+            1,
+            "win",
+            emitted_class_names=emitted,
+        )
+
+        self.assertIn('registerType(L, "LayoutOptions", {})', layout_text)
+        self.assertNotIn("CCObject>::tag()", layout_text)
+        self.assertIn("LayoutOptions>::tag()", anchor_text)
+        self.assertNotIn("CCObject>::tag()", anchor_text)
+
     def test_common_file_asserts_userdata_tag_budget(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")
         ccnode = Class(
