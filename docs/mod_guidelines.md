@@ -235,6 +235,40 @@ task.delay(10, function()
 end)
 ```
 
+### `reject-retainlease`
+
+Do not call `:retain()` or `:release()` on game objects from Luau.
+
+LuauAPI already tracks owned and borrowed `CCObject` userdata for you.
+Owned values get a C++ retain when pushed to Lua and release when the userdata is collected.
+Manual retain/release fights that bookkeeping and can crash the game, leak nodes, or break callback and `geode.fields` cleanup.
+
+Keep a normal Luau reference instead. Let the scene graph, a local, or a module table hold the object alive.
+
+Bad:
+
+```lua
+local layer = menu:getChildByID("my-layer")
+layer:retain()
+table.insert(savedLayers, layer)
+
+-- later
+layer:release()
+```
+
+Good:
+
+```lua
+local savedLayers = {}
+
+local layer = menu:getChildByID("my-layer")
+if layer then
+    table.insert(savedLayers, layer)
+end
+```
+
+See [game objects](reference/lua/game-objects.md) Ownership.
+
 ### `reject-keyword`
 
 Do not use Lua reserved keywords or LuauAPI globals as variable names.
