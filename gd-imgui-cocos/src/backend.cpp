@@ -293,6 +293,7 @@ void ImGuiCocos::drawFrame() {
 
 	reloadIfNeeded();
 	if (!m_initialized || !m_visible) return;
+	if (!luax::render3d::glContextAvailable() || luax::render3d::gpuFeaturesDisabled()) return;
 
 	luax::render3d::DrawStateSnapshot prevState{};
 	prevState.capture();
@@ -436,6 +437,8 @@ void ImGuiCocos::legacyRenderFrame() const {
 }
 
 void ImGuiCocos::renderFrame() const {
+	if (!luax::render3d::glContextAvailable()) return;
+
 #if defined(GEODE_IS_MACOS) || defined(GEODE_IS_IOS)
 	static bool hasVAO = hasExtension("GL_APPLE_vertex_array_object");
 #else
@@ -458,11 +461,12 @@ void ImGuiCocos::renderFrame() const {
 
 	glEnable(GL_SCISSOR_TEST);
 
-	GLuint vao = 0;
+	unsigned int const vao = luax::render3d::genVao();
+	if (vao == 0) return legacyRenderFrame();
+
 	GLuint vbos[2] = {0, 0};
 
-	glGenVertexArrays(1, &vao);
-	glBindVertexArray(vao);
+	luax::render3d::bindVao(vao);
 
 	glGenBuffers(2, &vbos[0]);
 
@@ -522,12 +526,12 @@ void ImGuiCocos::renderFrame() const {
 		}
 	}
 
-	glBindVertexArray(0);
+	luax::render3d::bindVao(0);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
 	glDeleteBuffers(2, &vbos[0]);
-	glDeleteVertexArrays(1, &vao);
+	luax::render3d::deleteVao(vao);
 }
 
 void ImGuiCocos::updateTexture(ImTextureData* tex) const {

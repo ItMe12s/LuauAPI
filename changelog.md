@@ -5,6 +5,7 @@
 ## v0.1.0-beta.6
 
 - Added global `warn` for script logging at warn level.
+- Fixed macOS crash in ImGui render when scene changes disturbed GL state.
 - Removed `:retain()` and `:release()` bindings on game objects.
 
 ## v0.1.0-beta.5
