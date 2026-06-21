@@ -235,7 +235,7 @@ task.delay(10, function()
 end)
 ```
 
-### `reject-retainlease`
+### `reject-retain-release`
 
 Do not call `:retain()` or `:release()` on game objects from Luau.
 
