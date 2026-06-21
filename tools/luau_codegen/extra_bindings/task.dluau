@@ -20,3 +20,5 @@ declare task: TaskNamespace
 declare time: TimeNamespace
 
 declare function loadstring(source: string, chunkName: string?): (((...any) -> ...any)?, string?)
+
+declare function warn(...: any): ()
