@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core/Runtime.hpp"
+#include "framework/callback/LuaTrampolineRegistry.hpp"
 #include "framework/lifecycle/Lifecycle.hpp"
 #include "framework/usertype/WeakRefShutdown.hpp"
 
@@ -78,13 +79,14 @@ namespace luax {
             owned.swap(ownedQueue);
 
             for (auto& entry : owned) {
-                if (auto lock = entry.weak.lock()) {
-                    if (auto* obj = lock.data()) {
-                        obj->release();
-                    }
+                if (entry.ptr && entry.weak.valid()) {
+                    entry.ptr->release();
                 }
+                // Leak owned weak so ~WeakRef does not pool-forget after release above, ig this works.
+                detail::leakWeakRefDuringShutdown(std::move(entry.weak));
             }
             borrowed.clear();
         }
+        drainDeferredTrampolineReleases();
     }
 } // namespace luax

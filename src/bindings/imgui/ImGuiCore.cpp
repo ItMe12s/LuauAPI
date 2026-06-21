@@ -206,7 +206,6 @@ namespace {
 
 #if !defined(LUAUAPI_HOST_TESTS)
     #include "bindings/imgui/ImGuiFontRegistry.hpp"
-    #include "framework/usertype/DeferredRelease.hpp"
     #include "render3d/gpu/GlUtil.hpp"
 
     #include <Geode/Geode.hpp>
@@ -264,7 +263,6 @@ namespace luax {
                 imguiFontRebuildAtlas();
             })
             .draw([] {
-                drainDeferredReleases();
                 ImGuiDrawScheduler::get().drawAll();
             });
         s_initialized = true;

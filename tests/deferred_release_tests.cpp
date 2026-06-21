@@ -9,16 +9,20 @@
 
 namespace {
     struct DeferGuard {
-        DeferGuard() {
+        explicit DeferGuard(bool pool = false) {
             luax::Runtime::setMainThreadId(std::this_thread::get_id());
             luax::Runtime::setShuttingDownForTests(false);
             geode::detail::weakRefSimulateForgetForTests() = true;
+            geode::detail::weakRefSimulatePoolForTests() = pool;
+            geode::detail::weakRefLockRetainsForTests() = false;
             luax::drainDeferredReleases();
         }
 
         ~DeferGuard() {
             luax::Runtime::setShuttingDownForTests(false);
             geode::detail::weakRefSimulateForgetForTests() = false;
+            geode::detail::weakRefSimulatePoolForTests() = false;
+            geode::detail::weakRefLockRetainsForTests() = false;
             luax::drainDeferredReleases();
             luax::Runtime::resetForTests();
         }
@@ -89,18 +93,7 @@ TEST_CASE("duplicate owned deferred releases do not double-free") {
     REQUIRE_FALSE(geode::detail::isLiveCocosObject(obj));
 }
 
-TEST_CASE("deferred owned release skips stale object at drain") {
-    DeferGuard guard;
-
-    auto* obj = new cocos2d::CCObject();
-    luax::deferOwnedRelease(obj);
-    obj->release();
-    REQUIRE_FALSE(geode::detail::isLiveCocosObject(obj));
-
-    REQUIRE_NOTHROW(luax::drainDeferredReleases());
-}
-
-TEST_CASE("deferred owned release skips object freed by scene teardown at drain") {
+TEST_CASE("deferred owned release skips dead object at drain") {
     DeferGuard guard;
 
     auto* node = new cocos2d::CCNode();
@@ -109,4 +102,43 @@ TEST_CASE("deferred owned release skips object freed by scene teardown at drain"
     REQUIRE_FALSE(geode::detail::isLiveCocosObject(node));
 
     REQUIRE_NOTHROW(luax::drainDeferredReleases());
+}
+
+TEST_CASE("owned drain uses valid guard without lock retain side effects") {
+    DeferGuard guard;
+    geode::detail::weakRefLockRetainsForTests() = true;
+
+    auto* obj = new cocos2d::CCObject();
+    obj->retain();
+    REQUIRE(obj->retainCount() == 2);
+
+    luax::deferOwnedRelease(obj);
+    REQUIRE(obj->releaseCallCount() == 0);
+
+    luax::drainDeferredReleases();
+    REQUIRE(obj->releaseCallCount() == 1);
+    REQUIRE(obj->retainCount() == 1);
+
+    obj->release();
+    REQUIRE_FALSE(geode::detail::isLiveCocosObject(obj));
+}
+
+TEST_CASE("borrowed and owned same object with pool-like WeakRef") {
+    DeferGuard guard(true);
+
+    auto* obj = new cocos2d::CCObject();
+    obj->retain();
+    REQUIRE(obj->retainCount() == 2);
+
+    luax::deferBorrowedRelease(geode::WeakRef<cocos2d::CCObject>(obj));
+    luax::deferOwnedRelease(obj);
+    REQUIRE(obj->retainCount() == 4);
+
+    luax::drainDeferredReleases();
+    REQUIRE(geode::detail::isLiveCocosObject(obj));
+    REQUIRE(obj->retainCount() == 2);
+
+    obj->release();
+    obj->release();
+    REQUIRE_FALSE(geode::detail::isLiveCocosObject(obj));
 }

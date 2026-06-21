@@ -33,6 +33,16 @@ namespace geode::detail {
         static bool enabled = false;
         return enabled;
     }
+
+    inline bool& weakRefSimulatePoolForTests() {
+        static bool enabled = false;
+        return enabled;
+    }
+
+    inline bool& weakRefLockRetainsForTests() {
+        static bool enabled = false;
+        return enabled;
+    }
 }
 
 namespace cocos2d {
@@ -49,6 +59,7 @@ namespace cocos2d {
         void retain() { ++m_retainCount; }
         CCObject* autorelease() { return this; }
         void release() {
+            ++m_releaseCallCount;
             if (m_retainCount > 0) {
                 --m_retainCount;
             }
@@ -59,11 +70,13 @@ namespace cocos2d {
 
         unsigned int retainCount() const { return m_retainCount; }
         std::uint64_t objectId() const { return m_objectId; }
+        std::size_t releaseCallCount() const { return m_releaseCallCount; }
 
     private:
         static inline std::uint64_t s_nextObjectId = 0;
         std::uint64_t m_objectId = 0;
         unsigned int m_retainCount = 1;
+        std::size_t m_releaseCallCount = 0;
     };
 
     class CCNode : public CCObject {};
@@ -97,10 +110,34 @@ namespace geode {
 
             T* data() const { return ptr; }
             T* ptr = nullptr;
+
+            ~Lock() {
+                if (retained && ptr && geode::detail::isLiveCocosObject(ptr)) {
+                    ptr->release();
+                }
+            }
+
+            Lock(Lock const&) = delete;
+            Lock& operator=(Lock const&) = delete;
+            Lock(Lock&& other) noexcept
+                : ptr(other.ptr), retained(other.retained) {
+                other.ptr = nullptr;
+                other.retained = false;
+            }
+
+        private:
+            friend class WeakRef;
+            Lock(T* ptr_, bool retained_) : ptr(ptr_), retained(retained_) {}
+
+            bool retained = false;
         };
 
         WeakRef() = default;
-        explicit WeakRef(T* ptr) : m_ptr(ptr), m_objectId(ptr ? ptr->objectId() : 0) {}
+        explicit WeakRef(T* ptr) : m_ptr(ptr), m_objectId(ptr ? ptr->objectId() : 0) {
+            if (m_ptr && geode::detail::weakRefSimulatePoolForTests()) {
+                m_ptr->retain();
+            }
+        }
 
         WeakRef(WeakRef&& other) noexcept
             : m_ptr(other.m_ptr), m_objectId(other.m_objectId) {
@@ -126,15 +163,24 @@ namespace geode {
 
         Lock lock() const {
             if (!m_ptr || !detail::isLiveCocosObject(m_ptr)) {
-                return Lock{};
+                return Lock{nullptr, false};
             }
             if (m_ptr->objectId() != m_objectId) {
-                return Lock{};
+                return Lock{nullptr, false};
             }
-            return Lock{m_ptr};
+            if (detail::weakRefLockRetainsForTests()) {
+                m_ptr->retain();
+                return Lock{m_ptr, true};
+            }
+            return Lock{m_ptr, false};
         }
 
-        bool valid() const { return static_cast<bool>(lock()); }
+        bool valid() const {
+            if (!m_ptr || !detail::isLiveCocosObject(m_ptr)) {
+                return false;
+            }
+            return m_ptr->objectId() == m_objectId;
+        }
 
     private:
         void forget() {
@@ -148,7 +194,12 @@ namespace geode {
                 m_objectId = 0;
                 return;
             }
-            if (detail::weakRefSimulateForgetForTests()) {
+            if (detail::weakRefSimulatePoolForTests()) {
+                if (detail::weakRefSimulateForgetForTests() || m_ptr->retainCount() == 1) {
+                    m_ptr->release();
+                }
+            }
+            else if (detail::weakRefSimulateForgetForTests()) {
                 m_ptr->release();
             }
             m_ptr = nullptr;

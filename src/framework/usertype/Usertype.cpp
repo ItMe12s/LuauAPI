@@ -2,6 +2,7 @@
 
 #include "core/Config.hpp"
 #include "core/Runtime.hpp"
+#include "framework/callback/LuaTrampolineRegistry.hpp"
 #include "framework/usertype/DeferredRelease.hpp"
 #include "framework/usertype/Fields.hpp"
 #include "framework/usertype/OpaqueHandle.hpp"
@@ -153,6 +154,8 @@ namespace luax::detail {
         if (!block) return;
         if (block->flags & kUserdataOwnedFlag) {
             if (block->ptr && !Runtime::isShuttingDown()) {
+                Fields::evict(block->ptr);
+                evictTrampolinesForAnchor(block->ptr);
                 untrackLuaRetain(block->ptr);
                 deferOwnedRelease(block->ptr);
             }

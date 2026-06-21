@@ -68,6 +68,29 @@ TEST_CASE("Orphan trampoline registry rejects registrations past cap") {
     luax::clearOrphanTrampolines();
 }
 
+TEST_CASE("evictTrampolinesForAnchor defers physical release until drain") {
+    RuntimeGuard guard;
+    luax::clearOrphanTrampolines();
+
+    struct Anchor : cocos2d::CCObject {};
+
+    struct Trampoline : cocos2d::CCObject {};
+
+    auto* anchor = new Anchor();
+    auto* trampoline = new Trampoline();
+    luax::anchorTrampoline(anchor, trampoline);
+    REQUIRE(trampoline->retainCount() == 2);
+
+    luax::evictTrampolinesForAnchor(anchor);
+    REQUIRE(trampoline->retainCount() == 2);
+
+    luax::drainDeferredTrampolineReleases();
+    REQUIRE(trampoline->retainCount() == 1);
+
+    anchor->release();
+    trampoline->release();
+}
+
 TEST_CASE("Delegate table lookup prunes invalid refs while shared_ptr is alive") {
     RuntimeGuard guard;
     auto* runtime = luax::Runtime::getOrCreate();

@@ -20,10 +20,16 @@ namespace luax {
             return anchors;
         }
 
+        std::vector<cocos2d::CCObject*>& deferredTrampolineReleases() {
+            static std::vector<cocos2d::CCObject*> queue;
+            return queue;
+        }
+
         bool s_shutdownHookRegistered = false;
         bool s_orphanCapWarned = false;
 
         void clearOrphanTrampolinesImpl() {
+            deferredTrampolineReleases().clear();
             if (Runtime::isShuttingDown()) {
                 orphanTrampolines().clear();
                 anchorMap().clear();
@@ -58,16 +64,34 @@ namespace luax {
         ensureTrampolineShutdownHook();
     }
 
-    void evictTrampolinesIfFinalRelease(cocos2d::CCObject* anchor) {
+    void evictTrampolinesForAnchor(cocos2d::CCObject* anchor) {
         if (!anchor) return;
         auto& map = anchorMap();
         auto it = map.find(anchor);
         if (it == map.end()) return;
-        if (anchor->retainCount() > 1) return;
+        auto& queue = deferredTrampolineReleases();
         for (auto* trampoline : it->second) {
-            trampoline->release();
+            queue.push_back(trampoline);
         }
         map.erase(it);
+    }
+
+    void evictTrampolinesIfFinalRelease(cocos2d::CCObject* anchor) {
+        if (!anchor || anchor->retainCount() > 1) return;
+        evictTrampolinesForAnchor(anchor);
+    }
+
+    void drainDeferredTrampolineReleases() {
+        if (Runtime::isShuttingDown()) {
+            deferredTrampolineReleases().clear();
+            return;
+        }
+        auto pending = std::move(deferredTrampolineReleases());
+        for (auto* trampoline : pending) {
+            if (trampoline) {
+                trampoline->release();
+            }
+        }
     }
 
     void registerOrphanTrampoline(cocos2d::CCObject* trampoline) {
