@@ -60,9 +60,8 @@ namespace luax {
             registerOrphanTrampoline(trampoline);
             return;
         }
-        if (auto* handler = dynamic_cast<LuaCocosHandlerBase*>(trampoline)) {
-            handler->bindAnchor(anchor);
-        }
+        auto* handler = static_cast<LuaCocosHandlerBase*>(trampoline);
+        handler->bindAnchor(anchor);
         trampoline->retain();
         anchorMap()[anchor].push_back(trampoline);
         ensureTrampolineShutdownHook();

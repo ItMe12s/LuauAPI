@@ -2,6 +2,11 @@
 
 [Check the GitHub commits for more details](https://github.com/ItMe12s/LuauAPI).
 
+## v0.1.0-beta.8
+
+- Switched `geode.fields` cleanup to Geode type casts instead of pointer reinterpretation.
+- Fixed CCObject casting for callback trampoline anchor binding.
+
 ## v0.1.0-beta.7
 
 - Redesigned deferred CCObject release drain for cross-platform stability.
