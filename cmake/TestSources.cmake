@@ -4,6 +4,7 @@ set(LUAUAPI_HOST_TEST_RUNTIME_SOURCES
     src/framework/callback/LuaCocosHandler.cpp
     src/framework/usertype/Fields.cpp
     src/framework/usertype/OpaqueHandle.cpp
+    src/framework/usertype/DeferredRelease.cpp
     src/framework/usertype/Usertype.cpp
     src/framework/usertype/UsertypeRegistry.cpp
     src/framework/callback/LuaDelegate.cpp

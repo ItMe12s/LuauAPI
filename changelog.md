@@ -2,6 +2,10 @@
 
 [Check the GitHub commits for more details](https://github.com/ItMe12s/LuauAPI).
 
+## v0.1.0-beta.7
+
+- Redesigned deferred CCObject release drain for WeakRef pool safety and universal thread adoption.
+
 ## v0.1.0-beta.6
 
 - Added global `warn` for script logging at warn level.

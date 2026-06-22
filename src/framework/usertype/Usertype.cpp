@@ -161,7 +161,7 @@ namespace luax::detail {
             }
         }
         else if (Runtime::isShuttingDown()) {
-            leakWeakRefDuringShutdown(std::move(block->weak));
+            parkWeakRefForPoolSafety(std::move(block->weak));
         }
         else {
             deferBorrowedRelease(std::move(block->weak));

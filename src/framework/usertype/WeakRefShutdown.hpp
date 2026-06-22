@@ -6,16 +6,15 @@
 #include <type_traits>
 
 namespace luax::detail {
-    // I forgor :skull:
     template <class T>
-    inline void leakWeakRefDuringShutdown(geode::WeakRef<T>&& ref) {
+    inline void parkWeakRefForPoolSafety(geode::WeakRef<T>&& ref) {
         static_assert(
             std::is_base_of_v<cocos2d::CCObject, T>,
-            "leakWeakRefDuringShutdown requires CCObject-derived T"
+            "parkWeakRefForPoolSafety requires CCObject-derived T"
         );
-        static auto* const leaked = [] {
+        static auto* const parked = [] {
             return new std::deque<geode::WeakRef<T>>();
         }();
-        leaked->push_back(std::move(ref));
+        parked->push_back(std::move(ref));
     }
 } // namespace luax::detail

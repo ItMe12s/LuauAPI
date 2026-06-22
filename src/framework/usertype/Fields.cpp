@@ -103,7 +103,7 @@ namespace luax {
         if (it == tables.end()) return;
         it->second.table.reset();
         if (Runtime::isShuttingDown()) {
-            detail::leakWeakRefDuringShutdown(std::move(it->second.owner));
+            detail::parkWeakRefForPoolSafety(std::move(it->second.owner));
         }
         tables.erase(it);
     }
@@ -129,7 +129,7 @@ namespace luax {
         if (Runtime::isShuttingDown()) {
             for (auto& [_, entry] : tables) {
                 entry.table.reset();
-                detail::leakWeakRefDuringShutdown(std::move(entry.owner));
+                detail::parkWeakRefForPoolSafety(std::move(entry.owner));
             }
             tables.clear();
             return;

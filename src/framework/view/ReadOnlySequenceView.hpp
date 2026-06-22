@@ -72,7 +72,7 @@ namespace luax::detail {
         if (block) {
             using Block = typename BackingPolicy::Block;
             if (Runtime::isShuttingDown()) {
-                leakWeakRefDuringShutdown(std::move(block->owner));
+                parkWeakRefForPoolSafety(std::move(block->owner));
             }
             block->~Block();
         }

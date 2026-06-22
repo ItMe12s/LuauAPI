@@ -10,6 +10,7 @@
 #include <imgui.h>
 #include <lua.h>
 #include <string>
+#include <thread>
 
 namespace {
     using namespace luax;
@@ -388,11 +389,9 @@ namespace luax {
     void ImGuiDrawScheduler::drawAll() {
         auto* runtime = Runtime::getIfInitialized();
         if (!runtime || m_store.empty()) return;
-#if defined(GEODE_IS_MACOS)
         if (!Runtime::isMainThread()) {
             Runtime::setMainThreadId(std::this_thread::get_id());
         }
-#endif
 
         m_inFrame = true;
 
