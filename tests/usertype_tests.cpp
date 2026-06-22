@@ -452,7 +452,6 @@ TEST_CASE("tryNodeCandidate accepts CCNode-derived userdata from registered meta
     REQUIRE(std::string_view(lua_tostring(L, -1)) == "marker");
     lua_pop(L, 3);
 
-    lua_pop(L, 1);
     node->release();
 }
 
@@ -561,6 +560,5 @@ TEST_CASE("tryNodeCandidate accepts CCNode lower-bound dynamic userdata") {
     REQUIRE(std::string_view(lua_tostring(L, -1)) == "marker");
     lua_pop(L, 3);
 
-    lua_pop(L, 1);
     node->release();
 }
