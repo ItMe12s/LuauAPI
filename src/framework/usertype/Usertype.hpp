@@ -22,6 +22,7 @@
 
 namespace luax {
     constexpr std::uint32_t kUserdataOwnedFlag = 1u;
+    constexpr std::uint32_t kUserdataEphemeralFlag = 2u;
 
     struct UserdataBlock {
         cocos2d::CCObject* ptr = nullptr;
@@ -91,6 +92,7 @@ namespace luax {
         bool hasBase(TypeInfo const& info, std::uint32_t targetTag);
         void pushUserdataOwned(lua_State* L, cocos2d::CCObject* obj, TypeInfo const& info);
         void pushUserdataBorrowed(lua_State* L, cocos2d::CCObject* obj, TypeInfo const& info);
+        void pushCallbackArg(lua_State* L, cocos2d::CCObject* obj);
         TypeInfo const* findPushTypeInfo(cocos2d::CCObject* obj, std::type_index staticLowerBound);
     } // namespace detail
 

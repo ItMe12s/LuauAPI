@@ -149,6 +149,82 @@ class CallbackFailureLoggingGuardTests(unittest.TestCase):
         body = function_body(source, "LuaMenuHandler::onCallback", ret="void")
         self.assertIn("invokeCocosCallback", body)
 
+    def test_invoke_cocos_callback_retain_handler_in_invoke_scope(self) -> None:
+        source = read_repo_file(LUA_COCOS)
+        body = function_body(source, "invokeCocosCallback", ret="bool")
+        self.assertRegex(body, r"ScopedRetain\s+keepHandler\s*\(\s*handler\s*\)")
+        self.assertIn("->retain()", source)
+        self.assertNotIn("DeferredSingleRelease", body)
+        self.assertRegex(body, r"auto\s+cb\s*=\s*callback")
+
+    def test_anchor_trampoline_binds_handler_anchor(self) -> None:
+        source = read_repo_file("src/framework/callback/LuaTrampolineRegistry.cpp")
+        body = function_body(source, "anchorTrampoline", ret="void")
+        self.assertIn("bindAnchor", body)
+
+    def test_invoke_cocos_callback_skips_dead_anchor(self) -> None:
+        source = read_repo_file(LUA_COCOS)
+        body = function_body(source, "invokeCocosCallback", ret="bool")
+        self.assertIn("anchorAlive", body)
+
+    def test_menu_handler_passes_this_to_invoke(self) -> None:
+        source = read_repo_file(LUA_COCOS)
+        body = function_body(source, "LuaMenuHandler::onCallback", ret="void")
+        self.assertRegex(body, r"if\s*\(\s*!anchorAlive\(\)\s*\)\s*return")
+        self.assertRegex(body, r"invokeCocosCallback\(\s*this,\s*m_callback,")
+        self.assertNotRegex(body, r"ScopedRetain\s+keepThis")
+        self.assertNotRegex(body, r"ScopedRetain\s+keepSender")
+        self.assertNotIn("pushBorrowed", body)
+        self.assertIn("pushCallbackArg", body)
+        self.assertNotIn("DeferredSingleRelease", body)
+        self.assertNotIn("auto callback = m_callback", body)
+        self.assertRegex(body, r"invokeCocosCallback\([\s\S]*,\s*sender\s*\)")
+
+    def test_handler_entrypoints_check_anchor_no_local_retain(self) -> None:
+        source = read_repo_file(LUA_COCOS)
+        for method in (
+            "LuaMenuHandler::onCallback",
+            "LuaScheduleHandler::onSchedule",
+            "LuaCallFuncHandler::onCallFunc",
+            "LuaCallFuncNHandler::onCallFuncN",
+            "LuaCallFuncNDHandler::onCallFuncND",
+            "LuaCallFuncOHandler::onCallFuncO",
+        ):
+            with self.subTest(method=method):
+                body = function_body(source, method, ret="void")
+                self.assertIn("anchorAlive()", body, f"{method} must check anchorAlive")
+                self.assertNotRegex(
+                    body,
+                    r"ScopedRetain\s+keepThis",
+                    f"{method} must not retain handler locally",
+                )
+
+    def test_invoke_cocos_callback_retain_arg_in_invoke_scope(self) -> None:
+        source = read_repo_file(LUA_COCOS)
+        body = function_body(source, "invokeCocosCallback", ret="bool")
+        self.assertIn("argKeepalive", body)
+        self.assertRegex(body, r"ScopedRetain\s+keepHandler\s*\(\s*handler\s*\)")
+        self.assertRegex(body, r"ScopedRetain\s+keepArg\s*\(\s*argKeepalive\s*\)")
+        self.assertNotRegex(body, r"ScopedRetain\s+keepSender")
+        self.assertNotRegex(body, r"ScopedRetain\s+keepNode")
+        self.assertNotRegex(body, r"ScopedRetain\s+keepObj")
+
+    def test_scoped_retain_dtor_no_weakref(self) -> None:
+        source = read_repo_file(LUA_COCOS)
+        dtor_start = source.find("~ScopedRetain()")
+        self.assertNotEqual(dtor_start, -1, "missing ScopedRetain dtor")
+        dtor_end = source.find("\n        };", dtor_start)
+        dtor_body = source[dtor_start:dtor_end]
+        self.assertNotIn("WeakRef", dtor_body)
+
+    def test_menu_callback_arg_uses_ephemeral_push(self) -> None:
+        usertype_source = read_repo_file(USERTYPE)
+        dtor_body = function_body(usertype_source, "destructorDispatch", ret="void")
+        self.assertIn("kUserdataEphemeralFlag", dtor_body)
+        self.assertNotIn("evictTrampolinesForAnchor", dtor_body)
+        self.assertIn("pushCallbackArg", usertype_source)
+        self.assertIn("kUserdataEphemeralFlag", usertype_source)
+
     def test_delegate_table_invoke_logs_failures(self) -> None:
         source = read_repo_file(LUA_DELEGATE)
         body = function_body(source, "invokeTableField", ret="bool")

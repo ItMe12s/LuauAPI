@@ -2,6 +2,7 @@
 
 #include "core/Config.hpp"
 #include "core/Runtime.hpp"
+#include "framework/callback/LuaCocosHandler.hpp"
 #include "framework/lifecycle/Lifecycle.hpp"
 
 #include <Geode/Geode.hpp>
@@ -58,6 +59,9 @@ namespace luax {
         if (!anchor) {
             registerOrphanTrampoline(trampoline);
             return;
+        }
+        if (auto* handler = dynamic_cast<LuaCocosHandlerBase*>(trampoline)) {
+            handler->bindAnchor(anchor);
         }
         trampoline->retain();
         anchorMap()[anchor].push_back(trampoline);

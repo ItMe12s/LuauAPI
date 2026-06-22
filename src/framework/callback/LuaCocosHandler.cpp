@@ -5,15 +5,53 @@
 #include "framework/usertype/Usertype.hpp"
 
 namespace luax {
+    void LuaCocosHandlerBase::bindAnchor(cocos2d::CCObject* anchor) {
+        m_anchor = geode::WeakRef<cocos2d::CCObject>(anchor);
+        m_anchorBound = true;
+    }
+
+    bool LuaCocosHandlerBase::anchorAlive() const {
+        return !m_anchorBound || m_anchor.valid();
+    }
+
     namespace detail {
+        struct ScopedRetain {
+            cocos2d::CCObject* obj = nullptr;
+            bool held = false;
+
+            explicit ScopedRetain(cocos2d::CCObject* o) : obj(o) {
+                if (obj) {
+                    obj->retain();
+                    held = true;
+                }
+            }
+
+            ~ScopedRetain() {
+                if (held && obj) obj->release();
+            }
+        };
+
         bool invokeCocosCallback(
-            std::shared_ptr<LuaCallback>& callback, int nargs, std::string_view context,
-            LuaCallback::PushArgsFn pushArgs, void* pushCtx
+            cocos2d::CCObject* handler, std::shared_ptr<LuaCallback>& callback, int nargs,
+            std::string_view context, LuaCallback::PushArgsFn pushArgs, void* pushCtx,
+            cocos2d::CCObject* argKeepalive
         ) {
-            if (!callback || !callback->valid()) {
+            if (handler) {
+                auto* cocosHandler = static_cast<LuaCocosHandlerBase*>(handler);
+                if (!cocosHandler->anchorAlive()) {
+                    return false;
+                }
+                if (handler->retainCount() < 1) {
+                    return false;
+                }
+            }
+            ScopedRetain keepHandler(handler);
+            ScopedRetain keepArg(argKeepalive);
+            auto cb = callback;
+            if (!cb || !cb->valid()) {
                 return false;
             }
-            if (!callback->invoke(nargs, 0, context, kHookScriptDeadlineMs, pushArgs, pushCtx)) {
+            if (!cb->invoke(nargs, 0, context, kHookScriptDeadlineMs, pushArgs, pushCtx)) {
                 logCallbackFailure(context);
                 return false;
             }
@@ -26,20 +64,24 @@ namespace luax {
     }
 
     void LuaMenuHandler::onCallback(cocos2d::CCObject* sender) {
+        if (!anchorAlive()) return;
+
         struct Ctx {
             cocos2d::CCObject* sender;
         };
 
         Ctx ctx{sender};
         detail::invokeCocosCallback(
+            this,
             m_callback,
             1,
             "menu callback",
             +[](lua_State* L, void* raw) {
                 auto* c = static_cast<Ctx*>(raw);
-                Usertype<cocos2d::CCObject>::pushBorrowed(L, c->sender);
+                detail::pushCallbackArg(L, c->sender);
             },
-            &ctx
+            &ctx,
+            sender
         );
     }
 
@@ -48,12 +90,15 @@ namespace luax {
     }
 
     void LuaScheduleHandler::onSchedule(float dt) {
+        if (!anchorAlive()) return;
+
         struct Ctx {
             float dt;
         };
 
         Ctx ctx{dt};
         detail::invokeCocosCallback(
+            this,
             m_callback,
             1,
             "schedule callback",
@@ -70,7 +115,8 @@ namespace luax {
     }
 
     void LuaCallFuncHandler::onCallFunc() {
-        detail::invokeCocosCallback(m_callback, 0, "callfunc callback", nullptr, nullptr);
+        if (!anchorAlive()) return;
+        detail::invokeCocosCallback(this, m_callback, 0, "callfunc callback", nullptr, nullptr);
     }
 
     LuaCallFuncNHandler* LuaCallFuncNHandler::create(lua_State* L, int fnIndex) {
@@ -78,20 +124,24 @@ namespace luax {
     }
 
     void LuaCallFuncNHandler::onCallFuncN(cocos2d::CCNode* node) {
+        if (!anchorAlive()) return;
+
         struct Ctx {
             cocos2d::CCNode* node;
         };
 
         Ctx ctx{node};
         detail::invokeCocosCallback(
+            this,
             m_callback,
             1,
             "callfuncn callback",
             +[](lua_State* L, void* raw) {
                 auto* c = static_cast<Ctx*>(raw);
-                Usertype<cocos2d::CCNode>::pushBorrowed(L, c->node);
+                detail::pushCallbackArg(L, c->node);
             },
-            &ctx
+            &ctx,
+            node
         );
     }
 
@@ -100,6 +150,8 @@ namespace luax {
     }
 
     void LuaCallFuncNDHandler::onCallFuncND(cocos2d::CCNode* node, void* data) {
+        if (!anchorAlive()) return;
+
         struct Ctx {
             cocos2d::CCNode* node;
             void* data;
@@ -107,16 +159,18 @@ namespace luax {
 
         Ctx ctx{node, data};
         detail::invokeCocosCallback(
+            this,
             m_callback,
             2,
             "callfuncnd callback",
             +[](lua_State* L, void* raw) {
                 auto* c = static_cast<Ctx*>(raw);
-                Usertype<cocos2d::CCNode>::pushBorrowed(L, c->node);
+                detail::pushCallbackArg(L, c->node);
                 if (c->data == nullptr) lua_pushnil(L);
                 else pushOpaqueHandle(L, c->data);
             },
-            &ctx
+            &ctx,
+            node
         );
     }
 
@@ -125,20 +179,24 @@ namespace luax {
     }
 
     void LuaCallFuncOHandler::onCallFuncO(cocos2d::CCObject* obj) {
+        if (!anchorAlive()) return;
+
         struct Ctx {
             cocos2d::CCObject* obj;
         };
 
         Ctx ctx{obj};
         detail::invokeCocosCallback(
+            this,
             m_callback,
             1,
             "callfunco callback",
             +[](lua_State* L, void* raw) {
                 auto* c = static_cast<Ctx*>(raw);
-                Usertype<cocos2d::CCObject>::pushBorrowed(L, c->obj);
+                detail::pushCallbackArg(L, c->obj);
             },
-            &ctx
+            &ctx,
+            obj
         );
     }
 } // namespace luax

@@ -6,8 +6,8 @@
 
 - Redesigned deferred CCObject release drain for cross-platform stability.
 - Fixed `geode.fields` throwing `unordered_map::at: key not found`.
-- Fixed dynamic node/object userdata losing subtype methods (e.g. `setVisible`, `getLayout`).
-- Fixed crash when using mods that reorder or redraw UI during scene draw.
+- Fixed dynamic node/object userdata losing subtype methods.
+- Fixed crash when spamming menu callbacks.
 
 ## v0.1.0-beta.6
 

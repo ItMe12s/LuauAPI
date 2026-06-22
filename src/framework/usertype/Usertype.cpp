@@ -2,7 +2,6 @@
 
 #include "core/Config.hpp"
 #include "core/Runtime.hpp"
-#include "framework/callback/LuaTrampolineRegistry.hpp"
 #include "framework/usertype/DeferredRelease.hpp"
 #include "framework/usertype/Fields.hpp"
 #include "framework/usertype/OpaqueHandle.hpp"
@@ -152,10 +151,13 @@ namespace luax::detail {
     void destructorDispatch(lua_State*, void* ud) {
         auto* block = static_cast<UserdataBlock*>(ud);
         if (!block) return;
+        if (block->flags & kUserdataEphemeralFlag) {
+            block->~UserdataBlock();
+            return;
+        }
         if (block->flags & kUserdataOwnedFlag) {
             if (block->ptr && !Runtime::isShuttingDown()) {
                 Fields::evict(block->ptr);
-                evictTrampolinesForAnchor(block->ptr);
                 untrackLuaRetain(block->ptr);
                 deferOwnedRelease(block->ptr);
             }
@@ -351,6 +353,29 @@ namespace luax::detail {
             return;
         }
         initUserdataBlock(L, obj, info, false);
+    }
+
+    void pushCallbackArg(lua_State* L, cocos2d::CCObject* obj) {
+        if (!obj) {
+            lua_pushnil(L);
+            return;
+        }
+        auto const* info = findPushTypeInfo(obj, std::type_index(typeid(cocos2d::CCObject)));
+        if (!info || !isValidUserdataTag(info->tag)) {
+            lua_pushnil(L);
+            return;
+        }
+        auto* storage =
+            lua_newuserdatatagged(L, sizeof(UserdataBlock), static_cast<int>(kSharedUsertypeTag));
+        auto* block = new (storage) UserdataBlock();
+        block->ptr = obj;
+        block->flags = kUserdataOwnedFlag | kUserdataEphemeralFlag;
+        block->typeTag = info->tag;
+        if (!assignUsertypeMetatable(L, *info)) {
+            block->~UserdataBlock();
+            lua_pop(L, 1);
+            lua_pushnil(L);
+        }
     }
 
     TypeInfo const* findPushTypeInfo(cocos2d::CCObject* obj, std::type_index staticLowerBound) {

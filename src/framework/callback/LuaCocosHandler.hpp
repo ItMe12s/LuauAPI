@@ -2,6 +2,7 @@
 
 #include "framework/callback/LuaCallback.hpp"
 
+#include <Geode/utils/cocos.hpp>
 #include <cocos2d.h>
 #include <lua.h>
 #include <memory>
@@ -9,14 +10,21 @@
 namespace luax {
     namespace detail {
         bool invokeCocosCallback(
-            std::shared_ptr<LuaCallback>& callback, int nargs, std::string_view context,
-            LuaCallback::PushArgsFn pushArgs, void* pushCtx
+            cocos2d::CCObject* handler, std::shared_ptr<LuaCallback>& callback, int nargs,
+            std::string_view context, LuaCallback::PushArgsFn pushArgs, void* pushCtx,
+            cocos2d::CCObject* argKeepalive = nullptr
         );
     }
 
     class LuaCocosHandlerBase : public cocos2d::CCObject {
+    public:
+        void bindAnchor(cocos2d::CCObject* anchor);
+        bool anchorAlive() const;
+
     protected:
         std::shared_ptr<LuaCallback> m_callback;
+        geode::WeakRef<cocos2d::CCObject> m_anchor;
+        bool m_anchorBound = false;
 
         template <class Handler>
         static Handler* create(lua_State* L, int fnIndex) {
