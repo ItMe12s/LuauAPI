@@ -31,6 +31,7 @@ set(LUAUAPI_HOST_TEST_RUNTIME_SOURCES
     src/bindings/imgui/ImGuiPopupsTablesMenus.cpp
     src/bindings/imgui/ImGuiStyleFonts.cpp
     tests/host/ImGuiHostStub.cpp
+    tests/host/Geode/utils/cocos.cpp
     src/bindings/task/TaskScheduler.cpp
     src/require/BytecodeCacheKey.cpp
     src/require/Requirer.cpp

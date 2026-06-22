@@ -244,8 +244,8 @@ public:
             "win",
         )
         self.assertIn("self->getChildByID(arg0)", cxx)
-        self.assertIn("luax::Usertype<cocos2d::CCObject>::pushBorrowedDynamic(L, result);", cxx)
-        self.assertNotIn("Usertype<cocos2d::CCNode>::pushBorrowed", cxx)
+        self.assertIn("luax::Usertype<cocos2d::CCNode>::pushBorrowedDynamic(L, result);", cxx)
+        self.assertNotIn("Usertype<cocos2d::CCObject>::pushBorrowedDynamic(L, result);", cxx)
 
     def test_unsupported_scanned_method_is_skipped_by_filter(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")

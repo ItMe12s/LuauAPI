@@ -460,8 +460,8 @@ class EmitStackCheckTests(unittest.TestCase):
             class_name="CCNode",
         )
         text = "".join(push_value(info, "result"))
-        self.assertIn("luax::Usertype<cocos2d::CCObject>::pushBorrowedDynamic(L, result);", text)
-        self.assertNotIn("Usertype<cocos2d::CCNode>::pushBorrowed", text)
+        self.assertIn("luax::Usertype<cocos2d::CCNode>::pushBorrowedDynamic(L, result);", text)
+        self.assertNotIn("Usertype<cocos2d::CCObject>::pushBorrowedDynamic(L, result);", text)
 
     def test_ccnode_push_uses_dynamic_owned(self) -> None:
         info = TypeInfo(
@@ -471,8 +471,8 @@ class EmitStackCheckTests(unittest.TestCase):
             class_name="CCNode",
         )
         text = "".join(push_return(info, "result", True))
-        self.assertIn("luax::Usertype<cocos2d::CCObject>::pushOwnedDynamic(L, result);", text)
-        self.assertNotIn("Usertype<cocos2d::CCNode>::pushOwned", text)
+        self.assertIn("luax::Usertype<cocos2d::CCNode>::pushOwnedDynamic(L, result);", text)
+        self.assertNotIn("Usertype<cocos2d::CCObject>::pushOwnedDynamic(L, result);", text)
 
     def test_specific_object_push_unchanged(self) -> None:
         info = TypeInfo(

@@ -1,8 +1,9 @@
 #include "framework/usertype/Usertype.hpp"
 
-#include <Geode/Geode.hpp>
 #include <fmt/format.h>
 #include <new>
+#include <string>
+#include <string_view>
 
 namespace luax::detail {
     UsertypeRegistry& UsertypeRegistry::get() {
@@ -50,6 +51,38 @@ namespace luax::detail {
         return typeIt == m_byType.end() ? nullptr : &typeIt->second;
     }
 
+    void UsertypeRegistry::indexName(std::type_index idx, std::string_view name) {
+        if (name.empty()) {
+            return;
+        }
+        for (auto it = m_byName.begin(); it != m_byName.end();) {
+            if (it->second == idx) {
+                it = m_byName.erase(it);
+            }
+            else {
+                ++it;
+            }
+        }
+        m_byName.insert_or_assign(std::string(name), idx);
+    }
+
+    TypeInfo const* UsertypeRegistry::findByName(std::string_view name) const {
+        if (name.empty()) {
+            return nullptr;
+        }
+        auto it = m_byName.find(std::string(name));
+        if (it != m_byName.end()) {
+            return findInfo(it->second);
+        }
+        auto const sep = name.rfind("::");
+        if (sep == std::string_view::npos) {
+            return nullptr;
+        }
+        auto shortName = name.substr(sep + 2);
+        auto shortIt = m_byName.find(std::string(shortName));
+        return shortIt == m_byName.end() ? nullptr : findInfo(shortIt->second);
+    }
+
 #if defined(LUAUAPI_HOST_TESTS)
     void UsertypeRegistry::setNextTagForTests(std::uint32_t tag) {
         m_next = tag;
@@ -58,6 +91,7 @@ namespace luax::detail {
     void UsertypeRegistry::resetForTests() {
         m_byType.clear();
         m_byTag.clear();
+        m_byName.clear();
         m_next = kFirstDynamicUsertypeTag;
     }
 #endif

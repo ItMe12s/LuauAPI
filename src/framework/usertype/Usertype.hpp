@@ -13,6 +13,7 @@
 #include <lua.h>
 #include <lualib.h>
 #include <string>
+#include <string_view>
 #include <type_traits>
 #include <typeindex>
 #include <typeinfo>
@@ -40,13 +41,7 @@ namespace luax {
             std::string mtName;
             std::vector<std::uint32_t> baseClosure;
             bool isNode = false;
-            bool (*matches)(cocos2d::CCObject* obj) = nullptr;
         };
-
-        template <class T>
-        bool matchesRegisteredType(cocos2d::CCObject* obj) {
-            return geode::cast::typeinfo_cast<T*>(obj) != nullptr;
-        }
 
         struct UserdataCandidate {
             cocos2d::CCObject* obj = nullptr;
@@ -61,13 +56,9 @@ namespace luax {
             geode::Result<TypeInfo*> ensureInfo(std::type_index idx);
             TypeInfo const* findInfo(std::type_index idx) const;
             TypeInfo const* findByTag(std::uint32_t tag) const;
+            TypeInfo const* findByName(std::string_view name) const;
+            void indexName(std::type_index idx, std::string_view name);
 
-            template <class Fn>
-            void forEachRegistered(Fn&& fn) const {
-                for (auto const& entry : m_byType) {
-                    fn(entry.second);
-                }
-            }
 #if defined(LUAUAPI_HOST_TESTS)
             void setNextTagForTests(std::uint32_t tag);
             void resetForTests();
@@ -76,6 +67,7 @@ namespace luax {
         private:
             std::unordered_map<std::type_index, TypeInfo> m_byType;
             std::unordered_map<std::uint32_t, std::type_index> m_byTag;
+            std::unordered_map<std::string, std::type_index> m_byName;
             std::uint32_t m_next = kFirstDynamicUsertypeTag;
         };
 
@@ -99,7 +91,7 @@ namespace luax {
         bool hasBase(TypeInfo const& info, std::uint32_t targetTag);
         void pushUserdataOwned(lua_State* L, cocos2d::CCObject* obj, TypeInfo const& info);
         void pushUserdataBorrowed(lua_State* L, cocos2d::CCObject* obj, TypeInfo const& info);
-        TypeInfo const* findPushTypeInfo(cocos2d::CCObject* obj);
+        TypeInfo const* findPushTypeInfo(cocos2d::CCObject* obj, std::type_index staticLowerBound);
     } // namespace detail
 
     template <class T>
@@ -137,7 +129,6 @@ namespace luax {
             info.name = nm;
             info.mtName = std::string("luax:") + nm;
             info.isNode = std::is_base_of_v<cocos2d::CCNode, T>;
-            info.matches = &detail::matchesRegisteredType<T>;
 
             if (baseTags.size() > 1) {
                 return geode::Err(fmt::format("{} supports at most one direct base tag", nm));
@@ -166,6 +157,7 @@ namespace luax {
             if (baseTags.size() > 0) {
                 detail::chainMethodTable(L, info, *baseTags.begin());
             }
+            reg.indexName(std::type_index(typeid(T)), nm);
             lua_setuserdatadtor(
                 L, static_cast<int>(detail::kSharedUsertypeTag), &detail::destructorDispatch
             );
@@ -240,35 +232,39 @@ namespace luax {
             detail::pushUserdataBorrowed(L, static_cast<cocos2d::CCObject*>(obj), *info);
         }
 
-        static void pushBorrowedDynamic(lua_State* L, cocos2d::CCObject* obj)
-            requires std::is_same_v<T, cocos2d::CCObject>
+        static void pushBorrowedDynamic(lua_State* L, T* obj)
+            requires std::is_same_v<T, cocos2d::CCObject> || std::is_same_v<T, cocos2d::CCNode>
         {
             if (!obj) {
                 lua_pushnil(L);
                 return;
             }
-            auto const* info = detail::findPushTypeInfo(obj);
+            auto const* info = detail::findPushTypeInfo(
+                static_cast<cocos2d::CCObject*>(obj), std::type_index(typeid(T))
+            );
             if (!info) {
                 lua_pushnil(L);
                 return;
             }
-            detail::pushUserdataBorrowed(L, obj, *info);
+            detail::pushUserdataBorrowed(L, static_cast<cocos2d::CCObject*>(obj), *info);
         }
 
-        static void pushOwnedDynamic(lua_State* L, cocos2d::CCObject* obj)
-            requires std::is_same_v<T, cocos2d::CCObject>
+        static void pushOwnedDynamic(lua_State* L, T* obj)
+            requires std::is_same_v<T, cocos2d::CCObject> || std::is_same_v<T, cocos2d::CCNode>
         {
             if (!obj) {
                 lua_pushnil(L);
                 return;
             }
-            auto const* info = detail::findPushTypeInfo(obj);
+            auto const* info = detail::findPushTypeInfo(
+                static_cast<cocos2d::CCObject*>(obj), std::type_index(typeid(T))
+            );
             if (!info) {
                 lua_pushnil(L);
                 return;
             }
-            detail::pushUserdataOwned(L, obj, *info);
-            if (!retainLuaRef(obj, info->name.c_str())) {
+            detail::pushUserdataOwned(L, static_cast<cocos2d::CCObject*>(obj), *info);
+            if (!retainLuaRef(static_cast<cocos2d::CCObject*>(obj), info->name.c_str())) {
                 lua_pop(L, 1);
                 lua_pushnil(L);
             }

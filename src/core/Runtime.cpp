@@ -13,6 +13,8 @@
 #include "require/PathSandbox.hpp"
 #if defined(LUAUAPI_HOST_TESTS)
     #include "framework/usertype/Usertype.hpp"
+
+    #include <Geode/utils/cocos.hpp>
 #endif
 
 #include <Geode/Geode.hpp>
@@ -374,6 +376,7 @@ namespace luax {
     void Runtime::resetForTests() {
         shuttingDownStorage().store(false, std::memory_order_release);
         invalidateCurrentModCache();
+        geode::cocos::clearObjectNamesForTests();
         detail::UsertypeRegistry::get().resetForTests();
         auto& runtime = runtimeStorage();
         runtime.reset();

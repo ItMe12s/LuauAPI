@@ -353,7 +353,7 @@ namespace luax::detail {
         initUserdataBlock(L, obj, info, false);
     }
 
-    TypeInfo const* findPushTypeInfo(cocos2d::CCObject* obj) {
+    TypeInfo const* findPushTypeInfo(cocos2d::CCObject* obj, std::type_index staticLowerBound) {
         if (!obj) {
             return nullptr;
         }
@@ -363,7 +363,14 @@ namespace luax::detail {
                 return info;
             }
         }
-        if (auto const* fallback = reg.findInfo(std::type_index(typeid(cocos2d::CCObject)))) {
+        if (auto runtimeName = geode::cocos::getObjectName(obj); !runtimeName.empty()) {
+            if (auto const* info = reg.findByName(runtimeName)) {
+                if (isValidUserdataTag(info->tag) && !info->name.empty()) {
+                    return info;
+                }
+            }
+        }
+        if (auto const* fallback = reg.findInfo(staticLowerBound)) {
             if (isValidUserdataTag(fallback->tag) && !fallback->name.empty()) {
                 return fallback;
             }

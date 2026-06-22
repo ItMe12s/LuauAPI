@@ -3,6 +3,7 @@
 #include "framework/usertype/Usertype.hpp"
 #include "host/lua_test_helpers.hpp"
 
+#include <Geode/utils/cocos.hpp>
 #include <RuntimeTypes.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <lua.h>
@@ -471,7 +472,37 @@ TEST_CASE("tryNodeCandidate rejects non-CCNode userdata") {
     obj->release();
 }
 
-TEST_CASE("findPushTypeInfo falls back to CCObject for unknown dynamic subtype") {
+TEST_CASE("findPushTypeInfo falls back to CCNode for unknown node subclasses") {
+    RuntimeGuard guard;
+    auto* runtime = luax::Runtime::getOrCreate();
+    auto* L = runtime->state();
+    REQUIRE(L != nullptr);
+
+    REQUIRE(luax::Usertype<cocos2d::CCObject>::registerType(L, "CCObject").isOk());
+    REQUIRE(
+        luax::Usertype<cocos2d::CCNode>::registerType(
+            L, "CCNode", {luax::Usertype<cocos2d::CCObject>::tag()}
+        )
+            .isOk()
+    );
+    luax::Usertype<cocos2d::CCNode>::method(L, "nodePing", &testMethod);
+
+    auto* node = new AliasNode();
+    auto const* info = luax::detail::findPushTypeInfo(node, std::type_index(typeid(cocos2d::CCNode)));
+    REQUIRE(info != nullptr);
+    REQUIRE(info->name == "CCNode");
+
+    luax::Usertype<cocos2d::CCNode>::pushBorrowedDynamic(L, node);
+    REQUIRE(lua_isuserdata(L, -1));
+
+    lua_getfield(L, -1, "nodePing");
+    REQUIRE(lua_isfunction(L, -1));
+    lua_pop(L, 2);
+
+    node->release();
+}
+
+TEST_CASE("findPushTypeInfo resolves registered runtime type name") {
     RuntimeGuard guard;
     auto* runtime = luax::Runtime::getOrCreate();
     auto* L = runtime->state();
@@ -485,16 +516,51 @@ TEST_CASE("findPushTypeInfo falls back to CCObject for unknown dynamic subtype")
     luax::Usertype<TestNode>::method(L, "ping", &testMethod);
 
     auto* node = new AliasNode();
-    auto const* info = luax::detail::findPushTypeInfo(node);
+    geode::cocos::setObjectNameForTests(node, "cocos2d::TestNode");
+    auto const* info =
+        luax::detail::findPushTypeInfo(node, std::type_index(typeid(cocos2d::CCObject)));
     REQUIRE(info != nullptr);
-    REQUIRE(info->name == "CCObject");
+    REQUIRE(info->name == "TestNode");
 
     luax::Usertype<cocos2d::CCObject>::pushBorrowedDynamic(L, node);
     REQUIRE(lua_isuserdata(L, -1));
 
     lua_getfield(L, -1, "ping");
-    REQUIRE(lua_isnil(L, -1));
+    REQUIRE(lua_isfunction(L, -1));
     lua_pop(L, 2);
 
+    node->release();
+}
+
+TEST_CASE("tryNodeCandidate accepts CCNode lower-bound dynamic userdata") {
+    RuntimeGuard guard;
+    auto* runtime = luax::Runtime::getOrCreate();
+    auto* L = runtime->state();
+
+    REQUIRE(luax::Usertype<cocos2d::CCObject>::registerType(L, "CCObject").isOk());
+    REQUIRE(
+        luax::Usertype<cocos2d::CCNode>::registerType(
+            L, "CCNode", {luax::Usertype<cocos2d::CCObject>::tag()}
+        )
+            .isOk()
+    );
+
+    auto* node = new AliasNode();
+    luax::Usertype<cocos2d::CCNode>::pushBorrowedDynamic(L, node);
+    REQUIRE(luax::detail::tryNodeCandidate(L, -1) == node);
+
+    luax::Fields::push(L, luax::detail::tryNodeCandidate(L, -1));
+    REQUIRE(lua_istable(L, -1));
+    lua_pushliteral(L, "marker");
+    lua_setfield(L, -2, "token");
+    lua_pop(L, 1);
+
+    lua_getfield(L, -1, "m_fields");
+    REQUIRE(lua_istable(L, -1));
+    lua_getfield(L, -1, "token");
+    REQUIRE(std::string_view(lua_tostring(L, -1)) == "marker");
+    lua_pop(L, 3);
+
+    lua_pop(L, 1);
     node->release();
 }

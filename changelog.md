@@ -4,7 +4,10 @@
 
 ## v0.1.0-beta.7
 
-- Redesigned deferred CCObject release drain for WeakRef pool safety and universal thread adoption.
+- Redesigned deferred CCObject release drain for cross-platform stability.
+- Fixed `geode.fields` throwing `unordered_map::at: key not found`.
+- Fixed dynamic node/object userdata losing subtype methods (e.g. `setVisible`, `getLayout`).
+- Fixed crash when using mods that reorder or redraw UI during scene draw.
 
 ## v0.1.0-beta.6
 
