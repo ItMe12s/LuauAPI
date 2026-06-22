@@ -3,7 +3,7 @@
 #if !defined(LUAUAPI_HOST_TESTS)
     #include "render3d/viewport/CCViewportFrame.hpp"
 
-    #include <Geode/utils/cocos.hpp>
+    #include <Geode/Geode.hpp>
     #include <cocos2d.h>
 #endif
 
@@ -29,7 +29,7 @@ namespace luax::render3d {
         if (!node) {
             return nullptr;
         }
-        return static_cast<CCViewportFrame*>(node.data());
+        return geode::cast::typeinfo_cast<CCViewportFrame*>(node.data());
     }
 
     unsigned int TextureAsset::viewportColorTexture() const {

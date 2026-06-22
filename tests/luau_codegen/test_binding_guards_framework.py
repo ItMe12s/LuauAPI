@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import unittest
 
 from binding_guard_support import (
@@ -17,6 +18,7 @@ from binding_guard_support import (
     TASK_BINDING,
     TASK_SCHEDULER,
     USERTYPE,
+    _REPO_ROOT,
     function_body,
     read_repo_file,
     registered_cocos_fields,
@@ -339,6 +341,51 @@ class ErrorSemanticsGuardTests(unittest.TestCase):
         source = read_repo_file("docs/reference/lua/delegates.md")
         self.assertIn("logs the failure", source)
         self.assertIn("method default", source)
+
+
+class CastConventionGuardTests(unittest.TestCase):
+    def test_fields_evict_uses_typeinfo_cast(self) -> None:
+        source = read_repo_file("src/framework/usertype/Fields.cpp")
+        for signature in (
+            "void Fields::evict(cocos2d::CCObject* object)",
+            "void Fields::evictIfFinalRelease(cocos2d::CCObject* object)",
+        ):
+            with self.subTest(signature=signature):
+                start = source.find(signature)
+                self.assertNotEqual(start, -1, f"missing {signature}")
+                rest = source[start + len(signature) :]
+                next_fn = rest.find("\n    void Fields::")
+                body = source[
+                    start : start + len(signature) + (next_fn if next_fn != -1 else len(rest))
+                ]
+                self.assertIn("geode::cast::typeinfo_cast<cocos2d::CCNode*>", body)
+                self.assertNotIn("reinterpret_cast", body)
+
+    def test_trampoline_anchor_uses_static_cast_not_typeinfo(self) -> None:
+        source = read_repo_file("src/framework/callback/LuaTrampolineRegistry.cpp")
+        body = function_body(source, "anchorTrampoline", ret="void")
+        self.assertIn("static_cast<LuaCocosHandlerBase*>", body)
+        self.assertNotIn("typeinfo_cast", body)
+
+    def test_no_reinterpret_cast_cocos2d_in_framework_or_render3d(self) -> None:
+        roots = ("src/framework", "src/render3d")
+        offenders: list[str] = []
+        for root in roots:
+            for dirpath, _dirnames, filenames in os.walk(
+                os.path.join(_REPO_ROOT, root.replace("/", os.sep))
+            ):
+                for filename in filenames:
+                    if not filename.endswith((".cpp", ".hpp", ".h")):
+                        continue
+                    rel = os.path.relpath(os.path.join(dirpath, filename), _REPO_ROOT)
+                    text = read_repo_file(rel.replace("\\", "/"))
+                    if "reinterpret_cast<cocos2d::" in text:
+                        offenders.append(rel.replace("\\", "/"))
+        self.assertFalse(
+            offenders,
+            "framework/render3d must not reinterpret_cast cocos2d types; "
+            f"use geode::cast::typeinfo_cast: {offenders}",
+        )
 
 
 class FreeFnManifestSyncTests(unittest.TestCase):

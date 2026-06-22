@@ -5,6 +5,7 @@
 ## v0.1.0-beta.8
 
 - Switched `geode.fields` cleanup to Geode type casts instead of pointer reinterpretation.
+- Switched viewport and ccCArray view element casting to Geode type casts.
 - Fixed CCObject casting for callback trampoline anchor binding.
 
 ## v0.1.0-beta.7

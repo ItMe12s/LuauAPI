@@ -47,7 +47,8 @@ namespace luax {
             }
 
             static T* at(Block const& block, std::size_t index) {
-                return static_cast<T*>(block.array->arr[index]);
+                auto* obj = static_cast<cocos2d::CCObject*>(block.array->arr[index]);
+                return geode::cast::typeinfo_cast<T*>(obj);
             }
 
             static bool canPushBorrowed(BorrowedArgs const& args) {
