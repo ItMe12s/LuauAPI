@@ -292,8 +292,8 @@ namespace luax::detail {
     cocos2d::CCNode* tryNodeCandidate(lua_State* L, int idx) {
         auto candidate = tryCandidate(L, idx);
         if (!candidate.obj || !candidate.info) return nullptr;
-        if (auto* typed = geode::cast::typeinfo_cast<cocos2d::CCNode*>(candidate.obj)) {
-            return typed;
+        if (candidate.info->isNode) {
+            return static_cast<cocos2d::CCNode*>(candidate.obj);
         }
         auto const* nodeInfo =
             UsertypeRegistry::get().findInfo(std::type_index(typeid(cocos2d::CCNode)));

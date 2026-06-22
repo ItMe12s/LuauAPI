@@ -424,6 +424,53 @@ TEST_CASE("Usertype pushBorrowedDynamic preserves runtime subclass type") {
     node->release();
 }
 
+TEST_CASE("tryNodeCandidate accepts CCNode-derived userdata from registered metadata") {
+    RuntimeGuard guard;
+    auto* runtime = luax::Runtime::getOrCreate();
+    auto* L = runtime->state();
+
+    REQUIRE(luax::Usertype<cocos2d::CCObject>::registerType(L, "CCObject").isOk());
+    REQUIRE(
+        luax::Usertype<TestNode>::registerType(L, "TestNode", {luax::Usertype<cocos2d::CCObject>::tag()})
+            .isOk()
+    );
+
+    auto* node = new TestNode();
+    luax::Usertype<TestNode>::pushBorrowed(L, node);
+    REQUIRE(luax::detail::tryNodeCandidate(L, -1) == node);
+
+    luax::Fields::push(L, luax::detail::tryNodeCandidate(L, -1));
+    REQUIRE(lua_istable(L, -1));
+    lua_pushliteral(L, "marker");
+    lua_setfield(L, -2, "token");
+    lua_pop(L, 1);
+
+    lua_getfield(L, -1, "m_fields");
+    REQUIRE(lua_istable(L, -1));
+    lua_getfield(L, -1, "token");
+    REQUIRE(std::string_view(lua_tostring(L, -1)) == "marker");
+    lua_pop(L, 3);
+
+    lua_pop(L, 1);
+    node->release();
+}
+
+TEST_CASE("tryNodeCandidate rejects non-CCNode userdata") {
+    RuntimeGuard guard;
+    auto* runtime = luax::Runtime::getOrCreate();
+    auto* L = runtime->state();
+
+    struct PlainObject : cocos2d::CCObject {};
+
+    REQUIRE(luax::Usertype<PlainObject>::registerType(L, "PlainObject").isOk());
+
+    auto* obj = new PlainObject();
+    luax::Usertype<PlainObject>::pushBorrowed(L, obj);
+    REQUIRE(luax::detail::tryNodeCandidate(L, -1) == nullptr);
+    lua_pop(L, 1);
+    obj->release();
+}
+
 TEST_CASE("findPushTypeInfo matcher fallback exposes registered ancestor type") {
     RuntimeGuard guard;
     auto* runtime = luax::Runtime::getOrCreate();
