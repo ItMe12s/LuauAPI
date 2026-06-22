@@ -471,7 +471,7 @@ TEST_CASE("tryNodeCandidate rejects non-CCNode userdata") {
     obj->release();
 }
 
-TEST_CASE("findPushTypeInfo matcher fallback exposes registered ancestor type") {
+TEST_CASE("findPushTypeInfo falls back to CCObject for unknown dynamic subtype") {
     RuntimeGuard guard;
     auto* runtime = luax::Runtime::getOrCreate();
     auto* L = runtime->state();
@@ -487,16 +487,13 @@ TEST_CASE("findPushTypeInfo matcher fallback exposes registered ancestor type") 
     auto* node = new AliasNode();
     auto const* info = luax::detail::findPushTypeInfo(node);
     REQUIRE(info != nullptr);
-    REQUIRE(info->name == "TestNode");
+    REQUIRE(info->name == "CCObject");
 
     luax::Usertype<cocos2d::CCObject>::pushBorrowedDynamic(L, node);
     REQUIRE(lua_isuserdata(L, -1));
 
     lua_getfield(L, -1, "ping");
-    REQUIRE(lua_isfunction(L, -1));
-    lua_pushvalue(L, -2);
-    REQUIRE(lua_pcall(L, 1, 1, 0) == 0);
-    REQUIRE(std::string_view(lua_tostring(L, -1)) == "called");
+    REQUIRE(lua_isnil(L, -1));
     lua_pop(L, 2);
 
     node->release();

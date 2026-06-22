@@ -13,42 +13,13 @@ namespace luax {
             geode::WeakRef<cocos2d::CCNode> owner;
         };
 
-        constexpr std::size_t kLazyPurgeInterval = 64;
-
         std::unordered_map<cocos2d::CCNode*, FieldEntry>& fieldTables() {
             static std::unordered_map<cocos2d::CCNode*, FieldEntry> tables;
             return tables;
         }
 
-        std::size_t& fieldAccessCounter() {
-            static std::size_t counter = 0;
-            return counter;
-        }
-
         bool entryStillOwnsNode(FieldEntry const& entry, cocos2d::CCNode* node) {
-            auto lock = entry.owner.lock();
-            return lock && lock.data() == node;
-        }
-
-        void purgeStaleFieldEntries() {
-            auto& tables = fieldTables();
-            for (auto it = tables.begin(); it != tables.end();) {
-                auto lock = it->second.owner.lock();
-                if (!lock || lock.data() != it->first) {
-                    it->second.table.reset();
-                    it = tables.erase(it);
-                    continue;
-                }
-                ++it;
-            }
-        }
-
-        void maybePurgeStaleFieldEntries() {
-            auto& counter = fieldAccessCounter();
-            if (++counter % kLazyPurgeInterval != 0) {
-                return;
-            }
-            purgeStaleFieldEntries();
+            return node && entry.owner.valid();
         }
     } // namespace
 
@@ -76,8 +47,6 @@ namespace luax {
             lua_pushnil(L);
             return;
         }
-
-        maybePurgeStaleFieldEntries();
 
         auto& tables = fieldTables();
         auto it = tables.find(node);
@@ -110,16 +79,14 @@ namespace luax {
 
     void Fields::evict(cocos2d::CCObject* object) {
         if (!object) return;
-        if (auto* node = geode::cast::typeinfo_cast<cocos2d::CCNode*>(object)) {
-            evict(node);
-        }
+        evict(reinterpret_cast<cocos2d::CCNode*>(object));
     }
 
     void Fields::evictIfFinalRelease(cocos2d::CCObject* object) {
         if (!object) return;
         auto& tables = fieldTables();
         auto it = tables.find(reinterpret_cast<cocos2d::CCNode*>(object));
-        if (it == tables.end() || !entryStillOwnsNode(it->second, it->first)) return;
+        if (it == tables.end() || !it->second.owner.valid()) return;
         if (object->retainCount() > 1) return;
         evict(it->first);
     }

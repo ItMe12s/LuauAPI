@@ -363,29 +363,6 @@ namespace luax::detail {
                 return info;
             }
         }
-        // O(number of registered types), maybe cached dynamic-type map if someone complains.
-        TypeInfo const* best = nullptr;
-        reg.forEachRegistered([&](TypeInfo const& info) {
-            if (!info.matches || !isValidUserdataTag(info.tag) || info.name.empty()) {
-                return;
-            }
-            if (!info.matches(obj)) {
-                return;
-            }
-            if (!best || info.baseClosure.size() > best->baseClosure.size()) {
-                best = &info;
-            }
-        });
-        if (best) {
-            return best;
-        }
-        if (geode::cast::typeinfo_cast<cocos2d::CCNode*>(obj)) {
-            if (auto const* nodeInfo = reg.findInfo(std::type_index(typeid(cocos2d::CCNode)))) {
-                if (isValidUserdataTag(nodeInfo->tag) && !nodeInfo->name.empty()) {
-                    return nodeInfo;
-                }
-            }
-        }
         if (auto const* fallback = reg.findInfo(std::type_index(typeid(cocos2d::CCObject)))) {
             if (isValidUserdataTag(fallback->tag) && !fallback->name.empty()) {
                 return fallback;
