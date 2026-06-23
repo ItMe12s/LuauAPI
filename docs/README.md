@@ -112,7 +112,3 @@ Codegen:
 - [Getting started](getting-started/overview.md)
 - [globals](reference/lua/globals.md)
 - [Codegen](contributor/codegen/codegen.md)
-
-## Source
-
-- `docs/`

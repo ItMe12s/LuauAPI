@@ -119,8 +119,7 @@ See [Limits and errors](../cpp/limits-and-errors.md) for callback budgets and or
 ## Source
 
 - `src/framework/callback/LuaCallback.hpp`
-- `src/framework/callback/LuaMenuHandler.hpp`
-- `src/framework/callback/LuaSelectorHandler.hpp`
+- `src/framework/callback/LuaCocosHandler.hpp`
 - `src/framework/callback/LuaTrampolineRegistry.hpp`
 - `tools/luau_codegen/convert/marshalling.py`
 - `tools/luau_codegen/convert/type_map.py`

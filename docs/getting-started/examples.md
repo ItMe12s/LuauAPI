@@ -207,11 +207,6 @@ geode.hook("geode.gd.MenuLayer:init/0", {
 - [hooks](../reference/lua/hooks.md)
 - [game objects](../reference/lua/game-objects.md)
 - [tasks and time](../reference/lua/tasks.md)
-- [fs](../reference/lua/fs.md)
-- [json](../reference/lua/json.md)
-- [mod](../reference/lua/mod.md)
-- [web](../reference/lua/web.md)
-- [websocket](../reference/lua/websocket.md)
 - [imgui](../reference/lua/imgui.md)
 - [gd3d](../reference/lua/gd3d.md)
 

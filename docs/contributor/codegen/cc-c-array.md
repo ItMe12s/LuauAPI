@@ -41,6 +41,7 @@ The view userdata indexes `1..num` from `ccCArray::arr`, pushes borrowed usertyp
 
 - [Codegen](codegen.md)
 - [Nested containers](nested-containers.md)
+- [Pair containers](pair-containers.md)
 
 ## Source
 

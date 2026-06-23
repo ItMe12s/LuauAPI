@@ -85,6 +85,7 @@ and the intersected stub omits platform-only members entirely.
 ## Related
 
 - [Codegen](codegen.md)
+- [Nested containers](nested-containers.md)
 - [Testing](../testing.md)
 
 ## Source

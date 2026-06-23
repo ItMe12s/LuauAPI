@@ -72,6 +72,7 @@ These shapes were skipped before nested support. After regen they should bind:
 ## Related
 
 - [Pair containers](pair-containers.md)
+- [ccCArray read-only fields](cc-c-array.md)
 - [Codegen](codegen.md)
 
 ## Source

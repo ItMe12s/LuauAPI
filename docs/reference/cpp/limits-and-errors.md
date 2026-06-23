@@ -226,7 +226,6 @@ Lifecycle error strings are defined in `src/bindings/websocket/WebSocketInternal
 | `path is not a regular file` | `loadMesh` target is not a file | `nil, err` |
 | `glTF file exceeds maximum read size` | File over read cap | `nil, err` |
 | `glTF file cannot be read: ...` | Open or read failure | `nil, err` |
-| `glTF file cannot be opened: ...` | Open failure | `nil, err` |
 | `glTF data is empty` | Empty buffer | `nil, err` |
 | `glTF data exceeds maximum read size` | In-memory data over cap | `nil, err` |
 | `failed to parse glTF: ...` | cgltf parse failure | `nil, err` |
@@ -244,8 +243,11 @@ Lifecycle error strings are defined in `src/bindings/websocket/WebSocketInternal
 | `%s: material handle is invalid` | Stale or bad material userdata | Lua error |
 | `gd3d.Material.new: expected color field` | Missing color in constructor table | Lua error |
 | `positions exceed maximum vertex count` | Procedural mesh over vertex cap | `nil, err` on `gd3d.mesh.new` |
+| `base64 image data is empty` | Empty embedded glTF image buffer | `nil, err` |
+| `image data is empty` | Empty image input | `nil, err` on texture load |
 | `encoded image exceeds maximum read size` | Image file over read cap | `nil, err` on texture or glTF image load |
 | `failed to decode image: ...` | stb decode failure | `nil, err` |
+| `decoded image has invalid dimensions` | Zero or negative width or height after decode | `nil, err` |
 | `decoded image exceeds maximum size` | Decoded pixel buffer over cap | `nil, err` |
 
 Sandbox path errors from [fs](../lua/fs.md) also apply to `loadMesh` roots and paths.

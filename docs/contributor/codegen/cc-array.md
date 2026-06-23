@@ -57,6 +57,7 @@ It falls back to `CCNode` for node objects, then `CCObject`.
 
 - [Codegen](codegen.md)
 - [ccCArray read-only fields](cc-c-array.md)
+- [Nested containers](nested-containers.md)
 
 ## Source
 

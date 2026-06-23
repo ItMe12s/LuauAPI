@@ -322,8 +322,7 @@ See [delegates](../../reference/lua/delegates.md) for how scripts use delegate t
 
 ## Related
 
-- [Codegen](../../contributor/codegen/codegen.md)
-- [game objects](game-objects.md)
+- [game objects](../../reference/lua/game-objects.md)
 - [Platform parity](platform-parity.md)
 - [Pair containers](pair-containers.md)
 - [Nested containers](nested-containers.md)

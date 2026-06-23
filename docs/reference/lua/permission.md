@@ -52,7 +52,6 @@ end
 
 - [geode.utils](utils.md)
 - [base64](base64.md)
-- [geode.utils](utils.md)
 - [callbacks](callbacks.md)
 - [globals](globals.md)
 
