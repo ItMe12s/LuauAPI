@@ -129,8 +129,13 @@ Boundary pushes and flushes stay on the main thread with no locking.
 
 ## Toggle
 
-`luax::diag::setRecordingEnabled(false)` turns off all recording.
+Recording is off by default. Turn on **Enable Crash Context File** (`enable-crash-sidecar`) in LuauAPI mod settings under User Settings.
+The toggle applies immediately without a restart.
+
+`luax::diag::setRecordingEnabled(false)` turns off all recording at the API level.
 The gate is checked at the top of every record path.
+
+See [hooks](../../reference/lua/hooks.md) for when the sidecar helps with native hook crashes.
 
 ## Empty mod context
 

@@ -5,6 +5,7 @@
 ## v0.1.0-beta.9
 
 - Added crash sidecar that writes `luauapi-last-context.txt` with Luau context before native faults.
+  Opt-in via **Enable Crash Context File** in User Settings (default off).
 - Updated `print`, `warn`, and panic to log with the owning mod id instead of `[lua]`.
 - Fixed crash in the global `CCObject::release` hook when releasing untracked objects during teardown.
 

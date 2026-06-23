@@ -51,6 +51,12 @@
 				"input": true
 			}
 		},
+		"enable-crash-sidecar": {
+			"type": "bool",
+			"name": "Enable Crash Context File",
+			"description": "Writes luauapi-last-context.txt to the crashlogs folder before native crashes. Pair it with the Geode crashlog when reporting bugs. Uses a small amount of disk I/O while enabled.",
+			"default": false
+		},
 		"title-enable-developer-mode": {
 			"type": "title",
 			"name": "Developer Settings"

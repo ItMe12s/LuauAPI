@@ -48,10 +48,13 @@ Plus, you get fewer crashes and clear, easy-to-understand error logging.
 
 ### LuauAPI Crashlog
 
+Find **Enable Crash Context File** in LuauAPI mod settings under User Settings.
+Turn it on for debugging only, it can cause lag.
+
 When the game crashed and you see a `Geode Crash Handler` window,
 click `Open crashlog folder` to get the `luauapi-last-context.txt` file.
 
-It will be overwritten on the next lauch so copy it before restarting the game if needed.
+It will be overwritten on the next launch so copy it before restarting the game if needed.
 
 ### Developer Mode
 

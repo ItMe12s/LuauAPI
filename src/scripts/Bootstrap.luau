@@ -15,11 +15,14 @@ geode.hook("geode.gd.MenuLayer:init/0", {
 
             local director = cc2d.CCDirector.sharedDirector(); if not director then return end
             local winSize = director:getWinSize();
-            local luauCrashLabel = cc2d.CCLabelBMFont.create("luauapi-last-context.txt was overwritten on restart", "goldFont.fnt")
+            local crashHint = if geode.Mod.getSettingValue("enable-crash-sidecar")
+                then "luauapi-last-context.txt was overwritten on restart!"
+                else 'Turn on "Enable Crash Context File" in LuauAPI settings to save Luau crash context.'
+            local luauCrashLabel = cc2d.CCLabelBMFont.create(crashHint, "chatFont.fnt")
             if not luauCrashLabel then return end
             luauCrashLabel:setID(modId .. "/luau-crash-label")
             luauCrashLabel:setZOrder(999)
-            luauCrashLabel:setScale(0.5)
+            luauCrashLabel:setScale(0.67)
             luauCrashLabel:setAnchorPoint({ x = 0.5, y = 0.5 })
             luauCrashLabel:setPosition({ x = winSize.width / 2, y = 80 })
             crashedLayer:addChild(luauCrashLabel)

@@ -41,8 +41,9 @@ namespace luax::diag {
             return s;
         }
 
+        // Just for test split, could use static bool g_enabled but nah.
         bool& enabledFlag() {
-            static bool enabled = true;
+            static bool enabled = false;
             return enabled;
         }
 
