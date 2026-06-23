@@ -4,7 +4,7 @@
 
 How to build interface elements from a script using the Geode UI classes exposed under `geode.*`.
 Covers the factory pattern, the layout system, and quick popups.
-For signatures, use editor autocomplete. For class behavior, see the [Geode docs](https://docs.geode-sdk.org/).
+Signatures come from [type stubs](type-stubs.md). For class behavior, see the [Geode docs](https://docs.geode-sdk.org/).
 
 ## Which UI to use
 
@@ -84,8 +84,8 @@ The stub also exposes a few free functions on `geode` itself:
 - `geode.openModsList()` to open the in-game mod list
 - `geode.Notification.create(text, icon, duration)` for toast overlays
 
-LuauAPI does not document every UI factory signature here.
-Use editor autocomplete from [type stubs](type-stubs.md) and read behavior in the [Geode SDK docs](https://docs.geode-sdk.org/).
+Not every factory is listed here.
+For the rest, read [type stubs](type-stubs.md) and the [Geode SDK docs](https://docs.geode-sdk.org/).
 
 ## ImGui mod menus
 

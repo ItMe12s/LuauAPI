@@ -2,7 +2,7 @@
 
 ## Summary
 
-Some C++ APIs take a delegate pointer, an object (list below) with virtual methods:
+Some C++ APIs take a delegate pointer for an interface with virtual methods:
 
 - touch delegates
 - keyboard delegates
@@ -11,7 +11,7 @@ Some C++ APIs take a delegate pointer, an object (list below) with virtual metho
 - similar interface delegates
 
 In Luau, pass a table with method names as keys and Luau functions as values.
-The runtime creates a C++ trampoline that calls the matching table function for each virtual method.
+The runtime builds a C++ trampoline that calls the matching table function for each virtual method.
 
 ## Table shape
 
@@ -30,9 +30,12 @@ layer:registerWithTouchDispatcher({
 }, 0, false)
 ```
 
-When a callback errors or times out, LuauAPI logs the failure and returns the method default.
-When a method is missing from the table, LuauAPI returns the method default without logging.
-`bool` returns `false`, `int` and `float`/`double` return `0`, `string` returns empty, and object methods return `nil`.
+Default behavior on error or missing method:
+
+- A callback that errors or times out is logged, and the method default is returned.
+- A missing method returns the default without logging.
+- Defaults: `bool` returns `false`, `int`/`float`/`double` return `0`, `string` returns empty, object methods return `nil`.
+
 Method names and argument types match the C++ interface. Multi-touch variants use `CCSet`.
 
 ## Keyboard delegate

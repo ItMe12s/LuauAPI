@@ -29,8 +29,6 @@ Start at [globals](reference/lua/globals.md) for the full Lua module index.
 
 ### Lua
 
-Start at [globals](reference/lua/globals.md) for the full index and error shapes.
-
 | Group | Page | Role |
 | --- | --- | --- |
 | Core | [hooks](reference/lua/hooks.md) | Hook game functions |

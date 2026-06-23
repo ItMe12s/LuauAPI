@@ -86,7 +86,7 @@ handle:disconnect()
 
 ## Listen to every key example
 
-Use `listen` when you care about many keys or want one place to filter them.
+Use `listen` to filter many keys in one place.
 
 ```lua
 local action = geode.KeyboardInputData.Action
@@ -121,7 +121,7 @@ end)
 
 ## Modifier shortcut example
 
-Test modifiers with `bit32.band`. Combine held modifiers the same way when building keybind tables.
+Test and combine modifiers with `bit32.band`.
 
 ```lua
 local keys = geode.cocos.enumKeyCodes
@@ -144,8 +144,7 @@ end)
 
 ## Rewrite mutable data example
 
-The callback receives a copy of the event data table.
-Changes you make are written back before later listeners run.
+The callback gets a copy of the event data. Your changes are written back before later listeners run, so use this sparingly.
 
 ```lua
 local keys = geode.cocos.enumKeyCodes
@@ -158,8 +157,6 @@ geode.KeyboardInputEvent.listen(function(data)
     return false
 end)
 ```
-
-Use this sparingly. It affects every listener that runs after yours.
 
 ## Priority example
 

@@ -3,13 +3,9 @@
 ## Summary
 
 `geode.utils.web` exposes Geode async web requests to Lua.
-Requests run on the web worker. Callbacks run on the main thread.
-See [Getting started](../../getting-started/overview.md) for the shared runtime threading rule.
-See Threading below for intercept and listener rules.
-This binding does not expose `openLinkUnsafe` or any `*Sync` request method.
-File writes stay inside mod sandbox roots.
-For signatures, use editor autocomplete from [type stubs](type-stubs.md).
-See [Examples](../../getting-started/examples.md).
+Requests run on the web worker and callbacks run on the main thread.
+This binding does not expose `openLinkUnsafe` or any `*Sync` method, and file writes stay inside mod sandbox roots.
+For signatures, use editor autocomplete from [type stubs](type-stubs.md). Threading and Security are covered below.
 
 ## Entry points
 

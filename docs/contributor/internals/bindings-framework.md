@@ -220,9 +220,7 @@ Field setters call `assignMap`, `assignSet`, or `assignPrimitiveVector` instead 
 Handwritten bindings that expose tagged or untagged userdata share `registerTaggedMetatable` in
 `src/framework/stack/TaggedMetatable.hpp`.
 
-The helper registers a named metatable from a `luaL_Reg` method table, sets `__index`,
-
-locks `__metatable`, and optionally adds:
+The helper registers a named metatable from a `luaL_Reg` method table, sets `__index`, locks `__metatable`, and optionally adds:
 
 - `__type` for Luau type names
 - metatable `__gc` (Geode web userdata uses untagged userdata with this path)

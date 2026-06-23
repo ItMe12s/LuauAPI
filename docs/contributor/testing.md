@@ -147,8 +147,7 @@ PYTHONPATH=tools python -m unittest discover -s tests/luau_codegen -p "test_*.py
 ```
 
 Tests under `tests/luau_codegen/` import from `luau_codegen.*`.
-Import `test_support` for shared fixtures such as `ROOT` and `resolve_test_bindings_dir()`.
-Shared fixtures are listed in the Shared test helpers section above.
+Import `test_support` for shared fixtures such as `ROOT` and `resolve_test_bindings_dir()` (listed above).
 
 Compact map of `tests/luau_codegen/`:
 

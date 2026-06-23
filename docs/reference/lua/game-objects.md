@@ -110,10 +110,11 @@ Some fields and method arguments use Geode containers. LuauAPI converts them to 
 - Pair-key map: entry list `{ { first = k1, second = k2, value = v } }` because Lua cannot use tables as map keys.
 - Nested map values and some size fields use other shapes. See the contributor container pages below.
 
-Writing a container field clears it and re-inserts your entries. Whole-container assignment is not used.
-Some nested primitive vector fields are read-only getters.
+Writing a container field:
 
-Read-only handler queues on input dispatchers use `{ Handler? }` sequences. Index with `1`, not `0`.
+- Clears it and re-inserts your entries. Whole-container assignment is not used.
+- Some nested primitive vector fields are read-only getters.
+- Read-only handler queues on input dispatchers use `{ Handler? }` sequences. Index with `1`, not `0`.
 
 Binding details for pair, nested, and ccCArray shapes:
 
@@ -154,7 +155,7 @@ GD and Geode enums are integer constant tables on `geode.gd` and `geode`. See [e
 
 ## Ownership
 
-The runtime tracks whether an object is owned by Lua or only borrowed and handles C++ lifetime for you.
+The runtime tracks Lua-owned vs borrowed objects and handles C++ lifetime for you.
 Luau does not bind `retain()` or `release()`.
 Manual ref counting fights LuauAPI bookkeeping and can crash the game, leak nodes, or break callback and `geode.fields` cleanup.
 

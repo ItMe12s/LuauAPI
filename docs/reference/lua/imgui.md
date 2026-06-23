@@ -8,9 +8,17 @@ For signatures, use editor autocomplete from [type stubs](type-stubs.md).
 
 ## Model
 
+### Registration and lifecycle
+
 Register one draw callback with `imgui.onDraw`. Build all ImGui UI inside that callback.
 Widget calls must run on the main thread and inside `imgui.onDraw`.
 See [Getting started](../../getting-started/overview.md) for the shared runtime threading rule.
+
+`onDraw` starts the backend on first use. `cancel` removes a callback.
+Dropping the handle cancels it on GC. A callback that errors is removed.
+Use `setVisible`, `toggle`, and `isVisible` to show or hide the overlay without unregistering.
+
+### Immediate mode
 
 ImGui is immediate mode. It does not store your widget state.
 Pass current values each frame and save returned values in Luau.
@@ -18,26 +26,28 @@ Pass current values each frame and save returned values in Luau.
 The game keeps input when ImGui is not hovered or focused.
 Focused ImGui windows capture the input they need.
 
-`onDraw` starts the backend on first use. `cancel` removes a callback.
-Dropping the handle cancels it on GC. A callback that errors is removed.
-Use `setVisible`, `toggle`, and `isVisible` to show or hide the overlay without unregistering.
+### Scoped wrappers
 
-Scoped wrappers (`window`, `child`, `group`, `tabBar`, `tabItem`, `popup`, `popupModal`, `table`, `menuBar`, `menu`, `style.with`, `font.with`)
-always close their ImGui region after `fn`, even when `fn` errors.
-`window` returns false when its close button is pressed. You don't have to name the window with your mod name or ID.
-Use `sizeCond` or `posCond` with `imgui.Cond.Always` for animated windows.
+`window`, `child`, `group`, `tabBar`, `tabItem`, `popup`, `popupModal`, `table`, `menuBar`, `menu`, `style.with`,
+and `font.with` always close their ImGui region after `fn`, even when `fn` errors.
 
-Text is drawn as raw text, so percent signs are safe.
-Input text uses a shared per-thread buffer. Default max length is 16384 and the cap is 65536.
-Combo and list indexes are zero-based. Colors use `{ x, y, z, w }` floats from 0 to 1.
+- `window` returns false when its close button is pressed.
+- You do not have to name the window with your mod name or ID.
+- Use `sizeCond` or `posCond` with `imgui.Cond.Always` for animated windows.
 
-`treeNode` returns a tracked open value only when `opts.open` is set.
-`tabItem` and `popupModal` return a close state only when `closable` is true.
-Use `openPopup` before `popup` or `popupModal`.
-`imgui.tooltip(fn)` shows a tooltip for the previous item only when it is hovered.
+### Widgets, buffers, and indexes
 
-Call table row and column helpers inside `imgui.table`.
-`menuItem` returns clicked when no selected value is passed. When selected is passed, it returns the new selected value.
+- Text is drawn as raw text, so percent signs are safe.
+- Input text uses a shared per-thread buffer. Default max length is 16384 and the cap is 65536.
+- Combo and list indexes are zero-based. Colors use `{ x, y, z, w }` floats from 0 to 1.
+- `treeNode` returns a tracked open value only when `opts.open` is set.
+- `tabItem` and `popupModal` return a close state only when `closable` is true.
+- Use `openPopup` before `popup` or `popupModal`.
+- `imgui.tooltip(fn)` shows a tooltip for the previous item only when it is hovered.
+- Call table row and column helpers inside `imgui.table`.
+- `menuItem` returns clicked when no selected value is passed. When selected is passed, it returns the new selected value.
+
+### Performance and unsupported APIs
 
 Use one `imgui.onDraw` per mod when possible.
 Do not do IO, web work, or heavy list rebuilds in `onDraw`.

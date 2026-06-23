@@ -2,11 +2,9 @@
 
 ## Summary
 
-`geode.utils` groups small helper libraries under the `geode.utils` prefix.
-Large modules have their own reference page. Smaller ones are documented on this page.
-
+Small helpers under `geode.utils` are documented here. Larger ones have their own page.
 For signatures, use editor autocomplete from [type stubs](type-stubs.md).
-Some Geode C++ integer sizes appear as `string` in the stub and use integer-string arguments at runtime.
+Wide integer types appear as `string` in the stub (see type stubs for the rule).
 
 ## Libraries
 

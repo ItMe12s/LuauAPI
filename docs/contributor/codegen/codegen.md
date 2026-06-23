@@ -16,8 +16,8 @@ The generator reads Broma binding files for one Geometry Dash version and one pl
   The `types/` folder is created in the repo root during build and is gitignored.
 - Metadata files: a schema, a report, a parity file, and an audit.
 
-The generated C++ is compiled into the main library. It is machine written, so you do not edit it.
-The build compiles it with warnings disabled and optimized for size.
+The generated C++ is machine written and compiled into the main library with warnings disabled and size optimization.
+Do not edit it by hand.
 
 ## How the build calls it
 
@@ -215,7 +215,7 @@ The generator keeps one only if `PREFERRED_OVERLOADS` lists its normalized arg s
 otherwise every colliding overload is skipped with `ambiguous-overload-arity:<arity>`.
 Ambiguous overloads cause codegen to exit with code 6 when building the emit plan.
 
-One Lua table key per method name. Runtime picks overload by arity only, not arg types.
+One Lua table key per method name.
 Stubs widen with `...any` where overloads disagree. See [type stubs](../../reference/lua/type-stubs.md).
 
 ## Value struct gate

@@ -64,8 +64,7 @@ Not supported:
 
 Primitives with a textured material must include `TEXCOORD_0`, loading fails otherwise.
 
-All mesh nodes merge into one asset. Node transforms bake into vertices and normals.
-No scene hierarchy, animation, morph targets, or glTF cameras and lights.
+All mesh nodes merge into one asset, with no scene hierarchy, animation, morph targets, or glTF cameras and lights.
 Reloading creates a new handle and uploads GPU data again.
 
 `vertexCount` is the total vertex count across all primitives.
@@ -152,9 +151,13 @@ Drawing needs an active OpenGL context. If it is not ready, framebuffer setup an
 
 The viewport renders to an off-screen framebuffer at the cocos content scale.
 When compositing is enabled, the sprite draws that framebuffer texture into the scene.
-Opaque and mask draws run first. Blend draws run second, sorted back to front.
-`doubleSided` disables culling. Off-screen instances are frustum culled.
-Opaque draws are sorted by texture and mesh. VAOs and GPU instancing are used when supported.
+
+Draw order:
+
+- Opaque and mask draws run first, sorted by texture and mesh.
+- Blend draws run second, sorted back to front.
+- `doubleSided` disables culling. Off-screen instances are frustum culled.
+- VAOs and GPU instancing are used when supported.
 
 Reloading a mesh uploads fresh GPU data.
 

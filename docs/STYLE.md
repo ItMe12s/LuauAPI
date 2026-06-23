@@ -6,7 +6,7 @@ Use this when you edit or make new pages.
 Keep docs plain, short, and easy to scan (not everyone can read).
 If docs and code disagree, just use the code as reference.
 
-This is mostly just my writing style, but I want to make sure everyone understands the docs.
+Aim for broad readability so anyone can follow the docs.
 
 ## Page shape
 

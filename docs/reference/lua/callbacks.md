@@ -14,13 +14,12 @@ The supported callback shapes are:
 Callbacks run on the main thread under the script budget.
 See [Getting started](../../getting-started/overview.md) and [Limits and errors](../cpp/limits-and-errors.md).
 If a callback raises an error, LuauAPI logs the failure and applies the callback site's fallback.
-Selector, menu, delegate, setting, web, and permission callbacks keep their registration lifetime.
-Task intervals and ImGui draw callbacks are removed after an error to avoid log spam.
+Registration lifetime varies by callback kind. See Lifetime below.
 
 ## std::function style callbacks
 
-When a bound method takes a `std::function<...>` (or Geode `Function` / `MiniFunction`,
-or the `Callback` alias for `std::function<void()>`), pass a Luau function with a matching signature.
+When a bound method takes a C++ callback (such as a `std::function`, Geode `Function`, or `Callback` alias),
+pass a Luau function with a matching signature.
 
 ```lua
 -- void callback
@@ -90,6 +89,9 @@ Each selector handler trampoline is retained and associated with an anchor `CCOb
 When the anchor's retain count drops to one before `release`, all its handlers are cleaned up,
 like `geode.fields` tables. `std::function` wrappers are held for the duration of the C++ call that received them.
 Task and ImGui handles cancel their callback when you call `:cancel()` or when the handle userdata is collected.
+
+Selector, menu, delegate, setting, web, and permission callbacks keep their registration lifetime.
+Task intervals and ImGui draw callbacks are removed after an error to avoid log spam.
 
 ## Shutdown
 

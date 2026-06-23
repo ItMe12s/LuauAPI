@@ -10,8 +10,7 @@ Core script globals in every Luau chunk:
 - `require`
 - `_G`
 
-And other standard libraries are included too.
-LuauAPI also exposes namespaces such as `task`, `geode`, `imgui`, and `gd3d`.
+Standard Luau libraries and LuauAPI namespaces (`task`, `geode`, `imgui`, `gd3d`, and others) are included.
 See Other globals below.
 
 This page covers signatures for the core globals plus error shapes.
@@ -108,8 +107,8 @@ print(fn())
 Sources over the script size cap return `nil` and an error message.
 If the runtime is not ready, it returns `nil, "luau runtime not ready"`.
 
-`loadstring` is always available, can compile any valid Luau source within the size cap, and ignores the `require` sandbox.
-Treat it as trusted-code execution. Calling the returned function does not start a new script deadline.
+`loadstring` bypasses the `require` sandbox.
+Treat its output as trusted code. Calling it does not start a new script deadline.
 It inherits an existing guarded call path, such as code already running inside a `task` callback.
 
 ## require
@@ -129,7 +128,7 @@ _G: { [string]: any }
 ```
 
 The shared global table for every script in the runtime.
-There is one runtime and one global table, so values you set on `_G` are visible to other scripts and to other mods.
+Values you set on `_G` are visible to all scripts and mods.
 Read shared values through `_G[key]` rather than as a bare global name. See [sharing APIs between mods](sharing-apis.md).
 
 ## Other globals
@@ -140,8 +139,7 @@ Hook helpers such as `geode.skip` are documented in [hooks](hooks.md).
 ## Limits
 
 `loadstring` rejects sources over the script size cap.
-
-See [Limits and errors](../cpp/limits-and-errors.md).
+See [Limits and errors](../cpp/limits-and-errors.md) for the caps and deadlines.
 
 ## Related
 

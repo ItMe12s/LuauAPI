@@ -127,9 +127,8 @@ See [Limits and errors](../cpp/limits-and-errors.md) for connection caps and err
 
 ## Security
 
-WebSocket traffic is not sandboxed.
-Scripts can open outbound client connections to any `ws://` or `wss://` URL the host stack allows.
-There is no URL or host allowlist.
+WebSocket traffic is not sandboxed and has no host allowlist.
+See [web](web.md) Security for the shared egress and TLS rules.
 
 The local server binds to loopback (`127.0.0.1`) by default.
 Passing `host = "0.0.0.0"` listens on all interfaces, so anything on the LAN can connect.
@@ -138,8 +137,7 @@ Only do this intentionally.
 TLS on the client:
 
 - `certVerification` defaults to `true` for `wss://`.
-- Setting `certVerification = false` disables certificate verification for that connection.
-- Use this only for trusted dev servers, for example self-signed certificates.
+- Setting `certVerification = false` disables verification. This is unsafe for production (see [web](web.md) Security).
 - On platforms without a usable system certificate store for mbedTLS, pass a PEM bundle via `caBundle`.
 - The server side does not support TLS.
 

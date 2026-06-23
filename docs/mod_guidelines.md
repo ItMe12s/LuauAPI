@@ -5,18 +5,14 @@
 These rules sit on top of the [Geode SDK Mod Guidelines](https://docs.geode-sdk.org/mods/guidelines/).
 Read those first. They are the real Index rules.
 
-This page is our LuauAPI overlay for mods that run Luau scripts. It is not official Geode policy yet.
-Still, breaking these rules can make your mod look unsafe, unstable, or impossible to review.
-Severe cases can still lead to real Geode Index rejection, delisting, or bans.
+This page is the LuauAPI overlay for mods that run Luau scripts, not official Geode policy.
+Severe breaks can still cause real Geode Index rejection, delisting, or bans.
 
 ## Everything is situational
 
-These rules are not magic law. Context matters.
-A tiny joke mod and a large renderer mod do not need the same review depth.
+Context matters. A tiny joke mod and a large renderer mod do not need the same review depth, and Index moderators have final say.
 
-Index moderators still have final say.
-
-The goal is simple:
+The goals:
 
 - Do not crash the game.
 - Do not harm other mods.
@@ -126,11 +122,9 @@ end)
 
 ### `reject-bad-global`
 
-Respect `_G`. Do not add bare globals. Do not use names like `_VAR` or `_SOMETHING`.
-
-All mods share one runtime and one global table. Bare globals collide with other mods.
-
-Names that start with `_` also look reserved for Lua internals.
+Respect `_G`. Do not add bare globals.
+All mods share one global table, so bare globals collide with other mods.
+Names starting with `_` look reserved for Lua internals.
 
 Bad:
 

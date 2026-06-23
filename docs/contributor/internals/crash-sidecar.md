@@ -18,8 +18,6 @@ Use this when the game hard-crashes, not when Lua prints an error from a caught 
 5. Read `Call chain` for nested boundaries, innermost first.
 6. Match `callback_id` to the hook callback when several hooks share one target.
 
-The sidecar names the Luau side. The crashlog has the native fault. Pair both to find your script line and the C++ frame it triggered.
-
 Caught Lua errors from `protectedCall` stay in the Geode log. They do not update the sidecar.
 
 ## Contract
