@@ -37,6 +37,8 @@ set(LUAUAPI_HOST_TEST_RUNTIME_SOURCES
     src/require/Requirer.cpp
     src/core/Loadstring.cpp
     src/core/Runtime.cpp
+    src/core/StackFormat.cpp
+    src/diagnostics/BoundaryRecorder.cpp
     src/render3d/assets/MeshAsset.cpp
     src/render3d/assets/TextureAsset.cpp
     src/render3d/assets/GltfIo.cpp

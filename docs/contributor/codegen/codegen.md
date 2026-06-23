@@ -71,6 +71,7 @@ These apply to non-debug builds only.
 4. Runs the registered `after` callbacks, applying a return override if given.
 
 `emit/cxx_templates.py` emits the shared hook runtime that stores callbacks, sorts them by priority, and calls them.
+Pre and post hook dispatch also record crash sidecar boundaries before each Lua callback. See [Crash sidecar](../internals/crash-sidecar.md).
 Invalid overrides are type-checked via pcall. Binding and hook decode share `convert/marshalling.py` `emit_stack_check`.
 A method is hookable only when its address is known on the target platform and its arguments and return can be marshalled.
 Static methods, constructors, and destructors are skipped.

@@ -17,6 +17,7 @@ This page names the main parts and traces how a script gets from a file to runni
 - WebSocket. Client and local server bindings backed by IXWebSocket. See [websocket](../reference/lua/websocket.md).
 - 3D rendering. Loads glTF meshes and draws them through `gd3d.ViewportFrame` sprites. See [gd3d](../reference/lua/gd3d.md).
 - Codegen. Generates the game bindings and the type stubs. See [Codegen](codegen/codegen.md).
+- Diagnostics. Crash sidecar for Luau context at native faults. See [Crash sidecar](internals/crash-sidecar.md).
 
 ## Repository layout
 
@@ -80,6 +81,7 @@ and [C++ API reference](../reference/cpp/api-reference.md) Threading for host AP
 - [Task scheduler](internals/task-scheduler.md)
 - [ImGui draw scheduler](internals/imgui-draw-scheduler.md)
 - [Codegen](codegen/codegen.md)
+- [Crash sidecar](internals/crash-sidecar.md)
 - [Pair containers](codegen/pair-containers.md)
 - [Nested containers](codegen/nested-containers.md)
 - [ccCArray read-only fields](codegen/cc-c-array.md)

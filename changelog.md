@@ -2,6 +2,11 @@
 
 [Check the GitHub commits for more details](https://github.com/ItMe12s/LuauAPI).
 
+## v0.1.0-beta.9
+
+- Added crash sidecar that writes `luauapi-last-context.txt` with Luau context before native faults.
+- Updated `print`, `warn`, and panic to log with the owning mod id instead of `[lua]`.
+
 ## v0.1.0-beta.8
 
 - Switched `geode.fields` cleanup to Geode type casts instead of pointer reinterpretation.

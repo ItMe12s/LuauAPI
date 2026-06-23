@@ -37,6 +37,7 @@ The interval encodes the kind of task:
 ## Advancing
 
 `advance(dt, L)` runs each frame.
+It also calls `diag::flushIfNeeded` so the crash sidecar file stays warm. See [Crash sidecar](crash-sidecar.md).
 It lowers each task timer by the frame delta and fires the tasks that are due.
 To fire a task it pushes the callback, sets the resources root scope,
 and calls the runtime protected call with the callback budget.
@@ -63,6 +64,7 @@ See [Limits and errors](../../reference/cpp/limits-and-errors.md).
 - [Architecture](../architecture.md)
 - [tasks and time](../../reference/lua/tasks.md)
 - [ImGui draw scheduler](imgui-draw-scheduler.md)
+- [Crash sidecar](crash-sidecar.md)
 - [Runtime](runtime.md)
 - [Limits and errors](../../reference/cpp/limits-and-errors.md)
 

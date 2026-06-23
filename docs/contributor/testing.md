@@ -28,6 +28,7 @@ CTest discovers the cases at build time. The files are:
 | --- | --- |
 | `tests/api_tests.cpp` | Public C++ API surface |
 | `tests/binding_tests.cpp` | Binding registration and dispatch |
+| `tests/boundary_recorder_tests.cpp` | Crash sidecar boundary stack, flush, and serialization |
 | `tests/bytecode_cache_key_tests.cpp` | Cache key over size, modify time, and content |
 | `tests/callback_tests.cpp` | Callback registration and invocation |
 | `tests/config_bounds_tests.cpp` | Resource byte caps stay aligned |
@@ -158,7 +159,7 @@ Compact map of `tests/luau_codegen/`:
 | Type map | `test_type_map.py`, `test_type_map_modules.py`, `test_value_struct_gate.py`, `test_cocos_enums.py` | C++ to Lua kinds, enums, value struct gate |
 | Containers | `test_nested_containers.py`, `test_pair_design.py`, `test_cc_c_array.py`, `test_object_vector_audit.py` | `gd` containers, pairs, `ccCArray`, object vectors |
 | Marshalling | `test_marshalling.py` | stack checks, callbacks, FMOD, containers |
-| Bindings emit | `test_bindings_handlers.py`, `test_bindings_overloads.py`, `test_bindings_safety.py`, `test_bindings_fmod.py`, `test_free_functions.py` | generated C++ handlers and free functions |
+| Bindings emit | `test_bindings_handlers.py`, `test_bindings_overloads.py`, `test_bindings_safety.py`, `test_bindings_fmod.py`, `test_free_functions.py` | generated C++ handlers, free functions, and crash sidecar boundary records |
 | Hooks | `test_hooks.py` | hook runtime, offsets, SEL callbacks |
 | Luau stubs | `test_luau_types.py`, `test_types_binding.py`, `test_geode_enums_emit.py` | stub emission and cocos value descriptors |
 | Geode SDK scan | `test_geode_scanner.py`, `test_geode_ccnode.py`, `test_geode_ccarray.py`, `test_cpp_scan.py` | header scanner and cocos additions |

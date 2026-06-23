@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core/Config.hpp"
+#include "diagnostics/BoundaryRecorder.hpp"
 
 #include <Geode/Geode.hpp>
 #include <RuntimeTypes.hpp>
@@ -56,10 +57,11 @@ namespace luax {
         );
         geode::Result<void> protectedCall(
             lua_State* L, int nargs, int nresults, std::string_view context,
-            int deadlineMs = kDefaultScriptDeadlineMs
+            int deadlineMs = kDefaultScriptDeadlineMs, diag::ProtectedCallBoundary boundary = {}
         );
         geode::Result<void> protectedCallWithTraceback(
-            lua_State* L, int nargs, int nresults, std::string_view context
+            lua_State* L, int nargs, int nresults, std::string_view context,
+            diag::ProtectedCallBoundary boundary = {}
         );
         static std::string compileSource(std::string_view source);
 
@@ -164,7 +166,7 @@ namespace luax {
         void tryCompileLoadedChunk(lua_State* L, std::string_view chunkName);
         geode::Result<void> protectedCallImpl(
             lua_State* invokeL, int nargs, int nresults, std::string_view context,
-            ProtectedCallPolicy policy, int deadlineMs
+            ProtectedCallPolicy policy, int deadlineMs, diag::ProtectedCallBoundary boundary
         );
         void runShutdownHooks();
         void removeBytecodeCacheEntry(std::list<BytecodeCacheEntry>::iterator it);

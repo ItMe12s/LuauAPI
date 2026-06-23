@@ -1,8 +1,9 @@
 #include "core/Runtime.hpp"
 
 #include "bindings/geode/CurrentMod.hpp"
-#include "core/Config.hpp"
 #include "core/Loadstring.hpp"
+#include "core/StackFormat.hpp"
+#include "diagnostics/BoundaryRecorder.hpp"
 #if !defined(LUAUAPI_HOST_TESTS)
     #include "framework/Binding.hpp"
     #include "framework/usertype/Ref.hpp"
@@ -48,6 +49,11 @@ namespace luax {
             return shuttingDown;
         }
 
+        std::string modLogPrefix() {
+            auto* mod = currentMod();
+            return mod ? std::string(mod->getID()) : "lua";
+        }
+
         std::thread::id& mainThreadIdStorage() {
             static std::thread::id id;
             return id;
@@ -75,16 +81,6 @@ namespace luax {
             int m_top = 0;
             bool m_active = true;
         };
-
-        bool iequalsPrefix(std::string_view haystack, std::string_view needle) {
-            if (haystack.size() < needle.size()) return false;
-            for (std::size_t i = 0; i < needle.size(); ++i) {
-                auto a = static_cast<unsigned char>(haystack[i]);
-                auto b = static_cast<unsigned char>(needle[i]);
-                if (std::tolower(a) != std::tolower(b)) return false;
-            }
-            return true;
-        }
 
         std::size_t bytecodeEntryBytes(std::string const& bytecode) {
             return bytecode.size();
@@ -154,87 +150,6 @@ namespace luax {
 
         std::size_t allocatorUsageAfterFree(std::size_t usage, std::size_t osize) {
             return osize <= usage ? usage - osize : 0;
-        }
-
-        std::string formatDebugSource(char const* source, std::filesystem::path const& resourcesRoot) {
-            if (!source || !source[0]) return {};
-
-            std::string_view text(source);
-            if (!text.empty() && (text.front() == '@' || text.front() == '=')) {
-                text.remove_prefix(1);
-            }
-
-            std::filesystem::path filePath(text);
-            if (filePath.empty()) return source;
-
-            if (!resourcesRoot.empty() && filePath.is_absolute()) {
-                auto rootResult = canonicalRoot(resourcesRoot);
-                if (rootResult.isOk()) {
-                    std::error_code ec;
-                    auto resolved = std::filesystem::weakly_canonical(filePath, ec);
-                    if (!ec && pathInsideRootValue(resolved, rootResult.unwrap())) {
-                        auto rel = resolved.lexically_relative(rootResult.unwrap());
-                        return "@" + normalizedPathString(rel);
-                    }
-                }
-            }
-
-            if (filePath.is_absolute()) {
-                auto name = filePath.filename();
-                if (!name.empty()) {
-                    return "@" + normalizedPathString(name);
-                }
-            }
-
-            return source;
-        }
-
-        std::size_t findRootPrefix(std::string const& text, std::string_view rootText, std::size_t pos) {
-            if (rootText.empty() || pos >= text.size()) return std::string::npos;
-#if defined(_WIN32)
-            for (std::size_t scan = pos; scan + rootText.size() <= text.size(); ++scan) {
-                if (iequalsPrefix(std::string_view(text).substr(scan), rootText)) {
-                    return scan;
-                }
-            }
-            return std::string::npos;
-#else
-            return text.find(rootText, pos);
-#endif
-        }
-
-        void replaceRootPrefix(std::string& text, std::string_view rootText) {
-            if (rootText.empty()) return;
-            std::size_t pos = 0;
-            while (pos < text.size()) {
-                std::size_t const found = findRootPrefix(text, rootText, pos);
-                if (found == std::string::npos) break;
-
-                std::size_t tail = found + rootText.size();
-                while (tail < text.size() && (text[tail] == '/' || text[tail] == '\\')) {
-                    ++tail;
-                }
-                text.replace(found, tail - found, "@");
-                pos = found + 1;
-            }
-        }
-
-        std::string redactHostPaths(std::string_view text, std::filesystem::path const& resourcesRoot) {
-            std::string out(text);
-            if (resourcesRoot.empty()) return out;
-
-            auto rootResult = canonicalRoot(resourcesRoot);
-            if (rootResult.isErr()) return out;
-
-            auto rootText = filesystemPathString(rootResult.unwrap());
-            replaceRootPrefix(out, rootText);
-
-            auto genericRoot = normalizedPathString(rootResult.unwrap());
-            if (genericRoot != rootText) {
-                replaceRootPrefix(out, genericRoot);
-            }
-
-            return out;
         }
     } // namespace
 
@@ -516,7 +431,7 @@ namespace luax {
             out.append(redactHostPaths(stackValueToString(L, i), resourcesRoot));
         }
 
-        geode::log::info("[lua] {}", out);
+        geode::log::info("[{}] {}", modLogPrefix(), out);
         return 0;
     }
 
@@ -534,7 +449,7 @@ namespace luax {
             out.append(redactHostPaths(stackValueToString(L, i), resourcesRoot));
         }
 
-        geode::log::warn("[lua] {}", out);
+        geode::log::warn("[{}] {}", modLogPrefix(), out);
         return 0;
     }
 
@@ -589,22 +504,8 @@ namespace luax {
             out.assign("(non-string error)");
         }
 
-        lua_Debug ar;
-        out.append("\n  stack:");
-        for (int level = 0; lua_getinfo(L, level, "sln", &ar); ++level) {
-            out.append("\n    ");
-            if (ar.source) {
-                out.append(formatDebugSource(ar.short_src, resourcesRoot));
-            }
-            if (ar.currentline > 0) {
-                out.append(":");
-                out.append(geode::utils::numToString(ar.currentline));
-            }
-            if (ar.name) {
-                out.append(" in ");
-                out.append(ar.name);
-            }
-        }
+        out.push_back('\n');
+        out.append(formatLuaStack(L, resourcesRoot));
 
         lua_pushlstring(L, out.data(), out.size());
         return 1;
@@ -815,11 +716,12 @@ namespace luax {
 
     geode::Result<void> Runtime::protectedCallImpl(
         lua_State* invokeL, int nargs, int nresults, std::string_view context,
-        ProtectedCallPolicy policy, int deadlineMs
+        ProtectedCallPolicy policy, int deadlineMs, diag::ProtectedCallBoundary boundary
     ) {
         if (auto guard = ensureCallable(policy == ProtectedCallPolicy::WithBudget); guard.isErr()) {
             return guard;
         }
+
         if (policy == ProtectedCallPolicy::TracebackOnly) {
             if (status() == imes::luauapi::RuntimeStatus::Panicked) {
                 return m_lastError.empty() ? failWith("luau runtime panicked") : cachedError();
@@ -862,6 +764,16 @@ namespace luax {
         lua_insert(m_state, -nargs - 2);
         int errfunc = lua_gettop(m_state) - nargs - 1;
 
+        std::optional<diag::BoundaryScope> boundaryScope;
+        if (diag::recordingEnabled() && boundary.record) {
+            diag::BoundaryFrame frame;
+            frame.kind = boundary.kind;
+            frame.target = std::string(context);
+            frame.callbackId = boundary.callbackId;
+            int const funcIndex = -(nargs + 1);
+            boundaryScope.emplace(diag::pushBoundary(std::move(frame), m_state, funcIndex));
+        }
+
         std::optional<ScriptBudgetGuard> budget;
         if (policy == ProtectedCallPolicy::WithBudget) {
             budget.emplace(*this, deadlineMs);
@@ -892,18 +804,20 @@ namespace luax {
     }
 
     geode::Result<void> Runtime::protectedCall(
-        lua_State* L, int nargs, int nresults, std::string_view context, int deadlineMs
+        lua_State* L, int nargs, int nresults, std::string_view context, int deadlineMs,
+        diag::ProtectedCallBoundary boundary
     ) {
         return protectedCallImpl(
-            L, nargs, nresults, context, ProtectedCallPolicy::WithBudget, deadlineMs
+            L, nargs, nresults, context, ProtectedCallPolicy::WithBudget, deadlineMs, boundary
         );
     }
 
     geode::Result<void> Runtime::protectedCallWithTraceback(
-        lua_State* L, int nargs, int nresults, std::string_view context
+        lua_State* L, int nargs, int nresults, std::string_view context,
+        diag::ProtectedCallBoundary boundary
     ) {
         return protectedCallImpl(
-            L, nargs, nresults, context, ProtectedCallPolicy::TracebackOnly, kDefaultScriptDeadlineMs
+            L, nargs, nresults, context, ProtectedCallPolicy::TracebackOnly, kDefaultScriptDeadlineMs, boundary
         );
     }
 
@@ -958,7 +872,9 @@ namespace luax {
 
     void Runtime::panicCallback(lua_State* L, int errcode) {
         char const* message = lua_tostring(L, -1);
-        geode::log::error("[lua:panic code={}] {}", errcode, message ? message : "unknown panic");
+        geode::log::error(
+            "[{}:panic code={}] {}", modLogPrefix(), errcode, message ? message : "unknown panic"
+        );
 
         auto* self = static_cast<Runtime*>(lua_callbacks(L)->userdata);
         if (self) {

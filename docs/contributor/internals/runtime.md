@@ -59,6 +59,12 @@ The cache key is built in the module layer. See [Module system](module-system.md
   The task and hook layers call it to run Lua callbacks safely.
 - Errors are formatted with a traceback and stored in `m_lastError`.
 
+## Crash sidecar
+
+`protectedCallImpl` pushes a `BoundaryScope` for each protected call and pops it when the call returns.
+Hook calls pass hook kind and callback id through `ProtectedCallBoundary`.
+See [Crash sidecar](crash-sidecar.md).
+
 ## Resources root
 
 `ResourcesRootScope` sets the current resources root for the length of a run and restores the previous one afterward.
@@ -92,10 +98,15 @@ WebSocket uses this to close live connections and servers. See [Bindings framewo
 - [Getting started](../../getting-started/overview.md)
 - [Bindings framework](bindings-framework.md)
 - [Module system](module-system.md)
+- [Crash sidecar](crash-sidecar.md)
 
 ## Source
 
 - `src/core/Runtime.hpp`
 - `src/core/Runtime.cpp`
+- `src/core/StackFormat.hpp`
+- `src/core/StackFormat.cpp`
 - `src/core/Config.hpp`
+- `src/diagnostics/BoundaryRecorder.hpp`
+- `src/diagnostics/BoundaryRecorder.cpp`
 - `src/framework/lifecycle/Lifecycle.hpp`

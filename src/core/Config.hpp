@@ -51,4 +51,10 @@ namespace luax {
     constexpr std::size_t kMaxWebSocketServerClients = 32;
     constexpr std::size_t kMaxWebSocketSendBytes = 8 * 1024 * 1024;
     constexpr std::size_t kMaxWebSocketReceiveBytes = 8 * 1024 * 1024;
+
+    // Crash sidecar
+    constexpr std::size_t kSidecarStackDepth = 64;
+    constexpr int kSidecarFlushIntervalMs = 100;
+    inline char const kSidecarFileName[] = "luauapi-last-context.txt";
+    inline char const kSidecarTempName[] = "luauapi-last-context.tmp";
 } // namespace luax

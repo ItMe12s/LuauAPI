@@ -219,6 +219,48 @@ class GeneratedSafetyTests(unittest.TestCase):
         self.assertIn("luax::Runtime::ResourcesRootScope", text)
         self.assertIn('#include "core/Runtime.hpp"', text)
 
+    def test_hook_boundaries_are_recorded_for_sidecar(self) -> None:
+        text = emit_internal_hpp()
+
+        self.assertIn('#include "diagnostics/BoundaryRecorder.hpp"', text)
+        self.assertIn("luax::diag::BoundaryKind::HookBefore", text)
+        self.assertIn("luax::diag::BoundaryKind::HookAfter", text)
+        self.assertIn("luax::diag::BoundaryKind::HookBefore, callback->id", text)
+        self.assertIn("luax::diag::BoundaryKind::HookAfter, callback->id", text)
+        self.assertNotIn("luax::diag::recordBoundary(", text)
+
+    def test_generated_bindings_record_entry_boundary(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        foo = Class(
+            name="Foo",
+            bases=["CCObject"],
+            methods=[Method(name="bar", ret="void", args=[], platforms=all_platforms("0x1"))],
+        )
+        text = _emit_class_file(
+            foo,
+            {"bar": foo.methods},
+            [],
+            [],
+            {"CCObject": ccobject, "Foo": foo},
+            set(),
+            1,
+            "win",
+        )
+
+        self.assertIn(
+            'auto const boundary = luax::diag::recordBindingEntry(L, "Foo:bar", luax::diag::BoundaryKind::GeneratedBinding)',
+            text,
+        )
+
+    def test_free_function_bindings_record_entry_boundary(self) -> None:
+        fn = Function(name="frob", ret="void", args=[])
+        text = emit_free_functions_file([fn], {})
+
+        self.assertIn(
+            'auto const boundary = luax::diag::recordBindingEntry(L, "geode.frob", luax::diag::BoundaryKind::GeneratedBinding)',
+            text,
+        )
+
     def test_common_bind_registers_shutdown_hooks_via_runtime(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")
         ccnode = Class(

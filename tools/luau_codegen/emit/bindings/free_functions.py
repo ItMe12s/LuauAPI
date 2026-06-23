@@ -51,6 +51,9 @@ def _emit_free_invoke(
     out.append(
         f'        if (lua_gettop(L) != {input_count}) luaL_error(L, "{label} expected {input_count} args");\n'
     )
+    out.append(
+        f'        auto const boundary = luax::diag::recordBindingEntry(L, "{label}", luax::diag::BoundaryKind::GeneratedBinding);\n'
+    )
     call_args: List[str] = []
     selector_handlers: List[tuple[str, str]] = []
     delegate_trampolines: List[str] = []
