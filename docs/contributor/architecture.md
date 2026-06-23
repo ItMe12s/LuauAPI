@@ -18,6 +18,8 @@ This page names the main parts and traces how a script gets from a file to runni
 - 3D rendering. Loads glTF meshes and draws them through `gd3d.ViewportFrame` sprites. See [gd3d](../reference/lua/gd3d.md).
 - Codegen. Generates the game bindings and the type stubs. See [Codegen](codegen/codegen.md).
 - Diagnostics. Crash sidecar for Luau context at native faults. See [Crash sidecar](internals/crash-sidecar.md).
+- Release-hook safety. Rule for code reachable from the global `CCObject::release` hook and the deferred release drain.
+  See [Release-hook safety](internals/release-hook-safety.md).
 
 ## Repository layout
 
@@ -82,6 +84,7 @@ and [C++ API reference](../reference/cpp/api-reference.md) Threading for host AP
 - [ImGui draw scheduler](internals/imgui-draw-scheduler.md)
 - [Codegen](codegen/codegen.md)
 - [Crash sidecar](internals/crash-sidecar.md)
+- [Release-hook safety](internals/release-hook-safety.md)
 - [Pair containers](codegen/pair-containers.md)
 - [Nested containers](codegen/nested-containers.md)
 - [ccCArray read-only fields](codegen/cc-c-array.md)
