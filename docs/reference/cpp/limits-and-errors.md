@@ -250,6 +250,16 @@ Lifecycle error strings are defined in `src/bindings/websocket/WebSocketInternal
 
 Sandbox path errors from [fs](../lua/fs.md) also apply to `loadMesh` roots and paths.
 
+## Crash sidecar
+
+| Constant | Value | Meaning |
+| --- | --- | --- |
+| `kSidecarStackDepth` | `64` | Max boundary frames kept in memory |
+| `kSidecarFlushIntervalMs` | `100 ms` | Min time between interval-driven disk flushes |
+
+Sidecar files: `luauapi-last-context.txt` and temp `luauapi-last-context.tmp` in the Geode crashlogs dir.
+See [Crash sidecar](../../contributor/internals/crash-sidecar.md).
+
 ## How errors reach you
 
 The run functions return `geode::Result<void>`. On failure they return `Err` with a message.

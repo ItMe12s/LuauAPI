@@ -65,6 +65,7 @@ Do not repeat these topics. Link to the central page.
 | Main-thread and runtime basics | [Getting started](getting-started/overview.md) |
 | C++ host API surface | [C++ API reference](reference/cpp/api-reference.md) |
 | Hook usage in scripts | [hooks](reference/lua/hooks.md) |
+| Native crash Luau context | [Crash sidecar](contributor/internals/crash-sidecar.md) |
 | Game object lifetime and refs | [game objects](reference/lua/game-objects.md) Ownership |
 
 Keep hook policy in [LuauAPI mod guidelines](mod_guidelines.md).

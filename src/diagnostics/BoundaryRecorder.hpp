@@ -61,7 +61,9 @@ namespace luax::diag {
         }
 
     private:
-        friend BoundaryScope pushBoundary(BoundaryFrame frame, lua_State* L, int pendingFuncIndex);
+        friend BoundaryScope pushBoundary(
+            BoundaryFrame frame, lua_State* L, int pendingFuncIndex, bool flushOnPush
+        );
 
         void popIfPushed();
 
@@ -71,7 +73,9 @@ namespace luax::diag {
     bool recordingEnabled();
     void setRecordingEnabled(bool enabled);
 
-    BoundaryScope pushBoundary(BoundaryFrame frame, lua_State* L, int pendingFuncIndex = 0);
+    BoundaryScope pushBoundary(
+        BoundaryFrame frame, lua_State* L, int pendingFuncIndex = 0, bool flushOnPush = true
+    );
     BoundaryScope recordBindingEntry(lua_State* L, std::string_view label, BoundaryKind kind);
 
     void refreshActiveBoundaryStack(lua_State* L);
@@ -83,4 +87,8 @@ namespace luax::diag {
 
     void resetForTests();
     void setCrashlogsDirForTests(std::filesystem::path dir);
+
+#if defined(LUAUAPI_HOST_TESTS)
+    std::uint64_t flushEpochForTests();
+#endif
 } // namespace luax::diag

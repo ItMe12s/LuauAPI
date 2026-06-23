@@ -146,6 +146,11 @@ See the [Geode SDK guidelines tips](https://docs.geode-sdk.org/mods/guidelines-t
 Luau hooks call originals through Geode's tulip wrapper for the hooked address,
 so they compose with C++ `$modify` mods on the same method.
 
+## Native crashes
+
+Bad hook returns can fault in C++ outside Lua errors.
+See [Crash sidecar](../../contributor/internals/crash-sidecar.md).
+
 ## Limits
 
 See [Getting started](../../getting-started/overview.md) for the main-thread rule.

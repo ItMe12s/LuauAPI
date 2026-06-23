@@ -81,7 +81,7 @@ namespace luax {
         auto* runtime = Runtime::getIfInitialized();
         if (!runtime) return;
         lua_pushvalue(L, fnIdx);
-        (void)runtime->protectedCall(L, 0, 0, context, kImGuiScriptDeadlineMs);
+        (void)runtime->protectedCall(L, 0, 0, context, kImGuiScriptDeadlineMs, {.record = false});
     }
 
     struct ImGuiEndGuard {

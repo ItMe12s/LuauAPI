@@ -7,6 +7,21 @@ It does not name the hook, binding, script, or mod that was active.
 LuauAPI writes `luauapi-last-context.txt` in the crashlogs dir next to Geode's logs.
 Read it with the main crashlog to see the Luau side of the fault.
 
+## How to use it
+
+Use this when the game hard-crashes, not when Lua prints an error from a caught script failure.
+
+1. Open the Geode crashlog for the fault address and C++ stack.
+2. Open `luauapi-last-context.txt` in the same crashlogs folder.
+3. Read `Active boundary` for the innermost hook, binding, or script.
+4. Read `Luau stack` for your `@file:line` callback before native code ran.
+5. Read `Call chain` for nested boundaries, innermost first.
+6. Match `callback_id` to the hook callback when several hooks share one target.
+
+The sidecar names the Luau side. The crashlog has the native fault. Pair both to find your script line and the C++ frame it triggered.
+
+Caught Lua errors from `protectedCall` stay in the Geode log. They do not update the sidecar.
+
 ## Contract
 
 - LuauAPI does not install a crash handler. Geode's loader dumps C++ frames at fault time.
@@ -15,14 +30,15 @@ Read it with the main crashlog to see the Luau side of the fault.
 
 ## File shape
 
-This example matches a real fault, an after-hook on `MenuLayer:init` calls `addChild`, and `libcocos2d.dll` crashes on the native call.
+**This example matches a real fault.**
+An after-hook on `MenuLayer:init` calls `addChild`, and `libcocos2d.dll` crashes on the native call.
 
 The force crash script:
 
 ```lua
 geode.hook("geode.gd.MenuLayer:init/0", {
     after = function(self, result)
-        return false
+        return false -- supposed to return result or true
     end,
 })
 ```
@@ -31,7 +47,7 @@ The sidecar log:
 
 ```text
 === LuauAPI Context ===
-timestamp: 2026-06-23T15:26:39Z
+timestamp: 2026-06-23T17:40:10Z
 runtime_status: Ready
 geode_version: v5.7.1
 luauapi_version: v0.1.0-beta.9
@@ -46,7 +62,7 @@ mod_version: v0.1.0-beta.9
 resources_root: C:\Program Files (x86)\Steam\steamapps\common\Geometry Dash\geode\unzipped\imes.luauapi\resources\imes.luauapi
 
 === Luau stack ===
-    Bootstrap.luau:3 in after
+    Bootstrap.luau:2 in after
 
 === Call chain (innermost first) ===
 #0 hook-after  geode.gd.MenuLayer:init/0  mod=imes.luauapi  cb=1
@@ -55,7 +71,7 @@ resources_root: C:\Program Files (x86)\Steam\steamapps\common\Geometry Dash\geod
 Recorded immediately before native code ran. C++ fault address is in the main crashlog.
 ```
 
-The Luau stack shows the pending callback (`Bootstrap.luau:3 in after`) captured before `lua_pcall` runs the hook body.
+The Luau stack shows the pending callback (`Bootstrap.luau:2 in after`) captured before `lua_pcall` runs the hook body.
 When the fault happens inside a generated binding,
 the call chain gains a `generated-binding` frame at `#0` and the stack lists full `@file:line` frames.
 
@@ -70,8 +86,9 @@ Three layers:
    See [Codegen](../codegen/codegen.md).
 2. **Generated bindings.** Each generated method and free function calls `recordBindingEntry` at CFunction entry.
    That returns a `BoundaryScope` that pops when the binding returns.
-3. **Universal choke point.** `Runtime::protectedCallImpl` records `script` and task,
-   imgui, websocket, web, and delegate labels from the `context` string each caller passes.
+3. **Universal choke point.** `Runtime::protectedCallImpl` records script, task, imgui, websocket, web,
+   and delegate labels from the `context` string each caller passes.
+   Nested ImGui draw closures pass `{.record = false}` so only the top-level `imgui.draw` callback pushes a boundary.
    A `BoundaryScope` pops when the call returns.
 
 Task, imgui, websocket, web, and delegate paths route through `Runtime::protectedCall` without extra site instrumentation.
@@ -82,18 +99,27 @@ but are not themselves a `protectedCall` site.
 
 - **Scripts and hooks:** before `lua_pcall`, record the pending function on the stack (`@file` or chunk name, plus the function name).
 - **Bindings:** at CFunction entry, walk the full Luau call stack and refresh it right before native code runs.
+- Pre-flush refresh replaces the stack only when the VM walk returns frames.
+  Pending-call snapshot from hook or script entry is kept otherwise.
 
 ## Flush policy
 
 - In-memory state updates on every boundary push or pop.
-- Flush to disk when the active boundary changes or before generated binding native code runs.
-- The task scheduler tick also flushes on a change-or-interval throttle.
+- Flush to disk on boundary push when the active boundary changes.
+- Flush on the task scheduler interval.
+- Flush before generated binding native code runs (`recordBindingEntry` force flush).
+- Pop does not flush. The next push, binding entry, or task tick writes the restored outer frame.
+- Nested ImGui widget closures (`imgui.window`, `imgui.style.with`, and similar) do not push boundaries.
+  Only the top-level `imgui.draw` callback records.
+- Before writing, refresh the active Luau stack from the VM.
+  Skip disk when the semantic payload is unchanged from the last write.
+  Semantic payload is everything except the `timestamp:` line.
 - When the boundary stack is empty, disk is not updated. The last non-empty snapshot stays on disk.
 - Writes use `luauapi-last-context.tmp`, then rename to `luauapi-last-context.txt`.
   A crash mid-write keeps the prior file or leaves nothing.
 - I/O errors are swallowed. The sidecar must not wedge the tick or crash the runtime.
 
-Flush timing and stack depth caps live in `src/core/Config.hpp`.
+See [Limits and errors](../../reference/cpp/limits-and-errors.md) for flush interval and stack depth caps.
 
 ## Threading
 
@@ -105,8 +131,6 @@ Boundary pushes and flushes stay on the main thread with no locking.
 
 `luax::diag::setRecordingEnabled(false)` turns off all recording.
 The gate is checked at the top of every record path.
-The imgui per-frame draw path is the hottest push site.
-Disable recording there if profiling shows the stack walk is too costly.
 
 ## Empty mod context
 
@@ -121,9 +145,10 @@ Panic uses `[<mod.id>:panic code=N]`.
 
 ## Related
 
-- [Architecture](../architecture.md)
 - [Runtime](runtime.md)
 - [Task scheduler](task-scheduler.md)
+- [Limits and errors](../../reference/cpp/limits-and-errors.md)
+- [Architecture](../architecture.md)
 - [Codegen](../codegen/codegen.md)
 - [hooks](../../reference/lua/hooks.md)
 - [mod](../../reference/lua/mod.md)
@@ -137,6 +162,7 @@ Panic uses `[<mod.id>:panic code=N]`.
 - `src/core/Runtime.cpp`
 - `src/core/Config.hpp`
 - `src/bindings/task/TaskScheduler.cpp`
+- `src/bindings/imgui/ImGuiBindingInternal.hpp`
 - `tools/luau_codegen/emit/cxx_templates.py`
 - `tools/luau_codegen/emit/bindings/class_file.py`
 - `tools/luau_codegen/emit/bindings/free_functions.py`

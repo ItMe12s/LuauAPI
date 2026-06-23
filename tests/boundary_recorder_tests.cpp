@@ -218,6 +218,81 @@ TEST_CASE("BoundaryRecorder flush is atomic: no .tmp left behind", "[diagnostics
     CHECK_FALSE(std::filesystem::exists(guard.dir.path / luax::kSidecarTempName));
 }
 
+TEST_CASE("BoundaryRecorder pop does not flush to disk", "[diagnostics][sidecar]") {
+    SidecarGuard guard;
+
+    luax::diag::BoundaryFrame outer;
+    outer.kind = luax::diag::BoundaryKind::Script;
+    outer.target = "outer";
+    auto outerScope = luax::diag::pushBoundary(std::move(outer), nullptr);
+    luax::diag::flushIfNeeded(imes::luauapi::RuntimeStatus::Ready, true);
+
+    {
+        luax::diag::BoundaryFrame inner;
+        inner.kind = luax::diag::BoundaryKind::HookBefore;
+        inner.target = "inner";
+        auto innerScope = luax::diag::pushBoundary(std::move(inner), nullptr);
+        luax::diag::flushIfNeeded(imes::luauapi::RuntimeStatus::Ready, true);
+    }
+
+    auto afterPop = readSidecar(guard.dir.path);
+    REQUIRE(afterPop.has_value());
+    CHECK(afterPop->find("target: inner") != std::string::npos);
+
+    luax::diag::flushIfNeeded(imes::luauapi::RuntimeStatus::Ready, true);
+    auto afterFlush = readSidecar(guard.dir.path);
+    REQUIRE(afterFlush.has_value());
+    CHECK(afterFlush->find("target: outer") != std::string::npos);
+}
+
+TEST_CASE("BoundaryRecorder dedup skips unchanged semantic payload", "[diagnostics][sidecar]") {
+    SidecarGuard guard;
+    auto* runtime = luax::Runtime::getOrCreate();
+    REQUIRE(runtime != nullptr);
+    auto* L = runtime->state();
+    REQUIRE(L != nullptr);
+
+    luax::diag::BoundaryFrame f;
+    f.kind = luax::diag::BoundaryKind::GeneratedBinding;
+    f.target = "Foo:bar";
+    auto scope = luax::diag::pushBoundary(std::move(f), nullptr);
+
+    luax::diag::flushIfNeeded(imes::luauapi::RuntimeStatus::Ready, true);
+    REQUIRE(luax::diag::flushEpochForTests() == 1);
+
+    luax::diag::refreshActiveBoundaryStack(L);
+    luax::diag::flushIfNeeded(imes::luauapi::RuntimeStatus::Ready, true);
+    CHECK(luax::diag::flushEpochForTests() == 1);
+}
+
+TEST_CASE("BoundaryRecorder pending stack survives pre-flush refresh", "[diagnostics][sidecar]") {
+    SidecarGuard guard;
+    auto* runtime = luax::Runtime::getOrCreate();
+    REQUIRE(runtime != nullptr);
+    auto* L = runtime->state();
+    REQUIRE(L != nullptr);
+
+    std::string const pendingStack = "  stack:\n    @scripts/hook.luau:6 in after";
+
+    luax::diag::BoundaryFrame f;
+    f.kind = luax::diag::BoundaryKind::HookAfter;
+    f.target = "geode.gd.MenuLayer:init/0";
+    f.callbackId = 1;
+    f.luaStack = pendingStack;
+    auto scope = luax::diag::pushBoundary(std::move(f), nullptr, 0, false);
+
+    luax::diag::refreshActiveBoundaryStack(L);
+    auto const* active = luax::diag::activeBoundary();
+    REQUIRE(active != nullptr);
+    CHECK(active->luaStack == pendingStack);
+
+    luax::diag::flushIfNeeded(imes::luauapi::RuntimeStatus::Ready, true);
+    auto contents = readSidecar(guard.dir.path);
+    REQUIRE(contents.has_value());
+    CHECK(contents->find("hook.luau:6 in after") != std::string::npos);
+    CHECK(contents->find("(no stack captured)") == std::string::npos);
+}
+
 TEST_CASE("BoundaryRecorder change-or-interval throttle", "[diagnostics][sidecar]") {
     SidecarGuard guard;
 

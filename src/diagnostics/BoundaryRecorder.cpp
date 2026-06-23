@@ -32,6 +32,7 @@ namespace luax::diag {
             std::chrono::steady_clock::time_point lastFlush{};
             bool lastFlushValid = false;
             std::string lastFlushKey;
+            std::string lastWrittenSemantic;
             std::uint64_t flushEpoch = 0;
         };
 
@@ -132,7 +133,55 @@ namespace luax::diag {
             if (!runtime) return;
             flushIfNeeded(runtime->status(), force);
         }
+
+        std::string semanticPayload(std::string const& payload) {
+            std::string out;
+            out.reserve(payload.size());
+            std::size_t pos = 0;
+            while (pos < payload.size()) {
+                std::size_t end = payload.find('\n', pos);
+                if (end == std::string::npos) {
+                    end = payload.size();
+                }
+                std::string_view line(payload.data() + pos, end - pos);
+                if (!line.starts_with("timestamp:")) {
+                    out.append(line);
+                    out.push_back('\n');
+                }
+                if (end == payload.size()) break;
+                pos = end + 1;
+            }
+            return out;
+        }
     } // namespace
+
+    BoundaryScope pushBoundary(BoundaryFrame frame, lua_State* L, int pendingFuncIndex, bool flushOnPush) {
+        BoundaryScope scope;
+        if (!recordingEnabled()) return scope;
+
+        auto& s = state();
+
+        frame.timestamp = isoTimestampUtc();
+
+        auto* mod = currentMod();
+        fillMod(frame, mod);
+        frame.resourcesRoot =
+            mod ? geode::utils::string::pathToString(mod->getResourcesDir()) : std::string{};
+
+        fillStack(frame, L, pendingFuncIndex);
+
+        s.stack.push_back(std::move(frame));
+        if (s.stack.size() > kSidecarStackDepth) {
+            s.stack.erase(s.stack.begin());
+        }
+
+        s.dirty = true;
+        scope.m_pushed = true;
+        if (flushOnPush) {
+            flushAfterChange(false);
+        }
+        return scope;
+    }
 
     BoundaryScope::~BoundaryScope() {
         popIfPushed();
@@ -160,7 +209,6 @@ namespace luax::diag {
             s.stack.pop_back();
         }
         s.dirty = true;
-        flushAfterChange(false);
     }
 
     bool recordingEnabled() {
@@ -171,39 +219,13 @@ namespace luax::diag {
         enabledFlag() = enabled;
     }
 
-    BoundaryScope pushBoundary(BoundaryFrame frame, lua_State* L, int pendingFuncIndex) {
-        BoundaryScope scope;
-        if (!recordingEnabled()) return scope;
-
-        auto& s = state();
-
-        frame.timestamp = isoTimestampUtc();
-
-        auto* mod = currentMod();
-        fillMod(frame, mod);
-        frame.resourcesRoot =
-            mod ? geode::utils::string::pathToString(mod->getResourcesDir()) : std::string{};
-
-        fillStack(frame, L, pendingFuncIndex);
-
-        s.stack.push_back(std::move(frame));
-        if (s.stack.size() > kSidecarStackDepth) {
-            s.stack.erase(s.stack.begin());
-        }
-
-        s.dirty = true;
-        scope.m_pushed = true;
-        flushAfterChange(false);
-        return scope;
-    }
-
     BoundaryScope recordBindingEntry(lua_State* L, std::string_view label, BoundaryKind kind) {
         if (!recordingEnabled()) return {};
 
         BoundaryFrame frame;
         frame.kind = kind;
         frame.target = std::string(label);
-        auto scope = pushBoundary(std::move(frame), L, 0);
+        auto scope = pushBoundary(std::move(frame), L, 0, false);
         refreshActiveBoundaryStack(L);
         flushAfterChange(true);
         return scope;
@@ -221,7 +243,11 @@ namespace luax::diag {
             root = s.stack.back().resourcesRoot;
         }
 
-        s.stack.back().luaStack = formatLuaStack(L, root);
+        auto refreshed = formatLuaStack(L, root);
+        if (!hasStackFrames(refreshed) && hasStackFrames(s.stack.back().luaStack)) {
+            return;
+        }
+        s.stack.back().luaStack = std::move(refreshed);
         s.dirty = true;
     }
 
@@ -241,12 +267,19 @@ namespace luax::diag {
         s.dirty = false;
         s.lastFlushValid = false;
         s.lastFlushKey.clear();
+        s.lastWrittenSemantic.clear();
         s.flushEpoch = 0;
     }
 
     void setCrashlogsDirForTests(std::filesystem::path dir) {
         state().crashlogsDir = std::move(dir);
     }
+
+#if defined(LUAUAPI_HOST_TESTS)
+    std::uint64_t flushEpochForTests() {
+        return state().flushEpoch;
+    }
+#endif
 
     static std::string serialize(imes::luauapi::RuntimeStatus status) {
         auto const& s = state();
@@ -371,7 +404,21 @@ namespace luax::diag {
         std::filesystem::path tmp = dir / kSidecarTempName;
         std::filesystem::path final = dir / kSidecarFileName;
 
+        if (auto* runtime = Runtime::getIfInitialized()) {
+            if (auto* L = runtime->state()) {
+                refreshActiveBoundaryStack(L);
+            }
+        }
+
         std::string payload = serialize(status);
+        std::string semantic = semanticPayload(payload);
+        if (!s.lastWrittenSemantic.empty() && semantic == s.lastWrittenSemantic) {
+            s.dirty = false;
+            s.lastFlush = now;
+            s.lastFlushValid = true;
+            s.lastFlushKey = s.stack.empty() ? std::string{} : flushKey(s.stack.back());
+            return;
+        }
 
         {
             std::ofstream out(tmp, std::ios::binary | std::ios::trunc);
@@ -403,6 +450,7 @@ namespace luax::diag {
         s.lastFlush = now;
         s.lastFlushValid = true;
         s.lastFlushKey = s.stack.empty() ? std::string{} : flushKey(s.stack.back());
+        s.lastWrittenSemantic = std::move(semantic);
         s.flushEpoch += 1;
     }
 } // namespace luax::diag

@@ -85,6 +85,7 @@ Internals:
 | [ImGui draw scheduler](contributor/internals/imgui-draw-scheduler.md) | ImGui frame scheduling |
 | [Module system](contributor/internals/module-system.md) | `require` and sandboxes |
 | [Runtime](contributor/internals/runtime.md) | Lua runtime lifecycle |
+| [Crash sidecar](contributor/internals/crash-sidecar.md) | Luau context at native faults |
 | [Task scheduler](contributor/internals/task-scheduler.md) | Main-thread tasks |
 
 Codegen:
