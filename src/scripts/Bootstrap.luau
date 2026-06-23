@@ -8,18 +8,21 @@ geode.hook("geode.gd.MenuLayer:init/0", {
         task.defer(function()
             local parent = self:getParent(); if not parent then return end
             local crashedLayer = parent:getChildByID("FLAlertLayer"); if not crashedLayer then return end
-            local mainLayer = parent:getChildByID("MainLayer"); if not mainLayer then return end
-            local title: CCLabelBMFont? = mainLayer:getChildByID("title"); if not title then return end
+            local mainLayer = crashedLayer:getChildByID("main-layer"); if not mainLayer then return end
+            local title = mainLayer:getChildByID("title") :: CCLabelBMFont?; if not title then return end
+            local titleString = title:getString(); if not titleString then return end
+            if titleString ~= "Crashed" then return end
 
-            if crashedLayer then
-                local luauCrashLabel = cc2d.CCLabelBMFont.create("Yo", "bigFont.fnt")
-                if not luauCrashLabel then return end
-                luauCrashLabel:setID(modId .. "/luau-crash-label")
-                luauCrashLabel:setZOrder(999)
-                luauCrashLabel:setAnchorPoint({ x = 0.5, y = 0.5 })
-                luauCrashLabel:setPosition({ x = 0, y = 50 })
-                crashedLayer:addChild(luauCrashLabel)
-            end
+            local director = cc2d.CCDirector.sharedDirector(); if not director then return end
+            local winSize = director:getWinSize();
+            local luauCrashLabel = cc2d.CCLabelBMFont.create("luauapi-last-context.txt was overwritten on restart", "goldFont.fnt")
+            if not luauCrashLabel then return end
+            luauCrashLabel:setID(modId .. "/luau-crash-label")
+            luauCrashLabel:setZOrder(999)
+            luauCrashLabel:setScale(0.5)
+            luauCrashLabel:setAnchorPoint({ x = 0.5, y = 0.5 })
+            luauCrashLabel:setPosition({ x = winSize.width / 2, y = 80 })
+            crashedLayer:addChild(luauCrashLabel)
         end)
 
         if not isDeveloperModeEnabled then return result end
