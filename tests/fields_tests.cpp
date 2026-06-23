@@ -11,6 +11,8 @@
 namespace {
     struct TestNode : cocos2d::CCNode {};
 
+    struct PlainObject : cocos2d::CCObject {};
+
     using RuntimeGuard = luauapi_test::FieldsRuntimeGuard;
 
     void setTableToken(lua_State* L, char const* token) {
@@ -65,6 +67,15 @@ TEST_CASE("Fields evictIfFinalRelease is no-op without a field entry") {
     REQUIRE_NOTHROW(luax::Fields::evictIfFinalRelease(node));
 
     node->release();
+}
+
+TEST_CASE("Fields evictIfFinalRelease is no-op for non-node CCObject") {
+    RuntimeGuard guard;
+    auto* object = new PlainObject();
+
+    REQUIRE_NOTHROW(luax::Fields::evictIfFinalRelease(object));
+
+    object->release();
 }
 
 TEST_CASE("Fields evictIfFinalRelease removes entry on final release") {

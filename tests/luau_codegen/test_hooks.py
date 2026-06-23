@@ -371,7 +371,7 @@ class HookApplyFnTests(unittest.TestCase):
     def test_apply_hook_override_uses_protected_call_with_traceback(self) -> None:
         text = emit_internal_hpp()
 
-        self.assertIn("protectedCallWithTraceback(L, 1, 0, targetId)", text)
+        self.assertIn("protectedCallWithTraceback(L, 1, 0, targetId, {.record = false})", text)
         self.assertNotIn("lua_pcall(L, 1, 0, 0)", text)
 
     def test_android_linked_create_hook_rejects_null_address(self) -> None:

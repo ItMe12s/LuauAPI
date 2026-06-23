@@ -346,20 +346,36 @@ class ErrorSemanticsGuardTests(unittest.TestCase):
 class CastConventionGuardTests(unittest.TestCase):
     def test_fields_evict_uses_typeinfo_cast(self) -> None:
         source = read_repo_file("src/framework/usertype/Fields.cpp")
-        for signature in (
-            "void Fields::evict(cocos2d::CCObject* object)",
-            "void Fields::evictIfFinalRelease(cocos2d::CCObject* object)",
-        ):
-            with self.subTest(signature=signature):
-                start = source.find(signature)
-                self.assertNotEqual(start, -1, f"missing {signature}")
-                rest = source[start + len(signature) :]
-                next_fn = rest.find("\n    void Fields::")
-                body = source[
-                    start : start + len(signature) + (next_fn if next_fn != -1 else len(rest))
-                ]
-                self.assertIn("geode::cast::typeinfo_cast<cocos2d::CCNode*>", body)
-                self.assertNotIn("reinterpret_cast", body)
+        start = source.find("void Fields::evict(cocos2d::CCObject* object)")
+        self.assertNotEqual(start, -1, "missing void Fields::evict(cocos2d::CCObject* object)")
+        rest = source[start + len("void Fields::evict(cocos2d::CCObject* object)") :]
+        next_fn = rest.find("\n    void Fields::")
+        body = source[
+            start : start
+            + len("void Fields::evict(cocos2d::CCObject* object)")
+            + (next_fn if next_fn != -1 else len(rest))
+        ]
+        self.assertIn("geode::cast::typeinfo_cast<cocos2d::CCNode*>", body)
+        self.assertNotIn("reinterpret_cast", body)
+
+    def test_fields_evict_if_final_release_skips_typeinfo_cast(self) -> None:
+        source = read_repo_file("src/framework/usertype/Fields.cpp")
+        start = source.find("void Fields::evictIfFinalRelease(cocos2d::CCObject* object)")
+        self.assertNotEqual(
+            start,
+            -1,
+            "missing void Fields::evictIfFinalRelease(cocos2d::CCObject* object)",
+        )
+        rest = source[start + len("void Fields::evictIfFinalRelease(cocos2d::CCObject* object)") :]
+        next_fn = rest.find("\n    void Fields::")
+        body = source[
+            start : start
+            + len("void Fields::evictIfFinalRelease(cocos2d::CCObject* object)")
+            + (next_fn if next_fn != -1 else len(rest))
+        ]
+        self.assertNotIn("geode::cast::typeinfo_cast", body)
+        self.assertIn("fieldTables()", body)
+        self.assertIn("entryStillOwnsNode", body)
 
     def test_trampoline_anchor_uses_static_cast_not_typeinfo(self) -> None:
         source = read_repo_file("src/framework/callback/LuaTrampolineRegistry.cpp")

@@ -86,11 +86,9 @@ namespace luax {
 
     void Fields::evictIfFinalRelease(cocos2d::CCObject* object) {
         if (!object) return;
-        auto* node = geode::cast::typeinfo_cast<cocos2d::CCNode*>(object);
-        if (!node) return;
         auto& tables = fieldTables();
-        auto it = tables.find(node);
-        if (it == tables.end() || !it->second.owner.valid()) return;
+        auto it = tables.find(static_cast<cocos2d::CCNode*>(static_cast<void*>(object)));
+        if (it == tables.end() || !entryStillOwnsNode(it->second, it->first)) return;
         if (object->retainCount() > 1) return;
         evict(it->first);
     }
