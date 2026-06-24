@@ -10,6 +10,7 @@ from luau_codegen.convert.type_map import (
     sel_variant as sel_variant_name,
 )
 from luau_codegen.model import delegate_specs as _delegate_specs
+from luau_codegen.emit.types_binding import emit_value_default_expr, emit_value_local_decl
 
 
 def _prefix(declare: bool, var: str) -> str:
@@ -482,7 +483,7 @@ def _emit_invoke_failure_return(ret: TypeInfo) -> str:
     if ret.kind == "seed_value":
         return f"{ret.cxx_type}{{}}"
     if ret.kind == "value":
-        return "{}"
+        return emit_value_default_expr(ret.cxx_type)
     if ret.kind == "string":
         return "std::string()"
     raise ValueError(
@@ -511,7 +512,10 @@ def _emit_callback_lambda(idx: int, var: str, info: TypeInfo, label: str) -> lis
         lines.append(f"        auto {var} = [{var}_cb]({params}) {{\n")
     else:
         lines.append(f"        auto {var} = [{var}_cb]({params}) -> {ret_type} {{\n")
-        lines.append(f"            {ret_type} {var}_ret{{}};\n")
+        if ret.kind == "value":
+            lines.append(f"            {emit_value_local_decl(ret.cxx_type, f'{var}_ret')}\n")
+        else:
+            lines.append(f"            {ret_type} {var}_ret{{}};\n")
     if info.callback_args:
         ctx_fields = "; ".join(f"{cb.cxx_type} p{i}" for i, cb in enumerate(info.callback_args))
         ctx_init = ", ".join(f"{var}_p{i}" for i in range(len(info.callback_args)))

@@ -60,6 +60,18 @@ def _needs_deferred_emission(desc: CocosValueStructDescriptor) -> bool:
     return desc.cxx_type in _deferred_cxx_types()
 
 
+def emit_value_local_decl(cxx_type: str, name: str) -> str:
+    if cxx_type in _deferred_cxx_types():
+        return f"{cxx_type} {name};"
+    return f"{cxx_type} {name}{{}};"
+
+
+def emit_value_default_expr(cxx_type: str) -> str:
+    if cxx_type in _deferred_cxx_types():
+        return f"{cxx_type}()"
+    return f"{cxx_type}{{}}"
+
+
 def _emit_check_struct(desc: CocosValueStructDescriptor) -> str:
     body = "".join(line for field in desc.check_fields for line in _check_lines(field))
     return (

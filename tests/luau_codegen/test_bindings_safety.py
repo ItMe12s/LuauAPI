@@ -895,6 +895,62 @@ class GeneratedSafetyTests(unittest.TestCase):
             gate.VALUE_STRUCT_OPT_IN = saved
             _rebuild_value_type_maps()
 
+    def test_deferred_value_struct_out_arg_uses_default_ctor_decl(self) -> None:
+        from pathlib import Path
+
+        from luau_codegen.emit.value_struct_specs import (  # type: ignore[import-unresolved]
+            collect_value_struct_specs,
+            install_value_struct_specs_module,
+        )
+        from luau_codegen.model import value_struct_gate as gate  # type: ignore[import-unresolved]
+        from luau_codegen.model.value_types import _rebuild_value_type_maps  # type: ignore[import-unresolved]
+
+        saved = gate.VALUE_STRUCT_OPT_IN
+        try:
+            gate.VALUE_STRUCT_OPT_IN = ("ContainerStruct",)
+            ccobject = Class(name="CCObject", namespace="cocos2d", fields=[])
+            container = Class(
+                name="ContainerStruct",
+                fields=[
+                    Field("m_keys", "gd::vector<int>"),
+                    Field("m_value", "int"),
+                ],
+            )
+            mgr = Class(
+                name="StateManager",
+                namespace="cocos2d",
+                bases=["CCObject"],
+                methods=[
+                    Method(
+                        name="fill",
+                        ret="void",
+                        args=[Arg("ContainerStruct&", "state")],
+                        platforms=all_platforms("0x1"),
+                    )
+                ],
+            )
+            root = Root(classes=[ccobject, container, mgr])
+            specs = collect_value_struct_specs(root)
+            install_value_struct_specs_module(
+                specs,
+                specs_path=Path(tempfile.gettempdir()) / "_test_value_struct_out_specs.py",
+                module_name="luau_codegen.model.value_struct_specs",
+            )
+            objects = {
+                "CCObject": ccobject,
+                "cocos2d::CCObject": ccobject,
+                "StateManager": mgr,
+                "ContainerStruct": container,
+            }
+            grouped, _ = group_supported(mgr, objects, "win")
+            text = _emit_class_file(mgr, grouped, [], [], objects, set(), 1, "win")
+            self.assertIn("ContainerStruct arg0;", text)
+            self.assertNotIn("ContainerStruct arg0{}", text)
+            self.assertIn("self->fill(arg0)", text)
+        finally:
+            gate.VALUE_STRUCT_OPT_IN = saved
+            _rebuild_value_type_maps()
+
     def test_std_array_int_field_setter_uses_assign_std_array(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")
         foo = Class(

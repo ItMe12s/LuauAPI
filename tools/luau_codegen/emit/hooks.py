@@ -8,6 +8,7 @@ if TYPE_CHECKING:
 from luau_codegen.parse.broma import Class, Method
 from luau_codegen.policy.hooks import hook_address_expr
 from luau_codegen.convert.marshalling import emit_stack_check, push_value
+from luau_codegen.emit.types_binding import emit_value_local_decl
 from luau_codegen.model.domain import cxx_name, lua_namespace
 from luau_codegen.convert.type_map import TypeInfo, classify_arg, classify_return
 from luau_codegen.util import cxx_id
@@ -159,7 +160,10 @@ def emit_hook_target(
     out.append(f"    static void* {original_var} = nullptr;\n\n")
     out.append(f"    {ret_type} {hook_fn}({params_text}) {{\n")
     if ret.kind != "void":
-        out.append(f"        {ret.cxx_type} result{{}};\n")
+        if ret.kind == "value":
+            out.append(f"        {emit_value_local_decl(ret.cxx_type, 'result')}\n")
+        else:
+            out.append(f"        {ret.cxx_type} result{{}};\n")
     for _, info, name in args:
         if info.kind == "string" and info.cxx_type.endswith("*"):
             out.append(f"        std::string {name}Storage;\n")

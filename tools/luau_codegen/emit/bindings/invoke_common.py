@@ -16,11 +16,12 @@ from luau_codegen.emit.bindings.vector_push import (
     emit_vector_out_push,
 )
 from luau_codegen.policy.containers import _CONTAINER_KINDS
+from luau_codegen.emit.types_binding import emit_value_local_decl
 
 
 def emit_out_arg(info: TypeInfo, var: str) -> tuple[List[str], str]:
-    if info.kind == "value" and info.lua_type == "UIButtonConfig":
-        return [f"        UIButtonConfig {var}{{}};\n"], var
+    if info.kind == "value":
+        return [f"        {emit_value_local_decl(info.cxx_type, var)}\n"], var
     if info.kind == "enum":
         return [f"        {info.cxx_type} {var}{{}};\n"], var
     if info.kind in _CONTAINER_KINDS:
