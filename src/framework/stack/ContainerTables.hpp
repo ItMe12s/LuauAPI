@@ -10,6 +10,7 @@
 #include <cstdint>
 #include <lua.h>
 #include <lualib.h>
+#include <new>
 #include <string>
 #include <type_traits>
 #include <utility>
@@ -539,6 +540,12 @@ namespace luax {
                 dest.push_back(std::move(elem));
             }
         }
+    }
+
+    template <class T>
+    void assignValue(T& dest, T src) {
+        dest.~T();
+        new (&dest) T(std::move(src));
     }
 } // namespace luax
 

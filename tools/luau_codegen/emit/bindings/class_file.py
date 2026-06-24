@@ -34,6 +34,7 @@ from luau_codegen.convert.type_map import (
     require_classify_return,
 )
 from luau_codegen.util import cxx_id
+from luau_codegen.emit.types_binding import _deferred_cxx_types
 
 
 def _classify_method_args(
@@ -391,6 +392,8 @@ def _emit_field_accessors(
         out.append(f'                luaL_error(L, "{label} field pointer is null");\n')
         out.append("            }\n")
         out.append(f"            *self->{field.name} = std::move(value);\n")
+    elif arg_info.kind == "value" and arg_info.cxx_type in _deferred_cxx_types():
+        out.append(f"            luax::assignValue(self->{field.name}, std::move(value));\n")
     else:
         out.append(
             f"            self->{field.name} = static_cast<decltype(self->{field.name})>(value);\n"

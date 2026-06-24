@@ -838,6 +838,63 @@ class GeneratedSafetyTests(unittest.TestCase):
         self.assertNotIn("static_cast<decltype(self->m_attempts)>(value)", text)
         self.assertIn("static_cast<int>(self->m_attempts)", text)
 
+    def test_deferred_value_struct_field_setter_uses_assign_value(self) -> None:
+        from pathlib import Path
+
+        from luau_codegen.emit.value_struct_specs import (  # type: ignore[import-unresolved]
+            collect_value_struct_specs,
+            install_value_struct_specs_module,
+        )
+        from luau_codegen.model import value_struct_gate as gate  # type: ignore[import-unresolved]
+        from luau_codegen.model.value_types import _rebuild_value_type_maps  # type: ignore[import-unresolved]
+
+        saved = gate.VALUE_STRUCT_OPT_IN
+        try:
+            gate.VALUE_STRUCT_OPT_IN = ("ContainerStruct",)
+            ccobject = Class(name="CCObject", namespace="cocos2d", fields=[])
+            container = Class(
+                name="ContainerStruct",
+                fields=[
+                    Field("m_keys", "gd::vector<int>"),
+                    Field("m_value", "int"),
+                ],
+            )
+            holder = Class(
+                name="Holder",
+                namespace="cocos2d",
+                bases=["CCObject"],
+                fields=[Field("m_state", "ContainerStruct")],
+            )
+            root = Root(classes=[ccobject, container, holder])
+            specs = collect_value_struct_specs(root)
+            install_value_struct_specs_module(
+                specs,
+                specs_path=Path(tempfile.gettempdir()) / "_test_value_struct_specs.py",
+                module_name="luau_codegen.model.value_struct_specs",
+            )
+            objects = {
+                "CCObject": ccobject,
+                "cocos2d::CCObject": ccobject,
+                "Holder": holder,
+                "ContainerStruct": container,
+            }
+            grouped, _ = group_supported(holder, objects, "win")
+            text = _emit_class_file(
+                holder,
+                grouped,
+                [],
+                [(holder, holder.fields[0])],
+                objects,
+                set(),
+                1,
+                "win",
+            )
+            self.assertIn("luax::assignValue(self->m_state, std::move(value))", text)
+            self.assertNotIn("self->m_state = static_cast", text)
+        finally:
+            gate.VALUE_STRUCT_OPT_IN = saved
+            _rebuild_value_type_maps()
+
     def test_std_array_int_field_setter_uses_assign_std_array(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")
         foo = Class(
