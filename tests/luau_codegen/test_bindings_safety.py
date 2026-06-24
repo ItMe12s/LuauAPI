@@ -4,7 +4,7 @@ import os
 import tempfile
 import unittest
 
-from test_support import all_platforms, types_text
+from test_support import all_platforms, reinstall_fixture_value_struct_specs, types_text
 from luau_codegen.convert.marshalling import emit_stack_check  # type: ignore[import-unresolved]
 from luau_codegen.convert.type_map import TypeInfo  # type: ignore[import-unresolved]
 from luau_codegen.emit.bindings import emit_free_functions_file  # type: ignore[import-unresolved]
@@ -846,7 +846,6 @@ class GeneratedSafetyTests(unittest.TestCase):
             install_value_struct_specs_module,
         )
         from luau_codegen.model import value_struct_gate as gate  # type: ignore[import-unresolved]
-        from luau_codegen.model.value_types import _rebuild_value_type_maps  # type: ignore[import-unresolved]
 
         saved = gate.VALUE_STRUCT_OPT_IN
         try:
@@ -893,7 +892,7 @@ class GeneratedSafetyTests(unittest.TestCase):
             self.assertNotIn("self->m_state = static_cast", text)
         finally:
             gate.VALUE_STRUCT_OPT_IN = saved
-            _rebuild_value_type_maps()
+            reinstall_fixture_value_struct_specs()
 
     def test_deferred_value_struct_out_arg_uses_default_ctor_decl(self) -> None:
         from pathlib import Path
@@ -903,7 +902,6 @@ class GeneratedSafetyTests(unittest.TestCase):
             install_value_struct_specs_module,
         )
         from luau_codegen.model import value_struct_gate as gate  # type: ignore[import-unresolved]
-        from luau_codegen.model.value_types import _rebuild_value_type_maps  # type: ignore[import-unresolved]
 
         saved = gate.VALUE_STRUCT_OPT_IN
         try:
@@ -949,7 +947,7 @@ class GeneratedSafetyTests(unittest.TestCase):
             self.assertIn("self->fill(arg0)", text)
         finally:
             gate.VALUE_STRUCT_OPT_IN = saved
-            _rebuild_value_type_maps()
+            reinstall_fixture_value_struct_specs()
 
     def test_std_array_int_field_setter_uses_assign_std_array(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")

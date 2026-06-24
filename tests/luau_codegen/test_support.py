@@ -77,6 +77,10 @@ _install_fixture_value_struct_specs()
 DELEGATE_SPECS = sys.modules[DELEGATE_SPECS_MODULE].DELEGATE_SPECS
 
 
+def reinstall_fixture_value_struct_specs() -> None:
+    _install_fixture_value_struct_specs()
+
+
 def all_platforms(value: str = "0x1") -> dict[str, str]:
     return {
         "win": value,
