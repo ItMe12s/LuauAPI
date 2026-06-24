@@ -137,7 +137,7 @@ class EmitValueStructCheckPushTests(unittest.TestCase):
     def test_nested_check_uses_luax_check_with_pop(self) -> None:
         desc = self._cocos_for(_NESTED_FIELDS, "NestedEmit")
         text = _emit_check_struct(desc)
-        self.assertIn("NestedEmit value{};", text)
+        self.assertIn("NestedEmit value;", text)
         self.assertIn('lua_getfield(L, idx, "m_pos")', text)
         self.assertIn("luax::check<cocos2d::CCPoint>(L, -1, method)", text)
         self.assertIn("lua_pop(L, 1)", text)

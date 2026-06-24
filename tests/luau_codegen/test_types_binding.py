@@ -5,6 +5,7 @@ import shutil
 import tempfile
 import unittest
 
+import test_support
 from luau_codegen.emit.types_binding import (
     emit_types_generated_containers_hpp,
     emit_types_generated_hpp,
@@ -77,6 +78,9 @@ class TypesGeneratedEmitterTests(unittest.TestCase):
         self.assertIn("checkOpaqueHandle", containers)
         self.assertNotIn("check<FMODSoundState>", base)
         self.assertIn("check<FMODSoundState>", containers)
+        self.assertIn("SequenceTriggerState value;", containers)
+        self.assertNotIn("value{};", containers)
+        self.assertNotIn("value();", containers)
 
     def test_write_types_generated_creates_expected_path(self) -> None:
         tmpdir = tempfile.mkdtemp()

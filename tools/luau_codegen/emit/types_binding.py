@@ -65,7 +65,7 @@ def _emit_check_struct(desc: CocosValueStructDescriptor) -> str:
     return (
         f"    template <>\n"
         f"    inline {desc.cxx_type} check<{desc.cxx_type}>(lua_State* L, int idx, char const* method) {{\n"
-        f"        {desc.cxx_type} value{{}};\n"
+        f"        {desc.cxx_type} value;\n"
         f"{body}"
         f"        return value;\n"
         f"    }}\n"
