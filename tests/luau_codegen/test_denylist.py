@@ -9,6 +9,7 @@ from luau_codegen.parse.collect import collect_bindings_root  # type: ignore[imp
 
 from luau_codegen.model.denylist import (  # type: ignore[import-unresolved]
     BINDABLE_CONSTRUCTORS,
+    GEODE_UI_PREFERRED_OVERLOAD_CLASSES,
     INACCESSIBLE_CLASSES,
     INACCESSIBLE_METHODS,
     PREFERRED_OVERLOADS,
@@ -25,6 +26,15 @@ def _load_root():
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         return collect_bindings_root(bindings, geode_sdk_path=sdk)
+
+
+def _geode_sdk_available() -> bool:
+    sdk = os.environ.get("GEODE_SDK")
+    return bool(sdk and os.path.isdir(sdk))
+
+
+def _skip_geode_ui_overload(cls_name: str) -> bool:
+    return not _geode_sdk_available() and cls_name in GEODE_UI_PREFERRED_OVERLOAD_CLASSES
 
 
 class DenylistStaleEntryTests(unittest.TestCase):
@@ -59,6 +69,8 @@ class DenylistStaleEntryTests(unittest.TestCase):
     def test_preferred_overload_keys_exist(self) -> None:
         stale = []
         for cls_name, method in sorted(PREFERRED_OVERLOADS):
+            if _skip_geode_ui_overload(cls_name):
+                continue
             methods = self.methods_by_class.get(cls_name)
             if methods is None or method not in methods:
                 stale.append((cls_name, method))
@@ -67,6 +79,8 @@ class DenylistStaleEntryTests(unittest.TestCase):
     def test_preferred_overload_signatures_match(self) -> None:
         mismatched = []
         for (cls_name, method), sigs in sorted(PREFERRED_OVERLOADS.items()):
+            if _skip_geode_ui_overload(cls_name):
+                continue
             parsed = self.overloads.get((cls_name, method), [])
             if not any(sig in parsed for sig in sigs):
                 mismatched.append((cls_name, method))

@@ -198,8 +198,18 @@ INACCESSIBLE_METHODS = {
     ("EditorUI", "colorSelectClosed"),
     ("EditorUI", "findSnapObject"),
     ("ButtonSprite", "init"),
-    ("MDPopup", "void"),
 }
+
+# Geode UI header-scanned classes (parse/geode_sdk.py), not Broma.
+# PREFERRED_OVERLOADS for these need GEODE_SDK at denylist-test time.
+GEODE_UI_PREFERRED_OVERLOAD_CLASSES = frozenset(
+    {
+        "Border",
+        "ColorPickPopup",
+        "Notification",
+        "ScrollLayer",
+    }
+)
 
 INACCESSIBLE_CLASSES = {
     "CCGrabber",

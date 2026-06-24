@@ -34,6 +34,7 @@ Plus, you get fewer crashes and clear, easy-to-understand error logging.
 - Argon support
 - Box2D support
 - SQLite support
+- In-game IDE
 - Other quality of life features
 
 ---

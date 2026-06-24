@@ -2,6 +2,7 @@
 #include "core/Config.hpp"
 #include "core/Runtime.hpp"
 #include "framework/Binding.hpp"
+#include "framework/callback/LuaCocosHandler.hpp"
 #include "framework/callback/LuaDelegate.hpp"
 #include "framework/callback/LuaTrampolineRegistry.hpp"
 #include "framework/usertype/LuaRef.hpp"
@@ -74,7 +75,7 @@ TEST_CASE("evictTrampolinesForAnchor defers physical release until drain") {
 
     struct Anchor : cocos2d::CCObject {};
 
-    struct Trampoline : cocos2d::CCObject {};
+    struct Trampoline : luax::LuaCocosHandlerBase {};
 
     auto* anchor = new Anchor();
     auto* trampoline = new Trampoline();
