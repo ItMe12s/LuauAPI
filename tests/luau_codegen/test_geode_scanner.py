@@ -6,7 +6,7 @@ import tempfile
 import unittest
 from unittest import mock
 
-import test_support  # noqa: F401
+import test_support
 from luau_codegen.parse.broma import Class  # type: ignore[import-unresolved]
 from luau_codegen.policy.filtering import supported  # type: ignore[import-unresolved]
 from luau_codegen.policy.link_attrs import class_link_platforms  # type: ignore[import-unresolved]

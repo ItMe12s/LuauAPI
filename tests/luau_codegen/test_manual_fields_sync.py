@@ -6,7 +6,7 @@ import re
 import tempfile
 import unittest
 
-import test_support  # noqa: F401
+import test_support
 from luau_codegen.emit.luau_types import emit as emit_luau_types  # type: ignore[import-unresolved]
 from luau_codegen.emit.luau_types.manual_fields import (  # type: ignore[import-unresolved]
     MANUAL_FREE_FN_FIELDS,

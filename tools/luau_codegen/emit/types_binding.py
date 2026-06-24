@@ -7,22 +7,67 @@ from luau_codegen.model.cocos_value_types import (
     COCOS_VALUE_STRUCTS,
     CocosValueStructDescriptor,
     PushFieldDescriptor,
-    _check_expr,
+    _check_lines,
 )
 
 TYPES_GEN_REL_PATH = "src/framework/stack/Types.generated.hpp"
+TYPES_GEN_CONTAINERS_REL_PATH = "src/framework/stack/Types.generated.containers.hpp"
 
 
 def types_gen_rel_path() -> str:
     return TYPES_GEN_REL_PATH
 
 
+def types_gen_containers_rel_path() -> str:
+    return TYPES_GEN_CONTAINERS_REL_PATH
+
+
+_DEFER_FIELD_KINDS = frozenset({"container", "object_nullable", "opaque_nullable"})
+
+
+def _direct_defer(desc: CocosValueStructDescriptor) -> bool:
+    if any(field.kind in _DEFER_FIELD_KINDS for field in desc.check_fields):
+        return True
+    return any(field.kind in _DEFER_FIELD_KINDS for field in desc.push_fields)
+
+
+def _nested_refs(desc: CocosValueStructDescriptor) -> set[str]:
+    refs: set[str] = set()
+    for field in desc.check_fields:
+        if field.kind == "nested" and field.nested_type:
+            refs.add(field.nested_type)
+    for field in desc.push_fields:
+        if field.kind == "nested" and field.nested_type:
+            refs.add(field.nested_type)
+    return refs
+
+
+def _deferred_cxx_types() -> frozenset[str]:
+    deferred = {desc.cxx_type for desc in COCOS_VALUE_STRUCTS if _direct_defer(desc)}
+    changed = True
+    while changed:
+        changed = False
+        for desc in COCOS_VALUE_STRUCTS:
+            if desc.cxx_type in deferred:
+                continue
+            if _nested_refs(desc) & deferred:
+                deferred.add(desc.cxx_type)
+                changed = True
+    return frozenset(deferred)
+
+
+def _needs_deferred_emission(desc: CocosValueStructDescriptor) -> bool:
+    return desc.cxx_type in _deferred_cxx_types()
+
+
 def _emit_check_struct(desc: CocosValueStructDescriptor) -> str:
-    fields = ", ".join(_check_expr(field) for field in desc.check_fields)
+    body = "".join(line for field in desc.check_fields for line in _check_lines(field))
     return (
         f"    template <>\n"
         f"    inline {desc.cxx_type} check<{desc.cxx_type}>(lua_State* L, int idx, char const* method) {{\n"
-        f"        return {{{fields}}};\n"
+        f"        {desc.cxx_type} value{{}};\n"
+        f"{body}"
+        f"        return value;\n"
         f"    }}\n"
     )
 
@@ -60,10 +105,42 @@ def _emit_push_field(field: PushFieldDescriptor) -> str:
             f"        luax::push(L, {field.member});\n"
             f'        lua_setfield(L, -2, "{field.name}");\n'
         )
+    if field.kind == "string":
+        return (
+            f"        push(L, std::string({field.member}));\n"
+            f'        lua_setfield(L, -2, "{field.name}");\n'
+        )
+    if field.kind == "enum":
+        return (
+            f"        lua_pushnumber(L, static_cast<double>(static_cast<int>({field.member})));\n"
+            f'        lua_setfield(L, -2, "{field.name}");\n'
+        )
+    if field.kind == "object_nullable":
+        obj = field.cxx_type or (field.nested_type or "")
+        return (
+            f"        if ({field.member} == nullptr) {{\n"
+            f"            lua_pushnil(L);\n"
+            f"        }} else {{\n"
+            f"            luax::Usertype<{obj}>::pushBorrowed(L, {field.member});\n"
+            f"        }}\n"
+            f'        lua_setfield(L, -2, "{field.name}");\n'
+        )
+    if field.kind == "opaque_nullable":
+        opaque = field.cxx_type or (field.nested_type or "")
+        return (
+            f"        if ({field.member} == nullptr) {{\n"
+            f"            lua_pushnil(L);\n"
+            f"        }} else {{\n"
+            f"            luax::pushOpaqueHandle(L, {field.member});\n"
+            f"        }}\n"
+            f'        lua_setfield(L, -2, "{field.name}");\n'
+        )
     if field.kind == "nested":
         if field.nested_type is None:
             raise ValueError(f"nested push field requires nested_type: {field.name}")
         return f'        push(L, {field.member});\n        lua_setfield(L, -2, "{field.name}");\n'
+    if field.kind == "container":
+        return "".join(field.push_override)
     raise ValueError(f"unsupported push field kind: {field.kind}")
 
 
@@ -89,8 +166,8 @@ def _emit_ccrect_push() -> str:
     )
 
 
-def emit_types_generated_hpp() -> str:
-    lines = [
+def _types_preamble() -> list[str]:
+    return [
         "#pragma once\n",
         "\n",
         "#include <cocos2d.h>\n",
@@ -98,13 +175,18 @@ def emit_types_generated_hpp() -> str:
         "\n",
         "namespace luax {\n",
     ]
-    for desc in COCOS_VALUE_STRUCTS:
+
+
+def emit_types_generated_hpp() -> str:
+    structs = [desc for desc in COCOS_VALUE_STRUCTS if not _needs_deferred_emission(desc)]
+    lines = _types_preamble()
+    for desc in structs:
         lines.append("\n")
         lines.append(_emit_check_struct(desc))
     lines.append("\n")
     lines.append(_emit_ccrect_check())
     lines.append("\n")
-    for desc in COCOS_VALUE_STRUCTS:
+    for desc in structs:
         param = desc.push_fields[0].member.split(".", 1)[0]
         lines.append(_emit_push_struct(desc, param))
     lines.append("\n")
@@ -113,8 +195,23 @@ def emit_types_generated_hpp() -> str:
     return "".join(lines)
 
 
+def emit_types_generated_containers_hpp() -> str:
+    structs = [desc for desc in COCOS_VALUE_STRUCTS if _needs_deferred_emission(desc)]
+    lines = _types_preamble()
+    for desc in structs:
+        lines.append("\n")
+        lines.append(_emit_check_struct(desc))
+    lines.append("\n")
+    for desc in structs:
+        param = desc.push_fields[0].member.split(".", 1)[0]
+        lines.append(_emit_push_struct(desc, param))
+    lines.append("} // namespace luax\n")
+    return "".join(lines)
+
+
 def write_types_generated(gen_out: Path | str) -> str:
-    content = emit_types_generated_hpp()
-    out_path = Path(gen_out) / TYPES_GEN_REL_PATH
-    _write_if_changed(str(out_path), content)
-    return str(out_path)
+    base_path = Path(gen_out) / TYPES_GEN_REL_PATH
+    containers_path = Path(gen_out) / TYPES_GEN_CONTAINERS_REL_PATH
+    _write_if_changed(str(base_path), emit_types_generated_hpp())
+    _write_if_changed(str(containers_path), emit_types_generated_containers_hpp())
+    return str(base_path)

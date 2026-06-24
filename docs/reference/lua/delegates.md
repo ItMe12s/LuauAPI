@@ -32,7 +32,7 @@ layer:registerWithTouchDispatcher({
 
 Default behavior on error or missing method:
 
-- A callback that errors or times out is logged, and the method default is returned.
+- If a callback errors or times out, LuauAPI logs the failure and returns the method default.
 - A missing method returns the default without logging.
 - Defaults: `bool` returns `false`, `int`/`float`/`double` return `0`, `string` returns empty, object methods return `nil`.
 

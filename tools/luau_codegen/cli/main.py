@@ -20,7 +20,12 @@ from luau_codegen.emit.delegates import (
     emit_delegate_artifacts,
     install_delegate_specs_module,
 )
-from luau_codegen.emit.types_binding import types_gen_rel_path, write_types_generated
+from luau_codegen.emit.types_binding import (
+    types_gen_containers_rel_path,
+    types_gen_rel_path,
+    write_types_generated,
+)
+from luau_codegen.emit.value_struct_specs import emit_value_struct_artifacts
 from luau_codegen.parse.collect import collect_bindings_root
 from luau_codegen.cli.io import (
     _cleanup_orphans,
@@ -95,6 +100,10 @@ def main(argv: List[str]) -> int:
         "--delegate-specs-out",
         help="Output path for delegate_specs.py (default: --out/delegate_specs.py)",
     )
+    parser.add_argument(
+        "--value-struct-specs-out",
+        help="Output path for value_struct_specs.py (default: --out/value_struct_specs.py)",
+    )
     args = parser.parse_args(argv)
 
     if args.platform not in VALID_PLATFORMS:
@@ -116,6 +125,8 @@ def main(argv: List[str]) -> int:
 
     if args.delegate_specs_out:
         args.delegate_specs_out = str(Path(args.delegate_specs_out).resolve())
+    if args.value_struct_specs_out:
+        args.value_struct_specs_out = str(Path(args.value_struct_specs_out).resolve())
 
     if not os.path.isdir(args.bindings):
         log_error(f"bindings dir missing: {args.bindings}")
@@ -166,6 +177,24 @@ def main(argv: List[str]) -> int:
         log_error(f"I/O failed while loading delegate specs: {exc}")
         return 4
 
+    value_struct_specs_out = args.value_struct_specs_out or (
+        os.path.join(args.out, "value_struct_specs.py") if args.out else None
+    )
+    try:
+        value_struct_specs = emit_value_struct_artifacts(
+            root,
+            specs_out=value_struct_specs_out,
+            install_module=True,
+            preserve_existing_on_empty=True,
+        )
+    except OSError as exc:
+        log_error(f"I/O failed while loading value-struct specs: {exc}")
+        return 4
+    except Exception as exc:
+        log_error(f"value-struct spec generation failed: {exc}")
+        return 5
+    log_info(f"value structs: {len(value_struct_specs)} derived")
+
     plan_platforms = tuple(dict.fromkeys(intersection_platforms(args.platform) + (args.platform,)))
     plans_by_platform = {
         platform: emit_plan.collect_platform_plan(root, platform) for platform in plan_platforms
@@ -213,6 +242,7 @@ def main(argv: List[str]) -> int:
         for rel in DELEGATE_GEN_REL_PATHS:
             print(rel)
         print(types_gen_rel_path())
+        print(types_gen_containers_rel_path())
         return 0
 
     if args.list_all_outputs:
@@ -224,6 +254,7 @@ def main(argv: List[str]) -> int:
         for rel in DELEGATE_GEN_REL_PATHS:
             print(f"binding:{rel}")
         print(f"binding:{types_gen_rel_path()}")
+        print(f"binding:{types_gen_containers_rel_path()}")
         type_files = emit_types.emit(
             root, args.platform, plan=plan, manual_fields=MANUAL_FREE_FN_FIELDS
         )
@@ -270,6 +301,7 @@ def main(argv: List[str]) -> int:
 
         types_gen_path = write_types_generated(args.out)
         written_paths.append(types_gen_path)
+        written_paths.append(str(Path(args.out) / types_gen_containers_rel_path()))
 
         schema_path = os.path.join(args.out, "schema.json")
         report_path = os.path.join(args.out, "report.md")

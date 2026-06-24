@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import unittest
 
-import test_support  # noqa: F401
+import test_support
 from luau_codegen.model.domain import build_class_lookup, codegen_object_map, resolve_base  # type: ignore[import-unresolved]
 from luau_codegen.parse.broma import Class, Root  # type: ignore[import-unresolved]
 

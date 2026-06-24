@@ -226,6 +226,10 @@ class ListAllOutputsCliTests(unittest.TestCase):
                 "binding:src/framework/stack/Types.generated.hpp",
                 lines,
             )
+            self.assertIn(
+                "binding:src/framework/stack/Types.generated.containers.hpp",
+                lines,
+            )
             self.assertIn("type:geode.d.luau", lines)
         finally:
             shutil.rmtree(tmpdir)

@@ -11,6 +11,9 @@ The generator reads Broma binding files for one Geometry Dash version and one pl
 
 - C++ binding sources into `build/luauapi-gen/src`.
   These expose game classes to Lua and implement the hook functions.
+- Value struct check/push headers into `build/luauapi-gen/src/framework/stack/`
+  (`Types.generated.hpp` and `Types.generated.containers.hpp`).
+  See Value structs below for split and include order.
 - One Luau type stub at `types/geode.d.luau`,
   holding all bound classes, factories, enum names, and the root `geode` namespace.
   The `types/` folder is created in the repo root during build and is gitignored.
@@ -157,6 +160,7 @@ After generation, `build/luauapi-gen/` holds:
 - `parity.json`: cross-platform method support matrix (see [Platform parity](platform-parity.md))
 - `audit.md`: skip audit grouped by bucket (see Audit buckets below)
 - `delegate_specs.py`: generated delegate type specs, installed before binding emit
+- `value_struct_specs.py`: generated value-struct type specs, installed before binding emit
 
 `emit/metadata.py` writes the schema and report.
 `emit/parity.py` writes `parity.json`.
@@ -218,20 +222,67 @@ Ambiguous overloads cause codegen to exit with code 6 when building the emit pla
 One Lua table key per method name.
 Stubs widen with `...any` where overloads disagree. See [type stubs](../../reference/lua/type-stubs.md).
 
-## Value struct gate
+## Value structs
 
-Cocos value types such as `CCPoint`, `RGBColor`, and `BlendFunc` are always bound.
-They live in `model/value_types.py` (single registry for classify, C++ check/push, and Luau stubs).
-`convert/type_map.py` re-exports `VALUE_TYPES` and `VALUE_CHECK_CXX_TYPES` derived from that table.
+Value structs are plain-data C++ structs marshalled as Lua tables in both directions.
+`model/value_types.py` is the single registry.
+Each `ValueTypeSpec` drives type classification, Luau stub emission, and generated check/push C++.
+`convert/type_map.py` re-exports `VALUE_TYPES` and `VALUE_CHECK_CXX_TYPES`.
 
-`model/value_struct_gate.py` holds two opt-in lists:
+### Generated check/push headers
 
-- `DENIED_VALUE_STRUCTS`: explicit deny with a reason (for example `ChanceObject`)
-- `GATED_VALUE_STRUCTS`: extra structs that need a custom stub body (for example `SmartPrefabResult`)
+`emit/types_binding.py` writes two headers under `build/luauapi-gen/src/framework/stack/`:
 
-Gated names are entries in `model/value_types.py` tagged via `GATED_VALUE_STRUCTS`.
-`emit/luau_types/references.py` emits export types from the same registry.
-See `tests/luau_codegen/test_value_struct_gate.py`.
+| Header | Contents |
+| --- | --- |
+| `Types.generated.hpp` | Primitive cocos structs and simple opt-in structs (numbers, enums, strings, nested non-deferred value types) |
+| `Types.generated.containers.hpp` | Structs that need container helpers, nullable usertypes, opaque handles, or nested deferred members |
+
+Defer rule in `types_binding.py`:
+
+- Direct defer when any check or push field kind is `container`, `object_nullable`, or `opaque_nullable`
+- Transitive defer when a `nested` field references another deferred struct
+- Fixpoint over `COCOS_VALUE_STRUCTS` order in the combined registry
+
+Runtime include order:
+
+- `Types.hpp` includes `Types.generated.hpp` before `Usertype.hpp`
+- `ContainerTables.hpp` includes `Types.generated.containers.hpp` at the end,
+  after container map and vector templates are declared
+- `checkPrimitiveVectorElement` and `pushPrimitiveVectorElement` are forward-declared first
+  and defined after that include so map value paths can call `luax::check<T>` and `luax::push` on deferred types
+
+Handwritten check/push for `UIButtonConfig` and `SmartPrefabResult` stay in `Types.hpp` (not generated).
+
+### Two sources of specs
+
+1. **Builtin specs**: hand-authored `ValueTypeSpec` entries in `model/value_types.py` for types not present in Broma
+   (cocos types such as `CCPoint`, `RGBColor`, `BlendFunc`, plus `UIButtonConfig` and `SmartPrefabResult`,
+   whose check/push are handwritten in `src/framework/stack/Types.hpp`).
+   The `FieldKind` set covers primitives, enums, nullable objects/opaques, nested value structs, strings, and containers.
+   The generic auto-C++ path emits a statement body for any member expressible as a `FieldDescriptor`/`PushFieldDescriptor`.
+
+2. **Derived specs**: Geometry Dash state structs
+   (for example `GJGameState`, `GJShaderState`, `PulseEffectAction`, the `Saved*` checkpoint records).
+   These are not hand-typed.
+   `emit/value_struct_specs.py` reads each struct's fields from the parsed Broma root
+   and derives the `ValueTypeSpec` (member kinds, Luau stub, deps) automatically.
+   Specs write to `build/luauapi-gen/value_struct_specs.py` and install into `model/value_struct_specs.py`.
+   The repo copy of `model/value_struct_specs.py` is a stub (empty `VALUE_STRUCT_SPECS`).
+   It is not the runtime source.
+   Same pattern as `delegate_specs.py`.
+
+### Opt-in list
+
+`model/value_struct_gate.py` holds `VALUE_STRUCT_OPT_IN`:
+a tuple of class names (leaf-first for nested resolution) that the derived-specs generator binds.
+To add a struct, append its name.
+Its layout, stub, deps, and C++ check/push regenerate on the next codegen run.
+No field-level Python to maintain. No drift when Geode bumps bindings.
+
+`emit/luau_types/references.py` emits `export type` blocks from the combined registry.
+See `tests/luau_codegen/test_value_struct_gate.py`, `tests/luau_codegen/test_value_struct_specs.py`,
+and `tests/luau_codegen/test_types_binding.py`.
 
 ## Nullable pointer policy
 
@@ -341,7 +392,12 @@ See [delegates](../../reference/lua/delegates.md) for how scripts use delegate t
 - `tools/luau_codegen/parse/broma_delegates.py`
 - `tools/luau_codegen/model/free_fn_sources.py`
 - `tools/luau_codegen/model/value_struct_gate.py`
+- `tools/luau_codegen/emit/types_binding.py`
+- `tools/luau_codegen/emit/value_struct_specs.py`
+- `src/framework/stack/Types.hpp`
+- `src/framework/stack/ContainerTables.hpp`
 - `tools/luau_codegen/model/delegate_specs.py`
+- `tools/luau_codegen/model/value_struct_specs.py`
 - `tools/luau_codegen/convert/type_classification.py`
 - `tools/luau_codegen/convert/type_map.py`
 - `tools/luau_codegen/emit/bindings/geode_enums.py`

@@ -49,6 +49,9 @@ find_package(Python3 3.11 REQUIRED COMPONENTS Interpreter)
 
 if (LUAUAPI_HOST_ONLY)
     message(STATUS "LuauAPI host-only configure: skipping Geode SDK and configure-time codegen listing")
+    if (LUAUAPI_BUILD_TESTS)
+        include(cmake/GeodeBindings.cmake)
+    endif()
 endif()
 
 if (NOT LUAUAPI_HOST_ONLY)

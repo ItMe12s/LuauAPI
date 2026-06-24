@@ -46,9 +46,14 @@ _TYPE_STUB_ORDER = _VALUE_STUB_ORDER + _OPAQUE_STUB_ORDER
 
 
 def _expand_value_refs(names: set[str]) -> set[str]:
-    out = set(names)
-    for name in names:
-        out.update(_VALUE_STUB_DEPS.get(name, ()))
+    out: set[str] = set(names)
+    queue = list(names)
+    while queue:
+        name = queue.pop()
+        for dep in _VALUE_STUB_DEPS.get(name, ()):
+            if dep not in out:
+                out.add(dep)
+                queue.append(dep)
     return {n for n in out if n in _VALUE_STUB_BODY}
 
 
@@ -73,9 +78,13 @@ def _emit_value_stub_block(names: set[str]) -> str:
     if not expanded:
         return ""
     bodies = _all_type_stub_bodies()
+
+    order = _VALUE_STUB_ORDER + _OPAQUE_STUB_ORDER
+
+    ordered = list(order) + sorted(expanded - set(order))
     parts: list[str] = []
     prev_was_value = False
-    for name in _TYPE_STUB_ORDER:
+    for name in ordered:
         if name not in expanded:
             continue
         is_opaque = name in _OPAQUE_STUB_BODY
@@ -116,7 +125,10 @@ def _refs_from_method(
     refs: set[str] = set()
     for arg in method.args:
         info = classify_arg(arg.type, objects, ctx=ctx)
-        if info and info.kind == "object":
+        if info and info.kind == "value":
+            refs.add(info.lua_type)
+            refs.update(_value_type_object_refs(info))
+        elif info and info.kind == "object":
             refs.add(_object_type_name(info))
         elif info and info.kind == "vector_view" and info.element_type:
             refs.add(_object_type_name(info.element_type))
@@ -141,7 +153,10 @@ def _refs_from_method(
             else:
                 refs.update(_value_type_object_refs(info.element_type))
     ret = classify_return(method.ret, objects, ctx=ctx)
-    if ret and ret.kind == "object":
+    if ret and ret.kind == "value":
+        refs.add(ret.lua_type)
+        refs.update(_value_type_object_refs(ret))
+    elif ret and ret.kind == "object":
         refs.add(_object_type_name(ret))
     elif ret and ret.kind == "vector_view" and ret.element_type:
         refs.add(_object_type_name(ret.element_type))
@@ -177,7 +192,10 @@ def _refs_from_fields(
     refs: set[str] = set()
     for field in fields:
         ok, _, _, ret = bindable_field(field, objects, cls, ctx=ctx)
-        if ok and ret and ret.kind == "object":
+        if ok and ret and ret.kind == "value":
+            refs.add(ret.lua_type)
+            refs.update(_value_type_object_refs(ret))
+        elif ok and ret and ret.kind == "object":
             refs.add(_object_type_name(ret))
         elif ok and ret and ret.kind in ("vector_view", "cc_c_array_view") and ret.element_type:
             refs.add(_object_type_name(ret.element_type))

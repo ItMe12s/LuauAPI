@@ -3,10 +3,32 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal
 
-from luau_codegen.model.value_struct_gate import GATED_VALUE_STRUCTS
-
-FieldKind = Literal["number", "uchar", "float", "glfloat", "GLenum", "bool"]
-PushFieldKind = Literal["number", "integer", "bool", "nested"]
+FieldKind = Literal[
+    "number",
+    "integer",
+    "uchar",
+    "float",
+    "glfloat",
+    "GLenum",
+    "bool",
+    "string",
+    "enum",
+    "object_nullable",
+    "opaque_nullable",
+    "nested",
+    "container",
+]
+PushFieldKind = Literal[
+    "number",
+    "integer",
+    "bool",
+    "string",
+    "enum",
+    "object_nullable",
+    "opaque_nullable",
+    "nested",
+    "container",
+]
 CocosEmitKind = Literal["standard", "ccrect"]
 
 
@@ -15,6 +37,9 @@ class FieldDescriptor:
     name: str
     kind: FieldKind
     member: str
+    cxx_type: str = ""
+    nested_type: str = ""
+    check_override: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -23,6 +48,8 @@ class PushFieldDescriptor:
     kind: PushFieldKind
     member: str
     nested_type: str | None = None
+    cxx_type: str = ""
+    push_override: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -44,9 +71,16 @@ class ValueTypeSpec:
     cocos_emit: CocosEmitKind | None = None
 
 
+def _member_assign_target(field: FieldDescriptor) -> str:
+    tail = field.member.split(".", 1)[1] if "." in field.member else field.member
+    return f"value.{tail}"
+
+
 def _check_expr(field: FieldDescriptor) -> str:
     if field.kind == "number":
         return f'fieldNumber(L, idx, "{field.name}", method)'
+    if field.kind == "integer":
+        return f'static_cast<int>(fieldNumber(L, idx, "{field.name}", method))'
     if field.kind == "uchar":
         return f'static_cast<unsigned char>(fieldNumber(L, idx, "{field.name}", method))'
     if field.kind == "float":
@@ -57,7 +91,59 @@ def _check_expr(field: FieldDescriptor) -> str:
         return f'static_cast<GLenum>(fieldNumber(L, idx, "{field.name}", method))'
     if field.kind == "bool":
         return f'fieldBool(L, idx, "{field.name}", method)'
-    raise ValueError(f"unsupported field kind: {field.kind}")
+    if field.kind == "enum":
+        cxx = field.cxx_type or "int"
+        return f'static_cast<{cxx}>(static_cast<int>(fieldNumber(L, idx, "{field.name}", method)))'
+    raise ValueError(f"unsupported single-line check kind: {field.kind}")
+
+
+def _check_lines(field: FieldDescriptor) -> list[str]:
+    target = _member_assign_target(field)
+    if field.kind == "string":
+        return [
+            "        {\n",
+            f'            auto _s = fieldString(L, idx, "{field.name}", method);\n',
+            f"            {target} = {field.cxx_type or 'gd::string'}(_s.c_str());\n",
+            "        }\n",
+        ]
+    if field.kind == "object_nullable":
+        obj = field.cxx_type
+        return [
+            "        {\n",
+            f'            lua_getfield(L, idx, "{field.name}");\n',
+            "            if (lua_isnil(L, -1)) {\n",
+            f"                {target} = nullptr;\n",
+            "            } else {\n",
+            f"                {target} = luax::Usertype<{obj}>::check(L, -1, method);\n",
+            "            }\n",
+            "            lua_pop(L, 1);\n",
+            "        }\n",
+        ]
+    if field.kind == "opaque_nullable":
+        opaque = field.cxx_type
+        return [
+            "        {\n",
+            f'            lua_getfield(L, idx, "{field.name}");\n',
+            "            if (lua_isnil(L, -1)) {\n",
+            f"                {target} = nullptr;\n",
+            "            } else {\n",
+            f"                {target} = luax::checkOpaqueHandle<{opaque}>(L, -1, method);\n",
+            "            }\n",
+            "            lua_pop(L, 1);\n",
+            "        }\n",
+        ]
+    if field.kind == "nested":
+        nested = field.nested_type or field.cxx_type
+        return [
+            "        {\n",
+            f'            lua_getfield(L, idx, "{field.name}");\n',
+            f"            {target} = luax::check<{nested}>(L, -1, method);\n",
+            "            lua_pop(L, 1);\n",
+            "        }\n",
+        ]
+    if field.kind == "container":
+        return list(field.check_override)
+    return [f"        {target} = {_check_expr(field)};\n"]
 
 
 _VALUE_TYPE_SPECS: tuple[ValueTypeSpec, ...] = (
@@ -288,12 +374,27 @@ _VALUE_TYPE_SPECS: tuple[ValueTypeSpec, ...] = (
     ),
 )
 
-_GATED_SPECS = tuple(spec for spec in _VALUE_TYPE_SPECS if spec.lua_name in GATED_VALUE_STRUCTS)
-_BUILTIN_SPECS = tuple(
-    spec for spec in _VALUE_TYPE_SPECS if spec.lua_name not in GATED_VALUE_STRUCTS
-)
 
-VALUE_TYPE_SPECS: tuple[ValueTypeSpec, ...] = _BUILTIN_SPECS + _GATED_SPECS
+def _load_generated_value_struct_specs() -> tuple[ValueTypeSpec, ...]:
+    try:
+        from luau_codegen.model.value_struct_specs import VALUE_STRUCT_SPECS
+    except ImportError:
+        return ()
+    return tuple(VALUE_STRUCT_SPECS)
+
+
+_BUILTIN_VALUE_TYPE_SPECS: tuple[ValueTypeSpec, ...] = _VALUE_TYPE_SPECS
+
+
+def _current_generated_specs() -> tuple[ValueTypeSpec, ...]:
+    return _load_generated_value_struct_specs()
+
+
+def _all_specs() -> tuple[ValueTypeSpec, ...]:
+    return _BUILTIN_VALUE_TYPE_SPECS + _current_generated_specs()
+
+
+VALUE_TYPE_SPECS: tuple[ValueTypeSpec, ...] = _all_specs()
 
 VALUE_STUB_ORDER: tuple[str, ...] = tuple(spec.lua_name for spec in VALUE_TYPE_SPECS)
 
@@ -320,12 +421,68 @@ def _build_value_types() -> dict[str, str]:
 
 
 def _build_value_check_cxx_types() -> dict[str, str]:
-    out: dict[str, str] = {spec.lua_name: spec.cxx_type for spec in VALUE_TYPE_SPECS}
-    for lua_name, cxx_name in GATED_VALUE_STRUCTS.items():
-        if lua_name not in out:
-            out[lua_name] = cxx_name
-    return out
+    return {spec.lua_name: spec.cxx_type for spec in VALUE_TYPE_SPECS}
 
 
 VALUE_TYPES = _build_value_types()
 VALUE_CHECK_CXX_TYPES = _build_value_check_cxx_types()
+
+_VALUE_TYPE_PROPAGATION = {
+    "luau_codegen.model.value_types": (
+        "VALUE_TYPE_SPECS",
+        "VALUE_STUB_ORDER",
+        "VALUE_STUB_BODY",
+        "VALUE_STUB_DEPS",
+        "COCOS_VALUE_STRUCTS",
+        "VALUE_TYPES",
+        "VALUE_CHECK_CXX_TYPES",
+    ),
+    "luau_codegen.model.cocos_value_types": (
+        "COCOS_VALUE_STRUCTS",
+        "VALUE_TYPES",
+        "VALUE_CHECK_CXX_TYPES",
+    ),
+    "luau_codegen.convert.type_map": ("VALUE_TYPES", "VALUE_CHECK_CXX_TYPES"),
+    "luau_codegen.convert.type_classification": ("VALUE_TYPES",),
+    "luau_codegen.convert.marshalling": ("VALUE_CHECK_CXX_TYPES",),
+    "luau_codegen.emit.luau_types.references": (
+        "_VALUE_STUB_BODY",
+        "_VALUE_STUB_DEPS",
+        "_VALUE_STUB_ORDER",
+    ),
+    "luau_codegen.emit.luau_types": ("_VALUE_STUB_BODY",),
+    "luau_codegen.emit.types_binding": ("COCOS_VALUE_STRUCTS",),
+}
+
+
+def _rebuild_value_type_maps() -> None:
+    import sys
+
+    global VALUE_TYPE_SPECS, VALUE_STUB_ORDER, VALUE_STUB_BODY
+    global VALUE_STUB_DEPS, COCOS_VALUE_STRUCTS, VALUE_TYPES, VALUE_CHECK_CXX_TYPES
+    VALUE_TYPE_SPECS = _all_specs()
+    VALUE_STUB_ORDER = tuple(spec.lua_name for spec in VALUE_TYPE_SPECS)
+    VALUE_STUB_BODY = {spec.lua_name: spec.luau_stub for spec in VALUE_TYPE_SPECS}
+    VALUE_STUB_DEPS = {spec.lua_name: spec.stub_deps for spec in VALUE_TYPE_SPECS if spec.stub_deps}
+    COCOS_VALUE_STRUCTS = tuple(spec.cocos for spec in VALUE_TYPE_SPECS if spec.cocos is not None)
+    VALUE_TYPES = _build_value_types()
+    VALUE_CHECK_CXX_TYPES = _build_value_check_cxx_types()
+
+    canonical = {
+        "VALUE_TYPE_SPECS": VALUE_TYPE_SPECS,
+        "VALUE_STUB_ORDER": VALUE_STUB_ORDER,
+        "VALUE_STUB_BODY": VALUE_STUB_BODY,
+        "VALUE_STUB_DEPS": VALUE_STUB_DEPS,
+        "COCOS_VALUE_STRUCTS": COCOS_VALUE_STRUCTS,
+        "VALUE_TYPES": VALUE_TYPES,
+        "VALUE_CHECK_CXX_TYPES": VALUE_CHECK_CXX_TYPES,
+        "_VALUE_STUB_BODY": VALUE_STUB_BODY,
+        "_VALUE_STUB_DEPS": VALUE_STUB_DEPS,
+        "_VALUE_STUB_ORDER": VALUE_STUB_ORDER,
+    }
+    for mod_name, attrs in _VALUE_TYPE_PROPAGATION.items():
+        mod = sys.modules.get(mod_name)
+        if mod is None:
+            continue
+        for attr in attrs:
+            setattr(mod, attr, canonical[attr])

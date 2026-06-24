@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 import unittest
 
-import test_support  # noqa: F401
+import test_support
 from luau_codegen.emit.plan import collect_plan  # type: ignore[import-unresolved]
 from luau_codegen.parse.broma import Arg, Class, Method, Root, parse_file  # type: ignore[import-unresolved]
 from luau_codegen.policy.filtering import supported  # type: ignore[import-unresolved]

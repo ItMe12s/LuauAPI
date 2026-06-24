@@ -2,6 +2,13 @@
 
 [Check the GitHub commits for more details](https://github.com/ItMe12s/LuauAPI).
 
+## v0.1.0-beta.10
+
+- Added Luau read/write for more Geometry Dash state and effect data exposed by bound game APIs.
+  Bindings now cover nested fields, containers, and optional objects.
+- Updated generated type stubs for the new table types.
+- Updated codegen to derive value struct bindings from Broma via opt-in registration instead of hand-written marshalling.
+
 ## v0.1.0-beta.9
 
 - Added crash sidecar that writes `luauapi-last-context.txt` with Luau context before native faults.

@@ -68,7 +68,8 @@ macro(luauapi_codegen_cli_args OUT_VAR MODE)
         list(APPEND LUAUAPI_ARGS
             --out ${LUAUAPI_GEN_DIR}
             --types-out ${LUAUAPI_TYPES_DIR}
-            --delegate-specs-out ${LUAUAPI_DELEGATE_SPECS_OUT})
+            --delegate-specs-out ${LUAUAPI_DELEGATE_SPECS_OUT}
+            --value-struct-specs-out ${LUAUAPI_VALUE_STRUCT_SPECS_OUT})
     else()
         message(FATAL_ERROR "Unknown luauapi_codegen_cli_args MODE: ${MODE}")
     endif()
@@ -86,6 +87,8 @@ macro(luauapi_setup_codegen)
     set(LUAUAPI_TYPES_DIR "${CMAKE_CURRENT_SOURCE_DIR}/types")
     set(LUAUAPI_DELEGATE_SPECS_OUT
         "${LUAUAPI_GEN_DIR}/delegate_specs.py")
+    set(LUAUAPI_VALUE_STRUCT_SPECS_OUT
+        "${LUAUAPI_GEN_DIR}/value_struct_specs.py")
     set(LUAUAPI_CODEGEN_STAMP "${LUAUAPI_GEN_DIR}/codegen.stamp")
     file(TO_CMAKE_PATH "$ENV{GEODE_SDK}" LUAUAPI_GEODE_SDK_PATH)
 
@@ -158,6 +161,7 @@ macro(luauapi_setup_codegen)
                 ${LUAUAPI_GENERATED_TYPE_FILES}
                 ${LUAUAPI_GENERATED_METADATA_FILES}
                 ${LUAUAPI_DELEGATE_SPECS_OUT}
+                ${LUAUAPI_VALUE_STRUCT_SPECS_OUT}
         COMMAND ${LUAUAPI_CODEGEN_CMD} ${LUAUAPI_CODEGEN_ARGS}
         COMMAND ${CMAKE_COMMAND} -E touch ${LUAUAPI_CODEGEN_STAMP}
         DEPENDS

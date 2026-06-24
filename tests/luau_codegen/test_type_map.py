@@ -5,7 +5,7 @@ import shutil
 import tempfile
 import unittest
 
-import test_support  # noqa: F401
+import test_support
 from luau_codegen.convert.type_map import (  # type: ignore[import-unresolved]
     COCOS_ENUM_TYPES,
     GD_ENUM_TYPES,
@@ -743,12 +743,13 @@ class GdEnumTypeMapTests(unittest.TestCase):
         "spriteMode",
     )
 
-    _STATE_TYPES_NOT_ENUMS = (
+    _STATE_TYPES_NOT_ENUMS = ("CCIndexPath",)
+
+    _REGISTERED_STATE_VALUE_STRUCTS = (
         "GJGameState",
         "GJShaderState",
         "FMODAudioState",
         "GJTransformState",
-        "CCIndexPath",
         "EffectManagerState",
         "SequenceTriggerState",
     )
@@ -786,10 +787,20 @@ class GdEnumTypeMapTests(unittest.TestCase):
             info = classify_arg(name, {})
             self.assertIsNone(info, name)
 
-    def test_bound_runtime_state_class_not_enum(self) -> None:
+    def test_registered_state_structs_classify_as_value(self) -> None:
+        for name in self._REGISTERED_STATE_VALUE_STRUCTS:
+            info = classify_arg(name, {})
+            self.assertIsNotNone(info, name)
+            assert info is not None
+            self.assertEqual(info.kind, "value", name)
+            self.assertNotEqual(info.kind, "enum", name)
+
+    def test_bound_runtime_state_class_is_value_not_enum(self) -> None:
         objects = codegen_object_map(Root(classes=[Class(name="GJGameState")]))
         info = classify_arg("GJGameState", objects)
-        self.assertIsNone(info)
+        self.assertIsNotNone(info)
+        assert info is not None
+        self.assertEqual(info.kind, "value")
 
     def test_classify_gd_enum_const_ref(self) -> None:
         info = classify_arg("EasingType const&", {})
@@ -934,6 +945,11 @@ class ValueStructGateTests(unittest.TestCase):
         self.assertEqual(info.value_type.kind, "value")
         self.assertEqual(info.value_type.lua_type, "SmartPrefabResult")
 
-    def test_classify_chance_object_vector_stays_unsupported(self) -> None:
-        self.assertIsNone(classify_arg("gd::vector<ChanceObject>", {}))
-        self.assertIsNone(classify_arg("gd::vector<ChanceObject> const&", {}))
+    def test_classify_chance_object_vector_is_value_primitive_vector(self) -> None:
+        info = classify_arg("gd::vector<ChanceObject>", {})
+        self.assertIsNotNone(info)
+        assert info is not None
+        self.assertEqual(info.kind, "primitive_vector")
+        assert info.element_type is not None
+        self.assertEqual(info.element_type.kind, "value")
+        self.assertEqual(info.element_type.lua_type, "ChanceObject")

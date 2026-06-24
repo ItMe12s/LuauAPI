@@ -6,7 +6,9 @@ import tempfile
 import unittest
 
 from luau_codegen.emit.types_binding import (
+    emit_types_generated_containers_hpp,
     emit_types_generated_hpp,
+    types_gen_containers_rel_path,
     types_gen_rel_path,
     write_types_generated,
 )
@@ -57,16 +59,43 @@ class TypesGeneratedEmitterTests(unittest.TestCase):
         self.assertIn("static_cast<double>(blend.src)", text)
         self.assertIn("static_cast<double>(blend.dst)", text)
 
+    def test_container_structs_emit_to_containers_header(self) -> None:
+        base = emit_types_generated_hpp()
+        containers = emit_types_generated_containers_hpp()
+        self.assertNotIn("check<SequenceTriggerState>", base)
+        self.assertIn("check<SequenceTriggerState>", containers)
+        self.assertIn("checkAssociativeMap", containers)
+        self.assertNotIn("checkAssociativeMap", base)
+        self.assertIn("checkStdArray", containers)
+        self.assertNotIn("checkStdArray", base)
+        self.assertIn("inline cocos2d::CCPoint check<cocos2d::CCPoint>", base)
+        self.assertNotIn("inline cocos2d::CCPoint check<cocos2d::CCPoint>", containers)
+        self.assertNotIn("inline SavedObjectStateRef check<SavedObjectStateRef>", base)
+        self.assertIn("Usertype<GameObject>", containers)
+        self.assertNotIn("Usertype<GameObject>", base)
+        self.assertNotIn("checkOpaqueHandle", base)
+        self.assertIn("checkOpaqueHandle", containers)
+        self.assertNotIn("check<FMODSoundState>", base)
+        self.assertIn("check<FMODSoundState>", containers)
+
     def test_write_types_generated_creates_expected_path(self) -> None:
         tmpdir = tempfile.mkdtemp()
         try:
             out_path = write_types_generated(tmpdir)
             rel = types_gen_rel_path()
             self.assertTrue(out_path.endswith(rel.replace("/", os.sep)))
+            containers_path = os.path.join(
+                tmpdir,
+                types_gen_containers_rel_path().replace("/", os.sep),
+            )
+            self.assertTrue(os.path.isfile(containers_path))
             with open(out_path, encoding="utf-8") as handle:
                 content = handle.read()
             self.assertIn("namespace luax", content)
             self.assertIn("check<cocos2d::CCAffineTransform>", content)
+            with open(containers_path, encoding="utf-8") as handle:
+                containers_content = handle.read()
+            self.assertIn("check<SequenceTriggerState>", containers_content)
         finally:
             shutil.rmtree(tmpdir)
 

@@ -60,91 +60,10 @@ namespace luax::detail {
     }
 
     template <class T>
-    inline T checkPrimitiveVectorElement(lua_State* L, int idx, char const* label) {
-        if constexpr (std::is_same_v<T, bool>) {
-            return check<bool>(L, idx, label);
-        }
-        else if constexpr (std::is_same_v<T, float>) {
-            return check<float>(L, idx, label);
-        }
-        else if constexpr (std::is_same_v<T, double>) {
-            return check<double>(L, idx, label);
-        }
-        else if constexpr (std::is_same_v<T, int>) {
-            return check<int>(L, idx, label);
-        }
-        else if constexpr (std::is_same_v<T, unsigned>) {
-            return check<unsigned>(L, idx, label);
-        }
-        else if constexpr (std::is_same_v<T, std::string>) {
-            return check<std::string>(L, idx, label);
-        }
-        else if constexpr (std::is_same_v<T, gd::string>) {
-            auto storage = check<std::string>(L, idx, label);
-            return gd::string(storage.c_str());
-        }
-        else if constexpr (std::is_enum_v<T>) {
-            return static_cast<T>(static_cast<int>(check<int>(L, idx, label)));
-        }
-        else if constexpr (std::is_integral_v<T>) {
-            if constexpr (sizeof(T) > sizeof(int) || !std::is_signed_v<T>) {
-                T value{};
-                if (!tryIntegerString<T>(L, idx, &value)) {
-                    if (!lua_isnumber(L, idx)) {
-                        luaL_error(L, "%s expected number or integer string at arg %d", label, idx);
-                    }
-                    value = static_cast<T>(lua_tointeger(L, idx));
-                }
-                return value;
-            }
-            return static_cast<T>(check<int>(L, idx, label));
-        }
-        else if constexpr (is_std_pair_v<T>) {
-            return luax::checkPair<typename T::first_type, typename T::second_type>(L, idx, label);
-        }
-        else {
-            return check<T>(L, idx, label);
-        }
-    }
+    T checkPrimitiveVectorElement(lua_State* L, int idx, char const* label);
 
     template <class T>
-    inline void pushPrimitiveVectorElement(lua_State* L, T const& value) {
-        if constexpr (std::is_same_v<T, bool>) {
-            push(L, value);
-        }
-        else if constexpr (std::is_same_v<T, float> || std::is_same_v<T, double>) {
-            push(L, value);
-        }
-        else if constexpr (std::is_same_v<T, int>) {
-            lua_pushnumber(L, static_cast<double>(value));
-        }
-        else if constexpr (std::is_same_v<T, unsigned>) {
-            push(L, value);
-        }
-        else if constexpr (std::is_same_v<T, std::string>) {
-            push(L, value);
-        }
-        else if constexpr (std::is_same_v<T, gd::string>) {
-            push(L, std::string(value.c_str()));
-        }
-        else if constexpr (std::is_enum_v<T>) {
-            lua_pushnumber(L, static_cast<double>(static_cast<int>(value)));
-        }
-        else if constexpr (std::is_integral_v<T>) {
-            if constexpr (sizeof(T) > sizeof(int) || !std::is_signed_v<T>) {
-                pushIntegerString(L, value);
-            }
-            else {
-                lua_pushnumber(L, static_cast<double>(value));
-            }
-        }
-        else if constexpr (is_std_pair_v<T>) {
-            luax::pushPair<typename T::first_type, typename T::second_type>(L, value);
-        }
-        else {
-            push(L, value);
-        }
-    }
+    void pushPrimitiveVectorElement(lua_State* L, T const& value);
 
     template <class T, class PushFn>
     inline void pushViaPointer(lua_State* L, T* ptr, PushFn&& pushValue) {
@@ -622,3 +541,94 @@ namespace luax {
         }
     }
 } // namespace luax
+
+#include "framework/stack/Types.generated.containers.hpp"
+
+namespace luax::detail {
+    template <class T>
+    inline T checkPrimitiveVectorElement(lua_State* L, int idx, char const* label) {
+        if constexpr (std::is_same_v<T, bool>) {
+            return check<bool>(L, idx, label);
+        }
+        else if constexpr (std::is_same_v<T, float>) {
+            return check<float>(L, idx, label);
+        }
+        else if constexpr (std::is_same_v<T, double>) {
+            return check<double>(L, idx, label);
+        }
+        else if constexpr (std::is_same_v<T, int>) {
+            return check<int>(L, idx, label);
+        }
+        else if constexpr (std::is_same_v<T, unsigned>) {
+            return check<unsigned>(L, idx, label);
+        }
+        else if constexpr (std::is_same_v<T, std::string>) {
+            return check<std::string>(L, idx, label);
+        }
+        else if constexpr (std::is_same_v<T, gd::string>) {
+            auto storage = check<std::string>(L, idx, label);
+            return gd::string(storage.c_str());
+        }
+        else if constexpr (std::is_enum_v<T>) {
+            return static_cast<T>(static_cast<int>(check<int>(L, idx, label)));
+        }
+        else if constexpr (std::is_integral_v<T>) {
+            if constexpr (sizeof(T) > sizeof(int) || !std::is_signed_v<T>) {
+                T value{};
+                if (!tryIntegerString<T>(L, idx, &value)) {
+                    if (!lua_isnumber(L, idx)) {
+                        luaL_error(L, "%s expected number or integer string at arg %d", label, idx);
+                    }
+                    value = static_cast<T>(lua_tointeger(L, idx));
+                }
+                return value;
+            }
+            return static_cast<T>(check<int>(L, idx, label));
+        }
+        else if constexpr (is_std_pair_v<T>) {
+            return luax::checkPair<typename T::first_type, typename T::second_type>(L, idx, label);
+        }
+        else {
+            return luax::check<T>(L, idx, label);
+        }
+    }
+
+    template <class T>
+    inline void pushPrimitiveVectorElement(lua_State* L, T const& value) {
+        if constexpr (std::is_same_v<T, bool>) {
+            push(L, value);
+        }
+        else if constexpr (std::is_same_v<T, float> || std::is_same_v<T, double>) {
+            push(L, value);
+        }
+        else if constexpr (std::is_same_v<T, int>) {
+            lua_pushnumber(L, static_cast<double>(value));
+        }
+        else if constexpr (std::is_same_v<T, unsigned>) {
+            push(L, value);
+        }
+        else if constexpr (std::is_same_v<T, std::string>) {
+            push(L, value);
+        }
+        else if constexpr (std::is_same_v<T, gd::string>) {
+            push(L, std::string(value.c_str()));
+        }
+        else if constexpr (std::is_enum_v<T>) {
+            lua_pushnumber(L, static_cast<double>(static_cast<int>(value)));
+        }
+        else if constexpr (std::is_integral_v<T>) {
+            if constexpr (sizeof(T) > sizeof(int) || !std::is_signed_v<T>) {
+                pushIntegerString(L, value);
+            }
+            else {
+                lua_pushnumber(L, static_cast<double>(value));
+            }
+        }
+        else if constexpr (is_std_pair_v<T>) {
+            luax::pushPair<typename T::first_type, typename T::second_type>(L, value);
+        }
+        else {
+            luax::push(L, value);
+        }
+    }
+} // namespace luax::detail

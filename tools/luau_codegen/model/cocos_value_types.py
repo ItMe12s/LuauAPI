@@ -6,6 +6,7 @@ from luau_codegen.model.value_types import (
     FieldDescriptor,
     PushFieldDescriptor,
     _check_expr,
+    _check_lines,
 )
 
 __all__ = [
@@ -14,4 +15,5 @@ __all__ = [
     "FieldDescriptor",
     "PushFieldDescriptor",
     "_check_expr",
+    "_check_lines",
 ]

@@ -1,9 +1,37 @@
 from __future__ import annotations
 
-DENIED_VALUE_STRUCTS: dict[str, str] = {
-    "ChanceObject": "no member layout in Broma Extras.bro",
-}
+# List of value struct class names to bind. Leaf-first order for nesting.
 
-GATED_VALUE_STRUCTS: dict[str, str] = {
-    "SmartPrefabResult": "SmartPrefabResult",
-}
+VALUE_STRUCT_OPT_IN: tuple[str, ...] = (
+    # Leaf structs (no value-struct dependencies).
+    "ChanceObject",
+    "GJPointDouble",
+    "SequenceTriggerState",
+    "GJTransformState",
+    "SavedObjectStateRef",
+    "SavedActiveObjectState",
+    "SavedSpecialObjectState",
+    "TimerItem",
+    "GameObjectPhysics",
+    "DynamicMoveCalculation",
+    "GJValueTween",
+    "CAState",
+    "FMODSoundTween",
+    "SoundStateContainer",
+    "FMODQueuedMusic",
+    "FMODSoundState",
+    # Effect action records (flat primitives + enums + containers).
+    "PulseEffectAction",
+    "CountTriggerAction",
+    "SpawnTriggerAction",
+    "OpacityEffectAction",
+    "CollisionTriggerAction",
+    "ToggleTriggerAction",
+    "TouchToggleAction",
+    "TimerTriggerAction",
+    # Large state blobs (reference the leaves above).
+    "GJGameState",
+    "GJShaderState",
+    "EffectManagerState",
+    "FMODAudioState",
+)
