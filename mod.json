@@ -57,6 +57,12 @@
 			"description": "Writes luauapi-last-context.txt to the crashlogs folder before native crashes. Pair it with the Geode crashlog when reporting bugs. Uses a small amount of disk I/O while enabled.",
 			"default": false
 		},
+		"enable-custom-loading-layer": {
+			"type": "bool",
+			"name": "Enable Custom Loading Layer",
+			"description": "Replace the loading screen with a cool LuauAPI themed one.",
+			"default": true
+		},
 		"title-enable-developer-mode": {
 			"type": "title",
 			"name": "Developer Settings"
