@@ -21,14 +21,13 @@ namespace luax {
     inline constexpr std::size_t kImGuiInputTextDefaultCap = 16384;
     inline constexpr std::size_t kImGuiInputTextMaxCap = 65536;
 
-    inline thread_local std::vector<char> s_imGuiInputTextBuffer;
-
     inline std::vector<char>& imGuiInputTextBuffer(std::size_t cap) {
-        if (s_imGuiInputTextBuffer.size() < cap + 1) {
-            s_imGuiInputTextBuffer.resize(cap + 1);
+        static thread_local std::vector<char> buffer;
+        if (buffer.size() < cap + 1) {
+            buffer.resize(cap + 1);
         }
-        std::fill(s_imGuiInputTextBuffer.begin(), s_imGuiInputTextBuffer.end(), '\0');
-        return s_imGuiInputTextBuffer;
+        std::fill(buffer.begin(), buffer.end(), '\0');
+        return buffer;
     }
 
     inline void requireFrame(lua_State* L, char const* method) {

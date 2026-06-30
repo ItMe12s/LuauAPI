@@ -217,6 +217,8 @@ namespace luax {
     namespace {
         bool s_initialized = false;
         bool s_pendingInit = false;
+        geode::ListenerHandle s_scaleListener;
+        bool s_scaleListenerRegistered = false;
     } // namespace
 
     bool imguiHostIsInitialized() {
@@ -251,12 +253,16 @@ namespace luax {
             static_cast<float>(geode::Mod::get()->getSettingValue<double>("imgui-scale"))
         );
 
-        static bool s_scaleListenerRegistered = false;
         if (!s_scaleListenerRegistered) {
+            s_scaleListener =
+                geode::SettingChangedEventV3(geode::Mod::get(), "imgui-scale")
+                    .listen([](std::shared_ptr<geode::SettingV3> setting) {
+                        if (auto fs =
+                                geode::cast::typeinfo_pointer_cast<geode::FloatSettingV3>(setting)) {
+                            ImGuiCocos::get().setDisplayScale(static_cast<float>(fs->getValue()));
+                        }
+                    });
             s_scaleListenerRegistered = true;
-            geode::listenForSettingChanges<double>("imgui-scale", [](double value) {
-                ImGuiCocos::get().setDisplayScale(static_cast<float>(value));
-            });
         }
 
         ImGuiCocos::get()
@@ -277,6 +283,8 @@ namespace luax {
             ImGuiCocos::get().destroy();
         }
         s_initialized = false;
+        s_scaleListener = geode::ListenerHandle();
+        s_scaleListenerRegistered = false;
     }
 
     void imguiHostSetVisible(bool visible) {

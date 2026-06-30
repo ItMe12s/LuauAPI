@@ -4,7 +4,9 @@
 
 ## 0.1.0-beta.11
 
-... Add stuff here
+- Fixed 3D scene lighting breaking on stretched (non-uniformly scaled) meshes.
+- Fixed minor cleanup gaps when the Lua runtime is restarted (mostly affects testing).
+- Misc internal cleanup and test reliability fixes.
 
 ## v0.1.0-beta.10
 

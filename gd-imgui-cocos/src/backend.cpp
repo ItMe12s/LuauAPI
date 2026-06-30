@@ -27,8 +27,13 @@ static ImTextureID fromGLTexture(GLuint tex) {
 
 #define MAT_SUPPORTS_CURSOR
 
-// we dont have easy access to any of the glfw methods,
-// so just directly access the glfwWindow struct, thus making this windows 2.206 only, for now
+// We can't use the GLFW API directly,
+// so we set the cursor by changing a pointer at a fixed offset in the GLFWwindow struct.
+// The kGlfwCursorOffset value is based on the current GLFW layout in GD (tested with 2.2081).
+// If the bundled GLFW version changes, this offset needs to be checked again.
+// Ask imes about this if you need to change it.
+constexpr uintptr_t kGlfwCursorOffset = 0x50;
+
 struct GLFWCursorData {
 	void* next = nullptr;
 	HCURSOR cursor;
@@ -37,7 +42,9 @@ struct GLFWCursorData {
 static void setMouseCursor(ImGuiMouseCursor cursor) {
 	auto* glfwWindow = CCEGLView::get()->getWindow();
 
-	auto& cursorField = *reinterpret_cast<GLFWCursorData**>(reinterpret_cast<uintptr_t>(glfwWindow) + 0x50);
+	auto& cursorField = *reinterpret_cast<GLFWCursorData**>(
+		reinterpret_cast<uintptr_t>(glfwWindow) + kGlfwCursorOffset
+	);
 	auto winCursor = IDC_ARROW;
 	switch (cursor) {
 		case ImGuiMouseCursor_Arrow: winCursor = IDC_ARROW; break;

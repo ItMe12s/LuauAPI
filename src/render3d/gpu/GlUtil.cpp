@@ -178,7 +178,7 @@ namespace luax::render3d {
             return shader;
         }
 
-        char log[512]{};
+        char log[2048]{};
         glGetShaderInfoLog(shader, static_cast<GLsizei>(sizeof log), nullptr, log);
         geode::log::error("Renderer3D: shader compile failed: {}", log);
         glDeleteShader(shader);
@@ -214,7 +214,7 @@ namespace luax::render3d {
         int ok = 0;
         glGetProgramiv(program, GL_LINK_STATUS, &ok);
         if (ok != GL_TRUE) {
-            char log[512]{};
+            char log[2048]{};
             glGetProgramInfoLog(program, static_cast<GLsizei>(sizeof log), nullptr, log);
             geode::log::error("Renderer3D: {} program link failed: {}", label, log);
             glDeleteProgram(program);

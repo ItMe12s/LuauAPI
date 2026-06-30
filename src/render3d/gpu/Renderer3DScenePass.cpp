@@ -18,9 +18,8 @@
 namespace luax::render3d {
     namespace {
         glm::vec3 normalizedLightDirection(glm::vec3 const& direction) {
-            glm::vec3 const fallback{0.35f, 0.85f, 0.4f};
             if (glm::dot(direction, direction) <= 0.0f) {
-                return glm::normalize(fallback);
+                return glm::normalize(kDefaultLightDirection);
             }
             return glm::normalize(direction);
         }
@@ -93,7 +92,8 @@ namespace luax::render3d {
             }
 
             glm::mat4 const mvp = projection * view * item.model;
-            glm::mat4 const normalMat = item.model;
+            glm::mat4 const normalMat =
+                glm::mat4(glm::inverse(glm::transpose(glm::mat3(item.model))));
             glUniformMatrix4fv(programs.lambertLocMvp, 1, GL_FALSE, glm::value_ptr(mvp));
             glUniformMatrix4fv(programs.lambertLocNormalMat, 1, GL_FALSE, glm::value_ptr(normalMat));
             glUniform3fv(programs.lambertLocTint, 1, glm::value_ptr(item.tint));

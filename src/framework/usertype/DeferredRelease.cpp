@@ -55,9 +55,13 @@ namespace luax {
             }
         }
 
-        void ensureDeferredReleaseShutdownHook() {
+        bool& deferredReleaseHookRegistered() {
             static bool registered = false;
-            ensureShutdownHook(registered, &clearDeferredReleases);
+            return registered;
+        }
+
+        void ensureDeferredReleaseShutdownHook() {
+            ensureShutdownHook(deferredReleaseHookRegistered(), &clearDeferredReleases);
         }
     } // namespace detail
 
@@ -75,6 +79,8 @@ namespace luax {
         auto& owned = detail::deferredOwnedReleases();
         detail::drainOwnedBatch(owned, false);
         owned.clear();
+
+        detail::deferredReleaseHookRegistered() = false;
     }
 
     void deferBorrowedRelease(geode::WeakRef<cocos2d::CCObject>&& weak) {

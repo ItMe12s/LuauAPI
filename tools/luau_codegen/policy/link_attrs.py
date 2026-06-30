@@ -2,20 +2,14 @@ from __future__ import annotations
 
 import re
 
-from luau_codegen.parse.broma import Class
+from luau_codegen.parse.broma import Class, _PLATFORM_ALIAS_TOKENS
 
 _LINK_ATTR_RE = re.compile(r"link\(([^)]*)\)")
 
 
 def platform_aliases(target_platform: str) -> set[str]:
-    return {
-        "mac": {"mac", "imac", "m1"},
-        "imac": {"mac", "imac"},
-        "m1": {"mac", "m1"},
-        "android": {"android", "android32", "android64"},
-        "android32": {"android", "android32"},
-        "android64": {"android", "android64"},
-    }.get(target_platform, {target_platform})
+    aliases = _PLATFORM_ALIAS_TOKENS.get(target_platform)
+    return set(aliases) if aliases else {target_platform}
 
 
 def class_link_platforms(cls: Class) -> set[str]:
