@@ -2,6 +2,10 @@
 
 [Check the GitHub commits for more details](https://github.com/ItMe12s/LuauAPI).
 
+## 0.1.0-beta.11
+
+... Add stuff here
+
 ## v0.1.0-beta.10
 
 - Added Luau read/write for more Geometry Dash state and effect data exposed by bound game APIs.
