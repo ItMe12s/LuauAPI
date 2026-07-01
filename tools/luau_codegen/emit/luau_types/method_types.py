@@ -43,6 +43,15 @@ LUAU_KEYWORDS = frozenset(
 )
 
 
+def lua_export_name(cpp_name: str, grouped: Dict[str, List[Method]] | None = None) -> str | None:
+    if cpp_name not in LUAU_KEYWORDS:
+        return cpp_name
+    renamed = cpp_name + "ToLua"
+    if grouped is not None and renamed in grouped:
+        return None
+    return renamed
+
+
 def _method_return_type(
     cls: Class, m: Method, objects: Dict[str, Class], ctx: CodegenContext | None = None
 ) -> str:

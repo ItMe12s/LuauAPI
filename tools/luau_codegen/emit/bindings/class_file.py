@@ -35,6 +35,7 @@ from luau_codegen.convert.type_map import (
 )
 from luau_codegen.util import cxx_id
 from luau_codegen.emit.types_binding import _deferred_cxx_types
+from luau_codegen.emit.luau_types.method_types import lua_export_name
 
 
 def _classify_method_args(
@@ -522,22 +523,29 @@ def _emit_class_file(
     for name, methods in grouped.items():
         if methods[0].is_static:
             continue
+        lua_name = lua_export_name(name, grouped)
+        if lua_name is None:
+            continue
         fn = f"luaapi_{cxx_id(cls.name)}_{cxx_id(name)}"
-        out.append(f'    luax::Usertype<{cxx_name(cls)}>::method(L, "{name}", &{fn});\n')
+        out.append(f'    luax::Usertype<{cxx_name(cls)}>::method(L, "{lua_name}", &{fn});\n')
 
     for _, field in field_targets:
         register = f"luaapi_{cxx_id(cls.name)}_field_register_{cxx_id(field.name)}"
         out.append(f"    {register}<{cxx_name(cls)}>(L);\n")
 
-    static_methods = [(name, methods) for name, methods in grouped.items() if methods[0].is_static]
+    static_methods = [
+        (name, lua_name, methods)
+        for name, methods in grouped.items()
+        if methods[0].is_static and (lua_name := lua_export_name(name, grouped)) is not None
+    ]
     if static_methods:
         ns = lua_namespace(cls)
         out.append(f'\n    luax::getOrCreateTable(L, "{ns}");\n')
         out.append(f"    lua_createtable(L, 0, {len(static_methods)});\n")
-        for name, methods in static_methods:
-            fn = f"luaapi_{cxx_id(cls.name)}_{cxx_id(name)}"
-            out.append(f'    lua_pushcfunction(L, &{fn}, "{cls.name}.{name}");\n')
-            out.append(f'    lua_setfield(L, -2, "{name}");\n')
+        for cpp_name, lua_name, methods in static_methods:
+            fn = f"luaapi_{cxx_id(cls.name)}_{cxx_id(cpp_name)}"
+            out.append(f'    lua_pushcfunction(L, &{fn}, "{cls.name}.{cpp_name}");\n')
+            out.append(f'    lua_setfield(L, -2, "{lua_name}");\n')
         out.append(f'    lua_setfield(L, -2, "{cls.name}");\n')
         out.append("    lua_pop(L, 1);\n")
 

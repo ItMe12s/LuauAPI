@@ -207,6 +207,7 @@ def emit(
     lines.append("    cocos2d: Cocos2dNamespace,\n")
     lines.append("    gd: GDNamespace,\n")
     lines.append("    Mod: ModNamespace,\n")
+    lines.append("    Loader: LoaderNamespace,\n")
     lines.append("    json: JsonNamespace,\n")
     lines.append("    fs: FsNamespace,\n")
     lines.append("    KeyboardInputEvent: KeyboardInputEventNamespace,\n")

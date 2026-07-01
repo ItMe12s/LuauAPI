@@ -16,10 +16,10 @@ from luau_codegen.model.denylist import INACCESSIBLE_CLASSES
 from luau_codegen.model.domain import short_name
 
 from luau_codegen.emit.luau_types.method_types import (
-    LUAU_KEYWORDS,
     _classify_input_args,
     _method_return_type,
     _widened_method_type,
+    lua_export_name,
 )
 
 
@@ -64,9 +64,14 @@ def _emit_class(
     lines: List[str] = []
     base_name = _emitted_base_name(cls, objects, skipped_classes)
     base = f" extends {base_name}" if base_name else ""
-    instance_methods = {
-        k: v for k, v in grouped.items() if not v[0].is_static and k not in LUAU_KEYWORDS
-    }
+    instance_methods: Dict[str, List[Method]] = {}
+    for cpp_name, methods in grouped.items():
+        if methods[0].is_static:
+            continue
+        lua_name = lua_export_name(cpp_name, grouped)
+        if lua_name is None:
+            continue
+        instance_methods[lua_name] = methods
     field_lines: List[str] = []
     if _is_ccnode_descendant(cls, objects, skipped_classes):
         field_lines.append("    m_fields: { [string]: any }\n")

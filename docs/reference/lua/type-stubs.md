@@ -21,6 +21,7 @@ Every file in `tools/luau_codegen/extra_bindings/` is appended to the same outpu
 - [`web.dluau`](../../../tools/luau_codegen/extra_bindings/web.dluau) adds `WebNamespace` and its request and response types. See [web](web.md).
 - [`hook.dluau`](../../../tools/luau_codegen/extra_bindings/hook.dluau) adds `HookHandle` and `HookCallbackTable`. See [hooks](hooks.md).
 - [`mod.dluau`](../../../tools/luau_codegen/extra_bindings/mod.dluau) adds `ModNamespace`. See [mod](mod.md).
+- [`loader.dluau`](../../../tools/luau_codegen/extra_bindings/loader.dluau) adds `LoaderModInfo` and `LoaderNamespace`. See [loader](loader.md).
 - [`json.dluau`](../../../tools/luau_codegen/extra_bindings/json.dluau) adds `JsonNamespace`. See [json](json.md).
 - [`keyboard.dluau`](../../../tools/luau_codegen/extra_bindings/keyboard.dluau) adds keyboard input support types.
   See [Keyboard input](keyboard-input.md).
@@ -82,6 +83,11 @@ Enum stubs use a `number` alias plus a `FooNamespace` table type for constants. 
 Methods and factories with several overloads are emitted as one widened signature that ends in `...any`.
 Leading arguments are typed where every overload agrees, then the rest fall back to `...any`.
 Runtime picks overload by arity only. One Lua key per C++ name. See [Codegen](../../contributor/codegen/codegen.md).
+
+## Luau keyword method names
+
+Luau keywords in C++ method names export with a `ToLua` suffix in stubs and runtime.
+See [Codegen](../../contributor/codegen/codegen.md).
 
 ## Regenerating the stub
 

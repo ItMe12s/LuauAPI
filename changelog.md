@@ -4,9 +4,11 @@
 
 ## 0.1.0-beta.11
 
-- Fixed 3D scene lighting breaking on stretched (non-uniformly scaled) meshes.
+- Added custom loading menu (**Enable Custom Loading Layer**, default on).
+- Added `geode.Loader.getAllMods()` for mod metadata from scripts.
+- Updated codegen and type stubs so Luau keyword C++ methods export as `{name}ToLua` (example: `endToLua`).
+- Fixed 3D scene lighting on stretched (non-uniformly scaled) meshes.
 - Fixed minor cleanup gaps when the Lua runtime is restarted (mostly affects testing).
-- Misc internal cleanup and test reliability fixes.
 
 ## v0.1.0-beta.10
 

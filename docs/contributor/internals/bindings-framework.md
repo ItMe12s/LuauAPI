@@ -24,6 +24,7 @@ A few libraries are handwritten in C++ under `src/bindings/geode/` and `src/fram
 | --- | --- |
 | `GeodeFsBinding.cpp` | `geode.fs` |
 | `GeodeModBinding.cpp` | `geode.Mod` |
+| `GeodeLoaderBinding.cpp` | `geode.Loader` |
 | `GeodeSmallBindings.cpp` | `geode.json`, `geode.utils.base64`, `geode.utils.permission`, `geode.ColorProvider`,`geode.Keybind`, `geode.VersionInfo` (see host-test split below) |
 | `GeodeKeyboardBinding.cpp` | `geode.KeyboardModifier`, `geode.KeyboardInputData`, `geode.KeyboardInputEvent` |
 | `GeodeWebCore.cpp` and siblings under `web/` | `geode.utils.web` |

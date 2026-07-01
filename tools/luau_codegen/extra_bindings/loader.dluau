@@ -1,0 +1,12 @@
+export type LoaderModInfo = {
+    id: string,
+    name: string,
+    developer: string,
+    version: string,
+    enabled: boolean,
+    shouldLoad: boolean,
+}
+
+export type LoaderNamespace = {
+    getAllMods: () -> { LoaderModInfo },
+}

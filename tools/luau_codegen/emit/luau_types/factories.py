@@ -8,9 +8,9 @@ if TYPE_CHECKING:
     from luau_codegen.model.codegen_context import CodegenContext
 from luau_codegen.model.domain import lua_namespace
 from luau_codegen.emit.luau_types.method_types import (
-    LUAU_KEYWORDS,
     _method_type,
     _widened_method_type,
+    lua_export_name,
 )
 
 
@@ -76,9 +76,14 @@ def _collect_factories(
         if cls.name in skipped_classes or lua_namespace(cls) != namespace:
             continue
         grouped = grouped_by_class[cls.name]
-        static_methods = {
-            k: v for k, v in grouped.items() if v[0].is_static and k not in LUAU_KEYWORDS
-        }
+        static_methods: Dict[str, List[Method]] = {}
+        for cpp_name, methods in grouped.items():
+            if not methods[0].is_static:
+                continue
+            lua_name = lua_export_name(cpp_name, grouped)
+            if lua_name is None:
+                continue
+            static_methods[lua_name] = methods
         if static_methods:
             factories[cls.name] = static_methods
     return factories

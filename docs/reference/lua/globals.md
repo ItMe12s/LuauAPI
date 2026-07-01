@@ -40,6 +40,7 @@ Caps and error strings live in [Limits and errors](../cpp/limits-and-errors.md).
 | UI | [imgui](imgui.md) | Dear ImGui overlay |
 | UI | [gd3d](gd3d.md) | 3D viewport rendering |
 | IO | [mod](mod.md) | Saved values and settings |
+| IO | [loader](loader.md) | Installed mod list |
 | IO | [fs](fs.md) | Sandboxed filesystem |
 | IO | [json](json.md) | JSON parse and dump |
 | Network | [web](web.md) | HTTP client |

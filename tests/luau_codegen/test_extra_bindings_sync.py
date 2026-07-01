@@ -37,6 +37,13 @@ _EXTRA_BINDING_SOURCES = {
         "start_marker": "registerGeodeMod(lua_State* L)",
         "end_marker": 'lua_setfield(L, -2, "Mod")',
     },
+    "loader": {
+        "dluau": "tools/luau_codegen/extra_bindings/loader.dluau",
+        "cpp": "src/bindings/geode/GeodeLoaderBinding.cpp",
+        "type_name": "LoaderNamespace",
+        "start_marker": "registerGeodeLoader(lua_State* L)",
+        "end_marker": 'lua_setfield(L, -2, "Loader")',
+    },
     "web": {
         "dluau": "tools/luau_codegen/extra_bindings/web.dluau",
         "cpp": "src/bindings/geode/web/GeodeWebCore.cpp",

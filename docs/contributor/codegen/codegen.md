@@ -132,7 +132,7 @@ Two ways to add them:
 
 - `tools/luau_codegen/extra_bindings/*.dluau`: appended at the end of the stub.
   Current files: `fs.dluau`, `gd3d.dluau`, `hook.dluau`, `imgui.dluau`, `json.dluau`,
-  `keyboard.dluau`, `mod.dluau`, `task.dluau`, `web.dluau`, `websocket.dluau`.
+  `keyboard.dluau`, `loader.dluau`, `mod.dluau`, `task.dluau`, `web.dluau`, `websocket.dluau`.
   Use this for new globals and for support types the `geode` namespace references.
 - `tools/luau_codegen/emit/luau_types/manual_fields.py`: injects fields into a namespace
   that codegen already emits, such as `geode.cocos`.
@@ -221,6 +221,17 @@ Ambiguous overloads cause codegen to exit with code 6 when building the emit pla
 
 One Lua table key per method name.
 Stubs widen with `...any` where overloads disagree. See [type stubs](../../reference/lua/type-stubs.md).
+
+## Luau keyword method names
+
+C++ methods whose names are Luau keywords export as `{name}ToLua` in stubs and runtime bindings.
+The rename helper lives in `tools/luau_codegen/emit/luau_types/method_types.py` (`lua_export_name`).
+It applies in `emit/luau_types/classes.py`, `emit/luau_types/factories.py`, and `emit/bindings/class_file.py`.
+
+Hook target IDs still use the original C++ name.
+Example: hook `geode.cocos2d.CCRenderTexture:end/0`, call `rt:endToLua()` from scripts.
+
+If broma already defines `{name}ToLua`, codegen skips renaming `{name}` to avoid duplicate keys.
 
 ## Value structs
 
@@ -412,6 +423,7 @@ See [delegates](../../reference/lua/delegates.md) for how scripts use delegate t
 - `tools/luau_codegen/emit/hooks.py`
 - `tools/luau_codegen/emit/cxx_templates.py`
 - `tools/luau_codegen/emit/luau_types/`
+- `tools/luau_codegen/emit/luau_types/method_types.py`
 - `tools/luau_codegen/extra_bindings/`
 - `tools/luau_codegen/convert/marshalling.py`
 - `tools/luau_codegen/emit/bindings/`
