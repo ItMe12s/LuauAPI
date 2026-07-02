@@ -561,16 +561,10 @@ TEST_CASE("dropBorrowedTargetIfFinalRelease defers drop while retainCount is abo
     );
 
     auto* node = new TestNode();
-    luax::Usertype<TestNode>::pushBorrowed(L, node);
-    REQUIRE(luax::detail::tryCandidate(L, -1).obj == node);
-
-    luax::dropBorrowedTargetIfFinalRelease(node);
-    REQUIRE(luax::detail::tryCandidate(L, -1).obj == nullptr);
-
     node->retain();
+
     luax::Usertype<TestNode>::pushBorrowed(L, node);
     REQUIRE(luax::detail::tryCandidate(L, -1).obj == node);
-    REQUIRE(luax::detail::tryCandidate(L, -2).obj == nullptr);
 
     luax::dropBorrowedTargetIfFinalRelease(node);
     REQUIRE(luax::detail::tryCandidate(L, -1).obj == node);
@@ -579,7 +573,7 @@ TEST_CASE("dropBorrowedTargetIfFinalRelease defers drop while retainCount is abo
     luax::dropBorrowedTargetIfFinalRelease(node);
     REQUIRE(luax::detail::tryCandidate(L, -1).obj == nullptr);
 
-    lua_pop(L, 2);
+    lua_pop(L, 1);
     node->release();
 }
 

@@ -4,7 +4,9 @@
 
 #include <catch2/catch_test_macros.hpp>
 #include <cstdint>
+#include <cstdlib>
 #include <lua.h>
+#include <new>
 #include <optional>
 #include <string>
 
@@ -31,17 +33,6 @@ namespace {
         return value;
     }
 
-    TestNode* allocateAtAddress(std::uintptr_t target, int maxAttempts = 256) {
-        for (int attempt = 0; attempt < maxAttempts; ++attempt) {
-            auto* node = new TestNode();
-            auto address = reinterpret_cast<std::uintptr_t>(node);
-            if (address == target) {
-                return node;
-            }
-            node->release();
-        }
-        return nullptr;
-    }
 } // namespace
 
 TEST_CASE("Fields tryPush returns false without materializing a table") {
@@ -117,18 +108,20 @@ TEST_CASE("Fields push drops stale map entry when node address is reused") {
     auto* runtime = luax::Runtime::getOrCreate();
     auto* L = runtime->state();
 
-    auto* first = new TestNode();
-    auto const reusedAddress = reinterpret_cast<std::uintptr_t>(first);
+    void* mem = std::malloc(sizeof(TestNode));
+    REQUIRE(mem != nullptr);
+
+    auto* first = new (mem) TestNode();
+    auto const reusedAddress = reinterpret_cast<std::uintptr_t>(mem);
 
     luax::Fields::push(L, first);
     REQUIRE(lua_istable(L, -1));
     setTableToken(L, "stale");
     lua_pop(L, 1);
 
-    first->release();
+    first->~TestNode();
 
-    auto* second = allocateAtAddress(reusedAddress);
-    REQUIRE(second != nullptr);
+    auto* second = new (mem) TestNode();
     REQUIRE(reinterpret_cast<std::uintptr_t>(second) == reusedAddress);
 
     luax::Fields::push(L, second);
@@ -143,5 +136,6 @@ TEST_CASE("Fields push drops stale map entry when node address is reused") {
     REQUIRE(getTableToken(L) == "fresh");
     lua_pop(L, 1);
 
-    second->release();
+    second->~TestNode();
+    std::free(mem);
 }
