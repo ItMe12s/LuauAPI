@@ -13,7 +13,8 @@ def _emit_common_file(emitted_classes: List[Class], plan: EmitPlan, target_platf
     out = [
         file_preamble(),
         '#include "bindings_internal.hpp"\n',
-        '#include "framework/stack/UserdataTags.hpp"\n\n',
+        '#include "framework/stack/UserdataTags.hpp"\n',
+        '#include "framework/usertype/Usertype.hpp"\n\n',
     ]
     for cls in emitted_classes:
         gen_ns = _gen_ns(cls)
@@ -40,6 +41,7 @@ def _emit_common_file(emitted_classes: List[Class], plan: EmitPlan, target_platf
         out.append("void luaapi_fields_release_hook(cocos2d::CCObject* self) {\n")
         out.append("    luax::Fields::evictIfFinalRelease(self);\n")
         out.append("    luax::evictTrampolinesIfFinalRelease(self);\n")
+        out.append("    luax::dropBorrowedTargetIfFinalRelease(self);\n")
         out.append("    self->release();\n")
         out.append("}\n\n")
         out.append("geode::Result<void> installFieldsReleaseHook() {\n")
