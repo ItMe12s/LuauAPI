@@ -2,6 +2,10 @@
 
 [Check the GitHub commits for more details](https://github.com/ItMe12s/LuauAPI).
 
+## 0.1.0-beta.14
+
+- Updated ImGui and `gd3d` to use shared GPU session readiness checks.
+
 ## 0.1.0-beta.13
 
 - Fixed ImGui and `gd3d` initializing before game textures load (`TexturesLoaded` defer).

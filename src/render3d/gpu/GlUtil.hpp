@@ -18,6 +18,10 @@ namespace luax::render3d {
     bool gpuFeaturesDisabled();
     void disableGpuFeaturesForSession();
 
+    inline bool gpuSessionReady() {
+        return !gpuFeaturesDisabled() && gameTexturesLoaded();
+    }
+
     bool vaoSupported();
 
     bool instancingSupported();

@@ -30,15 +30,6 @@ namespace {
             true
         );
     }
-
-    void ensureLuauApiGpuReady() {
-        if (luax::render3d::gpuFeaturesDisabled() || !luax::render3d::gameTexturesLoaded()) {
-            return;
-        }
-        geode::queueInMainThread([] {
-            luax::initImGuiHost();
-        });
-    }
 } // namespace
 
 namespace luax::render3d {
@@ -80,7 +71,6 @@ class $modify(LuauAPIMenuLayer, MenuLayer) {
             return false;
         }
         geode::queueInMainThread(showGpuFeaturesRestartWarning);
-        ensureLuauApiGpuReady();
         return true;
     }
 };

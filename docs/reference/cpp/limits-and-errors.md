@@ -85,7 +85,6 @@ GPU features are disabled for the rest of the session.
 | Fullscreen or windowed toggle on Windows | ImGui backend destroyed, live viewports abandoned, session GPU disable |
 | `TexturesUnloaded` game event | Same as above |
 | `TexturesLoaded` game event | Mark textures ready, init ImGui host (skipped if session-disabled) |
-| Main menu entry | Same as `TexturesLoaded` when the event was missed during mod load |
 
 While session-disabled, ImGui draw callbacks do not run and `gd3d.ViewportFrame` skips draws.
 A restart popup appears on the next menu layer. Restart the game to restore GPU features.

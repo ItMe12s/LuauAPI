@@ -68,7 +68,7 @@ namespace luax::render3d {
     }
 
     CCViewportFrame* CCViewportFrame::create(float width, float height) {
-        if (gpuFeaturesDisabled() || !gameTexturesLoaded()) {
+        if (!gpuSessionReady()) {
             return nullptr;
         }
         auto* node = new CCViewportFrame();
@@ -244,7 +244,7 @@ namespace luax::render3d {
     }
 
     std::uint64_t CCViewportFrame::ensureViewportTextureId() {
-        if (gpuFeaturesDisabled() || !gameTexturesLoaded()) {
+        if (!gpuSessionReady()) {
             return 0;
         }
         if (m_viewportTextureId != 0) {
@@ -261,7 +261,7 @@ namespace luax::render3d {
     }
 
     void CCViewportFrame::draw() {
-        if (gpuFeaturesDisabled() || !gameTexturesLoaded()) {
+        if (!gpuSessionReady()) {
             return;
         }
         if (!isVisible()) {
@@ -315,7 +315,7 @@ namespace luax::render3d {
     }
 
     bool CCViewportFrame::gpuHandlesValid() const {
-        return !gpuFeaturesDisabled() && gameTexturesLoaded() && m_gen == glContextGeneration();
+        return gpuSessionReady() && m_gen == glContextGeneration();
     }
 
     void CCViewportFrame::refreshSpriteTexture(CCSize const& points) {

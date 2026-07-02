@@ -225,7 +225,7 @@ namespace luax {
     }
 
     void imguiHostRequestReload() {
-        if (render3d::gpuFeaturesDisabled() || !render3d::gameTexturesLoaded()) {
+        if (!render3d::gpuSessionReady()) {
             return;
         }
         if (imguiHostIsInitialized()) {
@@ -234,7 +234,7 @@ namespace luax {
     }
 
     void initImGuiHost() {
-        if (render3d::gpuFeaturesDisabled() || !render3d::gameTexturesLoaded()) {
+        if (!render3d::gpuSessionReady()) {
             return;
         }
 
@@ -288,21 +288,21 @@ namespace luax {
     }
 
     void imguiHostSetVisible(bool visible) {
-        if (render3d::gpuFeaturesDisabled() || !render3d::gameTexturesLoaded()) {
+        if (!render3d::gpuSessionReady()) {
             return;
         }
         ImGuiCocos::get().setVisible(visible);
     }
 
     void imguiHostToggle() {
-        if (render3d::gpuFeaturesDisabled() || !render3d::gameTexturesLoaded()) {
+        if (!render3d::gpuSessionReady()) {
             return;
         }
         ImGuiCocos::get().toggle();
     }
 
     bool imguiHostIsVisible() {
-        if (render3d::gpuFeaturesDisabled() || !render3d::gameTexturesLoaded()) {
+        if (!render3d::gpuSessionReady()) {
             return false;
         }
         return ImGuiCocos::get().isVisible();
