@@ -377,6 +377,27 @@ class CastConventionGuardTests(unittest.TestCase):
         self.assertIn("fieldTables()", body)
         self.assertIn("entryStillOwnsNode", body)
 
+    def test_drop_borrowed_target_if_final_release_checks_set_before_retain_count(
+        self,
+    ) -> None:
+        source = read_repo_file("src/framework/usertype/Usertype.cpp")
+        start = source.find("void dropBorrowedTargetIfFinalRelease(cocos2d::CCObject* object)")
+        self.assertNotEqual(
+            start,
+            -1,
+            "missing void dropBorrowedTargetIfFinalRelease(cocos2d::CCObject* object)",
+        )
+        rest = source[start + len("void dropBorrowedTargetIfFinalRelease(cocos2d::CCObject* object)") :]
+        next_fn = rest.find("\n} // namespace luax")
+        body = source[
+            start : start
+            + len("void dropBorrowedTargetIfFinalRelease(cocos2d::CCObject* object)")
+            + (next_fn if next_fn != -1 else len(rest))
+        ]
+        self.assertIn("borrowedTargets()", body)
+        self.assertIn("retainCount()", body)
+        self.assertLess(body.find("borrowedTargets()"), body.find("retainCount()"))
+
     def test_trampoline_anchor_uses_static_cast_not_typeinfo(self) -> None:
         source = read_repo_file("src/framework/callback/LuaTrampolineRegistry.cpp")
         body = function_body(source, "anchorTrampoline", ret="void")

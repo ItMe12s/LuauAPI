@@ -531,6 +531,41 @@ TEST_CASE("findPushTypeInfo resolves registered runtime type name") {
     node->release();
 }
 
+TEST_CASE("borrowed userdata rejects access after borrowed target is dropped") {
+    RuntimeGuard guard;
+    auto* runtime = luax::Runtime::getOrCreate();
+    auto* L = runtime->state();
+
+    REQUIRE(luax::Usertype<cocos2d::CCObject>::registerType(L, "CCObject").isOk());
+    REQUIRE(
+        luax::Usertype<TestNode>::registerType(L, "TestNode", {luax::Usertype<cocos2d::CCObject>::tag()})
+            .isOk()
+    );
+
+    auto* node = new TestNode();
+    luax::Usertype<TestNode>::pushBorrowed(L, node);
+    REQUIRE(lua_isuserdata(L, -1));
+    REQUIRE(luax::detail::tryCandidate(L, -1).obj == node);
+
+    luax::dropBorrowedTargetIfFinalRelease(node);
+    REQUIRE(luax::detail::tryCandidate(L, -1).obj == nullptr);
+
+    lua_pushcfunction(
+        L,
+        [](lua_State* S) -> int {
+            luax::Usertype<TestNode>::check(S, 1, "test");
+            return 0;
+        },
+        "checkBorrowed"
+    );
+    lua_pushvalue(L, -2);
+    REQUIRE(lua_pcall(L, 1, 0, 0) != 0);
+    REQUIRE(std::string_view(lua_tostring(L, -1)).find("expected live") != std::string_view::npos);
+    lua_pop(L, 2);
+
+    node->release();
+}
+
 TEST_CASE("tryNodeCandidate accepts CCNode lower-bound dynamic userdata") {
     RuntimeGuard guard;
     auto* runtime = luax::Runtime::getOrCreate();

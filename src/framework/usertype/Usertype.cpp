@@ -13,6 +13,35 @@
 #include <luaconf.h>
 #include <lualib.h>
 #include <new>
+#include <unordered_set>
+
+namespace {
+    std::unordered_set<cocos2d::CCObject*>& borrowedTargets() {
+        static std::unordered_set<cocos2d::CCObject*> targets;
+        return targets;
+    }
+
+    void trackBorrowedTarget(cocos2d::CCObject* object) {
+        if (object) {
+            borrowedTargets().insert(object);
+        }
+    }
+
+    bool borrowedTargetIsLive(cocos2d::CCObject* object) {
+        if (!object) return false;
+        return borrowedTargets().find(object) != borrowedTargets().end();
+    }
+} // namespace
+
+namespace luax {
+    void dropBorrowedTargetIfFinalRelease(cocos2d::CCObject* object) {
+        if (!object) return;
+        auto& targets = borrowedTargets();
+        if (targets.find(object) == targets.end()) return;
+        if (object->retainCount() > 1) return;
+        targets.erase(object);
+    }
+} // namespace luax
 
 namespace luax::detail {
     namespace {
@@ -145,7 +174,12 @@ namespace luax::detail {
         if (block->flags & kUserdataOwnedFlag) {
             return block->ptr;
         }
-        return block->weak.lock().data();
+        auto* cached = block->ptr;
+        if (!cached || !borrowedTargetIsLive(cached)) {
+            return nullptr;
+        }
+        auto locked = block->weak.lock();
+        return locked ? locked.data() : nullptr;
     }
 
     void destructorDispatch(lua_State*, void* ud) {
@@ -328,7 +362,9 @@ namespace luax::detail {
             block->flags = kUserdataOwnedFlag;
         }
         else {
+            block->ptr = obj;
             block->weak = geode::WeakRef<cocos2d::CCObject>(obj);
+            trackBorrowedTarget(obj);
             block->flags = 0u;
         }
         block->typeTag = info.tag;

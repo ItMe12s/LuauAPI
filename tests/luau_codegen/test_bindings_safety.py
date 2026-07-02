@@ -161,6 +161,7 @@ class GeneratedSafetyTests(unittest.TestCase):
         text = _emit_common_file(plan.emitted_classes, plan, "win")
 
         self.assertIn("luax::evictTrampolinesIfFinalRelease(self);", text)
+        self.assertIn("luax::dropBorrowedTargetIfFinalRelease(self);", text)
         self.assertIn('#include "framework/callback/LuaCocosHandler.hpp"', text)
         self.assertIn("geode::Result<void> installFieldsReleaseHook()", text)
         self.assertIn(

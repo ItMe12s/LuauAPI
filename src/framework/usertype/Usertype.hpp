@@ -21,6 +21,8 @@
 #include <vector>
 
 namespace luax {
+    void dropBorrowedTargetIfFinalRelease(cocos2d::CCObject* object);
+
     constexpr std::uint32_t kUserdataOwnedFlag = 1u;
     constexpr std::uint32_t kUserdataEphemeralFlag = 2u;
 
