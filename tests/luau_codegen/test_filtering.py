@@ -531,14 +531,14 @@ class FmodFilterTests(unittest.TestCase):
     def test_unlisted_fmod_pointer_stays_unsupported(self) -> None:
         cls, objects = self._fmod_engine()
         method = Method(
-            name="takeDSP",
+            name="takeGeometry",
             ret="void",
-            args=[Arg("FMOD::DSP*", "dsp")],
+            args=[Arg("FMOD::Geometry*", "geometry")],
             platforms=all_platforms("0x4"),
         )
         ok, reason = supported(cls, method, objects, "win")
         self.assertFalse(ok)
-        self.assertEqual(reason, "unsupported-arg:FMOD::DSP*")
+        self.assertEqual(reason, "unsupported-arg:FMOD::Geometry*")
 
 
 class FreeFunctionSelMenuHandlerFilterTests(unittest.TestCase):

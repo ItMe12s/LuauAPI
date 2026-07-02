@@ -20,6 +20,10 @@ VALUE_STRUCT_OPT_IN: tuple[str, ...] = (
     "SoundStateContainer",
     "FMODQueuedMusic",
     "FMODSoundState",
+    # FMOD engine state records.
+    "FMODMusic",
+    "FMODSound",
+    "FMODQueuedEffect",
     # Effect action records (flat primitives + enums + containers).
     "PulseEffectAction",
     "CountTriggerAction",
@@ -34,4 +38,15 @@ VALUE_STRUCT_OPT_IN: tuple[str, ...] = (
     "GJShaderState",
     "EffectManagerState",
     "FMODAudioState",
+    # Area-effect + song + dynamic-action records (leaf-first).
+    "EnterEffectAnimValue",  # leaf: int/float + EasingType enum
+    "EnterEffectInstance",  # map<int,EnterEffectAnimValue> + floats + object ptr
+    "SongTriggerState",  # object ptr + double
+    "DynamicObjectAction",  # object ptrs + floats + ints
+    # Editor state.
+    "GameObjectEditorState",  # CCPoint + floats
+    # Replay records.
+    "RecordCheckpoint",  # ints + uint64 + gd::string
+    "RecordButtonCommand",  # PlayerButton enum + bools + int
+    "PlayerButtonCommand",  # PlayerButton enum + bools + int + double
 )

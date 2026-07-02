@@ -523,23 +523,23 @@ class LuauTypeEmissionTests(unittest.TestCase):
         root = Root(classes=[ccobject, engine])
         text = types_text(emit_luau_types(root))
         self.assertIn("declare class FMODChannel end", text)
-        self.assertIn("declare class FMODSound end", text)
+        self.assertIn("declare class FMODSoundHandle end", text)
         self.assertIn("}\n\n--- @type-only: opaque FMOD handle", text)
         channel_pos = text.find("declare class FMODChannel end")
         sig_pos = text.find("function getActiveMusicChannel(self): FMODChannel?")
         self.assertGreaterEqual(channel_pos, 0)
         self.assertGreater(sig_pos, channel_pos)
-        self.assertIn("function isSoundReady(self, arg1: FMODSound): boolean", text)
+        self.assertIn("function isSoundReady(self, arg1: FMODSoundHandle): boolean", text)
         self.assertIn(
-            "function channelLinkSound(self, arg1: number, arg2: FMODSound)",
+            "function channelLinkSound(self, arg1: number, arg2: FMODSoundHandle)",
             text,
         )
         self.assertIn(
-            "function preloadEffect(self, arg1: string): FMODSound?",
+            "function preloadEffect(self, arg1: string): FMODSoundHandle?",
             text,
         )
         self.assertIn(
-            "function storeEffect(self, arg1: FMODSound, arg2: string): FMODSound?",
+            "function storeEffect(self, arg1: FMODSoundHandle, arg2: string): FMODSoundHandle?",
             text,
         )
         self.assertIn("function printResult(self, arg1: number)", text)

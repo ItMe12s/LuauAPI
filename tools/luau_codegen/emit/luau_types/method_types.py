@@ -60,12 +60,14 @@ def _method_return_type(
     out_types: List[str] = []
     if ret.kind != "void":
         out_types.append(ret.lua_type)
-    if ret.kind == "void":
-        for arg in m.args:
-            info = classify_arg(arg.type, objects, owner_class=cls.name, ctx=ctx)
-            assert info is not None
-            if info.is_out:
-                out_types.append(info.lua_type)
+    arg_infos: List[TypeInfo] = []
+    for arg in m.args:
+        info = classify_arg(arg.type, objects, owner_class=cls.name, ctx=ctx)
+        assert info is not None
+        arg_infos.append(info)
+    for lua_arg in iter_lua_method_args(m, arg_infos, ret_kind=ret.kind):
+        if lua_arg.out_only:
+            out_types.append(lua_arg.info.lua_type)
     if not out_types:
         return "()"
     if len(out_types) == 1:

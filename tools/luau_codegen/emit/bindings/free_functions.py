@@ -71,9 +71,7 @@ def _emit_free_invoke(
 
     target = f"{fn.namespace}::{fn.name}({', '.join(call_args)})"
     out_refs = [
-        (arg_idx, info)
-        for arg_idx, (_, info) in enumerate(zip(fn.args, arg_infos))
-        if ret.kind == "void" and info.is_out
+        (arg_idx, info) for arg_idx, (_, info) in enumerate(zip(fn.args, arg_infos)) if info.is_out
     ]
     if ret.kind == "void":
         out.extend(
@@ -94,6 +92,7 @@ def _emit_free_invoke(
                 selector_handlers=selector_handlers,
                 delegate_trampolines=delegate_trampolines,
                 is_static=True,
+                out_refs=out_refs,
             )
         )
     out.append("    }\n\n")

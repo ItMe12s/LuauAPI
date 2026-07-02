@@ -617,13 +617,13 @@ class EmitStackCheckTests(unittest.TestCase):
         element = TypeInfo(
             kind="opaque_handle",
             cxx_type="FMOD::Sound*",
-            lua_type="FMODSound",
+            lua_type="FMODSoundHandle",
         )
         info = TypeInfo(
             kind="vector_view",
             cxx_type="gd::vector<FMOD::Sound*>",
-            lua_type="{ FMODSound? }",
-            class_name="FMODSound",
+            lua_type="{ FMODSoundHandle? }",
+            class_name="FMODSoundHandle",
             element_type=element,
         )
 
@@ -1035,7 +1035,7 @@ class FmodMarshallingTests(unittest.TestCase):
         info = TypeInfo(
             kind="opaque_handle",
             cxx_type="FMODSound*",
-            lua_type="FMODSound",
+            lua_type="FMODSoundHandle",
         )
         text = "".join(check_arg(Arg("FMODSound*", "sound"), info, 2, "arg0", "test"))
         self.assertIn("checkOpaqueHandle<FMODSound>", text)

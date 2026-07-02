@@ -50,5 +50,42 @@ class ValueStructGatePolicyTests(unittest.TestCase):
         self.assertIn("SmartPrefabResult", _VALUE_STUB_BODY)
 
 
+def _assert_opt_in_value_structs(test_case: unittest.TestCase, names: tuple[str, ...]) -> None:
+    for name in names:
+        test_case.assertIn(name, VALUE_STRUCT_OPT_IN, f"{name} missing from VALUE_STRUCT_OPT_IN")
+        test_case.assertIn(name, VALUE_TYPES, f"{name} not registered as a VALUE_TYPE at runtime")
+        info = classify_arg(name, {})
+        test_case.assertIsNotNone(info, f"{name} classified as None")
+        assert info is not None
+        test_case.assertEqual(info.kind, "value", f"{name} classified as {info.kind}, not value")
+
+
+class EffectReplayEditorStructOptInTests(unittest.TestCase):
+    STRUCTS = (
+        "EnterEffectAnimValue",
+        "EnterEffectInstance",
+        "SongTriggerState",
+        "DynamicObjectAction",
+        "GameObjectEditorState",
+        "RecordCheckpoint",
+        "RecordButtonCommand",
+        "PlayerButtonCommand",
+    )
+
+    def test_structs_are_opted_in_and_classify_as_value(self) -> None:
+        _assert_opt_in_value_structs(self, self.STRUCTS)
+
+
+class FmodEngineStructOptInTests(unittest.TestCase):
+    STRUCTS = (
+        "FMODMusic",
+        "FMODSound",
+        "FMODQueuedEffect",
+    )
+
+    def test_structs_are_opted_in_and_classify_as_value(self) -> None:
+        _assert_opt_in_value_structs(self, self.STRUCTS)
+
+
 if __name__ == "__main__":
     unittest.main()

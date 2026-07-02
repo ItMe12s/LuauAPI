@@ -91,10 +91,12 @@ def _map_push_call(info: TypeInfo) -> str:
         first, second = _pair_component_cxx(info.key_type)
         value = info.value_type.cxx_type
         map_type = _pair_key_map_type(info, first, second, value)
+        if info.is_out or info.is_vector_ptr:
+            return f"detail::pushPairKeyAssociativeMapPointer<{map_type}>"
         return f"detail::pushPairKeyAssociativeMap<{first}, {second}, {value}, {map_type}>"
     key, value = _map_key_value_cxx(info)
     map_type = _map_container_type(info, key, value)
-    if info.is_vector_ptr:
+    if info.is_out or info.is_vector_ptr:
         return f"detail::pushAssociativeMapPointer<{map_type}>"
     return f"detail::pushAssociativeMap<{key}, {value}, {map_type}>"
 
@@ -108,7 +110,7 @@ def _set_check_call(info: TypeInfo) -> str:
 def _set_push_call(info: TypeInfo) -> str:
     elem = _set_elem_cxx(info)
     set_type = _set_container_type(info, elem)
-    if info.is_vector_ptr:
+    if info.is_out or info.is_vector_ptr:
         return f"detail::pushSetContainerPointer<{set_type}>"
     return f"detail::pushSetAsTable<{elem}, {set_type}>"
 
@@ -143,6 +145,50 @@ def _nested_primitive_vector_push_fn(info: TypeInfo) -> str:
     if inner is None:
         raise ValueError("nested primitive vector view requires inner element type")
     return f"pushNestedPrimitiveVectorPointers<{inner.cxx_type}>"
+
+
+def _nested_primitive_vector_check_fn(info: TypeInfo) -> str:
+    if info.element_type is None or info.element_type.element_type is None:
+        raise ValueError("nested primitive vector view requires inner element type")
+    return f"checkNestedPrimitiveVectorPointers<{info.element_type.element_type.cxx_type}>"
+
+
+def _nested_object_pointee_cxx(info: TypeInfo) -> str:
+    current = info.element_type
+    while current is not None:
+        if current.element_type is not None and current.element_type.kind in (
+            "object",
+            "opaque_handle",
+        ):
+            element = current.element_type
+            if element.kind == "object":
+                return element.cxx_type[:-1]
+            pointee = element.cxx_type[:-1] if element.cxx_type.endswith("*") else element.cxx_type
+            return pointee
+        current = current.element_type
+    raise ValueError("nested object view requires object inner element")
+
+
+def _nested_object_vector_push_fn(info: TypeInfo) -> str:
+    return f"pushNestedObjectVectorPointers<{_nested_object_pointee_cxx(info)}>"
+
+
+def _nested_object_vector_check_fn(info: TypeInfo) -> str:
+    return f"checkNestedObjectVectorPointers<{_nested_object_pointee_cxx(info)}>"
+
+
+def _nested_object_grid_push_fn(info: TypeInfo) -> str:
+    return f"pushNestedObjectGridPointers<{_nested_object_pointee_cxx(info)}>"
+
+
+def _nested_object_grid_check_fn(info: TypeInfo) -> str:
+    return f"checkNestedObjectGridPointers<{_nested_object_pointee_cxx(info)}>"
+
+
+def _map_vector_elem_cxx(info: TypeInfo) -> str:
+    if info.element_type is None:
+        raise ValueError("map vector requires element type")
+    return info.element_type.cxx_type
 
 
 def _cc_c_array_view_pointee_cxx(info: TypeInfo) -> str:
@@ -291,6 +337,24 @@ def emit_stack_check(
         return [
             f'        {_prefix(declare, var)} = luax::checkPair<{first}, {second}>(L, {idx}, "{label}");\n'
         ]
+    if info.kind == "tuple":
+        return [
+            f'        {_prefix(declare, var)} = luax::checkTupleTableInt3(L, {idx}, "{label}");\n'
+        ]
+    if info.kind == "nested_bool_vector_view":
+        check_fn = _nested_primitive_vector_check_fn(info)
+        return [f'        {_prefix(declare, var)} = luax::{check_fn}(L, {idx}, "{label}");\n']
+    if info.kind == "nested_object_vector_view":
+        check_fn = _nested_object_vector_check_fn(info)
+        return [f'        {_prefix(declare, var)} = luax::{check_fn}(L, {idx}, "{label}");\n']
+    if info.kind == "nested_object_grid_view":
+        check_fn = _nested_object_grid_check_fn(info)
+        return [f'        {_prefix(declare, var)} = luax::{check_fn}(L, {idx}, "{label}");\n']
+    if info.kind == "map_vector":
+        elem = _map_vector_elem_cxx(info)
+        return [
+            f'        {_prefix(declare, var)} = luax::checkPrimitiveVector<{elem}>(L, {idx}, "{label}");\n'
+        ]
     raise ValueError(f"unsupported type kind: {info.kind}")
 
 
@@ -336,6 +400,22 @@ def _push_impl(
     if info.kind == "nested_primitive_vector_view":
         push_fn = _nested_primitive_vector_push_fn(info)
         return [f"{indent}luax::{push_fn}(L, {expr});\n"]
+    if info.kind == "nested_bool_vector_view":
+        push_fn = _nested_primitive_vector_push_fn(info)
+        return [f"{indent}luax::{push_fn}(L, {expr});\n"]
+    if info.kind == "nested_object_vector_view":
+        push_fn = _nested_object_vector_push_fn(info)
+        if not owner_expr:
+            raise ValueError("nested object vector view push requires owner expression")
+        return [f"{indent}luax::{push_fn}(L, {expr}, {owner_expr});\n"]
+    if info.kind == "nested_object_grid_view":
+        push_fn = _nested_object_grid_push_fn(info)
+        if not owner_expr:
+            raise ValueError("nested object grid view push requires owner expression")
+        return [f"{indent}luax::{push_fn}(L, {expr}, {owner_expr});\n"]
+    if info.kind == "map_vector":
+        elem = _map_vector_elem_cxx(info)
+        return [f"{indent}luax::pushPrimitiveVector<{elem}>(L, {expr});\n"]
     if info.kind == "cc_c_array_view":
         if info.element_type is None or info.element_type.kind != "object":
             raise ValueError("ccCArray view requires object element type")
@@ -361,13 +441,17 @@ def _push_impl(
         return [f"{indent}luax::pushStdArray<{args}>(L, {expr});\n"]
     if info.kind in ("map", "unordered_map"):
         push_fn = _map_push_call(info)
-        return [f"{indent}luax::{push_fn}(L, {expr});\n"]
+        arg_expr = f"&{expr}" if info.is_out and not info.is_vector_ptr else expr
+        return [f"{indent}luax::{push_fn}(L, {arg_expr});\n"]
     if info.kind in ("set", "unordered_set"):
         push_fn = _set_push_call(info)
-        return [f"{indent}luax::{push_fn}(L, {expr});\n"]
+        arg_expr = f"&{expr}" if info.is_out and not info.is_vector_ptr else expr
+        return [f"{indent}luax::{push_fn}(L, {arg_expr});\n"]
     if info.kind == "pair":
         first, second = _pair_component_cxx(info)
         return [f"{indent}luax::pushPair<{first}, {second}>(L, {expr});\n"]
+    if info.kind == "tuple":
+        return [f"{indent}luax::pushTupleTableInt3(L, {expr});\n"]
     if info.kind == "delegate":
         return [f"{indent}luax::tryPushBoundDelegateTable(L, {expr});\n"]
     if info.kind == "result":

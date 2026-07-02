@@ -180,7 +180,7 @@ Each bucket has a count, a reason histogram, and up to 25 sample skips.
 | `callback_alias` | `Callback` alias args |
 | `delegate_arg` | delegate pointer args without a bound spec |
 | `container_arg` | unsupported `gd` container args |
-| `value_type_arg` | FMOD / Kazmath value types |
+| `value_type_arg` | FMOD / Kazmath value types (see FMOD binding below) |
 | `http_async_excluded` | HTTP / async free functions |
 | `other` | unclassified skips |
 
@@ -325,7 +325,51 @@ container fields (`cc_c_array_view`, `nested_primitive_vector_view`).
 `gd::map` and `gd::set` field setters use `assignMap` / `assignSet` (clear plus per-entry insert)
 instead of whole-container `operator=`, because Geode gnustl on Android lacks `_Rb_tree::_M_move_assign`.
 `gd::vector` primitive field setters use `assignPrimitiveVector`. `std::pair` inside containers is bound.
+`std::array` fields bind up to `STD_ARRAY_MAX_SIZE` (2000) elements.
 See [Pair containers](pair-containers.md), [Nested containers](nested-containers.md), and [ccCArray read-only fields](cc-c-array.md).
+
+### Out-ref and multi-return
+
+Non-void methods may take out-reference container args (`gd::vector<T>&`, `gd::map<...>&`, and similar).
+When the return type is also bound, codegen emits a multi-value Lua return.
+
+Examples:
+
+- `GJBaseGameLayer:registerSpawnRemap(...)` returns `(number, { ChanceObject })`.
+- `FMODAudioEngine:getTweenContainer(...)` returns `{ { first: number, second: number, value: FMODSoundTween } }` from a pair-key map out-ref.
+
+Policy lives in `policy/containers.py` and `convert/sel_args.py`.
+Emit tests lock the shape in `tests/luau_codegen/test_out_ref_policy.py`.
+
+## FMOD binding
+
+FMOD types split into three buckets:
+
+| Bucket | Examples | Luau shape |
+| --- | --- | --- |
+| Value structs | `FMODMusic`, `FMODSound`, `FMODQueuedEffect`, `FMODSoundTween` | Table types from `VALUE_STRUCT_OPT_IN` |
+| Opaque handles | `FMODSystem`, `FMODDSP`, `FMODChannel`, `FMODChannelGroup` | `@type-only` stub classes |
+| Renamed handle | `FMOD::Sound*` | `FMODSoundHandle` (not `FMODSound`) |
+
+`FMODSound` is now the value struct name.
+The opaque sound pointer stub is `FMODSoundHandle`.
+
+Maps with opaque pointer values (for example `gd::unordered_map<int, FMOD::Channel*>`) bind normally.
+Opaque values use the handle stub type, not a value struct table.
+
+## Intentionally skipped
+
+Some audit one-offs stay skipped on purpose. Do not re-triage them without a new binding design.
+
+| Item | Reason |
+| --- | --- |
+| `ChallengesPage.updateTimers` | Broma `callback` method. GD scheduler hook, not mod-facing API. Hard-skipped in `policy/filtering.py` when `m.is_callback`. |
+| `DailyLevelPage.updateTimers` | Same as above. |
+| `RewardsPage.updateTimers` | Same as above. |
+| `HardStreak.updateStroke` | Same as above. |
+| `MusicDownloadManager.ProcessHttpRequest` | Same as above. |
+| `MDPopup.void` | Broma-parsed method (not a field). Scanner artifact with return type `geode::Function<...>`. Real surface is `create` and `setOnClick` with working callback marshalling. |
+| `geode.openInfoPopup` | Returns `std::optional<arc::TaskHandle<bool>>` and takes `Mod*`. No C++ to Luau marshalling for Geode async task handles (distinct from Luau `task.*` `TaskHandle`). |
 
 ## Denylist maintenance
 

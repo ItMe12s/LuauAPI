@@ -426,6 +426,13 @@ class ContainerTypeMapTests(unittest.TestCase):
         assert info.element_type is not None
         self.assertEqual(info.element_type.kind, "number")
 
+    def test_classify_std_array_float_2000(self) -> None:
+        info = classify_arg("std::array<float, 2000>", {})
+
+        assert info is not None
+        self.assertEqual(info.kind, "std_array")
+        self.assertEqual(info.array_size, 2000)
+
     def test_classify_std_array_ccpoint(self) -> None:
         info = classify_arg("std::array<cocos2d::CCPoint, 4>", {})
 
@@ -480,7 +487,7 @@ class ContainerTypeMapTests(unittest.TestCase):
 
         assert info is not None
         self.assertEqual(info.kind, "vector_view")
-        self.assertEqual(info.lua_type, "{ FMODSound? }")
+        self.assertEqual(info.lua_type, "{ FMODSoundHandle? }")
         assert info.element_type is not None
         self.assertEqual(info.element_type.kind, "opaque_handle")
 
@@ -874,9 +881,11 @@ class FmodTypeMapTests(unittest.TestCase):
     def test_classify_fmod_opaque_handles(self) -> None:
         cases = {
             "FMOD::Channel*": "FMODChannel",
-            "FMOD::Sound*": "FMODSound",
+            "FMOD::Sound*": "FMODSoundHandle",
+            "FMOD::System*": "FMODSystem",
+            "FMOD::DSP*": "FMODDSP",
             "FMOD::ChannelGroup*": "FMODChannelGroup",
-            "FMODSound*": "FMODSound",
+            "FMODSound*": "FMODSoundHandle",
         }
         for cxx, lua in cases.items():
             info = classify_arg(cxx, {})
@@ -899,10 +908,10 @@ class FmodTypeMapTests(unittest.TestCase):
         assert info is not None
         self.assertEqual(info.kind, "opaque_handle")
         self.assertEqual(info.cxx_type, "FMODSound*")
-        self.assertEqual(info.lua_type, "FMODSound?")
+        self.assertEqual(info.lua_type, "FMODSoundHandle?")
 
     def test_classify_unlisted_fmod_pointer_stays_unsupported(self) -> None:
-        self.assertIsNone(classify_arg("FMOD::DSP*", {}))
+        self.assertIsNone(classify_arg("FMOD::Geometry*", {}))
 
 
 class CocosOpaqueHandleTests(unittest.TestCase):

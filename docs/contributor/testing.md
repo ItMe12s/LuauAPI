@@ -156,8 +156,9 @@ Compact map of `tests/luau_codegen/`:
 | Broma parsing | `test_broma.py`, `test_broma_delegates.py`, `test_model.py` | `.bro` parse, link attrs, delegate class discovery |
 | Filtering and plan | `test_filtering.py`, `test_plan.py`, `test_constructors.py`, `test_denylist.py` | bindability, platform fields, constructors, denylist freshness |
 | Type map | `test_type_map.py`, `test_type_map_modules.py`, `test_value_struct_gate.py`, `test_cocos_enums.py` | C++ to Lua kinds, enums, value struct gate |
-| Containers | `test_nested_containers.py`, `test_pair_design.py`, `test_cc_c_array.py`, `test_object_vector_audit.py` | `gd` containers, pairs, `ccCArray`, object vectors |
-| Marshalling | `test_marshalling.py` | stack checks, callbacks, FMOD, containers |
+| Containers | `test_nested_containers.py`, `test_pair_design.py`, `test_cc_c_array.py`, `test_object_vector_audit.py`, `test_gj_grid_fields.py` | `gd` containers, pairs, `ccCArray`, object vectors, GJ grid fields |
+| Marshalling | `test_marshalling.py`, `test_out_ref_policy.py` | stack checks, callbacks, FMOD, containers, out-ref multi-return |
+| Audit one-offs | `test_one_offs.py`, `test_fmod_surface.py` | intentionally skipped methods, FMOD handle rename and value structs |
 | Bindings emit | `test_bindings_handlers.py`, `test_bindings_overloads.py`, `test_bindings_safety.py`, `test_bindings_fmod.py`, `test_free_functions.py` | generated C++ handlers, free functions, and crash sidecar boundary records |
 | Hooks | `test_hooks.py` | hook runtime, offsets, SEL callbacks |
 | Luau stubs | `test_luau_types.py`, `test_types_binding.py`, `test_geode_enums_emit.py` | stub emission and cocos value descriptors |

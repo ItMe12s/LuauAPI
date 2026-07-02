@@ -19,7 +19,11 @@ from luau_codegen.model.value_types import (
 
 _OPAQUE_STUB_BODY: Dict[str, str] = {
     "FMODChannel": "--- @type-only: opaque FMOD handle\ndeclare class FMODChannel end\n\n",
-    "FMODSound": "--- @type-only: opaque FMOD handle\ndeclare class FMODSound end\n\n",
+    "FMODSoundHandle": (
+        "--- @type-only: opaque FMOD handle\ndeclare class FMODSoundHandle end\n\n"
+    ),
+    "FMODSystem": "--- @type-only: opaque FMOD handle\ndeclare class FMODSystem end\n\n",
+    "FMODDSP": "--- @type-only: opaque FMOD handle\ndeclare class FMODDSP end\n\n",
     "FMODChannelGroup": (
         "--- @type-only: opaque FMOD handle\ndeclare class FMODChannelGroup end\n\n"
     ),
@@ -35,7 +39,9 @@ _OPAQUE_STUB_BODY: Dict[str, str] = {
 
 _OPAQUE_STUB_ORDER = (
     "FMODChannel",
-    "FMODSound",
+    "FMODSoundHandle",
+    "FMODSystem",
+    "FMODDSP",
     "FMODChannelGroup",
     "CCEvent",
     "CCEditBox",

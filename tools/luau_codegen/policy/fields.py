@@ -37,11 +37,15 @@ _READONLY_FIELD_CONTAINER_KINDS = frozenset(
 _MUTABLE_POINTER_FIELD_CONTAINER_KINDS = frozenset(
     {
         "primitive_vector",
+        "map_vector",
         "std_array",
         "map",
         "unordered_map",
         "set",
         "unordered_set",
+        "nested_bool_vector_view",
+        "nested_object_vector_view",
+        "nested_object_grid_view",
     }
 )
 

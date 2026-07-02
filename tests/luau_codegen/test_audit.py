@@ -296,9 +296,9 @@ class AuditReportTests(unittest.TestCase):
             bases=["CCObject"],
             methods=[
                 Method(
-                    name="takeDSP",
+                    name="takeGeometry",
                     ret="void",
-                    args=[Arg("FMOD::DSP*", "dsp")],
+                    args=[Arg("FMOD::Geometry*", "geometry")],
                     platforms=all_platforms(),
                 )
             ],
@@ -310,7 +310,7 @@ class AuditReportTests(unittest.TestCase):
         bucket = data["buckets"]["value_type_arg"]
 
         self.assertEqual(bucket["count"], 1)
-        self.assertIn("unsupported-arg:FMOD::DSP*", bucket["reasonHistogram"])
+        self.assertIn("unsupported-arg:FMOD::Geometry*", bucket["reasonHistogram"])
 
     def test_audit_supported_fmod_types_not_in_value_type_bucket(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")

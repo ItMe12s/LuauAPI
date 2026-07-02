@@ -20,14 +20,44 @@ BASELINE_NESTED_PRIMITIVE_VECTOR_FIELDS: dict[str, str] = {
     "m_collisionBlockSectionSizes": "gd::vector<gd::vector<int>*>",
 }
 
+BASELINE_NESTED_BOOL_VECTOR_FIELDS: dict[str, str] = {
+    "m_nonEffectObjectsFlags": "gd::vector<gd::vector<bool>*>",
+}
+
+BASELINE_NESTED_OBJECT_VECTOR_FIELDS: dict[str, str] = {
+    "m_collisionBlockSections": "gd::vector<gd::vector<GameObject*>*>",
+}
+
+BASELINE_NESTED_OBJECT_GRID_FIELDS: dict[str, str] = {
+    "m_sections": "gd::vector<gd::vector<gd::vector<GameObject*>*>*>",
+    "m_nonEffectObjects": "gd::vector<gd::vector<gd::vector<GameObject*>*>*>",
+}
+
+BASELINE_MAP_VECTOR_FIELDS: dict[str, str] = {
+    "m_spawnRemapTriggers": "gd::vector<gd::unordered_map<int,int>>",
+}
+
+BASELINE_TUPLE_SET_FIELDS: dict[str, str] = {
+    "m_spawnTuples": "gd::set<std::tuple<int, int, int>>",
+}
+
 ALLOWED_NESTED_PRIMITIVE_VECTOR_INNER = "gd::vector<int>*"
+ALLOWED_NESTED_BOOL_VECTOR_INNER = "gd::vector<bool>*"
+ALLOWED_NESTED_OBJECT_VECTOR_OUTER = "gd::vector<gd::vector<GameObject*>*>"
+ALLOWED_NESTED_OBJECT_GRID_OUTER = "gd::vector<gd::vector<gd::vector<GameObject*>*>*>"
+ALLOWED_MAP_VECTOR_ELEMENT = "gd::unordered_map<int,int>"
+ALLOWED_INT_TUPLE = "std::tuple<int, int, int>"
 
 
 def allow_nested_map_value(key: TypeInfo, value: TypeInfo) -> bool:
-    if value.kind != "vector_view":
-        return False
     element = value.element_type
-    if element is None or element.kind not in ("object", "opaque_handle"):
+    if value.kind == "vector_view":
+        if element is None or element.kind not in ("object", "opaque_handle"):
+            return False
+    elif value.kind == "primitive_vector":
+        if element is None or element.kind != "value":
+            return False
+    else:
         return False
     if key.kind == "pair":
         if key.key_type is None or key.value_type is None:
@@ -41,3 +71,23 @@ def allow_nested_map_value(key: TypeInfo, value: TypeInfo) -> bool:
 
 def allow_nested_primitive_vector_outer(normalized: str) -> bool:
     return normalized == f"gd::vector<{ALLOWED_NESTED_PRIMITIVE_VECTOR_INNER}>"
+
+
+def allow_nested_bool_vector_outer(normalized: str) -> bool:
+    return normalized == f"gd::vector<{ALLOWED_NESTED_BOOL_VECTOR_INNER}>"
+
+
+def allow_nested_object_vector_outer(normalized: str) -> bool:
+    return normalized == ALLOWED_NESTED_OBJECT_VECTOR_OUTER
+
+
+def allow_nested_object_grid_outer(normalized: str) -> bool:
+    return normalized == ALLOWED_NESTED_OBJECT_GRID_OUTER
+
+
+def allow_map_vector_element(normalized: str) -> bool:
+    return normalized == ALLOWED_MAP_VECTOR_ELEMENT
+
+
+def allow_int_tuple(normalized: str) -> bool:
+    return normalized == ALLOWED_INT_TUPLE

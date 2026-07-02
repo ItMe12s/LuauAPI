@@ -23,6 +23,7 @@ from luau_codegen.convert.marshalling import (
     check_sel_handler,
     push_value,
     _map_push_call,
+    _nested_object_pointee_cxx,
     _set_push_call,
 )
 from luau_codegen.convert.sel_args import iter_lua_method_args
@@ -186,9 +187,7 @@ def _emit_invoke(
         target = f"{cxx_name(cls)}::{m.name}({args})"
     else:
         target = f"self->{m.name}({args})"
-    out_refs = [
-        (i, arg_infos[i]) for i in range(len(m.args)) if ret.kind == "void" and arg_infos[i].is_out
-    ]
+    out_refs = [(i, arg_infos[i]) for i in range(len(m.args)) if arg_infos[i].is_out]
     if ret.kind == "void":
         out.extend(
             emit_invoke_void_tail(
@@ -212,6 +211,7 @@ def _emit_invoke(
                 owned_return=returns_owned(m) or m.is_bound_ctor,
                 ref_owner_expr=ref_owner,
                 pre_push_lines=["        result->autorelease();\n"] if m.is_bound_ctor else None,
+                out_refs=out_refs,
             )
         )
     out.append("    }\n\n")
@@ -220,11 +220,27 @@ def _emit_invoke(
 
 _CONTAINER_FIELD_ASSIGN_FNS = {
     "primitive_vector": "assignPrimitiveVector",
+    "map_vector": "assignPrimitiveVector",
     "map": "detail::assignAssociativeMap",
     "unordered_map": "detail::assignAssociativeMap",
     "set": "detail::assignSetContainer",
     "unordered_set": "detail::assignSetContainer",
 }
+
+
+def _nested_field_assign_fn(info: TypeInfo) -> str | None:
+    if info.kind == "nested_bool_vector_view":
+        if info.element_type is None or info.element_type.element_type is None:
+            raise ValueError("nested bool vector requires inner element type")
+        elem = info.element_type.element_type.cxx_type
+        return f"assignNestedPrimitiveVectorPointers<{elem}>"
+    if info.kind == "nested_object_vector_view":
+        pointee = _nested_object_pointee_cxx(info)
+        return f"assignNestedObjectVectorPointers<{pointee}>"
+    if info.kind == "nested_object_grid_view":
+        pointee = _nested_object_pointee_cxx(info)
+        return f"assignNestedObjectGridPointers<{pointee}>"
+    return None
 
 
 def _container_field_assign_fn(info: TypeInfo) -> str | None:
@@ -255,6 +271,24 @@ def _emit_std_array_field_assign_lines(field: Field, label: str, info: TypeInfo)
         f"                luax::assignStdArray<{elem}, {size}>(*self->{name}, std::move(value));\n",
         "            } else {\n",
         f"                luax::assignStdArray<{elem}, {size}>(self->{name}, std::move(value));\n",
+        "            }\n",
+    ]
+
+
+def _emit_nested_field_assign_lines(field: Field, label: str, info: TypeInfo) -> list[str]:
+    fn = _nested_field_assign_fn(info)
+    if fn is None:
+        raise ValueError(f"unsupported nested field assign: {info.kind}")
+    name = field.name
+    return [
+        "            if constexpr (std::is_pointer_v<std::remove_reference_t<decltype("
+        f"self->{name})>>) {{\n",
+        f"                if (self->{name} == nullptr) {{\n",
+        f'                    luaL_error(L, "{label} field pointer is null");\n',
+        "                }\n",
+        f"                luax::{fn}(*self->{name}, std::move(value));\n",
+        "            } else {\n",
+        f"                luax::{fn}(self->{name}, std::move(value));\n",
         "            }\n",
     ]
 
@@ -361,6 +395,67 @@ def _emit_field_accessors(
         out.append("        }\n")
         out.append("    }\n\n")
         return "".join(out)
+    if ret_info.kind in ("nested_object_vector_view", "nested_object_grid_view"):
+        out = ["    template <class T>\n"]
+        out.append(f"    int {getter_impl}(lua_State* L, T* self) {{\n")
+        out.append(f"        if constexpr (requires(T* obj) {{ obj->{field.name}; }}) {{\n")
+        out.extend(
+            f"    {line}"
+            for line in push_value(
+                _field_push_info(arg_info, ret_info),
+                f"self->{field.name}",
+                False,
+                owner_expr="self",
+            )
+        )
+        out.append("            return 1;\n")
+        out.append("        } else {\n")
+        out.append(
+            f'            luaL_error(L, "{label} field is not available in current SDK headers");\n'
+        )
+        out.append("            return 0;\n")
+        out.append("        }\n")
+        out.append("    }\n\n")
+        out.append(f"    int {getter}(lua_State* L) {{\n")
+        out.append(
+            f'        if (lua_gettop(L) != 1) luaL_error(L, "{label} getter expected 1 arg");\n'
+        )
+        out.append(
+            f'        auto self = luax::Usertype<{cxx_name(cls)}>::check(L, 1, "{label}");\n'
+        )
+        out.append(f"        return {getter_impl}(L, self);\n")
+        out.append("    }\n\n")
+        out.append("    template <class T>\n")
+        out.append(f"    int {setter_impl}(lua_State* L, T* self, {arg_info.cxx_type} value) {{\n")
+        out.append(f"        if constexpr (requires(T* obj) {{ obj->{field.name}; }}) {{\n")
+        out.extend(_emit_nested_field_assign_lines(field, label, arg_info))
+        out.append("            return 0;\n")
+        out.append("        } else {\n")
+        out.append(
+            f'            luaL_error(L, "{label} field is not available in current SDK headers");\n'
+        )
+        out.append("            return 0;\n")
+        out.append("        }\n")
+        out.append("    }\n\n")
+        out.append(f"    int {setter}(lua_State* L) {{\n")
+        out.append(
+            f'        if (lua_gettop(L) != 2) luaL_error(L, "{label} setter expected 2 args");\n'
+        )
+        out.append(
+            f'        auto self = luax::Usertype<{cxx_name(cls)}>::check(L, 1, "{label}");\n'
+        )
+        out.extend(check_arg(Arg(field.type, field.name), arg_info, 2, "value", label))
+        out.append(f"        return {setter_impl}(L, self, value);\n")
+        out.append("    }\n\n")
+        out.append("    template <class T>\n")
+        out.append(f"    void {register}(lua_State* L) {{\n")
+        out.append(f"        if constexpr (requires(T* obj) {{ obj->{field.name}; }}) {{\n")
+        out.append(
+            f'            luax::Usertype<T>::field(L, "{field.name}", &{getter}, &{setter});\n'
+        )
+        out.append("        }\n")
+        out.append("    }\n\n")
+        return "".join(out)
     out = ["    template <class T>\n"]
     out.append(f"    int {getter_impl}(lua_State* L, T* self) {{\n")
     out.append(f"        if constexpr (requires(T* obj) {{ obj->{field.name}; }}) {{\n")
@@ -388,6 +483,8 @@ def _emit_field_accessors(
         out.append(f"            self->{field.name} = value;\n")
     elif _container_field_assign_fn(arg_info) is not None:
         out.extend(_emit_container_field_assign_lines(field, label, arg_info))
+    elif _nested_field_assign_fn(arg_info) is not None:
+        out.extend(_emit_nested_field_assign_lines(field, label, arg_info))
     elif arg_info.is_vector_ptr:
         out.append(f"            if (self->{field.name} == nullptr) {{\n")
         out.append(f'                luaL_error(L, "{label} field pointer is null");\n')

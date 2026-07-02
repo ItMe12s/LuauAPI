@@ -162,6 +162,7 @@ def emit_invoke_return_tail(
     owned_return: bool = False,
     ref_owner_expr: str | None = None,
     pre_push_lines: List[str] | None = None,
+    out_refs: List[tuple[int, TypeInfo]] | None = None,
 ) -> List[str]:
     lines = [f"        auto result = {target};\n"]
     if pre_push_lines:
@@ -174,12 +175,19 @@ def emit_invoke_return_tail(
             is_static=is_static,
         )
     )
-    lines.extend(
-        emit_vector_return_push(
-            ret,
-            "result",
-            owned_return=owned_return,
-            ref_owner_expr=ref_owner_expr,
-        )
+    push_lines = emit_vector_return_push(
+        ret,
+        "result",
+        owned_return=owned_return,
+        ref_owner_expr=ref_owner_expr,
     )
+    if out_refs:
+        if push_lines and push_lines[-1].strip() == "return 1;":
+            push_lines = push_lines[:-1]
+        lines.extend(push_lines)
+        for arg_idx, oinfo in out_refs:
+            lines.extend(emit_vector_out_push(oinfo, f"arg{arg_idx}"))
+        lines.append(f"        return {1 + len(out_refs)};\n")
+    else:
+        lines.extend(push_lines)
     return lines

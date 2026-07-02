@@ -27,6 +27,12 @@ class NestedContainerPolicyTests(unittest.TestCase):
         self.assertTrue(allow_nested_primitive_vector_outer("gd::vector<gd::vector<int>*>"))
         self.assertFalse(allow_nested_primitive_vector_outer("gd::vector<gd::vector<bool>*>"))
 
+    def test_bool_nested_vector_outer_shape(self) -> None:
+        from luau_codegen.model.nested_containers import allow_nested_bool_vector_outer  # type: ignore[import-unresolved]
+
+        self.assertTrue(allow_nested_bool_vector_outer("gd::vector<gd::vector<bool>*>"))
+        self.assertFalse(allow_nested_bool_vector_outer("gd::vector<gd::vector<int>*>"))
+
 
 class NestedContainerTypeMapTests(unittest.TestCase):
     def test_unordered_map_int_to_label_object_vector(self) -> None:
@@ -252,7 +258,8 @@ class NestedContainerFieldBindingTests(unittest.TestCase):
             text,
         )
         self.assertIn(
-            "luax::detail::assignAssociativeMap(*self->m_labelObjects, std::move(value))", text
+            "luax::detail::assignAssociativeMap(*self->m_labelObjects, std::move(value))",
+            text,
         )
 
 
@@ -281,6 +288,64 @@ class NestedMapValuePolicyUnitTests(unittest.TestCase):
             element_type=TypeInfo(kind="number", cxx_type="int", lua_type="number"),
         )
         self.assertFalse(allow_nested_map_value(key, value))
+
+    def test_allow_nested_map_value_opt_in_value_vector(self) -> None:
+        key = TypeInfo(kind="number", cxx_type="int", lua_type="number")
+        value = TypeInfo(
+            kind="primitive_vector",
+            cxx_type="gd::vector<PulseEffectAction>",
+            lua_type="{ PulseEffectAction }",
+            element_type=TypeInfo(
+                kind="value",
+                cxx_type="PulseEffectAction",
+                lua_type="PulseEffectAction",
+            ),
+        )
+        self.assertTrue(allow_nested_map_value(key, value))
+
+
+class NestedMapValueEmitTests(unittest.TestCase):
+    def test_pulse_effect_map_field_emits_assign_associative(self) -> None:
+        import test_support
+
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        foo = Class(
+            name="Foo",
+            namespace="cocos2d",
+            bases=["CCObject"],
+            fields=[
+                Field(
+                    "m_pulseEffectMap",
+                    "gd::unordered_map<int, gd::vector<PulseEffectAction>>",
+                )
+            ],
+        )
+        objects = {
+            "CCObject": ccobject,
+            "cocos2d::CCObject": ccobject,
+            "Foo": foo,
+        }
+        grouped, skipped = group_supported(foo, objects, "win")
+        self.assertEqual(skipped, [])
+        text = _emit_class_file(
+            foo,
+            grouped,
+            [],
+            [(foo, foo.fields[0])],
+            objects,
+            set(),
+            1,
+            "win",
+        )
+        self.assertIn(
+            "detail::checkAssociativeMap<int, gd::vector<PulseEffectAction>, "
+            "gd::unordered_map<int, gd::vector<PulseEffectAction>>>",
+            text,
+        )
+        self.assertIn(
+            "luax::detail::assignAssociativeMap(*self->m_pulseEffectMap, std::move(value))",
+            text,
+        )
 
 
 if __name__ == "__main__":

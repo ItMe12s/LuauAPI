@@ -34,7 +34,12 @@ from luau_codegen.model.cc_c_array import (
 from luau_codegen.model.codegen_context import CodegenContext
 from luau_codegen.model.domain import short_name
 from luau_codegen.model.nested_containers import (
+    allow_int_tuple,
+    allow_map_vector_element,
+    allow_nested_bool_vector_outer,
     allow_nested_map_value,
+    allow_nested_object_grid_outer,
+    allow_nested_object_vector_outer,
     allow_nested_primitive_vector_outer,
 )
 from luau_codegen.model.pair_design import (
@@ -53,13 +58,13 @@ _PRIMITIVE_VECTOR_ELEMENT_KINDS = frozenset(
 
 _STD_ARRAY_ELEMENT_KINDS = _PRIMITIVE_VECTOR_ELEMENT_KINDS
 
-STD_ARRAY_MAX_SIZE = 400
+STD_ARRAY_MAX_SIZE = 2000
 
 _MAP_KEY_KINDS = frozenset({"bool", "number", "wideint", "string", "enum"})
 
-_MAP_VALUE_KINDS = _PRIMITIVE_VECTOR_ELEMENT_KINDS | {"object"}
+_MAP_VALUE_KINDS = _PRIMITIVE_VECTOR_ELEMENT_KINDS | {"object", "opaque_handle"}
 
-_SET_ELEMENT_KINDS = _PRIMITIVE_VECTOR_ELEMENT_KINDS | {"object"}
+_SET_ELEMENT_KINDS = _PRIMITIVE_VECTOR_ELEMENT_KINDS | {"object", "tuple"}
 
 _NESTED_CONTAINER_KINDS = frozenset(
     {
@@ -69,6 +74,9 @@ _NESTED_CONTAINER_KINDS = frozenset(
         "unordered_map",
         "set",
         "unordered_set",
+        "nested_object_vector_view",
+        "nested_object_grid_view",
+        "map_vector",
     }
 )
 
@@ -115,6 +123,8 @@ def _map_value_lua_type(value: TypeInfo) -> str:
         return value.lua_type
     if value.kind == "object":
         return f"{value.class_name}?"
+    if value.kind == "opaque_handle":
+        return f"{value.lua_type}?"
     if value.kind == "pair":
         if value.key_type is None or value.value_type is None:
             return value.lua_type
@@ -141,6 +151,8 @@ def _map_lua_type(key: TypeInfo, value: TypeInfo) -> str:
 def _set_element_lua_type(element: TypeInfo) -> str:
     if element.kind == "object":
         return f"{element.class_name}?"
+    if element.kind == "tuple":
+        return element.lua_type
     if element.kind == "pair":
         if element.key_type is None or element.value_type is None:
             return element.lua_type
@@ -278,21 +290,22 @@ def with_container_ref_flags(
     is_out: bool,
     is_vector_ptr: bool = False,
 ) -> TypeInfo:
-    return type_info_cls(
-        info.kind,
-        info.cxx_type,
-        info.lua_type,
-        info.class_name,
-        is_ref,
-        is_out,
-        is_vector_ptr,
-        info.callback_ret,
-        info.callback_args,
-        element_type=info.element_type,
-        key_type=info.key_type,
-        value_type=info.value_type,
-        array_size=info.array_size,
+    _ = type_info_cls
+    return dataclasses.replace(
+        info,
+        is_ref=is_ref,
+        is_out=is_out,
+        is_vector_ptr=is_vector_ptr,
     )
+
+
+def _with_ref_flags(
+    info: TypeInfo,
+    *,
+    is_ref: bool,
+    is_out: bool,
+) -> TypeInfo:
+    return dataclasses.replace(info, is_ref=is_ref, is_out=is_out)
 
 
 def parse_std_array(
@@ -435,6 +448,150 @@ def parse_nested_primitive_vector_view(
     )
 
 
+def parse_nested_bool_vector_view(
+    n: str,
+    object_classes: Dict[str, Class],
+    type_info_cls,
+    ctx: CodegenContext | None = None,
+) -> Optional[TypeInfo]:
+    if not allow_nested_bool_vector_outer(n):
+        return None
+    inner = template_inner(n, "gd::vector")
+    if inner is None:
+        return None
+    parts = split_top_level(inner)
+    if len(parts) != 1:
+        return None
+    elem = parts[0].strip()
+    if not elem.endswith("*"):
+        return None
+    inner_vec = parse_primitive_vector(elem[:-1].strip(), object_classes, type_info_cls, ctx=ctx)
+    if inner_vec is None or inner_vec.element_type is None:
+        return None
+    if inner_vec.element_type.kind != "bool":
+        return None
+    return type_info_cls(
+        "nested_bool_vector_view",
+        n,
+        f"{{ {inner_vec.lua_type} }}",
+        element_type=inner_vec,
+    )
+
+
+def parse_nested_object_vector_view(
+    n: str,
+    object_classes: Dict[str, Class],
+    type_info_cls,
+    ctx: CodegenContext | None = None,
+) -> Optional[TypeInfo]:
+    if not allow_nested_object_vector_outer(n):
+        return None
+    inner = template_inner(n, "gd::vector")
+    if inner is None:
+        return None
+    parts = split_top_level(inner)
+    if len(parts) != 1:
+        return None
+    elem = parts[0].strip()
+    if not elem.endswith("*"):
+        return None
+    inner_vec = parse_vector_view(elem[:-1].strip(), object_classes, type_info_cls, ctx=ctx)
+    if inner_vec is None:
+        return None
+    return type_info_cls(
+        "nested_object_vector_view",
+        n,
+        f"{{ {inner_vec.lua_type} }}",
+        element_type=inner_vec,
+    )
+
+
+def parse_nested_object_grid_view(
+    n: str,
+    object_classes: Dict[str, Class],
+    type_info_cls,
+    ctx: CodegenContext | None = None,
+) -> Optional[TypeInfo]:
+    if not allow_nested_object_grid_outer(n):
+        return None
+    inner = template_inner(n, "gd::vector")
+    if inner is None:
+        return None
+    parts = split_top_level(inner)
+    if len(parts) != 1:
+        return None
+    elem = parts[0].strip()
+    if not elem.endswith("*"):
+        return None
+    mid_vec = parse_nested_object_vector_view(
+        elem[:-1].strip(), object_classes, type_info_cls, ctx=ctx
+    )
+    if mid_vec is None:
+        return None
+    return type_info_cls(
+        "nested_object_grid_view",
+        n,
+        f"{{ {mid_vec.lua_type} }}",
+        element_type=mid_vec,
+    )
+
+
+def parse_map_vector(
+    n: str,
+    object_classes: Dict[str, Class],
+    type_info_cls,
+    ctx: CodegenContext | None = None,
+) -> Optional[TypeInfo]:
+    inner = template_inner(n, "gd::vector")
+    if inner is None:
+        return None
+    parts = split_top_level(inner)
+    if len(parts) != 1:
+        return None
+    elem_type = parts[0].strip()
+    if not allow_map_vector_element(normalize_type(elem_type)):
+        return None
+    element = classify_arg(elem_type, object_classes, ctx=ctx)
+    if element is None or element.kind != "unordered_map":
+        return None
+    return type_info_cls(
+        "map_vector",
+        n,
+        f"{{ {element.lua_type} }}",
+        element_type=element,
+    )
+
+
+def parse_std_tuple(
+    n: str,
+    object_classes: Dict[str, Class],
+    type_info_cls,
+    ctx: CodegenContext | None = None,
+) -> Optional[TypeInfo]:
+    if not allow_int_tuple(normalize_type(n)):
+        return None
+    inner = template_inner(n, "std::tuple")
+    if inner is None:
+        return None
+    parts = split_top_level(inner)
+    components = []
+    lua_parts = []
+    for part in parts:
+        info = classify_arg(part.strip(), object_classes, ctx=ctx)
+        if info is None or info.kind != "number":
+            return None
+        components.append(info)
+        lua_parts.append(info.lua_type)
+    if len(components) < 2:
+        return None
+    return type_info_cls(
+        "tuple",
+        n,
+        "{ " + ", ".join(lua_parts) + " }",
+        tuple_components=tuple(components),
+    )
+
+
 def _resolve_ctx(ctx: CodegenContext | None) -> CodegenContext:
     if ctx is not None:
         return ctx
@@ -564,6 +721,15 @@ def _classify_core(
         ptr_std_array = parse_std_array(base, object_classes, TypeInfo, ctx=ctx)
         if ptr_std_array is not None:
             return _with_out_ptr_flags(ptr_std_array)
+        ptr_nested_grid = parse_nested_object_grid_view(base, object_classes, TypeInfo, ctx=ctx)
+        if ptr_nested_grid is not None:
+            return _with_out_ptr_flags(ptr_nested_grid)
+        ptr_nested_obj = parse_nested_object_vector_view(base, object_classes, TypeInfo, ctx=ctx)
+        if ptr_nested_obj is not None:
+            return _with_out_ptr_flags(ptr_nested_obj)
+        ptr_nested_bool = parse_nested_bool_vector_view(base, object_classes, TypeInfo, ctx=ctx)
+        if ptr_nested_bool is not None:
+            return _with_out_ptr_flags(ptr_nested_bool)
         ptr_nested = parse_nested_primitive_vector_view(base, object_classes, TypeInfo, ctx=ctx)
         if ptr_nested is not None:
             return _with_out_ptr_flags(ptr_nested)
@@ -573,68 +739,45 @@ def _classify_core(
 
     std_array = parse_std_array(n, object_classes, TypeInfo, ctx=ctx)
     if std_array is not None:
-        return TypeInfo(
-            std_array.kind,
-            std_array.cxx_type,
-            std_array.lua_type,
-            std_array.class_name,
-            is_ref,
-            is_out,
-            element_type=std_array.element_type,
-            array_size=std_array.array_size,
-        )
+        return _with_ref_flags(std_array, is_ref=is_ref, is_out=is_out)
+
+    nested_object_grid_view = parse_nested_object_grid_view(n, object_classes, TypeInfo, ctx=ctx)
+    if nested_object_grid_view is not None:
+        return _with_ref_flags(nested_object_grid_view, is_ref=is_ref, is_out=is_out)
+
+    nested_object_vector_view = parse_nested_object_vector_view(
+        n, object_classes, TypeInfo, ctx=ctx
+    )
+    if nested_object_vector_view is not None:
+        return _with_ref_flags(nested_object_vector_view, is_ref=is_ref, is_out=is_out)
+
+    nested_bool_vector_view = parse_nested_bool_vector_view(n, object_classes, TypeInfo, ctx=ctx)
+    if nested_bool_vector_view is not None:
+        return _with_ref_flags(nested_bool_vector_view, is_ref=is_ref, is_out=is_out)
 
     nested_primitive_vector_view = parse_nested_primitive_vector_view(
         n, object_classes, TypeInfo, ctx=ctx
     )
     if nested_primitive_vector_view is not None:
-        return TypeInfo(
-            nested_primitive_vector_view.kind,
-            nested_primitive_vector_view.cxx_type,
-            nested_primitive_vector_view.lua_type,
-            nested_primitive_vector_view.class_name,
-            is_ref,
-            is_out,
-            element_type=nested_primitive_vector_view.element_type,
-        )
+        return _with_ref_flags(nested_primitive_vector_view, is_ref=is_ref, is_out=is_out)
+
+    map_vector = parse_map_vector(n, object_classes, TypeInfo, ctx=ctx)
+    if map_vector is not None:
+        return _with_ref_flags(map_vector, is_ref=is_ref, is_out=is_out)
 
     primitive_vector = parse_primitive_vector(n, object_classes, TypeInfo, ctx=ctx)
     if primitive_vector is not None:
-        return TypeInfo(
-            primitive_vector.kind,
-            primitive_vector.cxx_type,
-            primitive_vector.lua_type,
-            primitive_vector.class_name,
-            is_ref,
-            is_out,
-            element_type=primitive_vector.element_type,
-        )
+        return _with_ref_flags(primitive_vector, is_ref=is_ref, is_out=is_out)
 
     vector_view = parse_vector_view(n, object_classes, TypeInfo, ctx=ctx)
     if vector_view is not None:
-        return TypeInfo(
-            vector_view.kind,
-            vector_view.cxx_type,
-            vector_view.lua_type,
-            vector_view.class_name,
-            is_ref,
-            is_out,
-            element_type=vector_view.element_type,
-        )
+        return _with_ref_flags(vector_view, is_ref=is_ref, is_out=is_out)
 
     cc_c_array_view = parse_cc_c_array_view(
         n, owner_class, field_name, object_classes, TypeInfo, ctx=ctx
     )
     if cc_c_array_view is not None:
-        return TypeInfo(
-            cc_c_array_view.kind,
-            cc_c_array_view.cxx_type,
-            cc_c_array_view.lua_type,
-            cc_c_array_view.class_name,
-            is_ref,
-            is_out,
-            element_type=cc_c_array_view.element_type,
-        )
+        return _with_ref_flags(cc_c_array_view, is_ref=is_ref, is_out=is_out)
 
     container = parse_container(n, object_classes, TypeInfo, ctx=ctx)
     if container is not None:
@@ -644,18 +787,12 @@ def _classify_core(
             is_ref=is_ref,
             is_out=is_out,
         )
+    tuple_type = parse_std_tuple(n, object_classes, TypeInfo, ctx=ctx)
+    if tuple_type is not None:
+        return _with_ref_flags(tuple_type, is_ref=is_ref, is_out=is_out)
     pair_type = parse_std_pair(n, object_classes, TypeInfo, ctx=ctx)
     if pair_type is not None:
-        return TypeInfo(
-            pair_type.kind,
-            pair_type.cxx_type,
-            pair_type.lua_type,
-            pair_type.class_name,
-            is_ref=is_ref,
-            is_out=is_out,
-            key_type=pair_type.key_type,
-            value_type=pair_type.value_type,
-        )
+        return _with_ref_flags(pair_type, is_ref=is_ref, is_out=is_out)
     if base.startswith("SeedValue"):
         return TypeInfo("seed_value", n, "number", is_ref=is_ref, is_out=is_out)
     if n == "bool":

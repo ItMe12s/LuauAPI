@@ -161,9 +161,11 @@ FMOD_ENUM_TYPES = {
 
 OPAQUE_HANDLE_TYPES: dict[str, str] = {
     "FMOD::Channel*": "FMODChannel",
-    "FMOD::Sound*": "FMODSound",
+    "FMOD::Sound*": "FMODSoundHandle",
+    "FMOD::System*": "FMODSystem",
+    "FMOD::DSP*": "FMODDSP",
     "FMOD::ChannelGroup*": "FMODChannelGroup",
-    "FMODSound*": "FMODSound",
+    "FMODSound*": "FMODSoundHandle",
     "cocos2d::CCEvent*": "CCEvent",
     "cocos2d::extension::CCEditBox*": "CCEditBox",
     "GroupCommandObject2*": "GroupCommandObject2",
@@ -193,6 +195,7 @@ class TypeInfo:
     key_type: Optional["TypeInfo"] = None
     value_type: Optional["TypeInfo"] = None
     array_size: int = 0
+    tuple_components: Tuple["TypeInfo", ...] = field(default_factory=tuple)
 
 
 def _resolve_ctx(ctx: CodegenContext | None) -> CodegenContext:
