@@ -4,9 +4,22 @@
 
 namespace {
     static unsigned s_glContextGeneration = 0;
+    static bool s_gameTexturesLoaded = false;
 } // namespace
 
 namespace luax::render3d {
+
+    bool gameTexturesLoaded() {
+        return s_gameTexturesLoaded;
+    }
+
+    void markGameTexturesLoaded() {
+        s_gameTexturesLoaded = true;
+    }
+
+    void markGameTexturesUnloaded() {
+        s_gameTexturesLoaded = false;
+    }
 
     unsigned glContextGeneration() {
         return s_glContextGeneration;

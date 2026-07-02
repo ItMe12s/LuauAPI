@@ -47,7 +47,7 @@ It sets up ImGuiCocos and registers the draw lambda that calls `drawAll()`.
 The setup callback rebuilds the font atlas through `imguiFontRebuildAtlas()` after each ImGui init or reload.
 It runs lazily on the first `imgui.onDraw`, so a script that never uses ImGui pays nothing.
 If there's no OpenGL view yet, setup waits until available, making early `imgui.onDraw` safe.
-All host entry points return early when `gpuFeaturesDisabled()` is true. See [Limits and errors](../../reference/cpp/limits-and-errors.md).
+All host entry points return early while game textures are unloaded. See [Limits and errors](../../reference/cpp/limits-and-errors.md).
 `shutdownImGuiHost()` clears the scheduler, font registry, and tears down the backend.
 `src/main.cpp` calls it on game exit before `Runtime::shutdown()`, so the draw lambda detaches before the Lua state closes.
 The default input mode stays in place, so the game keeps input unless an ImGui window is hovered or focused.

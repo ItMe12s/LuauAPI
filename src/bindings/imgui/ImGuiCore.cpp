@@ -216,7 +216,6 @@ namespace {
 namespace luax {
     namespace {
         bool s_initialized = false;
-        bool s_pendingInit = false;
         geode::ListenerHandle s_scaleListener;
         bool s_scaleListenerRegistered = false;
     } // namespace
@@ -226,7 +225,7 @@ namespace luax {
     }
 
     void imguiHostRequestReload() {
-        if (render3d::gpuFeaturesDisabled()) {
+        if (!render3d::gameTexturesLoaded()) {
             return;
         }
         if (imguiHostIsInitialized()) {
@@ -235,15 +234,13 @@ namespace luax {
     }
 
     void initImGuiHost() {
-        if (render3d::gpuFeaturesDisabled() || s_initialized) return;
+        if (!render3d::gameTexturesLoaded()) {
+            return;
+        }
 
         auto* director = cocos2d::CCDirector::sharedDirector();
         if (!director || !director->getOpenGLView()) {
-            if (s_pendingInit) return;
-            s_pendingInit = true;
             geode::queueInMainThread([] {
-                if (!s_pendingInit) return;
-                s_pendingInit = false;
                 initImGuiHost();
             });
             return;
@@ -265,6 +262,10 @@ namespace luax {
             s_scaleListenerRegistered = true;
         }
 
+        if (s_initialized && ImGuiCocos::get().isInitialized()) {
+            return;
+        }
+
         ImGuiCocos::get()
             .setup([] {
                 imguiFontRebuildAtlas();
@@ -276,7 +277,6 @@ namespace luax {
     }
 
     void shutdownImGuiHost() {
-        s_pendingInit = false;
         ImGuiDrawScheduler::get().clear();
         imguiFontClear();
         if (s_initialized && ImGuiCocos::get().isInitialized()) {
@@ -288,17 +288,21 @@ namespace luax {
     }
 
     void imguiHostSetVisible(bool visible) {
-        if (render3d::gpuFeaturesDisabled()) return;
+        if (!render3d::gameTexturesLoaded()) {
+            return;
+        }
         ImGuiCocos::get().setVisible(visible);
     }
 
     void imguiHostToggle() {
-        if (render3d::gpuFeaturesDisabled()) return;
+        if (!render3d::gameTexturesLoaded()) {
+            return;
+        }
         ImGuiCocos::get().toggle();
     }
 
     bool imguiHostIsVisible() {
-        if (render3d::gpuFeaturesDisabled()) {
+        if (!render3d::gameTexturesLoaded()) {
             return false;
         }
         return ImGuiCocos::get().isVisible();

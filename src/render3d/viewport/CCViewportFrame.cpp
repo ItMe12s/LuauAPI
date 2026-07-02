@@ -68,7 +68,7 @@ namespace luax::render3d {
     }
 
     CCViewportFrame* CCViewportFrame::create(float width, float height) {
-        if (gpuFeaturesDisabled()) {
+        if (!gameTexturesLoaded()) {
             return nullptr;
         }
         auto* node = new CCViewportFrame();
@@ -87,7 +87,7 @@ namespace luax::render3d {
     CCViewportFrame::~CCViewportFrame() {
         liveViewports().erase(this);
         releaseViewportTexture();
-        if (gpuFeaturesDisabled() || !hasGlContext() || m_gen != glContextGeneration()) {
+        if (!hasGlContext() || m_gen != glContextGeneration()) {
             detachSpriteTexture();
         }
         destroyFramebuffer();
@@ -244,7 +244,7 @@ namespace luax::render3d {
     }
 
     std::uint64_t CCViewportFrame::ensureViewportTextureId() {
-        if (gpuFeaturesDisabled()) {
+        if (!gameTexturesLoaded()) {
             return 0;
         }
         if (m_viewportTextureId != 0) {
@@ -261,7 +261,7 @@ namespace luax::render3d {
     }
 
     void CCViewportFrame::draw() {
-        if (gpuFeaturesDisabled()) {
+        if (!gameTexturesLoaded()) {
             return;
         }
         if (!isVisible()) {
@@ -315,7 +315,7 @@ namespace luax::render3d {
     }
 
     bool CCViewportFrame::gpuHandlesValid() const {
-        return !gpuFeaturesDisabled() && m_gen == glContextGeneration();
+        return gameTexturesLoaded() && m_gen == glContextGeneration();
     }
 
     void CCViewportFrame::refreshSpriteTexture(CCSize const& points) {
@@ -351,7 +351,7 @@ namespace luax::render3d {
     }
 
     void CCViewportFrame::ensureFramebuffer() {
-        if (gpuFeaturesDisabled() || !hasGlContext()) {
+        if (!hasGlContext()) {
             return;
         }
 
@@ -382,7 +382,7 @@ namespace luax::render3d {
     }
 
     bool CCViewportFrame::createFramebuffer(int width, int height) {
-        if (gpuFeaturesDisabled() || !hasGlContext() || width <= 0 || height <= 0) {
+        if (!hasGlContext() || width <= 0 || height <= 0) {
             return false;
         }
 

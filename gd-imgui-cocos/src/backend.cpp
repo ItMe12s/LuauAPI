@@ -3,7 +3,7 @@
 #include <imgui_internal.h>
 #include <imgui.h>
 #include "render3d/gpu/GlUtil.hpp"
-#include <cstdint>
+#include "bindings/imgui/ImGuiHost.hpp"
 #include <string>
 #include <utility>
 
@@ -289,6 +289,11 @@ CCPoint ImGuiCocos::frameToCocos(const ImVec2& pos) {
 }
 
 void ImGuiCocos::drawFrame() {
+#if !defined(LUAUAPI_HOST_TESTS)
+	if (luax::render3d::gameTexturesLoaded()) {
+		luax::initImGuiHost();
+	}
+#endif
 	auto reloadIfNeeded = [this] {
 		if (!m_reloading) return;
 		bool const abandonTextures = m_abandonReloadTextures;
@@ -300,7 +305,9 @@ void ImGuiCocos::drawFrame() {
 
 	reloadIfNeeded();
 	if (!m_initialized || !m_visible) return;
-	if (!luax::render3d::glContextAvailable() || luax::render3d::gpuFeaturesDisabled()) return;
+	if (!luax::render3d::glContextAvailable() || !luax::render3d::gameTexturesLoaded()) {
+		return;
+	}
 
 	luax::render3d::DrawStateSnapshot prevState{};
 	prevState.capture();

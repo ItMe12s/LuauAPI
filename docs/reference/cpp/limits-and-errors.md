@@ -74,18 +74,18 @@ This page is the canonical list of caps, deadlines, and error strings for LuauAP
 | `font file could not be loaded` | Invalid TTF data | `nil, err` |
 | `imgui.font.with: font handle is invalid` | Bad or stale handle | Lua error |
 
-## GPU session disable
+## GPU texture reload
 
-LuauAPI disables all GPU features for the rest of the game session when the OpenGL context is torn down.
-This affects ImGui and `gd3d`.
+LuauAPI defers ImGui and `gd3d` GPU setup until game textures are loaded.
+On texture unload (including fullscreen/windowed toggles), GPU handles are abandoned and re-created when textures load again.
 
 | Trigger | Effect |
 | --- | --- |
-| Fullscreen or windowed toggle on Windows | ImGui backend destroyed, live viewports abandoned |
-| `TexturesUnloaded` game event | Same as above |
+| `TexturesUnloaded` game event | Bump GL context generation, abandon live viewports, reload ImGui backend |
+| `TexturesLoaded` game event | Mark textures ready, init or restore ImGui host |
+| Main menu entry | Same as `TexturesLoaded` when the event was missed during mod load |
 
-While disabled, ImGui draw callbacks do not run and `gd3d.ViewportFrame` skips draws.
-A restart popup appears on the next menu layer. Restart the game to restore GPU features.
+While textures are unloaded, ImGui draw callbacks and `gd3d.ViewportFrame` draws are skipped.
 There is no Lua error for this path.
 
 ## JSON limits

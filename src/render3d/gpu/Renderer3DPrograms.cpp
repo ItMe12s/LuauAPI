@@ -6,7 +6,7 @@
 namespace luax::render3d {
 
     void Renderer3DPrograms::destroyGlPrograms() {
-        if (gpuFeaturesDisabled() || !glContextAvailable()) {
+        if (!gameTexturesLoaded() || !glContextAvailable()) {
             return;
         }
         if (lambertProgram != 0) {

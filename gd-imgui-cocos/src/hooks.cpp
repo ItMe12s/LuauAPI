@@ -211,9 +211,7 @@ class $modify(ImGuiCocosCCEGLView, cocos2d::CCEGLView) {
 #endif
 
 	void swapBuffers() {
-		if (ImGuiCocos::get().isInitialized()) {
-			ImGuiCocos::get().drawFrame();
-		}
+		ImGuiCocos::get().drawFrame();
 		cocos2d::CCEGLView::swapBuffers();
 	}
 
@@ -226,8 +224,7 @@ class $modify(ImGuiCocosCCEGLView, cocos2d::CCEGLView) {
 class $modify(ImGuiCocosCCDirector, CCDirector) {
 	void drawScene() {
 		CCDirector::drawScene();
-		if (ImGuiCocos::get().isInitialized())
-			ImGuiCocos::get().drawFrame();
+		ImGuiCocos::get().drawFrame();
 	}
 };
 

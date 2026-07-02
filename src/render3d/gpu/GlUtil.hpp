@@ -11,8 +11,11 @@ namespace luax::render3d {
     unsigned glContextGeneration();
     void bumpGlContextGeneration();
 
-    bool gpuFeaturesDisabled();
-    void disableGpuFeaturesForSession();
+    bool gameTexturesLoaded();
+    void markGameTexturesLoaded();
+    void markGameTexturesUnloaded();
+
+    void reloadGpuAfterTextureUnload();
 
     bool vaoSupported();
 
