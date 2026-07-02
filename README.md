@@ -1,7 +1,5 @@
-<h1 align="center">LuauAPI</h1>
-
 <p align="center">
-  <img src="bigLogo.png" alt="Logo" width="300">
+  <img src="bigLogo.png" alt="Logo" width="600">
 </p>
 
 <p align="center">
@@ -9,10 +7,7 @@
   with many awesome features and tools.
 </p>
 
-<p align="center">
-  Read the docs by audience.<br>
-  Start with the docs index.
-</p>
+# LuauAPI
 
 **Heads up: LuauAPI is still in beta, so expect things to change.**
 **LuauAPI development will NOT support older versions of GD, Geode SDK, bindings, and dependencies.**
