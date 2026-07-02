@@ -44,6 +44,7 @@ namespace luax {
 } // namespace luax
 
 namespace luax::detail {
+    namespace {
         bool invokeFieldAccessor(
             lua_State* L, Runtime* runtime, int nargs, int nresults, std::string_view context,
             int deadlineMs
