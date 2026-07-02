@@ -387,7 +387,9 @@ class CastConventionGuardTests(unittest.TestCase):
             -1,
             "missing void dropBorrowedTargetIfFinalRelease(cocos2d::CCObject* object)",
         )
-        rest = source[start + len("void dropBorrowedTargetIfFinalRelease(cocos2d::CCObject* object)") :]
+        rest = source[
+            start + len("void dropBorrowedTargetIfFinalRelease(cocos2d::CCObject* object)") :
+        ]
         next_fn = rest.find("\n} // namespace luax")
         body = source[
             start : start

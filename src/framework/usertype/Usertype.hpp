@@ -23,6 +23,10 @@
 namespace luax {
     void dropBorrowedTargetIfFinalRelease(cocos2d::CCObject* object);
 
+#if defined(LUAUAPI_HOST_TESTS)
+    void clearBorrowedTargetsForTests();
+#endif
+
     constexpr std::uint32_t kUserdataOwnedFlag = 1u;
     constexpr std::uint32_t kUserdataEphemeralFlag = 2u;
 

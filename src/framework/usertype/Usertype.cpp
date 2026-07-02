@@ -16,20 +16,9 @@
 #include <unordered_set>
 
 namespace {
-    std::unordered_set<cocos2d::CCObject*>& borrowedTargets() {
+    auto& borrowedTargets() {
         static std::unordered_set<cocos2d::CCObject*> targets;
         return targets;
-    }
-
-    void trackBorrowedTarget(cocos2d::CCObject* object) {
-        if (object) {
-            borrowedTargets().insert(object);
-        }
-    }
-
-    bool borrowedTargetIsLive(cocos2d::CCObject* object) {
-        if (!object) return false;
-        return borrowedTargets().find(object) != borrowedTargets().end();
     }
 } // namespace
 
@@ -37,10 +26,15 @@ namespace luax {
     void dropBorrowedTargetIfFinalRelease(cocos2d::CCObject* object) {
         if (!object) return;
         auto& targets = borrowedTargets();
-        if (targets.find(object) == targets.end()) return;
-        if (object->retainCount() > 1) return;
+        if (targets.find(object) == targets.end() || object->retainCount() > 1) return;
         targets.erase(object);
     }
+
+#if defined(LUAUAPI_HOST_TESTS)
+    void clearBorrowedTargetsForTests() {
+        borrowedTargets().clear();
+    }
+#endif
 } // namespace luax
 
 namespace luax::detail {
@@ -174,8 +168,8 @@ namespace luax::detail {
         if (block->flags & kUserdataOwnedFlag) {
             return block->ptr;
         }
-        auto* cached = block->ptr;
-        if (!cached || !borrowedTargetIsLive(cached)) {
+        auto& targets = borrowedTargets();
+        if (!block->ptr || targets.find(block->ptr) == targets.end()) {
             return nullptr;
         }
         auto locked = block->weak.lock();
@@ -357,14 +351,15 @@ namespace luax::detail {
         auto* storage =
             lua_newuserdatatagged(L, sizeof(UserdataBlock), static_cast<int>(kSharedUsertypeTag));
         auto* block = new (storage) UserdataBlock();
+        block->ptr = obj;
         if (owned) {
-            block->ptr = obj;
             block->flags = kUserdataOwnedFlag;
         }
         else {
-            block->ptr = obj;
             block->weak = geode::WeakRef<cocos2d::CCObject>(obj);
-            trackBorrowedTarget(obj);
+            if (obj) {
+                borrowedTargets().insert(obj);
+            }
             block->flags = 0u;
         }
         block->typeTag = info.tag;

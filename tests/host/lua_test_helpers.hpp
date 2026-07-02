@@ -10,6 +10,7 @@
 #include "framework/callback/LuaTrampolineRegistry.hpp"
 #include "framework/usertype/Fields.hpp"
 #include "framework/usertype/LuaRef.hpp"
+#include "framework/usertype/Usertype.hpp"
 
 #include <Geode/loader/Mod.hpp>
 #include <Geode/utils/main_thread.hpp>
@@ -140,6 +141,7 @@ namespace luauapi_test {
 
         ~FieldsRuntimeGuard() {
             luax::Fields::clear();
+            luax::clearBorrowedTargetsForTests();
             luax::Runtime::resetForTests();
         }
     };

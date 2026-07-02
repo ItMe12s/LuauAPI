@@ -18,6 +18,8 @@ namespace {
 
     struct OverflowNode : cocos2d::CCNode {};
 
+    struct PlainObject : cocos2d::CCObject {};
+
     using RuntimeGuard = luauapi_test::FieldsRuntimeGuard;
 
     int getTestField(lua_State* L) {
@@ -460,8 +462,6 @@ TEST_CASE("tryNodeCandidate rejects non-CCNode userdata") {
     auto* runtime = luax::Runtime::getOrCreate();
     auto* L = runtime->state();
 
-    struct PlainObject : cocos2d::CCObject {};
-
     REQUIRE(luax::Usertype<PlainObject>::registerType(L, "PlainObject").isOk());
 
     auto* obj = new PlainObject();
@@ -528,6 +528,58 @@ TEST_CASE("findPushTypeInfo resolves registered runtime type name") {
     REQUIRE(lua_isfunction(L, -1));
     lua_pop(L, 2);
 
+    node->release();
+}
+
+TEST_CASE("dropBorrowedTargetIfFinalRelease is no-op without a borrowed entry") {
+    RuntimeGuard guard;
+    auto* node = new TestNode();
+
+    REQUIRE_NOTHROW(luax::dropBorrowedTargetIfFinalRelease(node));
+
+    node->release();
+}
+
+TEST_CASE("dropBorrowedTargetIfFinalRelease is no-op for non-node CCObject") {
+    RuntimeGuard guard;
+    auto* object = new PlainObject();
+
+    REQUIRE_NOTHROW(luax::dropBorrowedTargetIfFinalRelease(object));
+
+    object->release();
+}
+
+TEST_CASE("dropBorrowedTargetIfFinalRelease defers drop while retainCount is above one") {
+    RuntimeGuard guard;
+    auto* runtime = luax::Runtime::getOrCreate();
+    auto* L = runtime->state();
+
+    REQUIRE(luax::Usertype<cocos2d::CCObject>::registerType(L, "CCObject").isOk());
+    REQUIRE(
+        luax::Usertype<TestNode>::registerType(L, "TestNode", {luax::Usertype<cocos2d::CCObject>::tag()})
+            .isOk()
+    );
+
+    auto* node = new TestNode();
+    luax::Usertype<TestNode>::pushBorrowed(L, node);
+    REQUIRE(luax::detail::tryCandidate(L, -1).obj == node);
+
+    luax::dropBorrowedTargetIfFinalRelease(node);
+    REQUIRE(luax::detail::tryCandidate(L, -1).obj == nullptr);
+
+    node->retain();
+    luax::Usertype<TestNode>::pushBorrowed(L, node);
+    REQUIRE(luax::detail::tryCandidate(L, -1).obj == node);
+    REQUIRE(luax::detail::tryCandidate(L, -2).obj == nullptr);
+
+    luax::dropBorrowedTargetIfFinalRelease(node);
+    REQUIRE(luax::detail::tryCandidate(L, -1).obj == node);
+
+    node->release();
+    luax::dropBorrowedTargetIfFinalRelease(node);
+    REQUIRE(luax::detail::tryCandidate(L, -1).obj == nullptr);
+
+    lua_pop(L, 2);
     node->release();
 }
 
