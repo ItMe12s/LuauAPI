@@ -55,6 +55,7 @@ The generated body (in `tools/luau_codegen/emit/bindings/common.py`) is:
 void luaapi_fields_release_hook(cocos2d::CCObject* self) {
     luax::Fields::evictIfFinalRelease(self);
     luax::evictTrampolinesIfFinalRelease(self);
+    luax::dropBorrowedTargetIfFinalRelease(self);
     self->release();
 }
 ```
@@ -63,7 +64,7 @@ Codegen resolves the `CCObject::release` address per platform and hooks it with 
 A failed resolve, install, or enable is non-fatal.
 The hook is skipped and the mod logs a warning, so a bad binding address never blocks the mod from loading.
 
-Both `evictIfFinalRelease` calls must obey this rule because both run on every release.
+All three `evictIfFinalRelease` calls must obey this rule because all three run on every release.
 
 ## The compliant functions
 
@@ -88,6 +89,11 @@ so for an untracked object the `find` misses and the cast result is never derefe
 
 `evictTrampolinesIfFinalRelease` in `src/framework/callback/LuaTrampolineRegistry.cpp` follows the same shape.
 It does its own `anchorMap().find(anchor)` and returns on a miss before any call on the anchor.
+
+`dropBorrowedTargetIfFinalRelease` in `src/framework/usertype/Usertype.cpp` follows the same shape.
+It does its own `borrowedTargets().find(object)` and returns on a miss before `retainCount`.
+When a borrowed userdata target reaches its final release, the set entry is removed before Geode `WeakRef` pool cleanup can run.
+`liveObject` then skips `WeakRef::lock` for that target and returns `nullptr` instead of faulting.
 
 ## What the drain must do too
 
@@ -117,8 +123,10 @@ Two layers keep the rule alive after this page:
 
 - A Python guard test in `tests/luau_codegen/test_binding_guards_framework.py`
   checks that `evictIfFinalRelease` does not use `typeinfo_cast` and goes through `fieldTables()` and `entryStillOwnsNode`,
-  while `evict(CCObject*)` still does use it.
+  that `dropBorrowedTargetIfFinalRelease` checks `borrowedTargets()` before `retainCount`,
+  while `evict(CCObject*)` still does use `typeinfo_cast`.
 - Host tests in `tests/fields_tests.cpp` cover the no-op case for an untracked node and for a non-node CCObject.
+- Host tests in `tests/usertype_tests.cpp` cover borrowed userdata access after `dropBorrowedTargetIfFinalRelease`.
 
 If you add work to a release-reachable function, add a test that runs it on an untracked object and on a non-node CCObject.
 Extend the guard test so the next change cannot quietly put a virtual call back on the path.
@@ -136,10 +144,12 @@ Extend the guard test so the next change cannot quietly put a virtual call back 
 ## Source
 
 - `src/framework/usertype/Fields.cpp`
+- `src/framework/usertype/Usertype.cpp`
 - `src/framework/callback/LuaTrampolineRegistry.cpp`
 - `src/framework/usertype/DeferredRelease.cpp`
 - `src/framework/usertype/WeakRefShutdown.hpp`
 - `src/bindings/task/TaskSchedulerDrainHook.cpp`
 - `tools/luau_codegen/emit/bindings/common.py`
 - `tests/fields_tests.cpp`
+- `tests/usertype_tests.cpp`
 - `tests/luau_codegen/test_binding_guards_framework.py`

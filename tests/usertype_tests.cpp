@@ -531,7 +531,7 @@ TEST_CASE("findPushTypeInfo resolves registered runtime type name") {
     node->release();
 }
 
-TEST_CASE("borrowed userdata liveObject returns null after final release") {
+TEST_CASE("borrowed userdata rejects access after borrowed target is dropped") {
     RuntimeGuard guard;
     auto* runtime = luax::Runtime::getOrCreate();
     auto* L = runtime->state();
@@ -550,26 +550,6 @@ TEST_CASE("borrowed userdata liveObject returns null after final release") {
     luax::dropBorrowedTargetIfFinalRelease(node);
     REQUIRE(luax::detail::tryCandidate(L, -1).obj == nullptr);
 
-    lua_pop(L, 1);
-    node->release();
-}
-
-TEST_CASE("borrowed userdata check errors after final release without crashing") {
-    RuntimeGuard guard;
-    auto* runtime = luax::Runtime::getOrCreate();
-    auto* L = runtime->state();
-
-    REQUIRE(luax::Usertype<cocos2d::CCObject>::registerType(L, "CCObject").isOk());
-    REQUIRE(
-        luax::Usertype<TestNode>::registerType(L, "TestNode", {luax::Usertype<cocos2d::CCObject>::tag()})
-            .isOk()
-    );
-
-    auto* node = new TestNode();
-    luax::Usertype<TestNode>::pushBorrowed(L, node);
-
-    luax::dropBorrowedTargetIfFinalRelease(node);
-
     lua_pushcfunction(
         L,
         [](lua_State* S) -> int {
@@ -585,6 +565,8 @@ TEST_CASE("borrowed userdata check errors after final release without crashing")
 
     node->release();
 }
+
+TEST_CASE("tryNodeCandidate accepts CCNode lower-bound dynamic userdata") {
     RuntimeGuard guard;
     auto* runtime = luax::Runtime::getOrCreate();
     auto* L = runtime->state();
