@@ -15,7 +15,8 @@ namespace luax::render3d {
     void markGameTexturesLoaded();
     void markGameTexturesUnloaded();
 
-    void reloadGpuAfterTextureUnload();
+    bool gpuFeaturesDisabled();
+    void disableGpuFeaturesForSession();
 
     bool vaoSupported();
 

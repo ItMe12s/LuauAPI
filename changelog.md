@@ -2,9 +2,13 @@
 
 [Check the GitHub commits for more details](https://github.com/ItMe12s/LuauAPI).
 
+## 0.1.0-beta.13
+
+- Fixed ImGui and `gd3d` initializing before game textures load (`TexturesLoaded` defer).
+- Removed custom loading layer (**Enable Custom Loading Layer**) due to Geode loading incompatibility.
+
 ## 0.1.0-beta.12
 
-- Fixed Android crash when the custom loading screen accessed `LoadingLayer` after it was destroyed.
 - Fixed borrowed game object userdata crashing natively when scripts kept a reference after the object was freed.
 
 ## 0.1.0-beta.11

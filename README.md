@@ -1,7 +1,7 @@
 <h1 align="center">LuauAPI</h1>
 
 <p align="center">
-  <img src="logo.png" alt="Logo" width="200">
+  <img src="bigLogo.png" alt="Logo" width="300">
 </p>
 
 <p align="center">

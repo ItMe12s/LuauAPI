@@ -290,7 +290,7 @@ CCPoint ImGuiCocos::frameToCocos(const ImVec2& pos) {
 
 void ImGuiCocos::drawFrame() {
 #if !defined(LUAUAPI_HOST_TESTS)
-	if (luax::render3d::gameTexturesLoaded()) {
+	if (!luax::render3d::gpuFeaturesDisabled() && luax::render3d::gameTexturesLoaded()) {
 		luax::initImGuiHost();
 	}
 #endif
@@ -305,7 +305,8 @@ void ImGuiCocos::drawFrame() {
 
 	reloadIfNeeded();
 	if (!m_initialized || !m_visible) return;
-	if (!luax::render3d::glContextAvailable() || !luax::render3d::gameTexturesLoaded()) {
+	if (!luax::render3d::glContextAvailable() || luax::render3d::gpuFeaturesDisabled()
+		|| !luax::render3d::gameTexturesLoaded()) {
 		return;
 	}
 

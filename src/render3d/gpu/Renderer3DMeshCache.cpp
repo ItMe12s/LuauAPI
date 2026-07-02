@@ -95,7 +95,7 @@ namespace luax::render3d {
     unsigned int Renderer3DMeshCache::ensureGpuTexture(
         std::uint64_t textureId, TextureAsset const& textureAsset
     ) {
-        if (!gameTexturesLoaded()) {
+        if (gpuFeaturesDisabled() || !gameTexturesLoaded()) {
             return 0;
         }
         if (m_gen != glContextGeneration()) {
@@ -129,7 +129,7 @@ namespace luax::render3d {
     }
 
     GpuMesh* Renderer3DMeshCache::ensureGpuMesh(std::uint64_t meshId, MeshAsset const& meshAsset) {
-        if (!gameTexturesLoaded()) {
+        if (gpuFeaturesDisabled() || !gameTexturesLoaded()) {
             return nullptr;
         }
         if (m_gen != glContextGeneration()) {

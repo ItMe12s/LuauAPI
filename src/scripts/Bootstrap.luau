@@ -1,4 +1,3 @@
-require("./LuauAPI_LoadingLayer").init()
 require("./LuauAPI_MenuLayer").init()
 
 local isDeveloperModeEnabled = geode.Mod.getSettingValue("enable-developer-mode")

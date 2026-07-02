@@ -63,7 +63,7 @@ namespace luax::render3d {
         std::map<int, ViewportInstance> const& instances, RenderSettings const& settings,
         std::map<int, DebugLine> const& debugLines, bool debugBounds
     ) {
-        if (!gameTexturesLoaded() || fbo == 0 || pixelWidth <= 0 || pixelHeight <= 0) {
+        if (gpuFeaturesDisabled() || !gameTexturesLoaded() || fbo == 0 || pixelWidth <= 0 || pixelHeight <= 0) {
             return;
         }
         ensureRenderer3DShutdownHook();
