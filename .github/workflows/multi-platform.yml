@@ -22,11 +22,35 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Setup sccache (Windows)
+        if: runner.os == 'Windows'
+        uses: Mozilla-Actions/sccache-action@v0.0.10
+
+      - name: Setup ccache (macOS/Linux)
+        if: runner.os != 'Windows'
+        uses: hendrikmuhs/ccache-action@v1.2.23
+        with:
+          key: host-tests-${{ matrix.os }}
+
+      - name: Cache FetchContent deps
+        uses: actions/cache@v4
+        with:
+          path: build/_deps
+          key: deps-host-${{ matrix.os }}-${{ hashFiles('CMakeLists.txt','cmake/*.cmake') }}
+          restore-keys: |
+            deps-host-${{ matrix.os }}-
+
       - name: Configure
-        run: cmake -B build -DLUAUAPI_HOST_ONLY=ON -DLUAUAPI_BUILD_TESTS=ON
+        run: >
+          cmake -G Ninja -B build
+          -DLUAUAPI_HOST_ONLY=ON -DLUAUAPI_BUILD_TESTS=ON
+          -DCMAKE_C_COMPILER_LAUNCHER=${{ runner.os == 'Windows' && 'sccache' || 'ccache' }}
+          -DCMAKE_CXX_COMPILER_LAUNCHER=${{ runner.os == 'Windows' && 'sccache' || 'ccache' }}
 
       - name: Build tests
-        run: cmake --build build --config Debug --target luauapi_tests
+        run: cmake --build build --config Debug --target luauapi_tests --parallel
+        env:
+          CMAKE_BUILD_PARALLEL_LEVEL: ${{ runner.os == 'macOS' && '3' || '2' }}
 
       - name: Run tests
         run: ctest --test-dir build -C Debug --output-on-failure
@@ -41,9 +65,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-
-      - name: Configure
-        run: cmake -B build -DLUAUAPI_HOST_ONLY=ON -DLUAUAPI_BUILD_TESTS=ON
+          cache: pip
+          cache-dependency-path: pyproject.toml
 
       - name: Run Python codegen tests
         run: python -m unittest discover -s tests/luau_codegen -p "test_*.py"
@@ -78,12 +101,21 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+      
+      - name: Cache FetchContent deps
+        uses: actions/cache@v4
+        with:
+          path: build/_deps
+          key: deps-build-${{ matrix.config.name }}-${{ hashFiles('CMakeLists.txt','cmake/*.cmake') }}
+          restore-keys: |
+            deps-build-${{ matrix.config.name }}-
 
       - name: Build the mod
         uses: geode-sdk/build-geode-mod@main
         with:
           combine: true
           target: ${{ matrix.config.target }}
+          ccache-variant: ${{ (runner.os == 'Windows' || runner.os == 'Linux') && 'sccache' || 'ccache' }}
 
       - name: Summarize LuauAPI codegen
         shell: pwsh
