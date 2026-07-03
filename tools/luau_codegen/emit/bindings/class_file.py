@@ -286,9 +286,9 @@ def _emit_nested_field_assign_lines(field: Field, label: str, info: TypeInfo) ->
         f"                if (self->{name} == nullptr) {{\n",
         f'                    luaL_error(L, "{label} field pointer is null");\n',
         "                }\n",
-        f"                luax::{fn}(*self->{name}, std::move(value));\n",
+        f"                luax::{fn}(*self->{name}, value);\n",
         "            } else {\n",
-        f"                luax::{fn}(self->{name}, std::move(value));\n",
+        f"                luax::{fn}(self->{name}, value);\n",
         "            }\n",
     ]
 
@@ -304,9 +304,9 @@ def _emit_container_field_assign_lines(field: Field, label: str, info: TypeInfo)
         f"                if (self->{name} == nullptr) {{\n",
         f'                    luaL_error(L, "{label} field pointer is null");\n',
         "                }\n",
-        f"                luax::{fn}(*self->{name}, std::move(value));\n",
+        f"                luax::{fn}(*self->{name}, value);\n",
         "            } else {\n",
-        f"                luax::{fn}(self->{name}, std::move(value));\n",
+        f"                luax::{fn}(self->{name}, value);\n",
         "            }\n",
     ]
 

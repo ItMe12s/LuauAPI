@@ -776,7 +776,7 @@ class GeneratedSafetyTests(unittest.TestCase):
         )
 
         self.assertIn("pushPrimitiveVector<float>(L, self->m_pSplitTimes)", text)
-        self.assertIn("luax::assignPrimitiveVector(*self->m_pSplitTimes, std::move(value))", text)
+        self.assertIn("luax::assignPrimitiveVector(*self->m_pSplitTimes, value)", text)
         self.assertNotIn("*self->m_pSplitTimes = std::move(value)", text)
         self.assertIn("field pointer is null", text)
 
@@ -803,7 +803,7 @@ class GeneratedSafetyTests(unittest.TestCase):
         )
 
         self.assertIn("checkPrimitiveVector<bool>", text)
-        self.assertIn("luax::assignPrimitiveVector(self->m_flags, std::move(value))", text)
+        self.assertIn("luax::assignPrimitiveVector(self->m_flags, value)", text)
         self.assertNotIn("self->m_flags = std::move", text)
 
     def test_seed_value_field_setter_assigns_int(self) -> None:
@@ -1024,7 +1024,7 @@ class GeneratedSafetyTests(unittest.TestCase):
         )
 
         self.assertIn("checkPrimitiveVector<int>", text)
-        self.assertIn("luax::assignPrimitiveVector(*self->m_pInts, std::move(value))", text)
+        self.assertIn("luax::assignPrimitiveVector(*self->m_pInts, value)", text)
         self.assertNotIn("*self->m_pInts = std::move(value)", text)
 
     def test_map_field_setter_uses_assign_map(self) -> None:
@@ -1048,7 +1048,7 @@ class GeneratedSafetyTests(unittest.TestCase):
         )
 
         self.assertIn("detail::checkAssociativeMap<int, bool, gd::map<int, bool>>", text)
-        self.assertIn("luax::detail::assignAssociativeMap(self->m_values, std::move(value))", text)
+        self.assertIn("luax::detail::assignAssociativeMap(self->m_values, value)", text)
         self.assertNotIn("self->m_values = std::move", text)
 
     def test_set_field_setter_uses_assign_set(self) -> None:
@@ -1072,7 +1072,7 @@ class GeneratedSafetyTests(unittest.TestCase):
         )
 
         self.assertIn("detail::checkSetFromTable<int, gd::set<int>>", text)
-        self.assertIn("luax::detail::assignSetContainer(self->m_ids, std::move(value))", text)
+        self.assertIn("luax::detail::assignSetContainer(self->m_ids, value)", text)
         self.assertNotIn("self->m_ids = std::move", text)
 
     def test_object_set_field_setter_uses_assign_set(self) -> None:
@@ -1103,7 +1103,7 @@ class GeneratedSafetyTests(unittest.TestCase):
             "detail::checkSetFromTable<cocos2d::CCObject*, gd::set<cocos2d::CCObject*>>",
             text,
         )
-        self.assertIn("luax::detail::assignSetContainer(self->m_objects, std::move(value))", text)
+        self.assertIn("luax::detail::assignSetContainer(self->m_objects, value)", text)
         self.assertNotIn("self->m_objects = std::move", text)
 
     def test_object_set_pointer_field_setter_dereferences(self) -> None:
@@ -1134,7 +1134,7 @@ class GeneratedSafetyTests(unittest.TestCase):
             "detail::checkSetFromTable<cocos2d::CCObject*, gd::set<cocos2d::CCObject*>>",
             text,
         )
-        self.assertIn("luax::detail::assignSetContainer(*self->m_pSet, std::move(value))", text)
+        self.assertIn("luax::detail::assignSetContainer(*self->m_pSet, value)", text)
         self.assertIn(
             "luax::detail::pushSetContainerPointer<gd::set<cocos2d::CCObject*>>(L, self->m_pSet)",
             text,

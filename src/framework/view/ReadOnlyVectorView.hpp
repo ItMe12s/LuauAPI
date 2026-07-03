@@ -177,15 +177,41 @@ namespace luax {
     }
 
     template <class T>
+    void checkObjectVectorView(lua_State* L, int idx, char const* label, gd::vector<T*>& out) {
+        static_assert(
+            std::is_base_of_v<cocos2d::CCObject, T>, "vector view elements must be CCObject"
+        );
+        if (detail::tryCopyReadOnlyVectorView<T, detail::VectorObjectPolicy>(L, idx, out)) {
+            return;
+        }
+        idx = lua_absindex(L, idx);
+        luaL_checktype(L, idx, LUA_TTABLE);
+        auto len = static_cast<lua_Integer>(lua_objlen(L, idx));
+        if (len < 0) {
+            luaL_error(L, "%s: invalid vector length", label);
+        }
+        out.clear();
+        out.reserve(static_cast<std::size_t>(len));
+        for (lua_Integer i = 1; i <= len; ++i) {
+            lua_rawgeti(L, idx, i);
+            if (lua_isnil(L, -1)) {
+                out.push_back(nullptr);
+            }
+            else {
+                out.push_back(Usertype<T>::check(L, -1, label));
+            }
+            lua_pop(L, 1);
+        }
+    }
+
+    template <class T>
     gd::vector<T*> checkObjectVectorView(lua_State* L, int idx, char const* label) {
         static_assert(
             std::is_base_of_v<cocos2d::CCObject, T>, "vector view elements must be CCObject"
         );
-        return detail::checkPointerVectorFromTable<T, detail::VectorObjectPolicy>(
-            L, idx, label, [](lua_State* L, int i, char const* lbl) {
-                return Usertype<T>::check(L, i, lbl);
-            }
-        );
+        gd::vector<T*> out;
+        checkObjectVectorView(L, idx, label, out);
+        return out;
     }
 
     // Opaque views: elements use tagged opaque handles instead of Usertype borrowing.

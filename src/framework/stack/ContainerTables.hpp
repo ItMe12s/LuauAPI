@@ -182,16 +182,21 @@ namespace luax {
     }
 
     template <class T>
-    gd::vector<T> checkPrimitiveVector(lua_State* L, int idx, char const* label) {
+    void checkPrimitiveVector(lua_State* L, int idx, char const* label, gd::vector<T>& out);
+
+    template <class T>
+    void assignPrimitiveVector(gd::vector<T>& dest, gd::vector<T> const& src);
+
+    template <class T>
+    void checkPrimitiveVector(lua_State* L, int idx, char const* label, gd::vector<T>& out) {
         idx = detail::absCheckIndexedTable(L, idx);
         auto len = detail::indexedTableLength(L, idx);
         detail::requireNonNegativeIndexedLength(L, len, label, "vector");
-        gd::vector<T> out;
+        out.clear();
         out.reserve(static_cast<std::size_t>(len));
         detail::checkIndexedTableElements(L, idx, len, [&](lua_State* state, lua_Integer) {
             out.push_back(detail::checkPrimitiveVectorElement<T>(state, -1, label));
         });
-        return out;
     }
 
     template <class T>
@@ -290,7 +295,9 @@ namespace luax {
                 }
                 return checkOpaqueVectorView<Pointee>(L, idx, label);
             }
-            return checkPrimitiveVector<Elem>(L, idx, label);
+            V result;
+            checkPrimitiveVector<Elem>(L, idx, label, result);
+            return result;
         }
         else if constexpr (std::is_pointer_v<V>) {
             using Pointee = std::remove_pointer_t<V>;
@@ -404,25 +411,26 @@ namespace luax {
     }
 
     template <class T>
-    gd::vector<gd::vector<T>*> checkNestedPrimitiveVectorPointers(
-        lua_State* L, int idx, char const* label
+    void checkNestedPrimitiveVectorPointers(
+        lua_State* L, int idx, char const* label, gd::vector<gd::vector<T>*>& out
     ) {
         idx = detail::absCheckIndexedTable(L, idx);
         auto len = detail::indexedTableLength(L, idx);
         detail::requireNonNegativeIndexedLength(L, len, label, "vector");
-        gd::vector<gd::vector<T>*> out;
+        out.clear();
         out.reserve(static_cast<std::size_t>(len));
         detail::checkIndexedTableElements(L, idx, len, [&](lua_State* state, lua_Integer) {
-            auto inner = checkPrimitiveVector<T>(state, -1, label);
-            out.push_back(new gd::vector<T>(std::move(inner)));
+            gd::vector<T> inner;
+            checkPrimitiveVector<T>(state, -1, label, inner);
+            auto* heap = new gd::vector<T>();
+            assignPrimitiveVector(*heap, inner);
+            out.push_back(heap);
         });
-        return out;
     }
 
-    template <class InnerPtr, class CreateFn, class MoveAssignFn>
+    template <class InnerPtr, class CreateFn, class AssignFn>
     void assignNestedPointerVectorLayer(
-        gd::vector<InnerPtr>& dest, gd::vector<InnerPtr> src, CreateFn&& create,
-        MoveAssignFn&& moveAssign
+        gd::vector<InnerPtr>& dest, gd::vector<InnerPtr>& src, CreateFn&& create, AssignFn&& assignFn
     ) {
         while (dest.size() > src.size()) {
             delete dest.back();
@@ -435,27 +443,28 @@ namespace luax {
             if (dest[i] == nullptr) {
                 dest[i] = create();
             }
-            moveAssign(*dest[i], std::move(*src[i]));
+            assignFn(*dest[i], *src[i]);
             delete src[i];
             src[i] = nullptr;
         }
         for (auto* inner : src) {
             delete inner;
         }
+        src.clear();
     }
 
     template <class T>
     void assignNestedPrimitiveVectorPointers(
-        gd::vector<gd::vector<T>*>& dest, gd::vector<gd::vector<T>*> src
+        gd::vector<gd::vector<T>*>& dest, gd::vector<gd::vector<T>*>& src
     ) {
         assignNestedPointerVectorLayer(
             dest,
-            std::move(src),
+            src,
             []() {
                 return new gd::vector<T>();
             },
-            [](gd::vector<T>& inner, gd::vector<T> value) {
-                inner = std::move(value);
+            [](gd::vector<T>& inner, gd::vector<T> const& value) {
+                assignPrimitiveVector(inner, value);
             }
         );
     }
@@ -490,34 +499,38 @@ namespace luax {
     }
 
     template <class T>
-    gd::vector<gd::vector<T*>*> checkNestedObjectVectorPointers(lua_State* L, int idx, char const* label) {
+    void checkNestedObjectVectorPointers(
+        lua_State* L, int idx, char const* label, gd::vector<gd::vector<T*>*>& out
+    ) {
         static_assert(
             std::is_base_of_v<cocos2d::CCObject, T>, "nested object vector elements must be CCObject"
         );
         idx = detail::absCheckIndexedTable(L, idx);
         auto len = detail::indexedTableLength(L, idx);
         detail::requireNonNegativeIndexedLength(L, len, label, "vector");
-        gd::vector<gd::vector<T*>*> out;
+        out.clear();
         out.reserve(static_cast<std::size_t>(len));
         detail::checkIndexedTableElements(L, idx, len, [&](lua_State* state, lua_Integer) {
-            auto inner = checkObjectVectorView<T>(state, -1, label);
-            out.push_back(new gd::vector<T*>(std::move(inner)));
+            gd::vector<T*> inner;
+            checkObjectVectorView<T>(state, -1, label, inner);
+            auto* heap = new gd::vector<T*>();
+            assignPrimitiveVector(*heap, inner);
+            out.push_back(heap);
         });
-        return out;
     }
 
     template <class T>
     void assignNestedObjectVectorPointers(
-        gd::vector<gd::vector<T*>*>& dest, gd::vector<gd::vector<T*>*> src
+        gd::vector<gd::vector<T*>*>& dest, gd::vector<gd::vector<T*>*>& src
     ) {
         assignNestedPointerVectorLayer(
             dest,
-            std::move(src),
+            src,
             []() {
                 return new gd::vector<T*>();
             },
-            [](gd::vector<T*>& inner, gd::vector<T*> value) {
-                inner = std::move(value);
+            [](gd::vector<T*>& inner, gd::vector<T*> const& value) {
+                assignPrimitiveVector(inner, value);
             }
         );
     }
@@ -552,8 +565,8 @@ namespace luax {
     }
 
     template <class T>
-    gd::vector<gd::vector<gd::vector<T*>*>*> checkNestedObjectGridPointers(
-        lua_State* L, int idx, char const* label
+    void checkNestedObjectGridPointers(
+        lua_State* L, int idx, char const* label, gd::vector<gd::vector<gd::vector<T*>*>*>& out
     ) {
         static_assert(
             std::is_base_of_v<cocos2d::CCObject, T>, "nested object grid elements must be CCObject"
@@ -561,27 +574,32 @@ namespace luax {
         idx = detail::absCheckIndexedTable(L, idx);
         auto len = detail::indexedTableLength(L, idx);
         detail::requireNonNegativeIndexedLength(L, len, label, "vector");
-        gd::vector<gd::vector<gd::vector<T*>*>*> out;
+        out.clear();
         out.reserve(static_cast<std::size_t>(len));
         detail::checkIndexedTableElements(L, idx, len, [&](lua_State* state, lua_Integer) {
-            auto inner = checkNestedObjectVectorPointers<T>(state, -1, label);
-            out.push_back(new gd::vector<gd::vector<T*>*>(std::move(inner)));
+            gd::vector<gd::vector<T*>*> inner;
+            checkNestedObjectVectorPointers<T>(state, -1, label, inner);
+            auto* heap = new gd::vector<gd::vector<T*>*>();
+            for (auto* layer : inner) {
+                heap->push_back(layer);
+            }
+            inner.clear();
+            out.push_back(heap);
         });
-        return out;
     }
 
     template <class T>
     void assignNestedObjectGridPointers(
-        gd::vector<gd::vector<gd::vector<T*>*>*>& dest, gd::vector<gd::vector<gd::vector<T*>*>*> src
+        gd::vector<gd::vector<gd::vector<T*>*>*>& dest, gd::vector<gd::vector<gd::vector<T*>*>*>& src
     ) {
         assignNestedPointerVectorLayer(
             dest,
-            std::move(src),
+            src,
             []() {
                 return new gd::vector<gd::vector<T*>*>();
             },
-            [](gd::vector<gd::vector<T*>*>& inner, gd::vector<gd::vector<T*>*> value) {
-                assignNestedObjectVectorPointers<T>(inner, std::move(value));
+            [](gd::vector<gd::vector<T*>*>& inner, gd::vector<gd::vector<T*>*>& value) {
+                assignNestedObjectVectorPointers<T>(inner, value);
             }
         );
     }
@@ -764,7 +782,7 @@ namespace luax {
     } // namespace detail
 
     template <class T>
-    void assignPrimitiveVector(gd::vector<T>& dest, gd::vector<T> src) {
+    void assignPrimitiveVector(gd::vector<T>& dest, gd::vector<T> const& src) {
         dest.clear();
         dest.reserve(src.size());
         if constexpr (std::is_same_v<T, bool>) {

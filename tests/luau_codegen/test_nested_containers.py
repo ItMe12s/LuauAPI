@@ -258,7 +258,7 @@ class NestedContainerFieldBindingTests(unittest.TestCase):
             text,
         )
         self.assertIn(
-            "luax::detail::assignAssociativeMap(*self->m_labelObjects, std::move(value))",
+            "luax::detail::assignAssociativeMap(*self->m_labelObjects, value)",
             text,
         )
 
@@ -343,7 +343,7 @@ class NestedMapValueEmitTests(unittest.TestCase):
             text,
         )
         self.assertIn(
-            "luax::detail::assignAssociativeMap(*self->m_pulseEffectMap, std::move(value))",
+            "luax::detail::assignAssociativeMap(*self->m_pulseEffectMap, value)",
             text,
         )
 

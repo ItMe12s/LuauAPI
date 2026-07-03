@@ -17,6 +17,18 @@ def _prefix(declare: bool, var: str) -> str:
     return f"auto {var}" if declare else var
 
 
+def _emit_out_param_check(
+    info: TypeInfo, idx: str | int, var: str, label: str, fn: str, *, declare: bool
+) -> list[str]:
+    cxx = info.cxx_type
+    if declare:
+        return [
+            f"        {cxx} {var};\n",
+            f'        luax::{fn}(L, {idx}, "{label}", {var});\n',
+        ]
+    return [f'        luax::{fn}(L, {idx}, "{label}", {var});\n']
+
+
 def _primitive_vector_elem_cxx(info: TypeInfo) -> str:
     if info.element_type is None:
         raise ValueError("primitive vector requires element type")
@@ -318,9 +330,9 @@ def emit_stack_check(
         return [f'        {_prefix(declare, var)} = luax::{check_fn}(L, {idx}, "{label}");\n']
     if info.kind == "primitive_vector":
         elem = _primitive_vector_elem_cxx(info)
-        return [
-            f'        {_prefix(declare, var)} = luax::checkPrimitiveVector<{elem}>(L, {idx}, "{label}");\n'
-        ]
+        return _emit_out_param_check(
+            info, idx, var, label, f"checkPrimitiveVector<{elem}>", declare=declare
+        )
     if info.kind == "std_array":
         args = _std_array_template_args(info)
         return [
@@ -343,18 +355,18 @@ def emit_stack_check(
         ]
     if info.kind == "nested_bool_vector_view":
         check_fn = _nested_primitive_vector_check_fn(info)
-        return [f'        {_prefix(declare, var)} = luax::{check_fn}(L, {idx}, "{label}");\n']
+        return _emit_out_param_check(info, idx, var, label, check_fn, declare=declare)
     if info.kind == "nested_object_vector_view":
         check_fn = _nested_object_vector_check_fn(info)
-        return [f'        {_prefix(declare, var)} = luax::{check_fn}(L, {idx}, "{label}");\n']
+        return _emit_out_param_check(info, idx, var, label, check_fn, declare=declare)
     if info.kind == "nested_object_grid_view":
         check_fn = _nested_object_grid_check_fn(info)
-        return [f'        {_prefix(declare, var)} = luax::{check_fn}(L, {idx}, "{label}");\n']
+        return _emit_out_param_check(info, idx, var, label, check_fn, declare=declare)
     if info.kind == "map_vector":
         elem = _map_vector_elem_cxx(info)
-        return [
-            f'        {_prefix(declare, var)} = luax::checkPrimitiveVector<{elem}>(L, {idx}, "{label}");\n'
-        ]
+        return _emit_out_param_check(
+            info, idx, var, label, f"checkPrimitiveVector<{elem}>", declare=declare
+        )
     raise ValueError(f"unsupported type kind: {info.kind}")
 
 
