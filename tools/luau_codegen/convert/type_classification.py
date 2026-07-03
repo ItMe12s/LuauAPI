@@ -573,7 +573,7 @@ def parse_std_tuple(
     return type_info_cls(
         "tuple",
         n,
-        "{ number, number, number }",
+        "{ number }",
     )
 
 

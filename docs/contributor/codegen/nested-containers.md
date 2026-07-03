@@ -26,7 +26,7 @@ Tests live in `tests/luau_codegen/test_nested_containers.py` and `tests/luau_cod
 - Map vector (read-write field):
   - `gd::vector<gd::unordered_map<int,int>>` becomes `{ { [number]: number } }`
 - Tuple set element (read-write field):
-  - `gd::set<std::tuple<int, int, int>>` becomes `{ { number, number, number } }`
+  - `gd::set<std::tuple<int, int, int>>` becomes `{ { number } }`
 
 `T*` must be a bound `CCObject` descendant or a registered opaque handle.
 

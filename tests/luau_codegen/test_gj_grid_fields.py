@@ -85,7 +85,7 @@ class GjGridFieldTypeMapTests(unittest.TestCase):
         self.assertIsNotNone(info)
         assert info is not None
         self.assertEqual(info.kind, "set")
-        self.assertEqual(info.lua_type, "{ { number, number, number } }")
+        self.assertEqual(info.lua_type, "{ { number } }")
 
 
 class GjGridFieldMarshallingTests(unittest.TestCase):
