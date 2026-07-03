@@ -570,25 +570,10 @@ def parse_std_tuple(
 ) -> Optional[TypeInfo]:
     if not allow_int_tuple(normalize_type(n)):
         return None
-    inner = template_inner(n, "std::tuple")
-    if inner is None:
-        return None
-    parts = split_top_level(inner)
-    components = []
-    lua_parts = []
-    for part in parts:
-        info = classify_arg(part.strip(), object_classes, ctx=ctx)
-        if info is None or info.kind != "number":
-            return None
-        components.append(info)
-        lua_parts.append(info.lua_type)
-    if len(components) < 2:
-        return None
     return type_info_cls(
         "tuple",
         n,
-        "{ " + ", ".join(lua_parts) + " }",
-        tuple_components=tuple(components),
+        "{ number, number, number }",
     )
 
 
