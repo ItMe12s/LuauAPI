@@ -47,14 +47,14 @@ set(LUAUAPI_HOST_TEST_RUNTIME_SOURCES
 )
 
 set(LUAUAPI_HOST_TEST_FIXTURE_SOURCES
-    tests/host/Render3DMathTests.cpp
-    tests/host/GltfParseTests.cpp
-    tests/host/ImageDecodeTests.cpp
-    tests/host/ProceduralMeshTests.cpp
-    tests/host/Gd3dTransformBindingTests.cpp
-    tests/host/Gd3dMeshBindingTests.cpp
-    tests/host/FrustumTests.cpp
-    tests/host/SceneDrawListTests.cpp
+    tests/host/render3d/Render3DMathTests.cpp
+    tests/host/render3d/GltfParseTests.cpp
+    tests/host/render3d/ImageDecodeTests.cpp
+    tests/host/render3d/ProceduralMeshTests.cpp
+    tests/host/render3d/Gd3dTransformBindingTests.cpp
+    tests/host/render3d/Gd3dMeshBindingTests.cpp
+    tests/host/render3d/FrustumTests.cpp
+    tests/host/render3d/SceneDrawListTests.cpp
 )
 
 set(LUAUAPI_HOST_TEST_SOURCES

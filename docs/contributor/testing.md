@@ -26,46 +26,46 @@ CTest discovers the cases at build time. The files are:
 
 | Test file | Coverage |
 | --- | --- |
-| `tests/api_tests.cpp` | Public C++ API surface |
-| `tests/binding_tests.cpp` | Binding registration and dispatch |
-| `tests/boundary_recorder_tests.cpp` | Crash sidecar boundary stack, flush, and serialization |
-| `tests/bytecode_cache_key_tests.cpp` | Cache key over size, modify time, and content |
-| `tests/callback_tests.cpp` | Callback registration and invocation |
-| `tests/config_bounds_tests.cpp` | Resource byte caps stay aligned |
-| `tests/current_mod_tests.cpp` | Current-mod path helpers against a resources root |
-| `tests/deferred_release_tests.cpp` | Deferred CCObject release queue, shutdown skip, and drain |
-| `tests/fields_tests.cpp` | `m_fields` and release eviction |
-| `tests/geode_fs_path_tests.cpp` | Geode filesystem binding path resolution |
-| `tests/handle_gc_tests.cpp` | Task and ImGui draw handle `__gc` cancellation |
-| `tests/host/FrustumTests.cpp` | Frustum culling math |
-| `tests/host/Gd3dMeshBindingTests.cpp` | Procedural mesh Lua binding and handle lifetime |
-| `tests/host/Gd3dTransformBindingTests.cpp` | `gd3d.Transform` constructors and methods |
-| `tests/host/GltfParseTests.cpp` | glTF parse, materials, alpha flags |
-| `tests/host/ImageDecodeTests.cpp` | PNG and JPEG decode limits |
-| `tests/host/ProceduralMeshTests.cpp` | Procedural mesh build and validation |
-| `tests/host/Render3DMathTests.cpp` | Transform math and helpers |
-| `tests/host/SceneDrawListTests.cpp` | Scene draw list sorting and batching |
-| `tests/imgui_binding_tests.cpp` | ImGui widget binding smoke and font API guards |
-| `tests/imgui_scheduler_tests.cpp` | ImGui draw scheduler registration |
-| `tests/indexed_slot_map_tests.cpp` | Indexed slot map used by the schedulers |
-| `tests/loadstring_tests.cpp` | `loadstring` compile and runtime behavior |
-| `tests/misc_correctness_tests.cpp` | Assorted runtime correctness cases |
-| `tests/mod_fs_isolation_tests.cpp` | Mod filesystem isolation policy |
-| `tests/mod_sandbox_tests.cpp` | Mod sandbox path resolution and root access policy |
-| `tests/opaque_handle_tests.cpp` | Opaque pointer userdata handles |
-| `tests/path_rules_tests.cpp` | Flat path rules and extension checks |
-| `tests/path_sandbox_tests.cpp` | File containment and escape rejection |
-| `tests/require_path_tests.cpp` | Require child name rules and `.luau` fill in |
-| `tests/requirer_root_tests.cpp` | Resources root canonicalization and module resolution |
-| `tests/resource_bounds_tests.cpp` | Resource size and require bounds |
-| `tests/runtime_tests.cpp` | Runtime lifecycle and script execution |
-| `tests/task_scheduler_tests.cpp` | Task scheduler binding behavior |
-| `tests/usertype_tests.cpp` | Usertype registration, tag limits, and dispatch |
-| `tests/vector_view_tests.cpp` | Readonly vector view lifetime |
-| `tests/web_binding_tests.cpp` | Geode web binding smoke, caps, sandbox, mock async |
-| `tests/web_shutdown_tests.cpp` | Web task/listener shutdown and runtime reset |
-| `tests/websocket_bounds_tests.cpp` | WebSocket scheme, port, payload, and cap guards |
-| `tests/websocket_runtime_tests.cpp` | WebSocket loopback echo/binary, callbacks, close codes, send bounds |
+| `tests/cpp/core/api_tests.cpp` | Public C++ API surface |
+| `tests/cpp/framework/binding_tests.cpp` | Binding registration and dispatch |
+| `tests/cpp/diagnostics/boundary_recorder_tests.cpp` | Crash sidecar boundary stack, flush, and serialization |
+| `tests/cpp/require/bytecode_cache_key_tests.cpp` | Cache key over size, modify time, and content |
+| `tests/cpp/framework/callback_tests.cpp` | Callback registration and invocation |
+| `tests/cpp/core/config_bounds_tests.cpp` | Resource byte caps stay aligned |
+| `tests/cpp/bindings/current_mod_tests.cpp` | Current-mod path helpers against a resources root |
+| `tests/cpp/framework/deferred_release_tests.cpp` | Deferred CCObject release queue, shutdown skip, and drain |
+| `tests/cpp/framework/fields_tests.cpp` | `m_fields` and release eviction |
+| `tests/cpp/require/geode_fs_path_tests.cpp` | Geode filesystem binding path resolution |
+| `tests/cpp/framework/handle_gc_tests.cpp` | Task and ImGui draw handle `__gc` cancellation |
+| `tests/host/render3d/FrustumTests.cpp` | Frustum culling math |
+| `tests/host/render3d/Gd3dMeshBindingTests.cpp` | Procedural mesh Lua binding and handle lifetime |
+| `tests/host/render3d/Gd3dTransformBindingTests.cpp` | `gd3d.Transform` constructors and methods |
+| `tests/host/render3d/GltfParseTests.cpp` | glTF parse, materials, alpha flags |
+| `tests/host/render3d/ImageDecodeTests.cpp` | PNG and JPEG decode limits |
+| `tests/host/render3d/ProceduralMeshTests.cpp` | Procedural mesh build and validation |
+| `tests/host/render3d/Render3DMathTests.cpp` | Transform math and helpers |
+| `tests/host/render3d/SceneDrawListTests.cpp` | Scene draw list sorting and batching |
+| `tests/cpp/bindings/imgui_binding_tests.cpp` | ImGui widget binding smoke and font API guards |
+| `tests/cpp/bindings/imgui_scheduler_tests.cpp` | ImGui draw scheduler registration |
+| `tests/cpp/core/indexed_slot_map_tests.cpp` | Indexed slot map used by the schedulers |
+| `tests/cpp/core/loadstring_tests.cpp` | `loadstring` compile and runtime behavior |
+| `tests/cpp/framework/misc_correctness_tests.cpp` | Assorted runtime correctness cases |
+| `tests/cpp/bindings/mod_fs_isolation_tests.cpp` | Mod filesystem isolation policy |
+| `tests/cpp/bindings/mod_sandbox_tests.cpp` | Mod sandbox path resolution and root access policy |
+| `tests/cpp/framework/opaque_handle_tests.cpp` | Opaque pointer userdata handles |
+| `tests/cpp/require/path_rules_tests.cpp` | Flat path rules and extension checks |
+| `tests/cpp/require/path_sandbox_tests.cpp` | File containment and escape rejection |
+| `tests/cpp/require/require_path_tests.cpp` | Require child name rules and `.luau` fill in |
+| `tests/cpp/require/requirer_root_tests.cpp` | Resources root canonicalization and module resolution |
+| `tests/cpp/bindings/resource_bounds_tests.cpp` | Resource size and require bounds |
+| `tests/cpp/core/runtime_tests.cpp` | Runtime lifecycle and script execution |
+| `tests/cpp/bindings/task_scheduler_tests.cpp` | Task scheduler binding behavior |
+| `tests/cpp/framework/usertype_tests.cpp` | Usertype registration, tag limits, and dispatch |
+| `tests/cpp/framework/vector_view_tests.cpp` | Readonly vector view lifetime |
+| `tests/cpp/bindings/web_binding_tests.cpp` | Geode web binding smoke, caps, sandbox, mock async |
+| `tests/cpp/bindings/web_shutdown_tests.cpp` | Web task/listener shutdown and runtime reset |
+| `tests/cpp/bindings/websocket_bounds_tests.cpp` | WebSocket scheme, port, payload, and cap guards |
+| `tests/cpp/bindings/websocket_runtime_tests.cpp` | WebSocket loopback echo/binary, callbacks, close codes, send bounds |
 
 Host web tests use the in-memory stub in `tests/host/Geode/utils/web.hpp` (no network egress).
 The stub implements the Geode web request surface.
@@ -180,7 +180,7 @@ See [Codegen](codegen/codegen.md) for what the generator produces.
 ## Source
 
 - `CMakeLists.txt`
-- `tests/*.cpp`
+- `tests/cpp/`
 - `tests/host/`
 - `tests/host/lua_test_helpers.hpp`
 - `tests/luau_codegen/`

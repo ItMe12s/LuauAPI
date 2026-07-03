@@ -15,7 +15,9 @@ from luau_codegen.emit.metadata import emit_schema  # type: ignore[import-unreso
 from luau_codegen.emit.plan import collect_plan  # type: ignore[import-unresolved]
 from luau_codegen.parse.broma import Class, Field, Root  # type: ignore[import-unresolved]
 
-_REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+_REPO_ROOT = os.path.dirname(
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+)
 _EXTRA_BINDINGS_DIR = os.path.join(_REPO_ROOT, "tools", "luau_codegen", "extra_bindings")
 
 _NAMESPACE_SOURCES = {

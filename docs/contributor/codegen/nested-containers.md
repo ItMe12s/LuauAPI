@@ -6,7 +6,7 @@ Codegen binds only audited, shallow nested shapes. There is no generic recursive
 Read-only nested primitive size vectors and read-write GJ grids, map vectors, and tuple sets are in scope.
 Policy constants live in `tools/luau_codegen/model/nested_containers.py`.
 Classification gates live in `tools/luau_codegen/convert/type_classification.py`.
-Tests live in `tests/luau_codegen/test_nested_containers.py` and `tests/luau_codegen/test_gj_grid_fields.py`.
+Tests live in `tests/luau_codegen/typemap/test_nested_containers.py` and `tests/luau_codegen/typemap/test_gj_grid_fields.py`.
 
 ## Luau shapes
 

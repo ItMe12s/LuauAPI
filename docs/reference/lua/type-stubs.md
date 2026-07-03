@@ -72,7 +72,7 @@ Return pointers use `?` in stubs. Arg pointers do not. Nil object args fail unle
 Container field and argument shapes are summarized in [game objects](game-objects.md).
 Pair, nested, and ccCArray binding details live under [contributor/codegen](../../contributor/codegen/codegen.md).
 
-`tests/luau_codegen/test_manual_fields_sync.py` guards drift between the Python map, C++ registrars, and emitted stubs.
+`tests/luau_codegen/guards/test_manual_fields_sync.py` guards drift between the Python map, C++ registrars, and emitted stubs.
 
 ## Enums
 

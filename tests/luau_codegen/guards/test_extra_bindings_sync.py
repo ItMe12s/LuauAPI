@@ -11,7 +11,9 @@ from luau_codegen.emit.luau_types.manual_fields import (  # type: ignore[import-
 )
 from luau_codegen.parse.broma import Class, Root  # type: ignore[import-unresolved]
 
-_REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+_REPO_ROOT = os.path.dirname(
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+)
 _EXTRA_BINDINGS_DIR = os.path.join(_REPO_ROOT, "tools", "luau_codegen", "extra_bindings")
 _TYPE_STUBS_DOC = os.path.join(_REPO_ROOT, "docs", "reference", "lua", "type-stubs.md")
 

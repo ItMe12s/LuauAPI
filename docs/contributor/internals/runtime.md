@@ -87,7 +87,7 @@ On shutdown the runtime runs the hooks, releases Lua owned C++ objects, clears f
 Hooks run in **LIFO** order: the most recently registered hook runs first, then earlier ones.
 Subsystems that register during startup therefore shut down in reverse registration order.
 Hooks registered while a shutdown pass is already running are deferred until the next `runShutdownHooks` call.
-Tests in `tests/runtime_tests.cpp` preserve this contract.
+Tests in `tests/cpp/core/runtime_tests.cpp` preserve this contract.
 
 Subsystems register hooks through `ensureShutdownHook` in `src/framework/lifecycle/Lifecycle.hpp`.
 WebSocket uses this to close live connections and servers. See [Bindings framework](bindings-framework.md) Shutdown hooks.

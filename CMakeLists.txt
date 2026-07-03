@@ -133,8 +133,8 @@ if(LUAUAPI_BUILD_TESTS)
     )
     FetchContent_MakeAvailable(fmt)
 
-    file(GLOB LUAUAPI_TEST_SOURCES CONFIGURE_DEPENDS
-        ${CMAKE_CURRENT_SOURCE_DIR}/tests/*.cpp)
+    file(GLOB_RECURSE LUAUAPI_TEST_SOURCES CONFIGURE_DEPENDS
+        ${CMAKE_CURRENT_SOURCE_DIR}/tests/cpp/*.cpp)
 
     add_executable(luauapi_tests
         ${LUAUAPI_HOST_TEST_SOURCES}

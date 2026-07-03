@@ -27,7 +27,7 @@ namespace {
     using luauapi_test::runScriptReturnsString;
 
     std::filesystem::path repoRoot() {
-        return std::filesystem::path(__FILE__).parent_path().parent_path().parent_path();
+        return std::filesystem::path(__FILE__).parent_path().parent_path().parent_path().parent_path();
     }
 
     void registerGd3dBindings(lua_State* L) {

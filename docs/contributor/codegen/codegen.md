@@ -185,7 +185,7 @@ Each bucket has a count, a reason histogram, and up to 25 sample skips.
 | `other` | unclassified skips |
 
 Supported bindings do not appear in these buckets.
-See `tests/luau_codegen/test_audit.py` for bucket rules.
+See `tests/luau_codegen/audit/test_audit.py` for bucket rules.
 
 ## Type classification
 
@@ -292,8 +292,8 @@ Its layout, stub, deps, and C++ check/push regenerate on the next codegen run.
 No field-level Python to maintain. No drift when Geode bumps bindings.
 
 `emit/luau_types/references.py` emits `export type` blocks from the combined registry.
-See `tests/luau_codegen/test_value_struct_gate.py`, `tests/luau_codegen/test_value_struct_specs.py`,
-and `tests/luau_codegen/test_types_binding.py`.
+See `tests/luau_codegen/typemap/test_value_struct_gate.py`, `tests/luau_codegen/typemap/test_value_struct_specs.py`,
+and `tests/luau_codegen/bindings/test_types_binding.py`.
 
 ## Nullable pointer policy
 
@@ -339,7 +339,7 @@ Examples:
 - `FMODAudioEngine:getTweenContainer(...)` returns `{ { first: number, second: number, value: FMODSoundTween } }` from a pair-key map out-ref.
 
 Policy lives in `policy/containers.py` and `convert/sel_args.py`.
-Emit tests lock the shape in `tests/luau_codegen/test_out_ref_policy.py`.
+Emit tests lock the shape in `tests/luau_codegen/marshalling/test_out_ref_policy.py`.
 
 ## FMOD binding
 

@@ -4,7 +4,9 @@ import os
 import re
 import unittest
 
-_REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+_REPO_ROOT = os.path.dirname(
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+)
 
 _PUBLIC_HEADER = "include/LuauAPI.hpp"
 _HOST_HEADER = "tests/host/include/LuauAPI.hpp"

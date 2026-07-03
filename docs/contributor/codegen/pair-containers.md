@@ -5,7 +5,7 @@
 Codegen and `ContainerTables.hpp` bind `std::pair` inside Geode containers.
 Pair bodies are record tables. Maps with a pair key use an entry list, not dictionary keys.
 Policy constants live in `tools/luau_codegen/model/pair_design.py`.
-Tests live in `tests/luau_codegen/test_pair_design.py`.
+Tests live in `tests/luau_codegen/typemap/test_pair_design.py`.
 
 ## Luau shapes
 

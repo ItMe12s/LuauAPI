@@ -121,12 +121,12 @@ If yes, gate on a membership check first. If no, cast normally.
 
 Two layers keep the rule alive after this page:
 
-- A Python guard test in `tests/luau_codegen/test_binding_guards_framework.py`
+- A Python guard test in `tests/luau_codegen/guards/test_binding_guards_framework.py`
   checks that `evictIfFinalRelease` does not use `typeinfo_cast` and goes through `fieldTables()` and `entryStillOwnsNode`,
   that `dropBorrowedTargetIfFinalRelease` checks `borrowedTargets()` before `retainCount`,
   while `evict(CCObject*)` still does use `typeinfo_cast`.
-- Host tests in `tests/fields_tests.cpp` cover the no-op case for an untracked node and for a non-node CCObject.
-- Host tests in `tests/usertype_tests.cpp` cover borrowed userdata access after `dropBorrowedTargetIfFinalRelease`.
+- Host tests in `tests/cpp/framework/fields_tests.cpp` cover the no-op case for an untracked node and for a non-node CCObject.
+- Host tests in `tests/cpp/framework/usertype_tests.cpp` cover borrowed userdata access after `dropBorrowedTargetIfFinalRelease`.
 
 If you add work to a release-reachable function, add a test that runs it on an untracked object and on a non-node CCObject.
 Extend the guard test so the next change cannot quietly put a virtual call back on the path.
@@ -150,6 +150,6 @@ Extend the guard test so the next change cannot quietly put a virtual call back 
 - `src/framework/usertype/WeakRefShutdown.hpp`
 - `src/bindings/task/TaskSchedulerDrainHook.cpp`
 - `tools/luau_codegen/emit/bindings/common.py`
-- `tests/fields_tests.cpp`
-- `tests/usertype_tests.cpp`
-- `tests/luau_codegen/test_binding_guards_framework.py`
+- `tests/cpp/framework/fields_tests.cpp`
+- `tests/cpp/framework/usertype_tests.cpp`
+- `tests/luau_codegen/guards/test_binding_guards_framework.py`
