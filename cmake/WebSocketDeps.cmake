@@ -1,4 +1,4 @@
-set(LUAUAPI_MBEDTLS_GIT_TAG "mbedtls-4.1.0" CACHE STRING "Pinned mbedtls tag")
+set(LUAUAPI_MBEDTLS_GIT_TAG "v3.6.6" CACHE STRING "Pinned mbedtls tag")
 set(LUAUAPI_IXWEBSOCKET_GIT_TAG "v12.0.1" CACHE STRING "Pinned IXWebSocket tag")
 
 set(ENABLE_TESTING OFF CACHE BOOL "" FORCE)
