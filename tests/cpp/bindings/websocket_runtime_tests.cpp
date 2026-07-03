@@ -247,6 +247,9 @@ TEST_CASE("websocket callback registration survives garbage collection") {
     REQUIRE(runScript(fixture.L, gcSurvivalServerCallbacksScript()));
     REQUIRE(runScriptReturnsBool(fixture.L, connectClientScript(port)));
     REQUIRE(runScript(fixture.L, gcSurvivalClientCallbacksScript()));
+    REQUIRE(waitUntil([&] {
+        return evalBool(fixture.L, "_ws_client:readyState() == 'open'");
+    }));
     collectGarbage(fixture.L);
     collectGarbage(fixture.L);
 }
