@@ -85,16 +85,16 @@ See [Testing](testing.md).
 Before pushing changes, run the format script from the repo root.
 You need `clang-format` and `ruff` on PATH.
 
-```powershell
-tools/format.ps1 -Check
+```sh
+python tools/format.py --check
 ```
 
 The script formats C++ under `src/`, `include/`, and `tests/`.
 It runs `clang-format` once per file.
 It runs `ruff format` on `tools/` and `tests/`.
 
-Pass `-Target clang`, `-Target python`, or omit `-Target` for both.
-Drop `-Check` to rewrite files in place.
+Pass `--target clang`, `--target python`, or omit `--target` for both.
+Drop `--check` to rewrite files in place.
 The script prints a short summary when each step finishes.
 
 ## CI
@@ -113,5 +113,5 @@ See [Testing](testing.md) for CI jobs, how to run tests, and the host test list.
 - `cmake/ImGui.cmake`
 - `cmake/ImGuiCocos.cmake`
 - `mod.json`
-- `tools/format.ps1`
+- `tools/format.py`
 - `tools/luau_codegen/cli/main.py`

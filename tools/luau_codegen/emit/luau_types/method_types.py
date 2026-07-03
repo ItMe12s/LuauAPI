@@ -98,17 +98,16 @@ def _method_type(
     objects: Dict[str, Class],
     ctx: CodegenContext | None = None,
 ) -> str:
-    parts = []
-    for m in methods:
-        args = _classify_input_args(cls, m, objects, ctx=ctx)
-        ret_type = _method_return_type(cls, m, objects, ctx=ctx)
-        params = []
-        if not m.is_static:
-            params.append(f"self: {cls.name}")
-        for i, arg in enumerate(args, start=1):
-            params.append(f"arg{i}: {arg.lua_type}")
-        parts.append(f"({', '.join(params)}) -> {ret_type}")
-    return " & ".join(f"({p})" for p in parts)
+    assert len(methods) == 1
+    m = methods[0]
+    args = _classify_input_args(cls, m, objects, ctx=ctx)
+    ret_type = _method_return_type(cls, m, objects, ctx=ctx)
+    params = []
+    if not m.is_static:
+        params.append(f"self: {cls.name}")
+    for i, arg in enumerate(args, start=1):
+        params.append(f"arg{i}: {arg.lua_type}")
+    return f"(({', '.join(params)}) -> {ret_type})"
 
 
 def _widened_method_type(
