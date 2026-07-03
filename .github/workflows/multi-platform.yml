@@ -32,13 +32,14 @@ jobs:
         with:
           key: host-tests-${{ matrix.os }}
 
-      - name: Cache FetchContent deps
+      - name: Cache FetchContent sources
         uses: actions/cache@v4
         with:
-          path: build/_deps
-          key: deps-host-${{ matrix.os }}-${{ hashFiles('CMakeLists.txt','cmake/*.cmake') }}
+          enableCrossOsArchive: true
+          path: build/_deps/*-src
+          key: deps-src-${{ hashFiles('mod.json','cmake/Luau.cmake','cmake/Glm.cmake','cmake/GeodeBindings.cmake','cmake/WebSocketDeps.cmake') }}
           restore-keys: |
-            deps-host-${{ matrix.os }}-
+            deps-src-
 
       - name: Configure
         run: >
@@ -84,13 +85,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
-      - name: Cache FetchContent deps
+      - name: Cache FetchContent sources
         uses: actions/cache@v4
         with:
-          path: build/_deps
-          key: deps-build-${{ matrix.config.name }}-${{ hashFiles('CMakeLists.txt','cmake/*.cmake') }}
+          enableCrossOsArchive: true
+          path: build/_deps/*-src
+          key: deps-src-${{ hashFiles('mod.json','cmake/Luau.cmake','cmake/Glm.cmake','cmake/GeodeBindings.cmake','cmake/WebSocketDeps.cmake') }}
           restore-keys: |
-            deps-build-${{ matrix.config.name }}-
+            deps-src-
 
       - name: Build the mod
         uses: geode-sdk/build-geode-mod@main
