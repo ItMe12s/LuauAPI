@@ -6,7 +6,7 @@ set(LUAU_EXTERN_C    OFF CACHE BOOL "" FORCE)
 FetchContent_Declare(
     luau
     GIT_REPOSITORY https://github.com/luau-lang/luau.git
-    GIT_TAG        0.727
+    GIT_TAG        0.728
 )
 FetchContent_MakeAvailable(luau)
 
