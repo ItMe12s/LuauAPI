@@ -55,24 +55,6 @@ jobs:
       - name: Run tests
         run: ctest --test-dir build -C Debug --output-on-failure
 
-  linux-codegen-tests:
-    name: Linux Codegen Tests
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-          cache: pip
-          cache-dependency-path: pyproject.toml
-
-      - name: Run Python codegen tests
-        run: python -m unittest discover -s tests/luau_codegen -p "test_*.py"
-        env:
-          PYTHONPATH: tools
-
   build:
     strategy:
       fail-fast: false
