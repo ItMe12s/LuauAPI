@@ -1,7 +1,6 @@
 #pragma once
 
 #include <Geode/Result.hpp>
-
 #include <filesystem>
 #include <fstream>
 #include <iterator>
@@ -14,7 +13,9 @@ namespace geode::utils::file {
         if (!in.good()) {
             return geode::Err("read failed");
         }
-        return geode::Ok(std::string((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>()));
+        return geode::Ok(
+            std::string((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>())
+        );
     }
 
     inline geode::Result<std::vector<std::uint8_t>> readBinary(std::filesystem::path const& path) {
@@ -22,9 +23,11 @@ namespace geode::utils::file {
         if (!in.good()) {
             return geode::Err("read failed");
         }
-        return geode::Ok(std::vector<std::uint8_t>(
-            (std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>()
-        ));
+        return geode::Ok(
+            std::vector<std::uint8_t>(
+                (std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>()
+            )
+        );
     }
 
     inline geode::Result<void> writeString(std::filesystem::path const& path, std::string const& data) {
@@ -49,8 +52,7 @@ namespace geode::utils::file {
     }
 
     inline geode::Result<std::vector<std::filesystem::path>> readDirectory(
-        std::filesystem::path const& path,
-        bool /*recursive*/
+        std::filesystem::path const& path, bool /*recursive*/
     ) {
         std::vector<std::filesystem::path> entries;
         std::error_code ec;
@@ -62,4 +64,4 @@ namespace geode::utils::file {
         }
         return geode::Ok(std::move(entries));
     }
-}
+} // namespace geode::utils::file

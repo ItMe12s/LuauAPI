@@ -16,7 +16,9 @@ namespace {
         return std::move(result).value();
     }
 
-    GpuMesh makeGpuMesh(unsigned int vbo, unsigned int ibo, unsigned int indexCount, int materialIndex = -1) {
+    GpuMesh makeGpuMesh(
+        unsigned int vbo, unsigned int ibo, unsigned int indexCount, int materialIndex = -1
+    ) {
         GpuMesh mesh{};
         mesh.primitives.push_back(
             GpuPrimitive{.vbo = vbo, .ibo = ibo, .indexCount = indexCount, .materialIndex = materialIndex}
@@ -25,7 +27,9 @@ namespace {
     }
 
     GpuMeshResolver fixedGpuMesh(GpuMesh* mesh) {
-        return [mesh](std::uint64_t, MeshAsset const&) -> GpuMesh* { return mesh; };
+        return [mesh](std::uint64_t, MeshAsset const&) -> GpuMesh* {
+            return mesh;
+        };
     }
 } // namespace
 
@@ -143,16 +147,18 @@ TEST_CASE("resolveSceneDrawTexture suppresses self FBO feedback texture") {
 }
 
 TEST_CASE("buildSceneDrawLists skips instances outside frustum") {
-    auto mesh = requireMesh(MeshAsset::fromBuffers(
-        {
-            glm::vec3(0.0f, 0.0f, 0.0f),
-            glm::vec3(1.0f, 0.0f, 0.0f),
-            glm::vec3(0.0f, 1.0f, 0.0f),
-        },
-        {},
-        {},
-        {0, 1, 2}
-    ));
+    auto mesh = requireMesh(
+        MeshAsset::fromBuffers(
+            {
+                glm::vec3(0.0f, 0.0f, 0.0f),
+                glm::vec3(1.0f, 0.0f, 0.0f),
+                glm::vec3(0.0f, 1.0f, 0.0f),
+            },
+            {},
+            {},
+            {0, 1, 2}
+        )
+    );
 
     GpuMesh gpuMesh = makeGpuMesh(1, 2, 3);
     glm::mat4 const view = glm::mat4(1.0f);
@@ -182,16 +188,18 @@ TEST_CASE("buildSceneDrawLists skips instances outside frustum") {
 }
 
 TEST_CASE("buildSceneDrawLists routes alpha blend materials to blend list") {
-    auto mesh = requireMesh(MeshAsset::fromBuffers(
-        {
-            glm::vec3(0.0f, 0.0f, 0.0f),
-            glm::vec3(1.0f, 0.0f, 0.0f),
-            glm::vec3(0.0f, 1.0f, 0.0f),
-        },
-        {},
-        {},
-        {0, 1, 2}
-    ));
+    auto mesh = requireMesh(
+        MeshAsset::fromBuffers(
+            {
+                glm::vec3(0.0f, 0.0f, 0.0f),
+                glm::vec3(1.0f, 0.0f, 0.0f),
+                glm::vec3(0.0f, 1.0f, 0.0f),
+            },
+            {},
+            {},
+            {0, 1, 2}
+        )
+    );
 
     GpuMesh gpuMesh = makeGpuMesh(1, 2, 3);
     glm::mat4 const view = glm::mat4(1.0f);
@@ -218,16 +226,18 @@ TEST_CASE("buildSceneDrawLists routes alpha blend materials to blend list") {
 }
 
 TEST_CASE("buildSceneDrawLists applies primitive override over material override") {
-    auto mesh = requireMesh(MeshAsset::fromBuffers(
-        {
-            glm::vec3(0.0f, 0.0f, 0.0f),
-            glm::vec3(1.0f, 0.0f, 0.0f),
-            glm::vec3(0.0f, 1.0f, 0.0f),
-        },
-        {},
-        {},
-        {0, 1, 2}
-    ));
+    auto mesh = requireMesh(
+        MeshAsset::fromBuffers(
+            {
+                glm::vec3(0.0f, 0.0f, 0.0f),
+                glm::vec3(1.0f, 0.0f, 0.0f),
+                glm::vec3(0.0f, 1.0f, 0.0f),
+            },
+            {},
+            {},
+            {0, 1, 2}
+        )
+    );
 
     GpuMesh gpuMesh = makeGpuMesh(1, 2, 3);
     glm::mat4 const view = glm::mat4(1.0f);
@@ -257,16 +267,18 @@ TEST_CASE("buildSceneDrawLists applies primitive override over material override
 }
 
 TEST_CASE("buildSceneDrawLists skips invalid gpu primitives") {
-    auto mesh = requireMesh(MeshAsset::fromBuffers(
-        {
-            glm::vec3(0.0f, 0.0f, 0.0f),
-            glm::vec3(1.0f, 0.0f, 0.0f),
-            glm::vec3(0.0f, 1.0f, 0.0f),
-        },
-        {},
-        {},
-        {0, 1, 2}
-    ));
+    auto mesh = requireMesh(
+        MeshAsset::fromBuffers(
+            {
+                glm::vec3(0.0f, 0.0f, 0.0f),
+                glm::vec3(1.0f, 0.0f, 0.0f),
+                glm::vec3(0.0f, 1.0f, 0.0f),
+            },
+            {},
+            {},
+            {0, 1, 2}
+        )
+    );
 
     GpuMesh gpuMesh = makeGpuMesh(0, 0, 0);
     glm::mat4 const view = glm::mat4(1.0f);

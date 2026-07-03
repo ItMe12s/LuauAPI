@@ -1,5 +1,4 @@
 #include <Geode/utils/cocos.hpp>
-
 #include <cocos2d.h>
 #include <string>
 #include <string_view>

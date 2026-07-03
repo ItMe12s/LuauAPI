@@ -44,8 +44,8 @@ namespace geode::utils::string {
     }
 
     inline bool endsWith(std::string_view str, std::string_view suffix) {
-        return str.size() >= suffix.size()
-            && str.compare(str.size() - suffix.size(), suffix.size(), suffix) == 0;
+        return str.size() >= suffix.size() &&
+            str.compare(str.size() - suffix.size(), suffix.size(), suffix) == 0;
     }
 
     inline std::string toLower(std::string str) {
@@ -63,4 +63,4 @@ namespace geode::utils::string {
         }
         return false;
     }
-}
+} // namespace geode::utils::string

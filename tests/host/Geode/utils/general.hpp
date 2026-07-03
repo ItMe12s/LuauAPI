@@ -13,4 +13,4 @@ namespace geode::utils {
     inline float getDisplayFactor() {
         return 1.f;
     }
-}
+} // namespace geode::utils

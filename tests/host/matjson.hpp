@@ -1,7 +1,6 @@
 #pragma once
 
 #include <Geode/Result.hpp>
-
 #include <optional>
 #include <string>
 #include <string_view>
@@ -26,11 +25,18 @@ namespace matjson {
     class Element {
     public:
         Element() = default;
+
         Element(Value const& value) : m_value(&value) {}
+
         Element(std::string key, Value const& value) : m_key(std::move(key)), m_value(&value) {}
 
-        std::optional<std::string> getKey() const { return m_key; }
-        operator Value const&() const { return *m_value; }
+        std::optional<std::string> getKey() const {
+            return m_key;
+        }
+
+        operator Value const&() const {
+            return *m_value;
+        }
 
     private:
         std::optional<std::string> m_key;
@@ -40,14 +46,22 @@ namespace matjson {
     class Value {
     public:
         Value() = default;
+
         Value(std::nullptr_t) : m_data(nullptr) {}
+
         Value(bool value) : m_data(value) {}
+
         Value(double value) : m_data(value) {}
+
         Value(std::string value) : m_data(std::move(value)) {}
+
         Value(std::string_view value) : m_data(std::string(value)) {}
+
         Value(std::vector<Value> value) : m_data(std::move(value)) {}
 
-        static Value object() { return Value(std::vector<std::pair<std::string, Value>>{}); }
+        static Value object() {
+            return Value(std::vector<std::pair<std::string, Value>>{});
+        }
 
         static geode::Result<Value> parse(std::string_view text) {
             if (text.empty()) {
@@ -134,7 +148,8 @@ namespace matjson {
                 if (auto const* array = std::get_if<std::vector<Value>>(&m_owner->m_data)) {
                     return Element((*array)[m_index]);
                 }
-                auto const& object = std::get<std::vector<std::pair<std::string, Value>>>(m_owner->m_data);
+                auto const& object =
+                    std::get<std::vector<std::pair<std::string, Value>>>(m_owner->m_data);
                 return Element(object[m_index].first, object[m_index].second);
             }
 
@@ -160,22 +175,20 @@ namespace matjson {
             if (auto const* array = std::get_if<std::vector<Value>>(&m_data)) {
                 return Iterator(this, array->size());
             }
-            if (auto const* object = std::get_if<std::vector<std::pair<std::string, Value>>>(&m_data)) {
+            if (auto const* object =
+                    std::get_if<std::vector<std::pair<std::string, Value>>>(&m_data)) {
                 return Iterator(this, object->size());
             }
             return Iterator(this, 0);
         }
 
     private:
-        explicit Value(std::vector<std::pair<std::string, Value>> items) : m_data(std::move(items)) {}
+        explicit Value(std::vector<std::pair<std::string, Value>> items) :
+            m_data(std::move(items)) {}
 
         std::variant<
-            std::nullptr_t,
-            bool,
-            double,
-            std::string,
-            std::vector<Value>,
-            std::vector<std::pair<std::string, Value>>
-        > m_data = nullptr;
+            std::nullptr_t, bool, double, std::string, std::vector<Value>,
+            std::vector<std::pair<std::string, Value>>>
+            m_data = nullptr;
     };
-}
+} // namespace matjson

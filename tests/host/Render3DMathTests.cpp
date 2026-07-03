@@ -129,7 +129,8 @@ TEST_CASE("Transform withPosition preserves rotation") {
 }
 
 TEST_CASE("Transform withRotationOf preserves position") {
-    Transform const t = Transform::fromLookAt(glm::vec3(1.0f, 2.0f, 3.0f), glm::vec3(0.0f, 0.0f, 0.0f));
+    Transform const t =
+        Transform::fromLookAt(glm::vec3(1.0f, 2.0f, 3.0f), glm::vec3(0.0f, 0.0f, 0.0f));
     Transform const rot = Transform::fromEuler(0.5f, -1.0f, 0.2f);
     Transform const updated = t.withRotationOf(rot);
 

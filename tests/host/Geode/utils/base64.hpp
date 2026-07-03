@@ -1,7 +1,6 @@
 #pragma once
 
 #include <Geode/Result.hpp>
-
 #include <cstdint>
 #include <span>
 #include <string>
@@ -88,10 +87,12 @@ namespace geode::utils::base64 {
             return geode::Err(bytes.unwrapErr());
         }
         auto const& decoded = bytes.unwrap();
-        return geode::Ok(std::string(
-            reinterpret_cast<char const*>(decoded.data()),
-            reinterpret_cast<char const*>(decoded.data() + decoded.size())
-        ));
+        return geode::Ok(
+            std::string(
+                reinterpret_cast<char const*>(decoded.data()),
+                reinterpret_cast<char const*>(decoded.data() + decoded.size())
+            )
+        );
     }
 
     inline std::string encode(std::span<std::uint8_t const> /*data*/, Base64Variant /*var*/) {
@@ -101,4 +102,4 @@ namespace geode::utils::base64 {
     inline std::string encode(std::string_view /*str*/, Base64Variant /*var*/) {
         return {};
     }
-}
+} // namespace geode::utils::base64

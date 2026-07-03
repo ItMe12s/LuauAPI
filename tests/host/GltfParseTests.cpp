@@ -48,9 +48,7 @@ namespace {
         std::vector<std::uint8_t> bytes(gltfJson.begin(), gltfJson.end());
         auto const sandbox = repoRoot();
         auto result = MeshAsset::loadFromBytes(
-            std::span<std::uint8_t const>(bytes.data(), bytes.size()),
-            sandbox / "fixture.gltf",
-            sandbox
+            std::span<std::uint8_t const>(bytes.data(), bytes.size()), sandbox / "fixture.gltf", sandbox
         );
         REQUIRE(result.has_value());
         return std::move(result).value();
@@ -60,9 +58,7 @@ namespace {
         std::vector<std::uint8_t> bytes(gltfJson.begin(), gltfJson.end());
         auto const sandbox = repoRoot();
         auto result = MeshAsset::loadFromBytes(
-            std::span<std::uint8_t const>(bytes.data(), bytes.size()),
-            sandbox / "fixture.gltf",
-            sandbox
+            std::span<std::uint8_t const>(bytes.data(), bytes.size()), sandbox / "fixture.gltf", sandbox
         );
         REQUIRE(!result.has_value());
         REQUIRE(result.error().find(messagePart) != std::string::npos);
@@ -107,7 +103,6 @@ TEST_CASE("MeshAsset parses resources/test_donut.glb") {
         REQUIRE_FALSE(primitive.indices.empty());
         REQUIRE(primitive.indices.size() % 3 == 0);
     }
-
 }
 
 TEST_CASE("MeshAsset parses glTF materials and textures from test_donut.glb") {
@@ -130,8 +125,10 @@ TEST_CASE("MeshAsset parses glTF materials and textures from test_donut.glb") {
     REQUIRE(images.size() == 1);
     REQUIRE(images[0].width > 0);
     REQUIRE(images[0].height > 0);
-    REQUIRE(images[0].rgba.size() ==
-            static_cast<std::size_t>(images[0].width) * static_cast<std::size_t>(images[0].height) * 4);
+    REQUIRE(
+        images[0].rgba.size() ==
+        static_cast<std::size_t>(images[0].width) * static_cast<std::size_t>(images[0].height) * 4
+    );
 
     bool hasNonZeroPixel = false;
     for (auto const byte : images[0].rgba) {
@@ -180,9 +177,7 @@ TEST_CASE("MeshAsset loadFromBytes rejects empty bytes") {
     std::vector<std::uint8_t> const empty;
     auto const sandbox = repoRoot();
     auto result = MeshAsset::loadFromBytes(
-        std::span<std::uint8_t const>(empty.data(), empty.size()),
-        sandbox / "empty.gltf",
-        sandbox
+        std::span<std::uint8_t const>(empty.data(), empty.size()), sandbox / "empty.gltf", sandbox
     );
     REQUIRE(!result.has_value());
     REQUIRE(result.error() == "glTF data is empty");
@@ -239,7 +234,8 @@ TEST_CASE("MeshAsset loadFromBytes parses baseColorFactor into material color") 
 
 TEST_CASE("MeshAsset loadFromBytes rejects textured primitive without TEXCOORD_0") {
     char const* const k1x1PngBase64 =
-        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5Erk"
+        "Jggg==";
 
     std::string gltfJson = minimalTriangleGltfWithPrefix(
         std::string("{\n  \"asset\": {\"version\": \"2.0\"},\n  \"images\": [{\"uri\": \"data:image/png;base64,") +
@@ -252,7 +248,8 @@ TEST_CASE("MeshAsset loadFromBytes rejects textured primitive without TEXCOORD_0
 }
 
 TEST_CASE("MeshAsset loadFromBytes rejects Draco compressed primitives") {
-    requireGltfError(R"({
+    requireGltfError(
+        R"({
   "asset": {"version": "2.0"},
   "buffers": [{
     "byteLength": 42,
@@ -281,11 +278,14 @@ TEST_CASE("MeshAsset loadFromBytes rejects Draco compressed primitives") {
   "nodes": [{"mesh": 0}],
   "scenes": [{"nodes": [0]}],
   "scene": 0
-})", "Draco compressed primitives are not supported");
+})",
+        "Draco compressed primitives are not supported"
+    );
 }
 
 TEST_CASE("MeshAsset loadFromBytes rejects meshopt compressed accessors") {
-    requireGltfError(R"({
+    requireGltfError(
+        R"({
   "asset": {"version": "2.0"},
   "buffers": [{
     "byteLength": 42,
@@ -320,11 +320,14 @@ TEST_CASE("MeshAsset loadFromBytes rejects meshopt compressed accessors") {
   "nodes": [{"mesh": 0}],
   "scenes": [{"nodes": [0]}],
   "scene": 0
-})", "meshopt-compressed accessors are not supported");
+})",
+        "meshopt-compressed accessors are not supported"
+    );
 }
 
 TEST_CASE("MeshAsset loadFromBytes rejects sparse accessors") {
-    requireGltfError(R"({
+    requireGltfError(
+        R"({
   "asset": {"version": "2.0"},
   "buffers": [{
     "byteLength": 42,
@@ -351,7 +354,9 @@ TEST_CASE("MeshAsset loadFromBytes rejects sparse accessors") {
   "nodes": [{"mesh": 0}],
   "scenes": [{"nodes": [0]}],
   "scene": 0
-})", "sparse accessors are not supported");
+})",
+        "sparse accessors are not supported"
+    );
 }
 
 TEST_CASE("MeshAsset loadFromBytes rejects external buffer outside sandbox") {
@@ -363,8 +368,8 @@ TEST_CASE("MeshAsset loadFromBytes rejects external buffer outside sandbox") {
     REQUIRE(std::filesystem::create_directories(sandbox));
 
     std::array<std::uint8_t, 42> const bufferBytes{
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 63, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        0, 0, 0, 0, 128, 63, 0, 0, 0, 0, 1, 0, 2, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0,   128, 63, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 63,  0,  0, 0, 0, 1, 0, 2, 0, 0, 0,
     };
     luauapi_test::writeTestFile(outsideBuffer, bufferBytes);
 

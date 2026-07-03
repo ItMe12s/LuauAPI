@@ -6,11 +6,10 @@
 
 namespace geode::dirs {
     inline std::filesystem::path& crashlogsDirStorage() {
-        static std::filesystem::path dir = []
-        {
-            auto p = std::filesystem::temp_directory_path()
-                / ("luauapi_test_crashlogs_"
-                   + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
+        static std::filesystem::path dir = [] {
+            auto p = std::filesystem::temp_directory_path() /
+                ("luauapi_test_crashlogs_" +
+                 std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
             std::filesystem::create_directories(p);
             return p;
         }();

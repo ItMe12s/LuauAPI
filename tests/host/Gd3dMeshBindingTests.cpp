@@ -47,7 +47,8 @@ namespace {
         return handle->id;
     }
 
-    char const* kMinimalTriangleGltf = R"({"asset": {"version": "2.0"}, "materials": [{"pbrMetallicRoughness": {}}],
+    char const* kMinimalTriangleGltf =
+        R"({"asset": {"version": "2.0"}, "materials": [{"pbrMetallicRoughness": {}}],
   "buffers": [{
     "byteLength": 42,
     "uri": "data:application/octet-stream;base64,AAAAAAAAAAAAAAAAAACAPwAAAAAAAAAAAAAAAAAAgD8AAAAAAAABAAIA"

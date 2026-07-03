@@ -21,7 +21,6 @@
 #include <fstream>
 #include <lua.h>
 #include <lualib.h>
-
 #include <memory>
 #include <optional>
 #include <span>
@@ -231,7 +230,9 @@ namespace luauapi_test {
     inline void writeTestFile(std::filesystem::path const& path, std::span<std::uint8_t const> bytes) {
         std::ofstream out(path, std::ios::binary | std::ios::trunc);
         REQUIRE(out.good());
-        out.write(reinterpret_cast<char const*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
+        out.write(
+            reinterpret_cast<char const*>(bytes.data()), static_cast<std::streamsize>(bytes.size())
+        );
         REQUIRE(out.good());
     }
 
@@ -259,7 +260,9 @@ namespace luauapi_test {
         return true;
     }
 
-    inline bool runScriptReturnsBool(lua_State* L, std::string_view source, char const* chunk = "=test") {
+    inline bool runScriptReturnsBool(
+        lua_State* L, std::string_view source, char const* chunk = "=test"
+    ) {
         if (!runScriptPcall(L, source, chunk)) {
             return false;
         }

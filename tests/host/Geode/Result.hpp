@@ -12,14 +12,12 @@ namespace geode {
         struct OkHolder {
             U value;
         };
-    }
+    } // namespace impl
 
     template <class T>
     class Result {
         using Stored = std::conditional_t<
-            std::is_reference_v<T>,
-            std::reference_wrapper<std::remove_reference_t<T>>,
-            T>;
+            std::is_reference_v<T>, std::reference_wrapper<std::remove_reference_t<T>>, T>;
         using Bare = std::remove_reference_t<T>;
 
     public:
@@ -34,12 +32,25 @@ namespace geode {
             return result;
         }
 
-        bool isOk() const { return m_value.has_value(); }
-        bool isErr() const { return !isOk(); }
+        bool isOk() const {
+            return m_value.has_value();
+        }
 
-        Bare& unwrap() { return ref(); }
-        Bare const& unwrap() const { return ref(); }
-        std::string const& unwrapErr() const { return m_error; }
+        bool isErr() const {
+            return !isOk();
+        }
+
+        Bare& unwrap() {
+            return ref();
+        }
+
+        Bare const& unwrap() const {
+            return ref();
+        }
+
+        std::string const& unwrapErr() const {
+            return m_error;
+        }
 
         T unwrapOr(T fallback) const {
             return m_value ? *m_value : std::move(fallback);
@@ -50,6 +61,7 @@ namespace geode {
             if constexpr (std::is_reference_v<T>) return m_value->get();
             else return *m_value;
         }
+
         Bare const& ref() const {
             if constexpr (std::is_reference_v<T>) return m_value->get();
             else return *m_value;
@@ -73,11 +85,19 @@ namespace geode {
             return result;
         }
 
-        bool isOk() const { return m_ok; }
-        bool isErr() const { return !m_ok; }
+        bool isOk() const {
+            return m_ok;
+        }
+
+        bool isErr() const {
+            return !m_ok;
+        }
 
         void unwrap() const {}
-        std::string const& unwrapErr() const { return m_error; }
+
+        std::string const& unwrapErr() const {
+            return m_error;
+        }
 
     private:
         bool m_ok = true;
@@ -86,7 +106,7 @@ namespace geode {
 
     template <class U>
     inline impl::OkHolder<std::decay_t<U>> Ok(U&& value) {
-        return { std::forward<U>(value) };
+        return {std::forward<U>(value)};
     }
 
     inline Result<void> Ok() {
@@ -109,4 +129,4 @@ namespace geode {
     inline ErrMaker Err(std::string message) {
         return {std::move(message)};
     }
-}
+} // namespace geode

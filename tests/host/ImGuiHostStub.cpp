@@ -1,6 +1,5 @@
-#include "bindings/imgui/ImGuiHost.hpp"
-
 #include "bindings/imgui/ImGuiDrawScheduler.hpp"
+#include "bindings/imgui/ImGuiHost.hpp"
 
 namespace luax {
     void initImGuiHost() {}

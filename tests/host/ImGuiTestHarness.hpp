@@ -1,7 +1,7 @@
 #pragma once
 
-#include <imgui.h>
 #include <backends/imgui_impl_null.h>
+#include <imgui.h>
 
 namespace luauapi_test {
     struct ImGuiTestContext {

@@ -55,4 +55,4 @@ namespace geode::log {
     inline void error(std::string_view pattern, Args&&... args) {
         capturedErrorMessages().push_back(formatCapturedMessage(pattern, std::forward<Args>(args)...));
     }
-}
+} // namespace geode::log

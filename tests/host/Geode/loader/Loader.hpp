@@ -1,7 +1,6 @@
 #pragma once
 
 #include <Geode/loader/Mod.hpp>
-
 #include <string>
 #include <vector>
 
@@ -13,8 +12,12 @@ namespace geode {
             return &loader;
         }
 
-        std::vector<Mod*> getAllMods() const { return Mod::allMods(); }
+        std::vector<Mod*> getAllMods() const {
+            return Mod::allMods();
+        }
 
-        VersionInfo getVersion() const { return VersionInfo("v5.7.1"); }
+        VersionInfo getVersion() const {
+            return VersionInfo("v5.7.1");
+        }
     };
-}
+} // namespace geode

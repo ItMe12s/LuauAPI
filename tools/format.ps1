@@ -9,16 +9,14 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
-$root = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
+$root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 Set-Location $root
 
 function Invoke-ClangFormat {
     param([switch]$CheckOnly)
 
     $files = @(
-        Get-ChildItem -Path src, include -Recurse -File -Include '*.cpp', '*.hpp'
-        Get-ChildItem -Path tests -Recurse -File -Include '*.cpp', '*.hpp' |
-        Where-Object { ($_.FullName -replace '\\', '/') -notmatch '/tests/host/' }
+        Get-ChildItem -Path src, include, tests -Recurse -File -Include '*.cpp', '*.hpp'
     )
 
     if ($files.Count -eq 0) {
@@ -57,12 +55,12 @@ function Invoke-ClangFormat {
 function Invoke-PythonFormat {
     param([switch]$CheckOnly)
 
-    $paths = @('tools', 'tests/luau_codegen')
+    $paths = @('tools', 'tests')
 
     if ($CheckOnly) {
         & ruff format --check @paths
         if ($LASTEXITCODE -ne 0) {
-            Write-Host 'Run .\scripts\ci\format.ps1 -Target python to fix formatting.' -ForegroundColor Yellow
+            Write-Host 'Run .\tools\format.ps1 -Target python to fix formatting.' -ForegroundColor Yellow
             return $LASTEXITCODE
         }
         Write-Host "ruff format: OK ($($paths -join ', '))"
