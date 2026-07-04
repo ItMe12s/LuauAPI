@@ -4,18 +4,13 @@
 
 ## 0.1.0-beta.14
 
-- Added Luau read/write for more Geometry Dash state and audio data:
-  dynamic object actions, editor object state, enter effects, replay checkpoint and button records, and song triggers.
-  `FMODAudioEngine` (`FMODMusic`, `FMODQueuedEffect`, `FMODSound` table fields, opaque DSP and system handles, and `getTweenContainer`).
-  `GJBaseGameLayer` level grids (sections, collision blocks, non-effect objects, and bool flags),
-  spawn remap maps, spawn tuple sets, and variance values (float arrays up to 2000 elements).
-- Updated ImGui and `gd3d` to use shared GPU session readiness checks.
-- Updated generated type stubs for the new value struct and container shapes.
-- Updated bindings so some methods return extra Lua values when the game API fills an output container.
-  Example: `GJBaseGameLayer:registerSpawnRemap` returns `(number, { ChanceObject })`.
-- **Breaking:** Renamed the opaque FMOD sound handle stub from `FMODSound` to `FMODSoundHandle`.
-  Scripts that typed effect handles as `FMODSound?` should use `FMODSoundHandle?` instead.
-  The name `FMODSound` is now a value struct table type.
+- Added Luau bindings for more game state: effect and trigger value structs
+  (dynamic object actions, game object editor state, enter effects, replay checkpoint and button records, song triggers),
+  FMOD engine tables and opaque handles, and `GJBaseGameLayer` nested grids plus spawn and variance fields.
+- Added writable assign for opaque handle vector fields. Example: `CCMoveCNode.m_groupObjects = { ... }`.
+- Updated ImGui and `gd3d` to use shared `gpuSessionReady()` checks.
+- Updated generated stubs and out-ref method returns. Example: `registerSpawnRemap` returns `(number, { ChanceObject })`.
+- **Breaking:** Renamed opaque FMOD sound handle stub `FMODSound` to `FMODSoundHandle`. `FMODSound` is now a value struct table type.
 
 ## 0.1.0-beta.13
 

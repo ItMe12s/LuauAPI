@@ -188,6 +188,9 @@ namespace luax {
     void assignPrimitiveVector(gd::vector<T>& dest, gd::vector<T> const& src);
 
     template <class T>
+    void assignOpaqueVectorView(gd::vector<T*>& dest, gd::vector<T*> src);
+
+    template <class T>
     void checkPrimitiveVector(lua_State* L, int idx, char const* label, gd::vector<T>& out) {
         idx = detail::absCheckIndexedTable(L, idx);
         auto len = detail::indexedTableLength(L, idx);
@@ -794,6 +797,15 @@ namespace luax {
             for (auto& elem : src) {
                 dest.push_back(std::move(elem));
             }
+        }
+    }
+
+    template <class T>
+    void assignOpaqueVectorView(gd::vector<T*>& dest, gd::vector<T*> src) {
+        dest.clear();
+        dest.reserve(src.size());
+        for (auto& elem : src) {
+            dest.push_back(std::move(elem));
         }
     }
 

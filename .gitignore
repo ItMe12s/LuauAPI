@@ -68,9 +68,7 @@ build-*/
 .pytest_cache/
 .ruff_cache/
 .mypy_cache/
-types/
-!src/render3d/types/
-!src/render3d/types/**
+/types/
 
 # Lmao this guy is vibecoding
 .cursor/

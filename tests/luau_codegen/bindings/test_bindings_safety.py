@@ -551,6 +551,37 @@ class GeneratedSafetyTests(unittest.TestCase):
         self.assertIn('luax::Usertype<T>::readonlyField(L, "m_children"', text)
         self.assertNotIn("self->m_children =", text)
 
+    def test_generated_opaque_vector_field_accessor_is_writable_view(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        cls = Class(
+            name="CCMoveCNode",
+            namespace="cocos2d",
+            bases=["CCObject"],
+            fields=[Field("m_groupObjects", "gd::vector<GroupCommandObject2*>")],
+        )
+        objects = {"CCObject": ccobject, "cocos2d::CCObject": ccobject, "CCMoveCNode": cls}
+
+        text = _emit_class_file(
+            cls,
+            {},
+            [],
+            [(cls, cls.fields[0])],
+            objects,
+            set(),
+            1,
+            "win",
+        )
+
+        self.assertIn("luaapi_CCMoveCNode_field_get_m_groupObjects", text)
+        self.assertIn("pushOwnedReadOnlyOpaqueVectorView<GroupCommandObject2>", text)
+        self.assertIn('luax::Usertype<T>::field(L, "m_groupObjects"', text)
+        self.assertNotIn('luax::Usertype<T>::readonlyField(L, "m_groupObjects"', text)
+        self.assertIn("checkOpaqueVectorView<GroupCommandObject2>", text)
+        self.assertIn(
+            "luax::assignOpaqueVectorView(self->m_groupObjects, value)",
+            text,
+        )
+
     def test_vector_field_plan_and_types_are_bound(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")
         ccnode = Class(

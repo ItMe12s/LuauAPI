@@ -293,6 +293,12 @@ def _emit_nested_field_assign_lines(field: Field, label: str, info: TypeInfo) ->
     ]
 
 
+def _emit_opaque_vector_view_field_assign_lines(field: Field) -> list[str]:
+    return [
+        f"            luax::assignOpaqueVectorView(self->{field.name}, value);\n",
+    ]
+
+
 def _emit_container_field_assign_lines(field: Field, label: str, info: TypeInfo) -> list[str]:
     fn = _container_field_assign_fn(info)
     if fn is None:
@@ -354,10 +360,16 @@ def _emit_field_accessors(
     register = f"luaapi_{cxx_id(cls.name)}_field_register_{cxx_id(field.name)}"
     getter_impl = f"{getter}_impl"
     setter_impl = f"{setter}_impl"
-    if ret_info.kind in (
-        "vector_view",
-        "nested_primitive_vector_view",
-        "cc_c_array_view",
+    is_readonly_vector_view = ret_info.kind == "vector_view" and (
+        ret_info.element_type is None or ret_info.element_type.kind != "opaque_handle"
+    )
+    if (
+        ret_info.kind
+        in (
+            "nested_primitive_vector_view",
+            "cc_c_array_view",
+        )
+        or is_readonly_vector_view
     ):
         out = ["    template <class T>\n"]
         out.append(f"    int {getter_impl}(lua_State* L, T* self) {{\n")
@@ -485,6 +497,12 @@ def _emit_field_accessors(
         out.extend(_emit_container_field_assign_lines(field, label, arg_info))
     elif _nested_field_assign_fn(arg_info) is not None:
         out.extend(_emit_nested_field_assign_lines(field, label, arg_info))
+    elif (
+        arg_info.kind == "vector_view"
+        and arg_info.element_type is not None
+        and arg_info.element_type.kind == "opaque_handle"
+    ):
+        out.extend(_emit_opaque_vector_view_field_assign_lines(field))
     elif arg_info.is_vector_ptr:
         out.append(f"            if (self->{field.name} == nullptr) {{\n")
         out.append(f'                luaL_error(L, "{label} field pointer is null");\n')

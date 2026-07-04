@@ -319,8 +319,12 @@ All eight `SeedValue` variant names share this policy.
 
 Skipped fields appear as `-- skipped <name>: <reason>` comments in the stub.
 
-`bindable_field()` uses the same container gates as methods, except getter-only
-container fields (`cc_c_array_view`, `nested_primitive_vector_view`).
+`bindable_field()` uses the same container gates as methods, except getter-only container fields
+(`cc_c_array_view`, `nested_primitive_vector_view`, and object-element `vector_view`).
+Opaque-element `vector_view` fields bind read-write via table assign
+(clear plus repopulate through `assignOpaqueVectorView`).
+For example, `CCMoveCNode.m_groupObjects` (`gd::vector<GroupCommandObject2*>`) accepts `moveNode.m_groupObjects = { cmd1, cmd2 }`.
+Object-element `vector_view` stays getter-only until a retain-aware setter exists.
 
 `gd::map` and `gd::set` field setters use `assignMap` / `assignSet` (clear plus per-entry insert)
 instead of whole-container `operator=`, because Geode gnustl on Android lacks `_Rb_tree::_M_move_assign`.
