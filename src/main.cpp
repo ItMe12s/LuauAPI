@@ -9,7 +9,7 @@
 #include <thread>
 
 namespace {
-    constexpr char const* kBootstrapScript = "Bootstrap.luau";
+    constexpr char const* kBootstrapScript = "luauapi_Bootstrap.luau";
 
     void applyCrashSidecarSetting() {
         bool enabled = geode::Mod::get()->getSettingValue<bool>("enable-crash-sidecar");

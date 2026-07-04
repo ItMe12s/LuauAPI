@@ -4,6 +4,7 @@
 
 `require` loads another Luau file as a module.
 The system is flat and sandboxed, so you can only load sibling files inside the same resources root.
+See [Installation](../../getting-started/installation.md) for how Geode packs resource files.
 
 ## How to use it
 

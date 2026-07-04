@@ -26,7 +26,7 @@ print(Math.add(2, 3))
 ## Hook a game function
 
 Full API: [hooks](../reference/lua/hooks.md).
-Demo: [src/scripts/_helloworlddemo.luau](../../src/scripts/_helloworlddemo.luau).
+Demo: [mod/demo/demo_helloworld.luau](../../mod/demo/demo_helloworld.luau).
 
 ```lua
 geode.hook("geode.gd.MenuLayer:init/0", {
@@ -40,7 +40,7 @@ geode.hook("geode.gd.MenuLayer:init/0", {
 ## Read and write encrypted stat fields
 
 Full API: [game objects](../reference/lua/game-objects.md) (Encrypted stat fields).
-Demo: [src/scripts/_seedvaluedemo.luau](../../src/scripts/_seedvaluedemo.luau).
+Demo: [mod/demo/demo_seedvalue.luau](../../mod/demo/demo_seedvalue.luau).
 
 SeedValue fields such as `m_levelID` and `m_attempts` bind as plain Lua numbers.
 Run the demo from the in-game executor or your mod's `runFile` call.
@@ -133,7 +133,7 @@ Full API: [websocket](../reference/lua/websocket.md).
 ## Draw a debug overlay
 
 Full API: [imgui](../reference/lua/imgui.md).
-Demo: [src/scripts/_modmenudemo.luau](../../src/scripts/_modmenudemo.luau).
+Demo: [mod/demo/demo_modmenu.luau](../../mod/demo/demo_modmenu.luau).
 
 ```lua
 local state = { enabled = false }
@@ -152,7 +152,7 @@ end)
 ## Spin a 3D mesh in a viewport
 
 Full API: [gd3d](../reference/lua/gd3d.md).
-Demo: [src/scripts/_viewportdemo.luau](../../src/scripts/_viewportdemo.luau).
+Demo: [mod/demo/demo_viewport.luau](../../mod/demo/demo_viewport.luau).
 
 ```lua
 local Transform = gd3d.Transform
@@ -213,10 +213,10 @@ geode.hook("geode.gd.MenuLayer:init/0", {
 ## Source
 
 - `src/core/Runtime.cpp`
-- `src/scripts/_helloworlddemo.luau`
-- `src/scripts/_seedvaluedemo.luau`
-- `src/scripts/_modmenudemo.luau`
-- `src/scripts/_viewportdemo.luau`
+- `mod/demo/demo_helloworld.luau`
+- `mod/demo/demo_seedvalue.luau`
+- `mod/demo/demo_modmenu.luau`
+- `mod/demo/demo_viewport.luau`
 - `src/bindings/task/TaskBinding.cpp`
 - `src/bindings/geode/web/GeodeWebCore.cpp`
 - `src/bindings/websocket/WebSocketBinding.cpp`

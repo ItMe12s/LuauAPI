@@ -161,7 +161,7 @@ Draw order:
 
 Reloading a mesh uploads fresh GPU data.
 
-See [Examples](../../getting-started/examples.md) and [src/scripts/_viewportdemo.luau](../../../src/scripts/_viewportdemo.luau).
+See [Examples](../../getting-started/examples.md) and [mod/demo/demo_viewport.luau](../../../mod/demo/demo_viewport.luau).
 
 ## Limits
 

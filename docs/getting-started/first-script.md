@@ -44,6 +44,7 @@ LuauAPI owns the runtime, so you do not start it. Check `status()` is `Ready` fi
 ## The rules
 
 The file name must be a flat `.luau` resource name inside the resources directory you pass.
+See [Installation](installation.md) for how Geode packs resource files.
 See [modules](../reference/lua/modules.md) and [Limits and errors](../reference/cpp/limits-and-errors.md).
 
 ## Using the executor

@@ -2,6 +2,10 @@
 
 [Check the GitHub commits for more details](https://github.com/ItMe12s/LuauAPI).
 
+## 0.1.0-beta.15
+
+- Add stuff here later
+
 ## 0.1.0-beta.14
 
 - Added Luau bindings for more game state: effect and trigger value structs

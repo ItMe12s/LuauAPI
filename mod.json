@@ -8,7 +8,7 @@
 	},
 	"id": "imes.luauapi",
 	"name": "LuauAPI",
-	"version": "v0.1.0-beta.14",
+	"version": "v0.1.0-beta.15",
 	"developer": "imes",
 	"early-load": true,
 	"load-priority": "first",
@@ -28,8 +28,8 @@
 	},
 	"resources": {
 		"files": [
-			"src/scripts/*.luau",
-			"resources/*"
+			"mod/**/*.luau",
+			"resources/**/*"
 		]
 	},
 	"settings": {

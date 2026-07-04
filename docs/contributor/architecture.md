@@ -39,6 +39,8 @@ This page names the main parts and traces how a script gets from a file to runni
 - `src/require/`: the requirer and the path rules.
 - `build/luauapi-gen/src/`: generated C++ bindings from codegen.
 - `tools/luau_codegen/`: the Python code generator.
+- `mod/luauapi/`: LuauAPI bootstrap, executor, and other scripts. See [Installation](../getting-started/installation.md).
+- `mod/demo/`: built-in demo scripts for developer mode and the executor.
 - `tests/`: the host tests.
 
 ## Lifecycle

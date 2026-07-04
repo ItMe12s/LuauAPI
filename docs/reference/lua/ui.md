@@ -89,7 +89,7 @@ For the rest, read [type stubs](type-stubs.md) and the [Geode SDK docs](https://
 
 ## ImGui mod menus
 
-See [imgui](imgui.md) and [src/scripts/_modmenudemo.luau](../../../src/scripts/_modmenudemo.luau) for overlay menus.
+See [imgui](imgui.md) and [mod/demo/demo_modmenu.luau](../../../mod/demo/demo_modmenu.luau) for overlay menus.
 
 ## Finding signatures
 

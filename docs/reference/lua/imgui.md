@@ -110,7 +110,7 @@ imgui.onDraw(function()
 end)
 ```
 
-See [Examples](../../getting-started/examples.md) and [src/scripts/_modmenudemo.luau](../../../src/scripts/_modmenudemo.luau).
+See [Examples](../../getting-started/examples.md) and [mod/demo/demo_modmenu.luau](../../../mod/demo/demo_modmenu.luau).
 
 ## Style and theme
 

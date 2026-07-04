@@ -60,7 +60,7 @@ mod_version: v0.1.0-beta.9
 resources_root: C:\Program Files (x86)\Steam\steamapps\common\Geometry Dash\geode\unzipped\imes.luauapi\resources\imes.luauapi
 
 === Luau stack ===
-    Bootstrap.luau:2 in after
+    luauapi_Bootstrap.luau:2 in after
 
 === Call chain (innermost first) ===
 #0 hook-after  geode.gd.MenuLayer:init/0  mod=imes.luauapi  cb=1
@@ -69,7 +69,7 @@ resources_root: C:\Program Files (x86)\Steam\steamapps\common\Geometry Dash\geod
 Recorded immediately before native code ran. C++ fault address is in the main crashlog.
 ```
 
-The Luau stack shows the pending callback (`Bootstrap.luau:2 in after`) captured before `lua_pcall` runs the hook body.
+The Luau stack shows the pending callback (`luauapi_Bootstrap.luau:2 in after`) captured before `lua_pcall` runs the hook body.
 When the fault happens inside a generated binding,
 the call chain gains a `generated-binding` frame at `#0` and the stack lists full `@file:line` frames.
 
