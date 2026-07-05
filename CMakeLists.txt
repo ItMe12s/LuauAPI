@@ -117,6 +117,7 @@ endif()
 if(LUAUAPI_BUILD_TESTS)
     include(cmake/TestSources.cmake)
     include(cmake/ImGuiHeadless.cmake)
+    include(cmake/MoveOnlyFunction.cmake)
     enable_testing()
 
     FetchContent_Declare(
@@ -167,6 +168,7 @@ if(LUAUAPI_BUILD_TESTS)
         mbedx509
         mbedcrypto
     )
+    luauapi_link_move_only_function(luauapi_tests)
     if(WIN32)
         target_link_libraries(luauapi_tests PRIVATE ws2_32)
     endif()

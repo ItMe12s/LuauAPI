@@ -125,12 +125,12 @@ ImGuiCocos& ImGuiCocos::get() {
 
 ImGuiCocos::ImGuiCocos() : m_setupCall([] {}), m_drawCall([] {}) {}
 
-ImGuiCocos& ImGuiCocos::setup(std::move_only_function<void()> fun) {
+ImGuiCocos& ImGuiCocos::setup(luauapi::move_only_function<void()> fun) {
     m_setupCall = std::move(fun);
     return this->setup();
 }
 
-ImGuiCocos& ImGuiCocos::draw(std::move_only_function<void()> fun) {
+ImGuiCocos& ImGuiCocos::draw(luauapi::move_only_function<void()> fun) {
     m_drawCall = std::move(fun);
     return *this;
 }

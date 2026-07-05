@@ -3,8 +3,8 @@
 #include "render3d/gpu/GpuTypes.hpp"
 #include "render3d/types/SceneTypes.hpp"
 
+#include <MoveOnlyFunction.hpp>
 #include <cstdint>
-#include <functional>
 #include <glm/mat4x4.hpp>
 #include <map>
 #include <vector>
@@ -37,10 +37,10 @@ namespace luax::render3d {
     };
 
     using GpuMeshResolver =
-        std::move_only_function<GpuMesh*(std::uint64_t meshId, MeshAsset const& mesh)>;
+        luauapi::move_only_function<GpuMesh*(std::uint64_t meshId, MeshAsset const& mesh)>;
 
     using TextureResolver =
-        std::move_only_function<unsigned int(std::uint64_t textureId, TextureAsset const& texture)>;
+        luauapi::move_only_function<unsigned int(std::uint64_t textureId, TextureAsset const& texture)>;
 
     float shaderAlphaCutoff(int alphaMode, float alphaCutoff);
 

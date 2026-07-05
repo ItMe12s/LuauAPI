@@ -242,7 +242,7 @@ namespace luax {
         }
     }
 
-    void Runtime::registerShutdownHook(std::move_only_function<void()> fn) {
+    void Runtime::registerShutdownHook(luauapi::move_only_function<void()> fn) {
         if (!assertMainThread()) return;
         if (fn) m_shutdownHooks.push_back(std::move(fn));
     }

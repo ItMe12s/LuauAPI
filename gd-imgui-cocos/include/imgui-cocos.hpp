@@ -1,7 +1,7 @@
 #pragma once
 
+#include <MoveOnlyFunction.hpp>
 #include <cocos2d.h>
-#include <functional>
 #include <imgui.h>
 
 class ImGuiCocos {
@@ -12,7 +12,7 @@ private:
     bool m_visible = true;
     bool m_reloading = false;
     bool m_abandonReloadTextures = false;
-    std::move_only_function<void()> m_setupCall, m_drawCall;
+    luauapi::move_only_function<void()> m_setupCall, m_drawCall;
     ImGuiMouseCursor m_lastCursor = ImGuiMouseCursor_COUNT;
     float m_displayScale = 4.0f;
     void updateTexture(ImTextureData*) const;
@@ -35,10 +35,10 @@ public:
     // called on swapBuffers
     void drawFrame();
 
-    ImGuiCocos& setup(std::move_only_function<void()> fun);
+    ImGuiCocos& setup(luauapi::move_only_function<void()> fun);
     ImGuiCocos& setup();
 
-    ImGuiCocos& draw(std::move_only_function<void()> fun);
+    ImGuiCocos& draw(luauapi::move_only_function<void()> fun);
 
     // used to reinitialize imgui context
     void reload(bool abandonTextures = false);

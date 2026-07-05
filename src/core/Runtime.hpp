@@ -4,12 +4,12 @@
 #include "diagnostics/BoundaryRecorder.hpp"
 
 #include <Geode/Geode.hpp>
+#include <MoveOnlyFunction.hpp>
 #include <RuntimeTypes.hpp>
 #include <atomic>
 #include <chrono>
 #include <cstddef>
 #include <filesystem>
-#include <functional>
 #include <list>
 #include <lua.h>
 #include <lualib.h>
@@ -108,7 +108,7 @@ namespace luax {
             return m_lastError;
         }
 
-        void registerShutdownHook(std::move_only_function<void()> fn);
+        void registerShutdownHook(luauapi::move_only_function<void()> fn);
 
         geode::Result<std::reference_wrapper<std::string const>> getOrCompileBytecode(
             std::string const& key, std::string_view source
@@ -204,6 +204,6 @@ namespace luax {
         std::unique_ptr<Requirer> m_requirer;
 #endif
 
-        std::vector<std::move_only_function<void()>> m_shutdownHooks;
+        std::vector<luauapi::move_only_function<void()>> m_shutdownHooks;
     };
 } // namespace luax
