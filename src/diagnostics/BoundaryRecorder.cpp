@@ -14,7 +14,6 @@
 #include <ctime>
 #include <filesystem>
 #include <fmt/format.h>
-#include <fstream>
 #include <lua.h>
 #include <string>
 #include <string_view>
@@ -138,19 +137,11 @@ namespace luax::diag {
         std::string semanticPayload(std::string const& payload) {
             std::string out;
             out.reserve(payload.size());
-            std::size_t pos = 0;
-            while (pos < payload.size()) {
-                std::size_t end = payload.find('\n', pos);
-                if (end == std::string::npos) {
-                    end = payload.size();
-                }
-                std::string_view line(payload.data() + pos, end - pos);
-                if (!line.starts_with("timestamp:")) {
+            for (auto line : geode::utils::string::splitView(payload, "\n")) {
+                if (!geode::utils::string::startsWith(line, "timestamp:")) {
                     out.append(line);
                     out.push_back('\n');
                 }
-                if (end == payload.size()) break;
-                pos = end + 1;
             }
             return out;
         }
@@ -402,7 +393,6 @@ namespace luax::diag {
         std::filesystem::create_directories(dir, ec);
         if (ec) return;
 
-        std::filesystem::path tmp = dir / kSidecarTempName;
         std::filesystem::path final = dir / kSidecarFileName;
 
         if (auto* runtime = Runtime::getIfInitialized()) {
@@ -421,30 +411,8 @@ namespace luax::diag {
             return;
         }
 
-        {
-            std::ofstream out(tmp, std::ios::binary | std::ios::trunc);
-            if (!out.good()) return;
-            out.write(payload.data(), static_cast<std::streamsize>(payload.size()));
-            if (!out.good()) {
-                std::error_code rmec;
-                std::filesystem::remove(tmp, rmec);
-                return;
-            }
-            out.flush();
-        }
-
-        std::filesystem::rename(tmp, final, ec);
-        if (ec) {
-            std::error_code copyEc;
-            std::filesystem::copy_file(
-                tmp, final, std::filesystem::copy_options::overwrite_existing, copyEc
-            );
-            if (copyEc) {
-                std::error_code rmec;
-                std::filesystem::remove(tmp, rmec);
-                return;
-            }
-            std::filesystem::remove(tmp, ec);
+        if (geode::utils::file::writeStringSafe(final, payload).isErr()) {
+            return;
         }
 
         s.dirty = false;

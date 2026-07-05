@@ -5,7 +5,7 @@
 
 #include <Geode/Result.hpp>
 #include <Geode/utils/cocos.hpp>
-#include <algorithm>
+#include <Geode/utils/ranges.hpp>
 #include <cocos2d.h>
 #include <cstdint>
 #include <fmt/format.h>
@@ -150,8 +150,7 @@ namespace luax {
                 }
                 if (auto const* base = reg.findByTag(b)) {
                     for (std::uint32_t x : base->baseClosure) {
-                        if (std::find(info.baseClosure.begin(), info.baseClosure.end(), x) ==
-                            info.baseClosure.end()) {
+                        if (!geode::utils::ranges::indexOf(info.baseClosure, x).has_value()) {
                             info.baseClosure.push_back(x);
                         }
                     }

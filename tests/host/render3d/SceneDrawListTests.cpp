@@ -3,6 +3,7 @@
 #include "render3d/gpu/SceneDrawList.hpp"
 #include "render3d/types/Frustum.hpp"
 
+#include <Geode/Result.hpp>
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -11,9 +12,9 @@ namespace {
     using namespace luax::render3d;
     using Catch::Approx;
 
-    std::shared_ptr<MeshAsset> requireMesh(std::expected<std::shared_ptr<MeshAsset>, std::string> result) {
-        REQUIRE(result.has_value());
-        return std::move(result).value();
+    std::shared_ptr<MeshAsset> requireMesh(geode::Result<std::shared_ptr<MeshAsset>> result) {
+        REQUIRE(result.isOk());
+        return std::move(result).unwrap();
     }
 
     GpuMesh makeGpuMesh(
@@ -126,7 +127,7 @@ TEST_CASE("resolveSceneDrawTexture returns mesh image texture when not self atta
     item.texSource = &mesh;
     item.imageIndex = 0;
 
-    TextureResolver const resolveTexture = [](std::uint64_t, TextureAsset const&) -> unsigned int {
+    TextureResolver resolveTexture = [](std::uint64_t, TextureAsset const&) -> unsigned int {
         return 0u;
     };
     REQUIRE(resolveSceneDrawTexture(item, resolveTexture, 42) == 77u);
@@ -140,7 +141,7 @@ TEST_CASE("resolveSceneDrawTexture suppresses self FBO feedback texture") {
     item.texSource = &mesh;
     item.imageIndex = 0;
 
-    TextureResolver const resolveTexture = [](std::uint64_t, TextureAsset const&) -> unsigned int {
+    TextureResolver resolveTexture = [](std::uint64_t, TextureAsset const&) -> unsigned int {
         return 0u;
     };
     REQUIRE(resolveSceneDrawTexture(item, resolveTexture, 42) == 0u);
@@ -179,8 +180,8 @@ TEST_CASE("buildSceneDrawLists skips instances outside frustum") {
         {2, outside},
     };
 
-    SceneDrawLists const lists =
-        buildSceneDrawLists(instances, view, frustum, fixedGpuMesh(&gpuMesh));
+    auto resolveGpuMesh = fixedGpuMesh(&gpuMesh);
+    SceneDrawLists const lists = buildSceneDrawLists(instances, view, frustum, resolveGpuMesh);
 
     REQUIRE(lists.opaque.size() == 1);
     REQUIRE(lists.blend.empty());
@@ -216,8 +217,8 @@ TEST_CASE("buildSceneDrawLists routes alpha blend materials to blend list") {
 
     std::map<int, ViewportInstance> instances{{1, instance}};
 
-    SceneDrawLists const lists =
-        buildSceneDrawLists(instances, view, frustum, fixedGpuMesh(&gpuMesh));
+    auto resolveGpuMesh = fixedGpuMesh(&gpuMesh);
+    SceneDrawLists const lists = buildSceneDrawLists(instances, view, frustum, resolveGpuMesh);
 
     REQUIRE(lists.opaque.empty());
     REQUIRE(lists.blend.size() == 1);
@@ -258,8 +259,8 @@ TEST_CASE("buildSceneDrawLists applies primitive override over material override
 
     std::map<int, ViewportInstance> instances{{1, instance}};
 
-    SceneDrawLists const lists =
-        buildSceneDrawLists(instances, view, frustum, fixedGpuMesh(&gpuMesh));
+    auto resolveGpuMesh = fixedGpuMesh(&gpuMesh);
+    SceneDrawLists const lists = buildSceneDrawLists(instances, view, frustum, resolveGpuMesh);
 
     REQUIRE(lists.opaque.size() == 1);
     REQUIRE(lists.opaque.front().baseColor.r == Approx(0.1f));
@@ -290,8 +291,8 @@ TEST_CASE("buildSceneDrawLists skips invalid gpu primitives") {
 
     std::map<int, ViewportInstance> instances{{1, instance}};
 
-    SceneDrawLists const lists =
-        buildSceneDrawLists(instances, view, frustum, fixedGpuMesh(&gpuMesh));
+    auto resolveGpuMesh = fixedGpuMesh(&gpuMesh);
+    SceneDrawLists const lists = buildSceneDrawLists(instances, view, frustum, resolveGpuMesh);
 
     REQUIRE(lists.opaque.empty());
     REQUIRE(lists.blend.empty());

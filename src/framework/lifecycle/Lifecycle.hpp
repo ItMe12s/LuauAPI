@@ -2,7 +2,7 @@
 
 #include "core/Runtime.hpp"
 
-#include <algorithm>
+#include <Geode/utils/ranges.hpp>
 #include <cstddef>
 #include <memory>
 #include <vector>
@@ -20,16 +20,9 @@ namespace luax {
         }
 
         std::size_t compactAndCountLive() {
-            items_.erase(
-                std::remove_if(
-                    items_.begin(),
-                    items_.end(),
-                    [](auto const& weak) {
-                        return weak.expired();
-                    }
-                ),
-                items_.end()
-            );
+            geode::utils::ranges::remove(items_, [](auto const& weak) {
+                return weak.expired();
+            });
             return items_.size();
         }
 

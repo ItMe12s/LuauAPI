@@ -12,7 +12,7 @@ See [Installation](../getting-started/installation.md).
 Versions come from `CMakeLists.txt`.
 
 - CMake 3.21 or newer
-- A compiler with C++23 support
+- A compiler with C++23 support. See [C++ standard](cpp-standard.md) for Geode utils and style rules.
 - Python 3.11 or newer, used by the binding code generator
 - The Geode SDK, found through the `GEODE_SDK` environment variable
 

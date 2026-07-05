@@ -2,6 +2,7 @@
 
 #include "render3d/assets/MeshAsset.hpp"
 
+#include <Geode/Result.hpp>
 #include <cstdint>
 #include <filesystem>
 #include <string>
@@ -16,13 +17,11 @@ namespace luax::render3d {
         std::string lastError;
     };
 
-    std::expected<std::filesystem::path, std::string> canonicalSandboxRoot(
-        std::filesystem::path const& root
-    );
+    geode::Result<std::filesystem::path> canonicalSandboxRoot(std::filesystem::path const& root);
 
     void configureSandboxFileIo(::cgltf_options& options, SandboxFileContext& context);
 
-    std::expected<std::vector<std::uint8_t>, std::string> readImageEncodedBytes(
+    geode::Result<std::vector<std::uint8_t>> readImageEncodedBytes(
         ::cgltf_image const* image, std::filesystem::path const& assetPath,
         std::filesystem::path const& sandboxRoot
     );

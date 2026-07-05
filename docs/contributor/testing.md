@@ -20,7 +20,7 @@ ctest --test-dir build
 
 ## The C++ tests
 
-The C++ tests use Catch2 `v3.15.0` and build into the `luauapi_tests` executable.
+The C++ tests use Catch2 `v3.15.1` and build into the `luauapi_tests` executable.
 
 CTest discovers the cases at build time. The files are:
 

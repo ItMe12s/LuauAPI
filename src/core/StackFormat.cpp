@@ -1,6 +1,7 @@
 #include "core/StackFormat.hpp"
 
 #include <Geode/utils/general.hpp>
+#include <Geode/utils/string.hpp>
 #include <cctype>
 #include <filesystem>
 #include <string>
@@ -9,23 +10,13 @@
 
 namespace luax {
     namespace {
-#if defined(_WIN32)
-        bool iequalsPrefix(std::string_view haystack, std::string_view needle) {
-            if (haystack.size() < needle.size()) return false;
-            for (std::size_t i = 0; i < needle.size(); ++i) {
-                auto a = static_cast<unsigned char>(haystack[i]);
-                auto b = static_cast<unsigned char>(needle[i]);
-                if (std::tolower(a) != std::tolower(b)) return false;
-            }
-            return true;
-        }
-#endif
-
         std::size_t findRootPrefix(std::string const& text, std::string_view rootText, std::size_t pos) {
             if (rootText.empty() || pos >= text.size()) return std::string::npos;
 #if defined(_WIN32)
             for (std::size_t scan = pos; scan + rootText.size() <= text.size(); ++scan) {
-                if (iequalsPrefix(std::string_view(text).substr(scan), rootText)) {
+                if (geode::utils::string::equalsIgnoreCase(
+                        std::string_view(text).substr(scan, rootText.size()), rootText
+                    )) {
                     return scan;
                 }
             }
@@ -135,7 +126,7 @@ namespace luax {
     }
 
     bool hasStackFrames(std::string_view luaStack) {
-        return luaStack.find('\n') != std::string_view::npos;
+        return geode::utils::string::contains(luaStack, '\n');
     }
 
     std::string formatLuaStack(lua_State* L, std::filesystem::path const& resourcesRoot) {

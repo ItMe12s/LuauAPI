@@ -58,11 +58,11 @@ namespace luax::render3d {
         glm::vec3 const lightDir = normalizedLightDirection(settings.lightDirection);
         glm::vec3 const lightColor = settings.lightColor * settings.lightIntensity;
 
-        auto resolveGpuMesh = [&](std::uint64_t meshId, MeshAsset const& mesh) -> GpuMesh* {
+        GpuMeshResolver resolveGpuMesh = [&](std::uint64_t meshId, MeshAsset const& mesh) -> GpuMesh* {
             return meshCache.ensureGpuMesh(meshId, mesh);
         };
-        auto resolveTexture = [&](std::uint64_t textureId,
-                                  TextureAsset const& texture) -> unsigned int {
+        TextureResolver resolveTexture = [&](std::uint64_t textureId,
+                                             TextureAsset const& texture) -> unsigned int {
             return meshCache.ensureGpuTexture(textureId, texture);
         };
 

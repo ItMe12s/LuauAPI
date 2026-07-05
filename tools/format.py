@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-CPP_DIRS = ("src", "include", "tests")
+CPP_DIRS = ("src", "include", "tests", "gd-imgui-cocos")
 CPP_GLOBS = ("*.cpp", "*.hpp")
 PY_DIRS = ("tools", "tests")
 

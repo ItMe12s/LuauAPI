@@ -95,12 +95,12 @@ namespace {
         auto const& bytes = contents.unwrap();
 
         auto result = decodeImageRgba8(bytes);
-        if (!result.has_value()) {
-            return pushNilErr(L, result.error());
+        if (auto err = returnIfErr(L, result)) {
+            return *err;
         }
 
         auto asset = std::make_shared<TextureAsset>();
-        asset->cpu = std::move(result).value();
+        asset->cpu = std::move(result.unwrap());
         auto const id = TextureRegistry::instance().registerAsset(asset);
         pushTextureHandle(L, id);
         return 1;

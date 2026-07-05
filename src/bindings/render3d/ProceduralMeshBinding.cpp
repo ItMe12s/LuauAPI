@@ -66,11 +66,11 @@ namespace {
         return true;
     }
 
-    int pushNewMeshHandle(lua_State* L, std::expected<std::shared_ptr<MeshAsset>, std::string> result) {
-        if (!result.has_value()) {
-            return pushNilErr(L, result.error());
+    int pushNewMeshHandle(lua_State* L, geode::Result<std::shared_ptr<MeshAsset>> result) {
+        if (auto err = returnIfErr(L, result)) {
+            return *err;
         }
-        auto const id = MeshRegistry::instance().registerAsset(std::move(result).value());
+        auto const id = MeshRegistry::instance().registerAsset(std::move(result.unwrap()));
         pushMeshHandle(L, id);
         return 1;
     }

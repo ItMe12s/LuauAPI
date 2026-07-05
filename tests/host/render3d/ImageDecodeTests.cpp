@@ -21,9 +21,9 @@ namespace {
 
 TEST_CASE("decodeImageRgba8 decodes embedded 1x1 PNG") {
     auto result = decodeImageRgba8(std::span<std::uint8_t const>(k1x1Png.data(), k1x1Png.size()));
-    REQUIRE(result.has_value());
+    REQUIRE(result.isOk());
 
-    auto const& image = result.value();
+    auto const& image = result.unwrap();
     REQUIRE(image.width == 1);
     REQUIRE(image.height == 1);
     REQUIRE(image.rgba.size() == 4);
@@ -32,20 +32,20 @@ TEST_CASE("decodeImageRgba8 decodes embedded 1x1 PNG") {
 TEST_CASE("decodeImageRgba8 rejects empty input") {
     std::vector<std::uint8_t> const empty;
     auto result = decodeImageRgba8(std::span<std::uint8_t const>(empty.data(), empty.size()));
-    REQUIRE(!result.has_value());
-    REQUIRE(result.error() == "image data is empty");
+    REQUIRE(result.isErr());
+    REQUIRE(result.unwrapErr() == "image data is empty");
 }
 
 TEST_CASE("decodeImageRgba8 rejects invalid bytes") {
     std::vector<std::uint8_t> const invalid{0x00, 0x01, 0x02, 0x03};
     auto result = decodeImageRgba8(std::span<std::uint8_t const>(invalid.data(), invalid.size()));
-    REQUIRE(!result.has_value());
-    REQUIRE(result.error().starts_with("failed to decode image:"));
+    REQUIRE(result.isErr());
+    REQUIRE(result.unwrapErr().starts_with("failed to decode image:"));
 }
 
 TEST_CASE("decodeImageRgba8 rejects encoded input above read cap") {
     std::vector<std::uint8_t> oversized(kMaxFsReadBytes + 1, 0xFF);
     auto result = decodeImageRgba8(std::span<std::uint8_t const>(oversized.data(), oversized.size()));
-    REQUIRE(!result.has_value());
-    REQUIRE(result.error() == "encoded image exceeds maximum read size");
+    REQUIRE(result.isErr());
+    REQUIRE(result.unwrapErr() == "encoded image exceeds maximum read size");
 }

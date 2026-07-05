@@ -7,6 +7,7 @@
 #include "framework/stack/TableUtil.hpp"
 
 #include <Geode/loader/Priority.hpp>
+#include <Geode/utils/terminate.hpp>
 #include <Geode/utils/web.hpp>
 #include <cstdint>
 #include <lua.h>
@@ -118,12 +119,14 @@ namespace luax::webdetail {
             }
             // Off-thread response listeners run later for side effects only.
             // They cannot stop propagation synchronously.
-            std::optional<std::string> ownedModID;
-            if (modID) ownedModID = std::string(*modID);
+            auto ownedModID = modID.transform([](std::string_view id) {
+                return std::string(id);
+            });
             geode::queueInMainThread(
                 [cb = std::move(cb), context, ownedModID = std::move(ownedModID), response]() mutable {
-                    std::optional<std::string_view> view;
-                    if (ownedModID) view = std::string_view(*ownedModID);
+                    auto view = ownedModID.transform([](std::string const& id) {
+                        return std::string_view(id);
+                    });
                     (void)invokeResponseEventNow(cb, context, view, response);
                 }
             );
@@ -194,7 +197,7 @@ namespace luax::webdetail {
                         },
                         priority
                     );
-                default: std::unreachable();
+                default: geode::utils::unreachable();
             }
         }
 
@@ -226,7 +229,7 @@ namespace luax::webdetail {
                         },
                         priority
                     );
-                default: std::unreachable();
+                default: geode::utils::unreachable();
             }
         }
 

@@ -2,8 +2,8 @@
 
 #include "render3d/assets/AssetRegistry.hpp"
 
+#include <Geode/Result.hpp>
 #include <cstdint>
-#include <expected>
 #include <filesystem>
 #include <glm/vec2.hpp>
 #include <glm/vec3.hpp>
@@ -51,16 +51,14 @@ namespace luax::render3d {
 
     class MeshAsset {
     public:
-        static std::expected<std::shared_ptr<MeshAsset>, std::string> loadFromFile(
-            std::filesystem::path const& path
-        );
+        static geode::Result<std::shared_ptr<MeshAsset>> loadFromFile(std::filesystem::path const& path);
 
-        static std::expected<std::shared_ptr<MeshAsset>, std::string> loadFromBytes(
+        static geode::Result<std::shared_ptr<MeshAsset>> loadFromBytes(
             std::span<std::uint8_t const> bytes, std::filesystem::path const& assetPath,
             std::filesystem::path const& sandboxRoot
         );
 
-        static std::expected<std::shared_ptr<MeshAsset>, std::string> fromBuffers(
+        static geode::Result<std::shared_ptr<MeshAsset>> fromBuffers(
             std::vector<glm::vec3> positions, std::vector<glm::vec3> normals,
             std::vector<glm::vec2> uvs, std::vector<std::uint32_t> indices
         );

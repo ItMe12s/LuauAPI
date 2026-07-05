@@ -108,7 +108,7 @@ namespace luax {
             return m_lastError;
         }
 
-        void registerShutdownHook(std::function<void()> fn);
+        void registerShutdownHook(std::move_only_function<void()> fn);
 
         geode::Result<std::reference_wrapper<std::string const>> getOrCompileBytecode(
             std::string const& key, std::string_view source
@@ -204,6 +204,6 @@ namespace luax {
         std::unique_ptr<Requirer> m_requirer;
 #endif
 
-        std::vector<std::function<void()>> m_shutdownHooks;
+        std::vector<std::move_only_function<void()>> m_shutdownHooks;
     };
 } // namespace luax

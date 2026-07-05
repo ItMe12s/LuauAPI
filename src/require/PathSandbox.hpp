@@ -22,7 +22,8 @@
 
 namespace luax {
     inline bool escapedRelativePathText(std::string_view text) {
-        return text == ".." || text.starts_with("../") || text.starts_with("..\\");
+        return text == ".." || geode::utils::string::startsWith(text, "../") ||
+            geode::utils::string::startsWith(text, "..\\");
     }
 
     inline bool escapedRelativePathValue(std::filesystem::path const& rel) {

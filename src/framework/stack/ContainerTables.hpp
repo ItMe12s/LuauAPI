@@ -10,7 +10,7 @@
 #include <cstdint>
 #include <lua.h>
 #include <lualib.h>
-#include <new>
+#include <memory>
 #include <string>
 #include <type_traits>
 #include <utility>
@@ -425,9 +425,9 @@ namespace luax {
         detail::checkIndexedTableElements(L, idx, len, [&](lua_State* state, lua_Integer) {
             gd::vector<T> inner;
             checkPrimitiveVector<T>(state, -1, label, inner);
-            auto* heap = new gd::vector<T>();
+            auto heap = std::make_unique<gd::vector<T>>();
             assignPrimitiveVector(*heap, inner);
-            out.push_back(heap);
+            out.push_back(heap.release());
         });
     }
 
@@ -435,8 +435,9 @@ namespace luax {
     void assignNestedPointerVectorLayer(
         gd::vector<InnerPtr>& dest, gd::vector<InnerPtr>& src, CreateFn&& create, AssignFn&& assignFn
     ) {
+        using Pointee = std::remove_pointer_t<InnerPtr>;
         while (dest.size() > src.size()) {
-            delete dest.back();
+            std::unique_ptr<Pointee> owned(dest.back());
             dest.pop_back();
         }
         while (dest.size() < src.size()) {
@@ -447,11 +448,11 @@ namespace luax {
                 dest[i] = create();
             }
             assignFn(*dest[i], *src[i]);
-            delete src[i];
+            std::unique_ptr<Pointee> owned(src[i]);
             src[i] = nullptr;
         }
         for (auto* inner : src) {
-            delete inner;
+            std::unique_ptr<Pointee> owned(inner);
         }
         src.clear();
     }
@@ -516,9 +517,9 @@ namespace luax {
         detail::checkIndexedTableElements(L, idx, len, [&](lua_State* state, lua_Integer) {
             gd::vector<T*> inner;
             checkObjectVectorView<T>(state, -1, label, inner);
-            auto* heap = new gd::vector<T*>();
+            auto heap = std::make_unique<gd::vector<T*>>();
             assignPrimitiveVector(*heap, inner);
-            out.push_back(heap);
+            out.push_back(heap.release());
         });
     }
 
@@ -582,12 +583,12 @@ namespace luax {
         detail::checkIndexedTableElements(L, idx, len, [&](lua_State* state, lua_Integer) {
             gd::vector<gd::vector<T*>*> inner;
             checkNestedObjectVectorPointers<T>(state, -1, label, inner);
-            auto* heap = new gd::vector<gd::vector<T*>*>();
+            auto heap = std::make_unique<gd::vector<gd::vector<T*>*>>();
             for (auto* layer : inner) {
                 heap->push_back(layer);
             }
             inner.clear();
-            out.push_back(heap);
+            out.push_back(heap.release());
         });
     }
 

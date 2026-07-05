@@ -63,4 +63,40 @@ namespace geode::utils::string {
         }
         return false;
     }
+
+    inline std::vector<std::string_view> splitView(std::string_view str, std::string_view split) {
+        std::vector<std::string_view> parts;
+        std::size_t start = 0;
+        while (start <= str.size()) {
+            auto pos = str.find(split, start);
+            if (pos == std::string_view::npos) {
+                parts.emplace_back(str.substr(start));
+                break;
+            }
+            parts.emplace_back(str.substr(start, pos - start));
+            start = pos + split.size();
+        }
+        return parts;
+    }
+
+    inline bool contains(std::string_view str, char c) {
+        return str.find(c) != std::string_view::npos;
+    }
+
+    inline bool contains(std::string_view str, std::string_view subs) {
+        return str.find(subs) != std::string_view::npos;
+    }
+
+    inline bool equalsIgnoreCase(std::string_view a, std::string_view b) {
+        if (a.size() != b.size()) {
+            return false;
+        }
+        for (std::size_t i = 0; i < a.size(); ++i) {
+            if (std::tolower(static_cast<unsigned char>(a[i])) !=
+                std::tolower(static_cast<unsigned char>(b[i]))) {
+                return false;
+            }
+        }
+        return true;
+    }
 } // namespace geode::utils::string

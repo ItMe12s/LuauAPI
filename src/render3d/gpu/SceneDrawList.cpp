@@ -8,7 +8,7 @@
 namespace luax::render3d {
     namespace {
         void applyRuntimeMaterial(
-            SceneDrawItem& item, Material const& overrideMat, GpuMeshResolver const& resolveGpuMesh
+            SceneDrawItem& item, Material const& overrideMat, GpuMeshResolver& resolveGpuMesh
         ) {
             item.baseColor = overrideMat.baseColorFactor;
             item.alphaMode = overrideMat.alphaMode;
@@ -58,7 +58,7 @@ namespace luax::render3d {
     }
 
     unsigned int resolveSceneDrawTexture(
-        SceneDrawItem const& item, TextureResolver const& resolveTexture, int selfColorTexture
+        SceneDrawItem const& item, TextureResolver& resolveTexture, int selfColorTexture
     ) {
         unsigned int resolved = 0;
         if (item.textureId != 0 && item.textureAsset != nullptr) {
@@ -78,7 +78,7 @@ namespace luax::render3d {
 
     SceneDrawLists buildSceneDrawLists(
         std::map<int, ViewportInstance> const& instances, glm::mat4 const& view,
-        Frustum const& frustum, GpuMeshResolver const& resolveGpuMesh
+        Frustum const& frustum, GpuMeshResolver& resolveGpuMesh
     ) {
         SceneDrawLists lists{};
         lists.opaque.reserve(instances.size() * 4);

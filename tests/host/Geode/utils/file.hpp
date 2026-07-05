@@ -5,6 +5,7 @@
 #include <fstream>
 #include <iterator>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace geode::utils::file {
@@ -40,6 +41,10 @@ namespace geode::utils::file {
             return geode::Err("write failed");
         }
         return geode::Ok();
+    }
+
+    inline geode::Result<void> writeStringSafe(std::filesystem::path const& path, std::string_view data) {
+        return writeString(path, std::string(data));
     }
 
     inline geode::Result<void> createDirectoryAll(std::filesystem::path const& path) {

@@ -8,6 +8,7 @@
 #include "framework/stack/TaggedMetatable.hpp"
 #include "framework/stack/UserdataTags.hpp"
 
+#include <Geode/utils/ranges.hpp>
 #include <cstring>
 #include <imgui.h>
 #include <lua.h>
@@ -526,25 +527,16 @@ namespace luax {
         if (id == 0) {
             return nullptr;
         }
-        for (auto const& entry : s_entries) {
-            if (entry.id == id) {
-                return entry.font;
-            }
-        }
-        return nullptr;
+        auto entry = geode::utils::ranges::find(s_entries, [id](FontEntry const& item) {
+            return item.id == id;
+        });
+        return entry ? entry->font : nullptr;
     }
 
     void imguiFontRemove(std::uint64_t id) {
-        s_entries.erase(
-            std::remove_if(
-                s_entries.begin(),
-                s_entries.end(),
-                [id](FontEntry const& entry) {
-                    return entry.id == id;
-                }
-            ),
-            s_entries.end()
-        );
+        geode::utils::ranges::remove(s_entries, [id](FontEntry const& entry) {
+            return entry.id == id;
+        });
     }
 
     void imguiFontRebuildAtlas() {

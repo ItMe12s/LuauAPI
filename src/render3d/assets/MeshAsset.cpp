@@ -42,34 +42,30 @@ namespace {
     }
 
     template <class VecT>
-    std::expected<std::vector<VecT>, std::string> unpackVecAttribute(
-        cgltf_accessor const* accessor, char const* label
-    ) {
+    geode::Result<std::vector<VecT>> unpackVecAttribute(cgltf_accessor const* accessor, char const* label) {
         constexpr std::size_t kComponents = static_cast<std::size_t>(VecT::length());
         constexpr cgltf_type kExpectedType = kComponents == 2 ? cgltf_type_vec2 : cgltf_type_vec3;
         char const* const kTypeName = kComponents == 2 ? "vec2" : "vec3";
 
         if (accessor == nullptr) {
-            return std::unexpected(std::string(label) + " accessor is missing");
+            return geode::Err(std::string(label) + " accessor is missing");
         }
 
         if (accessor->is_sparse) {
-            return std::unexpected(std::string(label) + " sparse accessors are not supported");
+            return geode::Err(std::string(label) + " sparse accessors are not supported");
         }
 
         if (accessorUsesMeshopt(accessor)) {
-            return std::unexpected(
-                std::string(label) + " meshopt-compressed accessors are not supported"
-            );
+            return geode::Err(std::string(label) + " meshopt-compressed accessors are not supported");
         }
 
         if (accessor->type != kExpectedType) {
-            return std::unexpected(std::string(label) + " accessor must be " + kTypeName);
+            return geode::Err(std::string(label) + " accessor must be " + kTypeName);
         }
 
         cgltf_size const floatCount = cgltf_accessor_unpack_floats(accessor, nullptr, 0);
         if (floatCount == 0 || floatCount % kComponents != 0) {
-            return std::unexpected(std::string(label) + " accessor has no vertices");
+            return geode::Err(std::string(label) + " accessor has no vertices");
         }
 
         std::vector<float> floats(floatCount);
@@ -82,35 +78,35 @@ namespace {
             }
         }
 
-        return values;
+        return geode::Ok(std::move(values));
     }
 
-    std::expected<std::vector<std::uint32_t>, std::string> unpackIndices(cgltf_primitive const& primitive) {
+    geode::Result<std::vector<std::uint32_t>> unpackIndices(cgltf_primitive const& primitive) {
         if (primitive.indices == nullptr) {
             auto const* position = cgltf_find_accessor(&primitive, cgltf_attribute_type_position, 0);
             if (position == nullptr) {
-                return std::unexpected("primitive is missing position data");
+                return geode::Err("primitive is missing position data");
             }
 
             std::vector<std::uint32_t> indices(position->count);
             for (cgltf_size i = 0; i < position->count; ++i) {
                 indices[static_cast<std::size_t>(i)] = static_cast<std::uint32_t>(i);
             }
-            return indices;
+            return geode::Ok(std::move(indices));
         }
 
         if (primitive.indices->is_sparse) {
-            return std::unexpected("sparse index accessors are not supported");
+            return geode::Err("sparse index accessors are not supported");
         }
 
         if (accessorUsesMeshopt(primitive.indices)) {
-            return std::unexpected("meshopt-compressed index accessors are not supported");
+            return geode::Err("meshopt-compressed index accessors are not supported");
         }
 
         cgltf_size const indexCount =
             cgltf_accessor_unpack_indices(primitive.indices, nullptr, sizeof(std::uint32_t), 0);
         if (indexCount == 0) {
-            return std::unexpected("primitive index accessor is empty");
+            return geode::Err("primitive index accessor is empty");
         }
 
         std::vector<std::uint32_t> indices(indexCount);
@@ -118,31 +114,31 @@ namespace {
             primitive.indices, indices.data(), sizeof(std::uint32_t), indexCount
         );
         if (unpacked != indexCount) {
-            return std::unexpected("failed to unpack primitive indices");
+            return geode::Err("failed to unpack primitive indices");
         }
 
-        return indices;
+        return geode::Ok(std::move(indices));
     }
 
-    std::expected<MeshPrimitive, std::string> extractPrimitive(
+    geode::Result<MeshPrimitive> extractPrimitive(
         cgltf_data const* data, cgltf_primitive const& primitive, glm::mat4 const& worldMatrix
     ) {
         if (primitive.has_draco_mesh_compression) {
-            return std::unexpected("Draco compressed primitives are not supported");
+            return geode::Err("Draco compressed primitives are not supported");
         }
 
         if (primitive.type != cgltf_primitive_type_triangles) {
-            return std::unexpected("only triangle primitives are supported");
+            return geode::Err("only triangle primitives are supported");
         }
 
         auto const* positionAccessor =
             cgltf_find_accessor(&primitive, cgltf_attribute_type_position, 0);
         auto positionsResult = unpackVecAttribute<glm::vec3>(positionAccessor, "position");
-        if (!positionsResult.has_value()) {
-            return std::unexpected(positionsResult.error());
+        if (positionsResult.isErr()) {
+            return geode::Err(positionsResult.unwrapErr());
         }
 
-        auto positions = std::move(positionsResult).value();
+        auto positions = std::move(positionsResult).unwrap();
         glm::mat3 const normalMatrix = glm::transpose(glm::inverse(glm::mat3(worldMatrix)));
 
         for (auto& position : positions) {
@@ -154,13 +150,13 @@ namespace {
         auto const* normalAccessor = cgltf_find_accessor(&primitive, cgltf_attribute_type_normal, 0);
         if (normalAccessor != nullptr) {
             auto normalsResult = unpackVecAttribute<glm::vec3>(normalAccessor, "normal");
-            if (!normalsResult.has_value()) {
-                return std::unexpected(normalsResult.error());
+            if (normalsResult.isErr()) {
+                return geode::Err(normalsResult.unwrapErr());
             }
 
-            normals = std::move(normalsResult).value();
+            normals = std::move(normalsResult).unwrap();
             if (normals.size() != positions.size()) {
-                return std::unexpected("position and normal vertex counts do not match");
+                return geode::Err("position and normal vertex counts do not match");
             }
 
             for (auto& normal : normals) {
@@ -172,8 +168,8 @@ namespace {
         }
 
         auto indicesResult = unpackIndices(primitive);
-        if (!indicesResult.has_value()) {
-            return std::unexpected(indicesResult.error());
+        if (indicesResult.isErr()) {
+            return geode::Err(indicesResult.unwrapErr());
         }
 
         std::vector<glm::vec2> texcoords;
@@ -181,25 +177,25 @@ namespace {
             cgltf_find_accessor(&primitive, cgltf_attribute_type_texcoord, 0);
         if (texcoordAccessor != nullptr) {
             auto texcoordsResult = unpackVecAttribute<glm::vec2>(texcoordAccessor, "texcoord");
-            if (!texcoordsResult.has_value()) {
-                return std::unexpected(texcoordsResult.error());
+            if (texcoordsResult.isErr()) {
+                return geode::Err(texcoordsResult.unwrapErr());
             }
 
-            texcoords = std::move(texcoordsResult).value();
+            texcoords = std::move(texcoordsResult).unwrap();
             if (texcoords.size() != positions.size()) {
-                return std::unexpected("position and texcoord vertex counts do not match");
+                return geode::Err("position and texcoord vertex counts do not match");
             }
         }
 
         int materialIndex = -1;
         if (primitive.material != nullptr) {
             if (data->materials == nullptr || data->materials_count == 0) {
-                return std::unexpected("primitive references a missing material");
+                return geode::Err("primitive references a missing material");
             }
 
             materialIndex = static_cast<int>(primitive.material - data->materials);
             if (materialIndex < 0 || static_cast<cgltf_size>(materialIndex) >= data->materials_count) {
-                return std::unexpected("primitive references an invalid material");
+                return geode::Err("primitive references an invalid material");
             }
         }
 
@@ -207,35 +203,35 @@ namespace {
         meshPrimitive.positions = std::move(positions);
         meshPrimitive.normals = std::move(normals);
         meshPrimitive.texcoords = std::move(texcoords);
-        meshPrimitive.indices = std::move(indicesResult).value();
+        meshPrimitive.indices = std::move(indicesResult).unwrap();
         meshPrimitive.materialIndex = materialIndex;
-        return meshPrimitive;
+        return geode::Ok(std::move(meshPrimitive));
     }
 
-    std::expected<int, std::string> resolveImageIndex(
+    geode::Result<int> resolveImageIndex(
         cgltf_image const* image, std::filesystem::path const& assetPath,
         std::filesystem::path const& sandboxRoot, std::vector<ImageData>& images,
         std::unordered_map<cgltf_image const*, int>& imageIndices
     ) {
         auto const existing = imageIndices.find(image);
         if (existing != imageIndices.end()) {
-            return existing->second;
+            return geode::Ok(existing->second);
         }
 
         auto encodedResult = readImageEncodedBytes(image, assetPath, sandboxRoot);
-        if (!encodedResult.has_value()) {
-            return std::unexpected(encodedResult.error());
+        if (encodedResult.isErr()) {
+            return geode::Err(encodedResult.unwrapErr());
         }
 
-        auto decodeResult = decodeImageRgba8(encodedResult.value());
-        if (!decodeResult.has_value()) {
-            return std::unexpected(decodeResult.error());
+        auto decodeResult = decodeImageRgba8(encodedResult.unwrap());
+        if (decodeResult.isErr()) {
+            return geode::Err(decodeResult.unwrapErr());
         }
 
         int const index = static_cast<int>(images.size());
-        images.push_back(std::move(decodeResult).value());
+        images.push_back(std::move(decodeResult).unwrap());
         imageIndices.emplace(image, index);
-        return index;
+        return geode::Ok(index);
     }
 
     void computeFlatNormals(
@@ -311,11 +307,11 @@ namespace luax::render3d {
                     auto imageIndexResult = resolveImageIndex(
                         texture->image, assetPath, sandboxRoot, asset.m_images, imageIndices
                     );
-                    if (!imageIndexResult.has_value()) {
-                        return imageIndexResult.error();
+                    if (imageIndexResult.isErr()) {
+                        return imageIndexResult.unwrapErr();
                     }
 
-                    materialData.imageIndex = imageIndexResult.value();
+                    materialData.imageIndex = imageIndexResult.unwrap();
                 }
             }
 
@@ -351,11 +347,11 @@ namespace luax::render3d {
                  ++primitiveIndex) {
                 auto const& primitive = node->mesh->primitives[primitiveIndex];
                 auto primitiveResult = extractPrimitive(data, primitive, worldMatrix);
-                if (!primitiveResult.has_value()) {
-                    return primitiveResult.error();
+                if (primitiveResult.isErr()) {
+                    return primitiveResult.unwrapErr();
                 }
 
-                auto meshPrimitive = std::move(primitiveResult).value();
+                auto meshPrimitive = std::move(primitiveResult).unwrap();
                 if (meshPrimitive.materialIndex >= 0 &&
                     static_cast<std::size_t>(meshPrimitive.materialIndex) < asset.m_materials.size()) {
                     auto const& material =
@@ -377,46 +373,44 @@ namespace luax::render3d {
         return std::nullopt;
     }
 
-    std::expected<std::shared_ptr<MeshAsset>, std::string> MeshAsset::loadFromFile(
-        std::filesystem::path const& path
-    ) {
+    geode::Result<std::shared_ptr<MeshAsset>> MeshAsset::loadFromFile(std::filesystem::path const& path) {
         std::error_code ec;
         auto const fileSize = std::filesystem::file_size(path, ec);
         if (ec) {
-            return std::unexpected("glTF file cannot be read: " + filesystemPathString(path));
+            return geode::Err("glTF file cannot be read: " + filesystemPathString(path));
         }
 
         if (fileSize > kMaxFsReadBytes) {
-            return std::unexpected("glTF file exceeds maximum read size");
+            return geode::Err("glTF file exceeds maximum read size");
         }
 
         auto bytesResult = geode::utils::file::readBinary(path);
         if (bytesResult.isErr()) {
-            return std::unexpected("glTF file cannot be read: " + filesystemPathString(path));
+            return geode::Err("glTF file cannot be read: " + filesystemPathString(path));
         }
 
         auto bytes = std::move(bytesResult.unwrap());
         return loadFromBytes(bytes, path, path.parent_path());
     }
 
-    std::expected<std::shared_ptr<MeshAsset>, std::string> MeshAsset::loadFromBytes(
+    geode::Result<std::shared_ptr<MeshAsset>> MeshAsset::loadFromBytes(
         std::span<std::uint8_t const> bytes, std::filesystem::path const& assetPath,
         std::filesystem::path const& sandboxRoot
     ) {
         if (bytes.empty()) {
-            return std::unexpected("glTF data is empty");
+            return geode::Err("glTF data is empty");
         }
 
         if (bytes.size() > kMaxFsReadBytes) {
-            return std::unexpected("glTF data exceeds maximum read size");
+            return geode::Err("glTF data exceeds maximum read size");
         }
 
         auto rootResult = canonicalSandboxRoot(sandboxRoot);
-        if (!rootResult.has_value()) {
-            return std::unexpected(rootResult.error());
+        if (rootResult.isErr()) {
+            return geode::Err(rootResult.unwrapErr());
         }
 
-        SandboxFileContext fileContext{rootResult.value(), {}};
+        SandboxFileContext fileContext{rootResult.unwrap(), {}};
 
         cgltf_options options{};
         configureSandboxFileIo(options, fileContext);
@@ -425,9 +419,7 @@ namespace luax::render3d {
         cgltf_result parseResult =
             cgltf_parse(&options, bytes.data(), static_cast<cgltf_size>(bytes.size()), &data);
         if (parseResult != cgltf_result_success) {
-            return std::unexpected(
-                std::string("failed to parse glTF: ") + cgltfResultMessage(parseResult)
-            );
+            return geode::Err(std::string("failed to parse glTF: ") + cgltfResultMessage(parseResult));
         }
 
         std::string const assetPathText = filesystemPathString(assetPath);
@@ -437,53 +429,53 @@ namespace luax::render3d {
             message += fileContext.lastError.empty() ? cgltfResultMessage(bufferResult) :
                                                        fileContext.lastError;
             cgltf_free(data);
-            return std::unexpected(std::move(message));
+            return geode::Err(std::move(message));
         }
 
         auto mesh = std::shared_ptr<MeshAsset>(new MeshAsset());
-        auto materialError = MeshAsset::extractMaterials(data, *mesh, assetPath, rootResult.value());
+        auto materialError = MeshAsset::extractMaterials(data, *mesh, assetPath, rootResult.unwrap());
         if (materialError.has_value()) {
             cgltf_free(data);
-            return std::unexpected(*materialError);
+            return geode::Err(*materialError);
         }
 
         auto extractError = MeshAsset::extractSceneMeshes(data, *mesh);
         cgltf_free(data);
 
         if (extractError.has_value()) {
-            return std::unexpected(*extractError);
+            return geode::Err(*extractError);
         }
 
-        return mesh;
+        return geode::Ok(mesh);
     }
 
-    std::expected<std::shared_ptr<MeshAsset>, std::string> MeshAsset::fromBuffers(
+    geode::Result<std::shared_ptr<MeshAsset>> MeshAsset::fromBuffers(
         std::vector<glm::vec3> positions, std::vector<glm::vec3> normals,
         std::vector<glm::vec2> uvs, std::vector<std::uint32_t> indices
     ) {
         if (positions.empty()) {
-            return std::unexpected("positions are empty");
+            return geode::Err("positions are empty");
         }
 
         if (positions.size() > kMaxProceduralMeshVertices) {
-            return std::unexpected("positions exceed maximum vertex count");
+            return geode::Err("positions exceed maximum vertex count");
         }
 
         if (indices.empty() || indices.size() % 3 != 0) {
-            return std::unexpected("indices must contain a multiple of three triangle indices");
+            return geode::Err("indices must contain a multiple of three triangle indices");
         }
 
         if (!normals.empty() && normals.size() != positions.size()) {
-            return std::unexpected("normals length must match positions or be omitted");
+            return geode::Err("normals length must match positions or be omitted");
         }
 
         if (!uvs.empty() && uvs.size() != positions.size()) {
-            return std::unexpected("uvs length must match positions or be omitted");
+            return geode::Err("uvs length must match positions or be omitted");
         }
 
         for (auto const index : indices) {
             if (index >= positions.size()) {
-                return std::unexpected("index out of range");
+                return geode::Err("index out of range");
             }
         }
 
@@ -500,7 +492,7 @@ namespace luax::render3d {
 
         auto mesh = std::shared_ptr<MeshAsset>(new MeshAsset());
         mesh->addPrimitive(std::move(primitive));
-        return mesh;
+        return geode::Ok(mesh);
     }
 
     void MeshAsset::addPrimitive(MeshPrimitive primitive) {

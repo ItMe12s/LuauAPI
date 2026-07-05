@@ -6,6 +6,7 @@
 #include "render3d/assets/MeshAsset.hpp"
 
 #include <Geode/Geode.hpp>
+#include <Geode/Result.hpp>
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
@@ -18,17 +19,19 @@ namespace {
     using namespace luax::gd3d;
     using namespace luax::render3d;
 
-    std::expected<std::span<std::uint8_t const>, std::string> readGltfBytesArg(lua_State* L, int idx) {
+    geode::Result<std::span<std::uint8_t const>> readGltfBytesArg(lua_State* L, int idx) {
         if (lua_isbuffer(L, idx)) {
             size_t len = 0;
             void* data = lua_tobuffer(L, idx, &len);
             if (data == nullptr || len == 0) {
-                return std::unexpected("glTF data is empty");
+                return geode::Err("glTF data is empty");
             }
             if (len > kMaxFsReadBytes) {
-                return std::unexpected("glTF data exceeds maximum read size");
+                return geode::Err("glTF data exceeds maximum read size");
             }
-            return std::span<std::uint8_t const>(static_cast<std::uint8_t const*>(data), len);
+            return geode::Ok(
+                std::span<std::uint8_t const>(static_cast<std::uint8_t const*>(data), len)
+            );
         }
 
         size_t len = 0;
@@ -37,12 +40,14 @@ namespace {
             luaL_error(L, "gd3d.gltf.loadMeshFromBytes expected buffer or string at arg %d", idx);
         }
         if (len == 0) {
-            return std::unexpected("glTF data is empty");
+            return geode::Err("glTF data is empty");
         }
         if (len > kMaxFsReadBytes) {
-            return std::unexpected("glTF data exceeds maximum read size");
+            return geode::Err("glTF data exceeds maximum read size");
         }
-        return std::span<std::uint8_t const>(reinterpret_cast<std::uint8_t const*>(text), len);
+        return geode::Ok(
+            std::span<std::uint8_t const>(reinterpret_cast<std::uint8_t const*>(text), len)
+        );
     }
 
     int gltfLoadMesh(lua_State* L) {
@@ -57,29 +62,29 @@ namespace {
         }
 
         auto result = MeshAsset::loadFromFile(target->path);
-        if (!result.has_value()) {
-            return pushNilErr(L, result.error());
+        if (auto err = returnIfErr(L, result)) {
+            return *err;
         }
 
-        auto const id = MeshRegistry::instance().registerAsset(std::move(result).value());
+        auto const id = MeshRegistry::instance().registerAsset(std::move(result.unwrap()));
         pushMeshHandle(L, id);
         return 1;
     }
 
     int gltfLoadMeshFromBytes(lua_State* L) {
         auto bytesResult = readGltfBytesArg(L, 1);
-        if (!bytesResult.has_value()) {
-            return pushNilErr(L, bytesResult.error());
+        if (auto err = returnIfErr(L, bytesResult)) {
+            return *err;
         }
 
         auto result = MeshAsset::loadFromBytes(
-            bytesResult.value(), std::filesystem::path{}, std::filesystem::path{}
+            bytesResult.unwrap(), std::filesystem::path{}, std::filesystem::path{}
         );
-        if (!result.has_value()) {
-            return pushNilErr(L, result.error());
+        if (auto err = returnIfErr(L, result)) {
+            return *err;
         }
 
-        auto const id = MeshRegistry::instance().registerAsset(std::move(result).value());
+        auto const id = MeshRegistry::instance().registerAsset(std::move(result.unwrap()));
         pushMeshHandle(L, id);
         return 1;
     }

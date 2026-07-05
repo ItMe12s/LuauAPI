@@ -36,10 +36,11 @@ namespace luax::render3d {
         std::vector<SceneDrawItem> blend;
     };
 
-    using GpuMeshResolver = std::function<GpuMesh*(std::uint64_t meshId, MeshAsset const& mesh)>;
+    using GpuMeshResolver =
+        std::move_only_function<GpuMesh*(std::uint64_t meshId, MeshAsset const& mesh)>;
 
     using TextureResolver =
-        std::function<unsigned int(std::uint64_t textureId, TextureAsset const& texture)>;
+        std::move_only_function<unsigned int(std::uint64_t textureId, TextureAsset const& texture)>;
 
     float shaderAlphaCutoff(int alphaMode, float alphaCutoff);
 
@@ -50,12 +51,12 @@ namespace luax::render3d {
     void sortBlendDrawItems(std::vector<SceneDrawItem>& items);
 
     unsigned int resolveSceneDrawTexture(
-        SceneDrawItem const& item, TextureResolver const& resolveTexture, int selfColorTexture
+        SceneDrawItem const& item, TextureResolver& resolveTexture, int selfColorTexture
     );
 
     SceneDrawLists buildSceneDrawLists(
         std::map<int, ViewportInstance> const& instances, glm::mat4 const& view,
-        Frustum const& frustum, GpuMeshResolver const& resolveGpuMesh
+        Frustum const& frustum, GpuMeshResolver& resolveGpuMesh
     );
 
 } // namespace luax::render3d

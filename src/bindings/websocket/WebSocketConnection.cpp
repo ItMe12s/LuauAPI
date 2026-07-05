@@ -3,6 +3,7 @@
 #include "framework/stack/TableUtil.hpp"
 
 #include <Geode/Geode.hpp>
+#include <Geode/utils/string.hpp>
 #include <cstdint>
 #include <lua.h>
 #include <lualib.h>
@@ -216,7 +217,8 @@ namespace luax::wsdetail {
 
     int wsConnect(lua_State* L) {
         auto url = check<std::string>(L, 1, kMethod);
-        if (!url.starts_with("ws://") && !url.starts_with("wss://")) {
+        if (!geode::utils::string::startsWith(url, "ws://") &&
+            !geode::utils::string::startsWith(url, "wss://")) {
             return pushNilErr(L, "websocket url must start with ws:// or wss://");
         }
         if (activeWsConnections().compactAndCountLive() >= kMaxWebSocketConnections) {
