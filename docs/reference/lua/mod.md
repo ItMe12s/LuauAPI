@@ -20,9 +20,12 @@ Values are JSON types:
 - string
 - table
 - array
+- `null` (returns `nil` in Luau)
 
-Returns `nil` when the key is missing or the read fails.
-Recoverable failures use [globals](globals.md) Error shapes.
+A missing key returns `nil` only.
+A stored JSON `null` also returns `nil` only.
+Recoverable read or conversion failures return `nil` and an error message.
+See [globals](globals.md) Error shapes.
 
 ## setSavedValue
 

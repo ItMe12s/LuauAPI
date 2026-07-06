@@ -37,6 +37,7 @@ This page is the canonical list of caps, deadlines, and error strings for LuauAP
 | `data exceeds maximum write size` | Write over cap | `nil, err` |
 | `directory listing exceeds maximum entries` | List over entry cap | `nil, err` |
 | `directory listing exceeds maximum name bytes` | List over name byte cap | `nil, err` |
+| `root is read-only` | Write, mkdir, or remove on `resources` root | `nil, err` |
 
 ## Hooks, callbacks, tasks
 
@@ -231,7 +232,12 @@ Lifecycle error strings are defined in `src/bindings/websocket/WebSocketInternal
 | `glTF data is empty` | Empty buffer | `nil, err` |
 | `glTF data exceeds maximum read size` | In-memory data over cap | `nil, err` |
 | `failed to parse glTF: ...` | cgltf parse failure | `nil, err` |
-| `failed to load glTF buffers: ...` | Buffer load failure | `nil, err` |
+| `failed to load glTF buffers: ...` | Buffer load failure (often wraps a nested sandbox error below) | `nil, err` |
+| `buffer path cannot be resolved: ...` | External buffer URI path invalid | `nil, err` (via buffer load) |
+| `buffer path escapes sandbox root` | Buffer URI outside sandbox root | `nil, err` (via buffer load) |
+| `buffer file not found: ...` | External buffer file missing | `nil, err` (via buffer load) |
+| `buffer file cannot be read: ...` | Buffer open or read failure | `nil, err` (via buffer load) |
+| `buffer file exceeds maximum read size` | External buffer over read cap | `nil, err` (via buffer load) |
 | `glTF file contains no mesh primitives` | No geometry | `nil, err` |
 | `only triangle primitives are supported` | Non-triangle primitive | `nil, err` |
 | `Draco compressed primitives are not supported` | Draco extension | `nil, err` |

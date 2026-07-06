@@ -73,6 +73,7 @@ For people who build LuauAPI from source or work on the runtime and codegen.
 | --- | --- |
 | [Architecture](contributor/architecture.md) | Runtime layout |
 | [Building from source](contributor/building.md) | Build steps |
+| [C++ standard](contributor/cpp-standard.md) | C++23 and Geode utils |
 | [Testing](contributor/testing.md) | Test map |
 
 Internals:
@@ -84,6 +85,7 @@ Internals:
 | [Module system](contributor/internals/module-system.md) | `require` and sandboxes |
 | [Runtime](contributor/internals/runtime.md) | Lua runtime lifecycle |
 | [Crash sidecar](contributor/internals/crash-sidecar.md) | Luau context at native faults |
+| [Release-hook safety](contributor/internals/release-hook-safety.md) | Safe `CCObject::release` hook |
 | [Task scheduler](contributor/internals/task-scheduler.md) | Main-thread tasks |
 
 Codegen:
@@ -110,3 +112,11 @@ Codegen:
 - [Getting started](getting-started/overview.md)
 - [globals](reference/lua/globals.md)
 - [Codegen](contributor/codegen/codegen.md)
+
+## Source
+
+- `docs/`
+- `mod.json`
+- `include/LuauAPI.hpp`
+- `src/`
+- `tools/luau_codegen/`

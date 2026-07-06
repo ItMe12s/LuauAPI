@@ -34,8 +34,6 @@ Read back position, basis vectors, and euler angles through instance methods.
 
 `gd3d.gltf.loadMesh(root, path)` loads a glTF 2.0 file (`.glb` or `.gltf`) from a mod sandbox root.
 `gd3d.gltf.loadMeshFromBytes(bytes)` loads glTF data already in memory. Pass a Luau `buffer` or raw `string`.
-Use GLB with embedded buffers and images only.
-External URI references fail with the loader's usual buffer or image errors.
 See [Limits and errors](../cpp/limits-and-errors.md) for the read cap.
 The first argument uses the same roots as [fs](fs.md): `"save"`, `"config"`, `"persistent"`, or `"resources"`.
 Shipped assets belong under `"resources"`.

@@ -4,6 +4,7 @@
 
 `geode.KeyboardInputEvent` listens to Geode keyboard input events.
 Callbacks receive a mutable `KeyboardInputData` table. Return `true` to stop propagation.
+For signatures, use editor autocomplete from [type stubs](type-stubs.md).
 
 Use `geode.cocos.enumKeyCodes.KEY_*` values for keys and `geode.KeyboardModifier` for modifier masks.
 
@@ -201,6 +202,7 @@ end)
 - [cocos](cocos.md)
 - [delegates](delegates.md)
 - [globals](globals.md)
+- [type stubs](type-stubs.md)
 
 ## Source
 

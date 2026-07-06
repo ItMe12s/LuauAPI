@@ -152,14 +152,14 @@ end)
 ## Spin a 3D mesh in a viewport
 
 Full API: [gd3d](../reference/lua/gd3d.md).
-Demo: [mod/demo/demo_viewport.luau](../../mod/demo/demo_viewport.luau).
+Demo: [mod/demo/demo_viewport.luau](../../mod/demo/demo_viewport.luau) loads `resources/test_donut.glb`.
 
 ```lua
 local Transform = gd3d.Transform
 local cc2d = geode.cocos2d
 local modId = geode.Mod.getID()
 
-local mesh, err = gd3d.gltf.loadMesh("resources", "model.glb")
+local mesh, err = gd3d.gltf.loadMesh("resources", "test_donut.glb")
 if not mesh then
     print(err)
     return
@@ -196,6 +196,12 @@ geode.hook("geode.gd.MenuLayer:init/0", {
     end,
 })
 ```
+
+## Next
+
+- [LuauAPI mod guidelines](../mod_guidelines.md)
+- [globals](../reference/lua/globals.md)
+- [hooks](../reference/lua/hooks.md)
 
 ## Related
 

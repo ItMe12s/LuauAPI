@@ -33,7 +33,7 @@ The view userdata indexes `1..num` from `ccCArray::arr`, pushes borrowed usertyp
 
 ## Verification
 
-1. `PYTHONPATH=tools python -m unittest tests.luau_codegen.test_cc_c_array`
+1. `PYTHONPATH=tools python -m unittest discover -s tests/luau_codegen/typemap -p test_cc_c_array.py`
 2. Regenerate `types/geode.d.luau` and confirm dispatcher handler queue fields bind.
 3. Confirm `CCArray.data` and other unlisted `ccCArray*` fields remain `-- skipped`.
 

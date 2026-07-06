@@ -24,15 +24,16 @@ whether a brand new mod or one you already have.
 - Deadlines and memory. Each run has a time budget in milliseconds. Going over raises an error.
   Memory has a hard cap with no soft limit.
   See [Limits and errors](../reference/cpp/limits-and-errors.md).
-- Errors are logged, not fatal. The host runs scripts in a protected call,
+- Errors are logged, not fatal. LuauAPI runs scripts in a protected call when you call `runFile` or `runScript`,
   so an error is caught and written to the log instead of crashing the game.
 
 ## Next
 
 - [Installation](installation.md)
-- [Your first script](first-script.md)
 - [Editor setup](editor-setup.md)
+- [Your first script](first-script.md)
 - [Examples](examples.md)
+- [LuauAPI mod guidelines](../mod_guidelines.md)
 
 ## Related
 

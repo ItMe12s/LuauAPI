@@ -7,6 +7,7 @@ The smallest working mod. You write a Luau file, then run it from your Geode mod
 ## Step 1: write the script
 
 Create a `.luau` file in your mod resources, for example `Bootstrap.luau`.
+List it in your `mod.json` resources. See [Installation](installation.md).
 
 ```lua
 print("Hello from Luau")
@@ -51,17 +52,19 @@ See [modules](../reference/lua/modules.md) and [Limits and errors](../reference/
 
 LuauAPI ships a built-in script executor.
 It is an ImGui window where you write Luau and run it live in the game.
-Enable it in the mod settings under Developer Settings.
+Turn on **Enable Developer Mode** under Developer Settings in LuauAPI mod settings,
+restart the game, then turn on **Enable Script Executor**.
+The executor toggle appears only after developer mode is on.
 Use it to test snippets without a build step.
 
 ## Next
 
-- [Editor setup](editor-setup.md)
 - [Examples](examples.md)
 
 ## Related
 
 - [Getting started](overview.md)
+- [Editor setup](editor-setup.md)
 - [Examples](examples.md)
 - [globals](../reference/lua/globals.md)
 - [modules](../reference/lua/modules.md)

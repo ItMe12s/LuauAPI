@@ -106,7 +106,6 @@ See [Limits and errors](../cpp/limits-and-errors.md) for callback budgets and or
 ## Related
 
 - [Getting started](../../getting-started/overview.md)
-- [Examples](../../getting-started/examples.md)
 - [delegates](delegates.md)
 - [hooks](hooks.md)
 - [tasks and time](tasks.md)
@@ -115,7 +114,6 @@ See [Limits and errors](../cpp/limits-and-errors.md) for callback budgets and or
 - [mod](mod.md)
 - [web](web.md)
 - [imgui](imgui.md)
-- [globals](globals.md)
 - [Limits and errors](../cpp/limits-and-errors.md)
 
 ## Source

@@ -37,7 +37,8 @@ task.spawn(fn: (...any) -> ...any, ...any) -> ()
 ```
 
 Runs `fn` immediately under the callback budget. Extra arguments are passed to `fn`.
-Raises an error when the runtime is not ready. Errors inside `fn` are logged. The call returns nothing.
+Raises `task.spawn requires an initialized runtime` when the runtime is not ready.
+Errors inside `fn` are logged. The call returns nothing.
 
 ```lua
 task.spawn(function(name)

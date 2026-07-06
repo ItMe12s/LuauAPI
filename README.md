@@ -31,6 +31,8 @@ Start here if you are new:
 
 - [Overview](docs/getting-started/overview.md)
 - [Installation](docs/getting-started/installation.md)
+- [Editor setup](docs/getting-started/editor-setup.md)
+- [Your first script](docs/getting-started/first-script.md)
 - [Examples](docs/getting-started/examples.md)
 - [Lua module index](docs/reference/lua/globals.md)
 - [LuauAPI mod guidelines](docs/mod_guidelines.md)

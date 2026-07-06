@@ -117,7 +117,9 @@ type HookHandle = {
 }
 ```
 
-`enable` and `disable` return success first. On failure they also return an error string.
+`enable` and `disable` return `true` on success.
+When the handle is invalid or removed, they return `false` only.
+When Geode enable or disable fails, they return `false` and an error string.
 
 ```lua
 handle:disable()
@@ -128,9 +130,7 @@ print(handle:isEnabled())
 
 ## geode.fields
 
-Returns a plain table tied to the node, alive as long as the node.
-The `m_fields` property returns the same table.
-See [game objects](game-objects.md) for usage and node placement rules.
+Per-node Lua storage. See [game objects](game-objects.md) for `geode.fields`, `m_fields`, and node placement rules.
 
 ## Prefer the right tool
 

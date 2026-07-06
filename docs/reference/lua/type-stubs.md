@@ -42,7 +42,7 @@ The generator merges these entries into `types/geode.d.luau` so stubs stay compl
 
 Namespaces covered today:
 
-- `geode.utils.web`
+- `web` field on `geode.utils` (runtime namespace `geode.utils.web`)
 - `geode.utils.base64` and `geode.utils.permission`
 - `geode.ColorProvider`, `geode.VersionInfo`, `geode.Keybind`, and keyboard input namespaces
 - Selected `geode.cocos` color helpers

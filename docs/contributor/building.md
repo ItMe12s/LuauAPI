@@ -24,8 +24,8 @@ CMake downloads these during configuration, so you do not install them by hand.
 - Geode bindings, pinned through `LUAUAPI_BINDINGS_GIT_TAG` in `cmake/GeodeBindings.cmake`
 - Dear ImGui `v1.92.8`, pinned in `cmake/ImGui.cmake` for `imgui-cocos` and headless tests
 - GLM `1.0.3`, used by the 3D math and glTF loader
-- IXWebSocket `v12.0.0` and mbedTLS `v3.6.6`, fetched for websocket support
-- Catch2 `v3.15.0`, fetched only when tests are on
+- IXWebSocket `v12.0.1` and mbedTLS `v3.6.6`, fetched for websocket support
+- Catch2 `v3.15.1`, fetched only when tests are on
 
 ## Vendored dependencies
 
@@ -89,7 +89,7 @@ You need `clang-format` and `ruff` on PATH.
 python tools/format.py --check
 ```
 
-The script formats C++ under `src/`, `include/`, and `tests/`.
+The script formats C++ under `src/`, `include/`, `tests/`, and `gd-imgui-cocos/`.
 It runs `clang-format` once per file.
 It runs `ruff format` on `tools/` and `tests/`.
 
@@ -103,6 +103,8 @@ See [Testing](testing.md) for CI jobs, how to run tests, and the host test list.
 
 ## Related
 
+- [Architecture](architecture.md)
+- [C++ standard](cpp-standard.md)
 - [Installation](../getting-started/installation.md)
 - [Codegen](codegen/codegen.md)
 - [Testing](testing.md)

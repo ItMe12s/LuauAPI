@@ -74,7 +74,7 @@ See [gd3d](../reference/lua/gd3d.md) for the rendering model.
 
 The runtime is single threaded. Almost every call must run on the main thread.
 See [Getting started](../getting-started/overview.md) for the user-facing rule
-and [C++ API reference](../reference/cpp/api-reference.md) Threading for host API rules.
+and the [C++ API reference](../reference/cpp/api-reference.md) for host API rules.
 
 ## Related
 

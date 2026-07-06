@@ -106,7 +106,7 @@ Luau userdata tags are 8-bit (`uint8_t`). Only 256 Luau tag slots exist. That is
 
 Usertypes use two layers:
 
-- Luau tag: all `Usertype<T>` userdata share `kSharedUsertypeTag` (11).
+- Luau tag: all `Usertype<T>` userdata share `kSharedUsertypeTag` (12).
 - Internal type id: the real class id is in `UserdataBlock::typeTag` and `UsertypeRegistry`.
 
 `requireLive`, `tryCandidate`, and GC check the shared Luau tag first, then read `typeTag`.
@@ -130,10 +130,11 @@ Tag assignments:
   - `kMeshAssetUserdataTag` (8)
   - `kMaterialUserdataTag` (9)
   - `kTextureUserdataTag` (10)
+  - `kImGuiFontHandleUserdataTag` (11)
 - Shared Luau tag for all usertypes:
-  - `kSharedUsertypeTag` (11)
+  - `kSharedUsertypeTag` (12)
 - Internal registry ids for usertypes:
-  - Start at `kFirstDynamicUsertypeTag` (12)
+  - Start at `kFirstDynamicUsertypeTag` (13)
 
 Codegen picks the next free internal id at registration. That id goes in `UserdataBlock::typeTag`, not in the Luau userdata tag.
 
@@ -178,8 +179,10 @@ The orphan trampoline registry resets its `registered` flag inside its shutdown 
 
 When `LUAUAPI_HOST_TESTS` is defined, several bindings compile a reduced surface so tests avoid Geode-only APIs:
 
-- `GeodeSmallBindings.cpp` registers only `geode.json`.
-  Base64, permission, `ColorProvider`, `Keybind`, and `VersionInfo` are omitted.
+- Bindings wrapped in `#if !defined(LUAUAPI_HOST_TESTS)` omit their `LUAX_BINDING` static registrar.
+  Host tests call `resetBindingsForTests()`, register only what they need with `registerBinding()`, then call `applyAllBindings`.
+- `GeodeSmallBindings.cpp` exposes `registerGeodeJson` for tests.
+  Base64, permission, `ColorProvider`, `Keybind`, and `VersionInfo` registrars are omitted.
 - `GeodeWebCore.cpp`, websocket entry registration,
   and several gd3d viewport or GPU paths are wrapped in `#if !defined(LUAUAPI_HOST_TESTS)`.
 - Host tests use stubs under `tests/host/` for web async behavior.

@@ -4,7 +4,9 @@
 
 ## 0.1.0-beta.15
 
-- Add stuff here later
+- Moved bundled demo scripts to `mod/demo/` and runtime scripts to `mod/luauapi/`.
+- Updated getting-started, examples, and reference documentation.
+- Updated runtime internals, Geode utils, `geode::Result` in render3d asset paths, and cross-platform move-only callbacks.
 
 ## 0.1.0-beta.14
 

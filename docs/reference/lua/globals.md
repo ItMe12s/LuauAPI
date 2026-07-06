@@ -137,11 +137,6 @@ Read shared values through `_G[key]` rather than as a bare global name. See [sha
 Standard Luau libraries and LuauAPI namespaces (`task`, `geode`, `imgui`, `gd3d`, and others) are listed in [type stubs](type-stubs.md).
 Hook helpers such as `geode.skip` are documented in [hooks](hooks.md).
 
-## Limits
-
-`loadstring` rejects sources over the script size cap.
-See [Limits and errors](../cpp/limits-and-errors.md) for the caps and deadlines.
-
 ## Related
 
 - [Getting started](../../getting-started/overview.md)

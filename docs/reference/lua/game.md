@@ -43,7 +43,8 @@ geode.utils.game.launchLoaderUninstaller(deleteSaveData: boolean) -> ()
 
 Opens the loader uninstaller on Windows. When `deleteSaveData` is true, saved game data is deleted as part of uninstall.
 
-On iOS, Android, and macOS this call is unsupported and has no effect.
+On iOS, Android, and macOS this call is unsupported.
+Geode logs an error and does not launch the uninstaller.
 
 ## Related
 

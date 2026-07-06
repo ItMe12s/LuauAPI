@@ -86,7 +86,8 @@ Three layers:
    That returns a `BoundaryScope` that pops when the binding returns.
 3. **Universal choke point.** `Runtime::protectedCallImpl` records script, task, imgui, websocket, web,
    and delegate labels from the `context` string each caller passes.
-   Nested ImGui draw closures pass `{.record = false}` so only the top-level `imgui.draw` callback pushes a boundary.
+   Nested ImGui draw closures pass `{.record = false}` so only the top-level `imgui.onDraw` callback pushes a boundary.
+   The sidecar labels that frame `imgui.draw`.
    A `BoundaryScope` pops when the call returns.
 
 Task, imgui, websocket, web, and delegate paths route through `Runtime::protectedCall` without extra site instrumentation.
@@ -108,7 +109,7 @@ but are not themselves a `protectedCall` site.
 - Flush before generated binding native code runs (`recordBindingEntry` force flush).
 - Pop does not flush. The next push, binding entry, or task tick writes the restored outer frame.
 - Nested ImGui widget closures (`imgui.window`, `imgui.style.with`, and similar) do not push boundaries.
-  Only the top-level `imgui.draw` callback records.
+  Only the top-level `imgui.onDraw` callback records. The sidecar labels that frame `imgui.draw`.
 - Before writing, refresh the active Luau stack from the VM.
   Skip disk when the semantic payload is unchanged from the last write.
   Semantic payload is everything except the `timestamp:` line.

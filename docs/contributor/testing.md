@@ -129,8 +129,7 @@ GitHub Actions workflow `.github/workflows/multi-platform.yml` runs:
 
 | Job | Platform | What it runs |
 | --- | --- | --- |
-| `host-tests` | Windows, macOS | Host-only configure (`LUAUAPI_HOST_ONLY=ON`), builds `luauapi_tests`, runs CTest |
-| `linux-codegen-tests` | Linux | Python codegen tests only (`luauapi_codegen_tests`) |
+| `host-tests` | Windows, macOS | Host-only configure (`LUAUAPI_HOST_ONLY=ON`), builds `luauapi_tests`, runs CTest (Catch2 cases plus `luauapi_codegen_tests`) |
 | `build` matrix | Windows, macOS, iOS, Android32, Android64 | Full mod build via Geode SDK |
 | `package` | Ubuntu | Combines matrix artifacts |
 
@@ -153,20 +152,20 @@ Compact map of `tests/luau_codegen/`:
 
 | Area | Test files | Coverage |
 | --- | --- | --- |
-| Broma parsing | `test_broma.py`, `test_broma_delegates.py`, `test_model.py` | `.bro` parse, link attrs, delegate class discovery |
-| Filtering and plan | `test_filtering.py`, `test_plan.py`, `test_constructors.py`, `test_denylist.py` | bindability, platform fields, constructors, denylist freshness |
-| Type map | `test_type_map.py`, `test_type_map_modules.py`, `test_value_struct_gate.py`, `test_cocos_enums.py` | C++ to Lua kinds, enums, value struct gate |
-| Containers | `test_nested_containers.py`, `test_pair_design.py`, `test_cc_c_array.py`, `test_object_vector_audit.py`, `test_gj_grid_fields.py` | `gd` containers, pairs, `ccCArray`, object vectors, GJ grid fields |
-| Marshalling | `test_marshalling.py`, `test_out_ref_policy.py` | stack checks, callbacks, FMOD, containers, out-ref multi-return |
-| Audit one-offs | `test_one_offs.py`, `test_fmod_surface.py` | intentionally skipped methods, FMOD handle rename and value structs |
-| Bindings emit | `test_bindings_handlers.py`, `test_bindings_overloads.py`, `test_bindings_safety.py`, `test_bindings_fmod.py`, `test_free_functions.py` | generated C++ handlers, free functions, and crash sidecar boundary records |
-| Hooks | `test_hooks.py` | hook runtime, offsets, SEL callbacks |
-| Luau stubs | `test_luau_types.py`, `test_types_binding.py`, `test_geode_enums_emit.py` | stub emission and cocos value descriptors |
-| Geode SDK scan | `test_geode_scanner.py`, `test_geode_ccnode.py`, `test_geode_ccarray.py`, `test_cpp_scan.py` | header scanner and cocos additions |
-| Delegates | `test_delegate_generator.py` | delegate spec and trampoline emit |
-| Parity and audit | `test_parity.py`, `test_audit.py` | `parity.json` and audit bucket rules |
-| CLI | `test_codegen_cli.py` | exit codes, list-all-outputs, standalone audit |
-| Drift guards | `test_manual_fields_sync.py`, `test_extra_bindings_sync.py`, `test_public_api_header_sync.py`, `test_binding_guards_*.py` | stub, binding, and public header sync |
+| Broma parsing | `broma/test_broma.py`, `broma/test_broma_delegates.py`, `broma/test_model.py` | `.bro` parse, link attrs, delegate class discovery |
+| Filtering and plan | `policy/test_filtering.py`, `policy/test_plan.py`, `policy/test_constructors.py`, `policy/test_denylist.py` | bindability, platform fields, constructors, denylist freshness |
+| Type map | `typemap/test_type_map.py`, `typemap/test_type_map_modules.py`, `typemap/test_value_struct_gate.py`, `typemap/test_cocos_enums.py` | C++ to Lua kinds, enums, value struct gate |
+| Containers | `typemap/test_nested_containers.py`, `typemap/test_pair_design.py`, `typemap/test_cc_c_array.py`, `typemap/test_object_vector_audit.py`, `typemap/test_gj_grid_fields.py` | `gd` containers, pairs, `ccCArray`, object vectors, GJ grid fields |
+| Marshalling | `marshalling/test_marshalling.py`, `marshalling/test_out_ref_policy.py` | stack checks, callbacks, FMOD, containers, out-ref multi-return |
+| Audit one-offs | `audit/test_one_offs.py`, `audit/test_fmod_surface.py` | intentionally skipped methods, FMOD handle rename and value structs |
+| Bindings emit | `bindings/test_bindings_handlers.py`, `bindings/test_bindings_overloads.py`, `bindings/test_bindings_safety.py`, `bindings/test_bindings_fmod.py`, `bindings/test_free_functions.py` | generated C++ handlers, free functions, and crash sidecar boundary records |
+| Hooks | `policy/test_hooks.py` | hook runtime, offsets, SEL callbacks |
+| Luau stubs | `bindings/test_luau_types.py`, `bindings/test_types_binding.py`, `bindings/test_geode_enums_emit.py` | stub emission and cocos value descriptors |
+| Geode SDK scan | `broma/test_geode_scanner.py`, `broma/test_geode_ccnode.py`, `broma/test_geode_ccarray.py`, `broma/test_cpp_scan.py` | header scanner and cocos additions |
+| Delegates | `marshalling/test_delegate_generator.py` | delegate spec and trampoline emit |
+| Parity and audit | `audit/test_parity.py`, `audit/test_audit.py` | `parity.json` and audit bucket rules |
+| CLI | `bindings/test_codegen_cli.py` | exit codes, list-all-outputs, standalone audit |
+| Drift guards | `guards/test_manual_fields_sync.py`, `guards/test_extra_bindings_sync.py`, `guards/test_public_api_header_sync.py`, `guards/test_binding_guards_*.py` | stub, binding, and public header sync |
 
 See [Codegen](codegen/codegen.md) for what the generator produces.
 

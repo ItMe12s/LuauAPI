@@ -473,7 +473,3 @@ These are allowed when done with care.
 - [tasks and time](reference/lua/tasks.md)
 - [gd3d](reference/lua/gd3d.md)
 - [Limits and errors](reference/cpp/limits-and-errors.md)
-
-## Source
-
-- `src/core/Config.hpp`
