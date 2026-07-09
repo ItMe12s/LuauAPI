@@ -2,6 +2,12 @@
 
 [Check the GitHub commits for more details](https://github.com/ItMe12s/LuauAPI).
 
+## 0.1.0-beta.16
+
+- Added generated Luau support for Geode `arc::TaskHandle<T>` returns and consume-only task handle arguments.
+- Added `GeodeTaskHandle<T>` with `onComplete`, `cancel`, `detach`, and status checks for native Geode async tasks.
+- Added async `geode.openInfoPopup(modID)` support and updated task-handle limits, docs, stubs, and tests.
+
 ## 0.1.0-beta.15
 
 - Moved bundled demo scripts to `mod/demo/` and runtime scripts to `mod/luauapi/`.
