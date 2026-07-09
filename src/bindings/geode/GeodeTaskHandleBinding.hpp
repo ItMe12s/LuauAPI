@@ -9,8 +9,6 @@
 #include <optional>
 #include <stdexcept>
 #include <string>
-#include <typeindex>
-#include <typeinfo>
 #include <vector>
 
 namespace luax {
@@ -25,10 +23,9 @@ namespace luax {
             Detached,
         };
 
-        GeodeTaskHandleStateBase(std::type_index outputType, GeodeTaskHandlePushValueFn pushValue);
+        explicit GeodeTaskHandleStateBase(GeodeTaskHandlePushValueFn pushValue);
         virtual ~GeodeTaskHandleStateBase() = default;
 
-        std::type_index outputType() const;
         bool isPending() const;
         bool isDone() const;
         bool isDetached() const;
@@ -37,7 +34,6 @@ namespace luax {
         void addCallback(std::shared_ptr<LuaCallback> cb);
         void cancel();
         void detach();
-        void markTaken();
         void fireCallbacks();
 
         virtual void poll(arc::Context& cx) = 0;
@@ -55,7 +51,6 @@ namespace luax {
         void fireCallback(std::shared_ptr<LuaCallback> const& cb);
         void pushCallbackArgs(lua_State* L) const;
 
-        std::type_index m_outputType;
         GeodeTaskHandlePushValueFn m_pushValue = nullptr;
         Status m_status = Status::Pending;
         std::string m_error;
@@ -68,8 +63,7 @@ namespace luax {
     class GeodeTaskHandleState final : public GeodeTaskHandleStateBase {
     public:
         GeodeTaskHandleState(arc::TaskHandle<T> handle, GeodeTaskHandlePushValueFn pushValue) :
-            GeodeTaskHandleStateBase(std::type_index(typeid(T)), pushValue),
-            m_handle(std::move(handle)) {}
+            GeodeTaskHandleStateBase(pushValue), m_handle(std::move(handle)) {}
 
         void poll(arc::Context& cx) override {
             if (!isPending()) return;
@@ -96,11 +90,6 @@ namespace luax {
 
         void detachNative() noexcept override {
             m_handle.detach();
-        }
-
-        arc::TaskHandle<T> takeNative() {
-            markTaken();
-            return std::move(m_handle);
         }
 
     protected:
@@ -137,8 +126,7 @@ namespace luax {
     class GeodeTaskHandleState<void> final : public GeodeTaskHandleStateBase {
     public:
         GeodeTaskHandleState(arc::TaskHandle<void> handle, GeodeTaskHandlePushValueFn pushValue) :
-            GeodeTaskHandleStateBase(std::type_index(typeid(void)), pushValue),
-            m_handle(std::move(handle)) {}
+            GeodeTaskHandleStateBase(pushValue), m_handle(std::move(handle)) {}
 
         void poll(arc::Context& cx) override {
             if (!isPending()) return;
@@ -165,11 +153,6 @@ namespace luax {
             m_handle.detach();
         }
 
-        arc::TaskHandle<void> takeNative() {
-            markTaken();
-            return std::move(m_handle);
-        }
-
     protected:
         void dropStoredResult() override {}
 
@@ -183,9 +166,6 @@ namespace luax {
     };
 
     void registerGeodeTaskHandleMetatable(lua_State* L);
-    std::shared_ptr<GeodeTaskHandleStateBase> checkGeodeTaskHandleState(
-        lua_State* L, int idx, char const* label
-    );
     void pushGeodeTaskHandleState(lua_State* L, std::shared_ptr<GeodeTaskHandleStateBase> state);
     void pollGeodeTaskHandles(lua_State* L);
     void clearGeodeTaskHandles();
@@ -208,36 +188,5 @@ namespace luax {
             return;
         }
         pushGeodeTaskHandle<T>(L, std::move(*handle), pushValue);
-    }
-
-    template <class T>
-    arc::TaskHandle<T> takeGeodeTaskHandle(lua_State* L, int idx, char const* label) {
-        auto state = checkGeodeTaskHandleState(L, idx, label);
-        if (state->outputType() != std::type_index(typeid(T))) {
-            luaL_error(L, "%s expected GeodeTaskHandle with matching result type", label);
-            return {};
-        }
-        if (!state->isPending()) {
-            luaL_error(L, "%s expected a pending GeodeTaskHandle", label);
-            return {};
-        }
-        auto typed = std::dynamic_pointer_cast<GeodeTaskHandleState<T>>(state);
-        if (!typed) {
-            luaL_error(L, "%s expected GeodeTaskHandle with matching result type", label);
-            return {};
-        }
-        auto handle = typed->takeNative();
-        compactGeodeTaskHandles();
-        return handle;
-    }
-
-    template <class T>
-    std::optional<arc::TaskHandle<T>> takeOptionalGeodeTaskHandle(
-        lua_State* L, int idx, char const* label
-    ) {
-        if (lua_isnil(L, idx)) {
-            return std::nullopt;
-        }
-        return takeGeodeTaskHandle<T>(L, idx, label);
     }
 } // namespace luax

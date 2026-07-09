@@ -4,7 +4,7 @@
 
 ## 0.1.0-beta.16
 
-- Added generated Luau support for Geode `arc::TaskHandle<T>` returns and consume-only task handle arguments.
+- Added generated Luau support for Geode `arc::TaskHandle<T>` returns.
 - Added `GeodeTaskHandle<T>` with `onComplete`, `cancel`, `detach`, and status checks for native Geode async tasks.
 - Added async `geode.openInfoPopup(modID)` support and updated task-handle limits, docs, stubs, and tests.
 

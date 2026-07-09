@@ -618,6 +618,9 @@ def _parse_task_handle_type(
     ctx: CodegenContext | None = None,
 ) -> Optional[TypeInfo]:
     raw, ref_kind = _strip_task_handle_ref(t)
+    if not for_return:
+        return None
+
     optional_inner = template_inner(raw, "std::optional")
     if optional_inner is not None:
         if ref_kind != "value":
@@ -640,8 +643,6 @@ def _parse_task_handle_type(
     if task_inner is None:
         return None
     if for_return and ref_kind != "value":
-        return None
-    if not for_return and ref_kind not in ("value", "rvalue"):
         return None
     inner = classify_return(task_inner, object_classes, ctx=ctx)
     if inner is None:

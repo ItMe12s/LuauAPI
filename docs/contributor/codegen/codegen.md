@@ -216,12 +216,10 @@ Unsupported types return `None`, which becomes a skip reason such as `unsupporte
 `std::optional<arc::TaskHandle<T>>` returns become `GeodeTaskHandle<T>?`.
 `arc::TaskHandle<void>` returns become `GeodeTaskHandle<nil>`.
 
-Task handle args are consume-only.
-Codegen accepts `arc::TaskHandle<T>`, `arc::TaskHandle<T>&&`, and `std::optional<arc::TaskHandle<T>>`.
-Nil optional args become `std::nullopt`.
-Lvalue refs, const refs, pointer args, and unsupported result types stay unbound.
+Task handle args stay unbound.
+Luau code can observe returned native tasks but cannot pass native task handles back into generated bindings.
 
-The generated C++ uses `GeodeTaskHandleBinding` to push returns and take args.
+The generated C++ uses `GeodeTaskHandleBinding` to push returns.
 The bridge polls native handles from the task tick after `TaskScheduler::advance`.
 
 ## Overload resolution

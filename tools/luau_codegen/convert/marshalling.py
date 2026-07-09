@@ -291,16 +291,6 @@ def emit_stack_check(
         return [
             f'        {_prefix(declare, var)} = luax::check<{value_check}>(L, {idx}, "{label}");\n'
         ]
-    if info.kind == "task_handle":
-        inner = _task_handle_inner_cxx(info)
-        return [
-            f'        {_prefix(declare, var)} = luax::takeGeodeTaskHandle<{inner}>(L, {idx}, "{label}");\n'
-        ]
-    if info.kind == "optional_task_handle":
-        inner = _task_handle_inner_cxx(info)
-        return [
-            f'        {_prefix(declare, var)} = luax::takeOptionalGeodeTaskHandle<{inner}>(L, {idx}, "{label}");\n'
-        ]
     if info.kind == "opaque_handle":
         cxx = info.cxx_type
         pointee = cxx[:-1] if cxx.endswith("*") else cxx

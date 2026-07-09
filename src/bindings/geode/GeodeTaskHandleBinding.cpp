@@ -106,13 +106,8 @@ namespace luax {
         }
     } // namespace
 
-    GeodeTaskHandleStateBase::GeodeTaskHandleStateBase(
-        std::type_index outputType, GeodeTaskHandlePushValueFn pushValue
-    ) : m_outputType(outputType), m_pushValue(pushValue) {}
-
-    std::type_index GeodeTaskHandleStateBase::outputType() const {
-        return m_outputType;
-    }
+    GeodeTaskHandleStateBase::GeodeTaskHandleStateBase(GeodeTaskHandlePushValueFn pushValue) :
+        m_pushValue(pushValue) {}
 
     bool GeodeTaskHandleStateBase::isPending() const {
         return m_status == Status::Pending;
@@ -182,12 +177,6 @@ namespace luax {
             m_detachAfterCallbacks = true;
             return;
         }
-        dropStoredResult();
-        m_status = Status::Detached;
-    }
-
-    void GeodeTaskHandleStateBase::markTaken() {
-        m_callbacks.clear();
         dropStoredResult();
         m_status = Status::Detached;
     }
@@ -270,12 +259,6 @@ namespace luax {
             lua_setfield(L, -2, "__gc");
         }
         lua_pop(L, 1);
-    }
-
-    std::shared_ptr<GeodeTaskHandleStateBase> checkGeodeTaskHandleState(
-        lua_State* L, int idx, char const* label
-    ) {
-        return checkBox(L, idx, label)->state;
     }
 
     void pushGeodeTaskHandleState(lua_State* L, std::shared_ptr<GeodeTaskHandleStateBase> state) {

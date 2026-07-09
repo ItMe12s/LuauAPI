@@ -35,7 +35,7 @@ Virtual work must wait until after that miss.
 
 Treat any of these as virtual work and keep them out of the pre-check path:
 
-- `geode::cast::typeinfo_cast` and `dynamic_cast`
+- `geode::cast::typeinfo_cast` and C++ RTTI casts
 - any method call on the object, including `retainCount` and `release`
 - `geode::WeakRef` construction from the raw object
 - `unordered_map::at`, which throws instead of returning not-found

@@ -325,19 +325,15 @@ class GeodeTaskHandleTypeMapTests(unittest.TestCase):
         self.assertEqual(info.kind, "task_handle")
         self.assertEqual(info.lua_type, "GeodeTaskHandle<nil>")
 
-    def test_task_handle_args_are_consume_only(self) -> None:
-        self.assertIsNotNone(classify_arg("arc::TaskHandle<bool>", {}))
-        self.assertIsNotNone(classify_arg("arc::TaskHandle<bool>&&", {}))
+    def test_task_handle_args_are_unsupported(self) -> None:
+        self.assertIsNone(classify_arg("arc::TaskHandle<bool>", {}))
+        self.assertIsNone(classify_arg("arc::TaskHandle<bool>&&", {}))
         self.assertIsNone(classify_arg("arc::TaskHandle<bool>&", {}))
         self.assertIsNone(classify_arg("arc::TaskHandle<bool> const&", {}))
         self.assertIsNone(classify_arg("arc::TaskHandle<bool>*", {}))
 
-    def test_optional_task_handle_arg(self) -> None:
-        info = classify_arg("std::optional<arc::TaskHandle<void>>", {})
-        self.assertIsNotNone(info)
-        assert info is not None
-        self.assertEqual(info.kind, "optional_task_handle")
-        self.assertEqual(info.lua_type, "GeodeTaskHandle<nil>?")
+    def test_optional_task_handle_arg_is_unsupported(self) -> None:
+        self.assertIsNone(classify_arg("std::optional<arc::TaskHandle<void>>", {}))
 
 
 class ContainerTypeMapTests(unittest.TestCase):

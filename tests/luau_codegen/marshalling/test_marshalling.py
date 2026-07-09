@@ -406,28 +406,6 @@ class GeodeTaskHandleMarshallingTests(unittest.TestCase):
         self.assertIn("pushGeodeTaskHandle<void>", text)
         self.assertIn("nullptr", text)
 
-    def test_task_handle_arg_takes_bridge_handle(self) -> None:
-        info = classify_arg("arc::TaskHandle<bool>", {})
-        self.assertIsNotNone(info)
-        assert info is not None
-        text = "".join(check_arg(Arg("arc::TaskHandle<bool>", "task"), info, 2, "arg0", "test"))
-        self.assertIn("takeGeodeTaskHandle<bool>", text)
-
-    def test_optional_task_handle_arg_takes_optional_bridge_handle(self) -> None:
-        info = classify_arg("std::optional<arc::TaskHandle<void>>", {})
-        self.assertIsNotNone(info)
-        assert info is not None
-        text = "".join(
-            check_arg(
-                Arg("std::optional<arc::TaskHandle<void>>", "task"),
-                info,
-                2,
-                "arg0",
-                "test",
-            )
-        )
-        self.assertIn("takeOptionalGeodeTaskHandle<void>", text)
-
 
 class EmitStackCheckTests(unittest.TestCase):
     def test_ccpoint_uses_check_specialization(self) -> None:

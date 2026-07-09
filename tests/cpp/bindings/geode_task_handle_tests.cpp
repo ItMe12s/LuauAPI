@@ -60,10 +60,6 @@ namespace {
         return state;
     }
 
-    int takeVoidHandle(lua_State* L) {
-        (void)luax::takeGeodeTaskHandle<void>(L, 1, "takeVoid");
-        return 0;
-    }
 } // namespace
 
 TEST_CASE("GeodeTaskHandle completes bool callbacks and late callbacks") {
@@ -269,47 +265,6 @@ TEST_CASE("GeodeTaskHandle optional nil pushes nil") {
     auto* L = luax::Runtime::getOrCreate()->state();
     luax::pushOptionalGeodeTaskHandle<bool>(L, std::nullopt, &pushBool);
     REQUIRE(lua_isnil(L, -1));
-    lua_pop(L, 1);
-}
-
-TEST_CASE("GeodeTaskHandle optional nil arg becomes nullopt") {
-    RuntimeGuard guard;
-    auto* L = luax::Runtime::getOrCreate()->state();
-    lua_pushnil(L);
-    auto handle = luax::takeOptionalGeodeTaskHandle<bool>(L, -1, "optional");
-    REQUIRE_FALSE(handle.has_value());
-    lua_pop(L, 1);
-}
-
-TEST_CASE("GeodeTaskHandle consume moves native handle and detaches userdata") {
-    RuntimeGuard guard;
-    auto* L = luax::Runtime::getOrCreate()->state();
-    auto state = std::make_shared<arc::TaskState<bool>>();
-    luax::pushGeodeTaskHandle<bool>(L, arc::TaskHandle<bool>(state), &pushBool);
-
-    auto native = luax::takeGeodeTaskHandle<bool>(L, -1, "consume");
-    lua_setglobal(L, "h");
-
-    REQUIRE(luauapi_test::runScriptVoid(L, "_G.consumedDetached = h:isDetached()"));
-    REQUIRE(globalBool(L, "consumedDetached"));
-
-    state->value = true;
-    state->ready = true;
-    auto waker = arc::Waker::noop();
-    arc::Context cx(&waker);
-    auto result = native.poll(cx);
-    REQUIRE(result);
-    REQUIRE(*result);
-}
-
-TEST_CASE("GeodeTaskHandle consume rejects mismatched result type") {
-    RuntimeGuard guard;
-    auto* L = luax::Runtime::getOrCreate()->state();
-    auto state = std::make_shared<arc::TaskState<bool>>();
-    luax::pushGeodeTaskHandle<bool>(L, arc::TaskHandle<bool>(state), &pushBool);
-    lua_pushcfunction(L, &takeVoidHandle, "takeVoid");
-    lua_insert(L, -2);
-    REQUIRE(lua_pcall(L, 1, 0, 0) != 0);
     lua_pop(L, 1);
 }
 

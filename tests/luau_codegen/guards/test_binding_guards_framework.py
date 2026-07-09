@@ -440,6 +440,31 @@ class CastConventionGuardTests(unittest.TestCase):
             f"use geode::cast::typeinfo_cast: {offenders}",
         )
 
+    def test_no_runtime_rtti_cast_outside_host_typeinfo_cast_placeholder(self) -> None:
+        roots = ("src", "tests")
+        allowed = {"tests/host/cocos2d.h"}
+        cast_tokens = ("dynamic_" + "cast", "dynamic_" + "pointer_cast")
+        offenders: list[str] = []
+        for root in roots:
+            for dirpath, _dirnames, filenames in os.walk(
+                os.path.join(_REPO_ROOT, root.replace("/", os.sep))
+            ):
+                for filename in filenames:
+                    if not filename.endswith((".cpp", ".hpp", ".h", ".cc", ".cxx")):
+                        continue
+                    rel = os.path.relpath(os.path.join(dirpath, filename), _REPO_ROOT)
+                    rel = rel.replace("\\", "/")
+                    if rel in allowed:
+                        continue
+                    text = read_repo_file(rel)
+                    if any(token in text for token in cast_tokens):
+                        offenders.append(rel)
+        self.assertFalse(
+            offenders,
+            "C++ runtime casts must use static invariants or geode::cast::typeinfo_cast; "
+            f"RTTI cast offenders: {offenders}",
+        )
+
 
 class FreeFnManifestSyncTests(unittest.TestCase):
     def test_free_function_manifest_matches_emitter(self) -> None:
