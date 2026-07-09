@@ -82,6 +82,9 @@ The stub also exposes a few free functions on `geode` itself:
 - `geode.createDefaultLogo()` and `geode.createServerModLogo(modId)` for mod branding nodes.
   `createServerModLogo` takes a server mod ID string, not a local package path.
 - `geode.openModsList()` to open the in-game mod list
+- `geode.openInfoPopup(modID)` to show an installed mod or fetch mod info.
+  It returns nil when the mod is installed.
+  Otherwise it returns a `GeodeTaskHandle<boolean>` for the async lookup.
 - `geode.Notification.create(text, icon, duration)` for toast overlays
 
 Not every factory is listed here.

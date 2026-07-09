@@ -64,6 +64,11 @@ and merges the results into `types/geode.d.luau`. These are not in `MANUAL_FREE_
 | `geode.cocos` (codegen portion) | `utils/cocos.hpp` | [cocos](cocos.md) |
 | `geode` UI free functions | `ui/Popup.hpp`, `ui/GeodeUI.hpp` | [UI and layouts](ui.md) |
 
+Generated support types can also appear in the stub.
+`GeodeTaskHandle<T>` represents a native Geode async task returned by generated bindings.
+It has `onComplete`, `cancel`, `detach`, `isPending`, `isDone`, and `isDetached`.
+It is separate from the `TaskHandle` returned by the Lua `task` library.
+
 Some Geode C++ wide integer types (`size_t`, `uint64_t`, and similar) appear as `string` in the stub.
 At runtime, pass decimal integer strings for those arguments and read wide integer results as decimal strings.
 

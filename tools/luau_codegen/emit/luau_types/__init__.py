@@ -30,6 +30,7 @@ from luau_codegen.emit.luau_types.free_fn_tree import (
 from luau_codegen.emit.luau_types.references import (
     _VALUE_STUB_BODY,
     _emit_delegate_stub_block,
+    _emit_generated_support_stub_block,
     _emit_orphan_stubs,
     _emit_value_stub_block,
     _factory_object_refs,
@@ -166,6 +167,7 @@ def emit(
     }
 
     lines = _header("Geode type stubs")
+    lines.append(_emit_generated_support_stub_block())
 
     delegate_block = _emit_delegate_stub_block()
     value_block = _emit_value_stub_block(

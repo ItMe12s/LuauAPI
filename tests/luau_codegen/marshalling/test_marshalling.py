@@ -14,7 +14,7 @@ from luau_codegen.convert.marshalling import (  # type: ignore[import-unresolved
     sel_menu_call_args,
     sel_selector_call_arg,
 )
-from luau_codegen.convert.type_map import TypeInfo, classify_arg  # type: ignore[import-unresolved]
+from luau_codegen.convert.type_map import TypeInfo, classify_arg, classify_return  # type: ignore[import-unresolved]
 from luau_codegen.parse.broma import Arg  # type: ignore[import-unresolved]
 
 
@@ -377,6 +377,56 @@ class CallbackMarshallingTests(unittest.TestCase):
         text = "".join(push_return(info, "result", False))
         self.assertIn("tryPushBoundDelegateTable", text)
         self.assertIn("return 1", text)
+
+
+class GeodeTaskHandleMarshallingTests(unittest.TestCase):
+    def test_task_handle_return_pushes_bridge_handle(self) -> None:
+        info = classify_return("arc::TaskHandle<bool>", {})
+        self.assertIsNotNone(info)
+        assert info is not None
+        text = "".join(push_return(info, "result", False))
+        self.assertIn("pushGeodeTaskHandle<bool>", text)
+        self.assertIn("std::move(result)", text)
+        self.assertIn("static_cast<bool const*>", text)
+        self.assertIn("return 1", text)
+
+    def test_optional_task_handle_return_pushes_optional_bridge_handle(self) -> None:
+        info = classify_return("std::optional<arc::TaskHandle<bool>>", {})
+        self.assertIsNotNone(info)
+        assert info is not None
+        text = "".join(push_return(info, "result", False))
+        self.assertIn("pushOptionalGeodeTaskHandle<bool>", text)
+        self.assertIn("std::move(result)", text)
+
+    def test_void_task_handle_return_uses_null_pusher(self) -> None:
+        info = classify_return("arc::TaskHandle<void>", {})
+        self.assertIsNotNone(info)
+        assert info is not None
+        text = "".join(push_return(info, "result", False))
+        self.assertIn("pushGeodeTaskHandle<void>", text)
+        self.assertIn("nullptr", text)
+
+    def test_task_handle_arg_takes_bridge_handle(self) -> None:
+        info = classify_arg("arc::TaskHandle<bool>", {})
+        self.assertIsNotNone(info)
+        assert info is not None
+        text = "".join(check_arg(Arg("arc::TaskHandle<bool>", "task"), info, 2, "arg0", "test"))
+        self.assertIn("takeGeodeTaskHandle<bool>", text)
+
+    def test_optional_task_handle_arg_takes_optional_bridge_handle(self) -> None:
+        info = classify_arg("std::optional<arc::TaskHandle<void>>", {})
+        self.assertIsNotNone(info)
+        assert info is not None
+        text = "".join(
+            check_arg(
+                Arg("std::optional<arc::TaskHandle<void>>", "task"),
+                info,
+                2,
+                "arg0",
+                "test",
+            )
+        )
+        self.assertIn("takeOptionalGeodeTaskHandle<void>", text)
 
 
 class EmitStackCheckTests(unittest.TestCase):

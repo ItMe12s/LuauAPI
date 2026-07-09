@@ -77,31 +77,29 @@ class OneOffPolicyTests(unittest.TestCase):
         self.assertNotIn("void", supported_names)
         self.assertIn("setOnClick", supported_names)
 
-    def test_open_info_popup_unsupported_return(self) -> None:
+    def test_open_info_popup_task_handle_return_supported(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")
         fn = Function(
             name="openInfoPopup",
             namespace="geode",
             ret="std::optional<arc::TaskHandle<bool>>",
-            args=[Arg("Mod*", "mod")],
+            args=[Arg("std::string", "modID")],
         )
         reason = free_function_unsupported_reason(fn, {"CCObject": ccobject})
-        self.assertIsNotNone(reason)
-        assert reason is not None
-        self.assertIn("TaskHandle", reason)
+        self.assertIsNone(reason)
 
-    def test_open_info_popup_audit_bucket(self) -> None:
+    def test_open_info_popup_no_longer_async_audit_skip(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")
         fn = Function(
             name="openInfoPopup",
             namespace="geode",
             ret="std::optional<arc::TaskHandle<bool>>",
-            args=[Arg("Mod*", "mod")],
+            args=[Arg("std::string", "modID")],
         )
         root = Root(classes=[ccobject], functions=[fn])
         plan = collect_plan(root, "win")
         data = collect_audit(plan, root)
         bucket = data["buckets"]["http_async_excluded"]
 
-        self.assertEqual(bucket["count"], 1)
-        self.assertTrue(any("openInfoPopup" in sample for sample in bucket["samples"]))
+        self.assertEqual(bucket["count"], 0)
+        self.assertIn(fn, plan.supported_free_functions)

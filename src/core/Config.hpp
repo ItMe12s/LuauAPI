@@ -19,6 +19,7 @@ namespace luax {
     constexpr std::size_t kMaxHookCallbacksGlobal = 4096;
     constexpr std::size_t kMaxHookCallbacksPerTarget = 64;
     constexpr std::size_t kMaxScheduledTasks = 4096;
+    constexpr std::size_t kMaxGeodeTaskHandles = 4096;
     constexpr std::size_t kMaxCallbackTrampolines = 4096;
 
     // ImGui

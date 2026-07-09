@@ -240,6 +240,44 @@ class LuauTypeEmissionTests(unittest.TestCase):
         files = emit_luau_types(Root(classes=[ccobject, widget]))
         self.assertEqual(set(files.keys()), {TYPES_FILE})
 
+    def test_task_handle_prelude_and_free_function_return(self) -> None:
+        root = Root(
+            functions=[
+                Function(
+                    name="openInfoPopup",
+                    namespace="geode",
+                    ret="std::optional<arc::TaskHandle<bool>>",
+                    args=[Arg("std::string", "modID")],
+                )
+            ]
+        )
+        text = types_text(emit_luau_types(root, manual_fields=MANUAL_FREE_FN_FIELDS))
+        self.assertIn("export type GeodeTaskHandle<T>", text)
+        self.assertIn("openInfoPopup: ((arg1: string) -> GeodeTaskHandle<boolean>?)", text)
+        self.assertLess(
+            text.find("export type GeodeTaskHandle<T>"),
+            text.find("openInfoPopup:"),
+        )
+
+    def test_task_handle_object_return_emits_orphan_stub(self) -> None:
+        root = Root(
+            classes=[
+                Class(name="CCObject", namespace="cocos2d"),
+                Class(name="PopupResult", bases=["CCObject"]),
+            ],
+            functions=[
+                Function(
+                    name="openPopupResult",
+                    namespace="geode",
+                    ret="arc::TaskHandle<PopupResult*>",
+                    args=[],
+                )
+            ],
+        )
+        text = types_text(emit_luau_types(root, manual_fields=MANUAL_FREE_FN_FIELDS))
+        self.assertIn("declare class PopupResult end", text)
+        self.assertIn("openPopupResult: (() -> GeodeTaskHandle<PopupResult?>)", text)
+
     def test_no_backward_class_stub(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")
         ccsprite = Class(

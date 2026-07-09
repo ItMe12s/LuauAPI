@@ -210,6 +210,20 @@ Resolution order in `_classify_core()`:
 `CALLBACK_ALIASES` and `CLASS_CALLBACK_ALIASES` in `type_map.py` expand shorthand names before classification.
 Unsupported types return `None`, which becomes a skip reason such as `unsupported-arg:<type>`.
 
+### Geode task handles
+
+`arc::TaskHandle<T>` returns become `GeodeTaskHandle<T>` in Luau.
+`std::optional<arc::TaskHandle<T>>` returns become `GeodeTaskHandle<T>?`.
+`arc::TaskHandle<void>` returns become `GeodeTaskHandle<nil>`.
+
+Task handle args are consume-only.
+Codegen accepts `arc::TaskHandle<T>`, `arc::TaskHandle<T>&&`, and `std::optional<arc::TaskHandle<T>>`.
+Nil optional args become `std::nullopt`.
+Lvalue refs, const refs, pointer args, and unsupported result types stay unbound.
+
+The generated C++ uses `GeodeTaskHandleBinding` to push returns and take args.
+The bridge polls native handles from the task tick after `TaskScheduler::advance`.
+
 ## Overload resolution
 
 Broma can declare several methods with the same name.
@@ -373,7 +387,6 @@ Some audit one-offs stay skipped on purpose. Do not re-triage them without a new
 | `HardStreak.updateStroke` | Same as above. |
 | `MusicDownloadManager.ProcessHttpRequest` | Same as above. |
 | `MDPopup.void` | Broma-parsed method (not a field). Scanner artifact with return type `geode::Function<...>`. Real surface is `create` and `setOnClick` with working callback marshalling. |
-| `geode.openInfoPopup` | Returns `std::optional<arc::TaskHandle<bool>>` and takes `Mod*`. No C++ to Luau marshalling for Geode async task handles (distinct from Luau `task.*` `TaskHandle`). |
 
 ## Denylist maintenance
 

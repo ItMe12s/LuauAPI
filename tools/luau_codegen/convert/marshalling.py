@@ -65,6 +65,12 @@ def _pair_component_cxx(info: TypeInfo) -> tuple[str, str]:
     return info.key_type.cxx_type, info.value_type.cxx_type
 
 
+def _task_handle_inner_cxx(info: TypeInfo) -> str:
+    if info.element_type is None:
+        raise ValueError("task handle requires result type")
+    return info.element_type.cxx_type
+
+
 _MAP_CONTAINER_TYPES = {"map": "gd::map", "unordered_map": "gd::unordered_map"}
 _SET_CONTAINER_TYPES = {"set": "gd::set", "unordered_set": "gd::unordered_set"}
 
@@ -285,6 +291,16 @@ def emit_stack_check(
         return [
             f'        {_prefix(declare, var)} = luax::check<{value_check}>(L, {idx}, "{label}");\n'
         ]
+    if info.kind == "task_handle":
+        inner = _task_handle_inner_cxx(info)
+        return [
+            f'        {_prefix(declare, var)} = luax::takeGeodeTaskHandle<{inner}>(L, {idx}, "{label}");\n'
+        ]
+    if info.kind == "optional_task_handle":
+        inner = _task_handle_inner_cxx(info)
+        return [
+            f'        {_prefix(declare, var)} = luax::takeOptionalGeodeTaskHandle<{inner}>(L, {idx}, "{label}");\n'
+        ]
     if info.kind == "opaque_handle":
         cxx = info.cxx_type
         pointee = cxx[:-1] if cxx.endswith("*") else cxx
@@ -396,6 +412,8 @@ def _push_impl(
     if info.kind == "value":
         if info.lua_type in VALUE_CHECK_CXX_TYPES:
             return [f"{indent}luax::push(L, {expr});\n"]
+    if info.kind in ("task_handle", "optional_task_handle"):
+        return _push_task_handle(info, expr, indent=indent)
     if info.kind == "opaque_handle":
         return [
             f"{indent}luax::pushOpaqueHandle(L, {expr});\n",
@@ -475,6 +493,37 @@ def _push_impl(
             f"{indent}}}\n",
         ]
     raise ValueError(f"unsupported type kind: {info.kind}")
+
+
+def _task_handle_pusher_arg(info: TypeInfo, indent: str) -> list[str]:
+    inner = info.element_type
+    if inner is None:
+        raise ValueError("task handle requires result type")
+    if inner.kind == "void":
+        return ["nullptr"]
+    lines = [
+        "+[](lua_State* L, void const* raw) {\n",
+        f"{indent}    auto const& value = *static_cast<{inner.cxx_type} const*>(raw);\n",
+    ]
+    lines.extend(_push_impl(inner, "value", False, indent=f"{indent}    "))
+    lines.append(f"{indent}}}")
+    return lines
+
+
+def _push_task_handle(info: TypeInfo, expr: str, *, indent: str) -> list[str]:
+    inner = _task_handle_inner_cxx(info)
+    fn = (
+        "pushOptionalGeodeTaskHandle"
+        if info.kind == "optional_task_handle"
+        else "pushGeodeTaskHandle"
+    )
+    pusher = _task_handle_pusher_arg(info, indent)
+    if len(pusher) == 1:
+        return [f"{indent}luax::{fn}<{inner}>(L, std::move({expr}), {pusher[0]});\n"]
+    lines = [f"{indent}luax::{fn}<{inner}>(L, std::move({expr}), "]
+    lines.extend(pusher)
+    lines.append(");\n")
+    return lines
 
 
 def _callback_return_type(info: TypeInfo) -> str:

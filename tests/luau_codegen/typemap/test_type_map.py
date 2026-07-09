@@ -298,6 +298,48 @@ class GeodeEnumRegistrationTests(unittest.TestCase):
         self.assertEqual(len(info.callback_args), 1)
 
 
+class GeodeTaskHandleTypeMapTests(unittest.TestCase):
+    def test_classify_task_handle_return(self) -> None:
+        info = classify_return("arc::TaskHandle<bool>", {})
+        self.assertIsNotNone(info)
+        assert info is not None
+        self.assertEqual(info.kind, "task_handle")
+        self.assertEqual(info.cxx_type, "arc::TaskHandle<bool>")
+        self.assertEqual(info.lua_type, "GeodeTaskHandle<boolean>")
+        self.assertIsNotNone(info.element_type)
+        assert info.element_type is not None
+        self.assertEqual(info.element_type.kind, "bool")
+
+    def test_classify_optional_task_handle_return(self) -> None:
+        info = classify_return("std::optional<arc::TaskHandle<bool>>", {})
+        self.assertIsNotNone(info)
+        assert info is not None
+        self.assertEqual(info.kind, "optional_task_handle")
+        self.assertEqual(info.lua_type, "GeodeTaskHandle<boolean>?")
+        self.assertEqual(info.cxx_type, "std::optional<arc::TaskHandle<bool>>")
+
+    def test_classify_void_task_handle_return(self) -> None:
+        info = classify_return("arc::TaskHandle<void>", {})
+        self.assertIsNotNone(info)
+        assert info is not None
+        self.assertEqual(info.kind, "task_handle")
+        self.assertEqual(info.lua_type, "GeodeTaskHandle<nil>")
+
+    def test_task_handle_args_are_consume_only(self) -> None:
+        self.assertIsNotNone(classify_arg("arc::TaskHandle<bool>", {}))
+        self.assertIsNotNone(classify_arg("arc::TaskHandle<bool>&&", {}))
+        self.assertIsNone(classify_arg("arc::TaskHandle<bool>&", {}))
+        self.assertIsNone(classify_arg("arc::TaskHandle<bool> const&", {}))
+        self.assertIsNone(classify_arg("arc::TaskHandle<bool>*", {}))
+
+    def test_optional_task_handle_arg(self) -> None:
+        info = classify_arg("std::optional<arc::TaskHandle<void>>", {})
+        self.assertIsNotNone(info)
+        assert info is not None
+        self.assertEqual(info.kind, "optional_task_handle")
+        self.assertEqual(info.lua_type, "GeodeTaskHandle<nil>?")
+
+
 class ContainerTypeMapTests(unittest.TestCase):
     def test_classify_gd_vector_object_pointer_as_readonly_view(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")

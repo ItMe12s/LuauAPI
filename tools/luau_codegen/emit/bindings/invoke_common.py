@@ -65,7 +65,7 @@ def emit_lua_invoke_arg(
         return out, lua_idx + 1
 
     out.extend(check_arg(lua_arg.arg, info, lua_idx, var, label))
-    if info.kind == "callback":
+    if info.kind in ("callback", "task_handle", "optional_task_handle"):
         call_args.append(f"std::move({var})")
     elif info.kind == "delegate":
         call_args.append(var)

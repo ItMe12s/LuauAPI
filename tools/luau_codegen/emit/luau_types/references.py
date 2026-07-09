@@ -125,6 +125,19 @@ def _emit_delegate_stub_block() -> str:
     return "".join(lines)
 
 
+def _emit_generated_support_stub_block() -> str:
+    return (
+        "export type GeodeTaskHandle<T> = {\n"
+        "    onComplete: (self: GeodeTaskHandle<T>, callback: (value: T?, err: string?) -> ()) -> GeodeTaskHandle<T>,\n"
+        "    cancel: (self: GeodeTaskHandle<T>) -> (),\n"
+        "    detach: (self: GeodeTaskHandle<T>) -> (),\n"
+        "    isPending: (self: GeodeTaskHandle<T>) -> boolean,\n"
+        "    isDone: (self: GeodeTaskHandle<T>) -> boolean,\n"
+        "    isDetached: (self: GeodeTaskHandle<T>) -> boolean,\n"
+        "}\n\n"
+    )
+
+
 def _refs_from_method(
     method: Method, objects: Dict[str, Class], ctx: CodegenContext | None = None
 ) -> set[str]:
@@ -275,6 +288,10 @@ def _refs_from_text(content: str) -> set[str]:
     for match in re.finditer(r"extends (\w+)", content):
         refs.add(match.group(1))
     for match in re.finditer(r":\s*(\w+)\??(?:\s*[,&)]|\s*$|\s*->)", content, re.MULTILINE):
+        name = match.group(1)
+        if name[0].isupper():
+            refs.add(name)
+    for match in re.finditer(r"<\s*(\w+)\??\s*>", content):
         name = match.group(1)
         if name[0].isupper():
             refs.add(name)

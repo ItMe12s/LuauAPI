@@ -1,5 +1,6 @@
 #include "bindings/task/TaskScheduler.hpp"
 
+#include "bindings/geode/GeodeTaskHandleBinding.hpp"
 #include "core/Config.hpp"
 #include "core/Runtime.hpp"
 #include "diagnostics/BoundaryRecorder.hpp"
@@ -164,6 +165,7 @@ namespace luax {
                 auto* L = runtime->state();
                 if (!L) return;
                 TaskScheduler::get().advance(static_cast<double>(dt), L);
+                pollGeodeTaskHandles(L);
                 diag::flushIfNeeded(runtime->status());
             }
         };

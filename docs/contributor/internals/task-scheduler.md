@@ -43,6 +43,7 @@ To fire a task it pushes the callback, sets the resources root scope,
 and calls the runtime protected call with the callback budget.
 A repeating task is rescheduled, while a one shot or deferred task is marked cancelled.
 Cancelled tasks are then removed.
+After that, the tick polls generated Geode task handles so native async results can fire Lua callbacks.
 
 ## Game integration
 
@@ -71,4 +72,5 @@ Task count and callback budget caps are in [Limits and errors](../../reference/c
 - `src/bindings/task/TaskBinding.cpp`
 - `src/bindings/task/TaskScheduler.hpp`
 - `src/bindings/task/TaskScheduler.cpp`
+- `src/bindings/geode/GeodeTaskHandleBinding.cpp`
 - `src/core/Config.hpp`

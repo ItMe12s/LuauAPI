@@ -46,6 +46,7 @@ This page is the canonical list of caps, deadlines, and error strings for LuauAP
 | `kMaxHookCallbacksGlobal` | `4096` | Total `geode.hook` callbacks |
 | `kMaxHookCallbacksPerTarget` | `64` | Hook callbacks on one target |
 | `kMaxScheduledTasks` | `4096` | Active (non-cancelled) scheduled tasks at once |
+| `kMaxGeodeTaskHandles` | `4096` | Active generated Geode task handles at once |
 | `kMaxCallbackTrampolines` | `4096` soft cap | Orphan callback bridges without an anchor |
 
 ### Hooks, callbacks, tasks errors
@@ -55,6 +56,7 @@ This page is the canonical list of caps, deadlines, and error strings for LuauAP
 | `geode.hook global callback limit exceeded` | Global hook cap hit | Lua error |
 | `geode.hook target callback limit exceeded for %s` | Per-target hook cap hit | Lua error |
 | `task: too many scheduled tasks (limit 4096)` | Task cap hit | Lua error |
+| `geode task handles: too many active handles (limit 4096)` | Geode task handle cap hit | Lua error |
 | (log only) | Trampoline cap hit | Warn once. New trampolines dropped. No Lua error. |
 
 ## ImGui

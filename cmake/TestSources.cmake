@@ -22,6 +22,7 @@ set(LUAUAPI_HOST_TEST_RUNTIME_SOURCES
     src/bindings/geode/ModSandbox.cpp
     src/bindings/geode/GeodeFsBinding.cpp
     src/bindings/geode/GeodeSmallBindings.cpp
+    src/bindings/geode/GeodeTaskHandleBinding.cpp
     src/bindings/geode/web/GeodeWebCore.cpp
     src/bindings/geode/web/GeodeWebApi.cpp
     src/bindings/geode/web/GeodeWebListeners.cpp

@@ -9,6 +9,7 @@ from binding_guard_support import (
     FS_BINDING,
     GEODE_MOD,
     GEODE_PERMISSION,
+    GEODE_TASK_HANDLE_BINDING,
     IMGUI_BINDING,
     JSON_CONVERT,
     LUA_CALLBACK,
@@ -258,6 +259,19 @@ class HandleGcGuardTests(unittest.TestCase):
         self.assertIn("ScheduledHandleBinding", source)
         self.assertIn("detail::taskHandleTag()", source)
         self.assertIn("TaskHandleBinding::registerMetatable", source)
+
+    def test_geode_task_handles_poll_from_task_tick(self) -> None:
+        source = read_repo_file(TASK_SCHEDULER)
+        self.assertIn('#include "bindings/geode/GeodeTaskHandleBinding.hpp"', source)
+        self.assertIn("pollGeodeTaskHandles(L)", source)
+        self.assertLess(
+            source.find("TaskScheduler::get().advance"),
+            source.find("pollGeodeTaskHandles(L)"),
+        )
+
+    def test_geode_task_handle_bridge_in_host_test_sources(self) -> None:
+        test_sources = read_repo_file("cmake/TestSources.cmake")
+        self.assertIn(GEODE_TASK_HANDLE_BINDING, test_sources)
 
     def test_imgui_handle_metatable_registers_gc_cancellation(self) -> None:
         source = read_repo_file(IMGUI_BINDING)

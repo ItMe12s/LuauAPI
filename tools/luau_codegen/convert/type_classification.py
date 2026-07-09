@@ -583,6 +583,78 @@ def _resolve_ctx(ctx: CodegenContext | None) -> CodegenContext:
     return CodegenContext.static()
 
 
+def _strip_task_handle_ref(t: str) -> tuple[str, str]:
+    raw = normalize_type(t)
+    if raw.endswith("&&"):
+        return raw[:-2].strip(), "rvalue"
+    if raw.endswith("&"):
+        inner = raw[:-1].strip()
+        if inner.startswith("const ") or inner.endswith(" const"):
+            return strip_ref(raw), "const_lvalue"
+        return inner, "lvalue"
+    return raw, "value"
+
+
+def _task_handle_inner(n: str) -> Optional[str]:
+    for prefix in ("arc::TaskHandle", "TaskHandle"):
+        inner = template_inner(n, prefix)
+        if inner is not None:
+            inner = inner.strip()
+            return inner if inner else "void"
+    return None
+
+
+def _task_handle_lua_inner(inner: TypeInfo) -> str:
+    if inner.kind == "void":
+        return "nil"
+    return inner.lua_type
+
+
+def _parse_task_handle_type(
+    t: str,
+    object_classes: Dict[str, Class],
+    *,
+    for_return: bool,
+    ctx: CodegenContext | None = None,
+) -> Optional[TypeInfo]:
+    raw, ref_kind = _strip_task_handle_ref(t)
+    optional_inner = template_inner(raw, "std::optional")
+    if optional_inner is not None:
+        if ref_kind != "value":
+            return None
+        task_inner = _task_handle_inner(optional_inner.strip())
+        if task_inner is None:
+            return None
+        inner = classify_return(task_inner, object_classes, ctx=ctx)
+        if inner is None:
+            return None
+        cxx_inner = inner.cxx_type
+        return TypeInfo(
+            "optional_task_handle",
+            f"std::optional<arc::TaskHandle<{cxx_inner}>>",
+            f"GeodeTaskHandle<{_task_handle_lua_inner(inner)}>?",
+            element_type=inner,
+        )
+
+    task_inner = _task_handle_inner(raw)
+    if task_inner is None:
+        return None
+    if for_return and ref_kind != "value":
+        return None
+    if not for_return and ref_kind not in ("value", "rvalue"):
+        return None
+    inner = classify_return(task_inner, object_classes, ctx=ctx)
+    if inner is None:
+        return None
+    cxx_inner = inner.cxx_type
+    return TypeInfo(
+        "task_handle",
+        f"arc::TaskHandle<{cxx_inner}>",
+        f"GeodeTaskHandle<{_task_handle_lua_inner(inner)}>",
+        element_type=inner,
+    )
+
+
 def _parse_result_type(n: str) -> Optional[TypeInfo]:
     s = strip_ref(n)
     for prefix in ("geode::Result<", "Result<"):
@@ -689,6 +761,10 @@ def _classify_core(
         base = n[:-1].strip()
     else:
         base = short_name(n)
+
+    task_handle = _parse_task_handle_type(t, object_classes, for_return=for_return, ctx=ctx)
+    if task_handle is not None:
+        return task_handle
 
     if n.endswith("*"):
         ptr_container = parse_container(n[:-1].strip(), object_classes, TypeInfo, ctx=ctx)
