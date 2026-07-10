@@ -4,10 +4,13 @@ Executor.spacing = 10
 Executor.footer = 72
 Executor.windowWidth = 460
 Executor.windowHeight = 360
-Executor.buttonColumns = 3
+Executor.buttonColumns = 4
 Executor.ranCount = 0
 Executor.code = "print('hello from executor :3')"
 Executor.status = ""
+Executor.demoFiles = {}
+Executor.selectedDemo = ""
+Executor.demoError = ""
 Executor.initialized = false
 Executor.drawHandle = nil :: ImGuiDrawHandle?
 Executor.font = nil :: ImGuiFontHandle?
@@ -86,12 +89,35 @@ function Executor.execute(code: string)
     end)
 end
 
+function Executor.refreshDemoFiles()
+    Executor.demoFiles = {}
+    Executor.selectedDemo = ""
+    Executor.demoError = ""
+
+    local entries, err = geode.fs.list("resources", ".")
+    if not entries then
+        Executor.demoError = tostring(err)
+        Executor.setStatus(false, Executor.demoError)
+        return
+    end
+
+    for _, filename in entries do
+        if filename:match("^demo_.*%.luau$") then
+            table.insert(Executor.demoFiles, filename)
+        end
+    end
+    table.sort(Executor.demoFiles)
+end
+
 function Executor.draw()
     local function drawContent()
         imgui.style.with(getThemeOpts(), function()
             imgui.window("Executor", function()
                 local avail = imgui.getContentRegionAvail()
-                local buttonWidth = math.max(avail.x / Executor.buttonColumns, 1) - Executor.spacing / 1.5
+                local buttonWidth = math.max(
+                    (avail.x - Executor.spacing * (Executor.buttonColumns - 1)) / Executor.buttonColumns,
+                    1
+                )
 
                 Executor.code = imgui.inputTextMultiline("##code", Executor.code, { x = -1, y = -Executor.footer })
 
@@ -112,6 +138,54 @@ function Executor.draw()
                     Executor.code = ""
                     Executor.setStatus(true, "Code cleared")
                 end
+
+                imgui.sameLine()
+                if imgui.button("Load Demo", { size = { x = buttonWidth, y = 0 } }) then
+                    Executor.refreshDemoFiles()
+                    imgui.openPopup("load-demo")
+                end
+
+                imgui.popupModal("load-demo", function()
+                    imgui.text("Choose a demo file to load:")
+                    if #Executor.demoFiles == 0 and Executor.demoError == "" then
+                        imgui.text("No demo files found.")
+                    else
+                        for _, filename in Executor.demoFiles do
+                            if imgui.selectable(filename, Executor.selectedDemo == filename, {
+                                flags = imgui.Flag.Selectable.NoAutoClosePopups,
+                            }) then
+                                Executor.selectedDemo = filename
+                                Executor.demoError = ""
+                            end
+                        end
+                    end
+
+                    if Executor.demoError ~= "" then
+                        imgui.text("Error: " .. Executor.demoError)
+                    end
+
+                    if imgui.button("Load") then
+                        if Executor.selectedDemo == "" then
+                            Executor.demoError = "Select a demo file"
+                            Executor.setStatus(false, Executor.demoError)
+                        else
+                            local source, err = geode.fs.read("resources", Executor.selectedDemo)
+                            if source then
+                                Executor.code = source
+                                Executor.setStatus(true, "Loaded " .. Executor.selectedDemo)
+                                imgui.closeCurrentPopup()
+                            else
+                                Executor.demoError = tostring(err)
+                                Executor.setStatus(false, Executor.demoError)
+                            end
+                        end
+                    end
+
+                    imgui.sameLine()
+                    if imgui.button("Cancel") then
+                        imgui.closeCurrentPopup()
+                    end
+                end)
 
                 imgui.text(Executor.status)
             end, { size = { x = Executor.windowWidth, y = Executor.windowHeight } })
