@@ -2,6 +2,10 @@
 
 [Check the GitHub commits for more details](https://github.com/ItMe12s/LuauAPI).
 
+## 0.1.0-beta.17
+
+Adding stuff here...
+
 ## 0.1.0-beta.16
 
 - Added generated Luau support for Geode `arc::TaskHandle<T>` returns.
