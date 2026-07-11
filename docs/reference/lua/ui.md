@@ -3,7 +3,7 @@
 ## Summary
 
 How to build interface elements from a script using the Geode UI classes exposed under `geode.*`.
-Covers the factory pattern, the layout system, and quick popups.
+Covers the factory pattern, the layout system, popup queues, and scene helpers.
 Signatures come from [type stubs](type-stubs.md). For class behavior, see the [Geode docs](https://docs.geode-sdk.org/).
 
 ## Which UI to use
@@ -75,6 +75,29 @@ geode.createQuickPopup(
 )
 ```
 
+## Popup queue
+
+`geode.PopupManager` serializes modal popups so they do not overlap.
+Use `alert` for a one-button message, `quickPopup` for a two-button prompt, or `manage` to queue an existing popup.
+`geode.PopupManager.DEFAULT_WIDTH` is the standard alert width.
+
+`manage` returns a `ManagedPopup`:
+
+| Method | Role |
+| --- | --- |
+| `getInner` | Get the managed native popup |
+| `setPersistent` | Keep the popup visible across scene transitions |
+| `setPriority` | Set its queue priority |
+| `blockClosingFor` | Temporarily prevent closing |
+| `showInstant` | Show immediately |
+| `showQueue` | Add it to the popup queue |
+| `isShown` | Whether it is currently shown |
+| `shouldPreventClosing` | Whether closing is currently blocked |
+
+Use `geode.PopupManager.isManaged(popup)` to test a popup and
+`geode.PopupManager.hasPendingPopups()` to test the queue.
+Popup callbacks follow [Limits and errors](../cpp/limits-and-errors.md).
+
 ## Other geode helpers
 
 The stub also exposes a few free functions on `geode` itself:
@@ -86,6 +109,9 @@ The stub also exposes a few free functions on `geode` itself:
   It returns nil when the mod is installed.
   Otherwise it returns a `GeodeTaskHandle<boolean>` for the async lookup.
 - `geode.Notification.create(text, icon, duration)` for toast overlays
+- `geode.pushSceneWithLayer(layer)` to wrap a `CCLayer` in a new scene and push it
+
+`geode.Button:setDisplayNode(node)` replaces a button's display node while preserving Geode's button Z-order behavior.
 
 Not every factory is listed here.
 For the rest, read [type stubs](type-stubs.md) and the [Geode SDK docs](https://docs.geode-sdk.org/).
@@ -115,4 +141,7 @@ See [type stubs](type-stubs.md). For class behavior, read the upstream [Geode UI
 
 - `tools/luau_codegen/emit/luau_types/factories.py`
 - `tools/luau_codegen/parse/geode_sdk.py`
-- Generated `types/geode.d.luau` at build time
+- `tools/luau_codegen/model/free_fn_sources.py`
+- `tools/luau_codegen/extra_bindings/popup.dluau`
+- `src/bindings/geode/GeodePopupBinding.cpp`
+- `types/geode.d.luau`

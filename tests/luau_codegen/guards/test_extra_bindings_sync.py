@@ -18,6 +18,27 @@ _EXTRA_BINDINGS_DIR = os.path.join(_REPO_ROOT, "tools", "luau_codegen", "extra_b
 _TYPE_STUBS_DOC = os.path.join(_REPO_ROOT, "docs", "reference", "lua", "type-stubs.md")
 
 _EXTRA_BINDING_SOURCES = {
+    "color": {
+        "dluau": "tools/luau_codegen/extra_bindings/color.dluau",
+        "cpp": "src/bindings/geode/GeodeSmallBindings.cpp",
+        "type_name": "ColorNamespace",
+        "start_marker": 'getOrCreateTable(L, "geode.Color")',
+        "end_marker": "return geode::Ok();",
+    },
+    "managed_popup": {
+        "dluau": "tools/luau_codegen/extra_bindings/popup.dluau",
+        "cpp": "src/bindings/geode/GeodePopupBinding.cpp",
+        "type_name": "ManagedPopup",
+        "start_marker": "void registerManagedPopupMetatable(lua_State* L) {",
+        "end_marker": "std::string optString(",
+    },
+    "popup_manager": {
+        "dluau": "tools/luau_codegen/extra_bindings/popup.dluau",
+        "cpp": "src/bindings/geode/GeodePopupBinding.cpp",
+        "type_name": "PopupManagerNamespace",
+        "start_marker": 'getOrCreateTable(L, "geode.PopupManager")',
+        "end_marker": "return geode::Ok();",
+    },
     "fs": {
         "dluau": "tools/luau_codegen/extra_bindings/fs.dluau",
         "cpp": "src/bindings/geode/GeodeFsBinding.cpp",
@@ -136,8 +157,9 @@ _EXTRA_BINDING_SOURCES = {
     },
 }
 
-_DECLARED_FN_FIELD = re.compile(r"^\s*(\w+)\s*:\s*\(", re.MULTILINE)
+_DECLARED_FN_FIELD = re.compile(r"^\s*(\w+)\s*:\s*(?:<[^>]+>\s*)?\(", re.MULTILINE)
 _SET_CFUNCTION = re.compile(r'setTableCFunction\(L,\s*[^,]+,\s*"([^"]+)"')
+_LUA_REG_CFUNCTION = re.compile(r'\{\s*"([^"]+)"\s*,\s*&\w+\s*\}')
 
 
 def _read_repo_file(rel_path: str) -> str:
@@ -180,12 +202,21 @@ def _registered_namespace_fields(
         found_marker = True
         end = body.find(end_marker, start)
         assert end != -1, f"missing end marker {end_marker} in {source}"
-        registered.update(_SET_CFUNCTION.findall(body[start:end]))
+        section = body[start:end]
+        registered.update(_SET_CFUNCTION.findall(section))
+        registered.update(_LUA_REG_CFUNCTION.findall(section))
     assert found_marker, f"missing start marker {start_marker}"
     return registered
 
 
 class ExtraBindingsSyncTests(unittest.TestCase):
+    def test_managed_popup_uses_luau_native_userdata_destructor(self) -> None:
+        cpp = _read_repo_file("src/bindings/geode/GeodePopupBinding.cpp")
+        support = _read_repo_file("src/bindings/geode/GeodeBindingSupport.hpp")
+        self.assertIn("geode_detail::pushOwned", cpp)
+        self.assertIn("lua_newuserdatataggedwithmetatable", support)
+        self.assertIn("destroyOwned", support)
+
     def test_type_stubs_doc_lists_every_extra_binding(self) -> None:
         doc = _read_repo_file(os.path.relpath(_TYPE_STUBS_DOC, _REPO_ROOT))
         dluau_files = sorted(

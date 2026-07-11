@@ -92,6 +92,52 @@ class LuauTypeEmissionTests(unittest.TestCase):
         )
         self.assertIn("enumKeyCodes: EnumKeyCodesNamespace", text)
 
+    def test_geode_580_controller_keys_reach_luau_declarations(self) -> None:
+        names = (
+            "CONTROLLER2_A",
+            "CONTROLLER2_RTHUMBSTICK_RIGHT",
+            "CONTROLLER_L3",
+            "CONTROLLER2_L3",
+            "CONTROLLER_R3",
+            "CONTROLLER2_R3",
+        )
+        root = Root(classes=[Class(name="CCObject", namespace="cocos2d")])
+        root.codegen_ctx = CodegenContext.with_geode_enums(
+            {},
+            cocos_enum_members={
+                "enumKeyCodes": [(name, 0x3EA + index) for index, name in enumerate(names)]
+            },
+        )
+
+        text = types_text(emit_luau_types(root, manual_fields=MANUAL_FREE_FN_FIELDS))
+
+        for name in names:
+            with self.subTest(name=name):
+                self.assertIn(f"{name}: number", text)
+
+    def test_geode_580_button_set_display_node_reaches_luau_declarations(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        ccnode = Class(name="CCNode", namespace="cocos2d", bases=["CCObject"])
+        ccnode_rgba = Class(name="CCNodeRGBA", namespace="cocos2d", bases=["CCNode"])
+        button = Class(
+            name="Button",
+            namespace="geode",
+            bases=["cocos2d::CCNodeRGBA"],
+            methods=[
+                Method(
+                    name="setDisplayNode",
+                    ret="void",
+                    args=[Arg("CCNode*", "node")],
+                    platforms=all_platforms("0x1"),
+                )
+            ],
+        )
+
+        root = Root(classes=[ccobject, ccnode, ccnode_rgba, button])
+        text = types_text(emit_luau_types(root))
+
+        self.assertIn("function setDisplayNode(self, arg1: CCNode)", text)
+
     def test_gd_and_geode_enum_namespaces_use_scanned_members(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")
         root = Root(classes=[ccobject])

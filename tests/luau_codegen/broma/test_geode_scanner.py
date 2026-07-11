@@ -400,6 +400,7 @@ class ExtraScanScopeTests(unittest.TestCase):
             rels,
             {
                 "utils/general.hpp",
+                "ui/General.hpp",
                 "ui/Popup.hpp",
                 "ui/GeodeUI.hpp",
                 "utils/string.hpp",
@@ -407,6 +408,66 @@ class ExtraScanScopeTests(unittest.TestCase):
                 "utils/cocos.hpp",
             },
         )
+
+        general = next(spec for spec in FREE_FUNCTION_SOURCES if spec[0] == "ui/General.hpp")
+        self.assertEqual(general[1], frozenset({"geode"}))
+        self.assertEqual(general[2], frozenset({"pushSceneWithLayer"}))
+
+    def test_general_header_only_scans_push_scene_with_layer(self) -> None:
+        from luau_codegen.parse.geode_sdk import scan_geode_functions  # type: ignore[import-unresolved]
+
+        tmpdir = tempfile.mkdtemp()
+        try:
+            ui_dir = os.path.join(tmpdir, "loader", "include", "Geode", "ui")
+            os.makedirs(ui_dir)
+            with open(os.path.join(ui_dir, "General.hpp"), "w", encoding="utf-8") as f:
+                f.write(
+                    "namespace geode { "
+                    "GEODE_DLL cocos2d::CCSprite* createLayerBG(); "
+                    "GEODE_DLL void pushSceneWithLayer(cocos2d::CCLayer* layer); "
+                    "}"
+                )
+
+            fns = scan_geode_functions(tmpdir)
+
+            self.assertEqual(
+                [(fn.namespace, fn.name) for fn in fns],
+                [("geode", "pushSceneWithLayer")],
+            )
+            self.assertEqual(fns[0].ret, "void")
+            self.assertEqual(
+                [(arg.type, arg.name) for arg in fns[0].args],
+                [("cocos2d::CCLayer*", "layer")],
+            )
+        finally:
+            shutil.rmtree(tmpdir)
+
+    def test_button_set_display_node_scanned(self) -> None:
+        from luau_codegen.parse.geode_sdk import scan_geode_sdk  # type: ignore[import-unresolved]
+
+        tmpdir = tempfile.mkdtemp()
+        try:
+            include_dir = os.path.join(tmpdir, "loader", "include", "Geode")
+            ui_dir = os.path.join(include_dir, "ui")
+            os.makedirs(ui_dir)
+            with open(os.path.join(include_dir, "UI.hpp"), "w", encoding="utf-8") as f:
+                f.write('#include "ui/Button.hpp"\n')
+            with open(os.path.join(ui_dir, "Button.hpp"), "w", encoding="utf-8") as f:
+                f.write(
+                    "namespace geode { "
+                    "class GEODE_DLL Button : public cocos2d::CCNodeRGBA { "
+                    "public: void setDisplayNode(CCNode* node); "
+                    "}; "
+                    "}"
+                )
+
+            button = next(cls for cls in scan_geode_sdk(tmpdir) if cls.name == "Button")
+            method = next(method for method in button.methods if method.name == "setDisplayNode")
+
+            self.assertEqual(method.ret, "void")
+            self.assertEqual([(arg.type, arg.name) for arg in method.args], [("CCNode*", "node")])
+        finally:
+            shutil.rmtree(tmpdir)
 
     def test_multiline_free_function_decl_scanned(self) -> None:
         from luau_codegen.parse.geode_sdk import scan_geode_functions  # type: ignore[import-unresolved]

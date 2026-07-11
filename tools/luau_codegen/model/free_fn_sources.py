@@ -18,6 +18,7 @@ FREE_FUNCTION_SOURCES: Tuple[FreeFnSource, ...] = (
         ),
         None,
     ),
+    ("ui/General.hpp", frozenset({"geode"}), frozenset({"pushSceneWithLayer"})),
     ("ui/Popup.hpp", frozenset({"geode"}), frozenset({"createQuickPopup"})),
     ("ui/GeodeUI.hpp", frozenset({"geode"}), None),
     ("utils/string.hpp", frozenset({"geode::utils::string"}), None),

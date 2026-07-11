@@ -13,8 +13,15 @@ def manual_field_names_by_path(
 
 
 MANUAL_FREE_FN_FIELDS: Dict[str, List[str]] = {
+    "geode": [
+        "Color: ColorNamespace",
+        "PopupManager: PopupManagerNamespace",
+    ],
     "geode.utils": [
         "web: WebNamespace",
+    ],
+    "geode.utils.random": [
+        "choice: <T>(values: {T}) -> T",
     ],
     "geode.cocos": [
         "invert3B: (arg1: RGBColor) -> RGBColor",

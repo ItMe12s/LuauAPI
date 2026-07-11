@@ -1,3 +1,4 @@
+#include "bindings/geode/GeodeBindingSupport.hpp"
 #include "bindings/geode/JsonConvert.hpp"
 #include "core/Config.hpp"
 #include "framework/Binding.hpp"
@@ -16,11 +17,13 @@
     #include "framework/usertype/Usertype.hpp"
 
     #include <Geode/Geode.hpp>
+    #include <Geode/utils/ColorCode.hpp>
     #include <Geode/utils/ColorProvider.hpp>
     #include <Geode/utils/Keyboard.hpp>
     #include <Geode/utils/VersionInfo.hpp>
     #include <Geode/utils/base64.hpp>
     #include <Geode/utils/permission.hpp>
+    #include <Geode/utils/random.hpp>
     #include <cocos2d.h>
     #include <cstdint>
     #include <memory>
@@ -108,6 +111,134 @@ namespace {
     }
 
 #ifndef LUAUAPI_HOST_TESTS
+    // geode.Color
+
+    geode::Color checkColor(lua_State* L, int idx, char const* method) {
+        auto channels = geode_detail::checkColorChannels(L, idx, method);
+        return geode::Color(channels[0], channels[1], channels[2], channels[3]);
+    }
+
+    cocos2d::extension::HSV checkHSV(lua_State* L, int idx, char const* method) {
+        luaL_checktype(L, idx, LUA_TTABLE);
+        cocos2d::extension::HSV hsv{};
+        lua_getfield(L, idx, "h");
+        hsv.h = geode_detail::checkFinite(L, -1, method);
+        lua_pop(L, 1);
+        lua_getfield(L, idx, "s");
+        hsv.s = geode_detail::checkFinite(L, -1, method);
+        lua_pop(L, 1);
+        lua_getfield(L, idx, "v");
+        hsv.v = geode_detail::checkFinite(L, -1, method);
+        lua_pop(L, 1);
+        return hsv;
+    }
+
+    void pushColor(lua_State* L, geode::Color const& color) {
+        push(L, color.to4B());
+    }
+
+    void pushHSV(lua_State* L, cocos2d::extension::HSV const& hsv) {
+        lua_createtable(L, 0, 3);
+        lua_pushnumber(L, hsv.h);
+        lua_setfield(L, -2, "h");
+        lua_pushnumber(L, hsv.s);
+        lua_setfield(L, -2, "s");
+        lua_pushnumber(L, hsv.v);
+        lua_setfield(L, -2, "v");
+    }
+
+    int colorParse(lua_State* L) {
+        auto hex = check<std::string>(L, 1, "geode.Color.parse");
+        auto result = geode::Color::parse(hex);
+        if (result.isErr()) return pushNilErr(L, result.unwrapErr());
+        pushColor(L, result.unwrap());
+        return 1;
+    }
+
+    int colorFromHSV(lua_State* L) {
+        auto hsv = checkHSV(L, 1, "geode.Color.fromHSV");
+        int alpha = 255;
+        if (lua_gettop(L) >= 2 && !lua_isnil(L, 2)) {
+            alpha = geode_detail::checkByte(L, 2, "geode.Color.fromHSV");
+        }
+        pushColor(L, geode::Color(hsv, static_cast<GLubyte>(alpha)));
+        return 1;
+    }
+
+    int colorToHSV(lua_State* L) {
+        pushHSV(L, checkColor(L, 1, "geode.Color.toHSV").toHSV());
+        return 1;
+    }
+
+    int colorTo3B(lua_State* L) {
+        push(L, checkColor(L, 1, "geode.Color.to3B").to3B());
+        return 1;
+    }
+
+    int colorTo4B(lua_State* L) {
+        pushColor(L, checkColor(L, 1, "geode.Color.to4B"));
+        return 1;
+    }
+
+    int colorTo4F(lua_State* L) {
+        push(L, checkColor(L, 1, "geode.Color.to4F").to4F());
+        return 1;
+    }
+
+    int colorApplyHSV(lua_State* L) {
+        auto color = checkColor(L, 1, "geode.Color.applyHSV");
+        color.applyHSV(checkHSV(L, 2, "geode.Color.applyHSV"));
+        pushColor(L, color);
+        return 1;
+    }
+
+    int colorApplyH(lua_State* L) {
+        auto color = checkColor(L, 1, "geode.Color.applyH");
+        color.applyH(geode_detail::checkFinite(L, 2, "geode.Color.applyH"));
+        pushColor(L, color);
+        return 1;
+    }
+
+    int colorApplyS(lua_State* L) {
+        auto color = checkColor(L, 1, "geode.Color.applyS");
+        color.applyS(geode_detail::checkFinite(L, 2, "geode.Color.applyS"));
+        pushColor(L, color);
+        return 1;
+    }
+
+    int colorApplyV(lua_State* L) {
+        auto color = checkColor(L, 1, "geode.Color.applyV");
+        color.applyV(geode_detail::checkFinite(L, 2, "geode.Color.applyV"));
+        pushColor(L, color);
+        return 1;
+    }
+
+    int colorIsInvisible(lua_State* L) {
+        lua_pushboolean(L, checkColor(L, 1, "geode.Color.isInvisible").isInvisible());
+        return 1;
+    }
+
+    int colorIsTranslucent(lua_State* L) {
+        lua_pushboolean(L, checkColor(L, 1, "geode.Color.isTranslucent").isTranslucent());
+        return 1;
+    }
+
+    int colorIsOpaque(lua_State* L) {
+        lua_pushboolean(L, checkColor(L, 1, "geode.Color.isOpaque").isOpaque());
+        return 1;
+    }
+
+    // geode.utils.random
+
+    int randomChoice(lua_State* L) {
+        constexpr char const* method = "geode.utils.random.choice";
+        luaL_checktype(L, 1, LUA_TTABLE);
+        auto len = geode_detail::checkDenseArray(L, 1, method);
+        auto index = geode::utils::random::generate<std::size_t>(1, len + 1);
+        lua_rawgeti(L, 1, static_cast<int>(index));
+        return 1;
+    }
+
     // geode.VersionInfo
 
     int viParse(lua_State* L) {
@@ -307,6 +438,37 @@ namespace {
 
 namespace luax {
 #ifndef LUAUAPI_HOST_TESTS
+    geode::Result<void> registerGeodeColor(lua_State* L) {
+        getOrCreateTable(L, "geode.Color");
+        setTableCFunction(L, -1, "parse", &colorParse);
+        setTableCFunction(L, -1, "fromHSV", &colorFromHSV);
+        setTableCFunction(L, -1, "toHSV", &colorToHSV);
+        setTableCFunction(L, -1, "to3B", &colorTo3B);
+        setTableCFunction(L, -1, "to4B", &colorTo4B);
+        setTableCFunction(L, -1, "to4F", &colorTo4F);
+        setTableCFunction(L, -1, "applyHSV", &colorApplyHSV);
+        setTableCFunction(L, -1, "applyH", &colorApplyH);
+        setTableCFunction(L, -1, "applyHue", &colorApplyH);
+        setTableCFunction(L, -1, "applyS", &colorApplyS);
+        setTableCFunction(L, -1, "applySaturation", &colorApplyS);
+        setTableCFunction(L, -1, "applyV", &colorApplyV);
+        setTableCFunction(L, -1, "applyValue", &colorApplyV);
+        setTableCFunction(L, -1, "applyB", &colorApplyV);
+        setTableCFunction(L, -1, "applyBrightness", &colorApplyV);
+        setTableCFunction(L, -1, "isInvisible", &colorIsInvisible);
+        setTableCFunction(L, -1, "isTranslucent", &colorIsTranslucent);
+        setTableCFunction(L, -1, "isOpaque", &colorIsOpaque);
+        lua_pop(L, 1);
+        return geode::Ok();
+    }
+
+    geode::Result<void> registerGeodeRandom(lua_State* L) {
+        getOrCreateTable(L, "geode.utils.random");
+        setTableCFunction(L, -1, "choice", &randomChoice);
+        lua_pop(L, 1);
+        return geode::Ok();
+    }
+
     geode::Result<void> registerGeodeBase64(lua_State* L) {
         getOrCreateTable(L, "geode.utils.base64");
         setTableCFunction(L, -1, "encode", &b64Encode);
@@ -382,6 +544,8 @@ namespace luax {
 } // namespace luax
 
 #if !defined(LUAUAPI_HOST_TESTS)
+LUAX_BINDING(geode_color_lib, registerGeodeColor)
+LUAX_BINDING(geode_random_lib, registerGeodeRandom)
 LUAX_BINDING(geode_base64_lib, registerGeodeBase64)
 LUAX_BINDING(geode_json_lib, registerGeodeJson)
 LUAX_BINDING(geode_version_lib, registerGeodeVersion)

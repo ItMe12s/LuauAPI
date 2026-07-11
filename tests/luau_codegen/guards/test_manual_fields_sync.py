@@ -27,6 +27,7 @@ _NAMESPACE_SOURCES = {
     "geode.ColorProvider": "src/bindings/geode/GeodeSmallBindings.cpp",
     "geode.VersionInfo": "src/bindings/geode/GeodeSmallBindings.cpp",
     "geode.Keybind": "src/bindings/geode/GeodeSmallBindings.cpp",
+    "geode.utils.random": "src/bindings/geode/GeodeSmallBindings.cpp",
     "geode.KeyboardModifier": "src/bindings/geode/GeodeKeyboardBinding.cpp",
     "geode.KeyboardInputData": "src/bindings/geode/GeodeKeyboardBinding.cpp",
 }

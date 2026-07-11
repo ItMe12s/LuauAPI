@@ -1,0 +1,26 @@
+export type HSVColor = {
+    h: number,
+    s: number,
+    v: number,
+}
+
+export type ColorNamespace = {
+    parse: (hex: string) -> (RGBAColor?, string?),
+    fromHSV: (hsv: HSVColor, alpha: number?) -> RGBAColor,
+    toHSV: (color: RGBAColor) -> HSVColor,
+    to3B: (color: RGBAColor) -> RGBColor,
+    to4B: (color: RGBAColor) -> RGBAColor,
+    to4F: (color: RGBAColor) -> RGBAFloatColor,
+    applyHSV: (color: RGBAColor, hsv: HSVColor) -> RGBAColor,
+    applyH: (color: RGBAColor, hue: number) -> RGBAColor,
+    applyHue: (color: RGBAColor, hue: number) -> RGBAColor,
+    applyS: (color: RGBAColor, saturation: number) -> RGBAColor,
+    applySaturation: (color: RGBAColor, saturation: number) -> RGBAColor,
+    applyV: (color: RGBAColor, value: number) -> RGBAColor,
+    applyValue: (color: RGBAColor, value: number) -> RGBAColor,
+    applyB: (color: RGBAColor, brightness: number) -> RGBAColor,
+    applyBrightness: (color: RGBAColor, brightness: number) -> RGBAColor,
+    isInvisible: (color: RGBAColor) -> boolean,
+    isTranslucent: (color: RGBAColor) -> boolean,
+    isOpaque: (color: RGBAColor) -> boolean,
+}

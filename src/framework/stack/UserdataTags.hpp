@@ -15,10 +15,11 @@ namespace luax::detail {
     constexpr std::uint32_t kMaterialUserdataTag = 9;
     constexpr std::uint32_t kTextureUserdataTag = 10;
     constexpr std::uint32_t kImGuiFontHandleUserdataTag = 11;
+    constexpr std::uint32_t kManagedPopupUserdataTag = 12;
     // Luau userdata tags are uint8_t.
     // All usertypes share this tag, the real type id lives in UserdataBlock::typeTag.
-    constexpr std::uint32_t kSharedUsertypeTag = 12;
-    constexpr std::uint32_t kFirstDynamicUsertypeTag = 13;
+    constexpr std::uint32_t kSharedUsertypeTag = 13;
+    constexpr std::uint32_t kFirstDynamicUsertypeTag = 14;
 
     static_assert(
         kFirstDynamicUsertypeTag < LUA_UTAG_LIMIT, "Reserved userdata tags exceed LUA_UTAG_LIMIT"
@@ -34,7 +35,8 @@ namespace luax::detail {
             kMeshAssetUserdataTag < kMaterialUserdataTag &&
             kMaterialUserdataTag < kTextureUserdataTag &&
             kTextureUserdataTag < kImGuiFontHandleUserdataTag &&
-            kImGuiFontHandleUserdataTag < kSharedUsertypeTag &&
+            kImGuiFontHandleUserdataTag < kManagedPopupUserdataTag &&
+            kManagedPopupUserdataTag < kSharedUsertypeTag &&
             kSharedUsertypeTag < kFirstDynamicUsertypeTag,
         "Reserved userdata tags must be unique and ordered"
     );
@@ -81,6 +83,10 @@ namespace luax::detail {
 
     constexpr int imguiFontHandleTag() noexcept {
         return static_cast<int>(kImGuiFontHandleUserdataTag);
+    }
+
+    constexpr int managedPopupTag() noexcept {
+        return static_cast<int>(kManagedPopupUserdataTag);
     }
 
     constexpr bool isReservedUserdataTag(std::uint32_t tag) noexcept {

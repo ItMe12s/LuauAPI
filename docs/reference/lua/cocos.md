@@ -15,6 +15,9 @@ Colors use plain tables:
 | `RGBColor` | `{ r, g, b }` | each field 0 to 255 |
 | `RGBAColor` | `{ r, g, b, a }` | each field 0 to 255 |
 | `RGBAFloatColor` | `{ r, g, b, a }` | each field 0.0 to 1.0 |
+| `HSVColor` | `{ h, s, v }` | hue, saturation, and value |
+
+`geode.Color` provides Geode's color conversions and adjustments while keeping these plain table shapes.
 
 ## Node functions
 
@@ -37,6 +40,22 @@ Colors use plain tables:
 | `limitNodeHeight(node: CCNode, height: number, default: number, min: number) -> ()` | Scale to fit a height. |
 
 ## Color functions
+
+### geode.Color
+
+| Function | Description |
+| --- | --- |
+| `parse(hex) -> (RGBAColor?, string?)` | Parse a hex color with a recoverable error result. |
+| `fromHSV(hsv, alpha?) -> RGBAColor` | Convert HSV to RGBA. |
+| `toHSV(color) -> HSVColor` | Convert RGBA to HSV. |
+| `to3B`, `to4B`, `to4F` | Convert between supported color table shapes. |
+| `applyHSV(color, hsv) -> RGBAColor` | Apply an HSV adjustment without mutating the input. |
+| `isInvisible`, `isTranslucent`, `isOpaque` | Test alpha state. |
+
+Geode's H/S/V/B adjustment aliases are also exposed on `geode.Color` and return a new color.
+Use editor autocomplete for their exact names and signatures.
+
+### geode.cocos
 
 | Function | Description |
 | --- | --- |
@@ -62,6 +81,9 @@ With `permissive` true, a short string like `"f"` reads as white.
 geode.cocos.enumKeyCodes.KEY_A
 geode.cocos.enumKeyCodes.KEY_Escape
 geode.cocos.enumKeyCodes.MOUSE_4
+geode.cocos.enumKeyCodes.CONTROLLER2_A
+geode.cocos.enumKeyCodes.CONTROLLER_L3
+geode.cocos.enumKeyCodes.CONTROLLER2_R3
 ```
 
 `geode.cocos.enumKeyCodes` contains the full cocos `enumKeyCodes` table.
@@ -93,5 +115,8 @@ print(cc.lighten3B(red, 20).r) -- 255
 
 - `tools/luau_codegen/model/free_fn_sources.py`
 - `src/bindings/geode/GeodeCocosBinding.cpp`
+- `src/bindings/geode/GeodeSmallBindings.cpp`
+- `tools/luau_codegen/extra_bindings/color.dluau`
 - `tools/luau_codegen/emit/luau_types/manual_fields.py`
-- Generated free-function bindings at build time
+- `build/luauapi-gen/src/`
+- `types/geode.d.luau`

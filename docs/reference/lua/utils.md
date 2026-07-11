@@ -84,6 +84,7 @@ At runtime you must pass a decimal integer string such as `"16"`, not a bare num
 | `generateHexString` | Random lowercase hex string with the given length |
 | `generateAlphanumericString` | Random string using `[0-9A-Za-z]` |
 | `generateString` | Random string from a custom alphabet. `alphabet` must not be empty |
+| `choice` | Random value from a dense, one-based array |
 
 ```lua
 local rand = geode.utils.random
@@ -93,7 +94,12 @@ print(id)
 
 local token = rand.generateHexString("16")
 print(token)
+
+local direction = rand.choice({ "left", "right" })
+print(direction)
 ```
+
+`choice` ignores non-array fields. It errors when the array is empty or has holes.
 
 ## string
 
@@ -136,4 +142,5 @@ print(str.count("hello", string.byte("l"))) -- "2"
 - `tools/luau_codegen/extra_bindings/web.dluau`
 - `tools/luau_codegen/model/free_fn_sources.py`
 - `tools/luau_codegen/emit/luau_types/manual_fields.py`
-- Generated free-function bindings and `types/geode.d.luau` at build time
+- `build/luauapi-gen/src/`
+- `types/geode.d.luau`

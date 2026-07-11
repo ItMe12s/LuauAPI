@@ -2,9 +2,17 @@
 
 [Check the GitHub commits for more details](https://github.com/ItMe12s/LuauAPI).
 
+## Announcements
+
+- `11/7/2026`: Bindings that are automatically picked up likely won't be included in the changelog.
+
 ## 0.1.0-beta.17
 
-Adding stuff here...
+- Added `geode.PopupManager` and `ManagedPopup` for queued popups.
+- Added the `geode.Color` facade for parsing, conversion, HSV adjustment, and alpha checks.
+- Added `geode.pushSceneWithLayer`, `geode.Button:setDisplayNode`, and `geode.utils.random.choice`.
+- Added `load-demo` button in the executor.
+- Updated to Geode SDK 5.8.1.
 
 ## 0.1.0-beta.16
 

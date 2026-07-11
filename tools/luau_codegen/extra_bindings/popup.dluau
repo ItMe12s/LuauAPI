@@ -1,0 +1,19 @@
+export type ManagedPopup = {
+    getInner: (self: ManagedPopup) -> FLAlertLayer?,
+    setPersistent: (self: ManagedPopup, state: boolean?) -> (),
+    setPriority: (self: ManagedPopup, state: boolean?) -> (),
+    blockClosingFor: (self: ManagedPopup, seconds: number) -> (),
+    showInstant: (self: ManagedPopup) -> (),
+    showQueue: (self: ManagedPopup) -> (),
+    isShown: (self: ManagedPopup) -> boolean,
+    shouldPreventClosing: (self: ManagedPopup) -> boolean,
+}
+
+export type PopupManagerNamespace = {
+    DEFAULT_WIDTH: number,
+    alert: (title: string, content: string, btn1: string?, btn2: string?, width: number?) -> ManagedPopup,
+    quickPopup: (title: string, content: string, btn1: string?, btn2: string?, callback: ((layer: FLAlertLayer?, btn2: boolean) -> ())?, width: number?) -> ManagedPopup,
+    manage: (alert: FLAlertLayer) -> ManagedPopup,
+    isManaged: (alert: FLAlertLayer) -> boolean,
+    hasPendingPopups: () -> boolean,
+}
