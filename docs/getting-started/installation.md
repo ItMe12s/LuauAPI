@@ -15,7 +15,7 @@ Download the `.geode` file and place it in your mods folder if you install manua
 LuauAPI ships with the mod id `imes.luauapi`.
 It loads early with first priority, so the runtime is ready for other mods as soon as the game starts.
 
-Requires Geode **5.7.1** or newer (see `mod.json` `"geode"` field).
+Requires Geode **5.8.1** or newer (see `mod.json` `"geode"` field).
 
 ## Depend on it
 

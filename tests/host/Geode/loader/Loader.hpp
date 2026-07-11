@@ -17,7 +17,7 @@ namespace geode {
         }
 
         VersionInfo getVersion() const {
-            return VersionInfo("v5.7.1");
+            return VersionInfo("v5.8.1");
         }
     };
 } // namespace geode
