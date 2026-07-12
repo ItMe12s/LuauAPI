@@ -66,7 +66,7 @@ The stub is generated output, not source. Add this to your mod `.gitignore`.
 
 ```text
 # LuauAPI types
-/types
+/types/
 ```
 
 ## Step 7: reload
