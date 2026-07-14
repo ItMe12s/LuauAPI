@@ -40,8 +40,8 @@ namespace luax {
         constexpr char const kTracebackName[] = "luax:traceback";
 
         std::optional<Runtime>& runtimeStorage() {
-            static std::optional<Runtime> runtime;
-            return runtime;
+            static auto* runtime = new std::optional<Runtime>;
+            return *runtime;
         }
 
         std::atomic_bool& shuttingDownStorage() {
