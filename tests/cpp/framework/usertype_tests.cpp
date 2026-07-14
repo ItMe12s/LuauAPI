@@ -633,7 +633,7 @@ TEST_CASE("borrowed userdata rejects access after borrowed target is dropped") {
     REQUIRE(lua_isuserdata(L, -1));
     REQUIRE(luax::detail::tryCandidate(L, -1).obj == node);
 
-    node->release(); // pool-only RC=1
+    node->release();
     luax::dropBorrowedTargetIfFinalRelease(node);
     REQUIRE(luax::detail::tryCandidate(L, -1).obj == nullptr);
 
