@@ -85,7 +85,9 @@ The `static_cast` through `void*` is intentional and safe.
 The map is keyed by the real `CCNode*` handed to `Fields::push`.
 For an untracked object the `find` misses and the cast result is never dereferenced.
 `retainCount` runs only after the map confirms the object is one of ours.
-`eraseFieldEntry` parks the owner `WeakRef` so its destructor cannot call `isManaged` on this cascade.
+On the release cascade, `eraseFieldEntry` parks the owner `WeakRef` only while `Runtime::isShuttingDown()` is true.
+On a normal erase it destroys the WeakRef so Geode `WeakRefPool::forget` can run.
+Parking on every erase would leak the pool retain.
 
 `evictTrampolinesIfFinalRelease` in `src/framework/callback/LuaTrampolineRegistry.cpp` follows the same shape.
 It does its own `anchorMap().find(anchor)` and returns on a miss before any call on the anchor.
@@ -115,8 +117,9 @@ It calls `release` on owned objects it has held onto.
 
 A release inside the drain re-enters the global hook.
 So the drain inherits the same risk: every object it releases is one more pass through the hook body.
-The drain mitigates this by parking weak refs for pool safety (`WeakRefShutdown.hpp`)
-and by checking `Runtime::isShuttingDown()` to short-circuit during teardown.
+On a normal drain the WeakRefs are destroyed after the owned releases so the pool retain can drop.
+During shutdown the drain parks WeakRefs instead (`WeakRefShutdown.hpp`) and skips the logical release,
+because pool teardown is unsafe mid-exit.
 Any new drain logic must assume the released object is already being destroyed and must not inspect it after release.
 
 ## When you can use a cast freely

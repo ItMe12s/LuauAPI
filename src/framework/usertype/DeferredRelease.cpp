@@ -30,7 +30,9 @@ namespace luax {
         }
 
         void disposeBorrowedEntry(geode::WeakRef<cocos2d::CCObject>&& weak) {
-            parkWeakRefForPoolSafety(std::move(weak));
+            if (Runtime::isShuttingDown()) {
+                parkWeakRefForPoolSafety(std::move(weak));
+            }
         }
 
         void disposeOwnedEntry(OwnedDefer& entry, bool logicalRelease) {
@@ -40,7 +42,9 @@ namespace luax {
                 }
                 entry.ptr->release();
             }
-            parkWeakRefForPoolSafety(std::move(entry.weak));
+            if (Runtime::isShuttingDown()) {
+                parkWeakRefForPoolSafety(std::move(entry.weak));
+            }
         }
 
         void drainOwnedBatch(std::vector<OwnedDefer>& owned, bool logicalRelease) {

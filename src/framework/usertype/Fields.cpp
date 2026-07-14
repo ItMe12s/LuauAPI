@@ -1,5 +1,6 @@
 #include "framework/usertype/Fields.hpp"
 
+#include "core/Runtime.hpp"
 #include "framework/usertype/WeakRefShutdown.hpp"
 
 #include <Geode/Geode.hpp>
@@ -29,7 +30,9 @@ namespace luax {
             std::unordered_map<cocos2d::CCNode*, FieldEntry>::iterator it
         ) {
             it->second.table.reset();
-            detail::parkWeakRefForPoolSafety(std::move(it->second.owner));
+            if (Runtime::isShuttingDown()) {
+                detail::parkWeakRefForPoolSafety(std::move(it->second.owner));
+            }
             tables.erase(it);
         }
     } // namespace
@@ -100,9 +103,16 @@ namespace luax {
 
     void Fields::clear() {
         auto& tables = fieldTables();
+        if (Runtime::isShuttingDown()) {
+            for (auto& [_, entry] : tables) {
+                entry.table.reset();
+                detail::parkWeakRefForPoolSafety(std::move(entry.owner));
+            }
+            tables.clear();
+            return;
+        }
         for (auto& [_, entry] : tables) {
             entry.table.reset();
-            detail::parkWeakRefForPoolSafety(std::move(entry.owner));
         }
         tables.clear();
     }

@@ -114,14 +114,13 @@ TEST_CASE("owned drain applies one logical release with queue keepalive") {
     REQUIRE(obj->retainCount() == 2);
 
     luax::deferOwnedRelease(obj);
-    REQUIRE(obj->retainCount() == 4);
+    REQUIRE(obj->retainCount() == 3);
     REQUIRE(obj->releaseCallCount() == 0);
 
     luax::drainDeferredReleases();
     REQUIRE(obj->releaseCallCount() == 2);
-    REQUIRE(obj->retainCount() == 2);
+    REQUIRE(obj->retainCount() == 1);
 
-    obj->release();
     obj->release();
     REQUIRE_FALSE(geode::detail::isLiveCocosObject(obj));
 }
@@ -139,10 +138,8 @@ TEST_CASE("borrowed and owned same object with pool-like WeakRef") {
 
     luax::drainDeferredReleases();
     REQUIRE(geode::detail::isLiveCocosObject(obj));
-    REQUIRE(obj->retainCount() == 3);
+    REQUIRE(obj->retainCount() == 1);
 
-    obj->release();
-    obj->release();
     obj->release();
     REQUIRE_FALSE(geode::detail::isLiveCocosObject(obj));
 }

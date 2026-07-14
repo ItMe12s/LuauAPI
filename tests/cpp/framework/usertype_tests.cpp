@@ -562,7 +562,6 @@ TEST_CASE("dropBorrowedTargetIfFinalRelease defers drop while retainCount is abo
 
     auto* node = new TestNode();
     node->retain();
-    node->retain();
 
     luax::Usertype<TestNode>::pushBorrowed(L, node);
     REQUIRE(luax::detail::tryCandidate(L, -1).obj == node);
@@ -572,18 +571,25 @@ TEST_CASE("dropBorrowedTargetIfFinalRelease defers drop while retainCount is abo
 
     node->release();
     luax::dropBorrowedTargetIfFinalRelease(node);
-    REQUIRE(luax::detail::tryCandidate(L, -1).obj == node);
-
-    node->release();
-    luax::dropBorrowedTargetIfFinalRelease(node);
     REQUIRE(luax::detail::tryCandidate(L, -1).obj == nullptr);
 
     lua_pop(L, 1);
-    lua_gc(L, LUA_GCCOLLECT, 0);
+    node->release();
 }
 
 TEST_CASE("liveObject skips WeakRef lock when only pool retain remains") {
     RuntimeGuard guard;
+
+    struct PoolSimGuard {
+        PoolSimGuard() {
+            geode::detail::weakRefSimulatePoolForTests() = true;
+        }
+
+        ~PoolSimGuard() {
+            geode::detail::weakRefSimulatePoolForTests() = false;
+        }
+    } poolGuard;
+
     auto* runtime = luax::Runtime::getOrCreate();
     auto* L = runtime->state();
 
@@ -619,12 +625,10 @@ TEST_CASE("borrowed userdata rejects access after borrowed target is dropped") {
     );
 
     auto* node = new TestNode();
-    node->retain();
     luax::Usertype<TestNode>::pushBorrowed(L, node);
     REQUIRE(lua_isuserdata(L, -1));
     REQUIRE(luax::detail::tryCandidate(L, -1).obj == node);
 
-    node->release();
     luax::dropBorrowedTargetIfFinalRelease(node);
     REQUIRE(luax::detail::tryCandidate(L, -1).obj == nullptr);
 
@@ -640,7 +644,8 @@ TEST_CASE("borrowed userdata rejects access after borrowed target is dropped") {
     REQUIRE(lua_pcall(L, 1, 0, 0) != 0);
     REQUIRE(std::string_view(lua_tostring(L, -1)).find("expected live") != std::string_view::npos);
     lua_pop(L, 2);
-    lua_gc(L, LUA_GCCOLLECT, 0);
+
+    node->release();
 }
 
 TEST_CASE("tryNodeCandidate accepts CCNode lower-bound dynamic userdata") {
