@@ -108,6 +108,8 @@ Inside `forget`, `unordered_map::at` can throw `std::out_of_range` with the mess
 Never call `lock` or `valid` when `retainCount <= 1`.
 `liveObject` erases the borrowed target and returns `nullptr` instead.
 `Fields::evictIfFinalRelease` checks `retainCount` before any WeakRef probe.
+Host tests (`tests/host/cocos2d.h`) always retain on `WeakRef` construction like the Geode pool,
+so `retainCount <= 1` means pool-only there too.
 
 ## What the drain must do too
 

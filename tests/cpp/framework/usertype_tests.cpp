@@ -571,10 +571,14 @@ TEST_CASE("dropBorrowedTargetIfFinalRelease defers drop while retainCount is abo
 
     node->release();
     luax::dropBorrowedTargetIfFinalRelease(node);
+    REQUIRE(luax::detail::tryCandidate(L, -1).obj == node);
+
+    node->release();
+    luax::dropBorrowedTargetIfFinalRelease(node);
     REQUIRE(luax::detail::tryCandidate(L, -1).obj == nullptr);
 
     lua_pop(L, 1);
-    node->release();
+    lua_gc(L, LUA_GCCOLLECT, 0);
 }
 
 TEST_CASE("liveObject skips WeakRef lock when only pool retain remains") {
@@ -629,6 +633,7 @@ TEST_CASE("borrowed userdata rejects access after borrowed target is dropped") {
     REQUIRE(lua_isuserdata(L, -1));
     REQUIRE(luax::detail::tryCandidate(L, -1).obj == node);
 
+    node->release(); // pool-only RC=1
     luax::dropBorrowedTargetIfFinalRelease(node);
     REQUIRE(luax::detail::tryCandidate(L, -1).obj == nullptr);
 
@@ -645,7 +650,7 @@ TEST_CASE("borrowed userdata rejects access after borrowed target is dropped") {
     REQUIRE(std::string_view(lua_tostring(L, -1)).find("expected live") != std::string_view::npos);
     lua_pop(L, 2);
 
-    node->release();
+    lua_gc(L, LUA_GCCOLLECT, 0);
 }
 
 TEST_CASE("tryNodeCandidate accepts CCNode lower-bound dynamic userdata") {
