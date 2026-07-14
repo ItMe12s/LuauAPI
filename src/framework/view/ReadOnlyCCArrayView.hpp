@@ -21,6 +21,7 @@ namespace luax {
         struct CcCArrayBackingPolicy {
             struct Block {
                 cocos2d::ccCArray const* array = nullptr;
+                cocos2d::CCObject* ownerPtr = nullptr;
                 geode::WeakRef<cocos2d::CCObject> owner;
             };
 
@@ -39,6 +40,7 @@ namespace luax {
             }
 
             static bool ownerLive(Block const& block) {
+                if (!block.ownerPtr || block.ownerPtr->retainCount() <= 1) return false;
                 return block.owner.lock().data() != nullptr;
             }
 
@@ -57,6 +59,7 @@ namespace luax {
 
             static void initBorrowed(Block& block, BorrowedArgs const& args) {
                 block.array = args.first;
+                block.ownerPtr = args.second;
                 block.owner = geode::WeakRef<cocos2d::CCObject>(args.second);
             }
         };

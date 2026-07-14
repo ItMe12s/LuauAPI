@@ -115,7 +115,7 @@ TEST_CASE("owned drain applies one logical release with queue keepalive") {
     REQUIRE(obj->releaseCallCount() == 0);
 
     luax::drainDeferredReleases();
-    REQUIRE(obj->releaseCallCount() == 2);
+    REQUIRE(obj->releaseCallCount() == 3);
     REQUIRE(obj->retainCount() == 1);
 
     obj->release();

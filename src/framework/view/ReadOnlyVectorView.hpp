@@ -36,6 +36,7 @@ namespace luax {
         struct GdVectorBackingPolicy {
             struct Block {
                 gd::vector<T*> const* vector = nullptr;
+                cocos2d::CCObject* ownerPtr = nullptr;
                 geode::WeakRef<cocos2d::CCObject> owner;
                 std::unique_ptr<gd::vector<T*>> owned;
             };
@@ -57,7 +58,9 @@ namespace luax {
             }
 
             static bool ownerLive(Block const& block) {
-                return static_cast<bool>(block.owned) || block.owner.lock().data() != nullptr;
+                if (static_cast<bool>(block.owned)) return true;
+                if (!block.ownerPtr || block.ownerPtr->retainCount() <= 1) return false;
+                return block.owner.lock().data() != nullptr;
             }
 
             static std::size_t size(Block const& block) {
@@ -78,6 +81,7 @@ namespace luax {
 
             static void initBorrowed(Block& block, BorrowedArgs const& args) {
                 block.vector = &args.first;
+                block.ownerPtr = args.second;
                 block.owner = geode::WeakRef<cocos2d::CCObject>(args.second);
             }
 
