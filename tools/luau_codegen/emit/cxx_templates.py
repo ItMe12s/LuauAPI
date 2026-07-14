@@ -541,7 +541,10 @@ def emit_hook_support() -> str:
     int luaapi_geode_fields(lua_State* L) {
         if (lua_gettop(L) != 1) luaL_error(L, "geode.fields expected 1 arg");
         auto* node = luax::detail::tryNodeCandidate(L, 1);
-        if (!node) luaL_error(L, "geode.fields expected CCNode at arg 1");
+        if (!node) {
+            lua_createtable(L, 0, 0);
+            return 1;
+        }
         luax::Fields::push(L, node);
         return 1;
     }

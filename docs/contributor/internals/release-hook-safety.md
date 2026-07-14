@@ -75,17 +75,17 @@ void Fields::evictIfFinalRelease(cocos2d::CCObject* object) {
     if (!object) return;
     auto& tables = fieldTables();
     auto it = tables.find(static_cast<cocos2d::CCNode*>(static_cast<void*>(object)));
-    if (it == tables.end() || !entryStillOwnsNode(it->second, it->first)) return;
+    if (it == tables.end()) return;
     if (object->retainCount() > 1) return;
-    evict(it->first);
+    eraseFieldEntry(tables, it);
 }
 ```
 
 The `static_cast` through `void*` is intentional and safe.
-The map is keyed by the real `CCNode*` handed to `Fields::push`,
-so for an untracked object the `find` misses and the cast result is never dereferenced.
-`entryStillOwnsNode` re-checks the weak owner before any further work.
-`retainCount` is called only after the map confirms the object is one of ours.
+The map is keyed by the real `CCNode*` handed to `Fields::push`.
+For an untracked object the `find` misses and the cast result is never dereferenced.
+`retainCount` runs only after the map confirms the object is one of ours.
+`eraseFieldEntry` parks the owner `WeakRef` so its destructor cannot call `isManaged` on this cascade.
 
 `evictTrampolinesIfFinalRelease` in `src/framework/callback/LuaTrampolineRegistry.cpp` follows the same shape.
 It does its own `anchorMap().find(anchor)` and returns on a miss before any call on the anchor.
@@ -94,6 +94,18 @@ It does its own `anchorMap().find(anchor)` and returns on a miss before any call
 It does its own `borrowedTargets().find(object)` and returns on a miss before `retainCount`.
 When a borrowed userdata target reaches its final release, the set entry is removed before Geode `WeakRef` pool cleanup can run.
 `liveObject` then skips `WeakRef::lock` for that target and returns `nullptr` instead of faulting.
+
+## WeakRef lock on retainCount 1
+
+Geode `WeakRef::lock` and `valid` call `isManaged`.
+When `retainCount == 1`, only the WeakRef pool still holds the object.
+`isManaged` then runs `WeakRefPool::forget`, which calls `release` again.
+That re-enters LuauAPI's release hook.
+Inside `forget`, `unordered_map::at` can throw `std::out_of_range` with the message `unordered_map::at: key not found`.
+
+Never call `lock` or `valid` when `retainCount <= 1`.
+`liveObject` erases the borrowed target and returns `nullptr` instead.
+`Fields::evictIfFinalRelease` checks `retainCount` before any WeakRef probe.
 
 ## What the drain must do too
 
@@ -119,14 +131,16 @@ If yes, gate on a membership check first. If no, cast normally.
 
 ## How this is enforced
 
-Two layers keep the rule alive after this page:
+These checks keep the rule alive after this page:
 
 - A Python guard test in `tests/luau_codegen/guards/test_binding_guards_framework.py`
-  checks that `evictIfFinalRelease` does not use `typeinfo_cast` and goes through `fieldTables()` and `entryStillOwnsNode`,
-  that `dropBorrowedTargetIfFinalRelease` checks `borrowedTargets()` before `retainCount`,
-  while `evict(CCObject*)` still does use `typeinfo_cast`.
+  checks that `evictIfFinalRelease` skips `typeinfo_cast`, uses `fieldTables()` and `retainCount`,
+  and never calls `WeakRef::valid`, `lock`, or `entryStillOwnsNode`.
+  It also checks that `dropBorrowedTargetIfFinalRelease` looks up `borrowedTargets()` before `retainCount`,
+  while `evict(CCObject*)` still uses `typeinfo_cast`.
 - Host tests in `tests/cpp/framework/fields_tests.cpp` cover the no-op case for an untracked node and for a non-node CCObject.
-- Host tests in `tests/cpp/framework/usertype_tests.cpp` cover borrowed userdata access after `dropBorrowedTargetIfFinalRelease`.
+- Host tests in `tests/cpp/framework/usertype_tests.cpp` cover borrowed userdata after `dropBorrowedTargetIfFinalRelease`
+  and `liveObject` when only the WeakRef pool retain remains.
 
 If you add work to a release-reachable function, add a test that runs it on an untracked object and on a non-node CCObject.
 Extend the guard test so the next change cannot quietly put a virtual call back on the path.

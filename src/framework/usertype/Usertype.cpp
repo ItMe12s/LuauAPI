@@ -172,6 +172,10 @@ namespace luax::detail {
         if (!block->ptr || targets.find(block->ptr) == targets.end()) {
             return nullptr;
         }
+        if (block->ptr->retainCount() <= 1) {
+            targets.erase(block->ptr);
+            return nullptr;
+        }
         auto locked = block->weak.lock();
         return locked ? locked.data() : nullptr;
     }

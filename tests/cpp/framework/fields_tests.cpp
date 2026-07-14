@@ -75,23 +75,14 @@ TEST_CASE("Fields evictIfFinalRelease removes entry on final release") {
     auto* L = runtime->state();
 
     auto* node = new TestNode();
+    node->retain();
     luax::Fields::push(L, node);
     setTableToken(L, "first");
     lua_pop(L, 1);
 
     luax::Fields::evictIfFinalRelease(node);
     luax::Fields::push(L, node);
-    REQUIRE(getTableToken(L) == std::nullopt);
-    lua_pop(L, 1);
-
-    node->retain();
-    luax::Fields::push(L, node);
-    setTableToken(L, "retained");
-    lua_pop(L, 1);
-
-    luax::Fields::evictIfFinalRelease(node);
-    luax::Fields::push(L, node);
-    REQUIRE(getTableToken(L) == "retained");
+    REQUIRE(getTableToken(L) == "first");
     lua_pop(L, 1);
 
     node->release();
@@ -99,8 +90,6 @@ TEST_CASE("Fields evictIfFinalRelease removes entry on final release") {
     luax::Fields::push(L, node);
     REQUIRE(getTableToken(L) == std::nullopt);
     lua_pop(L, 1);
-
-    node->release();
 }
 
 TEST_CASE("Fields push drops stale map entry when node address is reused") {

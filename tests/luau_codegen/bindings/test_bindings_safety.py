@@ -292,6 +292,15 @@ class GeneratedSafetyTests(unittest.TestCase):
         self.assertIn("luaapi_geode_skip", text)
         self.assertIn("luaapi_geode_fields", text)
 
+    def test_geode_fields_dead_node_pushes_empty_table(self) -> None:
+        text = emit_hook_support()
+        start = text.find("int luaapi_geode_fields(lua_State* L)")
+        self.assertNotEqual(start, -1)
+        end = text.find("\n    int ", start + 1)
+        body = text[start:end] if end != -1 else text[start:]
+        self.assertIn("lua_createtable(L, 0, 0)", body)
+        self.assertNotIn('luaL_error(L, "geode.fields expected CCNode at arg 1")', body)
+
     def test_invalid_skip_value_rejects_skip_and_continues_chain(self) -> None:
         text = emit_internal_hpp()
 
@@ -559,7 +568,11 @@ class GeneratedSafetyTests(unittest.TestCase):
             bases=["CCObject"],
             fields=[Field("m_groupObjects", "gd::vector<GroupCommandObject2*>")],
         )
-        objects = {"CCObject": ccobject, "cocos2d::CCObject": ccobject, "CCMoveCNode": cls}
+        objects = {
+            "CCObject": ccobject,
+            "cocos2d::CCObject": ccobject,
+            "CCMoveCNode": cls,
+        }
 
         text = _emit_class_file(
             cls,

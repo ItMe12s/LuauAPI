@@ -127,11 +127,18 @@ Use [type stubs](type-stubs.md) for the exact stub type on each member.
 ## Per-object fields
 
 Store your own data on an object with `geode.fields(node)` or the `m_fields` property.
-Both return the same plain table for that object, alive as long as the object.
+Both return the same plain table for a live `CCNode`.
+
+When the value is not a live `CCNode`, `geode.fields` returns an empty table.
+Missing keys read as `nil`, so flags default to false in normal checks.
 
 ```lua
 local fields = geode.fields(self)
 fields.count = (fields.count or 0) + 1
+
+if geode.fields(layer).myFlag then
+    -- only runs when the layer is live and the flag was set
+end
 ```
 
 ## Encrypted stat fields

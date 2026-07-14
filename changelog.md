@@ -6,6 +6,12 @@
 
 - `11/7/2026`: Bindings that are automatically picked up likely won't be included in the changelog.
 
+## 0.1.0-beta.18
+
+- Fixed rare crashes when using borrowed objects after they were deleted.
+- Fixed a Windows crash when hooks called `geode.fields` on a dead node.
+- Updated `geode.fields` to return an empty table instead of raising an error when called on a dead or non-node value.
+
 ## 0.1.0-beta.17
 
 - Added `geode.PopupManager` and `ManagedPopup` for queued popups.

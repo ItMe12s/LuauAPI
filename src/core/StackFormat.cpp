@@ -2,7 +2,6 @@
 
 #include <Geode/utils/general.hpp>
 #include <Geode/utils/string.hpp>
-#include <cctype>
 #include <filesystem>
 #include <string>
 #include <string_view>
@@ -12,18 +11,7 @@ namespace luax {
     namespace {
         std::size_t findRootPrefix(std::string const& text, std::string_view rootText, std::size_t pos) {
             if (rootText.empty() || pos >= text.size()) return std::string::npos;
-#if defined(_WIN32)
-            for (std::size_t scan = pos; scan + rootText.size() <= text.size(); ++scan) {
-                if (geode::utils::string::equalsIgnoreCase(
-                        std::string_view(text).substr(scan, rootText.size()), rootText
-                    )) {
-                    return scan;
-                }
-            }
-            return std::string::npos;
-#else
             return text.find(rootText, pos);
-#endif
         }
 
         void replaceRootPrefix(std::string& text, std::string_view rootText) {

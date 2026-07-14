@@ -389,7 +389,30 @@ class CastConventionGuardTests(unittest.TestCase):
         ]
         self.assertNotIn("geode::cast::typeinfo_cast", body)
         self.assertIn("fieldTables()", body)
-        self.assertIn("entryStillOwnsNode", body)
+        self.assertIn("retainCount()", body)
+        self.assertNotIn("entryStillOwnsNode", body)
+        self.assertNotIn(".valid()", body)
+        self.assertNotIn(".lock()", body)
+
+    def test_geode_fields_dead_node_pushes_empty_table(self) -> None:
+        from luau_codegen.emit.cxx_templates import emit_hook_support
+
+        text = emit_hook_support()
+        start = text.find("int luaapi_geode_fields(lua_State* L)")
+        self.assertNotEqual(start, -1, "missing luaapi_geode_fields")
+        body = text[start : text.find("\n    int ", start + 1)]
+        if body == text[start:]:
+            body = text[start : text.find("\n} // namespace", start)]
+        self.assertIn("tryNodeCandidate", body)
+        self.assertIn("lua_createtable(L, 0, 0)", body)
+        self.assertNotIn("geode.fields expected CCNode at arg 1", body)
+
+    def test_stack_format_find_root_prefix_skips_equals_ignore_case(self) -> None:
+        source = read_repo_file("src/core/StackFormat.cpp")
+        self.assertIn("text.find(rootText, pos)", source)
+        self.assertNotIn("equalsIgnoreCase(", source)
+        self.assertNotIn("caseInsensitiveCompare(", source)
+        self.assertNotIn("#if defined(_WIN32)", source)
 
     def test_drop_borrowed_target_if_final_release_checks_set_before_retain_count(
         self,

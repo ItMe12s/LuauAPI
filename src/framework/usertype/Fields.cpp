@@ -1,6 +1,5 @@
 #include "framework/usertype/Fields.hpp"
 
-#include "core/Runtime.hpp"
 #include "framework/usertype/WeakRefShutdown.hpp"
 
 #include <Geode/Geode.hpp>
@@ -19,7 +18,19 @@ namespace luax {
         }
 
         bool entryStillOwnsNode(FieldEntry const& entry, cocos2d::CCNode* node) {
-            return node && entry.owner.valid();
+            if (!node || node->retainCount() <= 1) {
+                return false;
+            }
+            return entry.owner.valid();
+        }
+
+        void eraseFieldEntry(
+            std::unordered_map<cocos2d::CCNode*, FieldEntry>& tables,
+            std::unordered_map<cocos2d::CCNode*, FieldEntry>::iterator it
+        ) {
+            it->second.table.reset();
+            detail::parkWeakRefForPoolSafety(std::move(it->second.owner));
+            tables.erase(it);
         }
     } // namespace
 
@@ -34,8 +45,7 @@ namespace luax {
             return false;
         }
         if (!entryStillOwnsNode(it->second, node)) {
-            it->second.table.reset();
-            tables.erase(it);
+            eraseFieldEntry(tables, it);
             return false;
         }
         return it->second.table.push();
@@ -54,8 +64,7 @@ namespace luax {
             if (entryStillOwnsNode(it->second, node) && it->second.table.push()) {
                 return;
             }
-            it->second.table.reset();
-            tables.erase(it);
+            eraseFieldEntry(tables, it);
         }
 
         lua_createtable(L, 0, 4);
@@ -70,11 +79,7 @@ namespace luax {
         auto& tables = fieldTables();
         auto it = tables.find(node);
         if (it == tables.end()) return;
-        it->second.table.reset();
-        if (Runtime::isShuttingDown()) {
-            detail::parkWeakRefForPoolSafety(std::move(it->second.owner));
-        }
-        tables.erase(it);
+        eraseFieldEntry(tables, it);
     }
 
     void Fields::evict(cocos2d::CCObject* object) {
@@ -88,23 +93,16 @@ namespace luax {
         if (!object) return;
         auto& tables = fieldTables();
         auto it = tables.find(static_cast<cocos2d::CCNode*>(static_cast<void*>(object)));
-        if (it == tables.end() || !entryStillOwnsNode(it->second, it->first)) return;
+        if (it == tables.end()) return;
         if (object->retainCount() > 1) return;
-        evict(it->first);
+        eraseFieldEntry(tables, it);
     }
 
     void Fields::clear() {
         auto& tables = fieldTables();
-        if (Runtime::isShuttingDown()) {
-            for (auto& [_, entry] : tables) {
-                entry.table.reset();
-                detail::parkWeakRefForPoolSafety(std::move(entry.owner));
-            }
-            tables.clear();
-            return;
-        }
         for (auto& [_, entry] : tables) {
             entry.table.reset();
+            detail::parkWeakRefForPoolSafety(std::move(entry.owner));
         }
         tables.clear();
     }

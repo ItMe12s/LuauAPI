@@ -134,7 +134,7 @@ namespace geode {
 
         WeakRef() = default;
         explicit WeakRef(T* ptr) : m_ptr(ptr), m_objectId(ptr ? ptr->objectId() : 0) {
-            if (m_ptr && geode::detail::weakRefSimulatePoolForTests()) {
+            if (m_ptr) {
                 m_ptr->retain();
             }
         }
@@ -184,22 +184,10 @@ namespace geode {
 
     private:
         void forget() {
-            if (!m_ptr || !detail::isLiveCocosObject(m_ptr)) {
-                m_ptr = nullptr;
-                m_objectId = 0;
+            if (!m_ptr) {
                 return;
             }
-            if (m_ptr->objectId() != m_objectId) {
-                m_ptr = nullptr;
-                m_objectId = 0;
-                return;
-            }
-            if (detail::weakRefSimulatePoolForTests()) {
-                if (detail::weakRefSimulateForgetForTests() || m_ptr->retainCount() == 1) {
-                    m_ptr->release();
-                }
-            }
-            else if (detail::weakRefSimulateForgetForTests()) {
+            if (detail::isLiveCocosObject(m_ptr) && m_ptr->objectId() == m_objectId) {
                 m_ptr->release();
             }
             m_ptr = nullptr;
