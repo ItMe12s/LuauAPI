@@ -40,6 +40,8 @@ namespace luax {
         constexpr char const kTracebackName[] = "luax:traceback";
 
         std::optional<Runtime>& runtimeStorage() {
+            // Retain the holder through forced process teardown (closing Geode's platform console),
+            // normal exit destroys Runtime via Runtime::shutdown().
             static auto* runtime = new std::optional<Runtime>;
             return *runtime;
         }

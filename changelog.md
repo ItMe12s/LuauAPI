@@ -8,6 +8,7 @@
 
 ## 0.1.0-beta.18
 
+- Fixed shutdown crash when closing Geode's platform console.
 - Fixed rare crashes when using borrowed objects after they were deleted.
 - Fixed a Windows crash when hooks called `geode.fields` on a dead node.
 - Updated `geode.fields` to return an empty table instead of raising an error when called on a dead or non-node value.
