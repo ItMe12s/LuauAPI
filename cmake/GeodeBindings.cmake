@@ -1,4 +1,4 @@
-set(LUAUAPI_BINDINGS_GIT_TAG "2a8b5c489ce8b49e7061b0543aa2bc5b22570063"
+set(LUAUAPI_BINDINGS_GIT_TAG "ba9f177be0e428461160c1c9d6c0414831ffea0e"
     CACHE STRING "Pinned bindings commit")
 FetchContent_Declare(
     geode_bindings
