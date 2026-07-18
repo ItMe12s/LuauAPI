@@ -23,7 +23,9 @@ Reach for [Geode Utils](https://docs.geode-sdk.org/tutorials/utils) before custo
 | Fallible return values | `geode::Result`, `geode::Ok`, `geode::Err` |
 | String split, join, trim, contains, prefix/suffix | `geode::utils::string` |
 | Container find, remove, filter, map | `geode::utils::ranges` |
-| File read, write, directories, atomic write | `geode::utils::file` |
+| File read, write, create directories, atomic write | `geode::utils::file` |
+| Directory iteration | `std::filesystem::directory_iterator` with `std::error_code` |
+| Filesystem path text | `geode::utils::string::pathToString` |
 | Exhaustive switch default | `geode::utils::unreachable` |
 | GD type casts | `geode::cast` |
 | Cocos helpers and colors | `geode::cocos` |
@@ -36,6 +38,21 @@ Do not use `std::ranges` when `geode::utils::ranges` covers the case.
 
 Codegen Geode import paths live in [Codegen](codegen/codegen.md).
 Do not duplicate that table here.
+
+## Error flow
+
+Follow [Geode's exception guidance](https://docs.geode-sdk.org/mods/guidelines-tips).
+Use `geode::Result` for recoverable errors and check the active arm before `unwrap` or `unwrapErr`.
+Use non-throwing numeric conversions such as `geode::utils::numFromString`.
+
+Use `std::error_code` filesystem overloads when no `Result` overload exists.
+Iterate directories with explicit `directory_iterator(path, ec)` and `increment(ec)` calls.
+Convert filesystem paths with `geode::utils::string::pathToString`, not `path.string()`.
+
+Do not add `throw` or new `try`/`catch` flow to runtime code.
+The sole exception boundary is the two Arc 1.5.6 `TaskHandle` pollers.
+They convert standard and unknown Arc failures to Lua `nil, err` callbacks.
+Keep exception handling enabled while Geode and Arc require it.
 
 ## C++23 stdlib when Geode has no equivalent
 
@@ -61,7 +78,7 @@ Tests may link fmt through CMake when Catch2 or host helpers need it.
 - `NULL` (use `nullptr`)
 - Deprecated standard library APIs (`std::bind`, `std::auto_ptr`, and similar)
 
-## Interop exceptions
+## Interop ownership
 
 Cocos, GLFW, OpenGL, and Luau C APIs sometimes require raw pointers, `new`, or `delete`.
 Mark deliberate lifetime shortcuts with a short comment when the API owns the object.

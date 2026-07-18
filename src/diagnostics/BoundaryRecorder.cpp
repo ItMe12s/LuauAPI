@@ -380,13 +380,7 @@ namespace luax::diag {
 
         if (!force && !activeChanged && !intervalElapsed) return;
 
-        std::filesystem::path dir;
-        try {
-            dir = resolveCrashlogsDir();
-        }
-        catch (...) {
-            return;
-        }
+        auto dir = resolveCrashlogsDir();
         if (dir.empty()) return;
 
         std::error_code ec;

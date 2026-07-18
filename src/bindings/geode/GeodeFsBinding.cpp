@@ -69,27 +69,32 @@ namespace {
         auto target = resolveSandboxTarget(L, 1, 2, "geode.fs.list");
         if (!target) return 2;
 
-        auto entries = geode::utils::file::readDirectory(target->path, false);
-        if (entries.isErr()) {
-            return pushNilErr(L, entries.unwrapErr());
-        }
+        std::error_code ec;
+        std::filesystem::directory_iterator entry(target->path, ec);
+        if (ec) return pushNilErr(L, ec.message());
 
         lua_newtable(L);
         int index = 1;
         std::size_t totalNameBytes = 0;
-        for (auto const& entry : entries.unwrap()) {
+        auto const end = std::filesystem::directory_iterator{};
+        while (entry != end) {
             if (static_cast<std::size_t>(index) > kMaxFsListEntries) {
                 lua_pop(L, 1);
                 return pushNilErr(L, "directory listing exceeds maximum entries");
             }
-            auto name = geode::utils::string::pathToString(entry.filename());
-            if (totalNameBytes + name.size() > kMaxFsListNameBytes) {
+            auto name = geode::utils::string::pathToString(entry->path().filename());
+            if (name.size() > kMaxFsListNameBytes - totalNameBytes) {
                 lua_pop(L, 1);
                 return pushNilErr(L, "directory listing exceeds maximum name bytes");
             }
             totalNameBytes += name.size();
             push(L, std::move(name));
             lua_rawseti(L, -2, index++);
+            entry.increment(ec);
+            if (ec) {
+                lua_pop(L, 1);
+                return pushNilErr(L, ec.message());
+            }
         }
         return 1;
     }

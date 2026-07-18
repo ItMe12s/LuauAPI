@@ -37,15 +37,6 @@ namespace {
         return lua_pcall(L, 2, 2, 0);
     }
 
-    int callFsList(lua_State* L, std::string const& rel) {
-        lua_getglobal(L, "geode");
-        lua_getfield(L, -1, "fs");
-        lua_getfield(L, -1, "list");
-        lua_pushlstring(L, "save", 4);
-        lua_pushlstring(L, rel.data(), rel.size());
-        return lua_pcall(L, 2, 2, 0);
-    }
-
     int callJsonParse(lua_State* L, std::string const& text) {
         lua_getglobal(L, "geode");
         lua_getfield(L, -1, "json");
@@ -149,6 +140,33 @@ TEST_CASE("geode.fs.read rejects directories") {
     geode::Mod::destroy(mod);
 }
 
+TEST_CASE("geode.fs.list returns nil err for open and type failures") {
+    RuntimeGuard guard;
+    luauapi_test::ScopedTempDir dir{"luauapi_resource_bounds_"};
+    auto* mod = geode::Mod::create(dir.path);
+
+    auto* runtime = luax::Runtime::getOrCreate();
+    runtime->setResourcesRoot(dir.path);
+    auto* L = runtime->state();
+    registerResourceBindings(L);
+
+    auto saveDir = dir.path / "save";
+    REQUIRE(std::filesystem::create_directories(saveDir));
+
+    REQUIRE(callFs(L, "list", "save", "missing") == 0);
+    REQUIRE(lua_gettop(L) == 2);
+    REQUIRE(lua_isnil(L, -2));
+    REQUIRE(lua_isstring(L, -1));
+
+    writeFileContents(saveDir / "file.txt", "x");
+    REQUIRE(callFs(L, "list", "save", "file.txt") == 0);
+    REQUIRE(lua_gettop(L) == 2);
+    REQUIRE(lua_isnil(L, -2));
+    REQUIRE(lua_isstring(L, -1));
+
+    geode::Mod::destroy(mod);
+}
+
 TEST_CASE("geode.fs.list rejects directories with too many name bytes") {
     RuntimeGuard guard;
     luauapi_test::ScopedTempDir dir{"luauapi_resource_bounds_"};
@@ -171,7 +189,8 @@ TEST_CASE("geode.fs.list rejects directories with too many name bytes") {
         out << "x";
     }
 
-    REQUIRE(callFsList(L, "long_names") == 0);
+    REQUIRE(callFs(L, "list", "save", "long_names") == 0);
+    REQUIRE(lua_gettop(L) == 2);
     REQUIRE(lua_isnil(L, -2));
     REQUIRE(lua_isstring(L, -1));
     std::string err(lua_tostring(L, -1));
@@ -198,7 +217,8 @@ TEST_CASE("geode.fs.list rejects directories with too many entries") {
         out << "x";
     }
 
-    REQUIRE(callFsList(L, "many") == 0);
+    REQUIRE(callFs(L, "list", "save", "many") == 0);
+    REQUIRE(lua_gettop(L) == 2);
     REQUIRE(lua_isnil(L, -2));
     REQUIRE(lua_isstring(L, -1));
     std::string err(lua_tostring(L, -1));

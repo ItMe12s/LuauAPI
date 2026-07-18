@@ -18,6 +18,14 @@ namespace {
         }
     };
 
+    struct ThrowUnknownOnMove {
+        ThrowUnknownOnMove() = default;
+
+        ThrowUnknownOnMove(ThrowUnknownOnMove&&) {
+            throw 42;
+        }
+    };
+
     void pushBool(lua_State* L, void const* raw) {
         luax::push(L, *static_cast<bool const*>(raw));
     }
@@ -209,6 +217,24 @@ TEST_CASE("GeodeTaskHandle cancel aborts and clears callbacks") {
     REQUIRE(globalNumber(L, "cancelHits") == 0.0);
 }
 
+TEST_CASE("GeodeTaskHandle cancel accepts an invalid native handle") {
+    RuntimeGuard guard;
+    auto* L = luax::Runtime::getOrCreate()->state();
+    luax::pushGeodeTaskHandle<bool>(L, arc::TaskHandle<bool>{}, &pushBool);
+    lua_setglobal(L, "h");
+
+    REQUIRE(
+        luauapi_test::runScriptVoid(
+            L,
+            R"(
+            h:cancel()
+            _G.invalidCancelDetached = h:isDetached()
+        )"
+        )
+    );
+    REQUIRE(globalBool(L, "invalidCancelDetached"));
+}
+
 TEST_CASE("GeodeTaskHandle detach drops observation without aborting") {
     RuntimeGuard guard;
     auto* L = luax::Runtime::getOrCreate()->state();
@@ -235,7 +261,7 @@ TEST_CASE("GeodeTaskHandle detach drops observation without aborting") {
     REQUIRE(globalNumber(L, "detachHits") == 0.0);
 }
 
-TEST_CASE("GeodeTaskHandle reports poll exception as nil err") {
+TEST_CASE("GeodeTaskHandle reports std poll exception as nil err") {
     RuntimeGuard guard;
     auto* L = luax::Runtime::getOrCreate()->state();
     auto state = pushHandle<bool>(L, "h");
@@ -258,6 +284,36 @@ TEST_CASE("GeodeTaskHandle reports poll exception as nil err") {
     luax::pollGeodeTaskHandles(L);
     REQUIRE(globalBool(L, "errValueWasNil"));
     REQUIRE(globalString(L, "errText") == "boom");
+}
+
+TEST_CASE("GeodeTaskHandle reports unknown poll exception as nil err") {
+    RuntimeGuard guard;
+    auto* L = luax::Runtime::getOrCreate()->state();
+    auto state = std::make_shared<arc::TaskState<ThrowUnknownOnMove>>();
+    state->value.emplace();
+    luax::pushGeodeTaskHandle<ThrowUnknownOnMove>(
+        L, arc::TaskHandle<ThrowUnknownOnMove>(state), nullptr
+    );
+    lua_setglobal(L, "h");
+
+    REQUIRE(
+        luauapi_test::runScriptVoid(
+            L,
+            R"(
+            _G.errText = ""
+            _G.errValueWasNil = false
+            h:onComplete(function(value, err)
+                _G.errValueWasNil = value == nil
+                _G.errText = err
+            end)
+        )"
+        )
+    );
+
+    state->ready = true;
+    luax::pollGeodeTaskHandles(L);
+    REQUIRE(globalBool(L, "errValueWasNil"));
+    REQUIRE(globalString(L, "errText") == "Task failed with an unknown exception");
 }
 
 TEST_CASE("GeodeTaskHandle optional nil pushes nil") {

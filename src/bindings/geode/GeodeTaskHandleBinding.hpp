@@ -4,10 +4,10 @@
 
 #include <arc/future/Context.hpp>
 #include <arc/task/Task.hpp>
+#include <exception>
 #include <lua.h>
 #include <memory>
 #include <optional>
-#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -85,7 +85,9 @@ namespace luax {
         }
 
         void abortNative() override {
-            m_handle.abort();
+            if (m_handle.isValid()) {
+                m_handle.abort();
+            }
         }
 
         void detachNative() noexcept override {
@@ -146,7 +148,9 @@ namespace luax {
         }
 
         void abortNative() override {
-            m_handle.abort();
+            if (m_handle.isValid()) {
+                m_handle.abort();
+            }
         }
 
         void detachNative() noexcept override {

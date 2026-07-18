@@ -43,6 +43,7 @@ This page is the canonical list of caps, deadlines, and error strings for LuauAP
 | `data exceeds maximum write size` | Write over cap | `nil, err` |
 | `directory listing exceeds maximum entries` | List over entry cap | `nil, err` |
 | `directory listing exceeds maximum name bytes` | List over name byte cap | `nil, err` |
+| (platform filesystem error) | Directory open or iteration failure | `nil, err` |
 | `root is read-only` | Write, mkdir, or remove on `resources` root | `nil, err` |
 
 ## Hooks, callbacks, tasks
@@ -63,6 +64,8 @@ This page is the canonical list of caps, deadlines, and error strings for LuauAP
 | `geode.hook target callback limit exceeded for %s` | Per-target hook cap hit | Lua error |
 | `task: too many scheduled tasks (limit 4096)` | Task cap hit | Lua error |
 | `geode task handles: too many active handles (limit 4096)` | Geode task handle cap hit | Lua error |
+| (Arc exception text) | Native task raises `std::exception` | Geode task callback `nil, err` |
+| `Task failed with an unknown exception` | Native task raises another exception | Geode task callback `nil, err` |
 | (log only) | Trampoline cap hit | Warn once. New trampolines dropped. No Lua error. |
 
 ## ImGui
@@ -318,6 +321,8 @@ When an allocation would cross the cap, it fails and Lua reports an out of memor
 ## Source
 
 - `src/core/Config.hpp`
+- `src/bindings/geode/GeodeFsBinding.cpp`
+- `src/bindings/geode/GeodeTaskHandleBinding.hpp`
 - `src/bindings/imgui/ImGuiStyleFonts.cpp`
 - `src/bindings/imgui/ImGuiFontRegistry.hpp`
 - `src/render3d/gpu/GpuSessionDisable.cpp`

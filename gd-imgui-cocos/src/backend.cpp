@@ -223,7 +223,8 @@ ImGuiCocos& ImGuiCocos::setup() {
     io.BackendFlags |= ImGuiBackendFlags_RendererHasTextures;
 
     // use static since imgui does not own the pointer!
-    static auto const iniPath = (Mod::get()->getSaveDir() / "imgui.ini").string();
+    static auto const iniPath =
+        geode::utils::string::pathToString(Mod::get()->getSaveDir() / "imgui.ini");
     io.IniFilename = iniPath.c_str();
 
     ImGui::GetPlatformIO().Platform_GetClipboardTextFn = [](ImGuiContext*) {

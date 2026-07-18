@@ -10,8 +10,10 @@
 
 - Added recursive Luau bindings for by-value containers across fields, methods,
   and free functions, including `gd::map<int, gd::vector<int>>`.
+- Fixed invalid Geode task cancellation and partial `geode.fs.list` results on errors.
 - Updated container codegen and runtime marshalling to use shared cross-platform helpers
   and one audited adapter for existing `GJBaseGameLayer` pointer grids.
+- Updated runtime C++ error handling to keep exceptions limited to Arc task polling.
 
 ## 0.1.0-beta.18
 

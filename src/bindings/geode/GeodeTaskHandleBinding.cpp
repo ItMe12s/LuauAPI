@@ -145,11 +145,7 @@ namespace luax {
 
     void GeodeTaskHandleStateBase::cancel() {
         if (m_status == Status::Pending) {
-            try {
-                abortNative();
-            }
-            catch (...) {
-            }
+            abortNative();
             m_callbacks.clear();
             dropStoredResult();
             m_status = Status::Detached;

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import re
 import unittest
 
 from binding_guard_support import (
@@ -355,6 +356,93 @@ class ErrorSemanticsGuardTests(unittest.TestCase):
         source = read_repo_file("docs/reference/lua/delegates.md")
         self.assertIn("logs the failure", source)
         self.assertIn("method default", source)
+
+
+class RuntimeExceptionPolicyGuardTests(unittest.TestCase):
+    _ROOTS = ("src", "include", "gd-imgui-cocos/src", "gd-imgui-cocos/include")
+    _SUFFIXES = (".cpp", ".hpp", ".h", ".cc", ".cxx", ".mm")
+
+    @classmethod
+    def runtime_sources(cls) -> list[tuple[str, str]]:
+        sources: list[tuple[str, str]] = []
+        for root in cls._ROOTS:
+            absolute_root = os.path.join(_REPO_ROOT, root.replace("/", os.sep))
+            for dirpath, _dirnames, filenames in os.walk(absolute_root):
+                for filename in filenames:
+                    if not filename.endswith(cls._SUFFIXES):
+                        continue
+                    rel = os.path.relpath(os.path.join(dirpath, filename), _REPO_ROOT)
+                    rel = rel.replace("\\", "/")
+                    sources.append((rel, read_repo_file(rel)))
+        return sources
+
+    def test_exception_flow_matches_arc_poll_allowlist(self) -> None:
+        task_rel = "src/bindings/geode/GeodeTaskHandleBinding.hpp"
+        poll_pattern = re.compile(
+            r"        void poll\(arc::Context& cx\) override \{.*?\n        \}"
+            r"(?=\n\n        void abortNative\(\) override \{)",
+            re.DOTALL,
+        )
+        task_source = read_repo_file(task_rel)
+        pollers = poll_pattern.findall(task_source)
+        self.assertEqual(len(pollers), 2, "expected generic and void Arc poll boundaries")
+
+        allowed_per_poller = {
+            "try {": 1,
+            "catch (std::exception const& e) {": 1,
+            "catch (...) {": 1,
+        }
+        token = re.compile(r"\b(?:try|catch|throw)\b")
+        for poller in pollers:
+            actual: dict[str, int] = {}
+            for line in poller.splitlines():
+                if token.search(line):
+                    stripped = line.strip()
+                    actual[stripped] = actual.get(stripped, 0) + 1
+            self.assertEqual(allowed_per_poller, actual)
+
+        sources = dict(self.runtime_sources())
+        sources[task_rel] = poll_pattern.sub("", task_source)
+        offenders: list[str] = []
+        for rel, source in sources.items():
+            for line_no, line in enumerate(source.splitlines(), 1):
+                if token.search(line):
+                    offenders.append(f"{rel}:{line_no}: {line.strip()}")
+        self.assertFalse(
+            offenders,
+            "runtime exception flow is limited to the two Arc TaskHandle poll boundaries: "
+            + ", ".join(offenders),
+        )
+
+    def test_no_throwing_numeric_conversions(self) -> None:
+        names = r"stoi|stol|stoll|stoul|stoull|stof|stod|stold"
+        pattern = re.compile(rf"\bstd::(?:{names})\b|\b(?:{names})\s*\(")
+        offenders = [rel for rel, source in self.runtime_sources() if pattern.search(source)]
+        self.assertFalse(
+            offenders,
+            f"use non-throwing numeric conversion helpers: {offenders}",
+        )
+
+    def test_path_string_matches_reviewed_allowlist(self) -> None:
+        allowed = {
+            (
+                "src/bindings/geode/web/GeodeWebApi.cpp",
+                'auto result = checkResponse(L, 1, "WebResponse:text").string();',
+            ): 1,
+        }
+        pattern = re.compile(r"\.\s*string\s*\(")
+        actual: dict[tuple[str, str], int] = {}
+        for rel, source in self.runtime_sources():
+            for line in source.splitlines():
+                if not pattern.search(line):
+                    continue
+                key = (rel, line.strip())
+                actual[key] = actual.get(key, 0) + 1
+        self.assertEqual(
+            allowed,
+            actual,
+            "filesystem paths must use geode::utils::string::pathToString",
+        )
 
 
 class CastConventionGuardTests(unittest.TestCase):
