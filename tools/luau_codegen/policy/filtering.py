@@ -308,8 +308,10 @@ def linkless_class_names(
             out.add(cls.name)
             continue
         if cls.name in referenced:
-            if target_platform not in STRICT_DIRECT_PLATFORMS or _class_has_platform_support(
-                cls, target_platform
+            if (
+                target_platform not in STRICT_DIRECT_PLATFORMS
+                or not cls.methods
+                or _class_has_platform_support(cls, target_platform)
             ):
                 continue
             out.add(cls.name)

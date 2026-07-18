@@ -7,7 +7,7 @@ import unittest
 from test_support import ROOT, all_platforms, types_text
 from luau_codegen.convert.marshalling import check_arg, push_value  # type: ignore[import-unresolved]
 from luau_codegen.convert.type_map import classify_arg  # type: ignore[import-unresolved]
-from luau_codegen.emit.luau_types import emit_luau_types  # type: ignore[import-unresolved]
+from luau_codegen.emit.luau_types import emit as emit_luau_types  # type: ignore[import-unresolved]
 from luau_codegen.parse.broma import (  # type: ignore[import-unresolved]
     Arg,
     Class,

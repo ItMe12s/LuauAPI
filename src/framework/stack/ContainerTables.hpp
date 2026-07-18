@@ -261,7 +261,7 @@ namespace luax::detail {
             });
         }
         else {
-            pushContainerValue(L, &value, owner);
+            pushContainerValue(L, value, owner);
         }
     }
 

@@ -246,8 +246,15 @@ def _push_impl(
             return [f"{indent}luax::{push_fn}(L, {expr});\n"]
         return [f"{indent}luax::{push_fn}(L, {expr}, {owner_expr});\n"]
     if info.kind in COMPOSITE_KINDS:
+        arg_expr = (
+            f"&{expr}"
+            if info.kind in ("map", "unordered_map", "set", "unordered_set")
+            and info.is_out
+            and not info.is_vector_ptr
+            else expr
+        )
         owner_arg = f", {owner_expr}" if owner_expr else ""
-        return [f"{indent}luax::pushContainerValue<{info.cxx_type}>(L, {expr}{owner_arg});\n"]
+        return [f"{indent}luax::pushContainerValue<{info.cxx_type}>(L, {arg_expr}{owner_arg});\n"]
     if info.kind == "delegate":
         return [f"{indent}luax::tryPushBoundDelegateTable(L, {expr});\n"]
     if info.kind == "result":

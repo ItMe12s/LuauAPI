@@ -73,7 +73,11 @@ def _type_needed_class_names(plan: EmitPlan) -> set[str]:
 
     def add(info) -> None:
         if info:
-            referenced.update(object_class_names(info))
+            referenced.update(
+                name
+                for name in object_class_names(info)
+                if name in plan.objects and not plan.objects[name].methods
+            )
 
     for grouped in plan.supported_by_class.values():
         for methods in grouped.values():
