@@ -9,10 +9,12 @@ if TYPE_CHECKING:
 from luau_codegen.parse.broma import Class, Field
 from luau_codegen.model.denylist import INACCESSIBLE_CLASSES
 from luau_codegen.convert.type_map import (
+    COMPOSITE_KINDS,
     TypeInfo,
     classify_arg,
     classify_return,
     normalize_type,
+    object_class_names,
 )
 from luau_codegen.policy.containers import (
     _CONTAINER_KINDS,
@@ -24,30 +26,6 @@ from luau_codegen.policy.containers import (
 INACCESSIBLE_FIELDS = {
     ("CCObject", "m_nChildIndex"),
 }
-
-# Getter-only container fields skip setter arg gates.
-_READONLY_FIELD_CONTAINER_KINDS = frozenset(
-    {
-        "nested_primitive_vector_view",
-        "cc_c_array_view",
-    }
-)
-
-# Mutable pointer container fields bind getters/setters.
-_MUTABLE_POINTER_FIELD_CONTAINER_KINDS = frozenset(
-    {
-        "primitive_vector",
-        "map_vector",
-        "std_array",
-        "map",
-        "unordered_map",
-        "set",
-        "unordered_set",
-        "nested_bool_vector_view",
-        "nested_object_vector_view",
-        "nested_object_grid_view",
-    }
-)
 
 
 def field_key(cls: Class, field: Field) -> str:
@@ -65,9 +43,7 @@ def _is_function_pointer(t: str) -> bool:
 
 
 def _mutable_pointer_field_container(info: TypeInfo) -> bool:
-    return info.kind in _MUTABLE_POINTER_FIELD_CONTAINER_KINDS and (
-        info.is_out or info.is_vector_ptr
-    )
+    return info.kind in COMPOSITE_KINDS - {"vector_view"} and (info.is_out or info.is_vector_ptr)
 
 
 def bindable_field(
@@ -109,7 +85,7 @@ def bindable_field(
     if ret.kind in _CONTAINER_KINDS and not container_supported_as_return(ret):
         if not _mutable_pointer_field_container(ret):
             return False, f"unsupported-return:{field.type}", arg, ret
-    readonly_container_field = ret.kind in _READONLY_FIELD_CONTAINER_KINDS
+    readonly_container_field = ret.kind == "cc_c_array_view"
     if (
         arg.kind in _CONTAINER_KINDS
         and not readonly_container_field
@@ -119,10 +95,10 @@ def bindable_field(
         return False, f"unsupported-arg:{field.type}", arg, ret
     if arg.kind == "string" and arg.cxx_type.endswith("*"):
         return False, "string-pointer", arg, ret
-    if ret.kind == "object" and ret.class_name in INACCESSIBLE_CLASSES:
-        return False, f"inaccessible-type:{ret.class_name}", arg, ret
-    if arg.kind == "object" and arg.class_name in INACCESSIBLE_CLASSES:
-        return False, f"inaccessible-type:{arg.class_name}", arg, ret
+    for info in (ret, arg):
+        for class_name in sorted(object_class_names(info)):
+            if class_name in INACCESSIBLE_CLASSES:
+                return False, f"inaccessible-type:{class_name}", arg, ret
     return True, "", arg, ret
 
 
@@ -151,6 +127,8 @@ def field_skipped_object_ref(
             ctx=ctx,
         ),
     ):
-        if info and info.kind == "object" and info.class_name in blocked:
-            return info.class_name
+        if info:
+            for class_name in sorted(object_class_names(info)):
+                if class_name in blocked:
+                    return class_name
     return ""

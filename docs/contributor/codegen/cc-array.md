@@ -47,17 +47,12 @@ It falls back to `CCNode` for node objects, then `CCObject`.
 - Writable array helpers until retain and release behavior is audited
 - Broad conversion of `CCArray*` returns into Lua arrays
 
-## Verification
-
-1. `PYTHONPATH=tools python -m unittest discover -s tests/luau_codegen -p "test_geode_ccarray.py"`
-2. Regenerate `types/geode.d.luau` and confirm `CCArray` has `count` and `objectAtIndex`.
-3. Confirm `CCArray.data` remains skipped.
-
 ## Related
 
 - [Codegen](codegen.md)
 - [ccCArray read-only fields](cc-c-array.md)
-- [Nested containers](nested-containers.md)
+- [Recursive containers](nested-containers.md)
+- [Testing](../testing.md)
 
 ## Source
 

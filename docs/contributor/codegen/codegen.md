@@ -195,17 +195,18 @@ Binding, hook, delegate, and stub emit all call `classify_arg()` or `classify_re
 
 Resolution order in `_classify_core()`:
 
-1. Out-pointer containers, primitive vectors, std arrays, nested views, and `ccCArray` views
-2. `gd` containers and `std::pair`
-3. Primitives: `bool`, wide integers as string, numeric, string
-4. Value structs from `VALUE_TYPES` in `model/value_types.py` (via `convert/type_map.py`)
-5. Enums from `CodegenContext`
-6. Opaque handles from `OPAQUE_HANDLE_TYPES`
-7. `geode::Result<>` as boolean or string
-8. Callbacks (`std::function`, `geode::Function`) on args only
-9. cocos2d selectors on args only
-10. Delegate pointers on args only, via `model/delegate_specs.py`
-11. Object pointers last
+1. Geode task handles
+2. Root pointer containers, audited pointer-grid fields, `ccCArray` views, and recursive supported composites
+3. `SeedValue` wrappers
+4. Primitives: `bool`, wide integers as string, numeric, string
+5. Value structs from `VALUE_TYPES` in `model/value_types.py` (via `convert/type_map.py`)
+6. Enums from `CodegenContext`
+7. Opaque handles from `OPAQUE_HANDLE_TYPES`
+8. `geode::Result<>` as boolean or string
+9. Callbacks (`std::function`, `geode::Function`) on args only
+10. cocos2d selectors on args only
+11. Delegate pointers on args only, via `model/delegate_specs.py`
+12. Object pointers last
 
 `CALLBACK_ALIASES` and `CLASS_CALLBACK_ALIASES` in `type_map.py` expand shorthand names before classification.
 Unsupported types return `None`, which becomes a skip reason such as `unsupported-arg:<type>`.
@@ -267,13 +268,17 @@ Defer rule in `types_binding.py`:
 - Transitive defer when a `nested` field references another deferred struct
 - Fixpoint over `COCOS_VALUE_STRUCTS` order in the combined registry
 
-Runtime include order:
+Production include order:
 
 - `Types.hpp` includes `Types.generated.hpp` before `Usertype.hpp`
-- `ContainerTables.hpp` includes `Types.generated.containers.hpp` at the end,
-  after container map and vector templates are declared
-- `checkPrimitiveVectorElement` and `pushPrimitiveVectorElement` are forward-declared first
-  and defined after that include so map value paths can call `luax::check<T>` and `luax::push` on deferred types
+- `ContainerTables.hpp` includes `Types.generated.containers.hpp` after the public container helper
+  declarations
+- Recursive container traits are declared before that include.
+- Their leaf operations are defined after it.
+  Any nested path can then call `luax::check<T>` and `luax::push` on deferred types.
+
+Host tests define `LUAUAPI_HOST_TESTS` and skip both generated headers.
+Production builds require both generated headers.
 
 Handwritten check/push for `UIButtonConfig` and `SmartPrefabResult` stay in `Types.hpp` (not generated).
 
@@ -331,18 +336,18 @@ All eight `SeedValue` variant names share this policy.
 
 Skipped fields appear as `-- skipped <name>: <reason>` comments in the stub.
 
-`bindable_field()` uses the same container gates as methods, except getter-only container fields
-(`cc_c_array_view`, `nested_primitive_vector_view`, and object-element `vector_view`).
+`bindable_field()` uses recursive container policy. `cc_c_array_view` and direct object-element
+`vector_view` fields remain getter-only.
 Opaque-element `vector_view` fields bind read-write via table assign
 (clear plus repopulate through `assignOpaqueVectorView`).
 For example, `CCMoveCNode.m_groupObjects` (`gd::vector<GroupCommandObject2*>`) accepts `moveNode.m_groupObjects = { cmd1, cmd2 }`.
 Object-element `vector_view` stays getter-only until a retain-aware setter exists.
 
-`gd::map` and `gd::set` field setters use `assignMap` / `assignSet` (clear plus per-entry insert)
-instead of whole-container `operator=`, because Geode gnustl on Android lacks `_Rb_tree::_M_move_assign`.
-`gd::vector` primitive field setters use `assignPrimitiveVector`. `std::pair` inside containers is bound.
-`std::array` fields bind up to `STD_ARRAY_MAX_SIZE` (2000) elements.
-See [Pair containers](pair-containers.md), [Nested containers](nested-containers.md), and [ccCArray read-only fields](cc-c-array.md).
+Composite field setters use `assignContainerValue` instead of whole-container `operator=`.
+This avoids the missing `_Rb_tree::_M_move_assign` in Geode gnustl on Android.
+The recursive grammar, pointer-grid exception, assignment behavior, and array cap are documented in
+[Recursive containers](nested-containers.md).
+See [Pair containers](pair-containers.md) and [ccCArray read-only fields](cc-c-array.md) for their table shapes.
 
 ### Out-ref and multi-return
 
@@ -446,7 +451,7 @@ See [delegates](../../reference/lua/delegates.md) for how scripts use delegate t
 - [game objects](../../reference/lua/game-objects.md)
 - [Platform parity](platform-parity.md)
 - [Pair containers](pair-containers.md)
-- [Nested containers](nested-containers.md)
+- [Recursive containers](nested-containers.md)
 - [CCArray methods](cc-array.md)
 - [ccCArray read-only fields](cc-c-array.md)
 - [Testing](../testing.md)

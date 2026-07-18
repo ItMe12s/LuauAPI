@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from luau_codegen.parse.broma import Arg
 from luau_codegen.convert.type_map import (
+    COMPOSITE_KINDS,
     TypeInfo,
     UNSIGNED_NUMERIC_TYPES,
     VALUE_CHECK_CXX_TYPES,
@@ -10,6 +11,7 @@ from luau_codegen.convert.type_map import (
     sel_variant as sel_variant_name,
 )
 from luau_codegen.model import delegate_specs as _delegate_specs
+from luau_codegen.model.nested_containers import AUDITED_POINTER_GRID_KIND
 from luau_codegen.emit.types_binding import emit_value_default_expr, emit_value_local_decl
 
 
@@ -17,120 +19,10 @@ def _prefix(declare: bool, var: str) -> str:
     return f"auto {var}" if declare else var
 
 
-def _emit_out_param_check(
-    info: TypeInfo, idx: str | int, var: str, label: str, fn: str, *, declare: bool
-) -> list[str]:
-    cxx = info.cxx_type
-    if declare:
-        return [
-            f"        {cxx} {var};\n",
-            f'        luax::{fn}(L, {idx}, "{label}", {var});\n',
-        ]
-    return [f'        luax::{fn}(L, {idx}, "{label}", {var});\n']
-
-
-def _primitive_vector_elem_cxx(info: TypeInfo) -> str:
-    if info.element_type is None:
-        raise ValueError("primitive vector requires element type")
-    return info.element_type.cxx_type
-
-
-def _std_array_elem_cxx(info: TypeInfo) -> str:
-    if info.element_type is None:
-        raise ValueError("std array requires element type")
-    return info.element_type.cxx_type
-
-
-def _std_array_template_args(info: TypeInfo) -> str:
-    if info.array_size <= 0:
-        raise ValueError("std array requires fixed size")
-    return f"{_std_array_elem_cxx(info)}, {info.array_size}"
-
-
-def _map_key_value_cxx(info: TypeInfo) -> tuple[str, str]:
-    if info.key_type is None or info.value_type is None:
-        raise ValueError("map container requires key and value types")
-    return info.key_type.cxx_type, info.value_type.cxx_type
-
-
-def _set_elem_cxx(info: TypeInfo) -> str:
-    if info.element_type is None:
-        raise ValueError("set container requires element type")
-    return info.element_type.cxx_type
-
-
-def _pair_component_cxx(info: TypeInfo) -> tuple[str, str]:
-    if info.key_type is None or info.value_type is None:
-        raise ValueError("pair type requires first and second types")
-    return info.key_type.cxx_type, info.value_type.cxx_type
-
-
 def _task_handle_inner_cxx(info: TypeInfo) -> str:
     if info.element_type is None:
         raise ValueError("task handle requires result type")
     return info.element_type.cxx_type
-
-
-_MAP_CONTAINER_TYPES = {"map": "gd::map", "unordered_map": "gd::unordered_map"}
-_SET_CONTAINER_TYPES = {"set": "gd::set", "unordered_set": "gd::unordered_set"}
-
-
-def _map_container_type(info: TypeInfo, key: str, value: str) -> str:
-    container = _MAP_CONTAINER_TYPES[info.kind]
-    return f"{container}<{key}, {value}>"
-
-
-def _pair_key_map_type(info: TypeInfo, first: str, second: str, value: str) -> str:
-    container = _MAP_CONTAINER_TYPES[info.kind]
-    return f"{container}<std::pair<{first}, {second}>, {value}>"
-
-
-def _set_container_type(info: TypeInfo, elem: str) -> str:
-    return f"{_SET_CONTAINER_TYPES[info.kind]}<{elem}>"
-
-
-def _map_check_call(info: TypeInfo) -> str:
-    if info.key_type is not None and info.key_type.kind == "pair":
-        if info.value_type is None:
-            raise ValueError("map container requires value type")
-        first, second = _pair_component_cxx(info.key_type)
-        value = info.value_type.cxx_type
-        map_type = _pair_key_map_type(info, first, second, value)
-        return f"detail::checkPairKeyAssociativeMap<{first}, {second}, {value}, {map_type}>"
-    key, value = _map_key_value_cxx(info)
-    map_type = _map_container_type(info, key, value)
-    return f"detail::checkAssociativeMap<{key}, {value}, {map_type}>"
-
-
-def _map_push_call(info: TypeInfo) -> str:
-    if info.key_type is not None and info.key_type.kind == "pair":
-        if info.value_type is None:
-            raise ValueError("map container requires value type")
-        first, second = _pair_component_cxx(info.key_type)
-        value = info.value_type.cxx_type
-        map_type = _pair_key_map_type(info, first, second, value)
-        if info.is_out or info.is_vector_ptr:
-            return f"detail::pushPairKeyAssociativeMapPointer<{map_type}>"
-        return f"detail::pushPairKeyAssociativeMap<{first}, {second}, {value}, {map_type}>"
-    key, value = _map_key_value_cxx(info)
-    map_type = _map_container_type(info, key, value)
-    if info.is_out or info.is_vector_ptr:
-        return f"detail::pushAssociativeMapPointer<{map_type}>"
-    return f"detail::pushAssociativeMap<{key}, {value}, {map_type}>"
-
-
-def _set_check_call(info: TypeInfo) -> str:
-    elem = _set_elem_cxx(info)
-    set_type = _set_container_type(info, elem)
-    return f"detail::checkSetFromTable<{elem}, {set_type}>"
-
-
-def _set_push_call(info: TypeInfo) -> str:
-    elem = _set_elem_cxx(info)
-    set_type = _set_container_type(info, elem)
-    if info.is_out or info.is_vector_ptr:
-        return f"detail::pushSetContainerPointer<{set_type}>"
-    return f"detail::pushSetAsTable<{elem}, {set_type}>"
 
 
 def _luax_numeric_check_type(cxx: str) -> str:
@@ -154,59 +46,6 @@ def _vector_view_check_fn(info: TypeInfo) -> str:
     if info.element_type and info.element_type.kind == "opaque_handle":
         return f"checkOpaqueVectorView<{pointee}>"
     return f"checkObjectVectorView<{pointee}>"
-
-
-def _nested_primitive_vector_push_fn(info: TypeInfo) -> str:
-    if info.element_type is None:
-        raise ValueError("nested primitive vector view requires inner vector type")
-    inner = info.element_type.element_type
-    if inner is None:
-        raise ValueError("nested primitive vector view requires inner element type")
-    return f"pushNestedPrimitiveVectorPointers<{inner.cxx_type}>"
-
-
-def _nested_primitive_vector_check_fn(info: TypeInfo) -> str:
-    if info.element_type is None or info.element_type.element_type is None:
-        raise ValueError("nested primitive vector view requires inner element type")
-    return f"checkNestedPrimitiveVectorPointers<{info.element_type.element_type.cxx_type}>"
-
-
-def _nested_object_pointee_cxx(info: TypeInfo) -> str:
-    current = info.element_type
-    while current is not None:
-        if current.element_type is not None and current.element_type.kind in (
-            "object",
-            "opaque_handle",
-        ):
-            element = current.element_type
-            if element.kind == "object":
-                return element.cxx_type[:-1]
-            pointee = element.cxx_type[:-1] if element.cxx_type.endswith("*") else element.cxx_type
-            return pointee
-        current = current.element_type
-    raise ValueError("nested object view requires object inner element")
-
-
-def _nested_object_vector_push_fn(info: TypeInfo) -> str:
-    return f"pushNestedObjectVectorPointers<{_nested_object_pointee_cxx(info)}>"
-
-
-def _nested_object_vector_check_fn(info: TypeInfo) -> str:
-    return f"checkNestedObjectVectorPointers<{_nested_object_pointee_cxx(info)}>"
-
-
-def _nested_object_grid_push_fn(info: TypeInfo) -> str:
-    return f"pushNestedObjectGridPointers<{_nested_object_pointee_cxx(info)}>"
-
-
-def _nested_object_grid_check_fn(info: TypeInfo) -> str:
-    return f"checkNestedObjectGridPointers<{_nested_object_pointee_cxx(info)}>"
-
-
-def _map_vector_elem_cxx(info: TypeInfo) -> str:
-    if info.element_type is None:
-        raise ValueError("map vector requires element type")
-    return info.element_type.cxx_type
 
 
 def _cc_c_array_view_pointee_cxx(info: TypeInfo) -> str:
@@ -334,45 +173,14 @@ def emit_stack_check(
             raise ValueError("vector view requires object or opaque element type")
         check_fn = _vector_view_check_fn(info)
         return [f'        {_prefix(declare, var)} = luax::{check_fn}(L, {idx}, "{label}");\n']
-    if info.kind == "primitive_vector":
-        elem = _primitive_vector_elem_cxx(info)
-        return _emit_out_param_check(
-            info, idx, var, label, f"checkPrimitiveVector<{elem}>", declare=declare
-        )
-    if info.kind == "std_array":
-        args = _std_array_template_args(info)
+    if info.kind == AUDITED_POINTER_GRID_KIND:
         return [
-            f'        {_prefix(declare, var)} = luax::checkStdArray<{args}>(L, {idx}, "{label}");\n'
+            f'        {_prefix(declare, var)} = luax::checkAuditedPointerGrid<{info.cxx_type}>(L, {idx}, "{label}");\n'
         ]
-    if info.kind in ("map", "unordered_map"):
-        check_fn = _map_check_call(info)
-        return [f'        {_prefix(declare, var)} = luax::{check_fn}(L, {idx}, "{label}");\n']
-    if info.kind in ("set", "unordered_set"):
-        check_fn = _set_check_call(info)
-        return [f'        {_prefix(declare, var)} = luax::{check_fn}(L, {idx}, "{label}");\n']
-    if info.kind == "pair":
-        first, second = _pair_component_cxx(info)
+    if info.kind in COMPOSITE_KINDS:
         return [
-            f'        {_prefix(declare, var)} = luax::checkPair<{first}, {second}>(L, {idx}, "{label}");\n'
+            f'        {_prefix(declare, var)} = luax::checkContainerValue<{info.cxx_type}>(L, {idx}, "{label}");\n'
         ]
-    if info.kind == "tuple":
-        return [
-            f'        {_prefix(declare, var)} = luax::checkTupleTableInt3(L, {idx}, "{label}");\n'
-        ]
-    if info.kind == "nested_bool_vector_view":
-        check_fn = _nested_primitive_vector_check_fn(info)
-        return _emit_out_param_check(info, idx, var, label, check_fn, declare=declare)
-    if info.kind == "nested_object_vector_view":
-        check_fn = _nested_object_vector_check_fn(info)
-        return _emit_out_param_check(info, idx, var, label, check_fn, declare=declare)
-    if info.kind == "nested_object_grid_view":
-        check_fn = _nested_object_grid_check_fn(info)
-        return _emit_out_param_check(info, idx, var, label, check_fn, declare=declare)
-    if info.kind == "map_vector":
-        elem = _map_vector_elem_cxx(info)
-        return _emit_out_param_check(
-            info, idx, var, label, f"checkPrimitiveVector<{elem}>", declare=declare
-        )
     raise ValueError(f"unsupported type kind: {info.kind}")
 
 
@@ -417,25 +225,9 @@ def _push_impl(
             return [f"{indent}luax::Usertype<cocos2d::CCObject>::{push}(L, {expr});\n"]
         push = "pushOwned" if owned else "pushBorrowed"
         return [f"{indent}luax::Usertype<{info.cxx_type[:-1]}>::{push}(L, {expr});\n"]
-    if info.kind == "nested_primitive_vector_view":
-        push_fn = _nested_primitive_vector_push_fn(info)
-        return [f"{indent}luax::{push_fn}(L, {expr});\n"]
-    if info.kind == "nested_bool_vector_view":
-        push_fn = _nested_primitive_vector_push_fn(info)
-        return [f"{indent}luax::{push_fn}(L, {expr});\n"]
-    if info.kind == "nested_object_vector_view":
-        push_fn = _nested_object_vector_push_fn(info)
-        if not owner_expr:
-            raise ValueError("nested object vector view push requires owner expression")
-        return [f"{indent}luax::{push_fn}(L, {expr}, {owner_expr});\n"]
-    if info.kind == "nested_object_grid_view":
-        push_fn = _nested_object_grid_push_fn(info)
-        if not owner_expr:
-            raise ValueError("nested object grid view push requires owner expression")
-        return [f"{indent}luax::{push_fn}(L, {expr}, {owner_expr});\n"]
-    if info.kind == "map_vector":
-        elem = _map_vector_elem_cxx(info)
-        return [f"{indent}luax::pushPrimitiveVector<{elem}>(L, {expr});\n"]
+    if info.kind == AUDITED_POINTER_GRID_KIND:
+        owner_arg = f", {owner_expr}" if owner_expr else ""
+        return [f"{indent}luax::pushAuditedPointerGrid(L, {expr}{owner_arg});\n"]
     if info.kind == "cc_c_array_view":
         if info.element_type is None or info.element_type.kind != "object":
             raise ValueError("ccCArray view requires object element type")
@@ -453,25 +245,9 @@ def _push_impl(
         if vector_owned or not owner_expr:
             return [f"{indent}luax::{push_fn}(L, {expr});\n"]
         return [f"{indent}luax::{push_fn}(L, {expr}, {owner_expr});\n"]
-    if info.kind == "primitive_vector":
-        elem = _primitive_vector_elem_cxx(info)
-        return [f"{indent}luax::pushPrimitiveVector<{elem}>(L, {expr});\n"]
-    if info.kind == "std_array":
-        args = _std_array_template_args(info)
-        return [f"{indent}luax::pushStdArray<{args}>(L, {expr});\n"]
-    if info.kind in ("map", "unordered_map"):
-        push_fn = _map_push_call(info)
-        arg_expr = f"&{expr}" if info.is_out and not info.is_vector_ptr else expr
-        return [f"{indent}luax::{push_fn}(L, {arg_expr});\n"]
-    if info.kind in ("set", "unordered_set"):
-        push_fn = _set_push_call(info)
-        arg_expr = f"&{expr}" if info.is_out and not info.is_vector_ptr else expr
-        return [f"{indent}luax::{push_fn}(L, {arg_expr});\n"]
-    if info.kind == "pair":
-        first, second = _pair_component_cxx(info)
-        return [f"{indent}luax::pushPair<{first}, {second}>(L, {expr});\n"]
-    if info.kind == "tuple":
-        return [f"{indent}luax::pushTupleTableInt3(L, {expr});\n"]
+    if info.kind in COMPOSITE_KINDS:
+        owner_arg = f", {owner_expr}" if owner_expr else ""
+        return [f"{indent}luax::pushContainerValue<{info.cxx_type}>(L, {expr}{owner_arg});\n"]
     if info.kind == "delegate":
         return [f"{indent}luax::tryPushBoundDelegateTable(L, {expr});\n"]
     if info.kind == "result":
@@ -558,11 +334,11 @@ def _emit_callback_pop(var: str, ret: TypeInfo) -> list[str]:
         return [
             "                +[](lua_State* L, void* raw) {\n",
             f"                    auto* slot = static_cast<{ret.cxx_type}*>(raw);\n",
-            f"                    if (lua_isnil(L, -1)) {{\n",
-            f"                        *slot = nullptr;\n",
-            f"                    }} else {{\n",
+            "                    if (lua_isnil(L, -1)) {\n",
+            "                        *slot = nullptr;\n",
+            "                    } else {\n",
             f'                        *slot = luax::Usertype<{obj}>::check(L, -1, "{var} callback return");\n',
-            f"                    }}\n",
+            "                    }\n",
             "                },\n",
         ]
     if ret.kind == "opaque_handle":
@@ -570,11 +346,11 @@ def _emit_callback_pop(var: str, ret: TypeInfo) -> list[str]:
         return [
             "                +[](lua_State* L, void* raw) {\n",
             f"                    auto* slot = static_cast<{ret.cxx_type}*>(raw);\n",
-            f"                    if (lua_isnil(L, -1)) {{\n",
-            f"                        *slot = nullptr;\n",
-            f"                    }} else {{\n",
+            "                    if (lua_isnil(L, -1)) {\n",
+            "                        *slot = nullptr;\n",
+            "                    } else {\n",
             f'                        *slot = luax::checkOpaqueHandle<{pointee}>(L, -1, "{var} callback return");\n',
-            f"                    }}\n",
+            "                    }\n",
             "                },\n",
         ]
     if ret.kind == "string":

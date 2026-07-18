@@ -1,7 +1,9 @@
 #pragma once
 
 #include "framework/stack/Stack.hpp"
-#include "framework/stack/Types.generated.hpp"
+#if !defined(LUAUAPI_HOST_TESTS)
+    #include "framework/stack/Types.generated.hpp"
+#endif
 #include "framework/usertype/Usertype.hpp"
 
 #include <cocos2d.h>

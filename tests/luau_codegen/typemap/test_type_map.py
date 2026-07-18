@@ -5,7 +5,7 @@ import shutil
 import tempfile
 import unittest
 
-import test_support
+import test_support  # noqa: F401 - installs codegen test fixtures
 from luau_codegen.convert.type_map import (  # type: ignore[import-unresolved]
     COCOS_ENUM_TYPES,
     GD_ENUM_TYPES,
@@ -167,6 +167,15 @@ class GeodeEnumRegistrationTests(unittest.TestCase):
         self.assertEqual(info.lua_type, "(arg1: CCObject) -> boolean")
         assert info.callback_ret is not None
         self.assertEqual(info.callback_ret.kind, "bool")
+
+    def test_classify_std_function_rejects_container_children(self) -> None:
+        signatures = (
+            "std::function<gd::map<int, gd::vector<int>>()>",
+            "std::function<void(gd::vector<int>)>",
+        )
+        for signature in signatures:
+            with self.subTest(signature=signature):
+                self.assertIsNone(classify_arg(signature, {}))
 
     def test_classify_callback_alias(self) -> None:
         info = classify_arg("Callback", {})
@@ -394,12 +403,12 @@ class ContainerTypeMapTests(unittest.TestCase):
         self.assertTrue(info.is_vector_ptr)
         self.assertEqual(info.class_name, "GameObject")
 
-    def test_classify_gd_vector_int_as_primitive_vector(self) -> None:
+    def test_classify_gd_vector_int_as_vector(self) -> None:
         info = classify_arg("gd::vector<int>", {})
 
         self.assertIsNotNone(info)
         assert info is not None
-        self.assertEqual(info.kind, "primitive_vector")
+        self.assertEqual(info.kind, "vector")
         self.assertEqual(info.cxx_type, "gd::vector<int>")
         self.assertEqual(info.lua_type, "{ number }")
         self.assertIsNotNone(info.element_type)
@@ -412,42 +421,42 @@ class ContainerTypeMapTests(unittest.TestCase):
         info = classify_arg("gd::vector<int> const&", {})
 
         assert info is not None
-        self.assertEqual(info.kind, "primitive_vector")
+        self.assertEqual(info.kind, "vector")
         self.assertTrue(info.is_ref)
         self.assertFalse(info.is_out)
 
-    def test_classify_gd_vector_bool_as_primitive_vector(self) -> None:
+    def test_classify_gd_vector_bool_as_vector(self) -> None:
         info = classify_arg("gd::vector<bool>", {})
 
         assert info is not None
-        self.assertEqual(info.kind, "primitive_vector")
+        self.assertEqual(info.kind, "vector")
         self.assertEqual(info.lua_type, "{ boolean }")
         assert info.element_type is not None
         self.assertEqual(info.element_type.kind, "bool")
 
-    def test_classify_gd_vector_string_as_primitive_vector(self) -> None:
+    def test_classify_gd_vector_string_as_vector(self) -> None:
         info = classify_arg("gd::vector<std::string>", {})
 
         assert info is not None
-        self.assertEqual(info.kind, "primitive_vector")
+        self.assertEqual(info.kind, "vector")
         self.assertEqual(info.lua_type, "{ string }")
         assert info.element_type is not None
         self.assertEqual(info.element_type.kind, "string")
 
-    def test_classify_gd_vector_wideint_as_primitive_vector(self) -> None:
+    def test_classify_gd_vector_wideint_as_vector(self) -> None:
         info = classify_arg("gd::vector<uint64_t>", {})
 
         assert info is not None
-        self.assertEqual(info.kind, "primitive_vector")
+        self.assertEqual(info.kind, "vector")
         self.assertEqual(info.lua_type, "{ string }")
         assert info.element_type is not None
         self.assertEqual(info.element_type.kind, "wideint")
 
-    def test_classify_gd_vector_enum_as_primitive_vector(self) -> None:
+    def test_classify_gd_vector_enum_as_vector(self) -> None:
         info = classify_arg("gd::vector<FMOD_RESULT>", {})
 
         assert info is not None
-        self.assertEqual(info.kind, "primitive_vector")
+        self.assertEqual(info.kind, "vector")
         self.assertEqual(info.lua_type, "{ number }")
         assert info.element_type is not None
         self.assertEqual(info.element_type.kind, "enum")
@@ -507,9 +516,6 @@ class ContainerTypeMapTests(unittest.TestCase):
     def test_classify_std_array_rejects_unmapped_value_element(self) -> None:
         self.assertIsNone(classify_arg("std::array<ccVertex2F, 4>", {}))
 
-    def test_classify_std_array_rejects_nested_container_element(self) -> None:
-        self.assertIsNone(classify_arg("std::array<gd::vector<int>, 4>", {}))
-
     def test_classify_gd_vector_object_pointer_stays_vector_view(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")
         objects = {"CCObject": ccobject, "cocos2d::CCObject": ccobject}
@@ -537,9 +543,6 @@ class ContainerTypeMapTests(unittest.TestCase):
         assert info is not None
         self.assertEqual(info.kind, "vector_view")
         self.assertEqual(info.lua_type, "{ GroupCommandObject2? }")
-
-    def test_classify_gd_vector_rejects_nested_containers(self) -> None:
-        self.assertIsNone(classify_arg("gd::vector<gd::vector<int>>", {}))
 
     def test_classify_gd_map_int_object_pointer(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")
@@ -651,9 +654,6 @@ class ContainerTypeMapTests(unittest.TestCase):
 
         self.assertIsNone(classify_arg("gd::map<cocos2d::CCObject*, int>", objects))
 
-    def test_classify_gd_map_rejects_nested_containers(self) -> None:
-        self.assertIsNone(classify_arg("gd::map<int, gd::vector<int>>", {}))
-
     def test_classify_gd_unordered_map_nested_object_vector_value(self) -> None:
         label = Class(name="LabelGameObject", namespace="")
         objects = {"LabelGameObject": label}
@@ -674,17 +674,6 @@ class ContainerTypeMapTests(unittest.TestCase):
         assert info.value_type is not None
         self.assertEqual(info.value_type.kind, "vector_view")
         self.assertIn("value:", info.lua_type)
-
-    def test_classify_nested_primitive_vector_int_pointers(self) -> None:
-        info = classify_arg("gd::vector<gd::vector<int>*>", {})
-
-        self.assertIsNotNone(info)
-        assert info is not None
-        self.assertEqual(info.kind, "nested_primitive_vector_view")
-        self.assertEqual(info.lua_type, "{ { number } }")
-
-    def test_classify_gd_set_rejects_nested_containers(self) -> None:
-        self.assertIsNone(classify_arg("gd::set<gd::vector<int>>", {}))
 
     def test_classify_gd_set_ccobject_pointer(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")
@@ -746,7 +735,7 @@ class ContainerTypeMapTests(unittest.TestCase):
 
         self.assertIsNotNone(info)
         assert info is not None
-        self.assertEqual(info.kind, "primitive_vector")
+        self.assertEqual(info.kind, "vector")
         self.assertEqual(info.lua_type, "{ { first: number, second: number } }")
 
     def test_classify_gd_set_pair(self) -> None:
@@ -860,7 +849,7 @@ class GdEnumTypeMapTests(unittest.TestCase):
         info = classify_arg("gd::vector<GJLevelType>", {})
         self.assertIsNotNone(info)
         assert info is not None
-        self.assertEqual(info.kind, "primitive_vector")
+        self.assertEqual(info.kind, "vector")
         self.assertEqual(info.lua_type, "{ number }")
         assert info.element_type is not None
         self.assertEqual(info.element_type.kind, "enum")
@@ -992,11 +981,11 @@ class ValueStructGateTests(unittest.TestCase):
         self.assertEqual(info.value_type.kind, "value")
         self.assertEqual(info.value_type.lua_type, "SmartPrefabResult")
 
-    def test_classify_chance_object_vector_is_value_primitive_vector(self) -> None:
+    def test_classify_chance_object_vector_is_value_vector(self) -> None:
         info = classify_arg("gd::vector<ChanceObject>", {})
         self.assertIsNotNone(info)
         assert info is not None
-        self.assertEqual(info.kind, "primitive_vector")
+        self.assertEqual(info.kind, "vector")
         assert info.element_type is not None
         self.assertEqual(info.element_type.kind, "value")
         self.assertEqual(info.element_type.lua_type, "ChanceObject")

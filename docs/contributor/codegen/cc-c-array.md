@@ -31,17 +31,12 @@ The view userdata indexes `1..num` from `ccCArray::arr`, pushes borrowed usertyp
 - Unknown `ccCArray*` fields without an allowlist entry
 - Writable setters until retain semantics are designed
 
-## Verification
-
-1. `PYTHONPATH=tools python -m unittest discover -s tests/luau_codegen/typemap -p test_cc_c_array.py`
-2. Regenerate `types/geode.d.luau` and confirm dispatcher handler queue fields bind.
-3. Confirm `CCArray.data` and other unlisted `ccCArray*` fields remain `-- skipped`.
-
 ## Related
 
 - [Codegen](codegen.md)
-- [Nested containers](nested-containers.md)
+- [Recursive containers](nested-containers.md)
 - [Pair containers](pair-containers.md)
+- [Testing](../testing.md)
 
 ## Source
 

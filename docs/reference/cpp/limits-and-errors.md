@@ -2,7 +2,7 @@
 
 ## Summary
 
-Runtime limits and error strings. Values come from `src/core/Config.hpp` unless noted.
+Runtime and codegen limits plus error strings. Values come from `src/core/Config.hpp` unless noted.
 This page is the canonical list of caps, deadlines, and error strings for LuauAPI.
 
 ## Compilation and bytecode
@@ -19,6 +19,12 @@ This page is the canonical list of caps, deadlines, and error strings for LuauAP
 | --- | --- | --- |
 | `luau compile exceeded 15000 ms budget` | Compile over deadline | Internal. Cache insert fails. |
 | (none) | Cache over entry or byte cap | Oldest entries evicted. No Lua error. |
+
+## Code generation
+
+| Constant | Value | Meaning |
+| --- | --- | --- |
+| `STD_ARRAY_MAX_SIZE` | `2000` | Largest `std::array` accepted by codegen. The minimum size is 1. |
 
 ## Filesystem
 
@@ -307,6 +313,7 @@ When an allocation would cross the cap, it fails and Lua reports an out of memor
 - [tasks and time](../lua/tasks.md)
 - [web](../lua/web.md)
 - [websocket](../lua/websocket.md)
+- [Codegen](../../contributor/codegen/codegen.md)
 
 ## Source
 
@@ -322,3 +329,4 @@ When an allocation would cross the cap, it fails and Lua reports an out of memor
 - `include/LuauAPI.hpp`
 - `src/api.cpp`
 - `src/core/Runtime.cpp`
+- `tools/luau_codegen/convert/type_classification.py`

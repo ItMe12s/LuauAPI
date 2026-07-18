@@ -4,17 +4,13 @@ import unittest
 import warnings
 
 from test_support import resolve_test_bindings_dir
-from luau_codegen.convert.marshalling import check_arg, push_value  # type: ignore[import-unresolved]
-from luau_codegen.convert.type_map import TypeInfo, classify_arg  # type: ignore[import-unresolved]
-from luau_codegen.model.domain import build_class_lookup  # type: ignore[import-unresolved]
-from luau_codegen.model.nested_containers import (  # type: ignore[import-unresolved]
-    BASELINE_MAP_VECTOR_FIELDS,
-    BASELINE_NESTED_BOOL_VECTOR_FIELDS,
-    BASELINE_NESTED_OBJECT_GRID_FIELDS,
-    BASELINE_NESTED_OBJECT_VECTOR_FIELDS,
-    BASELINE_TUPLE_SET_FIELDS,
+from luau_codegen.convert.marshalling import (  # type: ignore[import-unresolved]
+    emit_stack_check,
+    push_value,
 )
-from luau_codegen.parse.broma import Arg, Class, Field  # type: ignore[import-unresolved]
+from luau_codegen.convert.type_map import classify_arg  # type: ignore[import-unresolved]
+from luau_codegen.model.domain import build_class_lookup  # type: ignore[import-unresolved]
+from luau_codegen.parse.broma import Class, Field  # type: ignore[import-unresolved]
 from luau_codegen.parse.collect import collect_bindings_root  # type: ignore[import-unresolved]
 from luau_codegen.policy.fields import bindable_field  # type: ignore[import-unresolved]
 from luau_codegen.emit.bindings.class_file import _emit_class_file  # type: ignore[import-unresolved]
@@ -23,6 +19,9 @@ from luau_codegen.policy.filtering import group_supported  # type: ignore[import
 
 _GJ_BINDABLE_FIELDS = (
     "m_varianceValues",
+    "m_sectionSizes",
+    "m_nonEffectObjectsSizes",
+    "m_collisionBlockSectionSizes",
     "m_nonEffectObjectsFlags",
     "m_collisionBlockSections",
     "m_sections",
@@ -38,6 +37,51 @@ _GJ_STILL_SKIPPED = (
     "m_unk3358",
 )
 
+_AUDITED_POINTER_GRIDS = (
+    (
+        "m_sectionSizes",
+        "gd::vector<gd::vector<int>*>",
+        "gd::vector<gd::vector<int>>",
+        False,
+    ),
+    (
+        "m_nonEffectObjectsSizes",
+        "gd::vector<gd::vector<int>*>",
+        "gd::vector<gd::vector<int>>",
+        False,
+    ),
+    (
+        "m_collisionBlockSectionSizes",
+        "gd::vector<gd::vector<int>*>",
+        "gd::vector<gd::vector<int>>",
+        False,
+    ),
+    (
+        "m_nonEffectObjectsFlags",
+        "gd::vector<gd::vector<bool>*>",
+        "gd::vector<gd::vector<bool>>",
+        True,
+    ),
+    (
+        "m_collisionBlockSections",
+        "gd::vector<gd::vector<GameObject*>*>",
+        "gd::vector<gd::vector<GameObject*>>",
+        True,
+    ),
+    (
+        "m_sections",
+        "gd::vector<gd::vector<gd::vector<GameObject*>*>*>",
+        "gd::vector<gd::vector<gd::vector<GameObject*>>>",
+        True,
+    ),
+    (
+        "m_nonEffectObjects",
+        "gd::vector<gd::vector<gd::vector<GameObject*>*>*>",
+        "gd::vector<gd::vector<gd::vector<GameObject*>>>",
+        True,
+    ),
+)
+
 
 class GjGridFieldTypeMapTests(unittest.TestCase):
     def test_variance_array_classifies(self) -> None:
@@ -47,80 +91,83 @@ class GjGridFieldTypeMapTests(unittest.TestCase):
         self.assertEqual(info.kind, "std_array")
         self.assertEqual(info.array_size, 2000)
 
-    def test_nested_bool_grid_classifies(self) -> None:
-        info = classify_arg("gd::vector<gd::vector<bool>*>", {})
-        self.assertIsNotNone(info)
-        assert info is not None
-        self.assertEqual(info.kind, "nested_bool_vector_view")
-        self.assertEqual(info.lua_type, "{ { boolean } }")
-
-    def test_nested_object_vector_classifies(self) -> None:
+    def test_audited_pointer_grids_store_pointer_free_mirror(self) -> None:
         game_object = Class(name="GameObject", namespace="")
-        info = classify_arg("gd::vector<gd::vector<GameObject*>*>", {"GameObject": game_object})
-        self.assertIsNotNone(info)
-        assert info is not None
-        self.assertEqual(info.kind, "nested_object_vector_view")
-        self.assertEqual(info.lua_type, "{ { GameObject? } }")
+        objects = {"GameObject": game_object}
+        for field_name, actual, mirror, _ in _AUDITED_POINTER_GRIDS:
+            with self.subTest(field=field_name):
+                info = classify_arg(
+                    actual,
+                    objects,
+                    owner_class="GJBaseGameLayer",
+                    field_name=field_name,
+                )
+                self.assertIsNotNone(info)
+                assert info is not None and info.element_type is not None
+                self.assertEqual(info.kind, "audited_pointer_grid")
+                self.assertEqual(info.cxx_type, actual)
+                self.assertEqual(info.element_type.cxx_type, mirror)
+                self.assertEqual(info.lua_type, info.element_type.lua_type)
 
-    def test_nested_object_grid_classifies(self) -> None:
+    def test_pointer_grid_outside_exact_allowlist_is_rejected(self) -> None:
         game_object = Class(name="GameObject", namespace="")
-        info = classify_arg(
-            "gd::vector<gd::vector<gd::vector<GameObject*>*>*>",
-            {"GameObject": game_object},
+        objects = {"GameObject": game_object}
+        cases = (
+            (
+                "gd::vector<gd::vector<int>*>",
+                "OtherLayer",
+                "m_sectionSizes",
+            ),
+            (
+                "gd::vector<gd::vector<int>*>",
+                "GJBaseGameLayer",
+                "m_otherSizes",
+            ),
+            (
+                "gd::vector<gd::vector<bool>*>",
+                "GJBaseGameLayer",
+                "m_sectionSizes",
+            ),
+            (
+                "gd::vector<gd::vector<float>*>",
+                "GJBaseGameLayer",
+                "m_sectionSizes",
+            ),
+            (
+                "gd::vector<gd::vector<GameObject*>*>",
+                "",
+                "",
+            ),
         )
-        self.assertIsNotNone(info)
-        assert info is not None
-        self.assertEqual(info.kind, "nested_object_grid_view")
-        self.assertEqual(info.lua_type, "{ { { GameObject? } } }")
-
-    def test_map_vector_classifies(self) -> None:
-        info = classify_arg("gd::vector<gd::unordered_map<int,int>>", {})
-        self.assertIsNotNone(info)
-        assert info is not None
-        self.assertEqual(info.kind, "map_vector")
-        self.assertEqual(info.lua_type, "{ { [number]: number } }")
-
-    def test_tuple_set_classifies(self) -> None:
-        info = classify_arg("gd::set<std::tuple<int, int, int>>", {})
-        self.assertIsNotNone(info)
-        assert info is not None
-        self.assertEqual(info.kind, "set")
-        self.assertEqual(info.lua_type, "{ { number } }")
+        for actual, owner, field_name in cases:
+            with self.subTest(actual=actual, owner=owner, field=field_name):
+                self.assertIsNone(
+                    classify_arg(
+                        actual,
+                        objects,
+                        owner_class=owner,
+                        field_name=field_name,
+                    )
+                )
 
 
 class GjGridFieldMarshallingTests(unittest.TestCase):
-    def test_map_vector_marshalling(self) -> None:
-        map_info = classify_arg("gd::unordered_map<int,int>", {})
-        assert map_info is not None
-        info = TypeInfo(
-            kind="map_vector",
-            cxx_type="gd::vector<gd::unordered_map<int,int>>",
-            lua_type="{ { [number]: number } }",
-            element_type=map_info,
-        )
-        check_text = "".join(
-            check_arg(
-                Arg("gd::vector<gd::unordered_map<int,int>>", "remaps"),
-                info,
-                1,
-                "arg0",
-                "test",
-            )
-        )
-        push_text = "".join(push_value(info, "remaps"))
-        self.assertIn("checkPrimitiveVector<gd::unordered_map<int, int>>", check_text)
-        self.assertIn("pushPrimitiveVector<gd::unordered_map<int, int>>", push_text)
-
-    def test_nested_object_grid_push_uses_owner(self) -> None:
+    def test_audited_pointer_grid_uses_generic_runtime_adapter(self) -> None:
         game_object = Class(name="GameObject", namespace="")
         info = classify_arg(
             "gd::vector<gd::vector<gd::vector<GameObject*>*>*>",
             {"GameObject": game_object},
+            owner_class="GJBaseGameLayer",
+            field_name="m_sections",
         )
         assert info is not None
         push_text = "".join(push_value(info, "sections", owner_expr="self"))
-        self.assertIn("pushNestedObjectGridPointers<GameObject>", push_text)
-        self.assertIn(", self)", push_text)
+        check_text = "".join(emit_stack_check(info, 2, "value", "GJBaseGameLayer.m_sections"))
+        self.assertEqual(push_text.strip(), "luax::pushAuditedPointerGrid(L, sections, self);")
+        self.assertIn(
+            "checkAuditedPointerGrid<gd::vector<gd::vector<gd::vector<GameObject*>*>*>>",
+            check_text,
+        )
 
 
 class GjGridBromaIntegrationTests(unittest.TestCase):
@@ -159,73 +206,54 @@ class GjGridBromaIntegrationTests(unittest.TestCase):
                 self.assertFalse(ok)
                 self.assertTrue(reason.startswith("unsupported-arg:"))
 
-    def test_baseline_field_docs_present(self) -> None:
-        self.assertIn("m_nonEffectObjectsFlags", BASELINE_NESTED_BOOL_VECTOR_FIELDS)
-        self.assertIn("m_collisionBlockSections", BASELINE_NESTED_OBJECT_VECTOR_FIELDS)
-        self.assertIn("m_sections", BASELINE_NESTED_OBJECT_GRID_FIELDS)
-        self.assertIn("m_spawnRemapTriggers", BASELINE_MAP_VECTOR_FIELDS)
-        self.assertIn("m_spawnTuples", BASELINE_TUPLE_SET_FIELDS)
-
 
 class GjGridFieldEmitTests(unittest.TestCase):
-    def test_nested_bool_field_emits_assign(self) -> None:
-        ccobject = Class(name="CCObject", namespace="cocos2d")
-        gj = Class(
-            name="GJBaseGameLayer",
-            namespace="",
-            bases=["CCLayer"],
-            fields=[Field("m_nonEffectObjectsFlags", "gd::vector<gd::vector<bool>*>")],
-        )
-        objects = {"CCObject": ccobject, "GJBaseGameLayer": gj}
-        grouped, skipped = group_supported(gj, objects, "win")
-        self.assertEqual(skipped, [])
-        text = _emit_class_file(
-            gj,
-            grouped,
-            [],
-            [(gj, gj.fields[0])],
-            objects,
-            set(),
-            1,
-            "win",
-        )
-        self.assertIn("assignNestedPrimitiveVectorPointers<bool>", text)
-        self.assertIn("checkNestedPrimitiveVectorPointers<bool>", text)
-
-    def test_nested_object_field_emits_owner_getter(self) -> None:
+    def test_audited_pointer_grid_fields_use_one_adapter_and_exact_policy(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")
         game_object = Class(name="GameObject", namespace="")
-        gj = Class(
-            name="GJBaseGameLayer",
-            namespace="",
-            bases=["CCLayer"],
-            fields=[
-                Field(
-                    "m_collisionBlockSections",
-                    "gd::vector<gd::vector<GameObject*>*>",
+        for field_name, actual, mirror, writable in _AUDITED_POINTER_GRIDS:
+            with self.subTest(field=field_name):
+                field = Field(field_name, actual)
+                gj = Class(
+                    name="GJBaseGameLayer",
+                    namespace="",
+                    bases=["CCLayer"],
+                    fields=[field],
                 )
-            ],
-        )
-        objects = {
-            "CCObject": ccobject,
-            "GameObject": game_object,
-            "GJBaseGameLayer": gj,
-        }
-        grouped, skipped = group_supported(gj, objects, "win")
-        self.assertEqual(skipped, [])
-        text = _emit_class_file(
-            gj,
-            grouped,
-            [],
-            [(gj, gj.fields[0])],
-            objects,
-            set(),
-            1,
-            "win",
-        )
-        self.assertIn("pushNestedObjectVectorPointers<GameObject>", text)
-        self.assertIn("assignNestedObjectVectorPointers<GameObject>", text)
-        self.assertIn(", self)", text)
+                objects = {
+                    "CCObject": ccobject,
+                    "GameObject": game_object,
+                    "GJBaseGameLayer": gj,
+                }
+                text = _emit_class_file(
+                    gj,
+                    {},
+                    [],
+                    [(gj, field)],
+                    objects,
+                    set(),
+                    1,
+                    "win",
+                )
+                self.assertIn(
+                    f"pushAuditedPointerGrid(L, self->{field_name}, self)",
+                    text,
+                )
+                if writable:
+                    self.assertIn(f"checkAuditedPointerGrid<{actual}>", text)
+                    self.assertIn(f"T* self, {mirror} value", text)
+                    self.assertIn("assignAuditedPointerGrid", text)
+                    self.assertIn(
+                        f"field_set_{field_name}_impl(L, self, std::move(value))",
+                        text,
+                    )
+                    self.assertIn(f"field_set_{field_name}", text)
+                    self.assertNotIn("readonlyField", text)
+                else:
+                    self.assertIn("readonlyField", text)
+                    self.assertNotIn(f"field_set_{field_name}", text)
+                    self.assertNotIn("checkAuditedPointerGrid", text)
+                    self.assertNotIn("assignAuditedPointerGrid", text)
 
     def test_map_vector_field_emits_assign(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")
@@ -253,8 +281,8 @@ class GjGridFieldEmitTests(unittest.TestCase):
             1,
             "win",
         )
-        self.assertIn("assignPrimitiveVector", text)
-        self.assertIn("checkPrimitiveVector<gd::unordered_map<int, int>>", text)
+        self.assertIn("checkContainerValue<gd::vector<gd::unordered_map<int, int>>>", text)
+        self.assertIn("assignContainerValue(self->m_spawnRemapTriggers, std::move(value))", text)
 
     def test_tuple_set_field_emits_assign(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")
@@ -277,44 +305,8 @@ class GjGridFieldEmitTests(unittest.TestCase):
             1,
             "win",
         )
-        self.assertIn("detail::assignSetContainer", text)
-        self.assertIn("checkSetFromTable<std::tuple<int, int, int>", text)
-
-    def test_nested_object_grid_field_emits_assign(self) -> None:
-        ccobject = Class(name="CCObject", namespace="cocos2d")
-        game_object = Class(name="GameObject", namespace="")
-        gj = Class(
-            name="GJBaseGameLayer",
-            namespace="",
-            bases=["CCLayer"],
-            fields=[
-                Field(
-                    "m_sections",
-                    "gd::vector<gd::vector<gd::vector<GameObject*>*>*>",
-                )
-            ],
-        )
-        objects = {
-            "CCObject": ccobject,
-            "GameObject": game_object,
-            "GJBaseGameLayer": gj,
-        }
-        grouped, skipped = group_supported(gj, objects, "win")
-        self.assertEqual(skipped, [])
-        text = _emit_class_file(
-            gj,
-            grouped,
-            [],
-            [(gj, gj.fields[0])],
-            objects,
-            set(),
-            1,
-            "win",
-        )
-        self.assertIn("pushNestedObjectGridPointers<GameObject>", text)
-        self.assertIn("assignNestedObjectGridPointers<GameObject>", text)
-        self.assertIn("checkNestedObjectGridPointers<GameObject>", text)
-        self.assertIn(", self)", text)
+        self.assertIn("checkContainerValue<gd::set<std::tuple<int, int, int>>>", text)
+        self.assertIn("assignContainerValue(self->m_spawnTuples, std::move(value))", text)
 
 
 if __name__ == "__main__":

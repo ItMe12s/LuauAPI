@@ -67,19 +67,31 @@ class EmitPlan:
 
 
 def _type_needed_class_names(plan: EmitPlan) -> set[str]:
-    from luau_codegen.convert.type_map import classify_arg, classify_return
+    from luau_codegen.convert.type_map import classify_arg, classify_return, object_class_names
 
     referenced: set[str] = set()
+
+    def add(info) -> None:
+        if info:
+            referenced.update(object_class_names(info))
+
     for grouped in plan.supported_by_class.values():
         for methods in grouped.values():
             for m in methods:
-                ret = classify_return(m.ret, plan.objects, ctx=plan.ctx)
-                if ret and ret.kind == "object":
-                    referenced.add(ret.class_name)
+                add(classify_return(m.ret, plan.objects, ctx=plan.ctx))
                 for arg in m.args:
-                    info = classify_arg(arg.type, plan.objects, ctx=plan.ctx)
-                    if info and info.kind == "object":
-                        referenced.add(info.class_name)
+                    add(classify_arg(arg.type, plan.objects, ctx=plan.ctx))
+
+    for targets in plan.field_targets_by_class.values():
+        for field_cls, bound_field in targets:
+            _, _, arg, ret = bindable_field(bound_field, plan.objects, field_cls, ctx=plan.ctx)
+            add(arg)
+            add(ret)
+
+    for fn in plan.supported_free_functions:
+        add(classify_return(fn.ret, plan.objects, ctx=plan.ctx))
+        for arg in fn.args:
+            add(classify_arg(arg.type, plan.objects, ctx=plan.ctx))
 
     lookup = build_class_lookup(plan.classes)
     keep_bases: set[str] = set()
@@ -177,6 +189,10 @@ def collect_platform_plan(root: Root, target_platform: str = "win") -> EmitPlan:
         for method, reason in cls_skipped:
             skipped.append((cls.name, method.name, reason))
 
+    supported_free_functions, skipped_free_functions = group_supported_free_functions(
+        root.functions, objects, target_platform, ctx=ctx
+    )
+
     skipped_classes = linkless_class_names(
         classes,
         objects,
@@ -184,6 +200,7 @@ def collect_platform_plan(root: Root, target_platform: str = "win") -> EmitPlan:
         skipped_by_class,
         target_platform,
         ctx=ctx,
+        free_functions=supported_free_functions,
     )
     skipped.extend(
         prune_skipped_class_refs(
@@ -224,9 +241,6 @@ def collect_platform_plan(root: Root, target_platform: str = "win") -> EmitPlan:
         )
     )
 
-    supported_free_functions, skipped_free_functions = group_supported_free_functions(
-        root.functions, objects, target_platform, ctx=ctx
-    )
     supported_free_functions, free_ref_skips = _filter_free_function_object_refs(
         supported_free_functions, objects, skipped_classes, target_platform, ctx=ctx
     )

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Dict, Optional, Set, Tuple
+from typing import TYPE_CHECKING, Dict, Iterator, Optional, Set, Tuple
 
 from luau_codegen.model.domain import short_name
 from luau_codegen.model.value_types import VALUE_CHECK_CXX_TYPES, VALUE_TYPES
@@ -179,6 +179,20 @@ STATIC_ENUM_CXX_NAMES: dict[str, str] = {
     **{name: name for name in FMOD_ENUM_TYPES},
 }
 
+COMPOSITE_KINDS = frozenset(
+    {
+        "vector_view",
+        "vector",
+        "std_array",
+        "map",
+        "unordered_map",
+        "set",
+        "unordered_set",
+        "pair",
+        "tuple",
+    }
+)
+
 
 @dataclass(frozen=True)
 class TypeInfo:
@@ -195,6 +209,35 @@ class TypeInfo:
     key_type: Optional["TypeInfo"] = None
     value_type: Optional["TypeInfo"] = None
     array_size: int = 0
+    tuple_types: Tuple["TypeInfo", ...] = field(default_factory=tuple)
+
+
+def iter_type_tree(info: TypeInfo) -> Iterator[TypeInfo]:
+    stack = [info]
+    while stack:
+        current = stack.pop()
+        yield current
+        children = [
+            child
+            for child in (
+                current.element_type,
+                current.key_type,
+                current.value_type,
+                current.callback_ret,
+            )
+            if child is not None
+        ]
+        children.extend(current.tuple_types)
+        children.extend(current.callback_args)
+        stack.extend(reversed(children))
+
+
+def object_class_names(info: TypeInfo) -> set[str]:
+    return {
+        node.class_name
+        for node in iter_type_tree(info)
+        if node.kind == "object" and node.class_name
+    }
 
 
 def _resolve_ctx(ctx: CodegenContext | None) -> CodegenContext:
@@ -356,6 +399,7 @@ __all__ = [
     "CALLBACK_ALIASES",
     "CLASS_CALLBACK_ALIASES",
     "COCOS_ENUM_TYPES",
+    "COMPOSITE_KINDS",
     "FMOD_ENUM_TYPES",
     "GD_ENUM_TYPES",
     "NUMERIC_TYPES",
@@ -379,8 +423,10 @@ __all__ = [
     "is_out_reference",
     "is_reference_type",
     "is_sel_type",
+    "iter_type_tree",
     "method_input_arg_count",
     "normalize_type",
+    "object_class_names",
     "register_geode_enums",
     "require_classify_arg",
     "require_classify_return",

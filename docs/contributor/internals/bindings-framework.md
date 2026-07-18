@@ -207,17 +207,11 @@ for reading numeric and boolean table fields and writing integers as strings to 
   - colors
   - button configs
 
-`ContainerTables.hpp`:
-
-- marshals the following C++ containers to Luau tables:
-  - `gd::vector`
-  - `gd::map`
-  - `gd::set`
-  - `std::pair`
-
+`ContainerTables.hpp` provides recursive table checks, pushes, and field updates.
+Field setters call `assignContainerValue` instead of assigning whole containers.
 Maps with a pair key use an entry list. See [Pair containers](../codegen/pair-containers.md).
-Nested map and vector shapes are in [Nested containers](../codegen/nested-containers.md).
-Field setters call `assignMap`, `assignSet`, or `assignPrimitiveVector` instead of assigning whole containers.
+The full grammar and audited field-only pointer-grid adapter are documented in
+[Recursive containers](../codegen/nested-containers.md).
 
 ## Tagged userdata metatables
 

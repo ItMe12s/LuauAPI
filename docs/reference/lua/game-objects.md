@@ -1,4 +1,4 @@
-# game objects
+# Game objects
 
 ## Summary
 
@@ -101,25 +101,33 @@ bg:setContentSize({ width = 170, height = 84 })
 
 ## Container-shaped values
 
-Some fields and method arguments use Geode containers. LuauAPI converts them to plain tables.
+Some generated APIs use Geode containers.
+Most by-value containers become plain table snapshots.
+Direct object and opaque-pointer vectors may use read-only sequence views.
 
-- Scalar-key map: `{ [number]: value }` or `{ [string]: value }`.
-- Number or string vector or set: `{ number }` or `{ string }`.
-- Object vector: `{ Object? }`. Entries can be nil.
+- Scalar-key map: `{ [K]: V }`.
+- Vector or set: `{ T }`.
+- Direct object vector view: `{ Object? }`. Entries can be `nil`.
 - Pair record: `{ first = T1, second = T2 }`. Always use `first` and `second`.
 - Pair-key map: entry list `{ { first = k1, second = k2, value = v } }` because Lua cannot use tables as map keys.
-- Nested map values and some size fields use other shapes. See the contributor container pages below.
+- Recursive containers apply these shapes at every level.
 
-Writing a container field:
+Sequence views use 1-based indexes and support `#`.
+They reject writes.
+Plain table snapshots follow Lua nil rules.
+A `nil` indexed leaf creates a hole.
+A `nil` value in a dictionary-shaped map removes that entry.
+Map table iteration order and unordered container order are unspecified.
 
-- Clears it and re-inserts your entries. Whole-container assignment is not used.
-- Some nested primitive vector fields are read-only getters.
-- Read-only handler queues on input dispatchers use `{ Handler? }` sequences. Index with `1`, not `0`.
+Writing a container field updates its native value recursively without whole-container assignment.
+Some generated container fields are read-only.
+Check the type stubs for the exact surface.
+Read-only handler queues on input dispatchers use `{ Handler? }` sequences and 1-based indexes.
 
-Binding details for pair, nested, and ccCArray shapes:
+Binding details for recursive containers, pairs, and ccCArray views:
 
 - [Pair containers](../../contributor/codegen/pair-containers.md)
-- [Nested containers](../../contributor/codegen/nested-containers.md)
+- [Recursive containers](../../contributor/codegen/nested-containers.md)
 - [ccCArray read-only fields](../../contributor/codegen/cc-c-array.md)
 
 Use [type stubs](type-stubs.md) for the exact stub type on each member.
@@ -172,7 +180,7 @@ See the [Bindings framework](../../contributor/internals/bindings-framework.md).
 ## Related
 
 - [Getting started](../../getting-started/overview.md)
-- [Examples](../../getting-started/examples.md)
+- [globals](globals.md)
 - [LuauAPI mod guidelines](../../mod_guidelines.md)
 - [hooks](hooks.md)
 - [callbacks](callbacks.md)
@@ -185,6 +193,8 @@ See the [Bindings framework](../../contributor/internals/bindings-framework.md).
 ## Source
 
 - `src/framework/stack/Types.hpp`
+- `src/framework/stack/ContainerTables.hpp`
+- `src/framework/view/ReadOnlyVectorView.hpp`
 - `src/framework/usertype/Fields.cpp`
 - `tools/luau_codegen/emit/luau_types/`
 - `tools/luau_codegen/policy/fields.py`

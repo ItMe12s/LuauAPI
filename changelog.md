@@ -8,7 +8,10 @@
 
 ## 0.1.0-beta.19
 
-add stuff here
+- Added recursive Luau bindings for by-value containers across fields, methods,
+  and free functions, including `gd::map<int, gd::vector<int>>`.
+- Updated container codegen and runtime marshalling to use shared cross-platform helpers
+  and one audited adapter for existing `GJBaseGameLayer` pointer grids.
 
 ## 0.1.0-beta.18
 

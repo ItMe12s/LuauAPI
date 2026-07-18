@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Dict, List
 if TYPE_CHECKING:
     from luau_codegen.model.codegen_context import CodegenContext
 
-from luau_codegen.parse.broma import Class, Method
+from luau_codegen.parse.broma import Class, Function, Method
 from luau_codegen.policy.fields import bindable_field
 from luau_codegen.model.denylist import (
     BINDABLE_CONSTRUCTORS,
@@ -28,6 +28,7 @@ from luau_codegen.convert.type_map import (
     classify_return,
     method_input_arg_count,
     normalize_type,
+    object_class_names,
 )
 from luau_codegen.policy.containers import (
     _CONTAINER_KINDS,
@@ -149,7 +150,7 @@ def supported(
         return False, f"unsupported-return:{m.ret}"
     if ret.kind == "delegate" and not delegate_supported_as_return(ret):
         return False, f"unsupported-return:{m.ret}"
-    for i, arg in enumerate(m.args):
+    for arg in m.args:
         info = classify_arg(arg.type, objects, owner_class=cls.name, ctx=ctx)
         if info is None:
             return False, f"unsupported-arg:{arg.type}"
@@ -257,27 +258,38 @@ def linkless_class_names(
     skipped_by_class: dict[str, list[tuple[Method, str]]],
     target_platform: str,
     ctx: CodegenContext | None = None,
+    free_functions: List[Function] | None = None,
 ) -> set[str]:
     referenced: set[str] = set()
     for grouped in supported_by_class.values():
         for methods in grouped.values():
             for m in methods:
                 ret = classify_return(m.ret, objects, ctx=ctx)
-                if ret and ret.kind == "object":
-                    referenced.add(ret.class_name)
+                if ret:
+                    referenced.update(object_class_names(ret))
                 for arg in m.args:
                     info = classify_arg(arg.type, objects, ctx=ctx)
-                    if info and info.kind == "object":
-                        referenced.add(info.class_name)
+                    if info:
+                        referenced.update(object_class_names(info))
 
     for cls in classes:
         for field in cls.fields:
             ok, _, _, ret = bindable_field(field, objects, cls, ctx=ctx)
-            if not ok or not ret or ret.kind != "object":
+            if not ok or not ret:
                 continue
-            ref_cls = objects.get(ret.class_name)
-            if ref_cls and not ref_cls.methods:
-                referenced.add(ret.class_name)
+            for class_name in object_class_names(ret):
+                ref_cls = objects.get(class_name)
+                if ref_cls:
+                    referenced.add(class_name)
+
+    for fn in free_functions or []:
+        ret = classify_return(fn.ret, objects, ctx=ctx)
+        if ret:
+            referenced.update(object_class_names(ret))
+        for arg in fn.args:
+            info = classify_arg(arg.type, objects, ctx=ctx)
+            if info:
+                referenced.update(object_class_names(info))
 
     out: set[str] = set()
     no_call = f"not-callable:{target_platform}"
@@ -290,6 +302,9 @@ def linkless_class_names(
             continue
         reasons = [reason for _, reason in skipped_by_class.get(cls.name, [])]
         if target_platform in STRICT_DIRECT_PLATFORMS and no_call in reasons:
+            out.add(cls.name)
+            continue
+        if "inaccessible-class" in reasons:
             out.add(cls.name)
             continue
         if cls.name in referenced:
@@ -325,16 +340,16 @@ def _skipped_object_ref(
     ctx: CodegenContext | None = None,
 ) -> str:
     ret = classify_return(m.ret, objects, ctx=ctx)
-    if ret and ret.kind == "object" and _is_skipped_object_type(ret.class_name, skipped_classes):
-        return ret.class_name
+    if ret:
+        for class_name in sorted(object_class_names(ret)):
+            if _is_skipped_object_type(class_name, skipped_classes):
+                return class_name
     for arg in m.args:
         info = classify_arg(arg.type, objects, ctx=ctx)
-        if (
-            info
-            and info.kind == "object"
-            and _is_skipped_object_type(info.class_name, skipped_classes)
-        ):
-            return info.class_name
+        if info:
+            for class_name in sorted(object_class_names(info)):
+                if _is_skipped_object_type(class_name, skipped_classes):
+                    return class_name
     return ""
 
 

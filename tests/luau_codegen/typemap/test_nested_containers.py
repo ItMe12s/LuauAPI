@@ -1,351 +1,278 @@
 from __future__ import annotations
 
+import os
+import re
 import unittest
 
+from test_support import ROOT, all_platforms, types_text
 from luau_codegen.convert.marshalling import check_arg, push_value  # type: ignore[import-unresolved]
-from luau_codegen.convert.type_map import TypeInfo, classify_arg  # type: ignore[import-unresolved]
-from luau_codegen.model.nested_containers import (  # type: ignore[import-unresolved]
-    BASELINE_NESTED_MAP_FIELDS,
-    BASELINE_NESTED_PRIMITIVE_VECTOR_FIELDS,
-    BASELINE_NESTED_UNORDERED_MAP_FIELDS,
-    allow_nested_map_value,
-    allow_nested_primitive_vector_outer,
+from luau_codegen.convert.type_map import classify_arg  # type: ignore[import-unresolved]
+from luau_codegen.emit.luau_types import emit_luau_types  # type: ignore[import-unresolved]
+from luau_codegen.parse.broma import (  # type: ignore[import-unresolved]
+    Arg,
+    Class,
+    Field,
+    Method,
+    Root,
 )
-from luau_codegen.model.pair_design import pair_key_map_entry_lua_type  # type: ignore[import-unresolved]
-from luau_codegen.parse.broma import Arg, Class, Field  # type: ignore[import-unresolved]
-from luau_codegen.emit.bindings.class_file import _emit_class_file  # type: ignore[import-unresolved]
 from luau_codegen.policy.filtering import group_supported  # type: ignore[import-unresolved]
+from luau_codegen.policy.fields import bindable_field  # type: ignore[import-unresolved]
 
 
-class NestedContainerPolicyTests(unittest.TestCase):
-    def test_allowlist_maps_documented(self) -> None:
-        self.assertIn("m_unkMap770", BASELINE_NESTED_MAP_FIELDS)
-        self.assertIn("m_labelObjects", BASELINE_NESTED_UNORDERED_MAP_FIELDS)
-        self.assertIn("m_sectionSizes", BASELINE_NESTED_PRIMITIVE_VECTOR_FIELDS)
+class RecursiveContainerTypeMapTests(unittest.TestCase):
+    def test_supported_composites_recurse(self) -> None:
+        cases = (
+            (
+                "gd::map<int, gd::vector<int>>",
+                "map",
+                "{ [number]: { number } }",
+            ),
+            (
+                "gd::unordered_map<int, gd::set<gd::string>>",
+                "unordered_map",
+                "{ [number]: { string } }",
+            ),
+            (
+                "gd::vector<gd::unordered_map<int, int>>",
+                "vector",
+                "{ { [number]: number } }",
+            ),
+            (
+                "gd::set<std::pair<int, gd::vector<bool>>>",
+                "set",
+                "{ { first: number, second: { boolean } } }",
+            ),
+            (
+                "gd::unordered_set<std::tuple<int, bool>>",
+                "unordered_set",
+                "{ { (number | boolean) } }",
+            ),
+            (
+                "std::array<gd::vector<int>, 3>",
+                "std_array",
+                "{ { number } }",
+            ),
+        )
+        for cxx, kind, lua in cases:
+            with self.subTest(cxx=cxx):
+                info = classify_arg(cxx, {})
+                self.assertIsNotNone(info)
+                assert info is not None
+                self.assertEqual(info.kind, kind)
+                self.assertEqual(info.lua_type, lua)
 
-    def test_primitive_nested_vector_outer_shape(self) -> None:
-        self.assertTrue(allow_nested_primitive_vector_outer("gd::vector<gd::vector<int>*>"))
-        self.assertFalse(allow_nested_primitive_vector_outer("gd::vector<gd::vector<bool>*>"))
+    def test_tuple_shapes_and_positions(self) -> None:
+        cases = (
+            ("std::tuple<>", "{}", ()),
+            ("std::tuple<int, int, int, int>", "{ number }", ("number",) * 4),
+            (
+                "std::tuple<int, bool, gd::string, gd::vector<float>>",
+                "{ (number | boolean | string | { number }) }",
+                ("number", "boolean", "string", "{ number }"),
+            ),
+        )
+        for cxx, lua, children in cases:
+            with self.subTest(cxx=cxx):
+                info = classify_arg(cxx, {})
+                self.assertIsNotNone(info)
+                assert info is not None
+                self.assertEqual(info.kind, "tuple")
+                self.assertEqual(info.lua_type, lua)
+                self.assertEqual(tuple(t.lua_type for t in info.tuple_types), children)
 
-    def test_bool_nested_vector_outer_shape(self) -> None:
-        from luau_codegen.model.nested_containers import allow_nested_bool_vector_outer  # type: ignore[import-unresolved]
-
-        self.assertTrue(allow_nested_bool_vector_outer("gd::vector<gd::vector<bool>*>"))
-        self.assertFalse(allow_nested_bool_vector_outer("gd::vector<gd::vector<int>*>"))
-
-
-class NestedContainerTypeMapTests(unittest.TestCase):
-    def test_unordered_map_int_to_label_object_vector(self) -> None:
-        label = Class(name="LabelGameObject", namespace="")
-        objects = {"LabelGameObject": label}
-
-        info = classify_arg("gd::unordered_map<int, gd::vector<LabelGameObject*>>", objects)
-
+    def test_nesting_has_no_codegen_depth_cap(self) -> None:
+        cxx = "int"
+        for _ in range(32):
+            cxx = f"gd::vector<{cxx}>"
+        info = classify_arg(cxx, {})
         self.assertIsNotNone(info)
         assert info is not None
-        self.assertEqual(info.kind, "unordered_map")
-        assert info.value_type is not None
-        self.assertEqual(info.value_type.kind, "vector_view")
-        self.assertEqual(info.value_type.lua_type, "{ LabelGameObject? }")
-        self.assertEqual(info.lua_type, "{ [number]: { LabelGameObject? } }")
+        depth = 0
+        node = info
+        while node.element_type is not None:
+            depth += 1
+            node = node.element_type
+        self.assertEqual(depth, 32)
+        self.assertEqual(node.kind, "number")
 
-    def test_pair_key_map_to_opaque_object_vector_entry_list(self) -> None:
-        info = classify_arg("gd::map<std::pair<int, int>, gd::vector<GroupCommandObject2*>>", {})
-
+    def test_recursive_root_pointer_keeps_out_flags(self) -> None:
+        info = classify_arg("gd::map<int, gd::vector<int>>*", {})
         self.assertIsNotNone(info)
-        assert info is not None
+        assert info is not None and info.value_type is not None
         self.assertEqual(info.kind, "map")
-        assert info.value_type is not None
-        self.assertEqual(info.value_type.kind, "vector_view")
-        self.assertIn("GroupCommandObject2", info.lua_type)
-        self.assertIn("value:", info.lua_type)
-        self.assertNotIn("[", info.lua_type)
+        self.assertEqual(info.value_type.kind, "vector")
+        self.assertTrue(info.is_out)
+        self.assertTrue(info.is_vector_ptr)
 
-    def test_map_int_to_primitive_vector_still_rejected(self) -> None:
-        self.assertIsNone(classify_arg("gd::map<int, gd::vector<int>>", {}))
+    def test_invalid_descendants_are_rejected(self) -> None:
+        rejected = (
+            "gd::map<gd::vector<int>, int>",
+            "gd::map<std::tuple<int, int>, int>",
+            "gd::map<std::pair<int, gd::vector<int>>, int>",
+            "gd::map<gd::vector<int>*, int>",
+            "gd::vector<gd::vector<int>*>",
+            "gd::vector<gd::vector<int>**>",
+            "gd::vector<int>**",
+            "gd::map<int, gd::vector<int>*>",
+            "gd::unordered_map<int, gd::vector<int>*>",
+            "gd::set<gd::vector<int>*>",
+            "gd::unordered_set<gd::vector<int>*>",
+            "std::array<gd::vector<int>*, 2>",
+            "std::pair<int, gd::vector<int>*>",
+            "std::tuple<int, gd::vector<int>*>",
+            "gd::vector<std::vector<int>>",
+            "gd::vector<ccCArray<int>>",
+            "gd::vector<cocos2d::ccCArray*>",
+            "gd::vector<std::function<void()>>",
+            "gd::vector<arc::TaskHandle<int>>",
+            "gd::vector<geode::Result<int>>",
+            "gd::vector<char*>",
+            "gd::vector<std::string_view>",
+            "std::array<int, 0>",
+            "std::array<int, 2001>",
+        )
+        for cxx in rejected:
+            with self.subTest(cxx=cxx):
+                self.assertIsNone(classify_arg(cxx, {}))
 
-    def test_nested_primitive_vector_int_pointers(self) -> None:
-        info = classify_arg("gd::vector<gd::vector<int>*>", {})
 
+class RecursiveContainerMarshallingTests(unittest.TestCase):
+    def test_runtime_has_no_exception_only_container_path(self) -> None:
+        path = os.path.join(ROOT, "src", "framework", "stack", "ContainerTables.hpp")
+        with open(path, encoding="utf-8") as f:
+            text = f.read()
+        self.assertIsNone(re.search(r"\btry\s*\{|\bcatch\s*\(|\bthrow\b", text))
+        self.assertNotIn("LUA_USE_LONGJMP", text)
+
+    def test_recursive_composites_use_generic_runtime_entry_points(self) -> None:
+        cases = (
+            "gd::map<int, gd::vector<int>>",
+            "std::tuple<int, bool, float>",
+        )
+        for cxx in cases:
+            with self.subTest(cxx=cxx):
+                info = classify_arg(cxx, {})
+                self.assertIsNotNone(info)
+                assert info is not None
+                check_text = "".join(check_arg(Arg(cxx, "value"), info, 1, "arg0", "test"))
+                push_text = "".join(push_value(info, "value"))
+                self.assertIn(f"checkContainerValue<{info.cxx_type}>", check_text)
+                self.assertIn(f"pushContainerValue<{info.cxx_type}>", push_text)
+
+    def test_by_value_tree_uses_generic_helper(self) -> None:
+        info = classify_arg("gd::vector<gd::vector<int>>", {})
         self.assertIsNotNone(info)
         assert info is not None
-        self.assertEqual(info.kind, "nested_primitive_vector_view")
-        self.assertEqual(info.lua_type, "{ { number } }")
-
-    def test_deep_nested_vector_still_rejected(self) -> None:
-        self.assertIsNone(classify_arg("gd::vector<gd::vector<gd::vector<int>*>>", {}))
-
-
-class NestedContainerMarshallingTests(unittest.TestCase):
-    def _map_with_vector_value(
-        self, *, kind: str, cxx: str, lua: str, value: TypeInfo, key: TypeInfo
-    ) -> TypeInfo:
-        return TypeInfo(
-            kind=kind,
-            cxx_type=cxx,
-            lua_type=lua,
-            key_type=key,
-            value_type=value,
-        )
-
-    def test_unordered_map_nested_vector_marshalling(self) -> None:
-        key = TypeInfo(kind="number", cxx_type="int", lua_type="number")
-        value = TypeInfo(
-            kind="vector_view",
-            cxx_type="gd::vector<LabelGameObject*>",
-            lua_type="{ LabelGameObject? }",
-            element_type=TypeInfo(
-                kind="object",
-                cxx_type="LabelGameObject*",
-                lua_type="LabelGameObject",
-                class_name="LabelGameObject",
-            ),
-        )
-        info = self._map_with_vector_value(
-            kind="unordered_map",
-            cxx="gd::unordered_map<int, gd::vector<LabelGameObject*>>",
-            lua="{ [number]: { LabelGameObject? } }",
-            value=value,
-            key=key,
-        )
-
-        check_text = "".join(
-            check_arg(
-                Arg("gd::unordered_map<int, gd::vector<LabelGameObject*>>", "labels"),
-                info,
-                1,
-                "arg0",
-                "test",
-            )
-        )
-        push_text = "".join(push_value(info, "labels"))
-
-        self.assertIn(
-            "luax::detail::checkAssociativeMap<int, gd::vector<LabelGameObject*>, gd::unordered_map<int, gd::vector<LabelGameObject*>>>",
-            check_text,
-        )
-        self.assertIn(
-            "luax::detail::pushAssociativeMap<int, gd::vector<LabelGameObject*>, gd::unordered_map<int, gd::vector<LabelGameObject*>>>",
-            push_text,
-        )
-
-    def test_pair_key_map_nested_opaque_vector_marshalling(self) -> None:
-        key = TypeInfo(
-            kind="pair",
-            cxx_type="std::pair<int, int>",
-            lua_type="{ first: number, second: number }",
-            key_type=TypeInfo(kind="number", cxx_type="int", lua_type="number"),
-            value_type=TypeInfo(kind="number", cxx_type="int", lua_type="number"),
-        )
-        value = TypeInfo(
-            kind="vector_view",
-            cxx_type="gd::vector<GroupCommandObject2*>",
-            lua_type="{ GroupCommandObject2? }",
-            element_type=TypeInfo(
-                kind="opaque_handle",
-                cxx_type="GroupCommandObject2*",
-                lua_type="GroupCommandObject2",
-            ),
-        )
-        info = self._map_with_vector_value(
-            kind="map",
-            cxx="gd::map<std::pair<int, int>, gd::vector<GroupCommandObject2*>>",
-            lua=pair_key_map_entry_lua_type("number", "number", "{ GroupCommandObject2? }"),
-            value=value,
-            key=key,
-        )
-
-        check_text = "".join(
-            check_arg(
-                Arg(
-                    "gd::map<std::pair<int, int>, gd::vector<GroupCommandObject2*>>",
-                    "groups",
-                ),
-                info,
-                1,
-                "arg0",
-                "test",
-            )
-        )
-        push_text = "".join(push_value(info, "groups"))
-
-        self.assertIn(
-            "luax::detail::checkPairKeyAssociativeMap<int, int, gd::vector<GroupCommandObject2*>, gd::map<std::pair<int, int>, gd::vector<GroupCommandObject2*>>>",
-            check_text,
-        )
-        self.assertIn(
-            "luax::detail::pushPairKeyAssociativeMap<int, int, gd::vector<GroupCommandObject2*>, gd::map<std::pair<int, int>, gd::vector<GroupCommandObject2*>>>",
-            push_text,
-        )
-
-    def test_nested_primitive_vector_push_helper(self) -> None:
-        inner = TypeInfo(
-            kind="primitive_vector",
-            cxx_type="gd::vector<int>",
-            lua_type="{ number }",
-            element_type=TypeInfo(kind="number", cxx_type="int", lua_type="number"),
-        )
-        info = TypeInfo(
-            kind="nested_primitive_vector_view",
-            cxx_type="gd::vector<gd::vector<int>*>",
-            lua_type="{ { number } }",
-            element_type=inner,
-        )
-
         text = "".join(push_value(info, "sizes"))
+        self.assertIn("pushContainerValue<", text)
 
-        self.assertIn("luax::pushNestedPrimitiveVectorPointers<int>", text)
 
+class RecursiveContainerSurfacePolicyTests(unittest.TestCase):
+    def test_value_tree_methods_bind(self) -> None:
+        foo = Class(
+            name="Foo",
+            methods=[
+                Method(
+                    name="roundTrip",
+                    ret="gd::map<int, gd::vector<int>>",
+                    args=[Arg("gd::map<int, gd::vector<int>>", "value")],
+                    platforms=all_platforms("0x1"),
+                )
+            ],
+        )
+        grouped, skipped = group_supported(foo, {"Foo": foo}, "win")
+        self.assertEqual(skipped, [])
+        self.assertIn("roundTrip", grouped)
 
-class NestedContainerFieldBindingTests(unittest.TestCase):
-    def test_nested_primitive_vector_field_is_readonly(self) -> None:
+    def test_composite_pointer_descendant_method_is_rejected(self) -> None:
+        foo = Class(
+            name="Foo",
+            methods=[
+                Method(
+                    name="mutate",
+                    ret="void",
+                    args=[Arg("gd::vector<gd::vector<int>*>", "value")],
+                    platforms=all_platforms("0x1"),
+                ),
+                Method(
+                    name="values",
+                    ret="gd::vector<gd::vector<int>*>",
+                    args=[],
+                    platforms=all_platforms("0x2"),
+                ),
+                Method(
+                    name="fill",
+                    ret="void",
+                    args=[Arg("gd::vector<gd::vector<int>*>&", "value")],
+                    platforms=all_platforms("0x3"),
+                ),
+            ],
+        )
+        grouped, skipped = group_supported(foo, {"Foo": foo}, "win")
+        self.assertNotIn("mutate", grouped)
+        self.assertNotIn("values", grouped)
+        self.assertNotIn("fill", grouped)
+        self.assertEqual(len(skipped), 3)
+        self.assertTrue(any("unsupported" in item[-1] for item in skipped))
+
+    def test_non_audited_composite_pointer_field_is_rejected(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")
         foo = Class(
             name="Foo",
-            namespace="cocos2d",
             bases=["CCObject"],
             fields=[Field("m_sectionSizes", "gd::vector<gd::vector<int>*>")],
-        )
-        grouped, _ = group_supported(foo, {}, "win")
-        text = _emit_class_file(
-            foo,
-            grouped,
-            [],
-            [(foo, foo.fields[0])],
-            {"CCObject": ccobject, "cocos2d::CCObject": ccobject},
-            set(),
-            1,
-            "win",
-        )
-
-        self.assertIn("pushNestedPrimitiveVectorPointers<int>", text)
-        self.assertIn("readonlyField", text)
-        self.assertNotIn("field_set_", text)
-
-    def test_nested_map_field_setter_uses_assign(self) -> None:
-        ccobject = Class(name="CCObject", namespace="cocos2d")
-        label = Class(name="LabelGameObject", namespace="")
-        foo = Class(
-            name="Foo",
-            namespace="cocos2d",
-            bases=["CCObject"],
-            fields=[
-                Field(
-                    "m_labelObjects",
-                    "gd::unordered_map<int, gd::vector<LabelGameObject*>>",
-                )
-            ],
-        )
-        objects = {
-            "CCObject": ccobject,
-            "cocos2d::CCObject": ccobject,
-            "LabelGameObject": label,
-        }
-        grouped, _ = group_supported(foo, objects, "win")
-        text = _emit_class_file(
-            foo,
-            grouped,
-            [],
-            [(foo, foo.fields[0])],
-            objects,
-            set(),
-            1,
-            "win",
-        )
-
-        self.assertIn(
-            "detail::checkAssociativeMap<int, gd::vector<LabelGameObject*>, gd::unordered_map<int, gd::vector<LabelGameObject*>>>",
-            text,
-        )
-        self.assertIn(
-            "luax::detail::assignAssociativeMap(*self->m_labelObjects, value)",
-            text,
-        )
-
-
-class NestedMapValuePolicyUnitTests(unittest.TestCase):
-    def test_allow_nested_map_value_object_vector(self) -> None:
-        key = TypeInfo(kind="number", cxx_type="int", lua_type="number")
-        value = TypeInfo(
-            kind="vector_view",
-            cxx_type="gd::vector<LabelGameObject*>",
-            lua_type="{ LabelGameObject? }",
-            element_type=TypeInfo(
-                kind="object",
-                cxx_type="LabelGameObject*",
-                lua_type="LabelGameObject",
-                class_name="LabelGameObject",
-            ),
-        )
-        self.assertTrue(allow_nested_map_value(key, value))
-
-    def test_reject_primitive_vector_map_value(self) -> None:
-        key = TypeInfo(kind="number", cxx_type="int", lua_type="number")
-        value = TypeInfo(
-            kind="primitive_vector",
-            cxx_type="gd::vector<int>",
-            lua_type="{ number }",
-            element_type=TypeInfo(kind="number", cxx_type="int", lua_type="number"),
-        )
-        self.assertFalse(allow_nested_map_value(key, value))
-
-    def test_allow_nested_map_value_opt_in_value_vector(self) -> None:
-        key = TypeInfo(kind="number", cxx_type="int", lua_type="number")
-        value = TypeInfo(
-            kind="primitive_vector",
-            cxx_type="gd::vector<PulseEffectAction>",
-            lua_type="{ PulseEffectAction }",
-            element_type=TypeInfo(
-                kind="value",
-                cxx_type="PulseEffectAction",
-                lua_type="PulseEffectAction",
-            ),
-        )
-        self.assertTrue(allow_nested_map_value(key, value))
-
-
-class NestedMapValueEmitTests(unittest.TestCase):
-    def test_pulse_effect_map_field_emits_assign_associative(self) -> None:
-        import test_support
-
-        ccobject = Class(name="CCObject", namespace="cocos2d")
-        foo = Class(
-            name="Foo",
-            namespace="cocos2d",
-            bases=["CCObject"],
-            fields=[
-                Field(
-                    "m_pulseEffectMap",
-                    "gd::unordered_map<int, gd::vector<PulseEffectAction>>",
-                )
-            ],
         )
         objects = {
             "CCObject": ccobject,
             "cocos2d::CCObject": ccobject,
             "Foo": foo,
         }
-        grouped, skipped = group_supported(foo, objects, "win")
-        self.assertEqual(skipped, [])
-        text = _emit_class_file(
+        ok, reason, _, _ = bindable_field(foo.fields[0], objects, foo)
+        self.assertFalse(ok)
+        self.assertIn("unsupported", reason)
+
+    def test_deep_inaccessible_object_leaf_rejects_field(self) -> None:
+        ccgrabber = Class(name="CCGrabber", namespace="cocos2d")
+        foo = Class(name="Foo")
+        field = Field(
+            "m_values",
+            "gd::map<int, gd::vector<cocos2d::CCGrabber*>>",
+        )
+        ok, reason, _, _ = bindable_field(
+            field,
+            {"CCGrabber": ccgrabber, "cocos2d::CCGrabber": ccgrabber},
             foo,
-            grouped,
-            [],
-            [(foo, foo.fields[0])],
-            objects,
-            set(),
-            1,
-            "win",
         )
-        self.assertIn(
-            "detail::checkAssociativeMap<int, gd::vector<PulseEffectAction>, "
-            "gd::unordered_map<int, gd::vector<PulseEffectAction>>>",
-            text,
+        self.assertFalse(ok)
+        self.assertEqual(reason, "inaccessible-type:CCGrabber")
+
+
+class RecursiveContainerStubTests(unittest.TestCase):
+    def test_container_null_sentinel_is_not_declared(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        text = types_text(emit_luau_types(Root(classes=[ccobject])))
+        self.assertNotIn("ContainerNull", text)
+        self.assertNotIn("nullContainer", text)
+
+    def test_deep_object_reference_is_declared_before_use(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        leaf = Class(name="Leaf", bases=["CCObject"])
+        foo = Class(
+            name="Foo",
+            bases=["CCObject"],
+            methods=[
+                Method(
+                    name="leaves",
+                    ret="gd::map<int, gd::vector<Leaf*>>",
+                    args=[],
+                    platforms=all_platforms("0x1"),
+                )
+            ],
         )
-        self.assertIn(
-            "luax::detail::assignAssociativeMap(*self->m_pulseEffectMap, value)",
-            text,
-        )
+        text = types_text(emit_luau_types(Root(classes=[ccobject, foo, leaf])))
+        leaf_pos = text.index("declare class Leaf")
+        method_pos = text.index("function leaves(self)")
+        self.assertLess(leaf_pos, method_pos)
 
 
 if __name__ == "__main__":

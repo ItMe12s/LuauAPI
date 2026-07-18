@@ -35,6 +35,7 @@ from luau_codegen.emit.luau_types.references import (
     _emit_value_stub_block,
     _factory_object_refs,
     _refs_from_classes,
+    _refs_from_functions,
     _refs_from_text,
     _value_refs_in_text,
 )
@@ -150,12 +151,14 @@ def emit(
 
     function_tree = _build_function_tree(plan.supported_free_functions, objects, manual_fields)
     function_field_lines = _emit_function_tree(function_tree, objects, 1, ctx=plan.ctx)
+    free_function_refs = _refs_from_functions(plan.supported_free_functions, objects, ctx=plan.ctx)
 
     defined = {name for name, _ in cocos_chunks} | {name for name, _ in gd_chunks}
     refs = _refs_from_classes(defined, grouped_by_class, objects, skipped_classes, ctx=plan.ctx)
     refs |= _factory_object_refs(cocos_factories, objects, ctx=plan.ctx)
     refs |= _factory_object_refs(gd_factories, objects, ctx=plan.ctx)
     refs |= _factory_object_refs(geode_factories, objects, ctx=plan.ctx)
+    refs |= free_function_refs
     refs |= _refs_from_text(
         cocos_body + gd_body + cocos_factory_text + gd_factory_text + geode_factory_text
     )
@@ -172,8 +175,14 @@ def emit(
     delegate_block = _emit_delegate_stub_block()
     value_block = _emit_value_stub_block(
         _value_refs_in_text(
-            cocos_body + gd_body + cocos_factory_text + gd_factory_text + delegate_block
+            cocos_body
+            + gd_body
+            + cocos_factory_text
+            + gd_factory_text
+            + delegate_block
+            + "".join(function_field_lines)
         )
+        | free_function_refs
     )
     if value_block:
         lines.append(value_block)

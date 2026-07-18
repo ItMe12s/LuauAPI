@@ -31,6 +31,7 @@ CTest discovers the cases at build time. The files are:
 | `tests/cpp/diagnostics/boundary_recorder_tests.cpp` | Crash sidecar boundary stack, flush, and serialization |
 | `tests/cpp/require/bytecode_cache_key_tests.cpp` | Cache key over size, modify time, and content |
 | `tests/cpp/framework/callback_tests.cpp` | Callback registration and invocation |
+| `tests/cpp/framework/container_tables_tests.cpp` | Recursive container tables and audited pointer grids |
 | `tests/cpp/core/config_bounds_tests.cpp` | Resource byte caps stay aligned |
 | `tests/cpp/bindings/current_mod_tests.cpp` | Current-mod path helpers against a resources root |
 | `tests/cpp/framework/deferred_release_tests.cpp` | Deferred CCObject release queue, shutdown skip, and drain |

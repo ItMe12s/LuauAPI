@@ -525,7 +525,7 @@ class EmitStackCheckTests(unittest.TestCase):
         )
         check_text = "".join(emit_stack_check(info, 1, "map", "test"))
         self.assertIn(
-            "luax::detail::checkAssociativeMap<gd::string, SmartPrefabResult, gd::map<gd::string, SmartPrefabResult>>",
+            "luax::checkContainerValue<gd::map<gd::string, SmartPrefabResult>>",
             check_text,
         )
 
@@ -667,10 +667,10 @@ class EmitStackCheckTests(unittest.TestCase):
 
         self.assertIn("luax::checkOpaqueVectorView<FMOD::Sound>", text)
 
-    def test_primitive_vector_check_uses_table_helper(self) -> None:
+    def test_vector_check_uses_container_helper(self) -> None:
         element = TypeInfo(kind="number", cxx_type="int", lua_type="number")
         info = TypeInfo(
-            kind="primitive_vector",
+            kind="vector",
             cxx_type="gd::vector<int>",
             lua_type="{ number }",
             element_type=element,
@@ -686,13 +686,13 @@ class EmitStackCheckTests(unittest.TestCase):
             )
         )
 
-        self.assertIn("luax::checkPrimitiveVector<int>", text)
+        self.assertIn("luax::checkContainerValue<gd::vector<int>>", text)
         self.assertIn("arg0", text)
 
-    def test_primitive_vector_push_uses_table_helper(self) -> None:
+    def test_vector_push_uses_container_helper(self) -> None:
         element = TypeInfo(kind="number", cxx_type="int", lua_type="number")
         info = TypeInfo(
-            kind="primitive_vector",
+            kind="vector",
             cxx_type="gd::vector<int>",
             lua_type="{ number }",
             element_type=element,
@@ -700,13 +700,13 @@ class EmitStackCheckTests(unittest.TestCase):
 
         text = "".join(push_return(info, "result", False))
 
-        self.assertIn("luax::pushPrimitiveVector<int>", text)
+        self.assertIn("luax::pushContainerValue<gd::vector<int>>", text)
         self.assertIn("result", text)
 
-    def test_primitive_vector_bool_check_and_push(self) -> None:
+    def test_bool_vector_check_and_push(self) -> None:
         element = TypeInfo(kind="bool", cxx_type="bool", lua_type="boolean")
         info = TypeInfo(
-            kind="primitive_vector",
+            kind="vector",
             cxx_type="gd::vector<bool>",
             lua_type="{ boolean }",
             element_type=element,
@@ -715,13 +715,13 @@ class EmitStackCheckTests(unittest.TestCase):
         check_text = "".join(check_arg(Arg("gd::vector<bool>", "flags"), info, 1, "arg0", "test"))
         push_text = "".join(push_value(info, "flags"))
 
-        self.assertIn("luax::checkPrimitiveVector<bool>", check_text)
-        self.assertIn("luax::pushPrimitiveVector<bool>", push_text)
+        self.assertIn("luax::checkContainerValue<gd::vector<bool>>", check_text)
+        self.assertIn("luax::pushContainerValue<gd::vector<bool>>", push_text)
 
-    def test_primitive_vector_wideint_check_and_push(self) -> None:
+    def test_wideint_vector_check_and_push(self) -> None:
         element = TypeInfo(kind="wideint", cxx_type="uint64_t", lua_type="string")
         info = TypeInfo(
-            kind="primitive_vector",
+            kind="vector",
             cxx_type="gd::vector<uint64_t>",
             lua_type="{ string }",
             element_type=element,
@@ -730,8 +730,8 @@ class EmitStackCheckTests(unittest.TestCase):
         check_text = "".join(check_arg(Arg("gd::vector<uint64_t>", "ids"), info, 1, "arg0", "test"))
         push_text = "".join(push_value(info, "ids"))
 
-        self.assertIn("luax::checkPrimitiveVector<uint64_t>", check_text)
-        self.assertIn("luax::pushPrimitiveVector<uint64_t>", push_text)
+        self.assertIn("luax::checkContainerValue<gd::vector<uint64_t>>", check_text)
+        self.assertIn("luax::pushContainerValue<gd::vector<uint64_t>>", push_text)
 
     def test_std_array_check_uses_fixed_length_helper(self) -> None:
         element = TypeInfo(kind="number", cxx_type="int", lua_type="number")
@@ -753,7 +753,7 @@ class EmitStackCheckTests(unittest.TestCase):
             )
         )
 
-        self.assertIn("luax::checkStdArray<int, 300>", text)
+        self.assertIn("luax::checkContainerValue<std::array<int, 300>>", text)
 
     def test_std_array_push_uses_fixed_length_helper(self) -> None:
         element = TypeInfo(
@@ -771,7 +771,7 @@ class EmitStackCheckTests(unittest.TestCase):
 
         text = "".join(push_value(info, "points"))
 
-        self.assertIn("luax::pushStdArray<cocos2d::CCPoint, 4>", text)
+        self.assertIn("luax::pushContainerValue<std::array<cocos2d::CCPoint, 4>>", text)
 
 
 class ContainerTableMarshallingTests(unittest.TestCase):
@@ -791,10 +791,8 @@ class ContainerTableMarshallingTests(unittest.TestCase):
         )
         push_text = "".join(push_value(info, "values"))
 
-        self.assertIn(
-            "luax::detail::checkAssociativeMap<int, bool, gd::map<int, bool>>", check_text
-        )
-        self.assertIn("luax::detail::pushAssociativeMap<int, bool, gd::map<int, bool>>", push_text)
+        self.assertIn("luax::checkContainerValue<gd::map<int, bool>>", check_text)
+        self.assertIn("luax::pushContainerValue<gd::map<int, bool>>", push_text)
 
     def test_unordered_map_check_and_push_use_table_helpers(self) -> None:
         key = TypeInfo(kind="string", cxx_type="std::string", lua_type="string")
@@ -819,11 +817,11 @@ class ContainerTableMarshallingTests(unittest.TestCase):
         push_text = "".join(push_value(info, "values"))
 
         self.assertIn(
-            "luax::detail::checkAssociativeMap<std::string, int, gd::unordered_map<std::string, int>>",
+            "luax::checkContainerValue<gd::unordered_map<std::string, int>>",
             check_text,
         )
         self.assertIn(
-            "luax::detail::pushAssociativeMap<std::string, int, gd::unordered_map<std::string, int>>",
+            "luax::pushContainerValue<gd::unordered_map<std::string, int>>",
             push_text,
         )
 
@@ -839,8 +837,8 @@ class ContainerTableMarshallingTests(unittest.TestCase):
         check_text = "".join(check_arg(Arg("gd::set<int>", "values"), info, 1, "arg0", "test"))
         push_text = "".join(push_value(info, "values"))
 
-        self.assertIn("luax::detail::checkSetFromTable<int, gd::set<int>>", check_text)
-        self.assertIn("luax::detail::pushSetAsTable<int, gd::set<int>>", push_text)
+        self.assertIn("luax::checkContainerValue<gd::set<int>>", check_text)
+        self.assertIn("luax::pushContainerValue<gd::set<int>>", push_text)
 
     def test_unordered_set_check_and_push_use_table_helpers(self) -> None:
         element = TypeInfo(kind="number", cxx_type="int", lua_type="number")
@@ -862,8 +860,8 @@ class ContainerTableMarshallingTests(unittest.TestCase):
         )
         push_text = "".join(push_value(info, "values"))
 
-        self.assertIn("luax::detail::checkSetFromTable<int, gd::unordered_set<int>>", check_text)
-        self.assertIn("luax::detail::pushSetAsTable<int, gd::unordered_set<int>>", push_text)
+        self.assertIn("luax::checkContainerValue<gd::unordered_set<int>>", check_text)
+        self.assertIn("luax::pushContainerValue<gd::unordered_set<int>>", push_text)
 
     def test_object_set_check_and_push_use_table_helpers(self) -> None:
         element = TypeInfo(
@@ -884,14 +882,8 @@ class ContainerTableMarshallingTests(unittest.TestCase):
         )
         push_text = "".join(push_value(info, "values"))
 
-        self.assertIn(
-            "luax::detail::checkSetFromTable<cocos2d::CCObject*, gd::set<cocos2d::CCObject*>>",
-            check_text,
-        )
-        self.assertIn(
-            "luax::detail::pushSetAsTable<cocos2d::CCObject*, gd::set<cocos2d::CCObject*>>",
-            push_text,
-        )
+        self.assertIn("luax::checkContainerValue<gd::set<cocos2d::CCObject*>>", check_text)
+        self.assertIn("luax::pushContainerValue<gd::set<cocos2d::CCObject*>>", push_text)
 
     def test_object_unordered_set_check_and_push_use_table_helpers(self) -> None:
         element = TypeInfo(
@@ -919,11 +911,11 @@ class ContainerTableMarshallingTests(unittest.TestCase):
         push_text = "".join(push_value(info, "values"))
 
         self.assertIn(
-            "luax::detail::checkSetFromTable<cocos2d::CCObject*, gd::unordered_set<cocos2d::CCObject*>>",
+            "luax::checkContainerValue<gd::unordered_set<cocos2d::CCObject*>>",
             check_text,
         )
         self.assertIn(
-            "luax::detail::pushSetAsTable<cocos2d::CCObject*, gd::unordered_set<cocos2d::CCObject*>>",
+            "luax::pushContainerValue<gd::unordered_set<cocos2d::CCObject*>>",
             push_text,
         )
 
@@ -943,8 +935,8 @@ class ContainerTableMarshallingTests(unittest.TestCase):
         )
         push_text = "".join(push_value(info, "entry"))
 
-        self.assertIn("luax::checkPair<int, int>", check_text)
-        self.assertIn("luax::pushPair<int, int>", push_text)
+        self.assertIn("luax::checkContainerValue<std::pair<int, int>>", check_text)
+        self.assertIn("luax::pushContainerValue<std::pair<int, int>>", push_text)
 
     def test_map_pair_value_check_and_push(self) -> None:
         key = TypeInfo(kind="number", cxx_type="int", lua_type="number")
@@ -977,11 +969,11 @@ class ContainerTableMarshallingTests(unittest.TestCase):
         push_text = "".join(push_value(info, "groups"))
 
         self.assertIn(
-            "luax::detail::checkAssociativeMap<int, std::pair<int, int>, gd::unordered_map<int, std::pair<int, int>>>",
+            "luax::checkContainerValue<gd::unordered_map<int, std::pair<int, int>>>",
             check_text,
         )
         self.assertIn(
-            "luax::detail::pushAssociativeMap<int, std::pair<int, int>, gd::unordered_map<int, std::pair<int, int>>>",
+            "luax::pushContainerValue<gd::unordered_map<int, std::pair<int, int>>>",
             push_text,
         )
 
@@ -1016,11 +1008,11 @@ class ContainerTableMarshallingTests(unittest.TestCase):
         push_text = "".join(push_value(info, "accounts"))
 
         self.assertIn(
-            "luax::detail::checkPairKeyAssociativeMap<int, int, int, gd::map<std::pair<int, int>, int>>",
+            "luax::checkContainerValue<gd::map<std::pair<int, int>, int>>",
             check_text,
         )
         self.assertIn(
-            "luax::detail::pushPairKeyAssociativeMap<int, int, int, gd::map<std::pair<int, int>, int>>",
+            "luax::pushContainerValue<gd::map<std::pair<int, int>, int>>",
             push_text,
         )
 

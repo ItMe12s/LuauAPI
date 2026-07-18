@@ -509,6 +509,22 @@ class HookableSelCallbackTests(unittest.TestCase):
         for method in cls.methods:
             self.assertFalse(hookable(cls, method, objects, "win"))
 
+    def test_composite_nested_below_pair_not_hookable(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        cls = Class(
+            name="Foo",
+            bases=["CCObject"],
+            methods=[
+                Method(
+                    name="takeNested",
+                    ret="void",
+                    args=[Arg("std::pair<int, gd::vector<int>>", "value")],
+                    platforms=all_platforms("0x1"),
+                )
+            ],
+        )
+        self.assertFalse(hookable(cls, cls.methods[0], {"CCObject": ccobject, "Foo": cls}, "win"))
+
     def test_opaque_handle_arg_not_hookable(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")
         cls = Class(
@@ -610,7 +626,6 @@ class HookCodegenTests(unittest.TestCase):
         self.assertEqual(hook_body.count("runLuaPostHooks"), 1)
 
     def test_hook_target_id_uses_arity_only(self) -> None:
-        ccobject = Class(name="CCObject", namespace="cocos2d")
         cls = Class(
             name="CCNode",
             namespace="cocos2d",

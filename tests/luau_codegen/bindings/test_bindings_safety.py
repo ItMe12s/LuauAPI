@@ -284,6 +284,14 @@ class GeneratedSafetyTests(unittest.TestCase):
         self.assertIn("luax::Runtime::fromState(L)", text)
         self.assertNotIn("static_cast<luax::Runtime*>", text)
 
+    def test_common_bind_has_no_container_null_singleton(self) -> None:
+        root = Root(classes=[Class(name="CCObject", namespace="cocos2d")])
+        plan = collect_plan(root, "win")
+        text = _emit_common_file(plan.emitted_classes, plan, "win")
+
+        self.assertNotIn("ensureNullContainerSentinel", text)
+        self.assertNotIn("nullContainer", text)
+
     def test_hook_api_is_table_only_with_skip_fields(self) -> None:
         text = emit_hook_support()
 
@@ -726,7 +734,7 @@ class GeneratedSafetyTests(unittest.TestCase):
         self.assertIn("pushOwnedReadOnlyVectorView<cocos2d::CCObject>", text)
         self.assertIn("geode::utils::children()", text)
 
-    def test_method_primitive_vector_input_checks_lua_table(self) -> None:
+    def test_method_vector_input_checks_lua_table(self) -> None:
         cls = Class(
             name="Foo",
             methods=[
@@ -742,10 +750,10 @@ class GeneratedSafetyTests(unittest.TestCase):
 
         text = _emit_class_file(cls, grouped, [], [], {}, set(), 1, "win")
 
-        self.assertIn("checkPrimitiveVector<int>", text)
+        self.assertIn("checkContainerValue<gd::vector<int>>", text)
         self.assertIn("self->take(arg0)", text)
 
-    def test_method_primitive_vector_return_pushes_table_copy(self) -> None:
+    def test_method_vector_return_pushes_table_copy(self) -> None:
         cls = Class(
             name="Foo",
             methods=[
@@ -761,10 +769,10 @@ class GeneratedSafetyTests(unittest.TestCase):
 
         text = _emit_class_file(cls, grouped, [], [], {}, set(), 1, "win")
 
-        self.assertIn("pushPrimitiveVector<int>", text)
+        self.assertIn("pushContainerValue<gd::vector<int>>", text)
         self.assertIn("self->getValues()", text)
 
-    def test_method_primitive_vector_out_arg_pushes_table_copy(self) -> None:
+    def test_method_vector_out_arg_pushes_table_copy(self) -> None:
         cls = Class(
             name="Foo",
             methods=[
@@ -782,9 +790,9 @@ class GeneratedSafetyTests(unittest.TestCase):
 
         self.assertIn("gd::vector<int> arg0{}", text)
         self.assertIn("self->fillValues(&arg0)", text)
-        self.assertIn("pushPrimitiveVector<int>", text)
+        self.assertIn("pushContainerValue<gd::vector<int>>", text)
 
-    def test_free_function_primitive_vector_return_pushes_table_copy(self) -> None:
+    def test_free_function_vector_return_pushes_table_copy(self) -> None:
         fn = Function(
             name="values",
             namespace="geode::utils",
@@ -794,10 +802,10 @@ class GeneratedSafetyTests(unittest.TestCase):
         kept, _ = group_supported_free_functions([fn], {}, "win")
         text = emit_free_functions_file(kept, {})
 
-        self.assertIn("pushPrimitiveVector<int>", text)
+        self.assertIn("pushContainerValue<gd::vector<int>>", text)
         self.assertIn("geode::utils::values()", text)
 
-    def test_primitive_vector_pointer_field_get_dereferences_and_set_assigns(
+    def test_vector_pointer_field_get_dereferences_and_set_assigns(
         self,
     ) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")
@@ -819,12 +827,12 @@ class GeneratedSafetyTests(unittest.TestCase):
             "win",
         )
 
-        self.assertIn("pushPrimitiveVector<float>(L, self->m_pSplitTimes)", text)
-        self.assertIn("luax::assignPrimitiveVector(*self->m_pSplitTimes, value)", text)
+        self.assertIn("pushContainerValue<gd::vector<float>>(L, *self->m_pSplitTimes", text)
+        self.assertIn("luax::assignContainerValue(*self->m_pSplitTimes, std::move(value))", text)
         self.assertNotIn("*self->m_pSplitTimes = std::move(value)", text)
         self.assertIn("field pointer is null", text)
 
-    def test_primitive_vector_bool_field_setter_uses_assign_primitive_vector(
+    def test_bool_vector_field_setter_uses_assign_container_value(
         self,
     ) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")
@@ -846,8 +854,8 @@ class GeneratedSafetyTests(unittest.TestCase):
             "win",
         )
 
-        self.assertIn("checkPrimitiveVector<bool>", text)
-        self.assertIn("luax::assignPrimitiveVector(self->m_flags, value)", text)
+        self.assertIn("checkContainerValue<gd::vector<bool>>", text)
+        self.assertIn("luax::assignContainerValue(self->m_flags, std::move(value))", text)
         self.assertNotIn("self->m_flags = std::move", text)
 
     def test_seed_value_field_setter_assigns_int(self) -> None:
@@ -883,7 +891,7 @@ class GeneratedSafetyTests(unittest.TestCase):
         self.assertNotIn("static_cast<decltype(self->m_attempts)>(value)", text)
         self.assertIn("static_cast<int>(self->m_attempts)", text)
 
-    def test_deferred_value_struct_field_setter_uses_assign_value(self) -> None:
+    def test_deferred_value_struct_field_setter_uses_direct_assignment(self) -> None:
         from pathlib import Path
 
         from luau_codegen.emit.value_struct_specs import (  # type: ignore[import-unresolved]
@@ -933,8 +941,8 @@ class GeneratedSafetyTests(unittest.TestCase):
                 1,
                 "win",
             )
-            self.assertIn("luax::assignValue(self->m_state, std::move(value))", text)
-            self.assertNotIn("self->m_state = static_cast", text)
+            self.assertIn("self->m_state = static_cast<decltype(self->m_state)>(value)", text)
+            self.assertNotIn("luax::assignValue", text)
         finally:
             gate.VALUE_STRUCT_OPT_IN = saved
             reinstall_fixture_value_struct_specs()
@@ -994,7 +1002,7 @@ class GeneratedSafetyTests(unittest.TestCase):
             gate.VALUE_STRUCT_OPT_IN = saved
             reinstall_fixture_value_struct_specs()
 
-    def test_std_array_int_field_setter_uses_assign_std_array(self) -> None:
+    def test_std_array_int_field_setter_uses_assign_container_value(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")
         foo = Class(
             name="Foo",
@@ -1014,11 +1022,11 @@ class GeneratedSafetyTests(unittest.TestCase):
             "win",
         )
 
-        self.assertIn("checkStdArray<int, 300>", text)
-        self.assertIn("luax::assignStdArray<int, 300>(self->m_values, std::move(value))", text)
+        self.assertIn("checkContainerValue<std::array<int, 300>>", text)
+        self.assertIn("luax::assignContainerValue(self->m_values, std::move(value))", text)
         self.assertNotIn("self->m_values = std::move", text)
 
-    def test_std_array_short_pointer_field_get_and_set_use_std_array_helpers(
+    def test_std_array_short_pointer_field_get_and_set_use_container_helpers(
         self,
     ) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")
@@ -1040,12 +1048,12 @@ class GeneratedSafetyTests(unittest.TestCase):
             "win",
         )
 
-        self.assertIn("pushStdArray<short, 10>(L, self->m_shorts)", text)
-        self.assertIn("luax::assignStdArray<short, 10>(*self->m_shorts, std::move(value))", text)
+        self.assertIn("pushContainerValue<std::array<short, 10>>", text)
+        self.assertIn("luax::assignContainerValue(*self->m_shorts, std::move(value))", text)
         self.assertIn("field pointer is null", text)
         self.assertNotIn("*self->m_shorts = std::move(value)", text)
 
-    def test_primitive_vector_int_pointer_field_setter_uses_assign_primitive_vector(
+    def test_int_vector_pointer_field_setter_uses_assign_container_value(
         self,
     ) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")
@@ -1067,11 +1075,11 @@ class GeneratedSafetyTests(unittest.TestCase):
             "win",
         )
 
-        self.assertIn("checkPrimitiveVector<int>", text)
-        self.assertIn("luax::assignPrimitiveVector(*self->m_pInts, value)", text)
+        self.assertIn("checkContainerValue<gd::vector<int>>", text)
+        self.assertIn("luax::assignContainerValue(*self->m_pInts, std::move(value))", text)
         self.assertNotIn("*self->m_pInts = std::move(value)", text)
 
-    def test_map_field_setter_uses_assign_map(self) -> None:
+    def test_map_field_setter_uses_assign_container_value(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")
         foo = Class(
             name="Foo",
@@ -1091,11 +1099,11 @@ class GeneratedSafetyTests(unittest.TestCase):
             "win",
         )
 
-        self.assertIn("detail::checkAssociativeMap<int, bool, gd::map<int, bool>>", text)
-        self.assertIn("luax::detail::assignAssociativeMap(self->m_values, value)", text)
+        self.assertIn("luax::checkContainerValue<gd::map<int, bool>>", text)
+        self.assertIn("luax::assignContainerValue(self->m_values, std::move(value))", text)
         self.assertNotIn("self->m_values = std::move", text)
 
-    def test_set_field_setter_uses_assign_set(self) -> None:
+    def test_set_field_setter_uses_assign_container_value(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")
         foo = Class(
             name="Foo",
@@ -1115,11 +1123,11 @@ class GeneratedSafetyTests(unittest.TestCase):
             "win",
         )
 
-        self.assertIn("detail::checkSetFromTable<int, gd::set<int>>", text)
-        self.assertIn("luax::detail::assignSetContainer(self->m_ids, value)", text)
+        self.assertIn("luax::checkContainerValue<gd::set<int>>", text)
+        self.assertIn("luax::assignContainerValue(self->m_ids, std::move(value))", text)
         self.assertNotIn("self->m_ids = std::move", text)
 
-    def test_object_set_field_setter_uses_assign_set(self) -> None:
+    def test_object_set_field_setter_uses_assign_container_value(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")
         foo = Class(
             name="Foo",
@@ -1143,11 +1151,8 @@ class GeneratedSafetyTests(unittest.TestCase):
             "win",
         )
 
-        self.assertIn(
-            "detail::checkSetFromTable<cocos2d::CCObject*, gd::set<cocos2d::CCObject*>>",
-            text,
-        )
-        self.assertIn("luax::detail::assignSetContainer(self->m_objects, value)", text)
+        self.assertIn("luax::checkContainerValue<gd::set<cocos2d::CCObject*>>", text)
+        self.assertIn("luax::assignContainerValue(self->m_objects, std::move(value))", text)
         self.assertNotIn("self->m_objects = std::move", text)
 
     def test_object_set_pointer_field_setter_dereferences(self) -> None:
@@ -1174,15 +1179,9 @@ class GeneratedSafetyTests(unittest.TestCase):
             "win",
         )
 
-        self.assertIn(
-            "detail::checkSetFromTable<cocos2d::CCObject*, gd::set<cocos2d::CCObject*>>",
-            text,
-        )
-        self.assertIn("luax::detail::assignSetContainer(*self->m_pSet, value)", text)
-        self.assertIn(
-            "luax::detail::pushSetContainerPointer<gd::set<cocos2d::CCObject*>>(L, self->m_pSet)",
-            text,
-        )
+        self.assertIn("luax::checkContainerValue<gd::set<cocos2d::CCObject*>>", text)
+        self.assertIn("luax::assignContainerValue(*self->m_pSet, std::move(value))", text)
+        self.assertIn("pushContainerValue<gd::set<cocos2d::CCObject*>>", text)
         self.assertIn("is_pointer_v", text)
         self.assertIn("field pointer is null", text)
 
@@ -1210,7 +1209,7 @@ class GeneratedSafetyTests(unittest.TestCase):
 
         text = _emit_class_file(cls, grouped, [], [], {}, set(), 1, "win")
 
-        self.assertIn("detail::checkAssociativeMap<int, bool, gd::map<int, bool>>", text)
+        self.assertIn("luax::checkContainerValue<gd::map<int, bool>>", text)
         self.assertIn("self->takeMap(arg0)", text)
 
     def test_method_map_return_pushes_table_copy(self) -> None:
@@ -1229,7 +1228,7 @@ class GeneratedSafetyTests(unittest.TestCase):
 
         text = _emit_class_file(cls, grouped, [], [], {}, set(), 1, "win")
 
-        self.assertIn("detail::pushAssociativeMap<int, bool, gd::map<int, bool>>", text)
+        self.assertIn("luax::pushContainerValue<gd::map<int, bool>>", text)
         self.assertIn("self->getMap()", text)
 
     def test_method_set_input_checks_lua_table(self) -> None:
@@ -1248,7 +1247,7 @@ class GeneratedSafetyTests(unittest.TestCase):
 
         text = _emit_class_file(cls, grouped, [], [], {}, set(), 1, "win")
 
-        self.assertIn("detail::checkSetFromTable<int, gd::set<int>>", text)
+        self.assertIn("luax::checkContainerValue<gd::set<int>>", text)
         self.assertIn("self->takeSet(arg0)", text)
 
     def test_free_function_unordered_map_return_pushes_table_copy(self) -> None:
@@ -1261,7 +1260,7 @@ class GeneratedSafetyTests(unittest.TestCase):
         kept, _ = group_supported_free_functions([fn], {}, "win")
         text = emit_free_functions_file(kept, {})
 
-        self.assertIn("detail::pushAssociativeMap<int, int, gd::unordered_map<int, int>>", text)
+        self.assertIn("luax::pushContainerValue<gd::unordered_map<int, int>>", text)
         self.assertIn("geode::utils::values()", text)
 
     def test_field_plan_and_types_include_ccnode_m_fields_only(self) -> None:

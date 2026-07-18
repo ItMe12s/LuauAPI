@@ -95,7 +95,7 @@ Codegen:
 | [Codegen](contributor/codegen/codegen.md) | Codegen overview |
 | [CCArray methods](contributor/codegen/cc-array.md) | CCArray binding rules |
 | [ccCArray read-only fields](contributor/codegen/cc-c-array.md) | ccCArray field rules |
-| [Nested containers](contributor/codegen/nested-containers.md) | Nested container codegen |
+| [Recursive containers](contributor/codegen/nested-containers.md) | Recursive container codegen |
 | [Pair containers](contributor/codegen/pair-containers.md) | Pair container codegen |
 | [Platform parity](contributor/codegen/platform-parity.md) | Cross-platform stubs |
 

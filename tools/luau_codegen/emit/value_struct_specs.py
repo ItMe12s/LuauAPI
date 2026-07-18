@@ -7,7 +7,12 @@ from typing import TYPE_CHECKING
 
 from luau_codegen.cli.io import _write_if_changed
 from luau_codegen.convert.marshalling import emit_stack_check, push_value
-from luau_codegen.convert.type_map import classify_arg, classify_return
+from luau_codegen.convert.type_map import (
+    COMPOSITE_KINDS,
+    classify_arg,
+    classify_return,
+    iter_type_tree,
+)
 from luau_codegen.model.codegen_context import CodegenContext
 from luau_codegen.model.value_types import (
     CocosValueStructDescriptor,
@@ -24,16 +29,7 @@ if TYPE_CHECKING:
 VALUE_STRUCT_SPECS_MODULE = "luau_codegen.model.value_struct_specs"
 
 
-_CONTAINER_KINDS = frozenset(
-    {
-        "primitive_vector",
-        "std_array",
-        "map",
-        "unordered_map",
-        "set",
-        "unordered_set",
-    }
-)
+_CONTAINER_KINDS = COMPOSITE_KINDS
 
 
 def _is_int_cxx(cxx: str) -> bool:
@@ -67,7 +63,9 @@ def _member_for_struct(name: str) -> str:
 
 def _render_container_check(field: "Field", info) -> tuple[str, ...]:
     lines = emit_stack_check(info, "idx", f"_{field.name}_tmp", field.name)
-    lines.append(f"        value.{field.name} = _{field.name}_tmp;\n")
+    lines.append(
+        f"        luax::assignContainerValue(value.{field.name}, std::move(_{field.name}_tmp));\n"
+    )
     return tuple(lines)
 
 
@@ -93,26 +91,7 @@ def _stub_dep_for(ret_info) -> str | None:
 
 
 def _stub_deps_for_field(ret_info) -> set[str]:
-    deps: set[str] = set()
-    direct = _stub_dep_for(ret_info)
-    if direct:
-        deps.add(direct)
-    if ret_info.kind in _CONTAINER_KINDS:
-        if ret_info.element_type is not None:
-            elem = ret_info.element_type
-            d = _stub_dep_for(elem)
-            if d:
-                deps.add(d)
-        if ret_info.value_type is not None:
-            val = ret_info.value_type
-            d = _stub_dep_for(val)
-            if d:
-                deps.add(d)
-            if val.kind in _CONTAINER_KINDS and val.element_type is not None:
-                d2 = _stub_dep_for(val.element_type)
-                if d2:
-                    deps.add(d2)
-    return deps
+    return {dep for node in iter_type_tree(ret_info) if (dep := _stub_dep_for(node)) is not None}
 
 
 def _build_spec(

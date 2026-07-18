@@ -1,15 +1,20 @@
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING, Dict, List, Sequence, Tuple
+from typing import TYPE_CHECKING, Dict, List, Sequence
 
 if TYPE_CHECKING:
     from luau_codegen.model.codegen_context import CodegenContext
 
-from luau_codegen.parse.broma import Class, Field, Method
+from luau_codegen.parse.broma import Class, Field, Function, Method
 from luau_codegen.policy.fields import bindable_field
 from luau_codegen.model.domain import short_name
-from luau_codegen.convert.type_map import TypeInfo, classify_arg, classify_return
+from luau_codegen.convert.type_map import (
+    TypeInfo,
+    classify_arg,
+    classify_return,
+    iter_type_tree,
+)
 from luau_codegen.model import delegate_specs as _delegate_specs
 from luau_codegen.model.value_types import (
     VALUE_STUB_BODY as _VALUE_STUB_BODY,
@@ -138,67 +143,47 @@ def _emit_generated_support_stub_block() -> str:
     )
 
 
+def _refs_from_type(info: TypeInfo) -> set[str]:
+    refs: set[str] = set()
+    for node in iter_type_tree(info):
+        if node.kind == "value":
+            refs.add(node.lua_type)
+            refs.update(_value_type_object_refs(node))
+        elif node.kind == "object":
+            refs.add(_object_type_name(node))
+        elif node.kind == "opaque_handle":
+            refs.add(node.lua_type.removesuffix("?"))
+    return refs
+
+
 def _refs_from_method(
     method: Method, objects: Dict[str, Class], ctx: CodegenContext | None = None
 ) -> set[str]:
     refs: set[str] = set()
     for arg in method.args:
         info = classify_arg(arg.type, objects, ctx=ctx)
-        if info and info.kind == "value":
-            refs.add(info.lua_type)
-            refs.update(_value_type_object_refs(info))
-        elif info and info.kind == "object":
-            refs.add(_object_type_name(info))
-        elif info and info.kind == "vector_view" and info.element_type:
-            refs.add(_object_type_name(info.element_type))
-        elif info and info.kind in ("map", "unordered_map") and info.value_type:
-            if info.value_type.kind == "object":
-                refs.add(_object_type_name(info.value_type))
-            elif (
-                info.value_type.kind == "vector_view"
-                and info.value_type.element_type
-                and info.value_type.element_type.kind == "object"
-            ):
-                refs.add(_object_type_name(info.value_type.element_type))
-            else:
-                refs.update(_value_type_object_refs(info.value_type))
-        elif info and info.kind == "primitive_vector" and info.element_type:
-            refs.update(_value_type_object_refs(info.element_type))
-        elif info and info.kind == "std_array" and info.element_type:
-            refs.update(_value_type_object_refs(info.element_type))
-        elif info and info.kind in ("set", "unordered_set") and info.element_type:
-            if info.element_type.kind == "object":
-                refs.add(_object_type_name(info.element_type))
-            else:
-                refs.update(_value_type_object_refs(info.element_type))
+        if info:
+            refs.update(_refs_from_type(info))
     ret = classify_return(method.ret, objects, ctx=ctx)
-    if ret and ret.kind == "value":
-        refs.add(ret.lua_type)
-        refs.update(_value_type_object_refs(ret))
-    elif ret and ret.kind == "object":
-        refs.add(_object_type_name(ret))
-    elif ret and ret.kind == "vector_view" and ret.element_type:
-        refs.add(_object_type_name(ret.element_type))
-    elif ret and ret.kind in ("map", "unordered_map") and ret.value_type:
-        if ret.value_type.kind == "object":
-            refs.add(_object_type_name(ret.value_type))
-        elif (
-            ret.value_type.kind == "vector_view"
-            and ret.value_type.element_type
-            and ret.value_type.element_type.kind == "object"
-        ):
-            refs.add(_object_type_name(ret.value_type.element_type))
-        else:
-            refs.update(_value_type_object_refs(ret.value_type))
-    elif ret and ret.kind == "primitive_vector" and ret.element_type:
-        refs.update(_value_type_object_refs(ret.element_type))
-    elif ret and ret.kind == "std_array" and ret.element_type:
-        refs.update(_value_type_object_refs(ret.element_type))
-    elif ret and ret.kind in ("set", "unordered_set") and ret.element_type:
-        if ret.element_type.kind == "object":
-            refs.add(_object_type_name(ret.element_type))
-        else:
-            refs.update(_value_type_object_refs(ret.element_type))
+    if ret:
+        refs.update(_refs_from_type(ret))
+    return refs
+
+
+def _refs_from_functions(
+    functions: Sequence[Function],
+    objects: Dict[str, Class],
+    ctx: CodegenContext | None = None,
+) -> set[str]:
+    refs: set[str] = set()
+    for function in functions:
+        for arg in function.args:
+            info = classify_arg(arg.type, objects, ctx=ctx)
+            if info:
+                refs.update(_refs_from_type(info))
+        ret = classify_return(function.ret, objects, ctx=ctx)
+        if ret:
+            refs.update(_refs_from_type(ret))
     return refs
 
 
@@ -211,33 +196,8 @@ def _refs_from_fields(
     refs: set[str] = set()
     for field in fields:
         ok, _, _, ret = bindable_field(field, objects, cls, ctx=ctx)
-        if ok and ret and ret.kind == "value":
-            refs.add(ret.lua_type)
-            refs.update(_value_type_object_refs(ret))
-        elif ok and ret and ret.kind == "object":
-            refs.add(_object_type_name(ret))
-        elif ok and ret and ret.kind in ("vector_view", "cc_c_array_view") and ret.element_type:
-            refs.add(_object_type_name(ret.element_type))
-        elif ok and ret and ret.kind in ("map", "unordered_map") and ret.value_type:
-            if ret.value_type.kind == "object":
-                refs.add(_object_type_name(ret.value_type))
-            elif (
-                ret.value_type.kind == "vector_view"
-                and ret.value_type.element_type
-                and ret.value_type.element_type.kind == "object"
-            ):
-                refs.add(_object_type_name(ret.value_type.element_type))
-            else:
-                refs.update(_value_type_object_refs(ret.value_type))
-        elif ok and ret and ret.kind == "primitive_vector" and ret.element_type:
-            refs.update(_value_type_object_refs(ret.element_type))
-        elif ok and ret and ret.kind == "std_array" and ret.element_type:
-            refs.update(_value_type_object_refs(ret.element_type))
-        elif ok and ret and ret.kind in ("set", "unordered_set") and ret.element_type:
-            if ret.element_type.kind == "object":
-                refs.add(_object_type_name(ret.element_type))
-            else:
-                refs.update(_value_type_object_refs(ret.element_type))
+        if ok and ret:
+            refs.update(_refs_from_type(ret))
     return refs
 
 

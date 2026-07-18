@@ -5,16 +5,12 @@ from typing import TYPE_CHECKING, Dict, Iterator, List, Optional, Union
 
 from luau_codegen.parse.broma import Arg, Class, Function, Method
 from luau_codegen.convert.type_map import TypeInfo, classify_arg
-from luau_codegen.policy.containers import _CONTAINER_KINDS
+from luau_codegen.policy.containers import is_out_container
 
 if TYPE_CHECKING:
     from luau_codegen.model.codegen_context import CodegenContext
 
 CallableWithArgs = Union[Method, Function]
-
-
-def _is_out_container(info: TypeInfo) -> bool:
-    return info.is_out and info.kind in _CONTAINER_KINDS
 
 
 def is_ccobject_ptr(info: TypeInfo) -> bool:
@@ -46,7 +42,7 @@ def iter_lua_method_args(
     while i < len(m.args):
         arg = m.args[i]
         info = arg_infos[i]
-        if _is_out_container(info):
+        if is_out_container(info):
             yield LuaMethodArg(arg=arg, info=info, arg_index=i, out_only=True)
             i += 1
             continue

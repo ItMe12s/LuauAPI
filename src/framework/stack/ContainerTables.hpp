@@ -7,20 +7,47 @@
 
 #include <Geode/Geode.hpp>
 #include <array>
-#include <cstdint>
 #include <lua.h>
 #include <lualib.h>
-#include <memory>
 #include <string>
+#include <tuple>
 #include <type_traits>
 #include <utility>
 
 namespace luax {
-    template <class F, class S>
-    std::pair<F, S> checkPair(lua_State* L, int idx, char const* label);
+    template <class T>
+    void checkContainerValue(lua_State* L, int idx, char const* label, T& out);
 
-    template <class F, class S>
-    void pushPair(lua_State* L, std::pair<F, S> const& pair);
+    template <class T>
+    T checkContainerValue(lua_State* L, int idx, char const* label);
+
+    template <class T>
+    void pushContainerValue(lua_State* L, T const& value);
+
+    template <class T>
+    void pushContainerValue(lua_State* L, T const* value);
+
+    template <class T>
+    void pushContainerValue(lua_State* L, T const& value, cocos2d::CCObject* owner);
+
+    template <class T>
+    void pushContainerValue(lua_State* L, T const* value, cocos2d::CCObject* owner);
+
+    template <class Array, class U, std::size_t N>
+    void pushContainerValue(lua_State* L, U const (&value)[N]);
+
+    template <class Array, class U, std::size_t N>
+    void pushContainerValue(lua_State* L, U const (&value)[N], cocos2d::CCObject* owner);
+
+    template <class T>
+    void assignContainerValue(T& dest, T const& source);
+
+    template <class T>
+    void assignContainerValue(T& dest, T&& source);
+
+    template <class T, std::size_t N, class U>
+    void assignContainerValue(U (&dest)[N], std::array<T, N> source);
+
 } // namespace luax
 
 namespace luax::detail {
@@ -42,43 +69,131 @@ namespace luax::detail {
     template <class T>
     inline constexpr bool is_gd_vector_v = is_gd_vector<T>::value;
 
-    template <class V>
-    struct gd_vector_element;
+    template <class T>
+    struct is_std_array : std::false_type {};
+
+    template <class T, std::size_t N>
+    struct is_std_array<std::array<T, N>> : std::true_type {};
 
     template <class T>
-    struct gd_vector_element<gd::vector<T>> {
-        using type = T;
+    inline constexpr bool is_std_array_v = is_std_array<std::remove_cv_t<T>>::value;
+
+    template <class T>
+    struct is_gd_map : std::false_type {};
+
+    template <class K, class V>
+    struct is_gd_map<gd::map<K, V>> : std::true_type {};
+
+    template <class T>
+    struct is_gd_unordered_map : std::false_type {};
+
+    template <class K, class V>
+    struct is_gd_unordered_map<gd::unordered_map<K, V>> : std::true_type {};
+
+    template <class T>
+    inline constexpr bool is_associative_map_v =
+        is_gd_map<std::remove_cv_t<T>>::value || is_gd_unordered_map<std::remove_cv_t<T>>::value;
+
+    template <class T>
+    struct is_gd_set : std::false_type {};
+
+    template <class V>
+    struct is_gd_set<gd::set<V>> : std::true_type {};
+
+    template <class T>
+    struct is_gd_unordered_set : std::false_type {};
+
+    template <class V>
+    struct is_gd_unordered_set<gd::unordered_set<V>> : std::true_type {};
+
+    template <class T>
+    inline constexpr bool is_associative_set_v =
+        is_gd_set<std::remove_cv_t<T>>::value || is_gd_unordered_set<std::remove_cv_t<T>>::value;
+
+    template <class T>
+    struct is_std_tuple : std::false_type {};
+
+    template <class... Ts>
+    struct is_std_tuple<std::tuple<Ts...>> : std::true_type {};
+
+    template <class T>
+    inline constexpr bool is_std_tuple_v = is_std_tuple<std::remove_cv_t<T>>::value;
+
+    template <class T>
+    inline constexpr bool is_wide_container_integer_v = std::is_same_v<std::remove_cv_t<T>, long> ||
+        std::is_same_v<std::remove_cv_t<T>, unsigned long> ||
+        std::is_same_v<std::remove_cv_t<T>, long long> ||
+        std::is_same_v<std::remove_cv_t<T>, unsigned long long> ||
+        (std::is_integral_v<std::remove_cv_t<T>> && sizeof(T) > sizeof(int));
+
+    template <class T>
+    inline constexpr bool is_container_composite_v =
+        is_gd_vector_v<std::remove_cv_t<T>> || is_std_array_v<T> || is_associative_map_v<T> ||
+        is_associative_set_v<T> || is_std_pair_v<std::remove_cv_t<T>> || is_std_tuple_v<T>;
+
+    template <class T>
+    inline constexpr bool is_ccobject_pointee_v = !std::is_void_v<std::remove_cv_t<T>> &&
+        requires(std::remove_cv_t<T>* ptr) { static_cast<cocos2d::CCObject*>(ptr); };
+
+    template <class T>
+    struct audited_pointer_grid_mirror_impl {
+        using type = std::remove_cv_t<T>;
     };
 
-    template <class V>
-    using gd_vector_element_t = typename gd_vector_element<V>::type;
-
-    inline void requireTableField(lua_State* L, int idx, char const* name, char const* label) {
-        lua_getfield(L, idx, name);
-        if (lua_isnil(L, -1)) {
-            luaL_error(L, "%s missing field %s", label, name);
-        }
-    }
+    template <class T>
+    struct audited_pointer_grid_mirror_impl<gd::vector<T>> {
+        using type = gd::vector<typename audited_pointer_grid_mirror_impl<std::remove_cv_t<T>>::type>;
+    };
 
     template <class T>
-    T checkPrimitiveVectorElement(lua_State* L, int idx, char const* label);
+    struct audited_pointer_grid_mirror_impl<T*> {
+        using Pointee = std::remove_cv_t<T>;
+        using type = std::conditional_t<
+            is_container_composite_v<Pointee>,
+            typename audited_pointer_grid_mirror_impl<Pointee>::type, T*>;
+    };
 
     template <class T>
-    void pushPrimitiveVectorElement(lua_State* L, T const& value);
+    using audited_pointer_grid_mirror_t =
+        typename audited_pointer_grid_mirror_impl<std::remove_cv_t<std::remove_reference_t<T>>>::type;
 
-    template <class T, class PushFn>
-    inline void pushViaPointer(lua_State* L, T* ptr, PushFn&& pushValue) {
-        if (ptr == nullptr) {
-            lua_pushnil(L);
-            return;
-        }
-        pushValue(L, *ptr);
-    }
+    template <class T>
+    struct has_audited_composite_pointer_impl : std::false_type {};
 
-    template <class T, class PushFn>
-    inline void pushViaPointer(lua_State* L, T const* ptr, PushFn&& pushValue) {
-        pushViaPointer(L, const_cast<T*>(ptr), std::forward<PushFn>(pushValue));
-    }
+    template <class T>
+    struct has_audited_composite_pointer_impl<gd::vector<T>> :
+        has_audited_composite_pointer_impl<std::remove_cv_t<T>> {};
+
+    template <class T>
+    struct has_audited_composite_pointer_impl<T*> :
+        std::bool_constant<
+            is_container_composite_v<std::remove_cv_t<T>> ||
+            has_audited_composite_pointer_impl<std::remove_cv_t<T>>::value> {};
+
+    template <class T>
+    inline constexpr bool has_audited_composite_pointer_v =
+        has_audited_composite_pointer_impl<std::remove_cv_t<std::remove_reference_t<T>>>::value;
+
+    template <class T>
+    struct is_audited_pointer_grid_node_impl :
+        std::bool_constant<!is_container_composite_v<std::remove_cv_t<T>>> {};
+
+    template <class T>
+    struct is_audited_pointer_grid_node_impl<gd::vector<T>> :
+        is_audited_pointer_grid_node_impl<std::remove_cv_t<T>> {};
+
+    template <class T>
+    struct is_audited_pointer_grid_node_impl<T*> :
+        std::bool_constant<
+            !is_container_composite_v<std::remove_cv_t<T>> ||
+            (is_gd_vector_v<std::remove_cv_t<T>> &&
+             is_audited_pointer_grid_node_impl<std::remove_cv_t<T>>::value)> {};
+
+    template <class T>
+    inline constexpr bool is_audited_pointer_grid_v =
+        is_gd_vector_v<std::remove_cv_t<std::remove_reference_t<T>>> &&
+        is_audited_pointer_grid_node_impl<std::remove_cv_t<std::remove_reference_t<T>>>::value &&
+        has_audited_composite_pointer_v<T>;
 
     template <class PushElemFn>
     inline void pushIndexedTable(lua_State* L, std::size_t size, PushElemFn&& pushElem) {
@@ -87,19 +202,6 @@ namespace luax::detail {
         for (std::size_t i = 0; i < size; ++i) {
             pushElem(L, i);
             lua_rawseti(L, tableIndex, static_cast<int>(i + 1));
-        }
-    }
-
-    template <class T, class Dest, class Src>
-    inline void assignContainer(Dest& dest, Src& src, std::size_t count) {
-        using DestElem = std::decay_t<decltype(dest[0])>;
-        for (std::size_t i = 0; i < count; ++i) {
-            if constexpr (std::is_same_v<T, bool>) {
-                dest[i] = static_cast<DestElem>(src[i]);
-            }
-            else {
-                dest[i] = static_cast<DestElem>(std::move(src[i]));
-            }
         }
     }
 
@@ -141,781 +243,720 @@ namespace luax::detail {
             lua_pop(L, 1);
         }
     }
+
+    template <class T>
+    void pushAuditedPointerGridValue(lua_State* L, T const& value, cocos2d::CCObject* owner) {
+        using U = std::remove_cv_t<T>;
+        if constexpr (std::is_pointer_v<U> && is_container_composite_v<std::remove_cv_t<std::remove_pointer_t<U>>>) {
+            if (value == nullptr) {
+                lua_createtable(L, 0, 0);
+            }
+            else {
+                pushAuditedPointerGridValue(L, *value, owner);
+            }
+        }
+        else if constexpr (is_gd_vector_v<U> && has_audited_composite_pointer_v<U>) {
+            pushIndexedTable(L, value.size(), [&](lua_State* state, std::size_t i) {
+                pushAuditedPointerGridValue(state, value[i], owner);
+            });
+        }
+        else {
+            pushContainerValue(L, &value, owner);
+        }
+    }
+
+    template <class T>
+    void destroyAuditedPointerGridValue(T& value) {
+        using U = std::remove_cv_t<T>;
+        if constexpr (std::is_pointer_v<U> && is_container_composite_v<std::remove_cv_t<std::remove_pointer_t<U>>>) {
+            if (value != nullptr) {
+                destroyAuditedPointerGridValue(*value);
+                delete value;
+                value = nullptr;
+            }
+        }
+        else if constexpr (is_gd_vector_v<U> && has_audited_composite_pointer_v<U>) {
+            for (auto& element : value) {
+                destroyAuditedPointerGridValue(element);
+            }
+            value.clear();
+        }
+    }
+
+    template <class Actual, class Mirror>
+    void assignAuditedPointerGridValue(Actual& dest, Mirror& source) {
+        using U = std::remove_cv_t<Actual>;
+        if constexpr (!has_audited_composite_pointer_v<U>) {
+            assignContainerValue(dest, std::move(source));
+        }
+        else if constexpr (
+            std::is_pointer_v<U> &&
+            is_container_composite_v<std::remove_cv_t<std::remove_pointer_t<U>>>
+        ) {
+            using Pointee = std::remove_cv_t<std::remove_pointer_t<U>>;
+            if (dest == nullptr) {
+                dest = new Pointee();
+            }
+            assignAuditedPointerGridValue(*dest, source);
+        }
+        else if constexpr (is_gd_vector_v<U>) {
+            using Element = typename U::value_type;
+            while (dest.size() > source.size()) {
+                destroyAuditedPointerGridValue(dest.back());
+                dest.pop_back();
+            }
+            while (dest.size() < source.size()) {
+                dest.push_back(Element{});
+            }
+            for (std::size_t i = 0; i < source.size(); ++i) {
+                assignAuditedPointerGridValue(dest[i], source[i]);
+            }
+        }
+    }
+
 } // namespace luax::detail
 
 namespace luax {
-    template <class F, class S>
-    std::pair<F, S> checkPair(lua_State* L, int idx, char const* label) {
-        idx = lua_absindex(L, idx);
-        luaL_checktype(L, idx, LUA_TTABLE);
-        detail::requireTableField(L, idx, "first", label);
-        F first = detail::checkPrimitiveVectorElement<F>(L, -1, label);
-        lua_pop(L, 1);
-        detail::requireTableField(L, idx, "second", label);
-        S second = detail::checkPrimitiveVectorElement<S>(L, -1, label);
-        lua_pop(L, 1);
-        return std::make_pair(std::move(first), std::move(second));
-    }
-
-    template <class F, class S>
-    void pushPair(lua_State* L, std::pair<F, S> const& pair) {
-        lua_createtable(L, 0, 2);
-        int tableIndex = lua_gettop(L);
-        detail::pushPrimitiveVectorElement(L, pair.first);
-        lua_setfield(L, tableIndex, "first");
-        detail::pushPrimitiveVectorElement(L, pair.second);
-        lua_setfield(L, tableIndex, "second");
-    }
-
-    template <class F, class S>
-    void pushPair(lua_State* L, std::pair<F, S>* pair) {
-        detail::pushViaPointer(L, pair, [](lua_State* state, std::pair<F, S> const& value) {
-            pushPair(state, value);
-        });
-    }
-
-    template <class F, class S>
-    void pushPair(lua_State* L, std::pair<F, S> const* pair) {
-        detail::pushViaPointer(L, pair, [](lua_State* state, std::pair<F, S> const& value) {
-            pushPair(state, value);
-        });
-    }
-
-    template <class T>
-    void checkPrimitiveVector(lua_State* L, int idx, char const* label, gd::vector<T>& out);
-
-    template <class T>
-    void assignPrimitiveVector(gd::vector<T>& dest, gd::vector<T> const& src);
-
     template <class T>
     void assignOpaqueVectorView(gd::vector<T*>& dest, gd::vector<T*> src);
 
-    template <class T>
-    void checkPrimitiveVector(lua_State* L, int idx, char const* label, gd::vector<T>& out) {
-        idx = detail::absCheckIndexedTable(L, idx);
-        auto len = detail::indexedTableLength(L, idx);
-        detail::requireNonNegativeIndexedLength(L, len, label, "vector");
-        out.clear();
-        out.reserve(static_cast<std::size_t>(len));
-        detail::checkIndexedTableElements(L, idx, len, [&](lua_State* state, lua_Integer) {
-            out.push_back(detail::checkPrimitiveVectorElement<T>(state, -1, label));
-        });
+    template <class Actual>
+        requires(!std::is_pointer_v<Actual>)
+    void pushAuditedPointerGrid(lua_State* L, Actual const& value, cocos2d::CCObject* owner = nullptr) {
+        static_assert(detail::is_audited_pointer_grid_v<Actual>);
+        detail::pushAuditedPointerGridValue(L, value, owner);
     }
 
-    template <class T>
-    void pushPrimitiveVector(lua_State* L, gd::vector<T> const& vector) {
-        detail::pushIndexedTable(L, vector.size(), [&](lua_State* state, std::size_t i) {
-            detail::pushPrimitiveVectorElement(state, vector[i]);
-        });
-    }
-
-    template <class T>
-    void pushPrimitiveVector(lua_State* L, gd::vector<T>* vector) {
-        detail::pushViaPointer(L, vector, [](lua_State* state, gd::vector<T> const& value) {
-            pushPrimitiveVector(state, value);
-        });
-    }
-
-    template <class T>
-    void pushPrimitiveVector(lua_State* L, gd::vector<T> const* vector) {
-        detail::pushViaPointer(L, vector, [](lua_State* state, gd::vector<T> const& value) {
-            pushPrimitiveVector(state, value);
-        });
-    }
-
-    template <class T, std::size_t N>
-    std::array<T, N> checkStdArray(lua_State* L, int idx, char const* label) {
-        idx = detail::absCheckIndexedTable(L, idx);
-        auto len = detail::indexedTableLength(L, idx);
-        detail::requireExactIndexedLength(L, len, N, label);
-        std::array<T, N> out{};
-        detail::checkIndexedTableElements(L, idx, len, [&](lua_State* state, lua_Integer i) {
-            out[static_cast<std::size_t>(i - 1)] =
-                detail::checkPrimitiveVectorElement<T>(state, -1, label);
-        });
-        return out;
-    }
-
-    template <class T, std::size_t N>
-    void pushStdArray(lua_State* L, std::array<T, N> const& array) {
-        detail::pushIndexedTable(L, N, [&](lua_State* state, std::size_t i) {
-            detail::pushPrimitiveVectorElement(state, array[i]);
-        });
-    }
-
-    template <class T, std::size_t N>
-    void pushStdArray(lua_State* L, std::array<T, N>* array) {
-        detail::pushViaPointer(L, array, [](lua_State* state, std::array<T, N> const& value) {
-            pushStdArray<T, N>(state, value);
-        });
-    }
-
-    template <class T, std::size_t N>
-    void pushStdArray(lua_State* L, std::array<T, N> const* array) {
-        detail::pushViaPointer(L, array, [](lua_State* state, std::array<T, N> const& value) {
-            pushStdArray<T, N>(state, value);
-        });
-    }
-
-    template <class T, std::size_t N, class U>
-    void pushStdArray(lua_State* L, U const (&array)[N]) {
-        detail::pushIndexedTable(L, N, [&](lua_State* state, std::size_t i) {
-            detail::pushPrimitiveVectorElement<T>(state, static_cast<T>(array[i]));
-        });
-    }
-
-    template <class T, std::size_t N>
-    void assignStdArray(std::array<T, N>& dest, std::array<T, N> src) {
-        detail::assignContainer<T>(dest, src, N);
-    }
-
-    template <class T, std::size_t N, class U>
-    void assignStdArray(U (&dest)[N], std::array<T, N> src) {
-        detail::assignContainer<T>(dest, src, N);
-    }
-
-    inline std::tuple<int, int, int> checkTupleTableInt3(lua_State* L, int idx, char const* label);
-    inline void pushTupleTableInt3(lua_State* L, std::tuple<int, int, int> const& value);
-
-    template <class K>
-    inline K checkMapKey(lua_State* L, int idx, char const* label) {
-        return detail::checkPrimitiveVectorElement<K>(L, idx, label);
-    }
-
-    template <class F, class S>
-    inline std::pair<F, S> checkMapValue(lua_State* L, int idx, char const* label) {
-        return checkPair<F, S>(L, idx, label);
-    }
-
-    template <class V>
-    inline V checkMapValue(lua_State* L, int idx, char const* label) {
-        if constexpr (detail::is_gd_vector_v<V>) {
-            using Elem = detail::gd_vector_element_t<V>;
-            if constexpr (std::is_pointer_v<Elem>) {
-                using Pointee = std::remove_pointer_t<Elem>;
-                if constexpr (std::is_base_of_v<cocos2d::CCObject, Pointee>) {
-                    return checkObjectVectorView<Pointee>(L, idx, label);
-                }
-                return checkOpaqueVectorView<Pointee>(L, idx, label);
-            }
-            V result;
-            checkPrimitiveVector<Elem>(L, idx, label, result);
-            return result;
-        }
-        else if constexpr (std::is_pointer_v<V>) {
-            using Pointee = std::remove_pointer_t<V>;
-            if (lua_isnil(L, idx)) {
-                return nullptr;
-            }
-            if constexpr (std::is_base_of_v<cocos2d::CCObject, Pointee>) {
-                return Usertype<Pointee>::check(L, idx, label);
-            }
-            return checkOpaqueHandle<Pointee>(L, idx, label);
-        }
-        else if constexpr (std::is_same_v<V, std::tuple<int, int, int>>) {
-            return checkTupleTableInt3(L, idx, label);
-        }
-        else {
-            return detail::checkPrimitiveVectorElement<V>(L, idx, label);
-        }
-    }
-
-    template <class K>
-    inline void pushMapKey(lua_State* L, K const& key) {
-        detail::pushPrimitiveVectorElement(L, key);
-    }
-
-    template <class F, class S>
-    inline void pushMapValue(lua_State* L, std::pair<F, S> const& value) {
-        pushPair(L, value);
-    }
-
-    template <class V>
-    inline void pushMapValue(lua_State* L, V const& value) {
-        if constexpr (detail::is_gd_vector_v<V>) {
-            using Elem = detail::gd_vector_element_t<V>;
-            if constexpr (std::is_pointer_v<Elem>) {
-                using Pointee = std::remove_pointer_t<Elem>;
-                detail::pushIndexedTable(L, value.size(), [&](lua_State* state, std::size_t i) {
-                    auto* elem = value[i];
-                    if constexpr (std::is_base_of_v<cocos2d::CCObject, Pointee>) {
-                        if (elem == nullptr) {
-                            lua_pushnil(state);
-                        }
-                        else if constexpr (std::is_same_v<Pointee, cocos2d::CCObject>) {
-                            Usertype<cocos2d::CCObject>::pushBorrowedDynamic(state, elem);
-                        }
-                        else {
-                            Usertype<Pointee>::pushBorrowed(state, elem);
-                        }
-                    }
-                    else if (elem == nullptr) {
-                        lua_pushnil(state);
-                    }
-                    else {
-                        pushOpaqueHandle(state, elem);
-                    }
-                });
-            }
-            else {
-                pushPrimitiveVector<Elem>(L, value);
-            }
-        }
-        else if constexpr (std::is_pointer_v<V>) {
-            using Pointee = std::remove_pointer_t<V>;
-            if (value == nullptr) {
-                lua_pushnil(L);
-            }
-            else if constexpr (std::is_base_of_v<cocos2d::CCObject, Pointee>) {
-                if constexpr (std::is_same_v<Pointee, cocos2d::CCObject>) {
-                    Usertype<cocos2d::CCObject>::pushBorrowedDynamic(L, value);
-                }
-                else {
-                    Usertype<Pointee>::pushBorrowed(L, value);
-                }
-            }
-            else {
-                pushOpaqueHandle(L, value);
-            }
-        }
-        else if constexpr (std::is_same_v<V, std::tuple<int, int, int>>) {
-            pushTupleTableInt3(L, value);
-        }
-        else {
-            detail::pushPrimitiveVectorElement(L, value);
-        }
-    }
-
-    template <class T>
-    void pushNestedPrimitiveVectorPointers(lua_State* L, gd::vector<gd::vector<T>*> const& outer) {
-        detail::pushIndexedTable(L, outer.size(), [&](lua_State* state, std::size_t i) {
-            auto* inner = outer[i];
-            if (inner == nullptr) {
-                lua_createtable(state, 0, 0);
-            }
-            else {
-                pushPrimitiveVector<T>(state, *inner);
-            }
-        });
-    }
-
-    template <class T>
-    void pushNestedPrimitiveVectorPointers(lua_State* L, gd::vector<gd::vector<T>*>* outer) {
-        detail::pushViaPointer(L, outer, [](lua_State* state, gd::vector<gd::vector<T>*> const& value) {
-            pushNestedPrimitiveVectorPointers<T>(state, value);
-        });
-    }
-
-    template <class T>
-    void pushNestedPrimitiveVectorPointers(lua_State* L, gd::vector<gd::vector<T>*> const* outer) {
-        detail::pushViaPointer(L, outer, [](lua_State* state, gd::vector<gd::vector<T>*> const& value) {
-            pushNestedPrimitiveVectorPointers<T>(state, value);
-        });
-    }
-
-    template <class T>
-    void checkNestedPrimitiveVectorPointers(
-        lua_State* L, int idx, char const* label, gd::vector<gd::vector<T>*>& out
-    ) {
-        idx = detail::absCheckIndexedTable(L, idx);
-        auto len = detail::indexedTableLength(L, idx);
-        detail::requireNonNegativeIndexedLength(L, len, label, "vector");
-        out.clear();
-        out.reserve(static_cast<std::size_t>(len));
-        detail::checkIndexedTableElements(L, idx, len, [&](lua_State* state, lua_Integer) {
-            gd::vector<T> inner;
-            checkPrimitiveVector<T>(state, -1, label, inner);
-            auto heap = std::make_unique<gd::vector<T>>();
-            assignPrimitiveVector(*heap, inner);
-            out.push_back(heap.release());
-        });
-    }
-
-    template <class InnerPtr, class CreateFn, class AssignFn>
-    void assignNestedPointerVectorLayer(
-        gd::vector<InnerPtr>& dest, gd::vector<InnerPtr>& src, CreateFn&& create, AssignFn&& assignFn
-    ) {
-        using Pointee = std::remove_pointer_t<InnerPtr>;
-        while (dest.size() > src.size()) {
-            std::unique_ptr<Pointee> owned(dest.back());
-            dest.pop_back();
-        }
-        while (dest.size() < src.size()) {
-            dest.push_back(create());
-        }
-        for (std::size_t i = 0; i < src.size(); ++i) {
-            if (dest[i] == nullptr) {
-                dest[i] = create();
-            }
-            assignFn(*dest[i], *src[i]);
-            std::unique_ptr<Pointee> owned(src[i]);
-            src[i] = nullptr;
-        }
-        for (auto* inner : src) {
-            std::unique_ptr<Pointee> owned(inner);
-        }
-        src.clear();
-    }
-
-    template <class T>
-    void assignNestedPrimitiveVectorPointers(
-        gd::vector<gd::vector<T>*>& dest, gd::vector<gd::vector<T>*>& src
-    ) {
-        assignNestedPointerVectorLayer(
-            dest,
-            src,
-            []() {
-                return new gd::vector<T>();
-            },
-            [](gd::vector<T>& inner, gd::vector<T> const& value) {
-                assignPrimitiveVector(inner, value);
-            }
-        );
-    }
-
-    template <class T>
-    void pushNestedObjectVectorPointers(
-        lua_State* L, gd::vector<gd::vector<T*>*> const& outer, cocos2d::CCObject* owner
-    ) {
-        static_assert(
-            std::is_base_of_v<cocos2d::CCObject, T>, "nested object vector elements must be CCObject"
-        );
-        detail::pushIndexedTable(L, outer.size(), [&](lua_State* state, std::size_t i) {
-            auto* inner = outer[i];
-            if (inner == nullptr) {
-                lua_createtable(state, 0, 0);
-            }
-            else {
-                pushReadOnlyVectorView<T>(state, *inner, owner);
-            }
-        });
-    }
-
-    template <class T>
-    void pushNestedObjectVectorPointers(
-        lua_State* L, gd::vector<gd::vector<T*>*>* outer, cocos2d::CCObject* owner
-    ) {
-        detail::pushViaPointer(
-            L, outer, [owner](lua_State* state, gd::vector<gd::vector<T*>*> const& value) {
-                pushNestedObjectVectorPointers<T>(state, value, owner);
-            }
-        );
-    }
-
-    template <class T>
-    void checkNestedObjectVectorPointers(
-        lua_State* L, int idx, char const* label, gd::vector<gd::vector<T*>*>& out
-    ) {
-        static_assert(
-            std::is_base_of_v<cocos2d::CCObject, T>, "nested object vector elements must be CCObject"
-        );
-        idx = detail::absCheckIndexedTable(L, idx);
-        auto len = detail::indexedTableLength(L, idx);
-        detail::requireNonNegativeIndexedLength(L, len, label, "vector");
-        out.clear();
-        out.reserve(static_cast<std::size_t>(len));
-        detail::checkIndexedTableElements(L, idx, len, [&](lua_State* state, lua_Integer) {
-            gd::vector<T*> inner;
-            checkObjectVectorView<T>(state, -1, label, inner);
-            auto heap = std::make_unique<gd::vector<T*>>();
-            assignPrimitiveVector(*heap, inner);
-            out.push_back(heap.release());
-        });
-    }
-
-    template <class T>
-    void assignNestedObjectVectorPointers(
-        gd::vector<gd::vector<T*>*>& dest, gd::vector<gd::vector<T*>*>& src
-    ) {
-        assignNestedPointerVectorLayer(
-            dest,
-            src,
-            []() {
-                return new gd::vector<T*>();
-            },
-            [](gd::vector<T*>& inner, gd::vector<T*> const& value) {
-                assignPrimitiveVector(inner, value);
-            }
-        );
-    }
-
-    template <class T>
-    void pushNestedObjectGridPointers(
-        lua_State* L, gd::vector<gd::vector<gd::vector<T*>*>*> const& outer, cocos2d::CCObject* owner
-    ) {
-        static_assert(
-            std::is_base_of_v<cocos2d::CCObject, T>, "nested object grid elements must be CCObject"
-        );
-        detail::pushIndexedTable(L, outer.size(), [&](lua_State* state, std::size_t i) {
-            auto* inner = outer[i];
-            if (inner == nullptr) {
-                lua_createtable(state, 0, 0);
-            }
-            else {
-                pushNestedObjectVectorPointers<T>(state, *inner, owner);
-            }
-        });
-    }
-
-    template <class T>
-    void pushNestedObjectGridPointers(
-        lua_State* L, gd::vector<gd::vector<gd::vector<T*>*>*>* outer, cocos2d::CCObject* owner
-    ) {
-        detail::pushViaPointer(
-            L, outer, [owner](lua_State* state, gd::vector<gd::vector<gd::vector<T*>*>*> const& value) {
-                pushNestedObjectGridPointers<T>(state, value, owner);
-            }
-        );
-    }
-
-    template <class T>
-    void checkNestedObjectGridPointers(
-        lua_State* L, int idx, char const* label, gd::vector<gd::vector<gd::vector<T*>*>*>& out
-    ) {
-        static_assert(
-            std::is_base_of_v<cocos2d::CCObject, T>, "nested object grid elements must be CCObject"
-        );
-        idx = detail::absCheckIndexedTable(L, idx);
-        auto len = detail::indexedTableLength(L, idx);
-        detail::requireNonNegativeIndexedLength(L, len, label, "vector");
-        out.clear();
-        out.reserve(static_cast<std::size_t>(len));
-        detail::checkIndexedTableElements(L, idx, len, [&](lua_State* state, lua_Integer) {
-            gd::vector<gd::vector<T*>*> inner;
-            checkNestedObjectVectorPointers<T>(state, -1, label, inner);
-            auto heap = std::make_unique<gd::vector<gd::vector<T*>*>>();
-            for (auto* layer : inner) {
-                heap->push_back(layer);
-            }
-            inner.clear();
-            out.push_back(heap.release());
-        });
-    }
-
-    template <class T>
-    void assignNestedObjectGridPointers(
-        gd::vector<gd::vector<gd::vector<T*>*>*>& dest, gd::vector<gd::vector<gd::vector<T*>*>*>& src
-    ) {
-        assignNestedPointerVectorLayer(
-            dest,
-            src,
-            []() {
-                return new gd::vector<gd::vector<T*>*>();
-            },
-            [](gd::vector<gd::vector<T*>*>& inner, gd::vector<gd::vector<T*>*>& value) {
-                assignNestedObjectVectorPointers<T>(inner, value);
-            }
-        );
-    }
-
-    inline std::tuple<int, int, int> checkTupleTableInt3(lua_State* L, int idx, char const* label) {
-        idx = detail::absCheckIndexedTable(L, idx);
-        auto len = detail::indexedTableLength(L, idx);
-        detail::requireExactIndexedLength(L, len, 3, label);
-        std::tuple<int, int, int> out{};
-        int* parts[] = {&std::get<0>(out), &std::get<1>(out), &std::get<2>(out)};
-        for (lua_Integer i = 1; i <= 3; ++i) {
-            lua_rawgeti(L, idx, i);
-            *parts[static_cast<std::size_t>(i - 1)] = check<int>(L, -1, label);
-            lua_pop(L, 1);
-        }
-        return out;
-    }
-
-    inline void pushTupleTableInt3(lua_State* L, std::tuple<int, int, int> const& value) {
-        int const parts[] = {std::get<0>(value), std::get<1>(value), std::get<2>(value)};
-        detail::pushIndexedTable(L, 3, [&](lua_State* state, std::size_t i) {
-            detail::pushPrimitiveVectorElement(state, parts[i]);
-        });
-    }
-
-    namespace detail {
-        template <class K1, class K2, class V, class Map>
-        Map checkPairKeyAssociativeMap(lua_State* L, int idx, char const* label) {
-            idx = absCheckIndexedTable(L, idx);
-            auto len = indexedTableLength(L, idx);
-            requireNonNegativeIndexedLength(L, len, label, "map");
-            Map out;
-            for (lua_Integer i = 1; i <= len; ++i) {
-                lua_rawgeti(L, idx, i);
-                requireTableField(L, -1, "first", label);
-                K1 keyFirst = checkMapKey<K1>(L, -1, label);
-                lua_pop(L, 1);
-                requireTableField(L, -1, "second", label);
-                K2 keySecond = checkMapKey<K2>(L, -1, label);
-                lua_pop(L, 1);
-                requireTableField(L, -1, "value", label);
-                V value = checkMapValue<V>(L, -1, label);
-                lua_pop(L, 2);
-                out.emplace(
-                    std::make_pair(std::move(keyFirst), std::move(keySecond)), std::move(value)
-                );
-            }
-            return out;
-        }
-
-        template <class K1, class K2, class V, class Map>
-        void pushPairKeyAssociativeMap(lua_State* L, Map const& map) {
-            lua_createtable(L, static_cast<int>(map.size()), 0);
-            int tableIndex = lua_gettop(L);
-            int i = 1;
-            for (auto const& entry : map) {
-                lua_createtable(L, 0, 3);
-                int entryIndex = lua_gettop(L);
-                pushMapKey(L, entry.first.first);
-                lua_setfield(L, entryIndex, "first");
-                pushMapKey(L, entry.first.second);
-                lua_setfield(L, entryIndex, "second");
-                pushMapValue(L, entry.second);
-                lua_setfield(L, entryIndex, "value");
-                lua_rawseti(L, tableIndex, i++);
-            }
-        }
-
-        template <class Map>
-        void pushPairKeyAssociativeMapPointer(lua_State* L, Map* map) {
-            pushViaPointer(L, map, [](lua_State* state, Map const& value) {
-                pushPairKeyAssociativeMap<
-                    typename Map::key_type::first_type,
-                    typename Map::key_type::second_type,
-                    typename Map::mapped_type,
-                    Map>(state, value);
-            });
-        }
-
-        template <class Map>
-        void pushPairKeyAssociativeMapPointer(lua_State* L, Map const* map) {
-            pushPairKeyAssociativeMapPointer(L, const_cast<Map*>(map));
-        }
-
-        template <class Map>
-        void assignPairKeyAssociativeMap(Map& dest, Map src) {
-            dest.clear();
-            for (auto& entry : src) {
-                dest.emplace(std::move(entry.first), std::move(entry.second));
-            }
-        }
-
-        template <class K, class V, class Map>
-        Map checkAssociativeMap(lua_State* L, int idx, char const* label) {
-            idx = lua_absindex(L, idx);
-            luaL_checktype(L, idx, LUA_TTABLE);
-            Map out;
+    template <class Actual>
+    void pushAuditedPointerGrid(lua_State* L, Actual const* value, cocos2d::CCObject* owner = nullptr) {
+        static_assert(detail::is_audited_pointer_grid_v<Actual>);
+        if (value == nullptr) {
             lua_pushnil(L);
-            while (lua_next(L, idx) != 0) {
-                K key = checkMapKey<K>(L, -2, label);
-                V value = checkMapValue<V>(L, -1, label);
-                out[std::move(key)] = std::move(value);
-                lua_pop(L, 1);
-            }
-            return out;
-        }
-
-        template <class K, class V, class Map>
-        void pushAssociativeMap(lua_State* L, Map const& map) {
-            lua_createtable(L, 0, static_cast<int>(map.size()));
-            int tableIndex = lua_gettop(L);
-            for (auto const& entry : map) {
-                pushMapKey(L, entry.first);
-                pushMapValue(L, entry.second);
-                lua_rawset(L, tableIndex);
-            }
-        }
-
-        template <class T, class Set>
-        Set checkSetFromTable(lua_State* L, int idx, char const* label) {
-            idx = absCheckIndexedTable(L, idx);
-            auto len = indexedTableLength(L, idx);
-            requireNonNegativeIndexedLength(L, len, label, "set");
-            Set out;
-            checkIndexedTableElements(L, idx, len, [&](lua_State* state, lua_Integer) {
-                out.insert(checkMapValue<T>(state, -1, label));
-            });
-            return out;
-        }
-
-        template <class T, class Set>
-        void pushSetAsTable(lua_State* L, Set const& set) {
-            auto it = set.begin();
-            pushIndexedTable(L, set.size(), [&](lua_State* state, std::size_t) {
-                pushMapValue(state, *it++);
-            });
-        }
-
-        template <class Map>
-        void pushAssociativeMapPointer(lua_State* L, Map* map) {
-            pushViaPointer(L, map, [](lua_State* state, Map const& value) {
-                pushAssociativeMap<typename Map::key_type, typename Map::mapped_type, Map>(
-                    state, value
-                );
-            });
-        }
-
-        template <class Map>
-        void pushAssociativeMapPointer(lua_State* L, Map const* map) {
-            pushAssociativeMapPointer(L, const_cast<Map*>(map));
-        }
-
-        template <class Set>
-        void pushSetContainerPointer(lua_State* L, Set* set) {
-            pushViaPointer(L, set, [](lua_State* state, Set const& value) {
-                pushSetAsTable<typename Set::value_type, Set>(state, value);
-            });
-        }
-
-        template <class Set>
-        void pushSetContainerPointer(lua_State* L, Set const* set) {
-            pushSetContainerPointer(L, const_cast<Set*>(set));
-        }
-
-        template <class Map>
-        void assignAssociativeMap(Map& dest, Map src) {
-            dest.clear();
-            for (auto& entry : src) {
-                dest[std::move(entry.first)] = std::move(entry.second);
-            }
-        }
-
-        template <class Set>
-        void assignSetContainer(Set& dest, Set src) {
-            dest.clear();
-            for (auto& elem : src) {
-                dest.insert(std::move(elem));
-            }
-        }
-    } // namespace detail
-
-    template <class T>
-    void assignPrimitiveVector(gd::vector<T>& dest, gd::vector<T> const& src) {
-        dest.clear();
-        dest.reserve(src.size());
-        if constexpr (std::is_same_v<T, bool>) {
-            for (std::size_t i = 0; i < src.size(); ++i) {
-                dest.push_back(src[i]);
-            }
         }
         else {
-            for (auto& elem : src) {
-                dest.push_back(std::move(elem));
-            }
+            detail::pushAuditedPointerGridValue(L, *value, owner);
         }
+    }
+
+    template <class Actual>
+    detail::audited_pointer_grid_mirror_t<Actual> checkAuditedPointerGrid(
+        lua_State* L, int idx, char const* label
+    ) {
+        static_assert(detail::is_audited_pointer_grid_v<Actual>);
+        return checkContainerValue<detail::audited_pointer_grid_mirror_t<Actual>>(L, idx, label);
+    }
+
+    template <class Actual>
+    void assignAuditedPointerGrid(Actual& dest, detail::audited_pointer_grid_mirror_t<Actual>&& source) {
+        static_assert(detail::is_audited_pointer_grid_v<Actual>);
+        detail::assignAuditedPointerGridValue(dest, source);
     }
 
     template <class T>
     void assignOpaqueVectorView(gd::vector<T*>& dest, gd::vector<T*> src) {
-        dest.clear();
-        dest.reserve(src.size());
-        for (auto& elem : src) {
-            dest.push_back(std::move(elem));
-        }
+        assignContainerValue(dest, std::move(src));
     }
 
-    template <class T>
-    void assignValue(T& dest, T src) {
-        dest.~T();
-        new (&dest) T(std::move(src));
-    }
 } // namespace luax
 
-#include "framework/stack/Types.generated.containers.hpp"
+#if !defined(LUAUAPI_HOST_TESTS)
+    #include "framework/stack/Types.generated.containers.hpp"
+#endif
 
 namespace luax::detail {
     template <class T>
-    inline T checkPrimitiveVectorElement(lua_State* L, int idx, char const* label) {
-        if constexpr (std::is_same_v<T, bool>) {
-            return check<bool>(L, idx, label);
+    T checkContainerLeaf(lua_State* L, int idx, char const* label) {
+        using U = std::remove_cv_t<T>;
+        if constexpr (std::is_same_v<U, bool>) {
+            return luax::check<bool>(L, idx, label);
         }
-        else if constexpr (std::is_same_v<T, float>) {
-            return check<float>(L, idx, label);
+        else if constexpr (std::is_floating_point_v<U>) {
+            return static_cast<U>(luax::check<double>(L, idx, label));
         }
-        else if constexpr (std::is_same_v<T, double>) {
-            return check<double>(L, idx, label);
+        else if constexpr (std::is_enum_v<U>) {
+            return static_cast<U>(luax::check<int>(L, idx, label));
         }
-        else if constexpr (std::is_same_v<T, int>) {
-            return check<int>(L, idx, label);
+        else if constexpr (std::is_same_v<U, unsigned>) {
+            return luax::check<unsigned>(L, idx, label);
         }
-        else if constexpr (std::is_same_v<T, unsigned>) {
-            return check<unsigned>(L, idx, label);
-        }
-        else if constexpr (std::is_same_v<T, std::string>) {
-            return check<std::string>(L, idx, label);
-        }
-        else if constexpr (std::is_same_v<T, gd::string>) {
-            auto storage = check<std::string>(L, idx, label);
-            return gd::string(storage.c_str());
-        }
-        else if constexpr (std::is_enum_v<T>) {
-            return static_cast<T>(static_cast<int>(check<int>(L, idx, label)));
-        }
-        else if constexpr (std::is_integral_v<T>) {
-            if constexpr (sizeof(T) > sizeof(int) || !std::is_signed_v<T>) {
-                T value{};
-                if (!tryIntegerString<T>(L, idx, &value)) {
-                    if (!lua_isnumber(L, idx)) {
-                        luaL_error(L, "%s expected number or integer string at arg %d", label, idx);
-                    }
-                    value = static_cast<T>(lua_tointeger(L, idx));
-                }
-                return value;
+        else if constexpr (std::is_integral_v<U>) {
+            if constexpr (is_wide_container_integer_v<U>) {
+                return luax::checkIntegerString<U>(L, idx, label);
             }
-            return static_cast<T>(check<int>(L, idx, label));
+            else {
+                return static_cast<U>(luax::check<int>(L, idx, label));
+            }
         }
-        else if constexpr (is_std_pair_v<T>) {
-            return luax::checkPair<typename T::first_type, typename T::second_type>(L, idx, label);
+        else if constexpr (std::is_same_v<U, std::string>) {
+            return luax::check<std::string>(L, idx, label);
         }
-        else if constexpr (std::is_same_v<T, gd::unordered_map<int, int>>) {
-            return detail::checkAssociativeMap<int, int, gd::unordered_map<int, int>>(L, idx, label);
+        else if constexpr (std::is_same_v<U, gd::string>) {
+            auto value = luax::check<std::string>(L, idx, label);
+            return gd::string(value.c_str());
         }
-        else if constexpr (std::is_same_v<T, std::tuple<int, int, int>>) {
-            return checkTupleTableInt3(L, idx, label);
+        else if constexpr (std::is_pointer_v<U>) {
+            using Pointee = std::remove_cv_t<std::remove_pointer_t<U>>;
+            if (lua_isnil(L, idx)) {
+                return nullptr;
+            }
+            if constexpr (is_ccobject_pointee_v<Pointee>) {
+                return Usertype<Pointee>::check(L, idx, label);
+            }
+            else {
+                return checkOpaqueHandle<Pointee>(L, idx, label);
+            }
         }
         else {
-            return luax::check<T>(L, idx, label);
+            return luax::check<U>(L, idx, label);
         }
     }
 
     template <class T>
-    inline void pushPrimitiveVectorElement(lua_State* L, T const& value) {
-        if constexpr (std::is_same_v<T, bool>) {
-            push(L, value);
+    void pushContainerLeaf(lua_State* L, T const& value) {
+        using U = std::remove_cv_t<T>;
+        if constexpr (std::is_same_v<U, bool>) {
+            luax::push(L, value);
         }
-        else if constexpr (std::is_same_v<T, float> || std::is_same_v<T, double>) {
-            push(L, value);
-        }
-        else if constexpr (std::is_same_v<T, int>) {
+        else if constexpr (std::is_floating_point_v<U>) {
             lua_pushnumber(L, static_cast<double>(value));
         }
-        else if constexpr (std::is_same_v<T, unsigned>) {
-            push(L, value);
-        }
-        else if constexpr (std::is_same_v<T, std::string>) {
-            push(L, value);
-        }
-        else if constexpr (std::is_same_v<T, gd::string>) {
-            push(L, std::string(value.c_str()));
-        }
-        else if constexpr (std::is_enum_v<T>) {
+        else if constexpr (std::is_enum_v<U>) {
             lua_pushnumber(L, static_cast<double>(static_cast<int>(value)));
         }
-        else if constexpr (std::is_integral_v<T>) {
-            if constexpr (sizeof(T) > sizeof(int) || !std::is_signed_v<T>) {
-                pushIntegerString(L, value);
+        else if constexpr (std::is_same_v<U, unsigned>) {
+            luax::push(L, value);
+        }
+        else if constexpr (std::is_integral_v<U>) {
+            if constexpr (is_wide_container_integer_v<U>) {
+                luax::pushIntegerString(L, value);
             }
             else {
                 lua_pushnumber(L, static_cast<double>(value));
             }
         }
-        else if constexpr (is_std_pair_v<T>) {
-            luax::pushPair<typename T::first_type, typename T::second_type>(L, value);
+        else if constexpr (std::is_same_v<U, std::string>) {
+            luax::push(L, value);
         }
-        else if constexpr (std::is_same_v<T, gd::unordered_map<int, int>>) {
-            detail::pushAssociativeMap<int, int, gd::unordered_map<int, int>>(L, value);
+        else if constexpr (std::is_same_v<U, gd::string>) {
+            luax::push(L, std::string(value.c_str()));
         }
-        else if constexpr (std::is_same_v<T, std::tuple<int, int, int>>) {
-            pushTupleTableInt3(L, value);
+        else if constexpr (std::is_pointer_v<U>) {
+            using Pointee = std::remove_cv_t<std::remove_pointer_t<U>>;
+            auto* ptr = const_cast<Pointee*>(value);
+            if (ptr == nullptr) {
+                lua_pushnil(L);
+            }
+            else if constexpr (is_ccobject_pointee_v<Pointee>) {
+                if constexpr (std::is_same_v<Pointee, cocos2d::CCObject>) {
+                    Usertype<cocos2d::CCObject>::pushBorrowedDynamic(L, ptr);
+                }
+                else {
+                    Usertype<Pointee>::pushBorrowed(L, ptr);
+                }
+            }
+            else {
+                pushOpaqueHandle(L, ptr);
+            }
         }
         else {
             luax::push(L, value);
         }
     }
+
+    inline void validateFixedIndexedKeys(
+        lua_State* L, int idx, std::size_t size, char const* label, char const* kind
+    ) {
+        idx = lua_absindex(L, idx);
+        luaL_checktype(L, idx, LUA_TTABLE);
+        requireExactIndexedLength(L, indexedTableLength(L, idx), size, label);
+        lua_pushnil(L);
+        while (lua_next(L, idx) != 0) {
+            int const keyType = lua_type(L, -2);
+            if (keyType == LUA_TNUMBER) {
+                lua_Number const raw = lua_tonumber(L, -2);
+                if (raw < 1 || raw > static_cast<lua_Number>(size) ||
+                    static_cast<lua_Number>(static_cast<lua_Integer>(raw)) != raw) {
+                    luaL_error(L, "%s: invalid %s index", label, kind);
+                }
+            }
+            lua_pop(L, 1);
+        }
+    }
+
+    template <class T>
+    void checkContainerValueInto(lua_State* L, int idx, char const* label, T& out);
+
+    template <class Tuple, std::size_t... Is>
+    void checkTupleValueInto(
+        lua_State* L, int idx, char const* label, Tuple& out, std::index_sequence<Is...>
+    ) {
+        idx = lua_absindex(L, idx);
+        validateFixedIndexedKeys(L, idx, sizeof...(Is), label, "tuple");
+        (
+            [&] {
+                lua_rawgeti(L, idx, static_cast<int>(Is + 1));
+                checkContainerValueInto(L, -1, label, std::get<Is>(out));
+                lua_pop(L, 1);
+            }(),
+            ...);
+    }
+
+    template <class T>
+    void checkVectorValueInto(lua_State* L, int idx, char const* label, T& out) {
+        using U = std::remove_cv_t<T>;
+        using Element = typename U::value_type;
+        if constexpr (std::is_pointer_v<Element>) {
+            using Pointee = std::remove_cv_t<std::remove_pointer_t<Element>>;
+            static_assert(
+                !is_container_composite_v<Pointee>,
+                "container-pointer descendants require a specialized field helper"
+            );
+            gd::vector<Pointee*> checked;
+            if constexpr (is_ccobject_pointee_v<Pointee>) {
+                checked = checkObjectVectorView<Pointee>(L, idx, label);
+            }
+            else {
+                checked = checkOpaqueVectorView<Pointee>(L, idx, label);
+            }
+            out.clear();
+            out.reserve(checked.size());
+            for (auto* value : checked) {
+                out.push_back(value);
+            }
+            return;
+        }
+
+        idx = absCheckIndexedTable(L, idx);
+        auto const len = indexedTableLength(L, idx);
+        requireNonNegativeIndexedLength(L, len, label, "vector");
+        out.clear();
+        out.reserve(static_cast<std::size_t>(len));
+        for (lua_Integer i = 1; i <= len; ++i) {
+            lua_rawgeti(L, idx, i);
+            Element candidate{};
+            checkContainerValueInto(L, -1, label, candidate);
+            lua_pop(L, 1);
+            if constexpr (std::is_same_v<Element, bool>) {
+                out.push_back(candidate);
+            }
+            else {
+                out.emplace_back(std::move(candidate));
+            }
+        }
+    }
+
+    template <class T>
+    void checkMapValueInto(lua_State* L, int idx, char const* label, T& out) {
+        using U = std::remove_cv_t<T>;
+        using Key = typename U::key_type;
+        using Value = typename U::mapped_type;
+        out.clear();
+
+        if constexpr (is_std_pair_v<Key>) {
+            idx = absCheckIndexedTable(L, idx);
+            auto const len = indexedTableLength(L, idx);
+            requireNonNegativeIndexedLength(L, len, label, "map");
+            for (lua_Integer i = 1; i <= len; ++i) {
+                lua_rawgeti(L, idx, i);
+                int const entry = absCheckIndexedTable(L, -1);
+                Key key{};
+                lua_getfield(L, entry, "first");
+                checkContainerValueInto(L, -1, label, key.first);
+                lua_pop(L, 1);
+                lua_getfield(L, entry, "second");
+                checkContainerValueInto(L, -1, label, key.second);
+                lua_pop(L, 1);
+                lua_getfield(L, entry, "value");
+                Value candidate{};
+                checkContainerValueInto(L, -1, label, candidate);
+                lua_pop(L, 1);
+                if (out.find(key) == out.end()) {
+                    out.emplace(std::move(key), std::move(candidate));
+                }
+                lua_pop(L, 1);
+            }
+        }
+        else {
+            idx = lua_absindex(L, idx);
+            luaL_checktype(L, idx, LUA_TTABLE);
+            lua_pushnil(L);
+            while (lua_next(L, idx) != 0) {
+                Key key = checkContainerLeaf<Key>(L, -2, label);
+                Value candidate{};
+                checkContainerValueInto(L, -1, label, candidate);
+                if (out.find(key) == out.end()) {
+                    out.emplace(std::move(key), std::move(candidate));
+                }
+                lua_pop(L, 1);
+            }
+        }
+    }
+
+    template <class T>
+    void checkSetValueInto(lua_State* L, int idx, char const* label, T& out) {
+        using U = std::remove_cv_t<T>;
+        using Element = typename U::value_type;
+        idx = absCheckIndexedTable(L, idx);
+        auto const len = indexedTableLength(L, idx);
+        requireNonNegativeIndexedLength(L, len, label, "set");
+        out.clear();
+        for (lua_Integer i = 1; i <= len; ++i) {
+            lua_rawgeti(L, idx, i);
+            Element candidate{};
+            checkContainerValueInto(L, -1, label, candidate);
+            lua_pop(L, 1);
+            if (out.find(candidate) == out.end()) {
+                out.emplace(std::move(candidate));
+            }
+        }
+    }
+
+    template <class T>
+    void checkContainerValueInto(lua_State* L, int idx, char const* label, T& out) {
+        using U = std::remove_cv_t<T>;
+        static_assert(
+            !(std::is_pointer_v<U> &&
+              is_container_composite_v<std::remove_cv_t<std::remove_pointer_t<U>>>),
+            "container-pointer descendants require a specialized field helper"
+        );
+        if constexpr (is_gd_vector_v<U>) {
+            checkVectorValueInto(L, idx, label, out);
+        }
+        else if constexpr (is_std_array_v<U>) {
+            idx = lua_absindex(L, idx);
+            validateFixedIndexedKeys(L, idx, out.size(), label, "array");
+            for (std::size_t i = 0; i < out.size(); ++i) {
+                lua_rawgeti(L, idx, static_cast<int>(i + 1));
+                checkContainerValueInto(L, -1, label, out[i]);
+                lua_pop(L, 1);
+            }
+        }
+        else if constexpr (is_associative_map_v<U>) {
+            checkMapValueInto(L, idx, label, out);
+        }
+        else if constexpr (is_associative_set_v<U>) {
+            checkSetValueInto(L, idx, label, out);
+        }
+        else if constexpr (is_std_pair_v<U>) {
+            idx = lua_absindex(L, idx);
+            luaL_checktype(L, idx, LUA_TTABLE);
+            lua_getfield(L, idx, "first");
+            checkContainerValueInto(L, -1, label, out.first);
+            lua_pop(L, 1);
+            lua_getfield(L, idx, "second");
+            checkContainerValueInto(L, -1, label, out.second);
+            lua_pop(L, 1);
+        }
+        else if constexpr (is_std_tuple_v<U>) {
+            checkTupleValueInto(L, idx, label, out, std::make_index_sequence<std::tuple_size_v<U>>{});
+        }
+        else {
+            out = checkContainerLeaf<U>(L, idx, label);
+        }
+    }
+
+    template <class T>
+    void pushContainerValueImpl(lua_State* L, T const& value, cocos2d::CCObject* owner, bool ownerAware);
+
+    template <class Tuple, std::size_t... Is>
+    void pushTupleValueImpl(
+        lua_State* L, Tuple const& value, cocos2d::CCObject* owner, bool ownerAware,
+        std::index_sequence<Is...>
+    ) {
+        lua_createtable(L, static_cast<int>(sizeof...(Is)), 0);
+        int const table = lua_gettop(L);
+        (
+            [&] {
+                pushContainerValueImpl(L, std::get<Is>(value), owner, ownerAware);
+                lua_rawseti(L, table, static_cast<int>(Is + 1));
+            }(),
+            ...);
+    }
+
+    template <class T>
+    void pushContainerValueImpl(lua_State* L, T const& value, cocos2d::CCObject* owner, bool ownerAware) {
+        using U = std::remove_cv_t<T>;
+        static_assert(
+            !(std::is_pointer_v<U> &&
+              is_container_composite_v<std::remove_cv_t<std::remove_pointer_t<U>>>),
+            "container-pointer descendants require a specialized field helper"
+        );
+        if constexpr (is_gd_vector_v<U>) {
+            using Element = typename U::value_type;
+            if constexpr (std::is_pointer_v<Element>) {
+                using Pointee = std::remove_cv_t<std::remove_pointer_t<Element>>;
+                static_assert(
+                    !is_container_composite_v<Pointee>,
+                    "container-pointer descendants require a specialized field helper"
+                );
+                if (owner != nullptr && ownerAware) {
+                    if constexpr (is_ccobject_pointee_v<Pointee>) {
+                        pushReadOnlyVectorView<Pointee>(L, value, owner);
+                    }
+                    else {
+                        pushReadOnlyOpaqueVectorView<Pointee>(L, value, owner);
+                    }
+                    return;
+                }
+            }
+            pushIndexedTable(L, value.size(), [&](lua_State* state, std::size_t i) {
+                if constexpr (std::is_same_v<Element, bool>) {
+                    bool const element = value[i];
+                    pushContainerValueImpl(state, element, owner, ownerAware);
+                }
+                else {
+                    pushContainerValueImpl(state, value[i], owner, ownerAware);
+                }
+            });
+        }
+        else if constexpr (is_std_array_v<U>) {
+            pushIndexedTable(L, value.size(), [&](lua_State* state, std::size_t i) {
+                pushContainerValueImpl(state, value[i], owner, ownerAware);
+            });
+        }
+        else if constexpr (is_associative_map_v<U>) {
+            using Key = typename U::key_type;
+            if constexpr (is_std_pair_v<Key>) {
+                lua_createtable(L, static_cast<int>(value.size()), 0);
+                int const table = lua_gettop(L);
+                int i = 1;
+                for (auto const& entry : value) {
+                    lua_createtable(L, 0, 3);
+                    int const item = lua_gettop(L);
+                    pushContainerValueImpl(L, entry.first.first, owner, ownerAware);
+                    lua_setfield(L, item, "first");
+                    pushContainerValueImpl(L, entry.first.second, owner, ownerAware);
+                    lua_setfield(L, item, "second");
+                    pushContainerValueImpl(L, entry.second, owner, ownerAware);
+                    lua_setfield(L, item, "value");
+                    lua_rawseti(L, table, i++);
+                }
+            }
+            else {
+                lua_createtable(L, 0, static_cast<int>(value.size()));
+                int const table = lua_gettop(L);
+                for (auto const& entry : value) {
+                    pushContainerLeaf(L, entry.first);
+                    pushContainerValueImpl(L, entry.second, owner, ownerAware);
+                    lua_rawset(L, table);
+                }
+            }
+        }
+        else if constexpr (is_associative_set_v<U>) {
+            lua_createtable(L, static_cast<int>(value.size()), 0);
+            int const table = lua_gettop(L);
+            int i = 1;
+            for (auto const& element : value) {
+                pushContainerValueImpl(L, element, owner, ownerAware);
+                lua_rawseti(L, table, i++);
+            }
+        }
+        else if constexpr (is_std_pair_v<U>) {
+            lua_createtable(L, 0, 2);
+            int const table = lua_gettop(L);
+            pushContainerValueImpl(L, value.first, owner, ownerAware);
+            lua_setfield(L, table, "first");
+            pushContainerValueImpl(L, value.second, owner, ownerAware);
+            lua_setfield(L, table, "second");
+        }
+        else if constexpr (is_std_tuple_v<U>) {
+            pushTupleValueImpl(
+                L, value, owner, ownerAware, std::make_index_sequence<std::tuple_size_v<U>>{}
+            );
+        }
+        else {
+            pushContainerLeaf(L, value);
+        }
+    }
+
+    template <class Expected, class Actual>
+    void pushAdaptedContainerValue(
+        lua_State* L, Actual const& value, cocos2d::CCObject* owner, bool ownerAware
+    ) {
+        using ExpectedValue = std::remove_cv_t<Expected>;
+        using ActualValue = std::remove_reference_t<Actual>;
+        if constexpr (is_std_array_v<ExpectedValue> && std::is_array_v<ActualValue>) {
+            static_assert(std::tuple_size_v<ExpectedValue> == std::extent_v<ActualValue>);
+            using Element = typename ExpectedValue::value_type;
+            pushIndexedTable(L, std::tuple_size_v<ExpectedValue>, [&](lua_State* state, std::size_t i) {
+                pushAdaptedContainerValue<Element>(state, value[i], owner, ownerAware);
+            });
+        }
+        else if constexpr (std::is_same_v<std::remove_cv_t<ActualValue>, ExpectedValue>) {
+            pushContainerValueImpl(L, value, owner, ownerAware);
+        }
+        else {
+            ExpectedValue converted = static_cast<ExpectedValue>(value);
+            pushContainerValueImpl(L, converted, owner, ownerAware);
+        }
+    }
 } // namespace luax::detail
+
+namespace luax {
+    template <class T>
+    void pushContainerValue(lua_State* L, T const& value) {
+        detail::pushContainerValueImpl(L, value, nullptr, false);
+    }
+
+    template <class T>
+    void pushContainerValue(lua_State* L, T const* value) {
+        if (value == nullptr) {
+            lua_pushnil(L);
+            return;
+        }
+        detail::pushContainerValueImpl(L, *value, nullptr, true);
+    }
+
+    template <class T>
+    void pushContainerValue(lua_State* L, T const& value, cocos2d::CCObject* owner) {
+        detail::pushContainerValueImpl(L, value, owner, false);
+    }
+
+    template <class T>
+    void pushContainerValue(lua_State* L, T const* value, cocos2d::CCObject* owner) {
+        if (value == nullptr) {
+            lua_pushnil(L);
+            return;
+        }
+        detail::pushContainerValueImpl(L, *value, owner, true);
+    }
+
+    template <class Array, class U, std::size_t N>
+    void pushContainerValue(lua_State* L, U const (&value)[N]) {
+        static_assert(detail::is_std_array_v<Array>);
+        static_assert(std::tuple_size_v<Array> == N);
+        detail::pushAdaptedContainerValue<Array>(L, value, nullptr, false);
+    }
+
+    template <class Array, class U, std::size_t N>
+    void pushContainerValue(lua_State* L, U const (&value)[N], cocos2d::CCObject* owner) {
+        static_assert(detail::is_std_array_v<Array>);
+        static_assert(std::tuple_size_v<Array> == N);
+        detail::pushAdaptedContainerValue<Array>(L, value, owner, false);
+    }
+} // namespace luax
+
+namespace luax::detail {
+    template <class Source>
+    decltype(auto) moveContainerSource(Source& source) {
+        if constexpr (std::is_const_v<std::remove_reference_t<Source>>) {
+            return (source);
+        }
+        else {
+            return std::move(source);
+        }
+    }
+
+    template <class T, class Source>
+    void assignContainerValueFrom(T& dest, Source& source);
+
+    template <class T, class Source, std::size_t... Is>
+    void assignTupleValueFrom(T& dest, Source& source, std::index_sequence<Is...>) {
+        (assignContainerValueFrom(std::get<Is>(dest), std::get<Is>(source)), ...);
+    }
+
+    template <class T, class Source>
+    void assignContainerValueFrom(T& dest, Source& source) {
+        using U = std::remove_cv_t<T>;
+        if constexpr (is_gd_vector_v<U>) {
+            using Element = typename U::value_type;
+            dest.clear();
+            dest.reserve(source.size());
+            for (std::size_t i = 0; i < source.size(); ++i) {
+                if constexpr (std::is_same_v<Element, bool>) {
+                    dest.push_back(static_cast<bool>(source[i]));
+                }
+                else {
+                    dest.emplace_back();
+                    assignContainerValueFrom(dest.back(), source[i]);
+                }
+            }
+        }
+        else if constexpr (is_std_array_v<U>) {
+            for (std::size_t i = 0; i < dest.size(); ++i) {
+                assignContainerValueFrom(dest[i], source[i]);
+            }
+        }
+        else if constexpr (is_associative_map_v<U>) {
+            using Value = typename U::mapped_type;
+            dest.clear();
+            for (auto& entry : source) {
+                auto [position, inserted] = dest.emplace(entry.first, Value{});
+                static_cast<void>(inserted);
+                assignContainerValueFrom(position->second, entry.second);
+            }
+        }
+        else if constexpr (is_associative_set_v<U>) {
+            using Element = typename U::value_type;
+            dest.clear();
+            for (auto const& element : source) {
+                Element candidate{};
+                assignContainerValueFrom(candidate, element);
+                dest.emplace(std::move(candidate));
+            }
+        }
+        else if constexpr (is_std_pair_v<U>) {
+            assignContainerValueFrom(dest.first, source.first);
+            assignContainerValueFrom(dest.second, source.second);
+        }
+        else if constexpr (is_std_tuple_v<U>) {
+            assignTupleValueFrom(dest, source, std::make_index_sequence<std::tuple_size_v<U>>{});
+        }
+        else {
+            static_assert(std::is_assignable_v<T&, decltype(moveContainerSource(source))>);
+            dest = moveContainerSource(source);
+        }
+    }
+
+    template <class Dest, class Source>
+    void assignAdaptedContainerValue(Dest& dest, Source& source) {
+        using DestValue = std::remove_reference_t<Dest>;
+        using SourceValue = std::remove_reference_t<Source>;
+        if constexpr (std::is_array_v<DestValue> && is_std_array_v<SourceValue>) {
+            static_assert(std::extent_v<DestValue> == std::tuple_size_v<SourceValue>);
+            for (std::size_t i = 0; i < std::extent_v<DestValue>; ++i) {
+                assignAdaptedContainerValue(dest[i], source[i]);
+            }
+        }
+        else {
+            assignContainerValueFrom(dest, source);
+        }
+    }
+
+} // namespace luax::detail
+
+namespace luax {
+    template <class T>
+    void assignContainerValue(T& dest, T const& source) {
+        if (&dest == &source) {
+            return;
+        }
+        detail::assignContainerValueFrom(dest, source);
+    }
+
+    template <class T>
+    void assignContainerValue(T& dest, T&& source) {
+        if (&dest == &source) {
+            return;
+        }
+        detail::assignContainerValueFrom(dest, source);
+    }
+
+    template <class T, std::size_t N, class U>
+    void assignContainerValue(U (&dest)[N], std::array<T, N> source) {
+        detail::assignAdaptedContainerValue(dest, source);
+    }
+
+    template <class T>
+    void checkContainerValue(lua_State* L, int idx, char const* label, T& out) {
+        detail::checkContainerValueInto(L, idx, label, out);
+    }
+
+    template <class T>
+    T checkContainerValue(lua_State* L, int idx, char const* label) {
+        T result{};
+        checkContainerValue(L, idx, label, result);
+        return result;
+    }
+
+} // namespace luax

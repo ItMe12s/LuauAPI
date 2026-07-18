@@ -79,11 +79,12 @@ class PairDesignPolicyTests(unittest.TestCase):
         info = classify_arg("gd::map<std::pair<int, UnlockType>, int>", {})
         self.assertIsNotNone(info)
         assert info is not None
+        assert info.key_type is not None
         self.assertEqual(info.key_type.kind, "pair")
 
     def test_vector_of_pair_classifies(self) -> None:
         info = classify_arg("gd::vector<std::pair<int, int>>", {})
         self.assertIsNotNone(info)
         assert info is not None
-        self.assertEqual(info.kind, "primitive_vector")
+        self.assertEqual(info.kind, "vector")
         self.assertIn("first: number", info.lua_type)

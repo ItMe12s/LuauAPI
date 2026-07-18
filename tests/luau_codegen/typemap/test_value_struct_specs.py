@@ -110,7 +110,22 @@ class CollectValueStructSpecsTests(unittest.TestCase):
         container_kinds = [f.kind for f in container.cocos.check_fields]
         self.assertEqual(container_kinds, ["container", "integer"])
         check_text = "".join(container.cocos.check_fields[0].check_override)
-        self.assertIn("checkPrimitiveVector<int>", check_text)
+        self.assertIn("checkContainerValue<gd::vector<int>>", check_text)
+
+    def test_recursive_container_collects_deep_stub_dependency(self) -> None:
+        fields = [("gd::map<int, gd::vector<GameObject*>>", "m_objects")]
+        with _with_opt_in(("DeepContainerStruct",)):
+            root = _root_with(_cls("DeepContainerStruct", fields))
+            specs = collect_value_struct_specs(root)
+        self.assertEqual(len(specs), 1)
+        self.assertIn("GameObject", specs[0].stub_deps)
+
+    def test_composite_pointer_member_is_rejected(self) -> None:
+        fields = [("gd::vector<gd::vector<int>*>", "m_values")]
+        with _with_opt_in(("PointerContainerStruct",)):
+            root = _root_with(_cls("PointerContainerStruct", fields))
+            specs = collect_value_struct_specs(root)
+        self.assertEqual(specs, ())
 
     def test_missing_opt_in_name_records_warning(self) -> None:
         with _with_opt_in(("DoesNotExist",)):
@@ -158,11 +173,11 @@ class EmitValueStructCheckPushTests(unittest.TestCase):
         self.assertIn("luax::Usertype<GameObject>::pushBorrowed(L, value.m_target)", text)
         self.assertIn('lua_setfield(L, -2, "m_target")', text)
 
-    def test_container_push_uses_primitive_vector_helper(self) -> None:
+    def test_container_push_uses_generic_helper(self) -> None:
         desc = self._cocos_for(_CONTAINER_FIELDS, "ContainerPush")
         param = desc.push_fields[0].member.split(".", 1)[0]
         text = _emit_push_struct(desc, param)
-        self.assertIn("luax::pushPrimitiveVector<int>(L, value.m_keys)", text)
+        self.assertIn("luax::pushContainerValue<gd::vector<int>>(L, value.m_keys)", text)
 
     def test_integer_check_casts_to_int(self) -> None:
         desc = self._cocos_for(_FLAT_FIELDS, "FlatEmit")

@@ -11,8 +11,13 @@ from luau_codegen.policy.containers import (
     _CONTAINER_KINDS,
     container_supported_as_arg,
     container_supported_as_return,
+    is_out_container,
 )
-from luau_codegen.convert.type_map import classify_arg, classify_return
+from luau_codegen.convert.type_map import (
+    classify_arg,
+    classify_return,
+    object_class_names,
+)
 from luau_codegen.model.denylist import INACCESSIBLE_CLASSES
 from luau_codegen.parse.broma import Class, Function
 
@@ -82,13 +87,13 @@ def free_function_unsupported_reason(
     if ret.kind in _CONTAINER_KINDS and not container_supported_as_return(ret):
         return f"free-function-unsupported-return:{fn.ret}"
     ret_kind = ret.kind
-    for i, arg in enumerate(fn.args):
+    for arg in fn.args:
         info = classify_arg(arg.type, objects, ctx=ctx)
         if info is None:
             return f"free-function-unsupported-arg:{arg.type}"
         if info.kind in _CONTAINER_KINDS and not container_supported_as_arg(info, ret_kind):
             return f"free-function-unsupported-arg:{arg.type}"
-        if info.is_out and info.kind not in _CONTAINER_KINDS:
+        if info.is_out and not is_out_container(info):
             return f"free-function-out-arg:{arg.type}"
         if info.kind == "sel":
             continue
@@ -109,12 +114,16 @@ def free_function_skipped_object_ref(
 ) -> str:
     blocked = skipped_classes | INACCESSIBLE_CLASSES
     ret = classify_return(fn.ret, objects, ctx=ctx)
-    if ret and ret.kind == "object" and ret.class_name in blocked:
-        return ret.class_name
+    if ret:
+        for class_name in sorted(object_class_names(ret)):
+            if class_name in blocked:
+                return class_name
     for arg in fn.args:
         info = classify_arg(arg.type, objects, ctx=ctx)
-        if info and info.kind == "object" and info.class_name in blocked:
-            return info.class_name
+        if info:
+            for class_name in sorted(object_class_names(info)):
+                if class_name in blocked:
+                    return class_name
     return ""
 
 

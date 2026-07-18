@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import dataclasses
 from typing import TYPE_CHECKING, Dict, List, Set
 
 if TYPE_CHECKING:
@@ -8,7 +7,6 @@ if TYPE_CHECKING:
 
 from luau_codegen.parse.broma import Arg, Class, Field, Method
 from luau_codegen.policy.fields import bindable_field
-from luau_codegen.policy.containers import _CONTAINER_KINDS
 from luau_codegen.policy.filtering import call_label, returns_owned
 from luau_codegen.emit.cxx_templates import file_preamble
 from luau_codegen.emit.bindings.dispatch import emit_arity_dispatcher
@@ -22,20 +20,22 @@ from luau_codegen.convert.marshalling import (
     check_arg,
     check_sel_handler,
     push_value,
-    _map_push_call,
-    _nested_object_pointee_cxx,
-    _set_push_call,
 )
 from luau_codegen.convert.sel_args import iter_lua_method_args
 from luau_codegen.model.domain import cxx_name, lua_namespace, short_name
+from luau_codegen.model.nested_containers import (
+    AUDITED_POINTER_GRID_KIND,
+    audited_gj_pointer_field_spec,
+)
 from luau_codegen.convert.type_map import (
+    COMPOSITE_KINDS,
     TypeInfo,
     method_input_arg_count,
+    normalize_type,
     require_classify_arg,
     require_classify_return,
 )
 from luau_codegen.util import cxx_id
-from luau_codegen.emit.types_binding import _deferred_cxx_types
 from luau_codegen.emit.luau_types.method_types import lua_export_name
 
 
@@ -218,91 +218,13 @@ def _emit_invoke(
     return "".join(out)
 
 
-_CONTAINER_FIELD_ASSIGN_FNS = {
-    "primitive_vector": "assignPrimitiveVector",
-    "map_vector": "assignPrimitiveVector",
-    "map": "detail::assignAssociativeMap",
-    "unordered_map": "detail::assignAssociativeMap",
-    "set": "detail::assignSetContainer",
-    "unordered_set": "detail::assignSetContainer",
-}
-
-
-def _nested_field_assign_fn(info: TypeInfo) -> str | None:
-    if info.kind == "nested_bool_vector_view":
-        if info.element_type is None or info.element_type.element_type is None:
-            raise ValueError("nested bool vector requires inner element type")
-        elem = info.element_type.element_type.cxx_type
-        return f"assignNestedPrimitiveVectorPointers<{elem}>"
-    if info.kind == "nested_object_vector_view":
-        pointee = _nested_object_pointee_cxx(info)
-        return f"assignNestedObjectVectorPointers<{pointee}>"
-    if info.kind == "nested_object_grid_view":
-        pointee = _nested_object_pointee_cxx(info)
-        return f"assignNestedObjectGridPointers<{pointee}>"
-    return None
-
-
-def _container_field_assign_fn(info: TypeInfo) -> str | None:
-    if info.kind in ("map", "unordered_map") and info.key_type is not None:
-        if info.key_type.kind == "pair":
-            return "detail::assignPairKeyAssociativeMap"
-    return _CONTAINER_FIELD_ASSIGN_FNS.get(info.kind)
-
-
-def _field_push_info(arg_info: TypeInfo, ret_info: TypeInfo) -> TypeInfo:
-    if arg_info.is_vector_ptr and ret_info.kind in _CONTAINER_KINDS:
-        return dataclasses.replace(ret_info, is_vector_ptr=True)
-    return ret_info
-
-
-def _emit_std_array_field_assign_lines(field: Field, label: str, info: TypeInfo) -> list[str]:
-    if info.element_type is None or info.array_size <= 0:
-        raise ValueError("std array field requires element type and size")
-    elem = info.element_type.cxx_type
-    size = info.array_size
-    name = field.name
-    return [
-        "            if constexpr (std::is_pointer_v<std::remove_reference_t<decltype("
-        f"self->{name})>>) {{\n",
-        f"                if (self->{name} == nullptr) {{\n",
-        f'                    luaL_error(L, "{label} field pointer is null");\n',
-        "                }\n",
-        f"                luax::assignStdArray<{elem}, {size}>(*self->{name}, std::move(value));\n",
-        "            } else {\n",
-        f"                luax::assignStdArray<{elem}, {size}>(self->{name}, std::move(value));\n",
-        "            }\n",
-    ]
-
-
-def _emit_nested_field_assign_lines(field: Field, label: str, info: TypeInfo) -> list[str]:
-    fn = _nested_field_assign_fn(info)
-    if fn is None:
-        raise ValueError(f"unsupported nested field assign: {info.kind}")
-    name = field.name
-    return [
-        "            if constexpr (std::is_pointer_v<std::remove_reference_t<decltype("
-        f"self->{name})>>) {{\n",
-        f"                if (self->{name} == nullptr) {{\n",
-        f'                    luaL_error(L, "{label} field pointer is null");\n',
-        "                }\n",
-        f"                luax::{fn}(*self->{name}, value);\n",
-        "            } else {\n",
-        f"                luax::{fn}(self->{name}, value);\n",
-        "            }\n",
-    ]
-
-
 def _emit_opaque_vector_view_field_assign_lines(field: Field) -> list[str]:
     return [
         f"            luax::assignOpaqueVectorView(self->{field.name}, value);\n",
     ]
 
 
-def _emit_container_field_assign_lines(field: Field, label: str, info: TypeInfo) -> list[str]:
-    fn = _container_field_assign_fn(info)
-    if fn is None:
-        raise ValueError(f"unsupported container field assign: {info.kind}")
+def _emit_audited_pointer_grid_assign_lines(field: Field, label: str) -> list[str]:
     name = field.name
     return [
         "            if constexpr (std::is_pointer_v<std::remove_reference_t<decltype("
@@ -310,39 +232,70 @@ def _emit_container_field_assign_lines(field: Field, label: str, info: TypeInfo)
         f"                if (self->{name} == nullptr) {{\n",
         f'                    luaL_error(L, "{label} field pointer is null");\n',
         "                }\n",
-        f"                luax::{fn}(*self->{name}, value);\n",
+        f"                luax::assignAuditedPointerGrid(*self->{name}, std::move(value));\n",
         "            } else {\n",
-        f"                luax::{fn}(self->{name}, value);\n",
+        f"                luax::assignAuditedPointerGrid(self->{name}, std::move(value));\n",
+        "            }\n",
+    ]
+
+
+def _emit_container_field_assign_lines(field: Field, label: str) -> list[str]:
+    name = field.name
+    return [
+        "            if constexpr (std::is_pointer_v<std::remove_reference_t<decltype("
+        f"self->{name})>>) {{\n",
+        f"                if (self->{name} == nullptr) {{\n",
+        f'                    luaL_error(L, "{label} field pointer is null");\n',
+        "                }\n",
+        f"                luax::assignContainerValue(*self->{name}, std::move(value));\n",
+        "            } else {\n",
+        f"                luax::assignContainerValue(self->{name}, std::move(value));\n",
         "            }\n",
     ]
 
 
 def _emit_container_field_push_lines(field: Field, info: TypeInfo) -> list[str]:
     name = field.name
-    expr = f"self->{name}"
-    if info.kind in ("set", "unordered_set"):
-        value_fn = _set_push_call(dataclasses.replace(info, is_vector_ptr=False))
-        ptr_fn = _set_push_call(dataclasses.replace(info, is_vector_ptr=True))
-    elif info.kind in ("map", "unordered_map"):
-        value_fn = _map_push_call(dataclasses.replace(info, is_vector_ptr=False))
-        ptr_fn = _map_push_call(dataclasses.replace(info, is_vector_ptr=True))
-    else:
-        raise ValueError(f"unsupported container field push: {info.kind}")
-    return [
+    lines = [
         "            if constexpr (std::is_pointer_v<std::remove_reference_t<decltype("
         f"self->{name})>>) {{\n",
-        f"                luax::{ptr_fn}(L, {expr});\n",
-        "            } else {\n",
-        f"                luax::{value_fn}(L, {expr});\n",
-        "            }\n",
+        f"                if (self->{name} == nullptr) {{\n",
+        "                    lua_pushnil(L);\n",
+        "                } else {\n",
     ]
+    lines.extend(
+        f"        {line}" for line in push_value(info, f"*self->{name}", False, owner_expr="self")
+    )
+    lines.extend(
+        [
+            "                }\n",
+            "            } else {\n",
+        ]
+    )
+    lines.extend(
+        f"        {line}" for line in push_value(info, f"self->{name}", False, owner_expr="self")
+    )
+    lines.extend(
+        [
+            "            }\n",
+        ]
+    )
+    return lines
 
 
-def _emit_field_push_lines(field: Field, arg_info: TypeInfo, ret_info: TypeInfo) -> list[str]:
-    if ret_info.kind in ("map", "unordered_map", "set", "unordered_set"):
+def _emit_field_push_lines(field: Field, ret_info: TypeInfo) -> list[str]:
+    if ret_info.kind in COMPOSITE_KINDS and ret_info.kind != "vector_view":
         return _emit_container_field_push_lines(field, ret_info)
-    push_info = _field_push_info(arg_info, ret_info)
-    return push_value(push_info, f"self->{field.name}", False)
+    owner = "self" if ret_info.kind == AUDITED_POINTER_GRID_KIND else None
+    return push_value(ret_info, f"self->{field.name}", False, owner_expr=owner)
+
+
+def _audited_pointer_grid_writable(cls: Class, field: Field) -> bool:
+    spec = audited_gj_pointer_field_spec(cls.name, field.name, normalize_type(field.type))
+    if spec is None:
+        return False
+    _, writable = spec
+    return writable
 
 
 def _emit_field_accessors(
@@ -363,21 +316,18 @@ def _emit_field_accessors(
     is_readonly_vector_view = ret_info.kind == "vector_view" and (
         ret_info.element_type is None or ret_info.element_type.kind != "opaque_handle"
     )
-    if (
-        ret_info.kind
-        in (
-            "nested_primitive_vector_view",
-            "cc_c_array_view",
-        )
-        or is_readonly_vector_view
-    ):
+    is_readonly_audited_grid = (
+        ret_info.kind == AUDITED_POINTER_GRID_KIND
+        and not _audited_pointer_grid_writable(cls, field)
+    )
+    if ret_info.kind == "cc_c_array_view" or is_readonly_audited_grid or is_readonly_vector_view:
         out = ["    template <class T>\n"]
         out.append(f"    int {getter_impl}(lua_State* L, T* self) {{\n")
         out.append(f"        if constexpr (requires(T* obj) {{ obj->{field.name}; }}) {{\n")
         out.extend(
             f"    {line}"
             for line in push_value(
-                _field_push_info(arg_info, ret_info),
+                ret_info,
                 f"self->{field.name}",
                 False,
                 owner_expr="self",
@@ -407,71 +357,10 @@ def _emit_field_accessors(
         out.append("        }\n")
         out.append("    }\n\n")
         return "".join(out)
-    if ret_info.kind in ("nested_object_vector_view", "nested_object_grid_view"):
-        out = ["    template <class T>\n"]
-        out.append(f"    int {getter_impl}(lua_State* L, T* self) {{\n")
-        out.append(f"        if constexpr (requires(T* obj) {{ obj->{field.name}; }}) {{\n")
-        out.extend(
-            f"    {line}"
-            for line in push_value(
-                _field_push_info(arg_info, ret_info),
-                f"self->{field.name}",
-                False,
-                owner_expr="self",
-            )
-        )
-        out.append("            return 1;\n")
-        out.append("        } else {\n")
-        out.append(
-            f'            luaL_error(L, "{label} field is not available in current SDK headers");\n'
-        )
-        out.append("            return 0;\n")
-        out.append("        }\n")
-        out.append("    }\n\n")
-        out.append(f"    int {getter}(lua_State* L) {{\n")
-        out.append(
-            f'        if (lua_gettop(L) != 1) luaL_error(L, "{label} getter expected 1 arg");\n'
-        )
-        out.append(
-            f'        auto self = luax::Usertype<{cxx_name(cls)}>::check(L, 1, "{label}");\n'
-        )
-        out.append(f"        return {getter_impl}(L, self);\n")
-        out.append("    }\n\n")
-        out.append("    template <class T>\n")
-        out.append(f"    int {setter_impl}(lua_State* L, T* self, {arg_info.cxx_type} value) {{\n")
-        out.append(f"        if constexpr (requires(T* obj) {{ obj->{field.name}; }}) {{\n")
-        out.extend(_emit_nested_field_assign_lines(field, label, arg_info))
-        out.append("            return 0;\n")
-        out.append("        } else {\n")
-        out.append(
-            f'            luaL_error(L, "{label} field is not available in current SDK headers");\n'
-        )
-        out.append("            return 0;\n")
-        out.append("        }\n")
-        out.append("    }\n\n")
-        out.append(f"    int {setter}(lua_State* L) {{\n")
-        out.append(
-            f'        if (lua_gettop(L) != 2) luaL_error(L, "{label} setter expected 2 args");\n'
-        )
-        out.append(
-            f'        auto self = luax::Usertype<{cxx_name(cls)}>::check(L, 1, "{label}");\n'
-        )
-        out.extend(check_arg(Arg(field.type, field.name), arg_info, 2, "value", label))
-        out.append(f"        return {setter_impl}(L, self, value);\n")
-        out.append("    }\n\n")
-        out.append("    template <class T>\n")
-        out.append(f"    void {register}(lua_State* L) {{\n")
-        out.append(f"        if constexpr (requires(T* obj) {{ obj->{field.name}; }}) {{\n")
-        out.append(
-            f'            luax::Usertype<T>::field(L, "{field.name}", &{getter}, &{setter});\n'
-        )
-        out.append("        }\n")
-        out.append("    }\n\n")
-        return "".join(out)
     out = ["    template <class T>\n"]
     out.append(f"    int {getter_impl}(lua_State* L, T* self) {{\n")
     out.append(f"        if constexpr (requires(T* obj) {{ obj->{field.name}; }}) {{\n")
-    out.extend(f"    {line}" for line in _emit_field_push_lines(field, arg_info, ret_info))
+    out.extend(f"    {line}" for line in _emit_field_push_lines(field, ret_info))
     out.append("            return 1;\n")
     out.append("        } else {\n")
     out.append(
@@ -485,31 +374,29 @@ def _emit_field_accessors(
     out.append(f'        auto self = luax::Usertype<{cxx_name(cls)}>::check(L, 1, "{label}");\n')
     out.append(f"        return {getter_impl}(L, self);\n")
     out.append("    }\n\n")
-    setter_value_type = "int" if arg_info.kind == "seed_value" else arg_info.cxx_type
+    if arg_info.kind == "seed_value":
+        setter_value_type = "int"
+    elif arg_info.kind == AUDITED_POINTER_GRID_KIND:
+        if arg_info.element_type is None:
+            raise ValueError("audited pointer grid requires mirror type")
+        setter_value_type = arg_info.element_type.cxx_type
+    else:
+        setter_value_type = arg_info.cxx_type
     out.append("    template <class T>\n")
     out.append(f"    int {setter_impl}(lua_State* L, T* self, {setter_value_type} value) {{\n")
     out.append(f"        if constexpr (requires(T* obj) {{ obj->{field.name}; }}) {{\n")
-    if arg_info.kind == "std_array":
-        out.extend(_emit_std_array_field_assign_lines(field, label, arg_info))
-    elif arg_info.kind == "seed_value":
+    if arg_info.kind == "seed_value":
         out.append(f"            self->{field.name} = value;\n")
-    elif _container_field_assign_fn(arg_info) is not None:
-        out.extend(_emit_container_field_assign_lines(field, label, arg_info))
-    elif _nested_field_assign_fn(arg_info) is not None:
-        out.extend(_emit_nested_field_assign_lines(field, label, arg_info))
     elif (
         arg_info.kind == "vector_view"
         and arg_info.element_type is not None
         and arg_info.element_type.kind == "opaque_handle"
     ):
         out.extend(_emit_opaque_vector_view_field_assign_lines(field))
-    elif arg_info.is_vector_ptr:
-        out.append(f"            if (self->{field.name} == nullptr) {{\n")
-        out.append(f'                luaL_error(L, "{label} field pointer is null");\n')
-        out.append("            }\n")
-        out.append(f"            *self->{field.name} = std::move(value);\n")
-    elif arg_info.kind == "value" and arg_info.cxx_type in _deferred_cxx_types():
-        out.append(f"            luax::assignValue(self->{field.name}, std::move(value));\n")
+    elif arg_info.kind in COMPOSITE_KINDS:
+        out.extend(_emit_container_field_assign_lines(field, label))
+    elif arg_info.kind == AUDITED_POINTER_GRID_KIND:
+        out.extend(_emit_audited_pointer_grid_assign_lines(field, label))
     else:
         out.append(
             f"            self->{field.name} = static_cast<decltype(self->{field.name})>(value);\n"
@@ -528,7 +415,8 @@ def _emit_field_accessors(
     )
     out.append(f'        auto self = luax::Usertype<{cxx_name(cls)}>::check(L, 1, "{label}");\n')
     out.extend(check_arg(Arg(field.type, field.name), arg_info, 2, "value", label))
-    out.append(f"        return {setter_impl}(L, self, value);\n")
+    setter_value = "std::move(value)" if arg_info.kind == AUDITED_POINTER_GRID_KIND else "value"
+    out.append(f"        return {setter_impl}(L, self, {setter_value});\n")
     out.append("    }\n\n")
     out.append("    template <class T>\n")
     out.append(f"    void {register}(lua_State* L) {{\n")

@@ -97,7 +97,7 @@ class FreeFunctionOverrideTests(unittest.TestCase):
 
 
 class FreeFunctionContainerTests(unittest.TestCase):
-    def test_vector_return_is_supported(self) -> None:
+    def test_object_vector_return_is_supported(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")
         fn = Function(
             name="children",
@@ -111,7 +111,7 @@ class FreeFunctionContainerTests(unittest.TestCase):
 
         self.assertIsNone(reason)
 
-    def test_vector_input_arg_is_supported(self) -> None:
+    def test_object_vector_input_arg_is_supported(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")
         fn = Function(
             name="applyChildren",
@@ -125,7 +125,7 @@ class FreeFunctionContainerTests(unittest.TestCase):
 
         self.assertIsNone(reason)
 
-    def test_primitive_vector_input_arg_is_supported(self) -> None:
+    def test_numeric_vector_input_arg_is_supported(self) -> None:
         fn = Function(
             name="take",
             namespace="geode::utils",
@@ -137,7 +137,7 @@ class FreeFunctionContainerTests(unittest.TestCase):
 
         self.assertIsNone(reason)
 
-    def test_primitive_vector_return_is_supported(self) -> None:
+    def test_numeric_vector_return_is_supported(self) -> None:
         fn = Function(
             name="values",
             namespace="geode::utils",
@@ -172,6 +172,50 @@ class FreeFunctionContainerTests(unittest.TestCase):
         reason = free_function_unsupported_reason(fn, {})
 
         self.assertIsNone(reason)
+
+    def test_recursive_value_tree_is_supported(self) -> None:
+        fn = Function(
+            name="roundTrip",
+            namespace="geode::utils",
+            ret="gd::map<int, gd::vector<int>>",
+            args=[Arg("gd::vector<std::tuple<int, bool>>", "values")],
+        )
+        self.assertIsNone(free_function_unsupported_reason(fn, {}))
+
+    def test_composite_pointer_descendant_is_not_supported(self) -> None:
+        signatures = (
+            Function(
+                name="take",
+                namespace="geode::utils",
+                ret="void",
+                args=[Arg("gd::vector<gd::vector<int>*>", "values")],
+            ),
+            Function(
+                name="make",
+                namespace="geode::utils",
+                ret="gd::vector<gd::vector<int>*>",
+                args=[],
+            ),
+        )
+        for fn in signatures:
+            with self.subTest(name=fn.name):
+                self.assertIsNotNone(free_function_unsupported_reason(fn, {}))
+
+    def test_recursive_function_leaves_emit_required_stubs(self) -> None:
+        ccobject = Class(name="CCObject", namespace="cocos2d")
+        leaf = Class(name="Leaf", bases=["CCObject"])
+        fn = Function(
+            name="transform",
+            namespace="geode::utils",
+            ret="gd::map<int, gd::vector<Leaf*>>",
+            args=[Arg("gd::vector<cocos2d::CCPoint>", "points")],
+        )
+
+        out = types_text(emit_luau_types(Root(classes=[ccobject, leaf], functions=[fn])))
+
+        self.assertIn("export type CCPoint", out)
+        self.assertIn("declare class Leaf", out)
+        self.assertIn("transform:", out)
 
 
 class GetEnvironmentVariableExclusionTests(unittest.TestCase):

@@ -5,7 +5,7 @@ import shutil
 import tempfile
 import unittest
 
-import test_support
+import test_support  # noqa: F401 - installs codegen test fixtures
 from luau_codegen.emit.types_binding import (
     emit_types_generated_containers_hpp,
     emit_types_generated_hpp,
@@ -65,10 +65,10 @@ class TypesGeneratedEmitterTests(unittest.TestCase):
         containers = emit_types_generated_containers_hpp()
         self.assertNotIn("check<SequenceTriggerState>", base)
         self.assertIn("check<SequenceTriggerState>", containers)
-        self.assertIn("checkAssociativeMap", containers)
-        self.assertNotIn("checkAssociativeMap", base)
-        self.assertIn("checkStdArray", containers)
-        self.assertNotIn("checkStdArray", base)
+        self.assertIn("checkContainerValue<gd::map", containers)
+        self.assertNotIn("checkContainerValue<gd::map", base)
+        self.assertIn("checkContainerValue<std::array", containers)
+        self.assertNotIn("checkContainerValue<std::array", base)
         self.assertIn("inline cocos2d::CCPoint check<cocos2d::CCPoint>", base)
         self.assertNotIn("inline cocos2d::CCPoint check<cocos2d::CCPoint>", containers)
         self.assertNotIn("inline SavedObjectStateRef check<SavedObjectStateRef>", base)

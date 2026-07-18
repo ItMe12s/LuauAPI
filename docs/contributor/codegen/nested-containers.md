@@ -1,112 +1,113 @@
-# Nested containers
+# Recursive containers
 
 ## Summary
 
-Codegen binds only audited, shallow nested shapes. There is no generic recursive container marshalling.
-Read-only nested primitive size vectors and read-write GJ grids, map vectors, and tuple sets are in scope.
-Policy constants live in `tools/luau_codegen/model/nested_containers.py`.
-Classification gates live in `tools/luau_codegen/convert/type_classification.py`.
-Tests live in `tests/luau_codegen/typemap/test_nested_containers.py` and `tests/luau_codegen/typemap/test_gj_grid_fields.py`.
+Codegen supports recursive by-value container trees.
+For example, `gd::map<int, gd::vector<int>>` becomes `{ [number]: { number } }`.
+Descendant composite pointers are unsupported except in seven audited fields.
+
+## Grammar
+
+```text
+Composite := gd::vector<Value>
+           | gd::map<Key, Value> | gd::unordered_map<Key, Value>
+           | gd::set<Value> | gd::unordered_set<Value>
+           | std::array<Value, N>
+           | std::pair<Value, Value>
+           | std::tuple<Value...>
+
+Value     := supported scalar, enum, value struct, bound object pointer, or opaque handle
+           | Composite
+
+Key       := supported scalar
+           | std::pair<non-container pair-key leaf, non-container pair-key leaf>
+```
+
+The non-container pair-key leaf set is scalar, enum, supported value struct, or bound object pointer.
+There is no explicit nesting limit.
+Supported `std::array` sizes are listed in [Limits and errors](../../reference/cpp/limits-and-errors.md).
+
+Only the listed `gd` containers and `std::array`, `std::pair`, and `std::tuple` take part.
+`std::vector`, `std::map`, and `std::set` remain unsupported.
+
+Direct `gd::vector<Object*>` and `gd::vector<Opaque*>` values use read-only sequence views.
+Other recursive values use table snapshots.
+Plain Lua table rules apply to snapshots.
+A `nil` indexed leaf creates a hole.
+A `nil` value in a dictionary-shaped map removes that entry.
 
 ## Luau shapes
 
-- Map with scalar key and vector value (normal dictionary):
-  - `gd::unordered_map<int, gd::vector<LabelGameObject*>>` becomes `{ [number]: { LabelGameObject? } }`
-- Map with pair key and vector value (entry list, same as [Pair containers](pair-containers.md)):
-  - `gd::map<std::pair<int, int>, gd::vector<GroupCommandObject2*>>` becomes
-    `{ { first: number, second: number, value: { GroupCommandObject2? } } }`
-- Nested primitive vector (read-only field getter):
-  - `gd::vector<gd::vector<int>*>` becomes `{ { number } }`
-- Nested bool vector (read-write field):
-  - `gd::vector<gd::vector<bool>*>` becomes `{ { boolean } }`
-- Nested object vector (read-write field, borrowed inner elements):
-  - `gd::vector<gd::vector<GameObject*>*>` becomes `{ { GameObject? } }`
-- Nested object grid (read-write field, borrowed inner elements):
-  - `gd::vector<gd::vector<gd::vector<GameObject*>*>*>` becomes `{ { { GameObject? } } }`
-- Map vector (read-write field):
-  - `gd::vector<gd::unordered_map<int,int>>` becomes `{ { [number]: number } }`
-- Tuple set element (read-write field):
-  - `gd::set<std::tuple<int, int, int>>` becomes `{ { number } }`
+- `gd::map<int, gd::vector<int>>` becomes `{ [number]: { number } }`.
+- `gd::vector<gd::unordered_map<int, bool>>` becomes `{ { [number]: boolean } }`.
+- `std::array<gd::set<gd::string>, 4>` becomes `{ { string } }`.
+- `std::pair<A, B>` stays `{ first: A, second: B }`.
+- A map with a pair key becomes `{ { first: K1, second: K2, value: V } }`.
+- `std::tuple<>` becomes `{}`.
+- A homogeneous tuple becomes `{ T }`.
+- A heterogeneous tuple becomes `{ (T1 | T2 | ...) }`.
 
-`T*` must be a bound `CCObject` descendant or a registered opaque handle.
+Luau array types cannot describe each tuple index separately.
+The runtime still requires exact tuple arity and checks every position.
+It rejects holes and extra numeric positions.
+`std::array` tables also require exactly the declared size with no holes or extra numeric positions.
+Array output order from unordered sets and unordered pair-key maps is unspecified.
 
-## Runtime
+## Surfaces
 
-| C++ API | Role |
-| --- | --- |
-| `checkMapValue` / `pushMapValue` | `gd::vector<...>` map values use vector helpers inside one template |
-| `pushNestedPrimitiveVectorPointers` | Read-only `gd::vector<gd::vector<int>*>` fields |
-| `checkNestedPrimitiveVectorPointers` / `assignNestedPrimitiveVectorPointers` | Read-write nested bool grids |
-| `pushNestedObjectVectorPointers` / `checkNestedObjectVectorPointers` / `assignNestedObjectVectorPointers` | 2-level object grids |
-| `pushNestedObjectGridPointers` / `checkNestedObjectGridPointers` / `assignNestedObjectGridPointers` | 3-level object grids |
-| `checkTupleTableInt3` / `pushTupleTableInt3` | `std::tuple<int,int,int>` set elements |
+By-value trees bind on class fields, method arguments, method returns, and free functions.
+Existing root pointer and out-parameter behavior stays unchanged.
+Hooks remain container-free.
 
-Map field setters still clear and re-insert (`assignMap`, `assignUnorderedMap`, pair-key assign helpers).
-No whole-container `operator=`.
+Recursive values reject:
 
-## Codegen
+- any descendant `Composite*`
+- composite map keys other than the restricted pair form
+- `Container**`
+- nested `ccCArray`
+- callback, delegate, task, result, and unsupported leaves
+- `char*`, string-view, and `ZStringView` leaves
 
-In `model/nested_containers.py` and `convert/type_classification.py`:
+Seven audited `GJBaseGameLayer` pointer-grid fields use one field-only adapter.
+The read-only fields are `m_sectionSizes`, `m_nonEffectObjectsSizes`, and `m_collisionBlockSectionSizes`.
+The writable fields are `m_nonEffectObjectsFlags`, `m_collisionBlockSections`, `m_sections`, and `m_nonEffectObjects`.
+Null children through this adapter still appear as empty tables.
+Lua cannot distinguish those null children from empty children.
+Writing `{}` creates or keeps a non-null empty row.
+Codegen emits the adapter only for these seven fields.
 
-- `allow_nested_map_value()` gates map values that are `vector_view` with object or opaque elements.
-- `nested_primitive_vector_view` handles read-only `gd::vector<gd::vector<int>*>`.
-- `nested_bool_vector_view`, `nested_object_vector_view`, and `nested_object_grid_view` handle audited GJ grid fields with getters and setters.
-- `map_vector` handles read-write `gd::vector<gd::unordered_map<int,int>>`.
-- `parse_std_tuple()` handles audited `std::tuple<int,int,int>` set elements for read-write set fields.
-- `allow_nested_*()` helpers match exact outer types only.
+## Runtime and codegen
 
-`convert/marshalling.py` emits map helpers and nested push/check helpers.
-`emit/bindings/class_file.py` emits setter assign paths for read-write nested fields.
-Nested primitive vector fields register as read-only getters.
+`TypeInfo` stores the full tree through `element_type`, `key_type`, `value_type`, and `tuple_types`.
+One tree walk drives dependency, inaccessible-class, hook, and value-struct checks.
 
-## Rejected
+Generated recursive values use:
 
-- `gd::map<int, gd::vector<int>>` (primitive vector as map value)
-- Generic deep nesting beyond audited GJ grid shapes
-- Nested containers inside pair components
-- `std::array` fields above 2000 elements
+- `checkContainerValue<T>` for table checks
+- `pushContainerValue<T>` for table pushes
+- `assignContainerValue` for recursive field updates
 
-## Baseline fields
-
-`BASELINE_NESTED_*` in `model/nested_containers.py` are coverage examples only.
-Codegen does not read them. Shape helpers gate binding.
-
-These shapes were skipped before nested support. After regen they should bind:
-
-| Field | Type | Notes |
-| --- | --- | --- |
-| `m_labelObjects` | `gd::unordered_map<int, gd::vector<LabelGameObject*>>` | Binds |
-| `m_timeLabelObjects` | `gd::unordered_map<int, gd::vector<LabelGameObject*>>` | Binds |
-| `m_unkMap770` | `gd::map<std::pair<int, int>, gd::vector<GroupCommandObject2*>>` | Binds |
-| `m_sectionSizes` | `gd::vector<gd::vector<int>*>` | Read-only getter |
-| `m_nonEffectObjectsSizes` | `gd::vector<gd::vector<int>*>` | Read-only getter |
-| `m_collisionBlockSectionSizes` | `gd::vector<gd::vector<int>*>` | Read-only getter |
-| `m_nonEffectObjectsFlags` | `gd::vector<gd::vector<bool>*>` | Read-write |
-| `m_collisionBlockSections` | `gd::vector<gd::vector<GameObject*>*>` | Read-write |
-| `m_sections` / `m_nonEffectObjects` | `gd::vector<gd::vector<gd::vector<GameObject*>*>*>` | Read-write |
-| `m_spawnRemapTriggers` | `gd::vector<gd::unordered_map<int,int>>` | Read-write |
-| `m_spawnTuples` | `gd::set<std::tuple<int, int, int>>` | Read-write |
-| `m_varianceValues` | `std::array<float, 2000>` | Read-write (`STD_ARRAY_MAX_SIZE` 2000) |
-
-## Verification
-
-1. `PYTHONPATH=tools python -m unittest discover -s tests/luau_codegen -p "test_*.py"`
-2. Regenerate `types/geode.d.luau` through the build.
-3. `PYTHONPATH=tools python -m luau_codegen --bindings <bindings-dir> --audit-report-out audit.md --platform win`
-4. Confirm nested map, size, GJ grid, and exotic fields bind. Generic deep nesting should still skip.
+`assignContainerValue` avoids whole-container assignment for Geode container ABI support.
+It clears and reinserts vectors, maps, and sets.
+Arrays, pairs, and tuples update recursively in place.
+The seven pointer-grid fields classify as one `audited_pointer_grid` kind.
+It emits `pushAuditedPointerGrid`, `checkAuditedPointerGrid<Actual>`, and `assignAuditedPointerGrid`.
+These helpers preserve the existing read, write, and null-child behavior without broadening recursive container support.
 
 ## Related
 
 - [Pair containers](pair-containers.md)
-- [ccCArray read-only fields](cc-c-array.md)
 - [Codegen](codegen.md)
+- [ccCArray read-only fields](cc-c-array.md)
+- [Testing](../testing.md)
+- [Game objects](../../reference/lua/game-objects.md)
+- [Limits and errors](../../reference/cpp/limits-and-errors.md)
 
 ## Source
 
-- `tools/luau_codegen/convert/type_map.py`
 - `tools/luau_codegen/convert/type_classification.py`
+- `tools/luau_codegen/convert/type_map.py`
 - `tools/luau_codegen/convert/marshalling.py`
 - `tools/luau_codegen/model/nested_containers.py`
 - `tools/luau_codegen/emit/bindings/class_file.py`
 - `src/framework/stack/ContainerTables.hpp`
-- `tools/luau_codegen/emit/audit.py`

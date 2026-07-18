@@ -8,15 +8,21 @@ if TYPE_CHECKING:
 
 from luau_codegen.convert.symbols import android_symbol
 from luau_codegen.convert.type_map import (
+    TypeInfo,
     classify_arg,
     classify_return,
     is_out_reference,
+    iter_type_tree,
     normalize_type,
 )
 from luau_codegen.policy.containers import _CONTAINER_KINDS
 from luau_codegen.parse.broma import Class, Method
 from luau_codegen.policy.filtering import direct_callable, platform_value
 from luau_codegen.policy.link_attrs import class_link_platforms, platform_aliases
+
+
+def _contains_container(info: TypeInfo) -> bool:
+    return any(node.kind in _CONTAINER_KINDS for node in iter_type_tree(info))
 
 
 def concrete_hook_platform(target_platform: str) -> bool:
@@ -107,7 +113,7 @@ def hookable(
         return False
     if ret.kind == "string" and ret.cxx_type.endswith("*"):
         return False
-    if ret.kind in _CONTAINER_KINDS:
+    if _contains_container(ret):
         return False
     if ret.kind == "opaque_handle":
         return False
@@ -117,9 +123,8 @@ def hookable(
         info = classify_arg(arg.type, objects, ctx=ctx)
         if info is None:
             return False
-        if (
-            info.kind in ("sel", "callback", "opaque_handle", "delegate")
-            or info.kind in _CONTAINER_KINDS
+        if info.kind in ("sel", "callback", "opaque_handle", "delegate") or _contains_container(
+            info
         ):
             return False
     return True
