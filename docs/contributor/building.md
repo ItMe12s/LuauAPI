@@ -20,7 +20,7 @@ Versions come from `CMakeLists.txt`.
 
 CMake downloads these during configuration, so you do not install them by hand.
 
-- Luau, pinned to tag `0.729`
+- Luau, pinned to tag `0.730`
 - Geode bindings, pinned through `LUAUAPI_BINDINGS_GIT_TAG` in `cmake/GeodeBindings.cmake`
 - Dear ImGui `v1.92.8`, pinned in `cmake/ImGui.cmake` for `imgui-cocos` and headless tests
 - GLM `1.0.3`, used by the 3D math and glTF loader

@@ -9,6 +9,7 @@
 #include <cocos2d.h>
 #include <lua.h>
 
+#if !defined(LUAUAPI_HOST_TESTS)
 namespace luax {
     template <>
     inline UIButtonConfig check<UIButtonConfig>(lua_State* L, int idx, char const* method) {
@@ -109,3 +110,4 @@ namespace luax {
         lua_setfield(L, -2, "ignoreCorners");
     }
 } // namespace luax
+#endif
