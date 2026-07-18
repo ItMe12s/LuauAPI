@@ -121,6 +121,14 @@ def emit(
         for name in {n for n, _ in cocos_chunks} | {n for n, _ in gd_chunks}
         if name in objects
     }
+    base_names = {name for name in base_of.values() if name}
+    orphan_chunk_names = {
+        name
+        for name, chunk in cocos_chunks + gd_chunks
+        if name not in base_names and chunk.endswith(" end\n\n")
+    }
+    cocos_chunks = [chunk for chunk in cocos_chunks if chunk[0] not in orphan_chunk_names]
+    gd_chunks = [chunk for chunk in gd_chunks if chunk[0] not in orphan_chunk_names]
     cocos_chunks = _topo_sort_chunks(cocos_chunks, base_of)
     gd_chunks = _topo_sort_chunks(gd_chunks, base_of)
 
@@ -167,7 +175,7 @@ def emit(
         name
         for name in refs
         if name not in defined and name in objects and name not in _VALUE_STUB_BODY
-    }
+    } | orphan_chunk_names
 
     lines = _header("Geode type stubs")
     lines.append(_emit_generated_support_stub_block())
