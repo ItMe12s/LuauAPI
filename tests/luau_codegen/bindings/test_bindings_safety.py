@@ -941,7 +941,7 @@ class GeneratedSafetyTests(unittest.TestCase):
                 1,
                 "win",
             )
-            self.assertIn("self->m_state = static_cast<decltype(self->m_state)>(value)", text)
+            self.assertIn("self->m_state = value;", text)
             self.assertNotIn("luax::assignValue", text)
         finally:
             gate.VALUE_STRUCT_OPT_IN = saved

@@ -397,6 +397,8 @@ def _emit_field_accessors(
         out.extend(_emit_container_field_assign_lines(field, label))
     elif arg_info.kind == AUDITED_POINTER_GRID_KIND:
         out.extend(_emit_audited_pointer_grid_assign_lines(field, label))
+    elif arg_info.kind == "value":
+        out.append(f"            self->{field.name} = value;\n")
     else:
         out.append(
             f"            self->{field.name} = static_cast<decltype(self->{field.name})>(value);\n"
