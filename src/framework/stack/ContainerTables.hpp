@@ -940,7 +940,7 @@ namespace luax {
     T checkContainerValue(lua_State* L, int idx, char const* label) {
         T result{};
         checkContainerValue(L, idx, label, result);
-        return result;
+        return T(result);
     }
 
 } // namespace luax
