@@ -533,7 +533,7 @@ namespace luax::detail {
         out.reserve(static_cast<std::size_t>(len));
         for (lua_Integer i = 1; i <= len; ++i) {
             lua_rawgeti(L, idx, i);
-            Element candidate{};
+            Element candidate;
             checkContainerValueInto(L, -1, label, candidate);
             lua_pop(L, 1);
             if constexpr (std::is_same_v<Element, bool>) {
@@ -567,7 +567,7 @@ namespace luax::detail {
                 checkContainerValueInto(L, -1, label, key.second);
                 lua_pop(L, 1);
                 lua_getfield(L, entry, "value");
-                Value candidate{};
+                Value candidate;
                 checkContainerValueInto(L, -1, label, candidate);
                 lua_pop(L, 1);
                 if (out.find(key) == out.end()) {
@@ -582,11 +582,7 @@ namespace luax::detail {
             lua_pushnil(L);
             while (lua_next(L, idx) != 0) {
                 Key key = checkContainerLeaf<Key>(L, -2, label);
-                Value candidate{};
-                checkContainerValueInto(L, -1, label, candidate);
-                if (out.find(key) == out.end()) {
-                    out.emplace(std::move(key), std::move(candidate));
-                }
+                checkContainerValueInto(L, -1, label, out[std::move(key)]);
                 lua_pop(L, 1);
             }
         }
@@ -602,7 +598,7 @@ namespace luax::detail {
         out.clear();
         for (lua_Integer i = 1; i <= len; ++i) {
             lua_rawgeti(L, idx, i);
-            Element candidate{};
+            Element candidate;
             checkContainerValueInto(L, -1, label, candidate);
             lua_pop(L, 1);
             if (out.find(candidate) == out.end()) {
@@ -651,7 +647,8 @@ namespace luax::detail {
             checkTupleValueInto(L, idx, label, out, std::make_index_sequence<std::tuple_size_v<U>>{});
         }
         else {
-            out = checkContainerLeaf<U>(L, idx, label);
+            auto const value = checkContainerLeaf<U>(L, idx, label);
+            out = value;
         }
     }
 
@@ -837,16 +834,6 @@ namespace luax {
 } // namespace luax
 
 namespace luax::detail {
-    template <class Source>
-    decltype(auto) moveContainerSource(Source& source) {
-        if constexpr (std::is_const_v<std::remove_reference_t<Source>>) {
-            return (source);
-        }
-        else {
-            return std::move(source);
-        }
-    }
-
     template <class T, class Source>
     void assignContainerValueFrom(T& dest, Source& source);
 
@@ -878,19 +865,16 @@ namespace luax::detail {
             }
         }
         else if constexpr (is_associative_map_v<U>) {
-            using Value = typename U::mapped_type;
             dest.clear();
             for (auto& entry : source) {
-                auto [position, inserted] = dest.emplace(entry.first, Value{});
-                static_cast<void>(inserted);
-                assignContainerValueFrom(position->second, entry.second);
+                assignContainerValueFrom(dest[entry.first], entry.second);
             }
         }
         else if constexpr (is_associative_set_v<U>) {
             using Element = typename U::value_type;
             dest.clear();
             for (auto const& element : source) {
-                Element candidate{};
+                Element candidate;
                 assignContainerValueFrom(candidate, element);
                 dest.emplace(std::move(candidate));
             }
@@ -903,8 +887,8 @@ namespace luax::detail {
             assignTupleValueFrom(dest, source, std::make_index_sequence<std::tuple_size_v<U>>{});
         }
         else {
-            static_assert(std::is_assignable_v<T&, decltype(moveContainerSource(source))>);
-            dest = moveContainerSource(source);
+            static_assert(std::is_assignable_v<T&, Source&>);
+            dest = source;
         }
     }
 
