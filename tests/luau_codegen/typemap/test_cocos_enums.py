@@ -69,7 +69,3 @@ class CocosEnumTests(unittest.TestCase):
         for name in names:
             with self.subTest(name=name):
                 self.assertIn(f"X({name})", text)
-
-
-if __name__ == "__main__":
-    unittest.main()

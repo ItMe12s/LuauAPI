@@ -88,7 +88,3 @@ class BindableConstructorTests(unittest.TestCase):
         text = types_text(files)
         self.assertIn("FixtureFactory", text)
         self.assertRegex(text, r"\bnew:\s*\(")
-
-
-if __name__ == "__main__":
-    unittest.main()

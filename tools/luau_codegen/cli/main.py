@@ -74,11 +74,6 @@ def main(argv: List[str]) -> int:
     parser.add_argument("--platform", default="win")
     parser.add_argument("--geode-sdk", default=None)
     parser.add_argument(
-        "--list-outputs",
-        action="store_true",
-        help="Print generated binding paths relative to --out/src, one per line",
-    )
-    parser.add_argument(
         "--list-all-outputs",
         action="store_true",
         help="Print binding and type outputs (binding: and type: prefixes)",
@@ -231,18 +226,6 @@ def main(argv: List[str]) -> int:
             log_error(f"I/O failed while writing audit report: {exc}")
             return 4
         log_info(f"wrote {args.audit_report_out}")
-        return 0
-
-    if args.list_outputs:
-        plan = collect_target_plan()
-        if (code := _exit_on_ambiguous_overloads(plan)) is not None:
-            return code
-        for rel in emit_plan.plan_outputs(root, args.platform, plan=plan):
-            print(f"src/{rel}")
-        for rel in DELEGATE_GEN_REL_PATHS:
-            print(rel)
-        print(types_gen_rel_path())
-        print(types_gen_containers_rel_path())
         return 0
 
     if args.list_all_outputs:

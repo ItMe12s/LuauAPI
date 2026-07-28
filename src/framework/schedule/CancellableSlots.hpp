@@ -4,7 +4,6 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <utility>
 
 namespace luax {
     template <typename Entry>
@@ -21,17 +20,9 @@ namespace luax {
     }
 
     template <CancellableSlotEntry Entry>
-    inline Entry* findActiveSlot(IndexedSlotMap<Entry>& slots, std::uint64_t id) {
-        Entry* entry = slots.find(id);
-        if (!entry || entry->cancelled) {
-            return nullptr;
-        }
-        return entry;
-    }
-
-    template <CancellableSlotEntry Entry>
     inline Entry const* findActiveSlot(IndexedSlotMap<Entry> const& slots, std::uint64_t id) {
-        return findActiveSlot(const_cast<IndexedSlotMap<Entry>&>(slots), id);
+        auto const* entry = slots.find(id);
+        return entry && !entry->cancelled ? entry : nullptr;
     }
 
     template <CancellableSlotEntry Entry>
@@ -58,20 +49,8 @@ namespace luax {
     }
 
     template <CancellableSlotEntry Entry>
-    inline bool slotMapFull(IndexedSlotMap<Entry> const& slots, std::size_t maxSlots) {
-        return activeSlotCount(slots) >= maxSlots;
-    }
-
-    template <CancellableSlotEntry Entry>
     inline bool isActiveSlot(IndexedSlotMap<Entry> const& slots, std::uint64_t id) {
         return findActiveSlot(slots, id) != nullptr;
-    }
-
-    template <CancellableSlotEntry Entry>
-    inline std::uint64_t insertSlot(IndexedSlotMap<Entry>& slots, Entry value, std::uint64_t& nextId) {
-        std::uint64_t const id = nextId++;
-        slots.insertWithId(id, std::move(value));
-        return id;
     }
 
     template <CancellableSlotEntry Entry>

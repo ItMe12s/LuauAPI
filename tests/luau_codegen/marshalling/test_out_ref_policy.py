@@ -181,7 +181,3 @@ class OutRefEmitTests(unittest.TestCase):
         ok, reason = supported(cls, method, {}, "win")
         self.assertFalse(ok)
         self.assertIn("unsupported-return", reason)
-
-
-if __name__ == "__main__":
-    unittest.main()

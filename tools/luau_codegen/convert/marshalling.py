@@ -546,11 +546,6 @@ def sel_call_args(var: str, info: TypeInfo, *, handler_first: bool = True) -> li
     return [selector, handler]
 
 
-def sel_menu_call_args(var: str) -> list[str]:
-    menu = TypeInfo("sel", "SEL_MenuHandler", "(sender: CCObject) -> ()", class_name="menu")
-    return sel_call_args(var, menu, handler_first=True)
-
-
 def check_arg(arg: Arg, info: TypeInfo, idx: int, var: str, label: str) -> list[str]:
     if info.kind == "callback":
         return _emit_callback_lambda(idx, var, info, label)

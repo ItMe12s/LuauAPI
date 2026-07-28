@@ -193,10 +193,6 @@ namespace luax::render3d {
         return m_instances;
     }
 
-    unsigned int CCViewportFrame::framebuffer() const {
-        return gpuHandlesValid() ? m_fbo : 0;
-    }
-
     unsigned int CCViewportFrame::colorTexture() const {
         return gpuHandlesValid() ? m_colorTexture : 0;
     }
@@ -211,10 +207,6 @@ namespace luax::render3d {
 
     void CCViewportFrame::setCompositeEnabled(bool enabled) {
         m_compositeEnabled = enabled;
-    }
-
-    bool CCViewportFrame::compositeEnabled() const {
-        return m_compositeEnabled;
     }
 
     int CCViewportFrame::addDebugLine(glm::vec3 from, glm::vec3 to, glm::vec3 color) {
@@ -233,14 +225,6 @@ namespace luax::render3d {
 
     void CCViewportFrame::setDebugBounds(bool enabled) {
         m_debugBounds = enabled;
-    }
-
-    bool CCViewportFrame::debugBounds() const {
-        return m_debugBounds;
-    }
-
-    std::map<int, DebugLine> const& CCViewportFrame::debugLines() const {
-        return m_debugLines;
     }
 
     std::uint64_t CCViewportFrame::ensureViewportTextureId() {

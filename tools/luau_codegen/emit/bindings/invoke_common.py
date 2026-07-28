@@ -6,15 +6,12 @@ from luau_codegen.convert.marshalling import (
     check_arg,
     check_sel_handler,
     push_return,
+    push_value,
     sel_call_args,
     sel_selector_call_arg,
 )
 from luau_codegen.convert.sel_args import LuaMethodArg
 from luau_codegen.convert.type_map import TypeInfo
-from luau_codegen.emit.bindings.vector_push import (
-    emit_owned_vector_return_push,
-    emit_vector_out_push,
-)
 from luau_codegen.policy.containers import _CONTAINER_KINDS
 from luau_codegen.emit.types_binding import emit_value_local_decl
 
@@ -86,7 +83,7 @@ def emit_vector_return_push(
         return push_return(ret, expr, owned_return)
     if ref_owner_expr is not None:
         return push_return(ret, expr, False, owner_expr=ref_owner_expr)
-    return emit_owned_vector_return_push(ret, expr)
+    return push_return(ret, expr, False, vector_owned=True)
 
 
 def _anchor_handler(handler: str, variant: str, anchor: str) -> str:
@@ -145,7 +142,14 @@ def emit_invoke_void_tail(
     )
     if out_refs:
         for arg_idx, oinfo in out_refs:
-            lines.extend(emit_vector_out_push(oinfo, f"arg{arg_idx}"))
+            lines.extend(
+                push_value(
+                    oinfo,
+                    f"arg{arg_idx}",
+                    False,
+                    vector_owned=oinfo.kind == "vector_view",
+                )
+            )
         lines.append(f"        return {len(out_refs)};\n")
     else:
         lines.extend(push_return(ret, "", False))
@@ -186,7 +190,14 @@ def emit_invoke_return_tail(
             push_lines = push_lines[:-1]
         lines.extend(push_lines)
         for arg_idx, oinfo in out_refs:
-            lines.extend(emit_vector_out_push(oinfo, f"arg{arg_idx}"))
+            lines.extend(
+                push_value(
+                    oinfo,
+                    f"arg{arg_idx}",
+                    False,
+                    vector_owned=oinfo.kind == "vector_view",
+                )
+            )
         lines.append(f"        return {1 + len(out_refs)};\n")
     else:
         lines.extend(push_lines)

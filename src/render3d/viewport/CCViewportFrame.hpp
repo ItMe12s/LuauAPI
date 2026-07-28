@@ -35,20 +35,16 @@ namespace luax::render3d {
 
         std::map<int, ViewportInstance> const& instances() const;
 
-        unsigned int framebuffer() const;
         unsigned int colorTexture() const;
         int framebufferPixelWidth() const;
         int framebufferPixelHeight() const;
 
         void setCompositeEnabled(bool enabled);
-        bool compositeEnabled() const;
 
         int addDebugLine(glm::vec3 from, glm::vec3 to, glm::vec3 color);
         bool removeDebugLine(int lineId);
         void clearDebugLines();
         void setDebugBounds(bool enabled);
-        bool debugBounds() const;
-        std::map<int, DebugLine> const& debugLines() const;
 
         std::uint64_t ensureViewportTextureId();
 

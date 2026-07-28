@@ -85,7 +85,3 @@ class FmodEngineStructOptInTests(unittest.TestCase):
 
     def test_structs_are_opted_in_and_classify_as_value(self) -> None:
         _assert_opt_in_value_structs(self, self.STRUCTS)
-
-
-if __name__ == "__main__":
-    unittest.main()

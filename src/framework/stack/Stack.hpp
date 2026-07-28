@@ -10,9 +10,7 @@
 #include <string>
 #include <string_view>
 #include <system_error>
-#include <tuple>
 #include <type_traits>
-#include <utility>
 
 namespace luax {
     inline void push(lua_State* L, bool v) {
@@ -92,17 +90,6 @@ namespace luax {
             luaL_error(L, "%s expected integer string at arg %d", method, idx);
         }
         return value;
-    }
-
-    template <class... Ts, std::size_t... Is>
-    inline int pushTupleImpl(lua_State* L, std::tuple<Ts...> const& t, std::index_sequence<Is...>) {
-        (push(L, std::get<Is>(t)), ...);
-        return sizeof...(Ts);
-    }
-
-    template <class... Ts>
-    inline int pushTuple(lua_State* L, std::tuple<Ts...> const& t) {
-        return pushTupleImpl(L, t, std::index_sequence_for<Ts...>{});
     }
 
     inline int pushNilErr(lua_State* L, std::string_view err) {

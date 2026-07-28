@@ -8,7 +8,7 @@ import unittest
 from test_support import all_platforms, types_text
 from luau_codegen.emit.bindings import emit as emit_luau_bindings  # type: ignore[import-unresolved]
 from luau_codegen.emit.luau_types import emit as emit_luau_types  # type: ignore[import-unresolved]
-from luau_codegen.emit.parity import collect_parity, emit_markdown  # type: ignore[import-unresolved]
+from luau_codegen.emit.parity import collect_parity  # type: ignore[import-unresolved]
 from luau_codegen.emit.plan import collect_plan, collect_platform_plan, plan_outputs  # type: ignore[import-unresolved]
 from luau_codegen.parse.broma import Arg, Class, Field, Method, Root, parse_file  # type: ignore[import-unresolved]
 from luau_codegen.parse.collect import collect_bindings_root  # type: ignore[import-unresolved]

@@ -5,7 +5,6 @@ import shutil
 import tempfile
 import unittest
 
-from test_support import all_platforms
 from luau_codegen.cli.main import main as codegen_main  # type: ignore[import-unresolved]
 from luau_codegen.convert.symbols import android_symbol  # type: ignore[import-unresolved]
 from luau_codegen.parse.broma import Arg, Class, Method  # type: ignore[import-unresolved]
@@ -39,29 +38,10 @@ class F5OverloadPreferredOnlyTests(unittest.TestCase):
         self.assertEqual(len(skipped), 2)
         self.assertTrue(all("ambiguous-overload-arity" in reason for _, reason in skipped))
 
-    def test_ambiguous_overload_cli_exits_nonzero(self) -> None:
-        tmpdir = tempfile.mkdtemp()
-        try:
-            with open(os.path.join(tmpdir, "GeometryDash.bro"), "w", encoding="utf-8") as f:
-                f.write(
-                    "class cocos2d::CCObject {};"
-                    "class gd::TestObj : cocos2d::CCObject {"
-                    "void foo(int a) = win 0x1;"
-                    "void foo(float b) = win 0x2;"
-                    "};"
-                )
-            code = codegen_main(
-                [
-                    "--bindings",
-                    tmpdir,
-                    "--platform",
-                    "win",
-                    "--list-outputs",
-                ]
-            )
-            self.assertEqual(code, 6)
-        finally:
-            shutil.rmtree(tmpdir)
+    def test_legacy_list_outputs_is_rejected(self) -> None:
+        with self.assertRaises(SystemExit) as raised:
+            codegen_main(["--bindings", ".", "--list-outputs"])
+        self.assertEqual(raised.exception.code, 2)
 
     def test_ambiguous_overload_list_all_outputs_exits_nonzero(self) -> None:
         tmpdir = tempfile.mkdtemp()

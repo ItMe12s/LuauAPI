@@ -93,7 +93,3 @@ class DenylistStaleEntryTests(unittest.TestCase):
     def test_bindable_constructor_keys_exist(self) -> None:
         stale = sorted(name for name in BINDABLE_CONSTRUCTORS if name not in self.methods_by_class)
         self.assertEqual(stale, [], f"stale BINDABLE_CONSTRUCTORS: {stale}")
-
-
-if __name__ == "__main__":
-    unittest.main()

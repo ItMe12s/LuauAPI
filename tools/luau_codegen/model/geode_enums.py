@@ -42,7 +42,3 @@ def parse_enum_members(body: str) -> tuple[tuple[EnumMember, ...], str | None]:
             current += 1
         members.append(EnumMember(name=name, value=current))
     return tuple(members), None
-
-
-def enum_names_to_cxx(enums: dict[str, EnumInfo]) -> dict[str, str]:
-    return {name: info.cxx_name for name, info in enums.items()}

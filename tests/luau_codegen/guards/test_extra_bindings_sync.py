@@ -269,7 +269,3 @@ class ExtraBindingsSyncTests(unittest.TestCase):
         )
         self.assertEqual(text.count(listen_sig), 1)
         self.assertEqual(text.count(listen_for_sig), 1)
-
-
-if __name__ == "__main__":
-    unittest.main()

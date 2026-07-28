@@ -46,7 +46,3 @@ class ValueTypePropagationTests(unittest.TestCase):
                     self.assertGreater(len(value), 0, f"{mod_name}.{attr} empty after rebuild")
                 elif isinstance(value, (dict, tuple, frozenset, set, list)):
                     self.assertGreater(len(value), 0, f"{mod_name}.{attr} empty after rebuild")
-
-
-if __name__ == "__main__":
-    unittest.main()

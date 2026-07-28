@@ -89,7 +89,4 @@ namespace luax::detail {
         return static_cast<int>(kManagedPopupUserdataTag);
     }
 
-    constexpr bool isReservedUserdataTag(std::uint32_t tag) noexcept {
-        return tag >= kOpaqueHandleUserdataTag && tag < kFirstDynamicUsertypeTag;
-    }
 } // namespace luax::detail

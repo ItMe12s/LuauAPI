@@ -13,7 +13,6 @@ from luau_codegen.convert.type_map import (  # type: ignore[import-unresolved]
     classify_arg,
     classify_return,
     method_input_arg_count as _input_arg_count,
-    register_geode_enums,
 )
 from luau_codegen.model.domain import codegen_object_map, object_classes  # type: ignore[import-unresolved]
 from luau_codegen.parse.broma import Arg, Class, Method, Root  # type: ignore[import-unresolved]
@@ -23,27 +22,6 @@ from luau_codegen.parse.collect import collect_bindings_root  # type: ignore[imp
 
 
 class GeodeEnumRegistrationTests(unittest.TestCase):
-    def test_register_geode_enums_skips_reserved(self) -> None:
-        skip = GD_ENUM_TYPES | COCOS_ENUM_TYPES | {"CollidingClass"}
-        ctx = register_geode_enums(
-            {
-                "IconType": "IconType",
-                "enumKeyCodes": "cocos2d::enumKeyCodes",
-                "CollidingClass": "geode::CollidingClass",
-                "UniqueGeodeEnum": "geode::UniqueGeodeEnum",
-            },
-            skip=skip,
-        )
-        self.assertNotIn("IconType", ctx.geode_enum_names)
-        self.assertNotIn("enumKeyCodes", ctx.geode_enum_names)
-        self.assertNotIn("CollidingClass", ctx.geode_enum_names)
-        self.assertIn("UniqueGeodeEnum", ctx.geode_enum_names)
-
-    def test_register_geode_enums_keeps_unique(self) -> None:
-        ctx = register_geode_enums({"BaseType": "geode::BaseType"})
-        self.assertEqual(ctx.geode_enum_names, frozenset({"BaseType"}))
-        self.assertIn("BaseType", ctx.enum_cxx_names())
-
     def test_with_geode_enums_stores_members(self) -> None:
         ctx = CodegenContext.with_geode_enums(
             {
@@ -132,7 +110,15 @@ class GeodeEnumRegistrationTests(unittest.TestCase):
         root = Root(classes=[ccobject, colliding])
         objects = codegen_object_map(root)
         skip = GD_ENUM_TYPES | COCOS_ENUM_TYPES | {c.name for c in object_classes(root)}
-        ctx = register_geode_enums({"CollidingClass": "geode::CollidingClass"}, skip=skip)
+        ctx = CodegenContext.with_geode_enums(
+            {
+                "CollidingClass": EnumInfo(
+                    name="CollidingClass",
+                    cxx_name="geode::CollidingClass",
+                )
+            },
+            skip=skip,
+        )
         info = classify_arg("CollidingClass*", objects, ctx=ctx)
         self.assertIsNotNone(info)
         assert info is not None

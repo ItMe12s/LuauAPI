@@ -49,7 +49,6 @@ public:
 
     // Higher = smaller UI.
     void setDisplayScale(float scale);
-    [[nodiscard]] float getDisplayScale() const;
 
     [[nodiscard]] bool isInitialized() const;
 

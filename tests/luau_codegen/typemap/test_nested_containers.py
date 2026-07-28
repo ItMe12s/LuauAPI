@@ -273,7 +273,3 @@ class RecursiveContainerStubTests(unittest.TestCase):
         leaf_pos = text.index("declare class Leaf")
         method_pos = text.index("function leaves(self)")
         self.assertLess(leaf_pos, method_pos)
-
-
-if __name__ == "__main__":
-    unittest.main()

@@ -144,7 +144,3 @@ class DelegateGeneratorTests(unittest.TestCase):
         text = emit_override(spec, spec.methods[0])
         self.assertIn("invokeTableValue<float>", text)
         self.assertIn("0.f", text)
-
-
-if __name__ == "__main__":
-    unittest.main()

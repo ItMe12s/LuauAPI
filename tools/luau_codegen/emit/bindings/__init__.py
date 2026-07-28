@@ -9,14 +9,6 @@ if TYPE_CHECKING:
 __all__ = ["emit"]
 
 
-def __getattr__(name: str):
-    if name in ("emit_free_functions_file", "FREE_FUNCTIONS_FILE"):
-        from luau_codegen.emit.bindings import free_functions
-
-        return getattr(free_functions, name)
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
-
-
 def emit(
     root: Root,
     target_platform: str = "win",

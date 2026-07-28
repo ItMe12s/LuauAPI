@@ -1,5 +1,4 @@
 #include "bindings/imgui/ImGuiBindingInternal.hpp"
-#include "bindings/imgui/ImGuiDrawHandleBinding.hpp"
 #include "bindings/imgui/ImGuiDrawScheduler.hpp"
 #include "bindings/imgui/ImGuiHost.hpp"
 #include "core/Runtime.hpp"
@@ -387,7 +386,9 @@ namespace luax {
         }
         DrawCb cb;
         cb.callback = std::move(callback);
-        return insertSlot(m_store, std::move(cb), m_nextId);
+        auto const id = m_nextId++;
+        m_store.insertWithId(id, std::move(cb));
+        return id;
     }
 
     void ImGuiDrawScheduler::cancel(std::uint64_t id) {
@@ -425,7 +426,7 @@ namespace luax {
     }
 
     bool ImGuiDrawScheduler::full() const {
-        return slotMapFull(m_store, kMaxImGuiDrawCallbacks);
+        return activeSlotCount(m_store) >= kMaxImGuiDrawCallbacks;
     }
 
     std::size_t ImGuiDrawScheduler::activeCount() const {

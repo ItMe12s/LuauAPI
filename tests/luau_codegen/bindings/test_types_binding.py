@@ -13,7 +13,7 @@ from luau_codegen.emit.types_binding import (
     types_gen_rel_path,
     write_types_generated,
 )
-from luau_codegen.model.cocos_value_types import COCOS_VALUE_STRUCTS, FieldDescriptor
+from luau_codegen.model.value_types import COCOS_VALUE_STRUCTS, FieldDescriptor
 
 
 class CocosValueDescriptorTests(unittest.TestCase):
@@ -102,7 +102,3 @@ class TypesGeneratedEmitterTests(unittest.TestCase):
             self.assertIn("check<SequenceTriggerState>", containers_content)
         finally:
             shutil.rmtree(tmpdir)
-
-
-if __name__ == "__main__":
-    unittest.main()

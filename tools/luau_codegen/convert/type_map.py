@@ -248,17 +248,6 @@ def _resolve_ctx(ctx: CodegenContext | None) -> CodegenContext:
     return Ctx.static()
 
 
-def register_geode_enums(
-    names_to_cxx: Dict[str, str],
-    skip: frozenset[str] | set[str] = frozenset(),
-) -> CodegenContext:
-    from luau_codegen.model.codegen_context import CodegenContext as Ctx
-    from luau_codegen.model.geode_enums import EnumInfo
-
-    enums = {name: EnumInfo(name=name, cxx_name=cxx) for name, cxx in names_to_cxx.items()}
-    return Ctx.with_geode_enums(enums, skip=skip)
-
-
 def enum_cxx_type(n: str, base: str, ctx: CodegenContext | None = None) -> str:
     return _resolve_ctx(ctx).enum_cxx_type(n, base)
 
@@ -427,7 +416,6 @@ __all__ = [
     "method_input_arg_count",
     "normalize_type",
     "object_class_names",
-    "register_geode_enums",
     "require_classify_arg",
     "require_classify_return",
     "resolve_object_class",

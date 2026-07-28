@@ -3,7 +3,7 @@
 ## Summary
 
 LuauAPI-internal fork of upstream gd-imgui-cocos. It is not a standalone library.
-LuauAPI fetches Dear ImGui in `cmake/ImGui.cmake` and wires this tree through `cmake/ImGuiCocos.cmake`.
+LuauAPI fetches Dear ImGui in `cmake/ImGui.cmake` and wires this tree through the root `CMakeLists.txt`.
 
 ## Related
 
@@ -14,4 +14,4 @@ LuauAPI fetches Dear ImGui in `cmake/ImGui.cmake` and wires this tree through `c
 
 - `gd-imgui-cocos/CMakeLists.txt`
 - `cmake/ImGui.cmake`
-- `cmake/ImGuiCocos.cmake`
+- `CMakeLists.txt`

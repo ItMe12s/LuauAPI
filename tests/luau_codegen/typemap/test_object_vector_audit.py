@@ -69,7 +69,3 @@ class ObjectVectorAuditTests(unittest.TestCase):
         )
         self.assertIn("GroupCommandObject2*", OPAQUE_HANDLE_TYPES)
         self.assertIn("DelayedSpawnNode*", OPAQUE_HANDLE_TYPES)
-
-
-if __name__ == "__main__":
-    unittest.main()

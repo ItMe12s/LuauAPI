@@ -73,7 +73,6 @@ namespace luax::diag {
                 case BoundaryKind::HookBefore: return "hook-before";
                 case BoundaryKind::HookAfter: return "hook-after";
                 case BoundaryKind::GeneratedBinding: return "generated-binding";
-                case BoundaryKind::HandwrittenBinding: return "handwritten-binding";
                 case BoundaryKind::Task: return "task";
                 case BoundaryKind::ImGui: return "imgui";
                 case BoundaryKind::Delegate: return "delegate";
@@ -246,11 +245,6 @@ namespace luax::diag {
     BoundaryFrame const* activeBoundary() {
         auto const& s = state();
         return s.stack.empty() ? nullptr : &s.stack.back();
-    }
-
-    std::span<BoundaryFrame const> callChain() {
-        auto const& s = state();
-        return std::span<BoundaryFrame const>(s.stack.data(), s.stack.size());
     }
 
     void resetForTests() {

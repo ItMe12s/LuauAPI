@@ -233,17 +233,6 @@ namespace luax::detail {
         }
     }
 
-    template <class CheckElemFn>
-    inline void checkIndexedTableElements(
-        lua_State* L, int absIdx, lua_Integer len, CheckElemFn&& checkElem
-    ) {
-        for (lua_Integer i = 1; i <= len; ++i) {
-            lua_rawgeti(L, absIdx, i);
-            checkElem(L, i);
-            lua_pop(L, 1);
-        }
-    }
-
     template <class T>
     void pushAuditedPointerGridValue(lua_State* L, T const& value, cocos2d::CCObject* owner) {
         using U = std::remove_cv_t<T>;

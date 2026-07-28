@@ -68,10 +68,6 @@ def free_function_skip_reason(fn: Function, target_platform: str) -> str | None:
     return None
 
 
-def free_function_allowed(fn: Function, target_platform: str) -> bool:
-    return free_function_skip_reason(fn, target_platform) is None
-
-
 def free_function_key(fn: Function) -> str:
     args = ",".join(arg.type for arg in fn.args)
     name = f"{fn.namespace}::{fn.name}" if fn.namespace else fn.name
@@ -98,12 +94,6 @@ def free_function_unsupported_reason(
         if info.kind == "sel":
             continue
     return None
-
-
-def free_function_supported(
-    fn: Function, objects: dict[str, Class], ctx: CodegenContext | None = None
-) -> bool:
-    return free_function_unsupported_reason(fn, objects, ctx=ctx) is None
 
 
 def free_function_skipped_object_ref(

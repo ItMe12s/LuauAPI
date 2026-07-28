@@ -11,7 +11,6 @@ from luau_codegen.convert.marshalling import (  # type: ignore[import-unresolved
     push_return,
     push_value,
     sel_call_args,
-    sel_menu_call_args,
     sel_selector_call_arg,
 )
 from luau_codegen.convert.type_map import TypeInfo, classify_arg, classify_return  # type: ignore[import-unresolved]
@@ -142,13 +141,6 @@ class CallbackMarshallingTests(unittest.TestCase):
         text = "".join(check_arg(Arg("SEL_MenuHandler", "sel"), info, 3, "sel", "CCMenuItem.init"))
         self.assertIn("LuaMenuHandler::create", text)
         self.assertIn("sel_handler", text)
-
-    def test_sel_menu_call_args(self) -> None:
-        text = sel_menu_call_args("sel2")
-        self.assertEqual(
-            text,
-            ["sel2_handler", "menu_selector(luax::LuaMenuHandler::onCallback)"],
-        )
 
     def test_sel_schedule_handler_emits_trampoline(self) -> None:
         info = TypeInfo(

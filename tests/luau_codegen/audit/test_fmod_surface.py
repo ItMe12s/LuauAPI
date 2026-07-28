@@ -49,7 +49,3 @@ class FmodSurfaceTests(unittest.TestCase):
         self.assertIsNotNone(info)
         assert info is not None
         self.assertEqual(info.kind, "value")
-
-
-if __name__ == "__main__":
-    unittest.main()

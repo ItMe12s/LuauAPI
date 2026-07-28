@@ -81,5 +81,5 @@ Draw callback count, per-callback deadlines, font errors, and GPU session disabl
 - `gd-imgui-cocos/src/hooks.cpp`
 - `gd-imgui-cocos/CMakeLists.txt`
 - `cmake/ImGui.cmake`
-- `cmake/ImGuiCocos.cmake`
+- `CMakeLists.txt`
 - `src/core/Config.hpp`

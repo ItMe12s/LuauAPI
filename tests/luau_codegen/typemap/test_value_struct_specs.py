@@ -197,7 +197,3 @@ class EmitValueStructCheckPushTests(unittest.TestCase):
         exec(text, ns)
         self.assertEqual(len(ns["VALUE_STRUCT_SPECS"]), 1)
         self.assertEqual(ns["VALUE_STRUCT_SPECS"][0].lua_name, "RoundTrip")
-
-
-if __name__ == "__main__":
-    unittest.main()

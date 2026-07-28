@@ -147,7 +147,3 @@ class GeodeEnumEmitTests(unittest.TestCase):
         finally:
             shutil.rmtree(repo)
             shutil.rmtree(sdk)
-
-
-if __name__ == "__main__":
-    unittest.main()

@@ -8,7 +8,7 @@
 
 ## 0.1.0-beta.20
 
-add stuff here...
+- Removed unused legacy developer APIs and trimmed runtime, codegen, build, and test code.
 
 ## 0.1.0-beta.19
 

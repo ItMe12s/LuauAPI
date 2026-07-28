@@ -22,16 +22,6 @@ namespace geode::utils::ranges {
         typename C::value_type;
     };
 
-    template <ValidConstContainer C>
-    bool contains(C const& cont, typename C::value_type const& elem) {
-        return std::find(cont.begin(), cont.end(), elem) != cont.end();
-    }
-
-    template <ValidConstContainer C, class Predicate>
-    bool contains(C const& cont, Predicate fun) {
-        return std::find_if(cont.begin(), cont.end(), fun) != cont.end();
-    }
-
     template <ValidConstContainer C, class Predicate>
     std::optional<typename C::value_type> find(C const& cont, Predicate fun) {
         auto it = std::find_if(cont.begin(), cont.end(), fun);

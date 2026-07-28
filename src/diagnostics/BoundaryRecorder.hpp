@@ -6,7 +6,6 @@
 #include <cstdint>
 #include <filesystem>
 #include <optional>
-#include <span>
 #include <string>
 #include <string_view>
 
@@ -23,7 +22,6 @@ namespace luax::diag {
         HookBefore,
         HookAfter,
         GeneratedBinding,
-        HandwrittenBinding,
         Task,
         ImGui,
         Delegate,
@@ -56,10 +54,6 @@ namespace luax::diag {
         BoundaryScope(BoundaryScope const&) = delete;
         BoundaryScope& operator=(BoundaryScope const&) = delete;
 
-        explicit operator bool() const {
-            return m_pushed;
-        }
-
     private:
         friend BoundaryScope pushBoundary(
             BoundaryFrame frame, lua_State* L, int pendingFuncIndex, bool flushOnPush
@@ -81,7 +75,6 @@ namespace luax::diag {
     void refreshActiveBoundaryStack(lua_State* L);
 
     BoundaryFrame const* activeBoundary();
-    std::span<BoundaryFrame const> callChain();
 
     void flushIfNeeded(imes::luauapi::RuntimeStatus status, bool force = false);
 

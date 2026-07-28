@@ -307,7 +307,3 @@ class GjGridFieldEmitTests(unittest.TestCase):
         )
         self.assertIn("checkContainerValue<gd::set<std::tuple<int, int, int>>>", text)
         self.assertIn("assignContainerValue(self->m_spawnTuples, std::move(value))", text)
-
-
-if __name__ == "__main__":
-    unittest.main()

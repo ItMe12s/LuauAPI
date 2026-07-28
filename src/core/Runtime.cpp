@@ -66,22 +66,15 @@ namespace luax {
             explicit StackGuard(lua_State* L) : m_state(L), m_top(lua_gettop(L)) {}
 
             ~StackGuard() {
-                if (m_active) {
-                    lua_settop(m_state, m_top);
-                }
+                lua_settop(m_state, m_top);
             }
 
             StackGuard(StackGuard const&) = delete;
             StackGuard& operator=(StackGuard const&) = delete;
 
-            void dismiss() {
-                m_active = false;
-            }
-
         private:
             lua_State* m_state = nullptr;
             int m_top = 0;
-            bool m_active = true;
         };
 
         std::size_t bytecodeEntryBytes(std::string const& bytecode) {

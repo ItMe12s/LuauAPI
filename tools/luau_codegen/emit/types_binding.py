@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from luau_codegen.cli.io import _write_if_changed
-from luau_codegen.model.cocos_value_types import (
+from luau_codegen.model.value_types import (
     COCOS_VALUE_STRUCTS,
     CocosValueStructDescriptor,
     PushFieldDescriptor,
@@ -138,7 +138,6 @@ def _emit_push_field(field: PushFieldDescriptor) -> str:
             f'        lua_setfield(L, -2, "{field.name}");\n'
         )
     if field.kind == "opaque_nullable":
-        opaque = field.cxx_type or (field.nested_type or "")
         return (
             f"        if ({field.member} == nullptr) {{\n"
             f"            lua_pushnil(L);\n"

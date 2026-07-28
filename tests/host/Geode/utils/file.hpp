@@ -55,18 +55,4 @@ namespace geode::utils::file {
         }
         return geode::Ok();
     }
-
-    inline geode::Result<std::vector<std::filesystem::path>> readDirectory(
-        std::filesystem::path const& path, bool /*recursive*/
-    ) {
-        std::vector<std::filesystem::path> entries;
-        std::error_code ec;
-        for (auto const& entry : std::filesystem::directory_iterator(path, ec)) {
-            if (ec) {
-                return geode::Err(ec.message());
-            }
-            entries.push_back(entry.path());
-        }
-        return geode::Ok(std::move(entries));
-    }
 } // namespace geode::utils::file

@@ -6,11 +6,12 @@ import tempfile
 import unittest
 
 from test_support import all_platforms, types_text
-from luau_codegen.convert.type_map import classify_arg, register_geode_enums  # type: ignore[import-unresolved]
+from luau_codegen.convert.type_map import classify_arg  # type: ignore[import-unresolved]
 from luau_codegen.emit.bindings.class_file import _emit_class_file  # type: ignore[import-unresolved]
 from luau_codegen.emit.luau_types import emit as emit_luau_types  # type: ignore[import-unresolved]
 from luau_codegen.emit.plan import collect_plan  # type: ignore[import-unresolved]
 from luau_codegen.parse.broma import Arg, Class, Method, Root  # type: ignore[import-unresolved]
+from luau_codegen.model.codegen_context import CodegenContext  # type: ignore[import-unresolved]
 from luau_codegen.parse.collect import collect_bindings_root  # type: ignore[import-unresolved]
 from luau_codegen.policy.filtering import group_supported  # type: ignore[import-unresolved]
 from luau_codegen.policy.link_attrs import class_link_platforms  # type: ignore[import-unresolved]
@@ -226,7 +227,6 @@ public:
             methods=[get_child],
             attributes=["link(win, android, android32, android64, imac, m1, ios)"],
         )
-        root = Root(classes=[ccobject, ccnode])
         objects = {
             "CCObject": ccobject,
             "CCNode": ccnode,
@@ -289,7 +289,7 @@ public:
             )
 
             enums = scan_geode_enums(tmpdir)
-            ctx = register_geode_enums({name: info.cxx_name for name, info in enums.items()})
+            ctx = CodegenContext.with_geode_enums(enums)
             info = classify_arg("geode::Anchor", {}, ctx=ctx)
             self.assertIsNotNone(info)
             assert info is not None

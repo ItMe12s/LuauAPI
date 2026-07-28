@@ -3,7 +3,7 @@ from __future__ import annotations
 import unittest
 
 from test_support import all_platforms
-from luau_codegen.emit.bindings import emit_free_functions_file  # type: ignore[import-unresolved]
+from luau_codegen.emit.bindings.free_functions import emit_free_functions_file  # type: ignore[import-unresolved]
 from luau_codegen.emit.bindings.class_file import _emit_class_file  # type: ignore[import-unresolved]
 from luau_codegen.parse.broma import Arg, Class, Function, Method  # type: ignore[import-unresolved]
 

@@ -14,6 +14,11 @@ from luau_codegen.parse.broma import Class, Root  # type: ignore[import-unresolv
 from luau_codegen.parse.collect import collect_bindings_root  # type: ignore[import-unresolved]
 
 
+def _create_empty_broma_files(path: str) -> None:
+    for name in ("Cocos2d.bro", "Extras.bro", "FMOD.bro", "Kazmath.bro", "GeometryDash.bro"):
+        open(os.path.join(path, name), "w", encoding="utf-8").close()
+
+
 class CodegenIoTests(unittest.TestCase):
     def test_write_if_changed_skips_identical_content(self) -> None:
         from luau_codegen.cli.io import _write_if_changed  # type: ignore[import-unresolved]
@@ -57,14 +62,7 @@ class AuditReportCliTests(unittest.TestCase):
             bindings = os.path.join(tmpdir, "bindings")
             audit_path = os.path.join(tmpdir, "audit.md")
             os.makedirs(bindings)
-            for name in (
-                "Cocos2d.bro",
-                "Extras.bro",
-                "FMOD.bro",
-                "Kazmath.bro",
-                "GeometryDash.bro",
-            ):
-                open(os.path.join(bindings, name), "w", encoding="utf-8").close()
+            _create_empty_broma_files(bindings)
             with mock.patch.object(cg, "collect_bindings_root", return_value=root):
                 rc = cg.main(
                     [
@@ -97,14 +95,7 @@ class CodegenExitCodeTests(unittest.TestCase):
             types_dir = os.path.join(tmpdir, "types")
             os.makedirs(bindings)
             os.makedirs(types_dir)
-            for name in (
-                "Cocos2d.bro",
-                "Extras.bro",
-                "FMOD.bro",
-                "Kazmath.bro",
-                "GeometryDash.bro",
-            ):
-                open(os.path.join(bindings, name), "w", encoding="utf-8").close()
+            _create_empty_broma_files(bindings)
             with mock.patch.object(cg, "collect_bindings_root", return_value=root):
                 with mock.patch.object(
                     cg,
@@ -188,14 +179,7 @@ class ListAllOutputsCliTests(unittest.TestCase):
         try:
             bindings = os.path.join(tmpdir, "bindings")
             os.makedirs(bindings)
-            for name in (
-                "Cocos2d.bro",
-                "Extras.bro",
-                "FMOD.bro",
-                "Kazmath.bro",
-                "GeometryDash.bro",
-            ):
-                open(os.path.join(bindings, name), "w", encoding="utf-8").close()
+            _create_empty_broma_files(bindings)
             with mock.patch.object(cg, "collect_bindings_root", return_value=root):
                 with mock.patch.object(
                     cg.emit_plan,

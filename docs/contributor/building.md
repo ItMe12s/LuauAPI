@@ -32,7 +32,7 @@ CMake downloads these during configuration, so you do not install them by hand.
 These live in the repository.
 
 - `gd-imgui-cocos/` is a LuauAPI fork of [matcool/gd-imgui-cocos](https://github.com/matcool/gd-imgui-cocos).
-  It is not a standalone library. LuauAPI wires it through `cmake/ImGuiCocos.cmake`.
+  It is not a standalone library. LuauAPI wires it through the root `CMakeLists.txt`.
   See [gd-imgui-cocos](../../gd-imgui-cocos/README.md).
 
 Vendored headers in `vendor/` are not fetched by CMake:
@@ -113,7 +113,6 @@ See [Testing](testing.md) for CI jobs, how to run tests, and the host test list.
 
 - `CMakeLists.txt`
 - `cmake/ImGui.cmake`
-- `cmake/ImGuiCocos.cmake`
 - `mod.json`
 - `tools/format.py`
 - `tools/luau_codegen/cli/main.py`

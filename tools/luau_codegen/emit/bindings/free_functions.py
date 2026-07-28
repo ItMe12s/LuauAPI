@@ -16,7 +16,6 @@ from luau_codegen.emit.bindings.invoke_common import (
 )
 from luau_codegen.convert.sel_args import iter_lua_method_args
 from luau_codegen.convert.type_map import (
-    TypeInfo,
     require_classify_arg,
     require_classify_return,
 )

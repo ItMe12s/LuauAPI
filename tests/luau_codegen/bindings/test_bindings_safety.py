@@ -7,7 +7,7 @@ import unittest
 from test_support import all_platforms, reinstall_fixture_value_struct_specs, types_text
 from luau_codegen.convert.marshalling import emit_stack_check  # type: ignore[import-unresolved]
 from luau_codegen.convert.type_map import TypeInfo  # type: ignore[import-unresolved]
-from luau_codegen.emit.bindings import emit_free_functions_file  # type: ignore[import-unresolved]
+from luau_codegen.emit.bindings.free_functions import emit_free_functions_file  # type: ignore[import-unresolved]
 from luau_codegen.emit.bindings.class_file import _emit_class_file  # type: ignore[import-unresolved]
 from luau_codegen.emit.bindings.common import _emit_common_file  # type: ignore[import-unresolved]
 from luau_codegen.emit.cxx_templates import emit_hook_support, emit_internal_hpp  # type: ignore[import-unresolved]

@@ -22,10 +22,6 @@ def pair_lua_type(first_lua: str, second_lua: str) -> str:
     return f"{{ {PAIR_RECORD_FIELDS[0]}: {first_lua}, {PAIR_RECORD_FIELDS[1]}: {second_lua} }}"
 
 
-def pair_map_value_lua_type(key_lua: str, value_lua: str) -> str:
-    return f"{{ [{key_lua}]: {value_lua} }}"
-
-
 def pair_key_map_entry_lua_type(first_lua: str, second_lua: str, value_lua: str) -> str:
     return (
         "{ "
@@ -34,8 +30,3 @@ def pair_key_map_entry_lua_type(first_lua: str, second_lua: str, value_lua: str)
         f"value: {value_lua} "
         "}"
     )
-
-
-def pair_key_map_lua_type(value_lua: str) -> str:
-    entry = pair_key_map_entry_lua_type("number", "number", value_lua)
-    return f"{{ {entry} }}"

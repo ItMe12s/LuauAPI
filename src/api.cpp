@@ -82,12 +82,6 @@ namespace {
         return geode::Ok();
     }
 
-    geode::Result<void> executePreparedRun(PreparedRun run, int deadlineMs) {
-        return executeScriptOnMain(
-            std::move(run.root), std::move(run.source), std::move(run.chunk), deadlineMs
-        );
-    }
-
     geode::Result<void> resolveRunFilePath(
         std::filesystem::path const& resourcesRoot, std::filesystem::path const& relativePath,
         std::filesystem::path& outPath, std::filesystem::path& outRoot
@@ -201,7 +195,8 @@ namespace imes::luauapi {
             return geode::Err(prepared.unwrapErr());
         }
 
-        return executePreparedRun(std::move(prepared.unwrap()), deadlineMs);
+        auto [root, source, chunk] = std::move(prepared.unwrap());
+        return executeScriptOnMain(std::move(root), std::move(source), std::move(chunk), deadlineMs);
     }
 
     geode::Result<void> runScript(
@@ -218,7 +213,10 @@ namespace imes::luauapi {
             return geode::Err(prepared.unwrapErr());
         }
 
-        return executePreparedRun(std::move(prepared.unwrap()), deadlineMs);
+        auto [root, preparedSource, chunk] = std::move(prepared.unwrap());
+        return executeScriptOnMain(
+            std::move(root), std::move(preparedSource), std::move(chunk), deadlineMs
+        );
     }
 
     geode::Result<void> resolveAsyncMainThreadResult(std::optional<geode::Result<void>> const& result) {

@@ -10,9 +10,7 @@ from luau_codegen.model.pair_design import (  # type: ignore[import-unresolved]
     PHASE_PAIR_MAP_KEY,
     PHASE_PAIR_MAP_VALUE,
     PHASE_PAIR_VALUE_AND_ELEMENTS,
-    pair_key_map_lua_type,
     pair_lua_type,
-    pair_map_value_lua_type,
 )
 
 
@@ -25,18 +23,6 @@ class PairDesignPolicyTests(unittest.TestCase):
             pair_lua_type("number", "boolean"),
             "{ first: number, second: boolean }",
         )
-
-    def test_pair_map_value_keeps_dictionary_keys(self) -> None:
-        inner = pair_lua_type("number", "number")
-        self.assertEqual(
-            pair_map_value_lua_type("number", inner),
-            "{ [number]: { first: number, second: number } }",
-        )
-
-    def test_pair_key_map_uses_entry_list_not_dictionary(self) -> None:
-        shape = pair_key_map_lua_type("number")
-        self.assertIn("value:", shape)
-        self.assertNotIn("[", shape)
 
     def test_baseline_skip_fields_documented(self) -> None:
         self.assertEqual(len(BASELINE_PAIR_SKIP_FIELDS), 4)

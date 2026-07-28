@@ -2,7 +2,6 @@
 
 #include <Geode/Result.hpp>
 #include <cstdint>
-#include <span>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -93,10 +92,6 @@ namespace geode::utils::base64 {
                 reinterpret_cast<char const*>(decoded.data() + decoded.size())
             )
         );
-    }
-
-    inline std::string encode(std::span<std::uint8_t const> /*data*/, Base64Variant /*var*/) {
-        return {};
     }
 
     inline std::string encode(std::string_view /*str*/, Base64Variant /*var*/) {

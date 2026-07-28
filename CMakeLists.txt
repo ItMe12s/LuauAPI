@@ -39,7 +39,12 @@ if (NOT LUAUAPI_HOST_ONLY)
 
     add_subdirectory($ENV{GEODE_SDK} ${CMAKE_CURRENT_BINARY_DIR}/geode)
 
-    include(cmake/ImGuiCocos.cmake)
+    include(cmake/ImGui.cmake)
+    add_subdirectory(
+        "${PROJECT_SOURCE_DIR}/gd-imgui-cocos"
+        "${CMAKE_CURRENT_BINARY_DIR}/gd-imgui-cocos"
+    )
+    target_include_directories(imgui-cocos INTERFACE "${PROJECT_SOURCE_DIR}/src")
 endif()
 
 if(NOT LUAUAPI_HOST_ONLY OR LUAUAPI_BUILD_TESTS)

@@ -4,14 +4,13 @@ import unittest
 
 from test_support import types_text
 from luau_codegen.emit.bindings import emit as emit_luau_bindings  # type: ignore[import-unresolved]
-from luau_codegen.emit.bindings import emit_free_functions_file  # type: ignore[import-unresolved]
+from luau_codegen.emit.bindings.free_functions import emit_free_functions_file  # type: ignore[import-unresolved]
 from luau_codegen.emit.luau_types import emit as emit_luau_types  # type: ignore[import-unresolved]
 from luau_codegen.emit.plan import collect_plan  # type: ignore[import-unresolved]
 from luau_codegen.parse.broma import Arg, Class, Function, Method, Root  # type: ignore[import-unresolved]
 from luau_codegen.policy.free_functions import (  # type: ignore[import-unresolved]
-    free_function_allowed as free_fn_allowed,
     free_function_key,
-    free_function_supported,
+    free_function_skip_reason,
     free_function_unsupported_reason,
     group_supported_free_functions,
 )
@@ -22,25 +21,15 @@ class FreeFunctionOverrideTests(unittest.TestCase):
         args = [Arg("bool", f"a{i}") for i in range(arity)]
         return Function(name="restart", namespace="geode::utils::game", ret="void", args=args)
 
-    def test_free_fn_allowed_drops_arity2_on_mobile(self) -> None:
-        two = self._restart(2)
-        one = self._restart(1)
-        mobile = ("android32", "android64", "ios", "m1", "imac", "mac")
-        for plat in mobile:
-            self.assertFalse(free_fn_allowed(two, plat))
-            self.assertTrue(free_fn_allowed(one, plat))
-        self.assertTrue(free_fn_allowed(two, "win"))
-        self.assertTrue(free_fn_allowed(one, "win"))
-
-    def test_free_fn_allowed_passes_unlisted_function(self) -> None:
-        other = Function(
-            name="other",
-            namespace="geode::utils::game",
-            ret="void",
-            args=[Arg("bool", "a"), Arg("bool", "b")],
-        )
-        for plat in ("win", "android32", "android64", "ios", "m1"):
-            self.assertTrue(free_fn_allowed(other, plat))
+    def test_restart_skip_reason(self) -> None:
+        one, two = self._restart(1), self._restart(2)
+        for platform in ("android32", "android64", "ios", "m1", "imac", "mac"):
+            self.assertIsNone(free_function_skip_reason(one, platform))
+            self.assertEqual(
+                free_function_skip_reason(two, platform),
+                f"free-function-override-arity:{platform}",
+            )
+        self.assertIsNone(free_function_skip_reason(two, "win"))
 
     def test_emit_drops_restart_arity2_on_android(self) -> None:
         functions = [self._restart(1), self._restart(2)]
@@ -227,12 +216,6 @@ class GetEnvironmentVariableExclusionTests(unittest.TestCase):
             args=[Arg("ZStringView", "name")],
         )
 
-    def test_free_fn_excluded_on_ios(self) -> None:
-        fn = self._get_env()
-        self.assertFalse(free_fn_allowed(fn, "ios"))
-        for plat in ("win", "android64", "m1"):
-            self.assertTrue(free_fn_allowed(fn, plat))
-
     def test_emit_drops_get_environment_variable_on_ios(self) -> None:
         functions = [self._get_env()]
         kept, skipped = group_supported_free_functions(functions, {}, "ios")
@@ -398,61 +381,6 @@ class FreeFunctionIntersectionTests(unittest.TestCase):
             ),
             plan.skipped_free_functions,
         )
-
-
-class FreeFunctionSupportedTests(unittest.TestCase):
-    def test_supported_marshallable_signature(self) -> None:
-        fn = Function(
-            name="foo",
-            namespace="geode::utils",
-            ret="void",
-            args=[Arg("int", "x"), Arg("bool", "flag")],
-        )
-        self.assertTrue(free_function_supported(fn, {}))
-
-    def test_supported_object_pointer_return(self) -> None:
-        objects = {"CCNode": Class(name="CCNode", namespace="cocos2d")}
-        fn = Function(
-            name="getNode",
-            namespace="geode::utils",
-            ret="cocos2d::CCNode*",
-            args=[],
-        )
-        self.assertTrue(free_function_supported(fn, objects))
-
-    def test_unsupported_return_type(self) -> None:
-        fn = Function(
-            name="foo",
-            namespace="geode::utils",
-            ret="UnknownType*",
-            args=[],
-        )
-        self.assertFalse(free_function_supported(fn, {}))
-
-    def test_unsupported_arg_type(self) -> None:
-        fn = Function(
-            name="foo",
-            namespace="geode::utils",
-            ret="void",
-            args=[Arg("SomeUnknownClass*", "obj")],
-        )
-        self.assertFalse(free_function_supported(fn, {}))
-
-    def test_out_reference_arg_unsupported(self) -> None:
-        mutate = Function(
-            name="toLowerIP",
-            namespace="geode::utils::string",
-            ret="void",
-            args=[Arg("std::string&", "s")],
-        )
-        self.assertFalse(free_function_supported(mutate, {}))
-        read = Function(
-            name="contains",
-            namespace="geode::utils::string",
-            ret="bool",
-            args=[Arg("std::string const&", "s")],
-        )
-        self.assertTrue(free_function_supported(read, {}))
 
 
 class FreeFunctionOverloadDedupTests(unittest.TestCase):

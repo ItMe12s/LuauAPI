@@ -274,10 +274,6 @@ void ImGuiCocos::setDisplayScale(float scale) {
     if (scale > 0.f) m_displayScale = scale;
 }
 
-float ImGuiCocos::getDisplayScale() const {
-    return m_displayScale;
-}
-
 ImVec2 ImGuiCocos::displaySize() {
     auto const scale = get().m_displayScale;
     auto const winSize = CCDirector::sharedDirector()->getWinSize();

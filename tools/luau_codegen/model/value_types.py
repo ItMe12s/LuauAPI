@@ -437,11 +437,6 @@ _VALUE_TYPE_PROPAGATION = {
         "VALUE_TYPES",
         "VALUE_CHECK_CXX_TYPES",
     ),
-    "luau_codegen.model.cocos_value_types": (
-        "COCOS_VALUE_STRUCTS",
-        "VALUE_TYPES",
-        "VALUE_CHECK_CXX_TYPES",
-    ),
     "luau_codegen.convert.type_map": ("VALUE_TYPES", "VALUE_CHECK_CXX_TYPES"),
     "luau_codegen.convert.type_classification": ("VALUE_TYPES",),
     "luau_codegen.convert.marshalling": ("VALUE_CHECK_CXX_TYPES",),

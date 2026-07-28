@@ -72,7 +72,3 @@ class PublicApiHeaderSyncTests(unittest.TestCase):
     def test_public_async_entry_points_stay_absent_from_host_header(self) -> None:
         host_symbols = _exported_symbols(_read_repo_file(_HOST_HEADER))
         self.assertFalse(host_symbols & _HOST_INTENTIONAL_OMISSIONS)
-
-
-if __name__ == "__main__":
-    unittest.main()

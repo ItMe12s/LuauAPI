@@ -12,7 +12,6 @@ dependencies = []
 [project.optional-dependencies]
 dev = [
     "ruff>=0.6",
-    "mypy>=1.11",
 ]
 
 [project.scripts]
@@ -34,8 +33,3 @@ include = ["luau_codegen*"]
 target-version = "py311"
 line-length = 100
 src = ["tools", "tests"]
-
-[tool.mypy]
-python_version = "3.11"
-mypy_path = "tools"
-ignore_missing_imports = true

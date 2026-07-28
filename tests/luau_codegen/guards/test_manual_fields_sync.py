@@ -13,7 +13,7 @@ from luau_codegen.emit.luau_types.manual_fields import (  # type: ignore[import-
 )
 from luau_codegen.emit.metadata import emit_schema  # type: ignore[import-unresolved]
 from luau_codegen.emit.plan import collect_plan  # type: ignore[import-unresolved]
-from luau_codegen.parse.broma import Class, Field, Root  # type: ignore[import-unresolved]
+from luau_codegen.parse.broma import Class, Root  # type: ignore[import-unresolved]
 
 _REPO_ROOT = os.path.dirname(
     os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -136,7 +136,3 @@ class ManualFieldsSyncTests(unittest.TestCase):
         self.assertEqual(schema["extraBindings"], expected_extra)
         self.assertIn("unscannedGdEnums", schema)
         self.assertIsInstance(schema["unscannedGdEnums"], list)
-
-
-if __name__ == "__main__":
-    unittest.main()

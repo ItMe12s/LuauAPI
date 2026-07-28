@@ -83,20 +83,4 @@ namespace geode::utils::string {
         return str.find(c) != std::string_view::npos;
     }
 
-    inline bool contains(std::string_view str, std::string_view subs) {
-        return str.find(subs) != std::string_view::npos;
-    }
-
-    inline bool equalsIgnoreCase(std::string_view a, std::string_view b) {
-        if (a.size() != b.size()) {
-            return false;
-        }
-        for (std::size_t i = 0; i < a.size(); ++i) {
-            if (std::tolower(static_cast<unsigned char>(a[i])) !=
-                std::tolower(static_cast<unsigned char>(b[i]))) {
-                return false;
-            }
-        }
-        return true;
-    }
 } // namespace geode::utils::string

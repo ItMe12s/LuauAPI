@@ -119,18 +119,6 @@ namespace luax {
             return tryCopyReadOnlySequenceView<T, GdVectorBackingPolicy<T>, Policy>(L, idx, out);
         }
 
-        template <class T, class Policy>
-        void pushBorrowedVectorView(lua_State* L, gd::vector<T*> const& vector, cocos2d::CCObject* owner) {
-            pushBorrowedSequenceView<T, GdVectorBackingPolicy<T>, Policy>(
-                L, std::pair<gd::vector<T*> const&, cocos2d::CCObject*>(vector, owner)
-            );
-        }
-
-        template <class T, class Policy>
-        void pushOwnedVectorView(lua_State* L, gd::vector<T*> const& vector) {
-            pushOwnedSequenceView<T, GdVectorBackingPolicy<T>, Policy>(L, vector);
-        }
-
         template <class T, class Policy, class CheckFn>
         gd::vector<T*> checkPointerVectorFromTable(
             lua_State* L, int idx, char const* label, CheckFn checkFn
@@ -166,7 +154,9 @@ namespace luax {
         static_assert(
             std::is_base_of_v<cocos2d::CCObject, T>, "vector view elements must be CCObject"
         );
-        detail::pushBorrowedVectorView<T, detail::VectorObjectPolicy>(L, vector, owner);
+        detail::pushBorrowedSequenceView<T, detail::GdVectorBackingPolicy<T>, detail::VectorObjectPolicy>(
+            L, std::pair<gd::vector<T*> const&, cocos2d::CCObject*>(vector, owner)
+        );
     }
 
     template <class T>
@@ -177,35 +167,9 @@ namespace luax {
         static_assert(
             std::is_base_of_v<cocos2d::CCObject, T>, "vector view elements must be CCObject"
         );
-        detail::pushOwnedVectorView<T, detail::VectorObjectPolicy>(L, vector);
-    }
-
-    template <class T>
-    void checkObjectVectorView(lua_State* L, int idx, char const* label, gd::vector<T*>& out) {
-        static_assert(
-            std::is_base_of_v<cocos2d::CCObject, T>, "vector view elements must be CCObject"
+        detail::pushOwnedSequenceView<T, detail::GdVectorBackingPolicy<T>, detail::VectorObjectPolicy>(
+            L, vector
         );
-        if (detail::tryCopyReadOnlyVectorView<T, detail::VectorObjectPolicy>(L, idx, out)) {
-            return;
-        }
-        idx = lua_absindex(L, idx);
-        luaL_checktype(L, idx, LUA_TTABLE);
-        auto len = static_cast<lua_Integer>(lua_objlen(L, idx));
-        if (len < 0) {
-            luaL_error(L, "%s: invalid vector length", label);
-        }
-        out.clear();
-        out.reserve(static_cast<std::size_t>(len));
-        for (lua_Integer i = 1; i <= len; ++i) {
-            lua_rawgeti(L, idx, i);
-            if (lua_isnil(L, -1)) {
-                out.push_back(nullptr);
-            }
-            else {
-                out.push_back(Usertype<T>::check(L, -1, label));
-            }
-            lua_pop(L, 1);
-        }
     }
 
     template <class T>
@@ -213,9 +177,11 @@ namespace luax {
         static_assert(
             std::is_base_of_v<cocos2d::CCObject, T>, "vector view elements must be CCObject"
         );
-        gd::vector<T*> out;
-        checkObjectVectorView(L, idx, label, out);
-        return out;
+        return detail::checkPointerVectorFromTable<T, detail::VectorObjectPolicy>(
+            L, idx, label, [](lua_State* L, int i, char const* lbl) {
+                return Usertype<T>::check(L, i, lbl);
+            }
+        );
     }
 
     // Opaque views: elements use tagged opaque handles instead of Usertype borrowing.
@@ -225,7 +191,9 @@ namespace luax {
     void pushReadOnlyOpaqueVectorView(
         lua_State* L, gd::vector<T*> const& vector, cocos2d::CCObject* owner
     ) {
-        detail::pushBorrowedVectorView<T, detail::VectorOpaquePolicy>(L, vector, owner);
+        detail::pushBorrowedSequenceView<T, detail::GdVectorBackingPolicy<T>, detail::VectorOpaquePolicy>(
+            L, std::pair<gd::vector<T*> const&, cocos2d::CCObject*>(vector, owner)
+        );
     }
 
     template <class T>
@@ -233,7 +201,9 @@ namespace luax {
 
     template <class T>
     void pushOwnedReadOnlyOpaqueVectorView(lua_State* L, gd::vector<T*> const& vector) {
-        detail::pushOwnedVectorView<T, detail::VectorOpaquePolicy>(L, vector);
+        detail::pushOwnedSequenceView<T, detail::GdVectorBackingPolicy<T>, detail::VectorOpaquePolicy>(
+            L, vector
+        );
     }
 
     template <class T>
