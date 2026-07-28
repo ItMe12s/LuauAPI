@@ -5,6 +5,23 @@
 Small runnable scripts for common tasks. Each block stands on its own.
 Full signatures live in the [globals](../reference/lua/globals.md).
 
+For a complete fill-in project combining installation, editor setup, and the first
+script, see the root [LuauAPI example mod](../../luauapi-example-mod) submodule.
+Include it in a fresh clone with:
+
+```sh
+git clone --recurse-submodules https://github.com/ItMe12s/LuauAPI.git
+```
+
+For an existing clone:
+
+```sh
+git submodule update --init --recursive
+```
+
+The [project README](../../README.md#example-mod) documents how to edit and update
+the example's separate repository.
+
 ## Load a module with require
 
 Full API: [modules](../reference/lua/modules.md).

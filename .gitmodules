@@ -1,0 +1,4 @@
+[submodule "luauapi-example-mod"]
+	path = luauapi-example-mod
+	url = https://github.com/ItMe12s/luauapi-example-mod.git
+	branch = main
