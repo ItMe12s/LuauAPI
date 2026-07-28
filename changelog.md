@@ -6,6 +6,10 @@
 
 - `11/7/2026`: Bindings that are automatically picked up likely won't be included in the changelog.
 
+## 0.1.0-beta.20
+
+add stuff here...
+
 ## 0.1.0-beta.19
 
 - Added recursive Luau bindings for by-value containers across fields, methods,
