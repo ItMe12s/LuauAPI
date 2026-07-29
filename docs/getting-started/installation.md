@@ -2,10 +2,38 @@
 
 ## Summary
 
-How to build a Geode mod that uses LuauAPI.
-Install the mod, declare a dependency, and pack your `.luau` files as resources.
-No build steps are needed for this path.
+The fastest way to start a LuauAPI mod is the example template.
+Create it with the Geode CLI or download it from GitHub.
+For an existing mod, add the dependency and resources manually.
+You do not need to build LuauAPI from source.
 See the [README](../README.md) beta note for release stability.
+
+## Start a new mod from the template
+
+The [LuauAPI example mod template](https://github.com/ItMe12s/luauapi-example-mod)
+already contains the dependency, resources, editor config, and first script.
+
+### Geode CLI
+
+This is the recommended path and the easiest.
+
+1. Run:
+
+   ```sh
+   geode new
+   ```
+
+2. Select `GitHub Repository`.
+3. Enter `ItMe12s/luauapi-example-mod` at the `Template:` prompt.
+4. Finish the project prompts. The CLI fills the template metadata.
+
+### Download ZIP
+
+1. Visit the [template repository](https://github.com/ItMe12s/luauapi-example-mod).
+2. Select the green `Code` button, then `Download ZIP`.
+3. Extract the archive and rename the project folder.
+4. Replace every `$GEODE_VERSION` and `$MOD_*` placeholder in `mod.json`.
+   Use `5.8.2` for `$GEODE_VERSION`.
 
 ## Install the mod
 
@@ -15,12 +43,26 @@ Download the `.geode` file and place it in your mods folder if you install manua
 LuauAPI ships with the mod id `imes.luauapi`.
 It loads early with first priority, so the runtime is ready for other mods as soon as the game starts.
 
-Requires Geode **5.8.1** or newer (see `mod.json` `"geode"` field).
+Requires Geode **5.8.2** or newer (see `mod.json` `"geode"` field).
 
-## Depend on it
+## Finish the template setup
 
-If you do not have a mod yet, create one with the Geode CLI (`geode new`).
-Then add a dependency on `imes.luauapi` in your `mod.json` and declare your script files as resources.
+For either template path:
+
+1. Check that `mod.json` contains your real mod metadata with no `$GEODE_VERSION` or `$MOD_*` placeholders.
+2. Update `logo.png`, `about.md`, `changelog.md`, and `support.md`.
+3. Follow [Editor setup](editor-setup.md) to download `types/geode.d.luau`.
+4. Build the project:
+
+```sh
+geode build
+```
+
+The template's `src/main.cpp` runs `mod/Bootstrap.luau` when the mod loads.
+
+## Add LuauAPI to an existing mod
+
+Add a dependency on `imes.luauapi` in your `mod.json` and declare your script files as resources.
 
 ```json
 {

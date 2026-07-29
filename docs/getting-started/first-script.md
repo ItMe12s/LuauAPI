@@ -4,6 +4,10 @@
 
 The smallest working mod. You write a Luau file, then run it from your Geode mod's C++ with `runFile`.
 
+The [example mod template](https://github.com/ItMe12s/luauapi-example-mod)
+already contains the matching `src/main.cpp` and `mod/Bootstrap.luau`.
+Follow this page when adding the same setup to an existing mod.
+
 ## Step 1: write the script
 
 Create a `.luau` file in your mod resources, for example `Bootstrap.luau`.

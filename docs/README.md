@@ -16,6 +16,7 @@ Read [LuauAPI mod guidelines](mod_guidelines.md) before you ship.
 
 | Page | Role |
 | --- | --- |
+| [Example mod template](https://github.com/ItMe12s/luauapi-example-mod) | Complete project for a new LuauAPI mod |
 | [Getting started](getting-started/overview.md) | Runtime basics and threading |
 | [Installation](getting-started/installation.md) | Dependency and platform setup |
 | [Editor setup](getting-started/editor-setup.md) | Autocomplete and stubs |

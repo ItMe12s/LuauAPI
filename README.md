@@ -34,16 +34,21 @@ Start here if you are new:
 - [Editor setup](docs/getting-started/editor-setup.md)
 - [Your first script](docs/getting-started/first-script.md)
 - [Examples](docs/getting-started/examples.md)
-- [Full example mod](luauapi-example-mod)
 - [Lua module index](docs/reference/lua/globals.md)
+- [LuauAPI example mod template](https://github.com/ItMe12s/luauapi-example-mod)
 - [LuauAPI mod guidelines](docs/mod_guidelines.md)
 
 Join the [Discord](https://discord.gg/E8f6D6XqbW) for help.
 
-## Example mod
+## Example mod template
 
-`luauapi-example-mod/` is a Git submodule with a complete fill-in project matching
-the getting-started tutorials. Include it when cloning:
+Start new projects from the [LuauAPI example mod template](https://github.com/ItMe12s/luauapi-example-mod).
+It already includes the LuauAPI dependency, Luau resources, editor config, and first script.
+See [Installation](docs/getting-started/installation.md) for the Geode CLI and Download ZIP setup paths.
+
+### Example mod contributors
+
+The local `luauapi-example-mod/` copy is a Git submodule. Include it when cloning LuauAPI:
 
 ```sh
 git clone --recurse-submodules https://github.com/ItMe12s/LuauAPI.git
@@ -53,20 +58,6 @@ For an existing clone:
 
 ```sh
 git submodule update --init --recursive
-```
-
-The example keeps its own Git history. To edit it from this checkout, switch the
-submodule to `main`, commit and push there first, then commit its new pointer here:
-
-```sh
-git -C luauapi-example-mod switch main
-# Edit, review, and stage the intended files.
-git -C luauapi-example-mod status
-git -C luauapi-example-mod add path/to/file
-git -C luauapi-example-mod commit -m "describe the example change"
-git -C luauapi-example-mod push origin main
-git add luauapi-example-mod
-git commit -m "update example mod"
 ```
 
 ## Project

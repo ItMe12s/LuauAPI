@@ -7,13 +7,18 @@ It lets your mod run Luau scripts and call into Geometry Dash through generated 
 This page is the entry point for mod authors who want to build a Geode mod using Luau,
 whether a brand new mod or one you already have.
 
-## The two ways to use it
+## Choose your path
 
-1. Build a Geode mod that depends on LuauAPI and runs your `.luau` files from its C++.
-   This is the common path and needs no build steps. Most mods using LuauAPI are built this way.
-   See [Installation](installation.md) and [Your first script](first-script.md).
-2. Build LuauAPI from source if you want unreleased features or to work on the runtime itself.
-   That path lives in the contributor docs. See [Building from source](../contributor/building.md).
+1. For a new mod, start from the
+   [LuauAPI example mod template](https://github.com/ItMe12s/luauapi-example-mod).
+   It includes the dependency, resources, editor config, and first script.
+   See [Installation](installation.md) for the Geode CLI and Download ZIP
+   setup paths.
+2. For an existing mod, add LuauAPI manually.
+   See [Installation](installation.md), [Editor setup](editor-setup.md),
+   and [Your first script](first-script.md).
+3. Build LuauAPI from source for unreleased features or runtime work.
+   See [Building from source](../contributor/building.md).
 
 ## Key concepts
 
@@ -29,7 +34,7 @@ whether a brand new mod or one you already have.
 
 ## Next
 
-- [Installation](installation.md)
+- [Example mod template and installation](installation.md)
 - [Editor setup](editor-setup.md)
 - [Your first script](first-script.md)
 - [Examples](examples.md)

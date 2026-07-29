@@ -5,6 +5,10 @@
 Set up VSCode so your `.luau` files get autocomplete and type checks.
 You get the `geode.d.luau` type stub, place it in your mod, then point the Luau language server at it.
 
+The [example mod template](https://github.com/ItMe12s/luauapi-example-mod)
+already contains `.luaurc`, `.vscode/settings.json`, and the `/types/` ignore rule.
+If you used it, complete step 1-3 then skip to step 7.
+
 ## Step 1: install the extension
 
 Install VSCode and the Luau Language Server extension, `luau-lsp` by JohnnyMorganz.
