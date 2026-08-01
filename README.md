@@ -12,6 +12,8 @@
 **Heads up: LuauAPI is still in beta, so expect things to change.**
 **LuauAPI development will NOT support older versions of GD, Geode SDK, bindings, and dependencies.**
 
+Mods can use Luau alone, combine C++ and Luau, or share APIs with other mods.
+
 ## Before you start
 
 You are expected to already have:

@@ -128,7 +128,9 @@ namespace imes::luauapi {
         template <class T>
         inline constexpr bool isInteger = [] {
             if constexpr (std::integral<Bare<T>>) {
-                return !std::same_as<Bare<T>, bool> && sizeof(Bare<T>) <= 8;
+                return !std::same_as<Bare<T>, bool> && !std::same_as<Bare<T>, wchar_t> &&
+                    !std::same_as<Bare<T>, char8_t> && !std::same_as<Bare<T>, char16_t> &&
+                    !std::same_as<Bare<T>, char32_t> && sizeof(Bare<T>) <= 8;
             }
             else if constexpr (std::is_enum_v<Bare<T>>) {
                 return sizeof(std::underlying_type_t<Bare<T>>) <= 8;

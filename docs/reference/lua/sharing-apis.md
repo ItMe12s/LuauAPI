@@ -3,18 +3,19 @@
 ## Summary
 
 All mods share one runtime and one global table.
-A value one script puts on a global is visible to other mods later.
-Use this to let one mod expose a Luau API to others.
+Functions and values published from Luau or registered from C++ are visible to other mods later.
+Use this to let one mod expose an API to others.
 
 ## Publishing from C++
 
 Direct native registration publishes C++ functions and values under the caller's full mod id.
-Luau consumers see the same shared table layout:
+The registering mod's own scripts can read this table through `_G[geode.Mod.getID()]`.
+Scripts from other mods use the registering mod's explicit id:
 
-```luau
+```lua
 local Provider = _G["provider.mod"]
-print(Provider.metadata.version)
-print(Provider.math.add(2, 3))
+print(Provider.math.isEven(6))
+print(Provider.math.divide(8, Provider.math.defaultDivisor))
 ```
 
 See [Native C++ registration](../cpp/native-registration.md) for setup, supported types, registration rules, and callback behavior.
@@ -25,12 +26,16 @@ Put your API in one table on `_G`, keyed by your full Geode mod id.
 
 ```lua
 _G["imes.luauapi"] = {
-    version = 1,
-    doThing = function(...) end,
+    math = {
+        defaultDivisor = 2,
+        isEven = function(value)
+            return value % 2 == 0
+        end,
+    },
 }
 ```
 
-- Add a `version` field for compatibility checks.
+- You have to inform other people to use Geode dependency version ranges for compatibility checks if needed.
 - Keep the table shape stable once others depend on it.
 - Publish once, after your API is ready.
 
@@ -82,7 +87,6 @@ end)
 ## Related
 
 - [Getting started](../../getting-started/overview.md)
-- [Native C++ registration](../cpp/native-registration.md)
 - [C++ API reference](../cpp/api-reference.md)
 - [Limits and errors](../cpp/limits-and-errors.md)
 - [Examples](../../getting-started/examples.md)

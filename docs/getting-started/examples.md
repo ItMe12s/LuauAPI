@@ -2,7 +2,7 @@
 
 ## Summary
 
-Small runnable scripts for common tasks. Each block stands on its own.
+Small runnable scripts for common tasks. Each example stands on its own.
 Full signatures live in the [globals](../reference/lua/globals.md).
 
 For a complete project, start from the [LuauAPI example mod template](https://github.com/ItMe12s/luauapi-example-mod).
@@ -118,10 +118,44 @@ if not ok then
 end
 ```
 
+## Call your mod's C++ from Luau
+
+Full API: [Native C++ registration](../reference/cpp/native-registration.md).
+
+Register C++ functions before running a script that needs them.
+
+```cpp
+#include <Geode/Geode.hpp>
+#include <Geode/loader/ModEvent.hpp>
+#include <imes.luauapi/include/LuauAPI.hpp>
+
+using namespace geode::prelude;
+namespace lua = imes::luauapi;
+
+bool isEven(int value) noexcept {
+    return value % 2 == 0;
+}
+
+$on_mod(Loaded) {
+    if (auto result = lua::registerFunction("math.isEven", &isEven); result.isErr()) {
+        log::error("native registration failed: {}", result.unwrapErr());
+        return;
+    }
+
+    if (auto result = lua::runFile(Mod::get()->getResourcesDir(), "Bootstrap.luau"); result.isErr()) {
+        log::error("script failed: {}", result.unwrapErr());
+    }
+}
+```
+
+```lua
+local Native = _G[geode.Mod.getID()]
+print(Native.math.isEven(67))
+```
+
 ## Share an API on _G
 
 Full API: [sharing APIs between mods](../reference/lua/sharing-apis.md).
-For a C++ provider, see [Native C++ registration](../reference/cpp/native-registration.md).
 
 Publish from the provider mod. Read with `_G["other.mod-id"]` from consumers.
 Use `task` polling when load order is unknown.
@@ -210,7 +244,6 @@ geode.hook("geode.gd.MenuLayer:init/0", {
 ## Related
 
 - [Getting started](overview.md)
-- [Native C++ registration](../reference/cpp/native-registration.md)
 - [globals](../reference/lua/globals.md)
 - [modules](../reference/lua/modules.md)
 - [sharing APIs between mods](../reference/lua/sharing-apis.md)
@@ -222,6 +255,8 @@ geode.hook("geode.gd.MenuLayer:init/0", {
 
 ## Source
 
+- `include/NativeRegistration.hpp`
+- `src/api.cpp`
 - `src/core/Runtime.cpp`
 - `mod/demo/demo_helloworld.luau`
 - `mod/demo/demo_seedvalue.luau`

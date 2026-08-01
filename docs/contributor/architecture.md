@@ -8,6 +8,8 @@ This page names the main parts and traces how a script gets from a file to runni
 ## The parts
 
 - Public C++ API in `imes::luauapi`. The host-facing surface. See [C++ API reference](../reference/cpp/api-reference.md).
+- Native registration bridge. Publishes C++ functions and values into the calling mod's Luau table.
+  See [Native C++ registration](../reference/cpp/native-registration.md).
 - Runtime. Owns the Lua state, memory, deadlines, and the bytecode cache. See [Runtime](internals/runtime.md).
 - Bindings framework. Exposes C++ types to Lua. See [Bindings framework](internals/bindings-framework.md).
 - Module system. Implements sandboxed `require`. See [Module system](internals/module-system.md).
@@ -23,7 +25,8 @@ This page names the main parts and traces how a script gets from a file to runni
 
 ## Repository layout
 
-- `include/LuauAPI.hpp`: the public header.
+- `include/LuauAPI.hpp`: the public API entry header.
+- `include/NativeRegistration.hpp`: the typed registration templates and Lua-free native call bridge.
 - `src/api.cpp`: the public API implementation.
 - `src/main.cpp`: the mod entry points that drive the runtime lifecycle.
 - `src/core/Config.hpp`: the limits and deadlines. See [Limits and errors](../reference/cpp/limits-and-errors.md).
@@ -54,6 +57,17 @@ and the bootstrap script runs before the handler returns. Shutdown runs on game 
 The host calls `runFile` on the main thread. The runtime resolves the path, compiles or loads cached bytecode, and runs it under a deadline.
 Errors are caught and returned to the host.
 See [Runtime](internals/runtime.md) for the full pipeline.
+
+## How native registration runs
+
+The caller-inline templates infer the registering mod and validate the C++ type shape.
+They pass copied function pointer bytes, an invoker, and scalar data through a Lua-free bridge to `src/api.cpp`.
+The runtime publishes the value through a protected Lua call and raw table access.
+It builds missing tables away from `_G`, then attaches the completed branch in one write.
+
+A registered closure owns the copied bridge data in the Lua state.
+It invokes native code through the coroutine state that called it and records a native-function diagnostic boundary.
+Closing the Lua state releases the closure storage without calling the registering mod.
 
 ## How a hook runs
 
@@ -91,6 +105,7 @@ and the [C++ API reference](../reference/cpp/api-reference.md) for host API rule
 
 ## Source
 
+- `include/NativeRegistration.hpp`
 - `src/main.cpp`
 - `src/api.cpp`
 - `src/core/Runtime.cpp`

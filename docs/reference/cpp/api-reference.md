@@ -40,7 +40,8 @@ See Threading below for per-function thread rules.
 
 ## Native registration
 
-Provider mods can publish typed C++ functions and values under their full mod id.
+Mods can expose typed C++ functions and values to their own Luau scripts.
+Other mods can use the same functions and values through the registering mod's full id.
 See [Native C++ registration](native-registration.md) for signatures, supported types,
 publication rules, callback behavior, and examples.
 
@@ -61,15 +62,12 @@ Execution errors populate both the async `Result` and `lastError()`.
 
 ```cpp
 geode::Result<void> runFile(
-    std::filesystem::path const& resourcesRoot,
-    std::filesystem::path const& relativePath,
+    std::filesystem::path const& resourcesRoot, std::filesystem::path const& relativePath,
     int deadlineMs = kDefaultScriptDeadlineMs
 );
 
 geode::Result<void> runScript(
-    std::filesystem::path const& resourcesRoot,
-    std::string_view source,
-    std::string_view chunkName,
+    std::filesystem::path const& resourcesRoot, std::string_view source, std::string_view chunkName,
     int deadlineMs = kDefaultScriptDeadlineMs
 );
 ```
@@ -86,15 +84,12 @@ See [Limits and errors](limits-and-errors.md) for path and size rules.
 
 ```cpp
 arc::Future<geode::Result<void>> runFileAsync(
-    std::filesystem::path resourcesRoot,
-    std::filesystem::path relativePath,
+    std::filesystem::path resourcesRoot, std::filesystem::path relativePath,
     int deadlineMs = kDefaultScriptDeadlineMs
 );
 
 arc::Future<geode::Result<void>> runScriptAsync(
-    std::filesystem::path resourcesRoot,
-    std::string source,
-    std::string chunkName,
+    std::filesystem::path resourcesRoot, std::string source, std::string chunkName,
     int deadlineMs = kDefaultScriptDeadlineMs
 );
 ```
@@ -162,13 +157,13 @@ See [Limits and errors](limits-and-errors.md).
 
 - [Getting started](../../getting-started/overview.md)
 - [Your first script](../../getting-started/first-script.md)
-- [Native C++ registration](native-registration.md)
 - [Limits and errors](limits-and-errors.md)
 - [Architecture](../../contributor/architecture.md)
 
 ## Source
 
 - `include/LuauAPI.hpp`
+- `include/NativeRegistration.hpp`
 - `include/RuntimeTypes.hpp`
 - `src/api.cpp`
 - `mod.json`

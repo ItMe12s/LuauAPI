@@ -137,13 +137,15 @@ Good:
 
 ```lua
 _G["your.modid"] = {
-    version = 1,
+    math = {
+        defaultDivisor = 2,
+    },
 }
 ```
 
 Even this should be rare. Prefer modules and locals when you do not need a public API.
+The same per-mod table rule applies to functions and values registered from C++.
 See [sharing APIs between mods](reference/lua/sharing-apis.md).
-For typed C++ providers, see [Native C++ registration](reference/cpp/native-registration.md).
 
 ### `reject-gpu-maxxing`
 
@@ -459,7 +461,7 @@ These are allowed when done with care.
 
 1. The whole mod is just a small `bootstrap.luau` file.
 2. One line guards that stay readable.
-3. A stable `_G["your.modid"]` API table for sharing with other mods.
+3. A stable `_G["your.modid"]` API table filled from Luau, C++, or both.
 4. Performance heavy features that are meaningful, optional, and optimized.
 5. A remake with permission, credit, and real new value.
 
@@ -469,7 +471,6 @@ These are allowed when done with care.
 - [Getting started](getting-started/overview.md)
 - [globals](reference/lua/globals.md)
 - [sharing APIs between mods](reference/lua/sharing-apis.md)
-- [Native C++ registration](reference/cpp/native-registration.md)
 - [modules](reference/lua/modules.md)
 - [hooks](reference/lua/hooks.md)
 - [tasks and time](reference/lua/tasks.md)

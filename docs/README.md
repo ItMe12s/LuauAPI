@@ -64,7 +64,7 @@ Start at [globals](reference/lua/globals.md) for the full Lua module index.
 | Page | Role |
 | --- | --- |
 | [C++ API reference](reference/cpp/api-reference.md) | Run functions, threading, and integration |
-| [Native C++ registration](reference/cpp/native-registration.md) | Publish typed C++ functions and values to Luau |
+| [Native C++ registration](reference/cpp/native-registration.md) | Expose a mod's typed C++ functions and values to Luau |
 | [Limits and errors](reference/cpp/limits-and-errors.md) | Caps, deadlines, and error strings |
 
 ## Contributor
@@ -120,5 +120,6 @@ Codegen:
 - `docs/`
 - `mod.json`
 - `include/LuauAPI.hpp`
+- `include/NativeRegistration.hpp`
 - `src/`
 - `tools/luau_codegen/`

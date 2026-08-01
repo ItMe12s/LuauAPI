@@ -108,6 +108,21 @@ namespace {
     static_assert(!imes::luauapi::NativeFunctionPointer<decltype(&nestedTupleReturn)>);
     static_assert(!imes::luauapi::NativeFunctionPointer<decltype(&MemberOwner::method)>);
     static_assert(!imes::luauapi::NativeFunctionPointer<decltype(capturingCallable)>);
+    static_assert(!imes::luauapi::NativeFunctionPointer<int (*)(wchar_t)>);
+    static_assert(!imes::luauapi::NativeFunctionPointer<int (*)(char8_t)>);
+    static_assert(!imes::luauapi::NativeFunctionPointer<int (*)(char16_t)>);
+    static_assert(!imes::luauapi::NativeFunctionPointer<int (*)(char32_t)>);
+    static_assert(!imes::luauapi::NativeFunctionPointer<wchar_t (*)()>);
+    static_assert(!imes::luauapi::NativeFunctionPointer<char8_t (*)()>);
+    static_assert(!imes::luauapi::NativeFunctionPointer<char16_t (*)()>);
+    static_assert(!imes::luauapi::NativeFunctionPointer<char32_t (*)()>);
+    static_assert(!imes::luauapi::NativeFunctionPointer<int (*)(std::optional<char16_t>)>);
+    static_assert(!imes::luauapi::NativeFunctionPointer<std::optional<char32_t> (*)()>);
+    static_assert(!imes::luauapi::NativeFunctionPointer<std::tuple<int, char8_t> (*)()>);
+    static_assert(imes::luauapi::NativeFunctionPointer<char (*)(char)>);
+    static_assert(imes::luauapi::NativeFunctionPointer<signed char (*)(signed char)>);
+    static_assert(imes::luauapi::NativeFunctionPointer<unsigned char (*)(unsigned char)>);
+    static_assert(imes::luauapi::NativeFunctionPointer<SmallEnum (*)(SmallEnum)>);
 
     using ConstCharArray = char const[4];
     using VolatileCharArray = char volatile[4];
@@ -119,10 +134,19 @@ namespace {
     static_assert(imes::luauapi::NativeValue<char*>);
     static_assert(imes::luauapi::NativeValue<char const*>);
     static_assert(imes::luauapi::NativeValue<ConstCharArray&>);
+    static_assert(imes::luauapi::NativeValue<char>);
+    static_assert(imes::luauapi::NativeValue<signed char>);
+    static_assert(imes::luauapi::NativeValue<unsigned char>);
+    static_assert(imes::luauapi::NativeValue<SmallEnum>);
     static_assert(!imes::luauapi::NativeValue<std::string volatile&>);
     static_assert(!imes::luauapi::NativeValue<std::string_view volatile&>);
     static_assert(!imes::luauapi::NativeValue<char volatile*>);
     static_assert(!imes::luauapi::NativeValue<VolatileCharArray&>);
+    static_assert(!imes::luauapi::NativeValue<wchar_t>);
+    static_assert(!imes::luauapi::NativeValue<char8_t>);
+    static_assert(!imes::luauapi::NativeValue<char16_t>);
+    static_assert(!imes::luauapi::NativeValue<char32_t>);
+    static_assert(!imes::luauapi::NativeValue<std::optional<char16_t>>);
 
     geode::Mod* makeProvider(
         luauapi_test::ScopedTempDir const& temp, std::string id = "provider.mod-with-dash"
@@ -144,7 +168,7 @@ TEST_CASE("native registration publishes exact provider namespace and nested pat
     REQUIRE(L != nullptr);
 
     int const top = lua_gettop(L);
-    REQUIRE(imes::luauapi::registerValue("metadata.version", 7).isOk());
+    REQUIRE(imes::luauapi::registerValue("math.defaultDivisor", 7).isOk());
     REQUIRE(imes::luauapi::registerValue("metadata.name", std::string("api\0v1", 6)).isOk());
     REQUIRE(imes::luauapi::registerValue("metadata.enum", SmallEnum::Two).isOk());
     REQUIRE(imes::luauapi::registerFunction("math.add", &add).isOk());
@@ -155,7 +179,7 @@ TEST_CASE("native registration publishes exact provider namespace and nested pat
             L,
             R"(
             local api = _G["provider.mod-with-dash"]
-            return api.metadata.version == 7
+            return api.math.defaultDivisor == 7
                 and api.metadata.enum == 2
                 and #api.metadata.name == 6
                 and string.byte(api.metadata.name, 4) == 0

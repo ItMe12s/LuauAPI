@@ -1,23 +1,22 @@
 # LuauAPI
 
-**Build Geode mods in Luau!**
+**Make Geode mods in Luau!**
 
-LuauAPI is an ambitious scripting ecosystem for Geode,
-so you can create mods, tools, and reusable systems in Luau without needing to write C++. (1)
+LuauAPI lets you make Geode mods and tools in Luau, no C++ needed. (1)
 
-It includes a higher-level SDK that helps you start simple and iterate faster, without all the C++ shenanigans.
-Plus, you get fewer crashes and clear, easy-to-understand error logging.
+It's easy to use, fast to start, and provides clear error logging with fewer crashes.
 
 **READ THE PSA AND NOTES AT THE BOTTOM!!!**
 
 ---
 
-## Features
+## Currently implemented
 
 - Fully cross-platform
 - Write fully functional Geode mods in Luau (2)
 - Luau LSP autocompletion support (3)
 - Create your own API mods in Luau
+- Manually expose APIs from required C++ mods to Luau
 - In-game developer tools (enable via developer mode)
 - JIT and JIT-less support
 - Easy-to-use 3D APIs and viewports through `gd3d`
@@ -55,11 +54,12 @@ Turn it on for debugging only, it can cause lag.
 When the game crashed and you see a `Geode Crash Handler` window,
 click `Open crashlog folder` to get the `luauapi-last-context.txt` file.
 
-It will be overwritten on the next launch so copy it before restarting the game if needed.
+It will be overwritten on the next launch so copy it before restarting the game.
 
 ### Developer Mode
 
-If someone asks you to **turn on Developer Mode** and copy and paste a script, **DON'T DO IT**.
+If someone wants you to **turn on Developer Mode** and execute a script, **DON'T DO IT**.
+
 They're trying to trick you. Running untrusted scripts can:
 
 - Delete your save files

@@ -2,9 +2,9 @@
 
 ## Summary
 
-Provider mods can publish typed C++ functions and values into LuauAPI's shared global table.
-LuauAPI places each API under the calling mod's full id.
-Registration is direct and does not expose the Luau stack to provider mods.
+Any Geode mod that depends on LuauAPI can expose typed C++ functions and values to Luau.
+The mod's own scripts can call them. Other mods can use the same table as a shared API.
+Registration is direct and does not expose the Luau stack to the calling mod.
 
 ## Setup
 
@@ -12,44 +12,123 @@ Declare LuauAPI as a required Geode dependency.
 Include `LuauAPI.hpp` from the dependency's exported include directory.
 See [Installation](../../getting-started/installation.md) for dependency setup.
 
+A required mod dependency can expose a linked C++ API through its public headers.
+Register a compatible free or static API function directly.
+For an unsupported signature, register a free or static wrapper in your mod that calls the dependency.
+Both forms still publish under the registering mod's id.
+
 Registration must run on the main thread after the Luau runtime is ready.
 It returns `Err` before readiness, during shutdown, or off the main thread.
 It does not create the runtime or queue work for later.
 
+Register functions and values before running a script that needs them:
+
 ```cpp
-geode::Result<int> add(int a, int b) {
-    return geode::Ok(a + b);
+#include <Geode/Geode.hpp>
+#include <Geode/loader/ModEvent.hpp>
+#include <cmath>
+#include <imes.luauapi/include/LuauAPI.hpp>
+
+using namespace geode::prelude;
+namespace lua = imes::luauapi;
+
+bool isEven(int value) noexcept {
+    return value % 2 == 0;
+}
+
+geode::Result<double> divide(double numerator, double denominator) {
+    if (denominator == 0.0) return geode::Err("denominator must not be zero");
+
+    auto quotient = numerator / denominator;
+    if (!std::isfinite(quotient)) return geode::Err("quotient must be finite");
+
+    return geode::Ok(quotient);
 }
 
 $on_mod(Loaded) {
-    using namespace imes::luauapi;
-
-    auto functionResult = registerFunction("math.add", &add);
-    if (functionResult.isErr()) {
-        geode::log::error("Could not register math.add: {}", functionResult.unwrapErr());
+    if (auto result = lua::registerFunction("math.isEven", &isEven); result.isErr()) {
+        log::error("math.isEven registration failed: {}", result.unwrapErr());
         return;
     }
 
-    auto valueResult = registerValue("metadata.version", 1);
-    if (valueResult.isErr()) {
-        geode::log::error("Could not register metadata.version: {}", valueResult.unwrapErr());
+    if (auto result = lua::registerFunction("math.divide", &divide); result.isErr()) {
+        log::error("math.divide registration failed: {}", result.unwrapErr());
+        return;
+    }
+
+    if (auto result = lua::registerValue("math.defaultDivisor", 2); result.isErr()) {
+        log::error("math.defaultDivisor registration failed: {}", result.unwrapErr());
+        return;
+    }
+
+    if (auto result = lua::runFile(Mod::get()->getResourcesDir(), "Bootstrap.luau"); result.isErr()) {
+        log::error("script failed: {}", result.unwrapErr());
     }
 }
 ```
 
-## Published layout
+The mod's `Bootstrap.luau` can call its C++ code through its own id:
 
-The caller-local `geode::Mod::get()` supplies the provider id.
-LuauAPI does not resolve the provider inside its own binary.
+```lua
+local Native = _G[geode.Mod.getID()]
+print(Native.math.isEven(6))
+print(Native.math.divide(8, Native.math.defaultDivisor))
 
-For a provider named `provider.mod`, the example publishes:
-
-```luau
-_G["provider.mod"].math.add(2, 3)
-_G["provider.mod"].metadata.version
+local ok, err = pcall(Native.math.divide, 1, 0)
+if not ok then
+    print(err)
+end
 ```
 
-The full provider id is one `_G` key, including dots and dashes.
+## Handling registration results
+
+Each registration returns `geode::Result<void>`.
+To use a local macro, replace the handler above with this version:
+
+```cpp
+#define LUAUAPI_REGISTER_OR_RETURN(expression)                                \
+    do {                                                                      \
+        auto result = (expression);                                           \
+        if (result.isErr()) {                                                 \
+            log::error("native registration failed: {}", result.unwrapErr()); \
+            return;                                                           \
+        }                                                                     \
+    } while (false)
+
+$on_mod(Loaded) {
+    LUAUAPI_REGISTER_OR_RETURN(lua::registerFunction("math.isEven", &isEven));
+    LUAUAPI_REGISTER_OR_RETURN(lua::registerFunction("math.divide", &divide));
+    LUAUAPI_REGISTER_OR_RETURN(lua::registerValue("math.defaultDivisor", 2));
+
+    if (auto result = lua::runFile(Mod::get()->getResourcesDir(), "Bootstrap.luau"); result.isErr()) {
+        log::error("script failed: {}", result.unwrapErr());
+    }
+}
+
+#undef LUAUAPI_REGISTER_OR_RETURN
+```
+
+This macro returns from a `void` setup handler on the first error.
+Change its control flow before using it in a function with another return type.
+
+> For quick prototyping, `(void)lua::registerFunction("math.isEven", &isEven);` explicitly ignores the result.
+> This can hide why a value is missing from Luau. Do not use it when a script depends on the registration.
+
+## Published layout
+
+The caller-local `geode::Mod::get()` supplies the calling mod id.
+LuauAPI does not resolve that id inside its own binary.
+
+For a mod named `provider.mod`, registration publishes:
+
+```lua
+_G["provider.mod"].math.isEven(67)
+_G["provider.mod"].math.divide(16, 4)
+_G["provider.mod"].math.defaultDivisor
+```
+
+The mod's own scripts and scripts from other mods see this same table.
+The full mod id is one `_G` key, including dots and dashes.
 Only the registration path is split on dots.
 
 Paths must be nonempty and cannot contain empty segments or embedded NUL bytes.
@@ -88,6 +167,8 @@ See [Limits and errors](limits-and-errors.md) for exact error strings.
 | Character arrays and C strings | `string` | A null C string returns `Err` |
 | `std::optional<T>` | inner value | Must be engaged and contain a supported scalar |
 
+The direct types `wchar_t`, `char8_t`, `char16_t`, and `char32_t`
+are rejected as registered values, function parameters, and return values.
 Unsigned values above `INT64_MAX` return `Err`.
 Small integral values use normal Luau numbers.
 Values outside the exact number range use Luau's signed 64-bit integer value.
@@ -108,12 +189,25 @@ Parameters may be supported scalars, optionals, or const references to those typ
 | `std::optional<T>` | Accepts the inner value or explicit `nil` |
 
 Pointers, mutable references, rvalue references, member functions, captured callables,
-`std::function`, nested optionals, wide unsupported numerics, and C-string parameters are rejected.
+`std::function`, nested optionals, and C-string parameters are rejected.
 
 Arity is strict. The maximum is the declared parameter count. The minimum ends at the last required parameter.
 Omitted arguments work only when every remaining parameter is optional.
 A non-trailing optional needs an explicit value or `nil` when a required parameter follows it.
 Colon calls add a `self` argument and fail unless the signature accepts that argument.
+
+## Choosing a callback return
+
+Use a supported return type other than `geode::Result<R>` when the callback does not need to report a recoverable failure.
+Use `geode::Result<R>` when the callback can reject a domain value or report a recoverable failure.
+`geode::Ok` produces the normal Luau return values.
+`geode::Err` raises a Luau error that names the registered target.
+Without `pcall`, the error propagates through the current Luau call.
+With `pcall`, the first result is `false` and the second is the error value.
+
+The callback result is created when Luau invokes the registered function.
+It is separate from the `geode::Result<void>` returned by `registerFunction`,
+which reports whether LuauAPI published the function.
 
 ## Function returns
 
@@ -129,13 +223,13 @@ Callbacks may return these shapes:
 | `geode::Result<R>` | The supported `R` shape or a Luau error |
 
 Optional tuple elements produce `nil` in their positions.
-String results are copied into Luau before the callback returns.
-A callback `Result::Err` raises an error that includes the qualified registered target.
+Returned `std::string` data stays owned by the invoker until LuauAPI copies it after the native function returns.
+A returned `std::string_view` does not own its bytes.
+Its backing storage must remain valid through this immediate post-return copy.
 Protected script execution adds the normal traceback.
 
 Pointer returns, reference returns, nested tuples, `std::optional<std::tuple<...>>`,
 and custom `Result` error types are rejected. Callbacks must not throw.
-Use `geode::Result` for recoverable failures.
 
 ## Lifetime and access
 
@@ -146,9 +240,11 @@ Callbacks run synchronously on the runtime thread. Long callbacks block the runt
 See [Limits and errors](limits-and-errors.md) for deadline and memory behavior.
 
 LuauAPI stores the function pointer bytes with the Lua closure.
-The provider mod must stay loaded while a registered closure can exist.
+The registering mod and the module that owns the function pointer must stay loaded while its closure can exist.
+For a wrapper, the registering mod owns the pointer.
+For a directly registered dependency function, the required dependency owns it.
 There is no unregister API or hot-unload support.
-Runtime shutdown releases closure storage without calling the provider.
+Runtime shutdown releases closure storage without calling the registering mod.
 
 ## Related
 

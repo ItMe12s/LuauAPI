@@ -86,15 +86,19 @@ There are no subdirectories. Use unique file names.
 Subfolders in your repo, such as `mod/luauapi/`, are for organization only.
 They load from your mod resources directory at runtime.
 Ship 3D assets the same way. Pack `.glb` or `.gltf` files under `"resources"` and load them with `gd3d.gltf.loadMesh`.
-Include `.ttf` files when you use custom ImGui fonts. See [gd3d](../reference/lua/gd3d.md) and [imgui](../reference/lua/imgui.md).
+Include `.ttf` files when you use custom ImGui fonts.
+See [gd3d](../reference/lua/gd3d.md) and [imgui](../reference/lua/imgui.md).
 
-## Run from C++
+## Use C++ and Luau together
 
 Most mods only need the dependency above.
-If your mod already has C++ entry points, call `imes::luauapi::runFile` or `runScript` with your resources directory.
+If your mod already has C++ entry points, it can run Luau scripts,
+expose typed C++ functions and values to those scripts, or do both.
+Call `imes::luauapi::runFile` or `runScript` with your resources directory.
 See [Getting started](overview.md) for the main-thread rule, [Your first script](first-script.md),
 and the [C++ API reference](../reference/cpp/api-reference.md).
-To publish typed C++ functions or values to Luau, see [Native C++ registration](../reference/cpp/native-registration.md).
+Register C++ functions and values before running a script that needs them.
+See [Native C++ registration](../reference/cpp/native-registration.md) for the full example and supported types.
 
 ## Supported platforms
 
@@ -113,7 +117,6 @@ To publish typed C++ functions or values to Luau, see [Native C++ registration](
 - [Getting started](overview.md)
 - [Editor setup](editor-setup.md)
 - [Your first script](first-script.md)
-- [Native C++ registration](../reference/cpp/native-registration.md)
 - [Examples](examples.md)
 - [LuauAPI mod guidelines](../mod_guidelines.md)
 - [Building from source](../contributor/building.md)
