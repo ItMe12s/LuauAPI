@@ -1,27 +1,15 @@
 #pragma once
 
+#include "Export.hpp"
+#include "NativeRegistration.hpp"
+#include "RuntimeTypes.hpp"
+
 #include <Geode/Geode.hpp>
 #include <Geode/utils/async.hpp>
 #include <cstddef>
 #include <filesystem>
 #include <string>
 #include <string_view>
-
-#if defined(GEODE_IS_WINDOWS)
-    #ifdef LUAUAPI_EXPORTING
-        #define LUAUAPI_DLL __declspec(dllexport)
-    #else
-        #define LUAUAPI_DLL __declspec(dllimport)
-    #endif
-#else
-    #ifdef LUAUAPI_EXPORTING
-        #define LUAUAPI_DLL __attribute__((visibility("default")))
-    #else
-        #define LUAUAPI_DLL
-    #endif
-#endif
-
-#include "RuntimeTypes.hpp"
 
 namespace imes::luauapi {
     LUAUAPI_DLL geode::Result<void> runFile(

@@ -1,18 +1,13 @@
 #pragma once
 
+#include <Export.hpp>
 #include <Geode/Geode.hpp>
+#include <NativeRegistration.hpp>
+#include <RuntimeTypes.hpp>
 #include <cstddef>
 #include <filesystem>
 #include <string>
 #include <string_view>
-
-#if defined(GEODE_IS_WINDOWS)
-    #define LUAUAPI_DLL
-#else
-    #define LUAUAPI_DLL
-#endif
-
-#include <RuntimeTypes.hpp>
 
 namespace imes::luauapi {
     geode::Result<void> runFile(

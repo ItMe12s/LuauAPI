@@ -22,6 +22,7 @@ namespace luax::diag {
         HookBefore,
         HookAfter,
         GeneratedBinding,
+        NativeFunction,
         Task,
         ImGui,
         Delegate,

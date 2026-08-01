@@ -10,6 +10,7 @@ _REPO_ROOT = os.path.dirname(
 
 _PUBLIC_HEADER = "include/LuauAPI.hpp"
 _HOST_HEADER = "tests/host/include/LuauAPI.hpp"
+_NATIVE_REGISTRATION_HEADER = "include/NativeRegistration.hpp"
 
 _HOST_INTENTIONAL_OMISSIONS = {
     "runFileAsync",
@@ -68,6 +69,20 @@ class PublicApiHeaderSyncTests(unittest.TestCase):
             extra_in_host,
             f"host LuauAPI.hpp has unexpected symbols: {sorted(extra_in_host)}",
         )
+
+    def test_registration_templates_have_one_shared_source(self) -> None:
+        public_header = _read_repo_file(_PUBLIC_HEADER)
+        host_header = _read_repo_file(_HOST_HEADER)
+        registration_header = _read_repo_file(_NATIVE_REGISTRATION_HEADER)
+
+        self.assertIn("NativeRegistration.hpp", public_header)
+        self.assertIn("NativeRegistration.hpp", host_header)
+        self.assertIn("registerFunction", registration_header)
+        self.assertIn("registerValue", registration_header)
+        self.assertNotIn("registerFunction", public_header)
+        self.assertNotIn("registerFunction", host_header)
+        self.assertNotIn("registerValue", public_header)
+        self.assertNotIn("registerValue", host_header)
 
     def test_public_async_entry_points_stay_absent_from_host_header(self) -> None:
         host_symbols = _exported_symbols(_read_repo_file(_HOST_HEADER))

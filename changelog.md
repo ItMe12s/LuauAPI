@@ -9,6 +9,7 @@
 
 ## 0.1.0-beta.20
 
+- Added typed direct C++ registration for native functions and values under each provider mod's shared Luau table.
 - Removed unused legacy developer APIs and trimmed runtime, codegen, build, and test code.
 
 ## 0.1.0-beta.19

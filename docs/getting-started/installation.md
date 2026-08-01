@@ -94,6 +94,7 @@ Most mods only need the dependency above.
 If your mod already has C++ entry points, call `imes::luauapi::runFile` or `runScript` with your resources directory.
 See [Getting started](overview.md) for the main-thread rule, [Your first script](first-script.md),
 and the [C++ API reference](../reference/cpp/api-reference.md).
+To publish typed C++ functions or values to Luau, see [Native C++ registration](../reference/cpp/native-registration.md).
 
 ## Supported platforms
 
@@ -112,6 +113,7 @@ and the [C++ API reference](../reference/cpp/api-reference.md).
 - [Getting started](overview.md)
 - [Editor setup](editor-setup.md)
 - [Your first script](first-script.md)
+- [Native C++ registration](../reference/cpp/native-registration.md)
 - [Examples](examples.md)
 - [LuauAPI mod guidelines](../mod_guidelines.md)
 - [Building from source](../contributor/building.md)

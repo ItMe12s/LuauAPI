@@ -37,6 +37,7 @@ whether a brand new mod or one you already have.
 - [Example mod template and installation](installation.md)
 - [Editor setup](editor-setup.md)
 - [Your first script](first-script.md)
+- [Native C++ registration](../reference/cpp/native-registration.md)
 - [Examples](examples.md)
 - [LuauAPI mod guidelines](../mod_guidelines.md)
 
@@ -45,6 +46,7 @@ whether a brand new mod or one you already have.
 - [LuauAPI mod guidelines](../mod_guidelines.md)
 - [globals](../reference/lua/globals.md)
 - [C++ API reference](../reference/cpp/api-reference.md)
+- [Native C++ registration](../reference/cpp/native-registration.md)
 - [Limits and errors](../reference/cpp/limits-and-errors.md)
 
 ## Source

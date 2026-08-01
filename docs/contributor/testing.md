@@ -27,6 +27,7 @@ CTest discovers the cases at build time. The files are:
 | Test file | Coverage |
 | --- | --- |
 | `tests/cpp/core/api_tests.cpp` | Public C++ API surface |
+| `tests/cpp/core/native_registration_tests.cpp` | Native publication, typed marshalling, conflicts, lifecycle, and diagnostics |
 | `tests/cpp/framework/binding_tests.cpp` | Binding registration and dispatch |
 | `tests/cpp/diagnostics/boundary_recorder_tests.cpp` | Crash sidecar boundary stack, flush, and serialization |
 | `tests/cpp/require/bytecode_cache_key_tests.cpp` | Cache key over size, modify time, and content |

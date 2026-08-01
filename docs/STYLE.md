@@ -64,6 +64,7 @@ Do not repeat these topics. Link to the central page.
 | Mod policy overlay | [LuauAPI mod guidelines](mod_guidelines.md) |
 | Main-thread and runtime basics | [Getting started](getting-started/overview.md) |
 | C++ host API surface | [C++ API reference](reference/cpp/api-reference.md) |
+| Native C++ registration | [Native C++ registration](reference/cpp/native-registration.md) |
 | Hook usage in scripts | [hooks](reference/lua/hooks.md) |
 | Native crash Luau context | [Crash sidecar](contributor/internals/crash-sidecar.md) |
 | CCObject::release hook safety | [Release-hook safety](contributor/internals/release-hook-safety.md) |

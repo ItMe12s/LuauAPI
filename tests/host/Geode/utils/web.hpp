@@ -3,6 +3,7 @@
 #include <Geode/Result.hpp>
 #include <Geode/loader/Mod.hpp>
 #include <Geode/utils/async.hpp>
+#include <Geode/utils/function.hpp>
 #include <atomic>
 #include <chrono>
 #include <cstdint>
@@ -22,9 +23,6 @@
 namespace geode {
     using ByteVector = std::vector<std::uint8_t>;
     using ZStringView = std::string_view;
-
-    template <typename Signature>
-    using Function = std::function<Signature>;
 
     class ListenerHandle {
     public:
@@ -620,7 +618,7 @@ namespace geode::utils::web {
         }
 
         WebRequest& onProgress(Function<void(WebProgress const&)> callback) {
-            m_progress = std::move(callback);
+            m_progress = std::make_shared<Function<void(WebProgress const&)>>(std::move(callback));
             return *this;
         }
 
@@ -685,7 +683,7 @@ namespace geode::utils::web {
         WebFuture makeFuture() {
             auto snapshot = std::make_shared<WebRequest>(*this);
             return WebFuture([snapshot]() {
-                if (snapshot->m_progress) snapshot->m_progress(snapshot->getProgress());
+                if (snapshot->m_progress) (*snapshot->m_progress)(snapshot->getProgress());
                 if (auto const& factory = test::responseFactory()) {
                     return factory(*snapshot, snapshot->m_method, snapshot->m_url, snapshot->m_mod);
                 }
@@ -713,7 +711,7 @@ namespace geode::utils::web {
         std::optional<std::string> m_bodyString;
         std::optional<matjson::Value> m_bodyJson;
         std::optional<ByteVector> m_bodyMultipart;
-        Function<void(WebProgress const&)> m_progress;
+        std::shared_ptr<Function<void(WebProgress const&)>> m_progress;
         Mod* m_mod = nullptr;
     };
 

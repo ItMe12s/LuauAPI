@@ -7,6 +7,7 @@
 #include "framework/stack/TableUtil.hpp"
 
 #include <Geode/loader/Priority.hpp>
+#include <Geode/utils/function.hpp>
 #include <Geode/utils/terminate.hpp>
 #include <Geode/utils/web.hpp>
 #include <cstdint>
@@ -141,7 +142,7 @@ namespace luax::webdetail {
 
         int registerWebListener(
             lua_State* L, int callbackIdx, int priorityIdx,
-            std::function<geode::ListenerHandle(std::shared_ptr<LuaCallback>, int)> connect
+            geode::FunctionRef<geode::ListenerHandle(std::shared_ptr<LuaCallback>, int)> connect
         ) {
             luaL_checktype(L, callbackIdx, LUA_TFUNCTION);
             auto cb = std::make_shared<LuaCallback>(L, callbackIdx);
@@ -289,7 +290,7 @@ namespace luax::webdetail {
                 return connectResponse(cb, priority, desc, std::move(modID), id);
             };
 
-            return registerWebListener(L, callbackIdx, priorityIdx, std::move(connect));
+            return registerWebListener(L, callbackIdx, priorityIdx, connect);
         }
 
         int listenerDispatch(lua_State* L, ListenerId id) {

@@ -1,4 +1,4 @@
-# sharing APIs between mods
+# Sharing APIs between mods
 
 ## Summary
 
@@ -6,7 +6,20 @@ All mods share one runtime and one global table.
 A value one script puts on a global is visible to other mods later.
 Use this to let one mod expose a Luau API to others.
 
-## Publishing
+## Publishing from C++
+
+Direct native registration publishes C++ functions and values under the caller's full mod id.
+Luau consumers see the same shared table layout:
+
+```luau
+local Provider = _G["provider.mod"]
+print(Provider.metadata.version)
+print(Provider.math.add(2, 3))
+```
+
+See [Native C++ registration](../cpp/native-registration.md) for setup, supported types, registration rules, and callback behavior.
+
+## Publishing from Luau
 
 Put your API in one table on `_G`, keyed by your full Geode mod id.
 
@@ -69,6 +82,9 @@ end)
 ## Related
 
 - [Getting started](../../getting-started/overview.md)
+- [Native C++ registration](../cpp/native-registration.md)
+- [C++ API reference](../cpp/api-reference.md)
+- [Limits and errors](../cpp/limits-and-errors.md)
 - [Examples](../../getting-started/examples.md)
 - [modules](modules.md)
 - [tasks and time](tasks.md)
@@ -77,6 +93,7 @@ end)
 
 ## Source
 
+- `include/NativeRegistration.hpp`
 - `src/core/Runtime.cpp`
 - `src/api.cpp`
 - `src/bindings/task/TaskBinding.cpp`

@@ -61,8 +61,11 @@ These are fine when Geode does not provide a helper:
 - `std::optional` monadic operations (`.and_then`, `.or_else`, `.transform`)
 - `std::span`
 - `concept` and `requires`
-- `luauapi::move_only_function` for move-only callbacks
-  (stdlib on MSVC, `std23` polyfill elsewhere via [`include/MoveOnlyFunction.hpp`](../../include/MoveOnlyFunction.hpp))
+
+## Callback wrappers
+
+Use `geode::Function` for owned move-only callbacks.
+Use `geode::FunctionRef` only for callbacks that are not stored.
 
 ## Formatting
 

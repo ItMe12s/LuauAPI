@@ -3,7 +3,7 @@
 #include "render3d/gpu/GpuTypes.hpp"
 #include "render3d/types/SceneTypes.hpp"
 
-#include <MoveOnlyFunction.hpp>
+#include <Geode/utils/function.hpp>
 #include <cstdint>
 #include <glm/mat4x4.hpp>
 #include <map>
@@ -36,11 +36,10 @@ namespace luax::render3d {
         std::vector<SceneDrawItem> blend;
     };
 
-    using GpuMeshResolver =
-        luauapi::move_only_function<GpuMesh*(std::uint64_t meshId, MeshAsset const& mesh)>;
+    using GpuMeshResolver = geode::Function<GpuMesh*(std::uint64_t meshId, MeshAsset const& mesh)>;
 
     using TextureResolver =
-        luauapi::move_only_function<unsigned int(std::uint64_t textureId, TextureAsset const& texture)>;
+        geode::Function<unsigned int(std::uint64_t textureId, TextureAsset const& texture)>;
 
     float shaderAlphaCutoff(int alphaMode, float alphaCutoff);
 

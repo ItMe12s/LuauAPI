@@ -121,8 +121,9 @@ end
 ## Share an API on _G
 
 Full API: [sharing APIs between mods](../reference/lua/sharing-apis.md).
+For a C++ provider, see [Native C++ registration](../reference/cpp/native-registration.md).
 
-Publish from the provider mod. Read with `_G["other.mod.id"]` from consumers.
+Publish from the provider mod. Read with `_G["other.mod-id"]` from consumers.
 Use `task` polling when load order is unknown.
 
 ## Fetch over the web
@@ -209,7 +210,7 @@ geode.hook("geode.gd.MenuLayer:init/0", {
 ## Related
 
 - [Getting started](overview.md)
-- [LuauAPI mod guidelines](../mod_guidelines.md)
+- [Native C++ registration](../reference/cpp/native-registration.md)
 - [globals](../reference/lua/globals.md)
 - [modules](../reference/lua/modules.md)
 - [sharing APIs between mods](../reference/lua/sharing-apis.md)

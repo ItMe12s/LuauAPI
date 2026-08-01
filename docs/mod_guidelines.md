@@ -143,6 +143,7 @@ _G["your.modid"] = {
 
 Even this should be rare. Prefer modules and locals when you do not need a public API.
 See [sharing APIs between mods](reference/lua/sharing-apis.md).
+For typed C++ providers, see [Native C++ registration](reference/cpp/native-registration.md).
 
 ### `reject-gpu-maxxing`
 
@@ -468,6 +469,7 @@ These are allowed when done with care.
 - [Getting started](getting-started/overview.md)
 - [globals](reference/lua/globals.md)
 - [sharing APIs between mods](reference/lua/sharing-apis.md)
+- [Native C++ registration](reference/cpp/native-registration.md)
 - [modules](reference/lua/modules.md)
 - [hooks](reference/lua/hooks.md)
 - [tasks and time](reference/lua/tasks.md)

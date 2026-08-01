@@ -17,7 +17,6 @@
 #include <lua.h>
 #include <string>
 #include <string_view>
-#include <system_error>
 #include <vector>
 
 namespace luax::diag {
@@ -73,6 +72,7 @@ namespace luax::diag {
                 case BoundaryKind::HookBefore: return "hook-before";
                 case BoundaryKind::HookAfter: return "hook-after";
                 case BoundaryKind::GeneratedBinding: return "generated-binding";
+                case BoundaryKind::NativeFunction: return "native-function";
                 case BoundaryKind::Task: return "task";
                 case BoundaryKind::ImGui: return "imgui";
                 case BoundaryKind::Delegate: return "delegate";
@@ -377,9 +377,7 @@ namespace luax::diag {
         auto dir = resolveCrashlogsDir();
         if (dir.empty()) return;
 
-        std::error_code ec;
-        std::filesystem::create_directories(dir, ec);
-        if (ec) return;
+        if (geode::utils::file::createDirectoryAll(dir).isErr()) return;
 
         std::filesystem::path final = dir / kSidecarFileName;
 

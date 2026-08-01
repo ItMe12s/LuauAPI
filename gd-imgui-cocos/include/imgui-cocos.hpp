@@ -1,6 +1,6 @@
 #pragma once
 
-#include <MoveOnlyFunction.hpp>
+#include <Geode/utils/function.hpp>
 #include <cocos2d.h>
 #include <imgui.h>
 
@@ -12,7 +12,7 @@ private:
     bool m_visible = true;
     bool m_reloading = false;
     bool m_abandonReloadTextures = false;
-    luauapi::move_only_function<void()> m_setupCall, m_drawCall;
+    geode::Function<void()> m_setupCall, m_drawCall;
     ImGuiMouseCursor m_lastCursor = ImGuiMouseCursor_COUNT;
     float m_displayScale = 4.0f;
     void updateTexture(ImTextureData*) const;
@@ -35,10 +35,10 @@ public:
     // called on swapBuffers
     void drawFrame();
 
-    ImGuiCocos& setup(luauapi::move_only_function<void()> fun);
+    ImGuiCocos& setup(geode::Function<void()> fun);
     ImGuiCocos& setup();
 
-    ImGuiCocos& draw(luauapi::move_only_function<void()> fun);
+    ImGuiCocos& draw(geode::Function<void()> fun);
 
     // used to reinitialize imgui context
     void reload(bool abandonTextures = false);

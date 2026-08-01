@@ -159,6 +159,54 @@ There is no Lua error for this path.
 | `script file exceeds maximum size` | File over cap on C++ run | C++ `Err` |
 | `module '%s' exceeds maximum size or cannot be read` | Module file over cap | Lua error on `require` |
 
+## C++ native registration
+
+`registerFunction` and `registerValue` return C++ `Err` for publication failures.
+See [Native C++ registration](native-registration.md) for the public API and callback rules.
+
+| Message | When |
+| --- | --- |
+| `native registration has no provider mod` | Caller-local `Mod::get()` is null |
+| `native registration provider ID is empty` | Provider id is empty |
+| `native registration provider ID contains NUL` | Provider id contains an embedded NUL |
+| `native registration path is empty` | Path has no segments |
+| `native registration path contains an empty segment` | Leading, trailing, or repeated dot |
+| `native registration path contains NUL` | Path contains an embedded NUL |
+| `luau api must be called on the main thread` | Registration is off main |
+| `luau runtime not ready` | Registration is before runtime readiness |
+| `luau runtime shutting down` | Registration is during or after shutdown |
+| `native registration namespace is not a table: ...` | The provider global already holds another type |
+| `native registration intermediate is not a table: ...` | A path segment already holds another type |
+| `native registration target already exists: ...` | The leaf is already non-`nil` |
+| `native registration failed for ...: ...` | Protected VM publication fails |
+| `native function pointer is null` | `registerFunction` receives a null pointer |
+| `registered optional value is empty` | `registerValue` receives a disengaged optional |
+| `registered C string is null` | `registerValue` receives a null C string |
+| `registered integer is outside signed 64-bit range` | Integral value cannot fit in `std::int64_t` |
+| `registered number must be finite` | Value is NaN or infinity |
+
+Publication is atomic: expected conflicts and protected VM failures do not expose partial tables.
+These errors do not update `lastError()`.
+
+Calls use strict arity and type validation. A callback `geode::Result::Err` becomes a Lua error:
+
+```text
+native function _G["provider.mod"].path failed: <message>
+```
+
+Script execution adds the normal Luau traceback. Native callbacks cannot be interrupted while C++ is executing.
+Elapsed wall time is checked at the next Luau instruction. Native allocations are not charged to `kMemoryLimitBytes`.
+
+Native callback validation uses these message patterns inside the qualified error:
+
+| Message | When |
+| --- | --- |
+| `expected ... arguments, got ...` | Argument count is outside the declared range |
+| `argument ... must be ...` | An argument has the wrong type or range |
+| `return integer is outside signed 64-bit range` | A returned integral value cannot fit |
+| `return number must be finite` | A returned float or double is NaN or infinity |
+| (provider error text) | The callback returns `geode::Err` |
+
 ## C++ run API
 
 Errors from `runFile`, `runScript`, and their async variants.
@@ -332,6 +380,7 @@ When an allocation would cross the cap, it fails and Lua reports an out of memor
 - `src/render3d/assets/ImageDecode.cpp`
 - `include/RuntimeTypes.hpp`
 - `include/LuauAPI.hpp`
+- `include/NativeRegistration.hpp`
 - `src/api.cpp`
 - `src/core/Runtime.cpp`
 - `tools/luau_codegen/convert/type_classification.py`

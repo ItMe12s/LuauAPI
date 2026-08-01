@@ -38,12 +38,19 @@ When a run fails, check these surfaces:
 
 See Threading below for per-function thread rules.
 
+## Native registration
+
+Provider mods can publish typed C++ functions and values under their full mod id.
+See [Native C++ registration](native-registration.md) for signatures, supported types,
+publication rules, callback behavior, and examples.
+
 ## Threading
 
 | API | Caller thread | Notes |
 | --- | --- | --- |
 | `runFile`, `runScript` | Main only | Full path validation, read, compile, and run |
 | `runFileAsync`, `runScriptAsync` | Any (not shutting down) | Path validation and file read on caller, script runs on main |
+| `registerFunction`, `registerValue` | Main only, runtime ready | Publish under the caller mod's exact `_G` key |
 | `isReady`, `status`, `lastError` | Main only | Off main thread or during shutdown return safe defaults |
 | `memoryUsage`, `memoryLimit`, `codegenEnabled` | Main only | Return zeros or false off main thread |
 
@@ -155,6 +162,7 @@ See [Limits and errors](limits-and-errors.md).
 
 - [Getting started](../../getting-started/overview.md)
 - [Your first script](../../getting-started/first-script.md)
+- [Native C++ registration](native-registration.md)
 - [Limits and errors](limits-and-errors.md)
 - [Architecture](../../contributor/architecture.md)
 

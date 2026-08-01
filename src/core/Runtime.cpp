@@ -19,6 +19,7 @@
 #endif
 
 #include <Geode/Geode.hpp>
+#include <Geode/utils/timer.hpp>
 #include <Luau/CodeGen.h>
 #include <Luau/Compiler.h>
 #if !defined(LUAUAPI_HOST_TESTS)
@@ -237,7 +238,7 @@ namespace luax {
         }
     }
 
-    void Runtime::registerShutdownHook(luauapi::move_only_function<void()> fn) {
+    void Runtime::registerShutdownHook(geode::Function<void()> fn) {
         if (!assertMainThread()) return;
         if (fn) m_shutdownHooks.push_back(std::move(fn));
     }
@@ -592,12 +593,9 @@ namespace luax {
             return geode::Ok(std::cref(it->second->bytecode));
         }
 
-        auto compileStart = std::chrono::steady_clock::now();
+        geode::utils::Timer<std::chrono::steady_clock> compileTimer;
         std::string compiled = compileSource(source);
-        auto compileMs = std::chrono::duration_cast<std::chrono::milliseconds>(
-                             std::chrono::steady_clock::now() - compileStart
-        )
-                             .count();
+        auto compileMs = compileTimer.elapsed<std::chrono::milliseconds>();
 
         if (!tryCacheCompiledBytecode(key, std::move(compiled), compileMs)) {
             m_bytecodeScratch.clear();
@@ -694,12 +692,9 @@ namespace luax {
 
         tryCompileLoadedChunk(m_state, chunk);
 
-        auto execStart = std::chrono::steady_clock::now();
+        geode::utils::Timer<std::chrono::steady_clock> execTimer;
         auto callResult = protectedCall(m_state, 0, 0, chunk, deadlineMs);
-        auto execMs = std::chrono::duration_cast<std::chrono::milliseconds>(
-                          std::chrono::steady_clock::now() - execStart
-        )
-                          .count();
+        auto execMs = execTimer.elapsed<std::chrono::milliseconds>();
 
         if (callResult.isErr()) {
             return callResult;
