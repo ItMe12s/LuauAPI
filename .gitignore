@@ -68,6 +68,7 @@ build-*/
 .pytest_cache/
 .ruff_cache/
 /types/
+/dummy-mods/
 
 # Lmao this guy is vibecoding
 .cursor/
