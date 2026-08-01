@@ -122,8 +122,8 @@ namespace imes::luauapi {
         inline constexpr bool isResult = ResultTraits<Bare<T>>::value;
 
         template <class T>
-        inline constexpr bool isString =
-            std::same_as<Bare<T>, std::string> || std::same_as<Bare<T>, std::string_view>;
+        inline constexpr bool isString = !std::is_volatile_v<std::remove_reference_t<T>> &&
+            (std::same_as<Bare<T>, std::string> || std::same_as<Bare<T>, std::string_view>);
 
         template <class T>
         inline constexpr bool isInteger = [] {
@@ -503,10 +503,12 @@ namespace imes::luauapi {
 
         template <class T>
         inline constexpr bool isCharArray = std::is_array_v<std::remove_reference_t<T>> &&
+            !std::is_volatile_v<std::remove_extent_t<std::remove_reference_t<T>>> &&
             std::same_as<std::remove_cv_t<std::remove_extent_t<std::remove_reference_t<T>>>, char>;
 
         template <class T>
-        inline constexpr bool isCharPointer = std::is_pointer_v<Bare<T>> &&
+        inline constexpr bool isCharPointer =
+            std::is_pointer_v<Bare<T>> && !std::is_volatile_v<std::remove_pointer_t<Bare<T>>> &&
             std::same_as<std::remove_cv_t<std::remove_pointer_t<Bare<T>>>, char>;
 
         template <class T>

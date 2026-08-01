@@ -67,7 +67,7 @@ Add a dependency on `imes.luauapi` in your `mod.json` and declare your script fi
 ```json
 {
     "dependencies": {
-        "imes.luauapi": ">=0.1.0-beta.1"
+        "imes.luauapi": ">=0.1.0-beta.20"
     },
     "resources": {
         "files": [

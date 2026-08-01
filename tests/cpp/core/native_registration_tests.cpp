@@ -109,6 +109,21 @@ namespace {
     static_assert(!imes::luauapi::NativeFunctionPointer<decltype(&MemberOwner::method)>);
     static_assert(!imes::luauapi::NativeFunctionPointer<decltype(capturingCallable)>);
 
+    using ConstCharArray = char const[4];
+    using VolatileCharArray = char volatile[4];
+
+    static_assert(imes::luauapi::NativeValue<std::string>);
+    static_assert(imes::luauapi::NativeValue<std::string const&>);
+    static_assert(imes::luauapi::NativeValue<std::string_view>);
+    static_assert(imes::luauapi::NativeValue<std::string_view const&>);
+    static_assert(imes::luauapi::NativeValue<char*>);
+    static_assert(imes::luauapi::NativeValue<char const*>);
+    static_assert(imes::luauapi::NativeValue<ConstCharArray&>);
+    static_assert(!imes::luauapi::NativeValue<std::string volatile&>);
+    static_assert(!imes::luauapi::NativeValue<std::string_view volatile&>);
+    static_assert(!imes::luauapi::NativeValue<char volatile*>);
+    static_assert(!imes::luauapi::NativeValue<VolatileCharArray&>);
+
     geode::Mod* makeProvider(
         luauapi_test::ScopedTempDir const& temp, std::string id = "provider.mod-with-dash"
     ) {
