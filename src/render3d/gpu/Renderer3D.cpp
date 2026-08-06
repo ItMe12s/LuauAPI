@@ -34,10 +34,10 @@ namespace luax::render3d {
     }
 
     void Renderer3D::syncContextGen() {
-        if (m_gen != glContextGeneration()) {
+        if (m_glContextGeneration != glContextGeneration()) {
             m_programs.reset();
             m_meshCache.clear();
-            m_gen = glContextGeneration();
+            m_glContextGeneration = glContextGeneration();
         }
     }
 

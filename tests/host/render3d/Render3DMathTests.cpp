@@ -59,6 +59,22 @@ TEST_CASE("Transform compose is associative") {
     REQUIRE(transformNear((a * b) * c, a * (b * c)));
 }
 
+TEST_CASE("Transform fromAxisAngle normalizes non-unit axes") {
+    Transform const unit = Transform::fromAxisAngle(glm::vec3(0.0f, 1.0f, 0.0f), 0.7f);
+    Transform const scaled = Transform::fromAxisAngle(glm::vec3(0.0f, 8.0f, 0.0f), 0.7f);
+
+    REQUIRE(quatNear(scaled.rotation, unit.rotation));
+    REQUIRE(glm::length(scaled.rightVector()) == Approx(1.0f).margin(1e-4f));
+    REQUIRE(glm::length(scaled.upVector()) == Approx(1.0f).margin(1e-4f));
+    REQUIRE(glm::length(scaled.lookVector()) == Approx(1.0f).margin(1e-4f));
+}
+
+TEST_CASE("Transform fromAxisAngle returns identity for a near-zero axis") {
+    REQUIRE(transformNear(
+        Transform::fromAxisAngle(glm::vec3(1e-7f, 0.0f, 0.0f), 1.2f), Transform::identity()
+    ));
+}
+
 TEST_CASE("Transform fromLookAt aims negative lookVector at target") {
     glm::vec3 const eye{0.0f, 2.0f, 6.0f};
     glm::vec3 const target{1.0f, -1.0f, 0.0f};

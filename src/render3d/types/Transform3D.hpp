@@ -6,13 +6,6 @@
 #include <glm/gtx/euler_angles.hpp>
 
 namespace luax::render3d {
-
-    namespace detail {
-        inline glm::vec3 rotateVec(glm::quat const& rotation, glm::vec3 const& vector) {
-            return glm::mat3_cast(rotation) * vector;
-        }
-    } // namespace detail
-
     struct Transform {
         glm::vec3 position{0.0f};
         glm::quat rotation{1.0f, 0.0f, 0.0f, 0.0f};
@@ -40,7 +33,14 @@ namespace luax::render3d {
         }
 
         static Transform fromAxisAngle(glm::vec3 const& axis, float angleRadians) {
-            return Transform{glm::vec3(0.0f), glm::angleAxis(angleRadians, axis)};
+            float const lengthSquared = glm::dot(axis, axis);
+            if (lengthSquared <= 1e-12f) {
+                return identity();
+            }
+            return Transform{
+                glm::vec3(0.0f),
+                glm::angleAxis(angleRadians, axis / glm::sqrt(lengthSquared)),
+            };
         }
 
         static Transform fromEuler(float pitchRadians, float yawRadians, float rollRadians) {
@@ -52,14 +52,14 @@ namespace luax::render3d {
 
         Transform operator*(Transform const& other) const {
             return Transform{
-                position + detail::rotateVec(rotation, other.position),
+                position + rotation * other.position,
                 glm::normalize(rotation * other.rotation),
             };
         }
 
         Transform inverse() const {
             glm::quat const invRot = glm::conjugate(rotation);
-            return Transform{detail::rotateVec(invRot, -position), invRot};
+            return Transform{invRot * -position, invRot};
         }
 
         Transform lerp(Transform const& goal, float alpha) const {
@@ -74,15 +74,15 @@ namespace luax::render3d {
         }
 
         glm::vec3 rightVector() const {
-            return detail::rotateVec(rotation, glm::vec3(1.0f, 0.0f, 0.0f));
+            return rotation * glm::vec3(1.0f, 0.0f, 0.0f);
         }
 
         glm::vec3 upVector() const {
-            return detail::rotateVec(rotation, glm::vec3(0.0f, 1.0f, 0.0f));
+            return rotation * glm::vec3(0.0f, 1.0f, 0.0f);
         }
 
         glm::vec3 lookVector() const {
-            return detail::rotateVec(rotation, glm::vec3(0.0f, 0.0f, -1.0f));
+            return rotation * glm::vec3(0.0f, 0.0f, -1.0f);
         }
 
         Transform withPosition(glm::vec3 const& pos) const {

@@ -59,8 +59,10 @@ TEST_CASE("web shutdown hook cancels live tasks and disconnects listeners") {
     Runtime::getOrCreate();
 
     auto task = std::make_shared<WebTask>(42);
-    auto listener = std::make_shared<WebListenerState>();
-    listener->connected = true;
+    bool listenerConnected = true;
+    auto listener = std::make_shared<WebListenerState>([&listenerConnected] {
+        listenerConnected = false;
+    });
 
     activeTasks().track(task);
     activeListeners().track(listener);
@@ -69,7 +71,7 @@ TEST_CASE("web shutdown hook cancels live tasks and disconnects listeners") {
     clearWebState();
 
     REQUIRE(task->done);
-    REQUIRE_FALSE(listener->connected);
+    REQUIRE_FALSE(listenerConnected);
     REQUIRE(activeTasks().empty());
     REQUIRE(activeListeners().empty());
     REQUIRE_FALSE(webShutdownHookRegistered());

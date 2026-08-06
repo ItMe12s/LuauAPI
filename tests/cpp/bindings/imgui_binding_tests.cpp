@@ -1,4 +1,5 @@
 #include "bindings/geode/CurrentMod.hpp"
+#include "bindings/imgui/ImGuiBindingInternal.hpp"
 #include "bindings/imgui/ImGuiDrawScheduler.hpp"
 #include "bindings/imgui/ImGuiFontRegistry.hpp"
 #include "core/Runtime.hpp"
@@ -7,6 +8,7 @@
 #include "host/lua_test_helpers.hpp"
 
 #include <Geode/loader/Mod.hpp>
+#include <Geode/utils/file.hpp>
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <filesystem>
@@ -155,6 +157,14 @@ namespace {
         runtime->setResourcesRoot(mod->getResourcesDir());
     }
 } // namespace
+
+TEST_CASE("ImGui input text buffer shrinks to the requested cap") {
+    auto& large = luax::imGuiInputTextBuffer(luax::kImGuiInputTextMaxCap);
+    REQUIRE(large.size() == luax::kImGuiInputTextMaxCap + 1);
+
+    auto& small = luax::imGuiInputTextBuffer(8);
+    REQUIRE(small.size() == 9);
+}
 
 TEST_CASE("ImGui constants match Dear ImGui values") {
     RuntimeGuard guard;
@@ -367,6 +377,20 @@ TEST_CASE("imgui.font.add rejects calls inside onDraw") {
 }
 
 #ifdef LUAUAPI_TEST_FONT_PATH
+TEST_CASE("ImGui font registry resolves and removes fonts") {
+    RuntimeGuard guard;
+    ImGuiContextGuard ctx;
+
+    auto bytes = geode::utils::file::readBinary(LUAUAPI_TEST_FONT_PATH);
+    REQUIRE(bytes.isOk());
+    auto const id = luax::imguiFontAdd(16.0f, std::move(bytes.unwrap()));
+    luax::imguiFontRebuildAtlas();
+
+    REQUIRE(luax::imguiFontResolve(id) != nullptr);
+    luax::imguiFontRemove(id);
+    REQUIRE(luax::imguiFontResolve(id) == nullptr);
+}
+
 TEST_CASE("imgui.font loads resource fonts and font.with pops after closure error") {
     RuntimeGuard guard;
     ImGuiContextGuard ctx;

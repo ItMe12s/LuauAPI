@@ -145,6 +145,7 @@ namespace {
         std::vector<char>& buffer = imGuiInputTextBuffer(cap);
         std::size_t copy = std::min(value.size(), cap);
         std::copy_n(value.data(), copy, buffer.data());
+        buffer[copy] = '\0';
 
         ImGui::InputText(label, buffer.data(), buffer.size());
         lua_pushstring(L, buffer.data());
@@ -171,6 +172,7 @@ namespace {
         std::vector<char>& buffer = imGuiInputTextBuffer(cap);
         std::size_t copy = std::min(value.size(), cap);
         std::copy_n(value.data(), copy, buffer.data());
+        buffer[copy] = '\0';
 
         ImGui::InputTextMultiline(label, buffer.data(), buffer.size(), size);
         lua_pushstring(L, buffer.data());

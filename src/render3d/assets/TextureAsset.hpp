@@ -3,9 +3,9 @@
 #include "render3d/assets/AssetRegistry.hpp"
 #include "render3d/assets/MeshAsset.hpp"
 
+#include <Geode/utils/cocos.hpp>
+#include <cocos2d.h>
 #include <cstdint>
-#include <memory>
-#include <unordered_map>
 
 namespace cocos2d {
     class CCNode;
@@ -26,8 +26,7 @@ namespace luax::render3d {
 
         void setViewportSourceNode(cocos2d::CCNode* node);
 
-        struct ViewportBinding;
-        std::shared_ptr<ViewportBinding> m_viewportBinding;
+        geode::WeakRef<cocos2d::CCNode> m_viewportSource;
     };
 
     using TextureRegistry = AssetRegistry<TextureAsset>;

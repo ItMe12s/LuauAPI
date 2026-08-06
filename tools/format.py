@@ -6,9 +6,9 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-CPP_DIRS = ("src", "include", "tests", "gd-imgui-cocos", "dummy-mods")
+CPP_DIRS = ("src", "include", "tests", "gd-imgui-cocos")
 CPP_GLOBS = ("*.cpp", "*.hpp")
-PY_DIRS = ("tools", "tests", "dummy-mods")
+PY_DIRS = ("tools", "tests")
 
 
 def _run(cmd: list[str]) -> int:

@@ -26,7 +26,7 @@ namespace luax::render3d {
 
         std::unordered_map<std::uint64_t, GpuMesh> m_gpuMeshes;
         std::unordered_map<std::uint64_t, unsigned int> m_gpuTextures;
-        unsigned m_gen = 0;
+        unsigned m_glContextGeneration = 0;
     };
 
 } // namespace luax::render3d

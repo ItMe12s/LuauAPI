@@ -23,7 +23,7 @@ namespace {
             lua_setfield(L, -2, "id");
             push(L, std::string(mod->getName()));
             lua_setfield(L, -2, "name");
-            auto const& devs = mod->getDevelopers();
+            auto const& devs = mod->getMetadata().getDevelopers();
             push(L, geode::utils::string::join(std::span{devs.data(), devs.size()}, ", "));
             lua_setfield(L, -2, "developer");
             push(L, mod->getVersion().toVString());

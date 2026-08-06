@@ -54,7 +54,8 @@ namespace luax::render3d {
         glm::mat4 const projection =
             glm::perspective(glm::radians(camera.fovYDegrees), aspect, camera.zNear, camera.zFar);
         glm::mat4 const view = camera.transform.inverse().toMat4();
-        Frustum const frustum = Frustum::fromViewProj(projection * view);
+        glm::mat4 const viewProj = projection * view;
+        Frustum const frustum = Frustum::fromViewProj(viewProj);
         glm::vec3 const lightDir = normalizedLightDirection(settings.lightDirection);
         glm::vec3 const lightColor = settings.lightColor * settings.lightIntensity;
 
@@ -91,11 +92,9 @@ namespace luax::render3d {
                 state.cullEnabled = wantCull;
             }
 
-            glm::mat4 const mvp = projection * view * item.model;
-            glm::mat4 const normalMat =
-                glm::mat4(glm::inverse(glm::transpose(glm::mat3(item.model))));
+            glm::mat4 const mvp = viewProj * item.model;
             glUniformMatrix4fv(programs.lambertLocMvp, 1, GL_FALSE, glm::value_ptr(mvp));
-            glUniformMatrix4fv(programs.lambertLocNormalMat, 1, GL_FALSE, glm::value_ptr(normalMat));
+            glUniformMatrix4fv(programs.lambertLocNormalMat, 1, GL_FALSE, glm::value_ptr(item.model));
             glUniform3fv(programs.lambertLocTint, 1, glm::value_ptr(item.tint));
 
             unsigned int const boundTexture = item.boundTexture;
@@ -158,6 +157,7 @@ namespace luax::render3d {
             );
         };
 
+        std::vector<GpuInstanceData> instanceData;
         auto drawInstancedRun = [&](SceneDrawItem const* begin,
                                     SceneDrawItem const* end,
                                     DrawPassState& state) {
@@ -184,7 +184,6 @@ namespace luax::render3d {
                 state.cullEnabled = wantCull;
             }
 
-            glm::mat4 const viewProj = projection * view;
             glUniformMatrix4fv(programs.lambertInstLocViewProj, 1, GL_FALSE, glm::value_ptr(viewProj));
 
             unsigned int const boundTexture = first.boundTexture;
@@ -214,7 +213,7 @@ namespace luax::render3d {
                 state.lastBoundTexture = boundTexture;
             }
 
-            std::vector<GpuInstanceData> instanceData;
+            instanceData.clear();
             instanceData.reserve(count);
             for (SceneDrawItem const* it = begin; it != end; ++it) {
                 instanceData.push_back(GpuInstanceData{it->model, glm::vec4(it->tint, 0.0f)});

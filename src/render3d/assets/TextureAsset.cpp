@@ -10,22 +10,12 @@
 namespace luax::render3d {
 
 #if !defined(LUAUAPI_HOST_TESTS)
-
-    struct TextureAsset::ViewportBinding {
-        geode::WeakRef<cocos2d::CCNode> node;
-    };
-
     void TextureAsset::setViewportSourceNode(cocos2d::CCNode* node) {
-        auto binding = std::make_shared<ViewportBinding>();
-        binding->node = geode::WeakRef<cocos2d::CCNode>(node);
-        m_viewportBinding = std::move(binding);
+        m_viewportSource = geode::WeakRef<cocos2d::CCNode>(node);
     }
 
     CCViewportFrame* TextureAsset::viewportSource() const {
-        if (!m_viewportBinding) {
-            return nullptr;
-        }
-        auto node = m_viewportBinding->node.lock();
+        auto node = m_viewportSource.lock();
         if (!node) {
             return nullptr;
         }

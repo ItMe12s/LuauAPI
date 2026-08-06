@@ -195,16 +195,17 @@ namespace luax::webdetail {
         }
     } // namespace
 
-    int parseRequestCall(lua_State* L, int optionsIdx, int callbackIdx, int& outOptions, int& outCallback) {
+    void parseRequestCall(
+        lua_State* L, int optionsIdx, int callbackIdx, int& outOptions, int& outCallback
+    ) {
         if (lua_isfunction(L, optionsIdx)) {
             outOptions = 0;
             outCallback = optionsIdx;
-            return outCallback;
+            return;
         }
         outOptions = optionsIdx;
         outCallback = callbackIdx;
         luaL_checktype(L, outCallback, LUA_TFUNCTION);
-        return outCallback;
     }
 
     std::shared_ptr<WebTask> startRequest(
@@ -238,10 +239,6 @@ namespace luax::webdetail {
                             kHookScriptDeadlineMs,
                             +[](lua_State* L, void* raw) {
                                 auto& response = *static_cast<Ctx*>(raw)->response;
-                                if (!responseDataWithinLimit(response.data().size())) {
-                                    pushNilErr(L, kWebResponseSizeExceededMsg);
-                                    return;
-                                }
                                 pushResponseOrError(L, std::move(response));
                             },
                             &ctx

@@ -4,9 +4,12 @@
 #include <functional>
 #include <string>
 #include <string_view>
+#include <type_traits>
 
 namespace geode::utils {
-    inline std::string numToString(int value) {
+    template <class T>
+        requires std::is_arithmetic_v<T>
+    inline std::string numToString(T value) {
         return std::to_string(value);
     }
 

@@ -1,5 +1,6 @@
 #include "core/Runtime.hpp"
 #include "diagnostics/BoundaryRecorder.hpp"
+#include "framework/stack/Stack.hpp"
 #include "require/PathSandbox.hpp"
 
 #include <LuauAPI.hpp>
@@ -55,22 +56,6 @@ namespace {
     };
 
     static_assert(std::is_trivially_copyable_v<NativeClosureHeader>);
-
-    class ApiStackGuard {
-    public:
-        explicit ApiStackGuard(lua_State* L) : m_state(L), m_top(lua_gettop(L)) {}
-
-        ~ApiStackGuard() {
-            lua_settop(m_state, m_top);
-        }
-
-        ApiStackGuard(ApiStackGuard const&) = delete;
-        ApiStackGuard& operator=(ApiStackGuard const&) = delete;
-
-    private:
-        lua_State* m_state = nullptr;
-        int m_top = 0;
-    };
 
     struct NativeCallState {
         lua_State* state = nullptr;
@@ -503,7 +488,7 @@ namespace {
         auto* L = runtime.state();
         if (!L) return geode::Err("luau runtime not ready");
 
-        ApiStackGuard stack(L);
+        luax::LuaStackGuard stack(L);
         int status = lua_cpcall(L, &nativeRegistrationEntry, &request);
         if (status != 0) {
             size_t size = 0;
@@ -580,9 +565,8 @@ namespace {
         return geode::Ok();
     }
 
-    geode::Result<void> resolveRunFilePath(
-        std::filesystem::path const& resourcesRoot, std::filesystem::path const& relativePath,
-        std::filesystem::path& outPath, std::filesystem::path& outRoot
+    geode::Result<PreparedRun> prepareRunFile(
+        std::filesystem::path const& resourcesRoot, std::filesystem::path const& relativePath
     ) {
         auto rootResult = luax::canonicalRoot(resourcesRoot);
         if (rootResult.isErr()) {
@@ -595,8 +579,8 @@ namespace {
         }
         auto flatPath = flatPathResult.unwrap();
 
-        outRoot = rootResult.unwrap();
-        auto pathResult = luax::resolveScriptFileInsideRoot(outRoot, outRoot / flatPath);
+        auto root = rootResult.unwrap();
+        auto pathResult = luax::resolveScriptFileInsideRoot(root, root / flatPath);
         if (pathResult.isErr()) {
             return geode::Err(pathResult.unwrapErr());
         }
@@ -606,20 +590,6 @@ namespace {
         auto fileSize = std::filesystem::file_size(path, sizeEc);
         if (!sizeEc && fileSize > luax::kMaxScriptBytes) {
             return geode::Err("script file exceeds maximum size");
-        }
-
-        outPath = path;
-        return geode::Ok();
-    }
-
-    geode::Result<PreparedRun> prepareRunFile(
-        std::filesystem::path const& resourcesRoot, std::filesystem::path const& relativePath
-    ) {
-        std::filesystem::path path;
-        std::filesystem::path root;
-        auto resolveResult = resolveRunFilePath(resourcesRoot, relativePath, path, root);
-        if (resolveResult.isErr()) {
-            return geode::Err(resolveResult.unwrapErr());
         }
 
         auto sourceResult = luax::readScriptFile(path);

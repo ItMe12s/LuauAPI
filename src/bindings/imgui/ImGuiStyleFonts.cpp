@@ -499,6 +499,7 @@ namespace luax {
 #include <Geode/Geode.hpp>
 #include <algorithm>
 #include <imgui.h>
+#include <ranges>
 #include <vector>
 
 namespace luax {
@@ -527,10 +528,10 @@ namespace luax {
         if (id == 0) {
             return nullptr;
         }
-        auto entry = geode::utils::ranges::find(s_entries, [id](FontEntry const& item) {
+        auto entry = std::ranges::find_if(s_entries, [id](FontEntry const& item) {
             return item.id == id;
         });
-        return entry ? entry->font : nullptr;
+        return entry != s_entries.end() ? entry->font : nullptr;
     }
 
     void imguiFontRemove(std::uint64_t id) {

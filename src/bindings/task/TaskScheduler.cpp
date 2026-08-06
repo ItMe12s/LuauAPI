@@ -25,7 +25,6 @@ namespace luax {
         task.remaining = delaySeconds;
         task.interval = intervalSeconds;
         m_timed.insertWithId(id, std::move(task));
-        m_deferredIds[id] = false;
         return id;
     }
 
@@ -37,7 +36,6 @@ namespace luax {
         std::uint64_t const id = m_nextId++;
         task.callback = std::move(callback);
         m_deferred.insertWithId(id, std::move(task));
-        m_deferredIds[id] = true;
         return id;
     }
 
@@ -81,12 +79,6 @@ namespace luax {
         }
     }
 
-    void TaskScheduler::eraseTaskAt(IndexedSlotMap<Task>& store, std::size_t index) {
-        std::uint64_t const id = store.idAt(index);
-        store.eraseAt(index);
-        m_deferredIds.erase(id);
-    }
-
     void TaskScheduler::compact(IndexedSlotMap<Task>& store) {
         for (std::size_t i = 0; i < store.size();) {
             if (!store[i].cancelled) {
@@ -94,7 +86,7 @@ namespace luax {
                 continue;
             }
             store[i].callback.reset();
-            eraseTaskAt(store, i);
+            store.eraseAt(i);
         }
     }
 
@@ -130,7 +122,6 @@ namespace luax {
     void TaskScheduler::clear() {
         clearSlots(m_timed);
         clearSlots(m_deferred);
-        m_deferredIds.clear();
     }
 
     bool TaskScheduler::full() const {
@@ -143,12 +134,7 @@ namespace luax {
 
 #if defined(LUAUAPI_HOST_TESTS)
     bool TaskScheduler::isScheduled(std::uint64_t id) const {
-        auto it = m_deferredIds.find(id);
-        if (it == m_deferredIds.end()) {
-            return false;
-        }
-        auto const& store = it->second ? m_deferred : m_timed;
-        return isActiveSlot(store, id);
+        return isActiveSlot(m_timed, id) || isActiveSlot(m_deferred, id);
     }
 #endif
 
@@ -170,7 +156,7 @@ namespace luax {
             }
         };
 
-        TaskTickNode* s_tickNode = nullptr;
+        geode::Ref<TaskTickNode> s_tickNode;
         bool s_armPending = false;
         bool s_retryQueued = false;
         bool s_directorErrorLogged = false;
@@ -196,7 +182,7 @@ namespace luax {
                 }
                 return false;
             }
-            s_tickNode = new TaskTickNode();
+            s_tickNode = geode::Ref<TaskTickNode>::adopt(new TaskTickNode());
             s_tickNode->init();
             scheduler->scheduleUpdateForTarget(s_tickNode, 0, false);
             s_armPending = false;
@@ -230,7 +216,6 @@ namespace luax {
                 scheduler->unscheduleUpdateForTarget(s_tickNode);
             }
         }
-        s_tickNode->release();
         s_tickNode = nullptr;
     }
 #else

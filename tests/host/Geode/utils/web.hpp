@@ -32,7 +32,15 @@ namespace geode {
             m_disconnect(std::move(disconnect)) {}
 
         ListenerHandle(ListenerHandle&&) = default;
-        ListenerHandle& operator=(ListenerHandle&&) = default;
+
+        ListenerHandle& operator=(ListenerHandle&& other) noexcept {
+            if (this != &other) {
+                disconnect();
+                m_disconnect = std::move(other.m_disconnect);
+            }
+            return *this;
+        }
+
         ListenerHandle(ListenerHandle const&) = delete;
         ListenerHandle& operator=(ListenerHandle const&) = delete;
 

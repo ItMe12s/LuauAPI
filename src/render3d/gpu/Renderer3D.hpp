@@ -37,7 +37,7 @@ namespace luax::render3d {
 
         Renderer3DPrograms m_programs;
         Renderer3DMeshCache m_meshCache;
-        unsigned m_gen = 0;
+        unsigned m_glContextGeneration = 0;
     };
 
 } // namespace luax::render3d

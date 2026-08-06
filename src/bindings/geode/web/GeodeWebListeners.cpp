@@ -89,13 +89,7 @@ namespace luax::webdetail {
                 +[](lua_State* L, void* raw) {
                     auto* c = static_cast<Ctx*>(raw);
                     if (c->modID) push(L, *c->modID);
-                    if (!responseDataWithinLimit(c->response.data().size())) {
-                        pushNilErr(L, kWebResponseSizeExceededMsg);
-                    }
-                    else {
-                        pushResponse(L, std::move(c->response));
-                        lua_pushnil(L);
-                    }
+                    pushResponseOrError(L, std::move(c->response));
                 },
                 &ctx,
                 +[](lua_State* L, void* raw) {
@@ -146,8 +140,7 @@ namespace luax::webdetail {
         ) {
             luaL_checktype(L, callbackIdx, LUA_TFUNCTION);
             auto cb = std::make_shared<LuaCallback>(L, callbackIdx);
-            auto state = std::make_shared<WebListenerState>();
-            state->handle = connect(cb, optPriority(L, priorityIdx));
+            auto state = std::make_shared<WebListenerState>(connect(cb, optPriority(L, priorityIdx)));
             rememberListener(state);
             pushListener(L, std::move(state));
             return 1;
@@ -344,7 +337,7 @@ namespace luax::webdetail {
 
     int listenerDisconnect(lua_State* L) {
         auto* box = checkListener(L, 1, "WebListenerHandle:disconnect");
-        if (box->state) box->state->disconnect();
+        if (box->state) *box->state = {};
         return 0;
     }
 

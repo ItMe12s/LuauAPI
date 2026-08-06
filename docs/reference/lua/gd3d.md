@@ -22,6 +22,7 @@ It still exposes `CCNode` layout methods (`addChild`, `setPosition`, `setContent
 
 Construct with `Transform.new()`, `Transform.new(position)`, `Transform.new(position, lookAt)`,
 `Transform.fromEuler(pitch, yaw, roll)`, or `Transform.fromAxisAngle(axis, angleRadians)`.
+`fromAxisAngle` normalizes non-unit axes, a near-zero axis produces the identity rotation.
 Euler and axis-angle angles are in radians.
 `Transform.new(position, lookAt)` builds a look-at rotation with +Y as up.
 

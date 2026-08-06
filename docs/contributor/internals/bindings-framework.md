@@ -149,7 +149,7 @@ for subsystems that need runtime shutdown cleanup.
 - `clearAll` locks each live entry and runs a caller-supplied shutdown callback, then clears the pool.
 
 Web tasks/listeners and WebSocket connections/servers use this pool.
-Web and keyboard listeners share `GeodeListenerState` in `GeodeListenerState.hpp`.
+Web, keyboard, and mouse listeners store `geode::ListenerHandle` directly; resetting or destroying it disconnects the listener.
 On runtime shutdown, `clearWebState` clears web callbacks and `clearWsState` shuts down every live socket.
 
 ## Mod sandbox
@@ -302,7 +302,6 @@ In practice most game types are generated. See [Codegen](../codegen/codegen.md).
 - `src/framework/stack/ContainerTables.hpp`
 - `src/framework/usertype/Fields.cpp`
 - `src/framework/lifecycle/Lifecycle.hpp`
-- `src/framework/lifecycle/GeodeListenerState.hpp`
 - `src/bindings/geode/ModSandbox.hpp`
 - `src/require/PathSandbox.hpp`
 - `src/framework/stack/UserdataTags.hpp`

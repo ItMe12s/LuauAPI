@@ -2,11 +2,8 @@
 
 #include "require/PathSandbox.hpp"
 
-#if !defined(LUAUAPI_HOST_TESTS)
-    #include <Geode/utils/general.hpp>
-    #include <Geode/utils/string.hpp>
-#endif
-
+#include <Geode/utils/general.hpp>
+#include <Geode/utils/string.hpp>
 #include <chrono>
 #include <cstdint>
 #include <span>
@@ -28,27 +25,6 @@ namespace luax {
             return std::to_string(hash);
         }
 
-#if defined(LUAUAPI_HOST_TESTS)
-        std::string contentHashToken(std::string_view source) {
-            return stableContentHashToken(source);
-        }
-
-        template <class Num>
-        std::string numericToken(Num value) {
-            return std::to_string(value);
-        }
-
-        std::string joinKeyParts(std::vector<std::string> const& parts, std::string_view separator) {
-            std::string out;
-            for (std::size_t i = 0; i < parts.size(); ++i) {
-                if (i > 0) {
-                    out.append(separator);
-                }
-                out.append(parts[i]);
-            }
-            return out;
-        }
-#else
         std::string contentHashToken(std::string_view source) {
             return stableContentHashToken(source);
         }
@@ -61,7 +37,6 @@ namespace luax {
         std::string joinKeyParts(std::vector<std::string> const& parts, std::string_view separator) {
             return geode::utils::string::join(std::span{parts.data(), parts.size()}, separator);
         }
-#endif
 
     } // namespace
 

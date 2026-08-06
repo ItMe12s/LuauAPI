@@ -6,7 +6,6 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <unordered_map>
 #include <vector>
 
 struct lua_State;
@@ -42,11 +41,9 @@ namespace luax {
         void fireDeferred();
         void fireTimedDue(std::vector<std::size_t> const& due);
         void compact(IndexedSlotMap<Task>& store);
-        void eraseTaskAt(IndexedSlotMap<Task>& store, std::size_t index);
 
         IndexedSlotMap<Task> m_timed;
         IndexedSlotMap<Task> m_deferred;
-        std::unordered_map<std::uint64_t, bool> m_deferredIds;
         std::uint64_t m_nextId = 1;
     };
 

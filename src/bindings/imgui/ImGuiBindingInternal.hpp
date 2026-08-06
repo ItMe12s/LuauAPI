@@ -7,7 +7,6 @@
 #include "framework/stack/Stack.hpp"
 #include "framework/stack/TableUtil.hpp"
 
-#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <imgui.h>
@@ -23,10 +22,7 @@ namespace luax {
 
     inline std::vector<char>& imGuiInputTextBuffer(std::size_t cap) {
         static thread_local std::vector<char> buffer;
-        if (buffer.size() < cap + 1) {
-            buffer.resize(cap + 1);
-        }
-        std::fill(buffer.begin(), buffer.end(), '\0');
+        buffer.resize(cap + 1);
         return buffer;
     }
 

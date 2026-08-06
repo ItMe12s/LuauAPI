@@ -67,7 +67,6 @@ namespace luax::render3d {
         void refreshSpriteTexture(cocos2d::CCSize const& points);
         void detachSpriteTexture();
         void releaseViewportTexture();
-        bool hasGlContext() const;
 
         Camera3D m_camera{};
         RenderSettings m_settings{};
@@ -80,7 +79,7 @@ namespace luax::render3d {
         cocos2d::CCTexture2D* m_framebufferTexture = nullptr;
         int m_fboPixelWidth = 0;
         int m_fboPixelHeight = 0;
-        unsigned m_gen = 0;
+        unsigned m_glContextGeneration = 0;
 
         bool m_compositeEnabled = true;
         std::uint64_t m_viewportTextureId = 0;

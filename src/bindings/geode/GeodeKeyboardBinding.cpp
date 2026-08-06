@@ -2,7 +2,6 @@
 #include "core/Runtime.hpp"
 #include "framework/Binding.hpp"
 #include "framework/callback/LuaCallback.hpp"
-#include "framework/lifecycle/GeodeListenerState.hpp"
 #include "framework/lifecycle/Lifecycle.hpp"
 #include "framework/stack/Stack.hpp"
 #include "framework/stack/TableUtil.hpp"
@@ -23,7 +22,7 @@ namespace {
 
     inline constexpr char const* kKeyboardListenerMeta = "luax.KeyboardInputListenerHandle";
 
-    struct KeyboardListenerState : GeodeListenerState {};
+    using KeyboardListenerState = geode::ListenerHandle;
 
     struct KeyboardListenerBox {
         std::shared_ptr<KeyboardListenerState> state;
@@ -41,7 +40,7 @@ namespace {
 
     void clearKeyboardState() {
         activeKeyboardListeners().clearAll([](KeyboardListenerState& listener) {
-            listener.disconnect();
+            listener = {};
         });
         keyboardShutdownHookRegistered() = false;
     }
@@ -188,21 +187,20 @@ namespace {
 
     int listenerDisconnect(lua_State* L) {
         auto* box = checkListener(L, 1, kKeyboardListenerMeta);
-        if (box->state) box->state->disconnect();
+        if (box->state) *box->state = {};
         return 0;
     }
 
     int keyboardListen(lua_State* L) {
         luaL_checktype(L, 1, LUA_TFUNCTION);
         auto cb = std::make_shared<LuaCallback>(L, 1);
-        auto state = std::make_shared<KeyboardListenerState>();
         int priority = optPriority(L, 2);
-        state->handle = geode::KeyboardInputEvent().listen(
+        auto state = std::make_shared<KeyboardListenerState>(geode::KeyboardInputEvent().listen(
             [cb](geode::KeyboardInputData& data) {
                 return invokeKeyboardEvent(cb, "geode.KeyboardInputEvent.listen", data);
             },
             priority
-        );
+        ));
         rememberListener(state);
         pushListener(L, std::move(state));
         return 1;
@@ -212,16 +210,16 @@ namespace {
         auto key = check<int>(L, 1, "geode.KeyboardInputEvent.listenFor");
         luaL_checktype(L, 2, LUA_TFUNCTION);
         auto cb = std::make_shared<LuaCallback>(L, 2);
-        auto state = std::make_shared<KeyboardListenerState>();
         int priority = optPriority(L, 3);
-        state->handle =
+        auto state = std::make_shared<KeyboardListenerState>(
             geode::KeyboardInputEvent(static_cast<cocos2d::enumKeyCodes>(key))
                 .listen(
                     [cb](geode::KeyboardInputData& data) {
                         return invokeKeyboardEvent(cb, "geode.KeyboardInputEvent.listenFor", data);
                     },
                     priority
-                );
+                )
+        );
         rememberListener(state);
         pushListener(L, std::move(state));
         return 1;

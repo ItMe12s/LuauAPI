@@ -56,15 +56,12 @@ namespace luax::render3d {
             return s_viewports;
         }
 
-        void abandonAllLiveViewports() {
-            for (auto* viewport : liveViewports()) {
-                viewport->abandonGpuResources();
-            }
-        }
     } // namespace
 
     void abandonLiveViewports() {
-        abandonAllLiveViewports();
+        for (auto* viewport : liveViewports()) {
+            viewport->abandonGpuResources();
+        }
     }
 
     CCViewportFrame* CCViewportFrame::create(float width, float height) {
@@ -87,14 +84,14 @@ namespace luax::render3d {
     CCViewportFrame::~CCViewportFrame() {
         liveViewports().erase(this);
         releaseViewportTexture();
-        if (!hasGlContext() || m_gen != glContextGeneration()) {
+        if (!glContextAvailable() || m_glContextGeneration != glContextGeneration()) {
             detachSpriteTexture();
         }
         destroyFramebuffer();
     }
 
     bool CCViewportFrame::initWithSize(float width, float height) {
-        if (!hasGlContext()) {
+        if (!glContextAvailable()) {
             return false;
         }
         CCSize const points = CCSizeMake(width, height);
@@ -294,12 +291,8 @@ namespace luax::render3d {
         }
     }
 
-    bool CCViewportFrame::hasGlContext() const {
-        return glContextAvailable();
-    }
-
     bool CCViewportFrame::gpuHandlesValid() const {
-        return gpuSessionReady() && m_gen == glContextGeneration();
+        return gpuSessionReady() && m_glContextGeneration == glContextGeneration();
     }
 
     void CCViewportFrame::refreshSpriteTexture(CCSize const& points) {
@@ -335,11 +328,11 @@ namespace luax::render3d {
     }
 
     void CCViewportFrame::ensureFramebuffer() {
-        if (!hasGlContext()) {
+        if (!glContextAvailable()) {
             return;
         }
 
-        if (m_gen != glContextGeneration()) {
+        if (m_glContextGeneration != glContextGeneration()) {
             detachSpriteTexture();
 
             m_fbo = 0;
@@ -347,7 +340,7 @@ namespace luax::render3d {
             m_depthRenderbuffer = 0;
             m_fboPixelWidth = 0;
             m_fboPixelHeight = 0;
-            m_gen = glContextGeneration();
+            m_glContextGeneration = glContextGeneration();
         }
 
         CCSize const points = getContentSize();
@@ -366,7 +359,7 @@ namespace luax::render3d {
     }
 
     bool CCViewportFrame::createFramebuffer(int width, int height) {
-        if (!hasGlContext() || width <= 0 || height <= 0) {
+        if (!glContextAvailable() || width <= 0 || height <= 0) {
             return false;
         }
 
@@ -423,7 +416,7 @@ namespace luax::render3d {
         m_colorTexture = color;
         m_fboPixelWidth = width;
         m_fboPixelHeight = height;
-        m_gen = glContextGeneration();
+        m_glContextGeneration = glContextGeneration();
         return true;
     }
 
@@ -438,7 +431,7 @@ namespace luax::render3d {
     }
 
     void CCViewportFrame::destroyFramebuffer() {
-        bool const canDelete = gpuHandlesValid() && hasGlContext();
+        bool const canDelete = gpuHandlesValid() && glContextAvailable();
         if (canDelete) {
             if (m_fbo != 0) {
                 glDeleteFramebuffers(1, &m_fbo);
@@ -461,7 +454,7 @@ namespace luax::render3d {
         m_depthRenderbuffer = 0;
         m_fboPixelWidth = 0;
         m_fboPixelHeight = 0;
-        m_gen = glContextGeneration();
+        m_glContextGeneration = glContextGeneration();
     }
 
 } // namespace luax::render3d

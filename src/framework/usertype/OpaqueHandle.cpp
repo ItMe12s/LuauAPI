@@ -70,13 +70,6 @@ namespace luax {
         return block ? block->ptr : nullptr;
     }
 
-    void* tryOpaqueHandle(lua_State* L, int idx) {
-        if (!detail::isOpaqueHandle(L, idx)) {
-            return nullptr;
-        }
-        auto* block = static_cast<OpaqueHandleBlock*>(lua_touserdata(L, idx));
-        return block ? block->ptr : nullptr;
-    }
 } // namespace luax
 
 LUAX_BINDING_PRIORITY(opaque_handle, luax::registerOpaqueHandle, 0)

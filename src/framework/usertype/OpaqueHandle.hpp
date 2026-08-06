@@ -23,8 +23,6 @@ namespace luax {
 
     void* checkOpaqueHandle(lua_State* L, int idx, char const* label);
 
-    void* tryOpaqueHandle(lua_State* L, int idx);
-
     template <class T>
     T* checkOpaqueHandle(lua_State* L, int idx, char const* label) {
         return static_cast<T*>(checkOpaqueHandle(L, idx, label));

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <cstdint>
 #include <vector>
 
@@ -23,12 +24,7 @@ namespace luax::render3d {
     }
 
     inline bool hasDrawableGpuPrimitive(GpuMesh const& mesh) {
-        for (auto const& primitive : mesh.primitives) {
-            if (isDrawableGpuPrimitive(primitive)) {
-                return true;
-            }
-        }
-        return false;
+        return std::ranges::any_of(mesh.primitives, isDrawableGpuPrimitive);
     }
 
 } // namespace luax::render3d

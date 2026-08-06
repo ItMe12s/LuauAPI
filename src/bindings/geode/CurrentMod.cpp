@@ -23,9 +23,7 @@ namespace {
     }
 
     bool modMatchesRoot(geode::Mod* mod, std::filesystem::path const& root) {
-        if (!modStillRegistered(mod)) {
-            return false;
-        }
+        if (!mod) return false;
         auto modRoot = luax::canonicalRoot(mod->getResourcesDir());
         return modRoot.isOk() && modRoot.unwrap() == root;
     }
@@ -71,7 +69,7 @@ namespace luax {
 
         auto& cache = modCache();
         if (auto it = cache.find(key); it != cache.end()) {
-            if (modMatchesRoot(it->second, canonical)) {
+            if (modStillRegistered(it->second) && modMatchesRoot(it->second, canonical)) {
                 return it->second;
             }
             cache.erase(it);

@@ -62,22 +62,6 @@ namespace luax {
             return id;
         }
 
-        class StackGuard {
-        public:
-            explicit StackGuard(lua_State* L) : m_state(L), m_top(lua_gettop(L)) {}
-
-            ~StackGuard() {
-                lua_settop(m_state, m_top);
-            }
-
-            StackGuard(StackGuard const&) = delete;
-            StackGuard& operator=(StackGuard const&) = delete;
-
-        private:
-            lua_State* m_state = nullptr;
-            int m_top = 0;
-        };
-
         std::size_t bytecodeEntryBytes(std::string const& bytecode) {
             return bytecode.size();
         }
@@ -414,7 +398,7 @@ namespace luax {
     }
 
     int Runtime::luaPrint(lua_State* L) {
-        StackGuard stack(L);
+        LuaStackGuard stack(L);
         int argc = lua_gettop(L);
         std::string out;
 
@@ -432,7 +416,7 @@ namespace luax {
     }
 
     int Runtime::luaWarn(lua_State* L) {
-        StackGuard stack(L);
+        LuaStackGuard stack(L);
         int argc = lua_gettop(L);
         std::string out;
 

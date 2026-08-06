@@ -133,12 +133,7 @@ namespace {
 
         auto const* positionAccessor =
             cgltf_find_accessor(&primitive, cgltf_attribute_type_position, 0);
-        auto positionsResult = unpackVecAttribute<glm::vec3>(positionAccessor, "position");
-        if (positionsResult.isErr()) {
-            return geode::Err(positionsResult.unwrapErr());
-        }
-
-        auto positions = std::move(positionsResult).unwrap();
+        GEODE_UNWRAP_INTO(auto positions, unpackVecAttribute<glm::vec3>(positionAccessor, "position"));
         glm::mat3 const normalMatrix = glm::transpose(glm::inverse(glm::mat3(worldMatrix)));
 
         for (auto& position : positions) {
@@ -149,12 +144,7 @@ namespace {
         std::vector<glm::vec3> normals;
         auto const* normalAccessor = cgltf_find_accessor(&primitive, cgltf_attribute_type_normal, 0);
         if (normalAccessor != nullptr) {
-            auto normalsResult = unpackVecAttribute<glm::vec3>(normalAccessor, "normal");
-            if (normalsResult.isErr()) {
-                return geode::Err(normalsResult.unwrapErr());
-            }
-
-            normals = std::move(normalsResult).unwrap();
+            GEODE_UNWRAP_INTO(normals, unpackVecAttribute<glm::vec3>(normalAccessor, "normal"));
             if (normals.size() != positions.size()) {
                 return geode::Err("position and normal vertex counts do not match");
             }
@@ -167,21 +157,13 @@ namespace {
             normals.assign(positions.size(), glm::vec3(0.0f, 1.0f, 0.0f));
         }
 
-        auto indicesResult = unpackIndices(primitive);
-        if (indicesResult.isErr()) {
-            return geode::Err(indicesResult.unwrapErr());
-        }
+        GEODE_UNWRAP_INTO(auto indices, unpackIndices(primitive));
 
         std::vector<glm::vec2> texcoords;
         auto const* texcoordAccessor =
             cgltf_find_accessor(&primitive, cgltf_attribute_type_texcoord, 0);
         if (texcoordAccessor != nullptr) {
-            auto texcoordsResult = unpackVecAttribute<glm::vec2>(texcoordAccessor, "texcoord");
-            if (texcoordsResult.isErr()) {
-                return geode::Err(texcoordsResult.unwrapErr());
-            }
-
-            texcoords = std::move(texcoordsResult).unwrap();
+            GEODE_UNWRAP_INTO(texcoords, unpackVecAttribute<glm::vec2>(texcoordAccessor, "texcoord"));
             if (texcoords.size() != positions.size()) {
                 return geode::Err("position and texcoord vertex counts do not match");
             }
@@ -203,7 +185,7 @@ namespace {
         meshPrimitive.positions = std::move(positions);
         meshPrimitive.normals = std::move(normals);
         meshPrimitive.texcoords = std::move(texcoords);
-        meshPrimitive.indices = std::move(indicesResult).unwrap();
+        meshPrimitive.indices = std::move(indices);
         meshPrimitive.materialIndex = materialIndex;
         return geode::Ok(std::move(meshPrimitive));
     }
@@ -218,18 +200,11 @@ namespace {
             return geode::Ok(existing->second);
         }
 
-        auto encodedResult = readImageEncodedBytes(image, assetPath, sandboxRoot);
-        if (encodedResult.isErr()) {
-            return geode::Err(encodedResult.unwrapErr());
-        }
-
-        auto decodeResult = decodeImageRgba8(encodedResult.unwrap());
-        if (decodeResult.isErr()) {
-            return geode::Err(decodeResult.unwrapErr());
-        }
+        GEODE_UNWRAP_INTO(auto encoded, readImageEncodedBytes(image, assetPath, sandboxRoot));
+        GEODE_UNWRAP_INTO(auto decoded, decodeImageRgba8(encoded));
 
         int const index = static_cast<int>(images.size());
-        images.push_back(std::move(decodeResult).unwrap());
+        images.push_back(std::move(decoded));
         imageIndices.emplace(image, index);
         return geode::Ok(index);
     }
@@ -405,12 +380,9 @@ namespace luax::render3d {
             return geode::Err("glTF data exceeds maximum read size");
         }
 
-        auto rootResult = canonicalSandboxRoot(sandboxRoot);
-        if (rootResult.isErr()) {
-            return geode::Err(rootResult.unwrapErr());
-        }
+        GEODE_UNWRAP_INTO(auto canonicalRoot, canonicalSandboxRoot(sandboxRoot));
 
-        SandboxFileContext fileContext{rootResult.unwrap(), {}};
+        SandboxFileContext fileContext{canonicalRoot, {}};
 
         cgltf_options options{};
         configureSandboxFileIo(options, fileContext);
@@ -433,7 +405,7 @@ namespace luax::render3d {
         }
 
         auto mesh = std::shared_ptr<MeshAsset>(new MeshAsset());
-        auto materialError = MeshAsset::extractMaterials(data, *mesh, assetPath, rootResult.unwrap());
+        auto materialError = MeshAsset::extractMaterials(data, *mesh, assetPath, canonicalRoot);
         if (materialError.has_value()) {
             cgltf_free(data);
             return geode::Err(*materialError);

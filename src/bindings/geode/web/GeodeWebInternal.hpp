@@ -31,7 +31,9 @@ namespace luax::webdetail {
         lua_State* L, web::WebRequest& req, std::string method, std::string url, int callbackIdx
     );
 
-    int parseRequestCall(lua_State* L, int optionsIdx, int callbackIdx, int& outOptions, int& outCallback);
+    void parseRequestCall(
+        lua_State* L, int optionsIdx, int callbackIdx, int& outOptions, int& outCallback
+    );
 
     int webOpenLinkInBrowser(lua_State* L);
     int webNewRequest(lua_State* L);

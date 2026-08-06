@@ -2,17 +2,9 @@
 
 #include "core/Config.hpp"
 
-#if defined(LUAUAPI_HOST_TESTS)
-    #include <Geode/utils/string.hpp>
-    #include <fstream>
-    #include <optional>
-    #include <vector>
-#else
-    #include <Geode/Result.hpp>
-    #include <Geode/utils/file.hpp>
-    #include <Geode/utils/string.hpp>
-#endif
-
+#include <Geode/Result.hpp>
+#include <Geode/utils/file.hpp>
+#include <Geode/utils/string.hpp>
 #include <array>
 #include <filesystem>
 #include <string>
@@ -21,6 +13,23 @@
 #include <utility>
 
 namespace luax {
+    template <class T>
+    using ScriptResult = geode::Result<T>;
+
+    template <class T>
+    inline ScriptResult<T> scriptOk(T value) {
+        return geode::Ok(std::move(value));
+    }
+
+    template <class T>
+    inline ScriptResult<T> scriptErr(std::string message) {
+        return geode::Err(std::move(message));
+    }
+
+    inline ScriptResult<std::filesystem::path> validateResourcePath(
+        std::filesystem::path path, bool addLuauExtension = true
+    );
+
     inline bool escapedRelativePathText(std::string_view text) {
         return text == ".." || geode::utils::string::startsWith(text, "../") ||
             geode::utils::string::startsWith(text, "..\\");
@@ -52,24 +61,7 @@ namespace luax {
     }
 
     inline bool isValidResourcePathValue(std::filesystem::path const& path, bool addLuauExtension = true) {
-        if (path.empty() || path.is_absolute()) {
-            return false;
-        }
-
-        auto normalized = path.lexically_normal();
-        if (!isFlatResourcePathValue(normalized) || hasUnsupportedExtensionValue(normalized)) {
-            return false;
-        }
-
-        if (!addLuauExtension) {
-            return true;
-        }
-
-        auto withExtension = normalized;
-        if (!hasLuauExtensionValue(withExtension)) {
-            withExtension += ".luau";
-        }
-        return isFlatResourcePathValue(withExtension);
+        return validateResourcePath(path, addLuauExtension).isOk();
     }
 
     inline bool canRequireFromChunk(std::string_view requirerChunkname) {
@@ -93,74 +85,6 @@ namespace luax {
         return current;
     }
 
-#if defined(LUAUAPI_HOST_TESTS)
-    template <class T>
-    class HostResult {
-    public:
-        static HostResult ok(T value) {
-            HostResult result;
-            result.m_value = std::move(value);
-            return result;
-        }
-
-        static HostResult err(std::string message) {
-            HostResult result;
-            result.m_error = std::move(message);
-            return result;
-        }
-
-        bool isOk() const {
-            return m_value.has_value();
-        }
-
-        bool isErr() const {
-            return !isOk();
-        }
-
-        T& unwrap() {
-            return *m_value;
-        }
-
-        T const& unwrap() const {
-            return *m_value;
-        }
-
-        std::string const& unwrapErr() const {
-            return m_error;
-        }
-
-    private:
-        std::optional<T> m_value;
-        std::string m_error;
-    };
-
-    template <class T>
-    using ScriptResult = HostResult<T>;
-
-    template <class T>
-    inline ScriptResult<T> scriptOk(T value) {
-        return ScriptResult<T>::ok(std::move(value));
-    }
-
-    template <class T>
-    inline ScriptResult<T> scriptErr(std::string message) {
-        return ScriptResult<T>::err(std::move(message));
-    }
-#else
-    template <class T>
-    using ScriptResult = geode::Result<T>;
-
-    template <class T>
-    inline ScriptResult<T> scriptOk(T value) {
-        return geode::Ok(std::move(value));
-    }
-
-    template <class T>
-    inline ScriptResult<T> scriptErr(std::string message) {
-        return geode::Err(std::move(message));
-    }
-#endif
-
     // If anyone misuses theses I swear to god.
     // POSIX-style path text for virtual chunk names and sandbox-relative checks.
     inline std::string normalizedPathString(std::filesystem::path const& path) {
@@ -168,12 +92,7 @@ namespace luax {
     }
 
     inline std::string filesystemPathString(std::filesystem::path const& path) {
-#if defined(LUAUAPI_HOST_TESTS)
-        auto text = path.u8string();
-        return std::string(reinterpret_cast<char const*>(text.data()), text.size());
-#else
         return geode::utils::string::pathToString(path);
-#endif
     }
 
     inline ScriptResult<std::string> readScriptFile(std::filesystem::path const& path) {
@@ -183,32 +102,6 @@ namespace luax {
             return scriptErr<std::string>("script exceeds maximum size");
         }
 
-#if defined(LUAUAPI_HOST_TESTS)
-        std::ifstream in(path, std::ios::binary);
-        if (!in.good()) {
-            return scriptErr<std::string>("script cannot be read: " + filesystemPathString(path));
-        }
-
-        std::string contents;
-        if (!ec) {
-            contents.reserve(static_cast<std::size_t>(size));
-        }
-
-        std::vector<char> buffer(64 * 1024);
-        while (in) {
-            in.read(buffer.data(), static_cast<std::streamsize>(buffer.size()));
-            auto read = in.gcount();
-            if (read <= 0) break;
-            if (contents.size() + static_cast<std::size_t>(read) > kMaxScriptBytes) {
-                return scriptErr<std::string>("script exceeds maximum size");
-            }
-            contents.append(buffer.data(), static_cast<std::size_t>(read));
-        }
-        if (in.bad()) {
-            return scriptErr<std::string>("script cannot be read: " + filesystemPathString(path));
-        }
-        return scriptOk(std::move(contents));
-#else
         auto contents = geode::utils::file::readString(path);
         if (contents.isErr()) {
             return scriptErr<std::string>("script cannot be read: " + filesystemPathString(path));
@@ -218,7 +111,6 @@ namespace luax {
             return scriptErr<std::string>("script exceeds maximum size");
         }
         return scriptOk(std::move(data));
-#endif
     }
 
     inline ScriptResult<std::filesystem::path> resolveScriptFileInsideRoot(
@@ -248,7 +140,7 @@ namespace luax {
     }
 
     inline ScriptResult<std::filesystem::path> validateResourcePath(
-        std::filesystem::path path, bool addLuauExtension = true
+        std::filesystem::path path, bool addLuauExtension
     ) {
         if (path.empty()) {
             return scriptErr<std::filesystem::path>("resource path is empty");

@@ -66,15 +66,6 @@ namespace {
         return true;
     }
 
-    int pushNewMeshHandle(lua_State* L, geode::Result<std::shared_ptr<MeshAsset>> result) {
-        if (auto err = returnIfErr(L, result)) {
-            return *err;
-        }
-        auto const id = MeshRegistry::instance().registerAsset(std::move(result.unwrap()));
-        pushMeshHandle(L, id);
-        return 1;
-    }
-
     bool readVec2Array(
         lua_State* L, int tableIdx, char const* field, char const* method,
         std::vector<glm::vec2>& out, std::string& err
@@ -186,12 +177,15 @@ namespace {
             return pushNilErr(L, err);
         }
 
-        return pushNewMeshHandle(
-            L,
-            MeshAsset::fromBuffers(
-                std::move(positions), std::move(normals), std::move(uvs), std::move(indices)
-            )
+        auto result = MeshAsset::fromBuffers(
+            std::move(positions), std::move(normals), std::move(uvs), std::move(indices)
         );
+        if (auto resultError = returnIfErr(L, result)) {
+            return *resultError;
+        }
+        auto const id = MeshRegistry::instance().registerAsset(std::move(result.unwrap()));
+        pushMeshHandle(L, id);
+        return 1;
     }
 } // namespace
 

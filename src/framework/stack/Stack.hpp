@@ -13,6 +13,22 @@
 #include <type_traits>
 
 namespace luax {
+    class LuaStackGuard {
+    public:
+        explicit LuaStackGuard(lua_State* L) : m_state(L), m_top(lua_gettop(L)) {}
+
+        ~LuaStackGuard() {
+            lua_settop(m_state, m_top);
+        }
+
+        LuaStackGuard(LuaStackGuard const&) = delete;
+        LuaStackGuard& operator=(LuaStackGuard const&) = delete;
+
+    private:
+        lua_State* m_state;
+        int m_top;
+    };
+
     inline void push(lua_State* L, bool v) {
         lua_pushboolean(L, v);
     }

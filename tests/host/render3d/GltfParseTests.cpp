@@ -1,14 +1,19 @@
+#include "core/Config.hpp"
 #include "lua_test_helpers.hpp"
+#include "render3d/assets/GltfIo.hpp"
 #include "render3d/assets/MeshAsset.hpp"
 
+#include <Geode/utils/base64.hpp>
 #include <array>
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
+#include <cgltf.h>
 #include <filesystem>
 #include <fstream>
 #include <iterator>
 #include <span>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace {
@@ -20,29 +25,62 @@ namespace {
     }
 
     char const kMinimalTriangleGltfSuffix[] = R"(],
-  "buffers": [{
-    "byteLength": 42,
-    "uri": "data:application/octet-stream;base64,AAAAAAAAAAAAAAAAAACAPwAAAAAAAAAAAAAAAAAAgD8AAAAAAAABAAIA"
-  }],
-  "bufferViews": [
-    {"buffer": 0, "byteOffset": 0, "byteLength": 36},
-    {"buffer": 0, "byteOffset": 36, "byteLength": 6}
-  ],
-  "accessors": [
-    {"bufferView": 0, "componentType": 5126, "count": 3, "type": "VEC3"},
-    {"bufferView": 1, "componentType": 5123, "count": 3, "type": "SCALAR"}
-  ],
-  "meshes": [{
-    "primitives": [{
-      "attributes": {"POSITION": 0},
-      "indices": 1,
-      "material": 0
-    }]
-  }],
-  "nodes": [{"mesh": 0}],
-  "scenes": [{"nodes": [0]}],
-  "scene": 0
+    "buffers": [{
+        "byteLength": 42,
+        "uri": "data:application/octet-stream;base64,AAAAAAAAAAAAAAAAAACAPwAAAAAAAAAAAAAAAAAAgD8AAAAAAAABAAIA"
+    }],
+    "bufferViews": [
+        {"buffer": 0, "byteOffset": 0, "byteLength": 36},
+        {"buffer": 0, "byteOffset": 36, "byteLength": 6}
+    ],
+    "accessors": [
+        {"bufferView": 0, "componentType": 5126, "count": 3, "type": "VEC3"},
+        {"bufferView": 1, "componentType": 5123, "count": 3, "type": "SCALAR"}
+    ],
+    "meshes": [{
+        "primitives": [{
+            "attributes": {"POSITION": 0},
+            "indices": 1,
+            "material": 0
+        }]
+    }],
+    "nodes": [{"mesh": 0}],
+    "scenes": [{"nodes": [0]}],
+    "scene": 0
 })";
+
+    constexpr std::array<std::uint8_t, 42> kTriangleBufferBytes{
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0,   128, 63, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 63,  0,  0, 0, 0, 1, 0, 2, 0, 0, 0,
+    };
+
+    std::string externalTriangleGltf(std::string_view uri) {
+        return std::string(R"({
+    "asset": {"version": "2.0"},
+    "buffers": [{"byteLength": 42, "uri": ")") +
+            std::string(uri) + R"("}],
+    "bufferViews": [
+        {"buffer": 0, "byteOffset": 0, "byteLength": 36},
+        {"buffer": 0, "byteOffset": 36, "byteLength": 6}
+    ],
+    "accessors": [
+        {"bufferView": 0, "componentType": 5126, "count": 3, "type": "VEC3"},
+        {"bufferView": 1, "componentType": 5123, "count": 3, "type": "SCALAR"}
+    ],
+    "meshes": [{"primitives": [{"attributes": {"POSITION": 0}, "indices": 1}]}],
+    "nodes": [{"mesh": 0}],
+    "scenes": [{"nodes": [0]}],
+    "scene": 0
+})";
+    }
+
+    void writeSparseFile(std::filesystem::path const& path, std::size_t size) {
+        std::ofstream output(path, std::ios::binary | std::ios::trunc);
+        REQUIRE(output.good());
+        output.seekp(static_cast<std::streamoff>(size - 1));
+        output.put('\0');
+        REQUIRE(output.good());
+    }
 
     std::shared_ptr<MeshAsset> loadGltfJson(std::string const& gltfJson) {
         std::vector<std::uint8_t> bytes(gltfJson.begin(), gltfJson.end());
@@ -238,9 +276,9 @@ TEST_CASE("MeshAsset loadFromBytes rejects textured primitive without TEXCOORD_0
         "Jggg==";
 
     std::string gltfJson = minimalTriangleGltfWithPrefix(
-        std::string("{\n  \"asset\": {\"version\": \"2.0\"},\n  \"images\": [{\"uri\": \"data:image/png;base64,") +
+        std::string("{\n    \"asset\": {\"version\": \"2.0\"},\n    \"images\": [{\"uri\": \"data:image/png;base64,") +
         k1x1PngBase64 +
-        "\"}],\n  \"textures\": [{\"source\": 0}],\n  \"materials\": "
+        "\"}],\n    \"textures\": [{\"source\": 0}],\n    \"materials\": "
         "[{\"pbrMetallicRoughness\": {\"baseColorTexture\": {\"index\": 0}}}"
     );
 
@@ -250,34 +288,34 @@ TEST_CASE("MeshAsset loadFromBytes rejects textured primitive without TEXCOORD_0
 TEST_CASE("MeshAsset loadFromBytes rejects Draco compressed primitives") {
     requireGltfError(
         R"({
-  "asset": {"version": "2.0"},
-  "buffers": [{
-    "byteLength": 42,
-    "uri": "data:application/octet-stream;base64,AAAAAAAAAAAAAAAAAACAPwAAAAAAAAAAAAAAAAAAgD8AAAAAAAABAAIA"
-  }],
-  "bufferViews": [
-    {"buffer": 0, "byteOffset": 0, "byteLength": 36},
-    {"buffer": 0, "byteOffset": 36, "byteLength": 6}
-  ],
-  "accessors": [
-    {"bufferView": 0, "componentType": 5126, "count": 3, "type": "VEC3"},
-    {"bufferView": 1, "componentType": 5123, "count": 3, "type": "SCALAR"}
-  ],
-  "meshes": [{
-    "primitives": [{
-      "attributes": {"POSITION": 0},
-      "indices": 1,
-      "extensions": {
-        "KHR_draco_mesh_compression": {
-          "bufferView": 0,
-          "attributes": {"POSITION": 0}
-        }
-      }
-    }]
-  }],
-  "nodes": [{"mesh": 0}],
-  "scenes": [{"nodes": [0]}],
-  "scene": 0
+    "asset": {"version": "2.0"},
+    "buffers": [{
+        "byteLength": 42,
+        "uri": "data:application/octet-stream;base64,AAAAAAAAAAAAAAAAAACAPwAAAAAAAAAAAAAAAAAAgD8AAAAAAAABAAIA"
+    }],
+    "bufferViews": [
+        {"buffer": 0, "byteOffset": 0, "byteLength": 36},
+        {"buffer": 0, "byteOffset": 36, "byteLength": 6}
+    ],
+    "accessors": [
+        {"bufferView": 0, "componentType": 5126, "count": 3, "type": "VEC3"},
+        {"bufferView": 1, "componentType": 5123, "count": 3, "type": "SCALAR"}
+    ],
+    "meshes": [{
+        "primitives": [{
+            "attributes": {"POSITION": 0},
+            "indices": 1,
+            "extensions": {
+                "KHR_draco_mesh_compression": {
+                    "bufferView": 0,
+                    "attributes": {"POSITION": 0}
+                }
+            }
+        }]
+    }],
+    "nodes": [{"mesh": 0}],
+    "scenes": [{"nodes": [0]}],
+    "scene": 0
 })",
         "Draco compressed primitives are not supported"
     );
@@ -286,40 +324,40 @@ TEST_CASE("MeshAsset loadFromBytes rejects Draco compressed primitives") {
 TEST_CASE("MeshAsset loadFromBytes rejects meshopt compressed accessors") {
     requireGltfError(
         R"({
-  "asset": {"version": "2.0"},
-  "buffers": [{
-    "byteLength": 42,
-    "uri": "data:application/octet-stream;base64,AAAAAAAAAAAAAAAAAACAPwAAAAAAAAAAAAAAAAAAgD8AAAAAAAABAAIA"
-  }],
-  "bufferViews": [{
-    "buffer": 0,
-    "byteOffset": 0,
-    "byteLength": 36,
-    "extensions": {
-      "EXT_meshopt_compression": {
+    "asset": {"version": "2.0"},
+    "buffers": [{
+        "byteLength": 42,
+        "uri": "data:application/octet-stream;base64,AAAAAAAAAAAAAAAAAACAPwAAAAAAAAAAAAAAAAAAgD8AAAAAAAABAAIA"
+    }],
+    "bufferViews": [{
         "buffer": 0,
         "byteOffset": 0,
         "byteLength": 36,
-        "byteStride": 12,
-        "count": 3,
-        "mode": "ATTRIBUTES"
-      }
-    }
-  }, {
-    "buffer": 0,
-    "byteOffset": 36,
-    "byteLength": 6
-  }],
-  "accessors": [
-    {"bufferView": 0, "componentType": 5126, "count": 3, "type": "VEC3"},
-    {"bufferView": 1, "componentType": 5123, "count": 3, "type": "SCALAR"}
-  ],
-  "meshes": [{
-    "primitives": [{"attributes": {"POSITION": 0}, "indices": 1}]
-  }],
-  "nodes": [{"mesh": 0}],
-  "scenes": [{"nodes": [0]}],
-  "scene": 0
+        "extensions": {
+            "EXT_meshopt_compression": {
+                "buffer": 0,
+                "byteOffset": 0,
+                "byteLength": 36,
+                "byteStride": 12,
+                "count": 3,
+                "mode": "ATTRIBUTES"
+            }
+        }
+    }, {
+        "buffer": 0,
+        "byteOffset": 36,
+        "byteLength": 6
+    }],
+    "accessors": [
+        {"bufferView": 0, "componentType": 5126, "count": 3, "type": "VEC3"},
+        {"bufferView": 1, "componentType": 5123, "count": 3, "type": "SCALAR"}
+    ],
+    "meshes": [{
+        "primitives": [{"attributes": {"POSITION": 0}, "indices": 1}]
+    }],
+    "nodes": [{"mesh": 0}],
+    "scenes": [{"nodes": [0]}],
+    "scene": 0
 })",
         "meshopt-compressed accessors are not supported"
     );
@@ -328,32 +366,32 @@ TEST_CASE("MeshAsset loadFromBytes rejects meshopt compressed accessors") {
 TEST_CASE("MeshAsset loadFromBytes rejects sparse accessors") {
     requireGltfError(
         R"({
-  "asset": {"version": "2.0"},
-  "buffers": [{
-    "byteLength": 42,
-    "uri": "data:application/octet-stream;base64,AAAAAAAAAAAAAAAAAACAPwAAAAAAAAAAAAAAAAAAgD8AAAAAAAABAAIA"
-  }],
-  "bufferViews": [
-    {"buffer": 0, "byteOffset": 0, "byteLength": 36},
-    {"buffer": 0, "byteOffset": 36, "byteLength": 6}
-  ],
-  "accessors": [{
-    "bufferView": 0,
-    "componentType": 5126,
-    "count": 3,
-    "type": "VEC3",
-    "sparse": {
-      "count": 1,
-      "indices": {"bufferView": 1, "componentType": 5123, "byteOffset": 0},
-      "values": {"bufferView": 0, "byteOffset": 0}
-    }
-  }, {"bufferView": 1, "componentType": 5123, "count": 3, "type": "SCALAR"}],
-  "meshes": [{
-    "primitives": [{"attributes": {"POSITION": 0}, "indices": 1}]
-  }],
-  "nodes": [{"mesh": 0}],
-  "scenes": [{"nodes": [0]}],
-  "scene": 0
+    "asset": {"version": "2.0"},
+    "buffers": [{
+        "byteLength": 42,
+        "uri": "data:application/octet-stream;base64,AAAAAAAAAAAAAAAAAACAPwAAAAAAAAAAAAAAAAAAgD8AAAAAAAABAAIA"
+    }],
+    "bufferViews": [
+        {"buffer": 0, "byteOffset": 0, "byteLength": 36},
+        {"buffer": 0, "byteOffset": 36, "byteLength": 6}
+    ],
+    "accessors": [{
+        "bufferView": 0,
+        "componentType": 5126,
+        "count": 3,
+        "type": "VEC3",
+        "sparse": {
+            "count": 1,
+            "indices": {"bufferView": 1, "componentType": 5123, "byteOffset": 0},
+            "values": {"bufferView": 0, "byteOffset": 0}
+        }
+    }, {"bufferView": 1, "componentType": 5123, "count": 3, "type": "SCALAR"}],
+    "meshes": [{
+        "primitives": [{"attributes": {"POSITION": 0}, "indices": 1}]
+    }],
+    "nodes": [{"mesh": 0}],
+    "scenes": [{"nodes": [0]}],
+    "scene": 0
 })",
         "sparse accessors are not supported"
     );
@@ -367,30 +405,9 @@ TEST_CASE("MeshAsset loadFromBytes rejects external buffer outside sandbox") {
 
     REQUIRE(std::filesystem::create_directories(sandbox));
 
-    std::array<std::uint8_t, 42> const bufferBytes{
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0,   128, 63, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 63,  0,  0, 0, 0, 1, 0, 2, 0, 0, 0,
-    };
-    luauapi_test::writeTestFile(outsideBuffer, bufferBytes);
+    luauapi_test::writeTestFile(outsideBuffer, kTriangleBufferBytes);
 
-    std::string const gltfJson = R"({
-  "asset": {"version": "2.0"},
-  "buffers": [{"byteLength": 42, "uri": "../outside.bin"}],
-  "bufferViews": [
-    {"buffer": 0, "byteOffset": 0, "byteLength": 36},
-    {"buffer": 0, "byteOffset": 36, "byteLength": 6}
-  ],
-  "accessors": [
-    {"bufferView": 0, "componentType": 5126, "count": 3, "type": "VEC3"},
-    {"bufferView": 1, "componentType": 5123, "count": 3, "type": "SCALAR"}
-  ],
-  "meshes": [{
-    "primitives": [{"attributes": {"POSITION": 0}, "indices": 1}]
-  }],
-  "nodes": [{"mesh": 0}],
-  "scenes": [{"nodes": [0]}],
-  "scene": 0
-})";
+    std::string const gltfJson = externalTriangleGltf("../outside.bin");
 
     luauapi_test::writeTestFile(gltfPath, gltfJson);
 
@@ -398,4 +415,86 @@ TEST_CASE("MeshAsset loadFromBytes rejects external buffer outside sandbox") {
     auto result = MeshAsset::loadFromBytes(bytes, gltfPath, sandbox);
     REQUIRE(result.isErr());
     REQUIRE(result.unwrapErr().find("escapes sandbox root") != std::string::npos);
+}
+
+TEST_CASE("MeshAsset reads valid external buffers and reports missing or oversized files") {
+    luauapi_test::ScopedTempDir base("luauapi_gltf_external_buffer_");
+    auto const sandbox = base.path / "sandbox";
+    auto const gltfPath = sandbox / "model.gltf";
+    REQUIRE(std::filesystem::create_directories(sandbox));
+
+    SECTION("valid") {
+        luauapi_test::writeTestFile(sandbox / "mesh.bin", kTriangleBufferBytes);
+        std::string const gltfJson = externalTriangleGltf("mesh.bin");
+        std::vector<std::uint8_t> bytes(gltfJson.begin(), gltfJson.end());
+        REQUIRE(MeshAsset::loadFromBytes(bytes, gltfPath, sandbox).isOk());
+    }
+
+    SECTION("missing") {
+        std::string const gltfJson = externalTriangleGltf("missing.bin");
+        std::vector<std::uint8_t> bytes(gltfJson.begin(), gltfJson.end());
+        auto result = MeshAsset::loadFromBytes(bytes, gltfPath, sandbox);
+        REQUIRE(result.isErr());
+        REQUIRE(result.unwrapErr().find("buffer file not found:") != std::string::npos);
+    }
+
+    SECTION("oversized") {
+        writeSparseFile(sandbox / "large.bin", luax::kMaxFsReadBytes + 1);
+        std::string const gltfJson = externalTriangleGltf("large.bin");
+        std::vector<std::uint8_t> bytes(gltfJson.begin(), gltfJson.end());
+        auto result = MeshAsset::loadFromBytes(bytes, gltfPath, sandbox);
+        REQUIRE(result.isErr());
+        REQUIRE(result.unwrapErr().find("buffer file exceeds maximum read size") != std::string::npos);
+    }
+}
+
+TEST_CASE("glTF external image reads enforce the sandbox and size cap") {
+    luauapi_test::ScopedTempDir base("luauapi_gltf_external_image_");
+    auto const sandbox = base.path / "sandbox";
+    auto const assetPath = sandbox / "model.gltf";
+    REQUIRE(std::filesystem::create_directories(sandbox));
+
+    cgltf_image image{};
+    std::string uri;
+    auto read = [&] {
+        image.uri = uri.data();
+        return readImageEncodedBytes(&image, assetPath, sandbox);
+    };
+
+    SECTION("valid") {
+        constexpr std::string_view pngBase64 =
+            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU"
+            "5ErkJggg==";
+        auto decoded =
+            geode::utils::base64::decode(pngBase64, geode::utils::base64::Base64Variant::Normal);
+        REQUIRE(decoded.isOk());
+        luauapi_test::writeTestFile(sandbox / "pixel.png", decoded.unwrap());
+        uri = "pixel.png";
+        auto result = read();
+        REQUIRE(result.isOk());
+        REQUIRE(result.unwrap() == decoded.unwrap());
+    }
+
+    SECTION("escape") {
+        luauapi_test::writeTestFile(base.path / "outside.png", std::array<std::uint8_t, 1>{0});
+        uri = "../outside.png";
+        auto result = read();
+        REQUIRE(result.isErr());
+        REQUIRE(result.unwrapErr() == "image path escapes sandbox root");
+    }
+
+    SECTION("missing") {
+        uri = "missing.png";
+        auto result = read();
+        REQUIRE(result.isErr());
+        REQUIRE(result.unwrapErr().find("image file not found:") == 0);
+    }
+
+    SECTION("oversized") {
+        writeSparseFile(sandbox / "large.png", luax::kMaxFsReadBytes + 1);
+        uri = "large.png";
+        auto result = read();
+        REQUIRE(result.isErr());
+        REQUIRE(result.unwrapErr() == "image file exceeds maximum read size");
+    }
 }

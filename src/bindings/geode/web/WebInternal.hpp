@@ -2,7 +2,6 @@
 
 #include "bindings/geode/web/WebCaps.hpp"
 #include "framework/callback/LuaCallback.hpp"
-#include "framework/lifecycle/GeodeListenerState.hpp"
 #include "framework/lifecycle/Lifecycle.hpp"
 
 #include <Geode/Geode.hpp>
@@ -57,7 +56,7 @@ namespace luax {
         std::shared_ptr<WebTask> task;
     };
 
-    struct WebListenerState : GeodeListenerState {};
+    using WebListenerState = geode::ListenerHandle;
 
     struct WebListenerBox {
         std::shared_ptr<WebListenerState> state;
@@ -83,7 +82,7 @@ namespace luax {
             task.cancel();
         });
         activeListeners().clearAll([](WebListenerState& listener) {
-            listener.disconnect();
+            listener = {};
         });
         webShutdownHookRegistered() = false;
     }
@@ -134,22 +133,15 @@ namespace luax {
         lua_setmetatable(L, -2);
     }
 
-    inline void pushResponse(lua_State* L, web::WebResponse response) {
-        if (response.data().size() > kMaxWebResponseBytes) {
-            luaL_error(L, "%s", kWebResponseSizeExceededMsg);
-        }
-        auto* box = static_cast<WebResponseBox*>(lua_newuserdata(L, sizeof(WebResponseBox)));
-        new (box) WebResponseBox{std::move(response)};
-        luaL_getmetatable(L, kResponseMeta);
-        lua_setmetatable(L, -2);
-    }
-
     inline void pushResponseOrError(lua_State* L, web::WebResponse response) {
         if (!responseDataWithinLimit(response.data().size())) {
             pushNilErr(L, kWebResponseSizeExceededMsg);
             return;
         }
-        pushResponse(L, std::move(response));
+        auto* box = static_cast<WebResponseBox*>(lua_newuserdata(L, sizeof(WebResponseBox)));
+        new (box) WebResponseBox{std::move(response)};
+        luaL_getmetatable(L, kResponseMeta);
+        lua_setmetatable(L, -2);
         lua_pushnil(L);
     }
 

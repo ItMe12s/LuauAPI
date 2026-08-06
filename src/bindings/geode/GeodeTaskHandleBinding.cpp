@@ -7,7 +7,7 @@
 #include "framework/stack/Stack.hpp"
 #include "framework/stack/TableUtil.hpp"
 
-#include <algorithm>
+#include <Geode/utils/ranges.hpp>
 #include <arc/task/Waker.hpp>
 #include <lua.h>
 #include <lualib.h>
@@ -291,15 +291,10 @@ namespace luax {
 
     void compactGeodeTaskHandles() {
         auto& handles = activeHandles();
-        handles.erase(
-            std::remove_if(
-                handles.begin(),
-                handles.end(),
-                [](std::shared_ptr<GeodeTaskHandleStateBase> const& state) {
-                    return !state || !state->isPending();
-                }
-            ),
-            handles.end()
+        geode::utils::ranges::remove(
+            handles, [](std::shared_ptr<GeodeTaskHandleStateBase> const& state) {
+                return !state || !state->isPending();
+            }
         );
     }
 

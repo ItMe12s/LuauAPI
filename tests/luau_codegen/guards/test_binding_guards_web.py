@@ -42,13 +42,13 @@ class BindingGuardTests(unittest.TestCase):
                     f"{method} must enforce kMaxWebResponseBytes",
                 )
 
-    def test_push_response_enforces_size_cap_before_boxing(self) -> None:
+    def test_push_response_or_error_enforces_size_cap_before_boxing(self) -> None:
         source = read_repo_file(WEB_INTERNAL)
-        body = inline_function_body(source, "inline void pushResponse(lua_State* L")
+        body = inline_function_body(source, "inline void pushResponseOrError(lua_State* L")
         self.assertIn(
-            "kMaxWebResponseBytes",
+            "responseDataWithinLimit",
             body,
-            "pushResponse must reject oversized bodies before boxing userdata",
+            "pushResponseOrError must reject oversized bodies before boxing userdata",
         )
 
     def test_start_request_enforces_concurrent_request_cap(self) -> None:
@@ -156,18 +156,18 @@ class BindingGuardTests(unittest.TestCase):
         source = web_binding_source()
         body = function_body(source, "startRequest", ret="std::shared_ptr<WebTask>")
         self.assertIn(
-            "responseDataWithinLimit",
+            "pushResponseOrError",
             body,
-            "async request callbacks must reject oversized responses before pushResponse",
+            "async request callbacks must use the capped response push helper",
         )
 
     def test_response_listener_rejects_oversized_response(self) -> None:
         source = web_binding_source()
         body = function_body(source, "invokeResponseEventNow", ret="bool")
         self.assertIn(
-            "responseDataWithinLimit",
+            "pushResponseOrError",
             body,
-            "response listeners must reject oversized responses before pushResponse",
+            "response listeners must use the capped response push helper",
         )
 
     def test_off_thread_request_intercept_fails_closed(self) -> None:
