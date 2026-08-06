@@ -81,7 +81,7 @@ local handle = geode.KeyboardInputEvent.listenFor(keys.KEY_A, function(data)
     return true
 end)
 
--- later
+-- Disconnect later.
 handle:disconnect()
 ```
 
@@ -195,6 +195,7 @@ end)
 
 ## Related
 
+- [Mouse input](mouse-input.md)
 - [Getting started](../../getting-started/overview.md)
 - [Examples](../../getting-started/examples.md)
 - [callbacks](callbacks.md)

@@ -53,7 +53,7 @@ local modId = geode.Mod.getID()
 local menu = cc2d.CCMenu.create()
 menu:setID(modId .. "/my-menu")
 menu:setLayout(geode.ColumnLayout.create())
--- add your buttons to menu here
+-- Add your buttons to the menu here.
 menu:updateLayout()
 ```
 
@@ -64,14 +64,14 @@ The callback receives the popup and which button was pressed.
 
 ```lua
 geode.createQuickPopup(
-    "Confirm",            -- title
-    "Delete this level?", -- body
-    "Cancel", "Delete",   -- button 1, button 2
+    "Confirm",            -- Popup title.
+    "Delete this level?", -- Popup body.
+    "Cancel", "Delete",   -- First and second buttons.
     function(_popup, btn2)
         if btn2 then print("deleted") end
     end,
-    true, -- doShow: show the popup now
-    false -- cancelledByEscape: Escape does not close it
+    true, -- Parameter doShow: Show the popup now.
+    false -- Parameter cancelledByEscape: Escape does not close it.
 )
 ```
 

@@ -36,7 +36,7 @@ The force crash script:
 ```lua
 geode.hook("geode.gd.MenuLayer:init/0", {
     after = function(self, result)
-        return false -- supposed to return result or true
+        return false -- Supposed to return result or true.
     end,
 })
 ```

@@ -81,6 +81,27 @@ _EXTRA_BINDING_SOURCES = {
         "start_marker": "registerKeyboardInputEvent(lua_State* L)",
         "end_marker": "return geode::Ok();",
     },
+    "mouse_input": {
+        "dluau": "tools/luau_codegen/extra_bindings/mouse.dluau",
+        "cpp": "src/bindings/geode/GeodeMouseBinding.cpp",
+        "type_name": "MouseInputEventNamespace",
+        "start_marker": "registerMouseInputEvent(lua_State* L)",
+        "end_marker": "return geode::Ok();",
+    },
+    "mouse_move": {
+        "dluau": "tools/luau_codegen/extra_bindings/mouse.dluau",
+        "cpp": "src/bindings/geode/GeodeMouseBinding.cpp",
+        "type_name": "MouseMoveEventNamespace",
+        "start_marker": "registerMouseMoveEvent(lua_State* L)",
+        "end_marker": "return geode::Ok();",
+    },
+    "scroll_wheel": {
+        "dluau": "tools/luau_codegen/extra_bindings/mouse.dluau",
+        "cpp": "src/bindings/geode/GeodeMouseBinding.cpp",
+        "type_name": "ScrollWheelEventNamespace",
+        "start_marker": "registerScrollWheelEvent(lua_State* L)",
+        "end_marker": "return geode::Ok();",
+    },
     "websocket": {
         "dluau": "tools/luau_codegen/extra_bindings/websocket.dluau",
         "cpp": "src/bindings/websocket/WebSocketBinding.cpp",
@@ -269,3 +290,27 @@ class ExtraBindingsSyncTests(unittest.TestCase):
         )
         self.assertEqual(text.count(listen_sig), 1)
         self.assertEqual(text.count(listen_for_sig), 1)
+
+    def test_mouse_event_stubs_single_source(self) -> None:
+        root = Root(classes=[Class(name="CCObject", namespace="cocos2d")])
+        text = emit_luau_types(root, manual_fields=MANUAL_FREE_FN_FIELDS)["geode.d.luau"]
+        geode = text[text.index("export type GeodeNamespace") : text.index("declare geode:")]
+        fields = {
+            "MouseInputEvent": "MouseInputEventNamespace",
+            "MouseMoveEvent": "MouseMoveEventNamespace",
+            "ScrollWheelEvent": "ScrollWheelEventNamespace",
+        }
+        for field, namespace in fields.items():
+            self.assertIn(f"{field}: {namespace}", geode)
+            self.assertNotRegex(geode, rf"{field}:\s*\{{[^}}]*listen:")
+
+        signatures = (
+            "listen: (callback: (data: MouseInputData) -> boolean?, priority: number?) "
+            "-> MouseInputListenerHandle",
+            "listen: (callback: (x: number, y: number) -> boolean?, priority: number?) "
+            "-> MouseInputListenerHandle",
+            "listen: (callback: (xOffset: number, yOffset: number) -> boolean?, "
+            "priority: number?) -> MouseInputListenerHandle",
+        )
+        for signature in signatures:
+            self.assertEqual(text.count(signature), 1)

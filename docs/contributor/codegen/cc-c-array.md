@@ -11,7 +11,7 @@ Runtime lives in `src/framework/view/ReadOnlyCCArrayView.hpp`.
 
 Proven fields expose a read-only sequence:
 
-- `cocos2d::ccCArray*` on `CCKeyboardDispatcher.m_pHandlersToAdd` becomes `{ CCKeyboardHandler? }`
+- `cocos2d::ccCArray*` on `CCKeyboardDispatcher.m_pHandlersToAdd` becomes `{ CCKeyboardHandler? }`.
 
 The same pattern applies to `CCKeypadHandler`, `CCMouseHandler`, and `CCTouchHandler`
 on the matching dispatcher `m_pHandlersToAdd` and `m_pHandlersToRemove` fields in the allowlist.

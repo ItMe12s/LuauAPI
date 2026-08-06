@@ -43,7 +43,7 @@ Serializes a Luau value to a JSON string.
 
 ```lua
 geode.json.dump({ x = true })   -- '{"x":true}'
-geode.json.dump({ 1, 2, 3 }, 2) -- pretty-printed array, 2-space indent
+geode.json.dump({ 1, 2, 3 }, 2) -- Pretty-printed array, 2-space indent.
 ```
 
 ## Limits

@@ -30,6 +30,7 @@ _NAMESPACE_SOURCES = {
     "geode.utils.random": "src/bindings/geode/GeodeSmallBindings.cpp",
     "geode.KeyboardModifier": "src/bindings/geode/GeodeKeyboardBinding.cpp",
     "geode.KeyboardInputData": "src/bindings/geode/GeodeKeyboardBinding.cpp",
+    "geode.MouseInputData": "src/bindings/geode/GeodeMouseBinding.cpp",
 }
 
 _SET_CFUNCTION = re.compile(r'setTableCFunction\(L,\s*[^,]+,\s*"([^"]+)"')

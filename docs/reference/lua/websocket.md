@@ -15,13 +15,13 @@ type WebSocketConnectOptions = {
     protocols: { string }?,
     pingIntervalSecs: number?,
     handshakeTimeoutSecs: number?,
-    autoReconnect: boolean?,    -- default false
-    certVerification: boolean?, -- default true
-    caBundle: string?,          -- PEM bundle content, in-memory
+    autoReconnect: boolean?,    -- Defaults to false.
+    certVerification: boolean?, -- Defaults to true.
+    caBundle: string?,          -- PEM bundle content held in memory.
 }
 
 type WebSocketServeOptions = {
-    host: string?, -- default "127.0.0.1"
+    host: string?, -- Defaults to "127.0.0.1".
 }
 
 type WebSocketReadyState = "connecting" | "open" | "closing" | "closed"
@@ -95,7 +95,7 @@ The server binds to loopback by default. See Security for `host = "0.0.0.0"` LAN
 Peer-to-peer setups run `serve` on one peer and `connect` on the other:
 
 ```lua
--- host peer
+-- Host peer.
 local server = websocket.serve(7777, { host = "0.0.0.0" })
 server:onClientConnect(function(peer)
     peer:send("welcome")
@@ -103,7 +103,7 @@ end):onMessage(function(peer, data)
     server:broadcast(data)
 end)
 
--- joining peer
+-- Joining peer.
 local ws = websocket.connect("ws://192.168.1.5:7777")
 ```
 
@@ -114,7 +114,7 @@ peer:send(data: string) -> (boolean?, string?)
 peer:sendBinary(data: string) -> (boolean?, string?)
 peer:close(code: number?, reason: string?) -> ()
 peer:remoteAddress() -> string? -- "ip:port"
-peer:id() -> string?            -- stable per connection, use as table key
+peer:id() -> string?            -- Stable per connection. Use as a table key.
 ```
 
 Peer userdata handed to different callbacks may be distinct Lua values for the same connection.

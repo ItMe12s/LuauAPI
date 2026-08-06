@@ -22,12 +22,12 @@ When a bound method takes a C++ callback (such as a `std::function`, Geode `Func
 pass a Luau function with a matching signature.
 
 ```lua
--- void callback
+-- Void callback.
 someObject:doLater(function(arg1: CCNode)
     print("called from C++", arg1)
 end)
 
--- non-void return (shape only, real APIs vary)
+-- Non-void return (shape only, real APIs vary).
 local ok = someObject:tryAction(function(layer: FLAlertLayer, accepted: boolean): boolean
     return accepted
 end)

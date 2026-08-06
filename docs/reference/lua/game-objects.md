@@ -47,9 +47,9 @@ Geode adds string IDs to `CCNode`.
 
 When creating a node, always call `:setID()` and pass an id string:
 
-- The id should start with your mod id as a prefix
-- Use lowercase kebab-case
-- Do not use spaces
+- The id should start with your mod id as a prefix.
+- Use lowercase kebab-case.
+- Do not use spaces.
 
 Example: `mod-id/my-node-id`
 
@@ -145,7 +145,7 @@ local fields = geode.fields(self)
 fields.count = (fields.count or 0) + 1
 
 if geode.fields(layer).myFlag then
-    -- only runs when the layer is live and the flag was set
+    -- Only runs when the layer is live and the flag was set.
 end
 ```
 

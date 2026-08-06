@@ -44,6 +44,7 @@ Start at [globals](reference/lua/globals.md) for the full Lua module index.
 | Game | [ColorProvider](reference/lua/color-provider.md) | Theme colors |
 | Game | [Keybind](reference/lua/keybind.md) | Keybind strings |
 | Game | [Keyboard input](reference/lua/keyboard-input.md) | Keyboard events |
+| Game | [Mouse input](reference/lua/mouse-input.md) | Mouse events |
 | UI | [UI and layouts](reference/lua/ui.md) | Cocos UI factories and layouts |
 | UI | [imgui](reference/lua/imgui.md) | Dear ImGui overlay |
 | UI | [gd3d](reference/lua/gd3d.md) | 3D viewport rendering |

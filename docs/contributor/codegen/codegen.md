@@ -132,7 +132,7 @@ Two ways to add them:
 
 - `tools/luau_codegen/extra_bindings/*.dluau`: appended at the end of the stub.
   Current files: `fs.dluau`, `gd3d.dluau`, `hook.dluau`, `imgui.dluau`, `json.dluau`,
-  `keyboard.dluau`, `loader.dluau`, `mod.dluau`, `task.dluau`, `web.dluau`, `websocket.dluau`.
+  `keyboard.dluau`, `loader.dluau`, `mod.dluau`, `mouse.dluau`, `task.dluau`, `web.dluau`, `websocket.dluau`.
   Use this for new globals and for support types the `geode` namespace references.
 - `tools/luau_codegen/emit/luau_types/manual_fields.py`: injects fields into a namespace
   that codegen already emits, such as `geode.cocos`.
@@ -142,12 +142,12 @@ so they must stay in sync. `test_manual_fields_sync.py` and `test_extra_bindings
 
 `geode.cocos` is hybrid:
 
-- Codegen emits `geode::cocos` helpers into `bindings_free_functions.cpp`
+- Codegen emits `geode::cocos` helpers into `bindings_free_functions.cpp`.
 - `GeodeCocosBinding.cpp` registers only:
   - color helpers
   - `ccDrawColor4B`
   - hex parsers
-- `test_binding_guards_*.py` enforces that split
+- `test_binding_guards_*.py` enforces that split.
 
 ## Metadata outputs
 
@@ -270,9 +270,9 @@ Defer rule in `types_binding.py`:
 
 Production include order:
 
-- `Types.hpp` includes `Types.generated.hpp` before `Usertype.hpp`
+- `Types.hpp` includes `Types.generated.hpp` before `Usertype.hpp`.
 - `ContainerTables.hpp` includes `Types.generated.containers.hpp` after the public container helper
-  declarations
+  declarations.
 - Recursive container traits are declared before that include.
 - Their leaf operations are defined after it.
   Any nested path can then call `luax::check<T>` and `luax::push` on deferred types.
@@ -323,11 +323,11 @@ Class fields are filtered in `policy/fields.py` by `bindable_field()`.
 
 A field is skipped when any of the following apply:
 
-- Its type cannot be marshalled
-- It is an array or reference
-- It is a function or string pointer
-- It is listed in `INACCESSIBLE_FIELDS`
-- Its type cannot be marshalled as a `SeedValue*` field (see below)
+- Its type cannot be marshalled.
+- It is an array or reference.
+- It is a function or string pointer.
+- It is listed in `INACCESSIBLE_FIELDS`.
+- Its type cannot be marshalled as a `SeedValue*` field (see below).
 
 `SeedValue*` fields (for example `geode::SeedValueRSV`) bind as Lua `number`.
 Classification uses kind `seed_value`. Getters decode with `static_cast<int>`.

@@ -23,8 +23,8 @@ Every file in `tools/luau_codegen/extra_bindings/` is appended to the same outpu
 - [`mod.dluau`](../../../tools/luau_codegen/extra_bindings/mod.dluau) adds `ModNamespace`. See [mod](mod.md).
 - [`loader.dluau`](../../../tools/luau_codegen/extra_bindings/loader.dluau) adds `LoaderModInfo` and `LoaderNamespace`. See [loader](loader.md).
 - [`json.dluau`](../../../tools/luau_codegen/extra_bindings/json.dluau) adds `JsonNamespace`. See [json](json.md).
-- [`keyboard.dluau`](../../../tools/luau_codegen/extra_bindings/keyboard.dluau) adds keyboard input support types.
-  See [Keyboard input](keyboard-input.md).
+- [`keyboard.dluau`](../../../tools/luau_codegen/extra_bindings/keyboard.dluau) adds keyboard input support types. See [Keyboard input](keyboard-input.md).
+- [`mouse.dluau`](../../../tools/luau_codegen/extra_bindings/mouse.dluau) adds mouse input support types. See [Mouse input](mouse-input.md).
 - [`fs.dluau`](../../../tools/luau_codegen/extra_bindings/fs.dluau) adds `FsRoot` and `FsNamespace`. See [fs](fs.md).
 - [`gd3d.dluau`](../../../tools/luau_codegen/extra_bindings/gd3d.dluau) adds `gd3d`,
   Transform, Mesh, Material, Texture, and ViewportFrame types. See [gd3d](gd3d.md).

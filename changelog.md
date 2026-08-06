@@ -9,7 +9,7 @@
 
 ## 0.1.0-beta.21
 
-add stuff here...
+- Added `geode.MouseInputEvent`, `geode.MouseMoveEvent`, and `geode.ScrollWheelEvent` listeners.
 
 ## 0.1.0-beta.20
 

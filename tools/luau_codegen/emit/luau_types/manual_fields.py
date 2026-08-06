@@ -74,4 +74,8 @@ MANUAL_FREE_FN_FIELDS: Dict[str, List[str]] = {
     "geode.KeyboardInputData": [
         "Action: { Press: number, Release: number, Repeat: number }",
     ],
+    "geode.MouseInputData": [
+        "Action: { Press: number, Release: number }",
+        "Button: { Left: number, Right: number, Middle: number, Button4: number, Button5: number }",
+    ],
 }

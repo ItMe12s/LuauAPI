@@ -424,7 +424,7 @@ geode.hook("geode.gd.MenuLayer:init/0", {
         local menu = self:getChildByID("bottom-menu")
         if not menu then return result end
 
-        local button = makeButton() -- Bring your own button function here
+        local button = makeButton() -- Bring your own button function here.
         button:setID(geode.Mod.getID() .. "/open-button")
         menu:addChild(button)
         menu:updateLayout()

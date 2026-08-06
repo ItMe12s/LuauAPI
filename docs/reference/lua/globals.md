@@ -36,6 +36,7 @@ Caps and error strings live in [Limits and errors](../cpp/limits-and-errors.md).
 | Game | [ColorProvider](color-provider.md) | Theme colors |
 | Game | [Keybind](keybind.md) | Keybind strings |
 | Game | [Keyboard input](keyboard-input.md) | Keyboard events |
+| Game | [Mouse input](mouse-input.md) | Mouse events |
 | UI | [UI and layouts](ui.md) | Cocos UI factories |
 | UI | [imgui](imgui.md) | Dear ImGui overlay |
 | UI | [gd3d](gd3d.md) | 3D viewport rendering |

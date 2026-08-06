@@ -1,0 +1,22 @@
+export type MouseInputData = {
+    button: number,
+    action: number,
+    modifiers: number,
+    timestamp: number,
+}
+
+export type MouseInputListenerHandle = {
+    disconnect: (self: MouseInputListenerHandle) -> (),
+}
+
+export type MouseInputEventNamespace = {
+    listen: (callback: (data: MouseInputData) -> boolean?, priority: number?) -> MouseInputListenerHandle,
+}
+
+export type MouseMoveEventNamespace = {
+    listen: (callback: (x: number, y: number) -> boolean?, priority: number?) -> MouseInputListenerHandle,
+}
+
+export type ScrollWheelEventNamespace = {
+    listen: (callback: (xOffset: number, yOffset: number) -> boolean?, priority: number?) -> MouseInputListenerHandle,
+}
