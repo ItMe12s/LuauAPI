@@ -6,10 +6,8 @@ import warnings
 from test_support import resolve_test_bindings_dir
 from luau_codegen.parse.collect import collect_bindings_root  # type: ignore[import-unresolved]
 
-from luau_codegen.convert.type_map import (  # type: ignore[import-unresolved]
-    OPAQUE_HANDLE_TYPES,
-    classify_arg,
-)
+from luau_codegen.convert.type_primitives import OPAQUE_HANDLE_TYPES  # type: ignore[import-unresolved]
+from luau_codegen.convert.type_classification import classify_arg  # type: ignore[import-unresolved]
 from luau_codegen.model.domain import codegen_object_map  # type: ignore[import-unresolved]
 from luau_codegen.model.object_discovery import (  # type: ignore[import-unresolved]
     undocumented_opaque_vector_elements,

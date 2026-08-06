@@ -1,18 +1,16 @@
 from __future__ import annotations
 
-from typing import Dict, FrozenSet, List
-
 
 def manual_field_names_by_path(
-    manual_fields: Dict[str, List[str]] | None = None,
-) -> Dict[str, FrozenSet[str]]:
+    manual_fields: dict[str, list[str]] | None = None,
+) -> dict[str, frozenset[str]]:
     return {
         lua_path: frozenset(entry.split(":", 1)[0].strip() for entry in fields)
         for lua_path, fields in (manual_fields or {}).items()
     }
 
 
-MANUAL_FREE_FN_FIELDS: Dict[str, List[str]] = {
+MANUAL_FREE_FN_FIELDS: dict[str, list[str]] = {
     "geode": [
         "Color: ColorNamespace",
         "PopupManager: PopupManagerNamespace",

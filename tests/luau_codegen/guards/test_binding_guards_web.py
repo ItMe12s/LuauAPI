@@ -242,7 +242,7 @@ class BindingGuardTests(unittest.TestCase):
         self.assertNotIn(
             "if (!box) luaL_error",
             source,
-            "luaL_checkudata never returns null; redundant checks are dead code",
+            "luaL_checkudata never returns null, redundant checks are dead code",
         )
 
     def test_web_listener_registrars_use_shared_helper(self) -> None:

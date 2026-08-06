@@ -106,7 +106,7 @@ These helpers preserve the existing read, write, and null-child behavior without
 ## Source
 
 - `tools/luau_codegen/convert/type_classification.py`
-- `tools/luau_codegen/convert/type_map.py`
+- `tools/luau_codegen/convert/type_primitives.py`
 - `tools/luau_codegen/convert/marshalling.py`
 - `tools/luau_codegen/model/nested_containers.py`
 - `tools/luau_codegen/emit/bindings/class_file.py`

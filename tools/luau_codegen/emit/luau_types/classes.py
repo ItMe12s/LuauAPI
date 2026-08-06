@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Dict, List, Tuple
+from typing import TYPE_CHECKING
 
-from luau_codegen.parse.broma import Class, Field, Method
+from luau_codegen.parse.broma import Class, Method
 
 if TYPE_CHECKING:
     from luau_codegen.model.codegen_context import CodegenContext
+    from luau_codegen.model.type_analysis import TypeAnalysis
 
 from luau_codegen.policy.fields import (
     bindable_field,
@@ -25,18 +26,18 @@ from luau_codegen.emit.luau_types.method_types import (
 
 def _should_emit_type_class(
     cls: Class,
-    objects: Dict[str, Class],
-    field_targets: list[tuple[Class, Field]],
+    objects: dict[str, Class],
     skipped_classes: set,
     target_platform: str = "win",
     ctx: CodegenContext | None = None,
+    analysis: TypeAnalysis | None = None,
 ) -> bool:
     if cls.name not in skipped_classes:
         return True
     for field in cls.fields:
         if not field_applies_on_platform(field, target_platform):
             continue
-        ok, reason, _, ret = bindable_field(field, objects, cls, ctx=ctx)
+        ok, reason, _, ret = bindable_field(field, objects, cls, ctx=ctx, analysis=analysis)
         if ok and ret:
             return True
         if reason:
@@ -44,7 +45,7 @@ def _should_emit_type_class(
     return False
 
 
-def _emitted_base_name(cls: Class, objects: Dict[str, Class], skipped_classes: set) -> str | None:
+def _emitted_base_name(cls: Class, objects: dict[str, Class], skipped_classes: set) -> str | None:
     for b in cls.bases:
         b_cls = objects.get(short_name(b))
         if b_cls and b_cls.name not in skipped_classes:
@@ -54,17 +55,17 @@ def _emitted_base_name(cls: Class, objects: Dict[str, Class], skipped_classes: s
 
 def _emit_class(
     cls: Class,
-    grouped: Dict[str, List[Method]],
-    field_targets: list[tuple[Class, Field]],
-    objects: Dict[str, Class],
+    grouped: dict[str, list[Method]],
+    objects: dict[str, Class],
     skipped_classes: set,
     target_platform: str = "win",
     ctx: CodegenContext | None = None,
-) -> List[str]:
-    lines: List[str] = []
+    analysis: TypeAnalysis | None = None,
+) -> tuple[list[str], bool]:
+    lines: list[str] = []
     base_name = _emitted_base_name(cls, objects, skipped_classes)
     base = f" extends {base_name}" if base_name else ""
-    instance_methods: Dict[str, List[Method]] = {}
+    instance_methods: dict[str, list[Method]] = {}
     for cpp_name, methods in grouped.items():
         if methods[0].is_static:
             continue
@@ -72,14 +73,21 @@ def _emit_class(
         if lua_name is None:
             continue
         instance_methods[lua_name] = methods
-    field_lines: List[str] = []
+    field_lines: list[str] = []
     if _is_ccnode_descendant(cls, objects, skipped_classes):
         field_lines.append("    m_fields: { [string]: any }\n")
     for field in cls.fields:
         if not field_applies_on_platform(field, target_platform):
             continue
-        ok, reason, _, ret = bindable_field(field, objects, cls, ctx=ctx)
-        skipped_ref = field_skipped_object_ref(field, objects, skipped_classes, cls, ctx=ctx)
+        ok, reason, _, ret = bindable_field(field, objects, cls, ctx=ctx, analysis=analysis)
+        skipped_ref = field_skipped_object_ref(
+            field,
+            objects,
+            skipped_classes,
+            cls,
+            ctx=ctx,
+            analysis=analysis,
+        )
         ref_cls = objects.get(skipped_ref) if skipped_ref else None
         type_only_ref = (
             ref_cls is not None and not ref_cls.methods and skipped_ref not in INACCESSIBLE_CLASSES
@@ -93,7 +101,8 @@ def _emit_class(
         elif reason:
             field_lines.append(f"    -- skipped {field.name}: {reason}\n")
 
-    if not instance_methods and not field_lines:
+    has_members = bool(instance_methods or field_lines)
+    if not has_members:
         lines.append(f"declare class {cls.name}{base} end\n\n")
     else:
         lines.append(f"declare class {cls.name}{base}\n")
@@ -101,8 +110,8 @@ def _emit_class(
         for name, methods in sorted(instance_methods.items()):
             if len(methods) == 1:
                 m = methods[0]
-                args = _classify_input_args(cls, m, objects, ctx=ctx)
-                ret_type = _method_return_type(cls, m, objects, ctx=ctx)
+                args = _classify_input_args(cls, m, objects, ctx=ctx, analysis=analysis)
+                ret_type = _method_return_type(cls, m, objects, ctx=ctx, analysis=analysis)
                 arg_text = ", ".join(
                     f"arg{i}: {arg.lua_type}" for i, arg in enumerate(args, start=1)
                 )
@@ -117,15 +126,17 @@ def _emit_class(
                         f"    function {name}({self_prefix}{arg_text}){': ' + ret_type if ret_type != '()' else ''}\n"
                     )
             else:
-                widened = _widened_method_type(cls, methods, objects, static=False, ctx=ctx)
+                widened = _widened_method_type(
+                    cls, methods, objects, static=False, ctx=ctx, analysis=analysis
+                )
                 lines.append(f"    {name}: {widened}\n")
         lines.append("end\n\n")
-    return lines
+    return lines, has_members
 
 
 def _is_ccnode_descendant(
     cls: Class,
-    objects: Dict[str, Class],
+    objects: dict[str, Class],
     skipped_classes: set,
     seen: set[str] | None = None,
 ) -> bool:
@@ -145,12 +156,12 @@ def _is_ccnode_descendant(
 
 
 def _topo_sort_chunks(
-    chunks: List[Tuple[str, str]], base_of: Dict[str, str | None]
-) -> List[Tuple[str, str]]:
+    chunks: list[tuple[str, str]], base_of: dict[str, str | None]
+) -> list[tuple[str, str]]:
     chunk_map = dict(chunks)
     present = set(chunk_map)
     placed: set[str] = set()
-    ordered: List[str] = []
+    ordered: list[str] = []
 
     def visit(name: str, stack: frozenset[str]) -> None:
         if name in placed:

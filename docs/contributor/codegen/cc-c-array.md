@@ -41,5 +41,6 @@ The view userdata indexes `1..num` from `ccCArray::arr`, pushes borrowed usertyp
 ## Source
 
 - `tools/luau_codegen/model/cc_c_array.py`
-- `tools/luau_codegen/convert/type_map.py`
+- `tools/luau_codegen/convert/type_primitives.py`
+- `tools/luau_codegen/convert/type_classification.py`
 - `src/framework/view/ReadOnlyCCArrayView.hpp`

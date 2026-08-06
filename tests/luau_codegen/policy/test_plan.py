@@ -13,7 +13,7 @@ from luau_codegen.emit.plan import collect_plan, collect_platform_plan, plan_out
 from luau_codegen.parse.broma import Arg, Class, Field, Method, Root, parse_file  # type: ignore[import-unresolved]
 from luau_codegen.parse.collect import collect_bindings_root  # type: ignore[import-unresolved]
 from luau_codegen.policy.hooks import hookable  # type: ignore[import-unresolved]
-from luau_codegen.policy.intersection import intersection_platforms  # type: ignore[import-unresolved]
+from luau_codegen.model.platforms import intersection_platforms  # type: ignore[import-unresolved]
 
 
 class PlatformFieldPlanTests(unittest.TestCase):
@@ -97,7 +97,7 @@ class PlanRegressionTests(unittest.TestCase):
         )
 
     def test_scanned_geode_ui_class_survives_intersection(self) -> None:
-        from luau_codegen.parse.geode_sdk import _SCANNED_LINK_ATTR  # type: ignore[import-unresolved]
+        from luau_codegen.model.platforms import SCANNED_LINK_ATTR  # type: ignore[import-unresolved]
 
         ccobject = Class(name="CCObject", namespace="cocos2d")
         ccnode = Class(name="CCNode", namespace="cocos2d", bases=["CCObject"])
@@ -105,7 +105,7 @@ class PlanRegressionTests(unittest.TestCase):
             name="OverlayManager",
             namespace="geode",
             bases=["cocos2d::CCNode"],
-            attributes=[_SCANNED_LINK_ATTR],
+            attributes=[SCANNED_LINK_ATTR],
             methods=[
                 Method(
                     name="get",

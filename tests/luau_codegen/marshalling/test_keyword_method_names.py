@@ -38,7 +38,8 @@ class KeywordMethodNameTests(unittest.TestCase):
 
     def test_stub_emits_endToLua(self) -> None:
         cls, grouped, objects = _fixture("end")
-        text = "".join(_emit_class(cls, grouped, [], objects, set(), "win"))
+        lines, _ = _emit_class(cls, grouped, objects, set(), "win")
+        text = "".join(lines)
         self.assertIn("function endToLua(self)", text)
         self.assertNotIn("function end(self)", text)
 

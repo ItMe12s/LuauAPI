@@ -27,20 +27,20 @@ def collect_bindings_root(bindings_dir: str, geode_sdk_path: str | None = None) 
             scan_geode_ccnode_additions,
             scan_geode_enums,
             scan_geode_functions,
-            take_scan_warnings,
         )
 
-        geode_enum_infos = scan_geode_enums(geode_sdk_path, bindings_dir=bindings_dir)
+        geode_enum_infos = scan_geode_enums(
+            geode_sdk_path, bindings_dir=bindings_dir, diagnostics=root.scan_warnings
+        )
         enum_key_codes = scan_enum_key_codes(geode_sdk_path)
-        root.classes.extend(scan_geode_sdk(geode_sdk_path))
+        root.classes.extend(scan_geode_sdk(geode_sdk_path, diagnostics=root.scan_warnings))
         ccnode_additions = scan_geode_ccnode_additions(geode_sdk_path)
         if ccnode_additions:
             root.classes.append(ccnode_additions)
         ccarray_additions = scan_geode_ccarray_additions(geode_sdk_path)
         if ccarray_additions:
             root.classes.append(ccarray_additions)
-        root.functions.extend(scan_geode_functions(geode_sdk_path))
-        root.scan_warnings.extend(take_scan_warnings())
+        root.functions.extend(scan_geode_functions(geode_sdk_path, diagnostics=root.scan_warnings))
     from luau_codegen.policy.filtering import method_key
 
     seen: dict[str, broma.Class] = {}
@@ -65,7 +65,7 @@ def collect_bindings_root(bindings_dir: str, geode_sdk_path: str | None = None) 
     root.classes = list(seen.values())
     root.classes.sort(key=lambda c: (c.namespace, c.name))
     if geode_enum_infos is not None:
-        from luau_codegen.convert.type_map import COCOS_ENUM_TYPES, GD_ENUM_TYPES
+        from luau_codegen.convert.type_primitives import COCOS_ENUM_TYPES, GD_ENUM_TYPES
         from luau_codegen.model.codegen_context import CodegenContext
 
         skip = GD_ENUM_TYPES | COCOS_ENUM_TYPES | {c.name for c in object_classes(root)}

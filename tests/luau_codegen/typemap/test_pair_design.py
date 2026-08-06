@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import unittest
 
-from luau_codegen.convert.type_map import classify_arg  # type: ignore[import-unresolved]
+from luau_codegen.convert.type_classification import classify_arg  # type: ignore[import-unresolved]
 from luau_codegen.model.pair_design import (  # type: ignore[import-unresolved]
     BASELINE_PAIR_SKIP_FIELDS,
     PAIR_COMPONENT_KINDS,

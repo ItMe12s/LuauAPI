@@ -123,14 +123,13 @@ class CodegenExitCodeTests(unittest.TestCase):
         finally:
             shutil.rmtree(tmpdir)
 
-    def test_emit_delegates_writes_specs_and_gen_files(self) -> None:
+    def test_emit_delegates_writes_gen_files_only(self) -> None:
         from luau_codegen.cli import main as cg  # type: ignore[import-unresolved]
 
         tmpdir = tempfile.mkdtemp()
         try:
             bindings = os.path.join(ROOT, "tests", "luau_codegen", "fixtures", "delegate_bindings")
             out_dir = os.path.join(tmpdir, "out")
-            specs_path = os.path.join(tmpdir, "delegate_specs.py")
             rc = cg.main(
                 [
                     "--emit-delegates",
@@ -138,12 +137,10 @@ class CodegenExitCodeTests(unittest.TestCase):
                     bindings,
                     "--out",
                     out_dir,
-                    "--delegate-specs-out",
-                    specs_path,
                 ]
             )
             self.assertEqual(rc, 0)
-            self.assertTrue(os.path.isfile(specs_path))
+            self.assertFalse(os.path.exists(os.path.join(out_dir, "delegate_specs.py")))
             self.assertTrue(
                 os.path.isfile(
                     os.path.join(
@@ -169,6 +166,14 @@ class CodegenExitCodeTests(unittest.TestCase):
         finally:
             shutil.rmtree(tmpdir)
 
+    def test_removed_spec_output_flags_are_rejected(self) -> None:
+        from luau_codegen.cli import main as cg  # type: ignore[import-unresolved]
+
+        bindings = os.path.join(ROOT, "tests", "luau_codegen", "fixtures", "delegate_bindings")
+        for flag in ("--delegate-specs-out", "--value-struct-specs-out"):
+            with self.subTest(flag=flag), self.assertRaisesRegex(SystemExit, "2"):
+                cg.main(["--bindings", bindings, flag, "unused.py"])
+
 
 class ListAllOutputsCliTests(unittest.TestCase):
     def test_list_all_outputs_emits_binding_and_type_prefixes(self) -> None:
@@ -186,11 +191,7 @@ class ListAllOutputsCliTests(unittest.TestCase):
                     "plan_outputs",
                     return_value=["bindings_CCObject.cpp"],
                 ):
-                    with mock.patch.object(
-                        cg.emit_types,
-                        "emit",
-                        return_value={"geode.d.luau": "-- stub\n"},
-                    ):
+                    with mock.patch.object(cg.emit_types, "emit") as emit_types:
                         buf = io.StringIO()
                         with mock.patch("sys.stdout", buf):
                             rc = cg.main(
@@ -215,6 +216,7 @@ class ListAllOutputsCliTests(unittest.TestCase):
                 lines,
             )
             self.assertIn("type:geode.d.luau", lines)
+            emit_types.assert_not_called()
         finally:
             shutil.rmtree(tmpdir)
 

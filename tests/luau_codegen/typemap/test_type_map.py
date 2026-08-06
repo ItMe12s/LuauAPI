@@ -6,9 +6,11 @@ import tempfile
 import unittest
 
 import test_support  # noqa: F401 - installs codegen test fixtures
-from luau_codegen.convert.type_map import (  # type: ignore[import-unresolved]
+from luau_codegen.convert.type_primitives import (  # type: ignore[import-unresolved]
     COCOS_ENUM_TYPES,
     GD_ENUM_TYPES,
+)
+from luau_codegen.convert.type_classification import (  # type: ignore[import-unresolved]
     STD_ARRAY_MAX_SIZE,
     classify_arg,
     classify_return,

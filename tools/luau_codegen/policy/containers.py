@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from luau_codegen.convert.type_map import COMPOSITE_KINDS, TypeInfo
+from luau_codegen.convert.type_primitives import COMPOSITE_KINDS, TypeInfo
 from luau_codegen.model.nested_containers import AUDITED_POINTER_GRID_KIND
 
 
-_CONTAINER_KINDS = COMPOSITE_KINDS | {AUDITED_POINTER_GRID_KIND, "cc_c_array_view"}
-OUT_CONTAINER_KINDS = _CONTAINER_KINDS - {"pair", "tuple"}
+CONTAINER_KINDS = COMPOSITE_KINDS | {AUDITED_POINTER_GRID_KIND, "cc_c_array_view"}
+OUT_CONTAINER_KINDS = CONTAINER_KINDS - {"pair", "tuple"}
 
 
 def _readonly_container_arg(info: TypeInfo) -> bool:
@@ -27,7 +27,7 @@ def is_out_container(info: TypeInfo) -> bool:
 def container_supported_as_arg(info: TypeInfo, ret_kind: str) -> bool:
     if _readonly_container_arg(info):
         return False
-    if info.kind not in _CONTAINER_KINDS:
+    if info.kind not in CONTAINER_KINDS:
         return True
     if info.kind in ("pair", "tuple"):
         return True
@@ -37,7 +37,7 @@ def container_supported_as_arg(info: TypeInfo, ret_kind: str) -> bool:
 
 
 def container_supported_as_return(info: TypeInfo) -> bool:
-    if info.kind not in _CONTAINER_KINDS:
+    if info.kind not in CONTAINER_KINDS:
         return True
     if info.kind in ("pair", "tuple"):
         return True

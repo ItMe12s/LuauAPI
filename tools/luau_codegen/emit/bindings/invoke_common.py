@@ -1,27 +1,25 @@
 from __future__ import annotations
 
-from typing import List
 
 from luau_codegen.convert.marshalling import (
     check_arg,
     check_sel_handler,
-    push_return,
     push_value,
     sel_call_args,
     sel_selector_call_arg,
 )
 from luau_codegen.convert.sel_args import LuaMethodArg
-from luau_codegen.convert.type_map import TypeInfo
-from luau_codegen.policy.containers import _CONTAINER_KINDS
+from luau_codegen.convert.type_primitives import TypeInfo
+from luau_codegen.policy.containers import CONTAINER_KINDS
 from luau_codegen.emit.types_binding import emit_value_local_decl
 
 
-def emit_out_arg(info: TypeInfo, var: str) -> tuple[List[str], str]:
+def emit_out_arg(info: TypeInfo, var: str) -> tuple[list[str], str]:
     if info.kind == "value":
-        return [f"        {emit_value_local_decl(info.cxx_type, var)}\n"], var
+        return [f"        {emit_value_local_decl(info, var)}\n"], var
     if info.kind == "enum":
         return [f"        {info.cxx_type} {var}{{}};\n"], var
-    if info.kind in _CONTAINER_KINDS:
+    if info.kind in CONTAINER_KINDS:
         return [f"        {info.cxx_type} {var}{{}};\n"], (f"&{var}" if info.is_vector_ptr else var)
     return [f"        {info.cxx_type} {var}{{}};\n"], var
 
@@ -31,11 +29,11 @@ def emit_lua_invoke_arg(
     *,
     lua_idx: int,
     label: str,
-    call_args: List[str],
-    selector_handlers: List[tuple[str, str]],
-    delegate_trampolines: List[str] | None = None,
-) -> tuple[List[str], int]:
-    out: List[str] = []
+    call_args: list[str],
+    selector_handlers: list[str],
+    delegate_trampolines: list[str] | None = None,
+) -> tuple[list[str], int]:
+    out: list[str] = []
     info = lua_arg.info
     arg_idx = lua_arg.arg_index
     var = f"arg{arg_idx}"
@@ -51,14 +49,14 @@ def emit_lua_invoke_arg(
         sel_var = f"sel{arg_idx}"
         out.extend(check_sel_handler(lua_idx, sel_var, info, label))
         call_args.append(sel_selector_call_arg(info))
-        selector_handlers.append((f"{sel_var}_handler", info.class_name or "menu"))
+        selector_handlers.append(f"{sel_var}_handler")
         return out, lua_idx + 1
 
     if lua_arg.sel_pair and not lua_arg.implicit_self_target:
         sel_var = f"sel{arg_idx}"
         out.extend(check_sel_handler(lua_idx, sel_var, info, label))
         call_args.extend(sel_call_args(sel_var, info, handler_first=lua_arg.handler_first))
-        selector_handlers.append((f"{sel_var}_handler", info.class_name or "menu"))
+        selector_handlers.append(f"{sel_var}_handler")
         return out, lua_idx + 1
 
     out.extend(check_arg(lua_arg.arg, info, lua_idx, var, label))
@@ -72,51 +70,43 @@ def emit_lua_invoke_arg(
     return out, lua_idx + 1
 
 
-def emit_vector_return_push(
+def emit_return_value_push(
     ret: TypeInfo,
     expr: str,
     *,
     owned_return: bool = False,
     ref_owner_expr: str | None = None,
-) -> List[str]:
+) -> list[str]:
     if ret.kind != "vector_view":
-        return push_return(ret, expr, owned_return)
+        return push_value(ret, expr, owned_return)
     if ref_owner_expr is not None:
-        return push_return(ret, expr, False, owner_expr=ref_owner_expr)
-    return push_return(ret, expr, False, vector_owned=True)
-
-
-def _anchor_handler(handler: str, variant: str, anchor: str) -> str:
-    return f"luax::anchorTrampoline({anchor}, {handler});\n"
-
-
-def _orphan_handler(handler: str, variant: str) -> str:
-    return f"luax::registerOrphanTrampoline({handler});\n"
+        return push_value(ret, expr, False, owner_expr=ref_owner_expr)
+    return push_value(ret, expr, False, vector_owned=True)
 
 
 def emit_trampoline_registrations(
-    selector_handlers: List[tuple[str, str]],
-    delegate_trampolines: List[str],
+    selector_handlers: list[str],
+    delegate_trampolines: list[str],
     *,
     ret_kind: str,
     is_static: bool,
-) -> List[str]:
+) -> list[str]:
     if not selector_handlers and not delegate_trampolines:
         return []
-    lines: List[str] = []
+    lines: list[str] = []
     if ret_kind == "object":
-        for handler, variant in selector_handlers:
-            lines.append(f"        {_anchor_handler(handler, variant, 'result')}")
+        for handler in selector_handlers:
+            lines.append(f"        luax::anchorTrampoline(result, {handler});\n")
         for trampoline in delegate_trampolines:
             lines.append(f"        luax::anchorDelegate(result, {trampoline});\n")
     elif not is_static:
-        for handler, variant in selector_handlers:
-            lines.append(f"        {_anchor_handler(handler, variant, 'self')}")
+        for handler in selector_handlers:
+            lines.append(f"        luax::anchorTrampoline(self, {handler});\n")
         for trampoline in delegate_trampolines:
             lines.append(f"        luax::anchorDelegate(self, {trampoline});\n")
     else:
-        for handler, variant in selector_handlers:
-            lines.append(f"        {_orphan_handler(handler, variant)}")
+        for handler in selector_handlers:
+            lines.append(f"        luax::registerOrphanTrampoline({handler});\n")
         for trampoline in delegate_trampolines:
             lines.append(f"        luax::registerOrphanTrampoline({trampoline});\n")
     return lines
@@ -126,11 +116,11 @@ def emit_invoke_void_tail(
     target: str,
     *,
     ret: TypeInfo,
-    out_refs: List[tuple[int, TypeInfo]],
-    selector_handlers: List[tuple[str, str]],
-    delegate_trampolines: List[str] | None = None,
+    out_refs: list[tuple[int, TypeInfo]],
+    selector_handlers: list[str],
+    delegate_trampolines: list[str] | None = None,
     is_static: bool,
-) -> List[str]:
+) -> list[str]:
     lines = [f"        {target};\n"]
     lines.extend(
         emit_trampoline_registrations(
@@ -152,7 +142,7 @@ def emit_invoke_void_tail(
             )
         lines.append(f"        return {len(out_refs)};\n")
     else:
-        lines.extend(push_return(ret, "", False))
+        lines.append("        return 0;\n")
     return lines
 
 
@@ -160,14 +150,14 @@ def emit_invoke_return_tail(
     target: str,
     *,
     ret: TypeInfo,
-    selector_handlers: List[tuple[str, str]],
-    delegate_trampolines: List[str] | None = None,
+    selector_handlers: list[str],
+    delegate_trampolines: list[str] | None = None,
     is_static: bool,
     owned_return: bool = False,
     ref_owner_expr: str | None = None,
-    pre_push_lines: List[str] | None = None,
-    out_refs: List[tuple[int, TypeInfo]] | None = None,
-) -> List[str]:
+    pre_push_lines: list[str] | None = None,
+    out_refs: list[tuple[int, TypeInfo]] | None = None,
+) -> list[str]:
     lines = [f"        auto result = {target};\n"]
     if pre_push_lines:
         lines.extend(pre_push_lines)
@@ -179,15 +169,13 @@ def emit_invoke_return_tail(
             is_static=is_static,
         )
     )
-    push_lines = emit_vector_return_push(
+    push_lines = emit_return_value_push(
         ret,
         "result",
         owned_return=owned_return,
         ref_owner_expr=ref_owner_expr,
     )
     if out_refs:
-        if push_lines and push_lines[-1].strip() == "return 1;":
-            push_lines = push_lines[:-1]
         lines.extend(push_lines)
         for arg_idx, oinfo in out_refs:
             lines.extend(
@@ -201,4 +189,5 @@ def emit_invoke_return_tail(
         lines.append(f"        return {1 + len(out_refs)};\n")
     else:
         lines.extend(push_lines)
+        lines.append("        return 1;\n")
     return lines

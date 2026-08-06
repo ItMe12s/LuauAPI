@@ -9,7 +9,7 @@ from luau_codegen.policy.fields import field_key
 from luau_codegen.policy.free_functions import free_function_key
 from luau_codegen.model.domain import object_classes, status_for
 from luau_codegen.cli.io import _write_if_changed
-from luau_codegen.convert.type_map import GD_ENUM_TYPES
+from luau_codegen.convert.type_primitives import GD_ENUM_TYPES
 from luau_codegen.emit.luau_types.manual_fields import MANUAL_FREE_FN_FIELDS
 
 _PACKAGE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -122,7 +122,7 @@ def emit_report(
     plan: EmitPlan | None = None,
     plans_by_platform: dict[str, EmitPlan] | None = None,
 ) -> None:
-    obj = object_classes(root)
+    obj = plan.classes if plan else object_classes(root)
     total_methods = sum(len(c.methods) for c in root.classes)
     emitted_methods = total_methods - len(skipped)
     reasons: dict[str, int] = {}

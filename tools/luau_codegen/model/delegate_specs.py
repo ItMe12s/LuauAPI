@@ -1,14 +1,15 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict, FrozenSet, Optional, Tuple
+from types import MappingProxyType
+from collections.abc import Mapping
 
 
 @dataclass(frozen=True)
 class DelegateMethodSpec:
     name: str
     ret_lua: str
-    args_lua: Tuple[str, ...]
+    args_lua: tuple[str, ...]
 
 
 @dataclass(frozen=True)
@@ -17,13 +18,23 @@ class DelegateSpec:
     lua_name: str
     cpp_class: str
     create_fn: str
-    methods: Tuple[DelegateMethodSpec, ...]
+    methods: tuple[DelegateMethodSpec, ...]
 
 
-DELEGATE_SPECS: Dict[str, DelegateSpec] = {}
-DELEGATE_CXX_TYPES: FrozenSet[str] = frozenset()
+@dataclass(frozen=True)
+class DelegateCatalog:
+    specs: Mapping[str, DelegateSpec]
+    cxx_types: frozenset[str]
 
+    @classmethod
+    def empty(cls) -> DelegateCatalog:
+        return cls(MappingProxyType({}), frozenset())
 
-def lookup_delegate(cxx_ptr_type: str) -> Optional[DelegateSpec]:
-    n = cxx_ptr_type.strip().removesuffix("*").strip()
-    return DELEGATE_SPECS.get(n) or DELEGATE_SPECS.get(n.split("::")[-1])
+    @classmethod
+    def from_specs(cls, specs: Mapping[str, DelegateSpec]) -> DelegateCatalog:
+        owned = MappingProxyType(dict(specs))
+        return cls(owned, frozenset(owned))
+
+    def lookup(self, cxx_ptr_type: str) -> DelegateSpec | None:
+        n = cxx_ptr_type.strip().removesuffix("*").strip()
+        return self.specs.get(n) or self.specs.get(n.split("::")[-1])

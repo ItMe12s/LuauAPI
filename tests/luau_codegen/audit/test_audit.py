@@ -449,7 +449,7 @@ class AuditReportTests(unittest.TestCase):
         root = Root(classes=[ccobject])
         skipped = [
             (
-                f"GameLevelManager",
+                "GameLevelManager",
                 f"load{i}",
                 "unsupported-arg:gd::vector<int>",
             )

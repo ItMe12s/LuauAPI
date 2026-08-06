@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Dict, List, Optional
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from luau_codegen.parse.broma import Root
@@ -13,7 +13,7 @@ def emit(
     root: Root,
     target_platform: str = "win",
     plan: EmitPlan | None = None,
-    manual_fields: Optional[Dict[str, List[str]]] = None,
+    manual_fields: dict[str, list[str]] | None = None,
 ) -> tuple[dict[str, str], list[tuple[str, str, str]]]:
     from luau_codegen.emit.plan import collect_plan
     from luau_codegen.emit.cxx_templates import emit_internal_hpp
@@ -49,6 +49,7 @@ def emit(
             plan.objects,
             ctx=plan.ctx,
             manual_fields=manual_fields,
+            analysis=plan.type_analysis,
         ),
     }
 
@@ -65,6 +66,7 @@ def emit(
             target_platform,
             ctx=plan.ctx,
             emitted_class_names=emitted_class_names,
+            analysis=plan.type_analysis,
         )
 
     return files, plan.skipped

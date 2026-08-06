@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Dict, List, Set
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from luau_codegen.model.codegen_context import CodegenContext
+    from luau_codegen.model.type_analysis import TypeAnalysis
 
 from luau_codegen.parse.broma import Arg, Class, Field, Method
 from luau_codegen.policy.fields import bindable_field
@@ -27,11 +28,13 @@ from luau_codegen.model.nested_containers import (
     AUDITED_POINTER_GRID_KIND,
     audited_gj_pointer_field_spec,
 )
-from luau_codegen.convert.type_map import (
+from luau_codegen.convert.type_primitives import (
     COMPOSITE_KINDS,
     TypeInfo,
-    method_input_arg_count,
     normalize_type,
+)
+from luau_codegen.convert.type_classification import (
+    method_input_arg_count,
     require_classify_arg,
     require_classify_return,
 )
@@ -42,9 +45,9 @@ from luau_codegen.emit.luau_types.method_types import lua_export_name
 def _classify_method_args(
     cls: Class,
     m: Method,
-    objects: Dict[str, Class],
+    objects: dict[str, Class],
     ctx: CodegenContext | None = None,
-) -> List[TypeInfo]:
+) -> list[TypeInfo]:
     return [
         require_classify_arg(arg.type, objects, owner_class=cls.name, ctx=ctx) for arg in m.args
     ]
@@ -55,13 +58,12 @@ def _gen_ns(cls: Class) -> str:
 
 
 def _emit_ccnode_schedule(
-    cls: Class,
     m: Method,
     label: str,
     lua_idx: int,
     sel_info: TypeInfo,
-    remaining_call_args: List[str],
-) -> List[str]:
+    remaining_call_args: list[str],
+) -> list[str]:
     sel_var = "sel0"
     out = check_sel_handler(lua_idx, sel_var, sel_info, label)
     selector = "schedule_selector(luax::LuaScheduleHandler::onSchedule)"
@@ -96,14 +98,18 @@ def _emit_ccnode_schedule(
 def _emit_invoke(
     cls: Class,
     m: Method,
-    objects: Dict[str, Class],
+    objects: dict[str, Class],
     suffix: str,
     ctx: CodegenContext | None = None,
+    analysis: TypeAnalysis | None = None,
 ) -> str:
     fn = f"luaapi_{cxx_id(cls.name)}_{cxx_id(m.name)}{suffix}"
     label = call_label(cls, m)
-    ret = require_classify_return(m.ret, objects, ctx=ctx)
-    arg_infos = _classify_method_args(cls, m, objects, ctx=ctx)
+    signature = analysis.signature(m, owner_class=cls.name) if analysis else None
+    ret = signature.return_info if signature else require_classify_return(m.ret, objects, ctx=ctx)
+    arg_infos = (
+        list(signature.arg_infos) if signature else _classify_method_args(cls, m, objects, ctx=ctx)
+    )
 
     input_count = sum(
         1
@@ -121,9 +127,9 @@ def _emit_invoke(
     out.append(
         f'        auto const boundary = luax::diag::recordBindingEntry(L, "{label}", luax::diag::BoundaryKind::GeneratedBinding);\n'
     )
-    call_args: List[str] = []
-    selector_handlers: List[tuple[str, str]] = []
-    delegate_trampolines: List[str] = []
+    call_args: list[str] = []
+    selector_handlers: list[str] = []
+    delegate_trampolines: list[str] = []
     if not m.is_static:
         out.append(
             f'        auto self = luax::Usertype<{cxx_name(cls)}>::check(L, 1, "{label}");\n'
@@ -143,7 +149,7 @@ def _emit_invoke(
             sel_var = f"sel{lua_arg.arg_index}"
             out.extend(check_sel_handler(lua_idx, sel_var, lua_arg.info, label))
             call_args.append("schedule_selector(luax::LuaScheduleHandler::onSchedule)")
-            selector_handlers.append((f"{sel_var}_handler", "schedule"))
+            selector_handlers.append(f"{sel_var}_handler")
             lua_idx += 1
             continue
         if (
@@ -155,7 +161,7 @@ def _emit_invoke(
             and (lua_arg.info.class_name or "menu") == "schedule"
             and lua_arg.arg_index == 0
         ):
-            remaining: List[str] = []
+            remaining: list[str] = []
             temp_lua = lua_idx + 1
             for tail in iter_lua_method_args(
                 m, arg_infos, ret_kind=ret.kind, is_instance=not m.is_static
@@ -167,7 +173,7 @@ def _emit_invoke(
                 out.extend(check_arg(tail.arg, tail.info, temp_lua, f"arg{tail.arg_index}", label))
                 remaining.append(f"arg{tail.arg_index}")
                 temp_lua += 1
-            out.extend(_emit_ccnode_schedule(cls, m, label, lua_idx, lua_arg.info, remaining))
+            out.extend(_emit_ccnode_schedule(m, label, lua_idx, lua_arg.info, remaining))
             out.append("    }\n\n")
             return "".join(out)
         lines, lua_idx = emit_lua_invoke_arg(
@@ -301,10 +307,11 @@ def _audited_pointer_grid_writable(cls: Class, field: Field) -> bool:
 def _emit_field_accessors(
     cls: Class,
     field: Field,
-    objects: Dict[str, Class],
+    objects: dict[str, Class],
     ctx: CodegenContext | None = None,
+    analysis: TypeAnalysis | None = None,
 ) -> str:
-    ok, reason, arg_info, ret_info = bindable_field(field, objects, cls, ctx=ctx)
+    ok, reason, arg_info, ret_info = bindable_field(field, objects, cls, ctx=ctx, analysis=analysis)
     if not ok or not arg_info or not ret_info:
         raise ValueError(f"unsupported field {cls.name}.{field.name}: {reason}")
     label = f"{cls.name}.{field.name}"
@@ -432,9 +439,10 @@ def _emit_field_accessors(
 def _emit_dispatcher(
     cls: Class,
     name: str,
-    methods: List[Method],
-    objects: Dict[str, Class],
+    methods: list[Method],
+    objects: dict[str, Class],
     ctx: CodegenContext | None = None,
+    analysis: TypeAnalysis | None = None,
 ) -> str:
     if len(methods) == 1:
         return ""
@@ -443,7 +451,11 @@ def _emit_dispatcher(
     adjust = 0 if first.is_static else 1
     cases = [
         (
-            method_input_arg_count(m, objects, owner_class=cls.name, ctx=ctx),
+            (
+                analysis.signature(m, owner_class=cls.name).input_arity
+                if analysis and analysis.signature(m, owner_class=cls.name)
+                else method_input_arg_count(m, objects, owner_class=cls.name, ctx=ctx)
+            ),
             f"luaapi_{cxx_id(cls.name)}_{cxx_id(name)}_{idx}",
         )
         for idx, m in enumerate(methods)
@@ -454,14 +466,15 @@ def _emit_dispatcher(
 def _emit_class_file(
     cls: Class,
     grouped: dict[str, list[Method]],
-    hook_targets: List[tuple[Class, Method]],
-    field_targets: List[tuple[Class, Field]],
-    objects: Dict[str, Class],
-    skipped_classes: Set[str],
+    hook_targets: list[tuple[Class, Method]],
+    field_targets: list[tuple[Class, Field]],
+    objects: dict[str, Class],
+    skipped_classes: set[str],
     depth: int,
     target_platform: str,
     ctx: CodegenContext | None = None,
-    emitted_class_names: Set[str] | None = None,
+    emitted_class_names: set[str] | None = None,
+    analysis: TypeAnalysis | None = None,
 ) -> str:
     ns_name = cxx_id(cls.name)
     gen_ns = _gen_ns(cls)
@@ -472,14 +485,16 @@ def _emit_class_file(
     for methods in grouped.values():
         for idx, m in enumerate(methods):
             suffix = "" if len(methods) == 1 else f"_{idx}"
-            out.append(_emit_invoke(cls, m, objects, suffix, ctx=ctx))
-        out.append(_emit_dispatcher(cls, methods[0].name, methods, objects, ctx=ctx))
+            out.append(_emit_invoke(cls, m, objects, suffix, ctx=ctx, analysis=analysis))
+        out.append(
+            _emit_dispatcher(cls, methods[0].name, methods, objects, ctx=ctx, analysis=analysis)
+        )
 
     for _, field in field_targets:
-        out.append(_emit_field_accessors(cls, field, objects, ctx=ctx))
+        out.append(_emit_field_accessors(cls, field, objects, ctx=ctx, analysis=analysis))
 
     for _, m in hook_targets:
-        out.append(emit_hook_target(cls, m, objects, target_platform, ctx=ctx))
+        out.append(emit_hook_target(cls, m, objects, target_platform, ctx=ctx, analysis=analysis))
 
     out.append("} // namespace\n\n")
 
@@ -539,7 +554,7 @@ def _emit_class_file(
         out.append(f"    {register}<{cxx_name(cls)}>(L);\n")
 
     static_methods = [
-        (name, lua_name, methods)
+        (name, lua_name)
         for name, methods in grouped.items()
         if methods[0].is_static and (lua_name := lua_export_name(name, grouped)) is not None
     ]
@@ -547,7 +562,7 @@ def _emit_class_file(
         ns = lua_namespace(cls)
         out.append(f'\n    luax::getOrCreateTable(L, "{ns}");\n')
         out.append(f"    lua_createtable(L, 0, {len(static_methods)});\n")
-        for cpp_name, lua_name, methods in static_methods:
+        for cpp_name, lua_name in static_methods:
             fn = f"luaapi_{cxx_id(cls.name)}_{cxx_id(cpp_name)}"
             out.append(f'    lua_pushcfunction(L, &{fn}, "{cls.name}.{cpp_name}");\n')
             out.append(f'    lua_setfield(L, -2, "{lua_name}");\n')

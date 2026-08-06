@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from types import MappingProxyType
+from collections.abc import Iterable, Mapping
 from typing import Literal
 
 FieldKind = Literal[
@@ -375,109 +377,84 @@ _VALUE_TYPE_SPECS: tuple[ValueTypeSpec, ...] = (
 )
 
 
-def _load_generated_value_struct_specs() -> tuple[ValueTypeSpec, ...]:
-    try:
-        from luau_codegen.model.value_struct_specs import VALUE_STRUCT_SPECS
-    except ImportError:
-        return ()
-    return tuple(VALUE_STRUCT_SPECS)
-
-
 _BUILTIN_VALUE_TYPE_SPECS: tuple[ValueTypeSpec, ...] = _VALUE_TYPE_SPECS
-
-
-def _current_generated_specs() -> tuple[ValueTypeSpec, ...]:
-    return _load_generated_value_struct_specs()
-
-
-def _all_specs() -> tuple[ValueTypeSpec, ...]:
-    return _BUILTIN_VALUE_TYPE_SPECS + _current_generated_specs()
-
-
-VALUE_TYPE_SPECS: tuple[ValueTypeSpec, ...] = _all_specs()
-
-VALUE_STUB_ORDER: tuple[str, ...] = tuple(spec.lua_name for spec in VALUE_TYPE_SPECS)
-
-VALUE_STUB_BODY: dict[str, str] = {spec.lua_name: spec.luau_stub for spec in VALUE_TYPE_SPECS}
-
-VALUE_STUB_DEPS: dict[str, tuple[str, ...]] = {
-    spec.lua_name: spec.stub_deps for spec in VALUE_TYPE_SPECS if spec.stub_deps
-}
-
-COCOS_VALUE_STRUCTS: tuple[CocosValueStructDescriptor, ...] = tuple(
-    spec.cocos for spec in VALUE_TYPE_SPECS if spec.cocos is not None
-)
 
 CCRECT_CXX_TYPE = "cocos2d::CCRect"
 
 
-def _build_value_types() -> dict[str, str]:
+def _build_value_types(specs: tuple[ValueTypeSpec, ...]) -> dict[str, str]:
     out: dict[str, str] = {}
-    for spec in VALUE_TYPE_SPECS:
+    for spec in specs:
         out[spec.cxx_type] = spec.lua_name
         for alias in spec.cxx_aliases:
             out[alias] = spec.lua_name
     return out
 
 
-def _build_value_check_cxx_types() -> dict[str, str]:
-    return {spec.lua_name: spec.cxx_type for spec in VALUE_TYPE_SPECS}
+def _build_value_check_cxx_types(specs: tuple[ValueTypeSpec, ...]) -> dict[str, str]:
+    return {spec.lua_name: spec.cxx_type for spec in specs}
 
 
-VALUE_TYPES = _build_value_types()
-VALUE_CHECK_CXX_TYPES = _build_value_check_cxx_types()
+@dataclass(frozen=True)
+class ValueTypeCatalog:
+    specs: tuple[ValueTypeSpec, ...]
+    stub_order: tuple[str, ...]
+    stub_body: Mapping[str, str]
+    stub_deps: Mapping[str, tuple[str, ...]]
+    cocos_structs: tuple[CocosValueStructDescriptor, ...]
+    types: Mapping[str, str]
+    check_cxx_types: Mapping[str, str]
+    deferred_cxx_types: frozenset[str]
 
-_VALUE_TYPE_PROPAGATION = {
-    "luau_codegen.model.value_types": (
-        "VALUE_TYPE_SPECS",
-        "VALUE_STUB_ORDER",
-        "VALUE_STUB_BODY",
-        "VALUE_STUB_DEPS",
-        "COCOS_VALUE_STRUCTS",
-        "VALUE_TYPES",
-        "VALUE_CHECK_CXX_TYPES",
-    ),
-    "luau_codegen.convert.type_map": ("VALUE_TYPES", "VALUE_CHECK_CXX_TYPES"),
-    "luau_codegen.convert.type_classification": ("VALUE_TYPES",),
-    "luau_codegen.convert.marshalling": ("VALUE_CHECK_CXX_TYPES",),
-    "luau_codegen.emit.luau_types.references": (
-        "_VALUE_STUB_BODY",
-        "_VALUE_STUB_DEPS",
-        "_VALUE_STUB_ORDER",
-    ),
-    "luau_codegen.emit.luau_types": ("_VALUE_STUB_BODY",),
-    "luau_codegen.emit.types_binding": ("COCOS_VALUE_STRUCTS",),
-}
+    @classmethod
+    def from_specs(
+        cls,
+        generated_specs: Iterable[ValueTypeSpec] = (),
+        *,
+        include_builtins: bool = True,
+    ) -> ValueTypeCatalog:
+        specs = (_BUILTIN_VALUE_TYPE_SPECS if include_builtins else ()) + tuple(generated_specs)
+        deferred = {
+            spec.cocos.cxx_type
+            for spec in specs
+            if spec.cocos is not None
+            and any(
+                field.kind in {"container", "object_nullable", "opaque_nullable"}
+                for field in (*spec.cocos.check_fields, *spec.cocos.push_fields)
+            )
+        }
+        changed = True
+        while changed:
+            changed = False
+            for spec in specs:
+                desc = spec.cocos
+                if desc is None or desc.cxx_type in deferred:
+                    continue
+                nested = {
+                    field.nested_type
+                    for field in (*desc.check_fields, *desc.push_fields)
+                    if field.kind == "nested" and field.nested_type
+                }
+                if nested & deferred:
+                    deferred.add(desc.cxx_type)
+                    changed = True
+        return cls(
+            specs=specs,
+            stub_order=tuple(spec.lua_name for spec in specs),
+            stub_body=MappingProxyType({spec.lua_name: spec.luau_stub for spec in specs}),
+            stub_deps=MappingProxyType(
+                {spec.lua_name: spec.stub_deps for spec in specs if spec.stub_deps}
+            ),
+            cocos_structs=tuple(spec.cocos for spec in specs if spec.cocos is not None),
+            types=MappingProxyType(_build_value_types(specs)),
+            check_cxx_types=MappingProxyType(_build_value_check_cxx_types(specs)),
+            deferred_cxx_types=frozenset(deferred),
+        )
 
+    @classmethod
+    def builtins(cls) -> ValueTypeCatalog:
+        return cls.from_specs()
 
-def _rebuild_value_type_maps() -> None:
-    import sys
-
-    global VALUE_TYPE_SPECS, VALUE_STUB_ORDER, VALUE_STUB_BODY
-    global VALUE_STUB_DEPS, COCOS_VALUE_STRUCTS, VALUE_TYPES, VALUE_CHECK_CXX_TYPES
-    VALUE_TYPE_SPECS = _all_specs()
-    VALUE_STUB_ORDER = tuple(spec.lua_name for spec in VALUE_TYPE_SPECS)
-    VALUE_STUB_BODY = {spec.lua_name: spec.luau_stub for spec in VALUE_TYPE_SPECS}
-    VALUE_STUB_DEPS = {spec.lua_name: spec.stub_deps for spec in VALUE_TYPE_SPECS if spec.stub_deps}
-    COCOS_VALUE_STRUCTS = tuple(spec.cocos for spec in VALUE_TYPE_SPECS if spec.cocos is not None)
-    VALUE_TYPES = _build_value_types()
-    VALUE_CHECK_CXX_TYPES = _build_value_check_cxx_types()
-
-    canonical = {
-        "VALUE_TYPE_SPECS": VALUE_TYPE_SPECS,
-        "VALUE_STUB_ORDER": VALUE_STUB_ORDER,
-        "VALUE_STUB_BODY": VALUE_STUB_BODY,
-        "VALUE_STUB_DEPS": VALUE_STUB_DEPS,
-        "COCOS_VALUE_STRUCTS": COCOS_VALUE_STRUCTS,
-        "VALUE_TYPES": VALUE_TYPES,
-        "VALUE_CHECK_CXX_TYPES": VALUE_CHECK_CXX_TYPES,
-        "_VALUE_STUB_BODY": VALUE_STUB_BODY,
-        "_VALUE_STUB_DEPS": VALUE_STUB_DEPS,
-        "_VALUE_STUB_ORDER": VALUE_STUB_ORDER,
-    }
-    for mod_name, attrs in _VALUE_TYPE_PROPAGATION.items():
-        mod = sys.modules.get(mod_name)
-        if mod is None:
-            continue
-        for attr in attrs:
-            setattr(mod, attr, canonical[attr])
+    @classmethod
+    def empty(cls) -> ValueTypeCatalog:
+        return cls.from_specs(include_builtins=False)

@@ -46,7 +46,7 @@ No whole-container `operator=` is used.
 
 ## Codegen
 
-In `convert/type_classification.py` and `convert/type_map.py`:
+In `convert/type_classification.py` and `convert/type_primitives.py`:
 
 - Pairs are detected with `TypeInfo.kind == "pair"` from `std::pair<First, Second>`.
 - Pair members accept any value allowed by the recursive container grammar.
@@ -101,7 +101,7 @@ Generated pair field examples:
 ## Source
 
 - `tools/luau_codegen/convert/type_classification.py`
-- `tools/luau_codegen/convert/type_map.py`
+- `tools/luau_codegen/convert/type_primitives.py`
 - `tools/luau_codegen/convert/marshalling.py`
 - `tools/luau_codegen/model/pair_design.py`
 - `src/framework/stack/ContainerTables.hpp`

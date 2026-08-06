@@ -4,11 +4,13 @@ import re
 import unittest
 
 from test_support import all_platforms, types_text
-from luau_codegen.convert.type_map import (  # type: ignore[import-unresolved]
+from luau_codegen.convert.type_classification import (  # type: ignore[import-unresolved]
     classify_arg,
+    method_input_arg_count as _input_arg_count,
+)
+from luau_codegen.convert.type_primitives import (  # type: ignore[import-unresolved]
     is_const_reference,
     is_out_reference,
-    method_input_arg_count as _input_arg_count,
 )
 from luau_codegen.emit.bindings.class_file import _emit_dispatcher  # type: ignore[import-unresolved]
 from luau_codegen.emit.luau_types import TYPES_FILE, emit as emit_luau_types  # type: ignore[import-unresolved]

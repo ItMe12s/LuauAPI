@@ -5,7 +5,7 @@ import shutil
 import tempfile
 import unittest
 
-import test_support  # noqa: F401 - installs codegen test fixtures
+from test_support import fixture_codegen_context
 from luau_codegen.emit.types_binding import (
     emit_types_generated_containers_hpp,
     emit_types_generated_hpp,
@@ -13,12 +13,14 @@ from luau_codegen.emit.types_binding import (
     types_gen_rel_path,
     write_types_generated,
 )
-from luau_codegen.model.value_types import COCOS_VALUE_STRUCTS, FieldDescriptor
+from luau_codegen.model.value_types import FieldDescriptor
 
 
 class CocosValueDescriptorTests(unittest.TestCase):
+    ctx = fixture_codegen_context()
+
     def test_standard_structs_exclude_hand_retained_types(self) -> None:
-        cxx_types = {desc.cxx_type for desc in COCOS_VALUE_STRUCTS}
+        cxx_types = {desc.cxx_type for desc in self.ctx.value_types.cocos_structs}
         self.assertIn("cocos2d::CCPoint", cxx_types)
         self.assertIn("cocos2d::CCSize", cxx_types)
         self.assertIn("cocos2d::ccColor3B", cxx_types)
@@ -26,15 +28,21 @@ class CocosValueDescriptorTests(unittest.TestCase):
         self.assertNotIn("SmartPrefabResult", cxx_types)
 
     def test_field_descriptor_schema_has_name_and_kind(self) -> None:
-        point = next(desc for desc in COCOS_VALUE_STRUCTS if desc.cxx_type == "cocos2d::CCPoint")
+        point = next(
+            desc
+            for desc in self.ctx.value_types.cocos_structs
+            if desc.cxx_type == "cocos2d::CCPoint"
+        )
         self.assertEqual(point.check_fields[0], FieldDescriptor("x", "number", "point.x"))
         self.assertEqual(point.check_fields[0].name, "x")
         self.assertEqual(point.check_fields[0].kind, "number")
 
 
 class TypesGeneratedEmitterTests(unittest.TestCase):
+    ctx = fixture_codegen_context()
+
     def test_emits_check_and_push_for_cocos_structs(self) -> None:
-        text = emit_types_generated_hpp()
+        text = emit_types_generated_hpp(self.ctx)
         self.assertIn("check<cocos2d::CCPoint>", text)
         self.assertIn("check<cocos2d::CCRect>", text)
         self.assertIn('fieldNumber(L, idx, "x", method)', text)
@@ -45,7 +53,7 @@ class TypesGeneratedEmitterTests(unittest.TestCase):
         self.assertNotIn("SmartPrefabResult", text)
 
     def test_ccrect_check_reads_flat_xywh(self) -> None:
-        text = emit_types_generated_hpp()
+        text = emit_types_generated_hpp(self.ctx)
         self.assertIn(
             '{fieldNumber(L, idx, "x", method), fieldNumber(L, idx, "y", method)},',
             text,
@@ -56,13 +64,13 @@ class TypesGeneratedEmitterTests(unittest.TestCase):
         )
 
     def test_blendfunc_push_casts_gl_enum(self) -> None:
-        text = emit_types_generated_hpp()
+        text = emit_types_generated_hpp(self.ctx)
         self.assertIn("static_cast<double>(blend.src)", text)
         self.assertIn("static_cast<double>(blend.dst)", text)
 
     def test_container_structs_emit_to_containers_header(self) -> None:
-        base = emit_types_generated_hpp()
-        containers = emit_types_generated_containers_hpp()
+        base = emit_types_generated_hpp(self.ctx)
+        containers = emit_types_generated_containers_hpp(self.ctx)
         self.assertNotIn("check<SequenceTriggerState>", base)
         self.assertIn("check<SequenceTriggerState>", containers)
         self.assertIn("checkContainerValue<gd::map", containers)
@@ -85,7 +93,7 @@ class TypesGeneratedEmitterTests(unittest.TestCase):
     def test_write_types_generated_creates_expected_path(self) -> None:
         tmpdir = tempfile.mkdtemp()
         try:
-            out_path = write_types_generated(tmpdir)
+            out_path = write_types_generated(tmpdir, self.ctx)
             rel = types_gen_rel_path()
             self.assertTrue(out_path.endswith(rel.replace("/", os.sep)))
             containers_path = os.path.join(

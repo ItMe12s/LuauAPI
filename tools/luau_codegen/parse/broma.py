@@ -2,10 +2,15 @@ from __future__ import annotations
 
 import dataclasses
 import re
-from typing import TYPE_CHECKING, Dict, List, Optional
+from typing import TYPE_CHECKING
 
-from luau_codegen.parse.text import strip_comments
-from luau_codegen.util import INTERSECTION_PLATFORMS
+from luau_codegen.model.platforms import (
+    PLATFORM_ALIASES,
+    PLATFORM_BLOCK_TOKENS,
+    PLATFORM_SCOPE_CANDIDATES,
+    PLATFORMS,
+)
+from luau_codegen.parse.cpp_scan import balanced_delimiter_end, strip_comments
 
 if TYPE_CHECKING:
     from luau_codegen.model.codegen_context import CodegenContext
@@ -21,7 +26,7 @@ class Arg:
 class Method:
     name: str
     ret: str
-    args: List[Arg]
+    args: list[Arg]
     is_virtual: bool = False
     is_static: bool = False
     is_const: bool = False
@@ -30,8 +35,8 @@ class Method:
     is_dtor: bool = False
     is_bound_ctor: bool = False
     access: str = "public"
-    platforms: Dict[str, str] = dataclasses.field(default_factory=dict)
-    attributes: List[str] = dataclasses.field(default_factory=list)
+    platforms: dict[str, str] = dataclasses.field(default_factory=dict)
+    attributes: list[str] = dataclasses.field(default_factory=list)
     line: int = 0
 
 
@@ -49,10 +54,10 @@ class Field:
 class Class:
     name: str
     namespace: str = ""
-    bases: List[str] = dataclasses.field(default_factory=list)
-    methods: List[Method] = dataclasses.field(default_factory=list)
-    fields: List[Field] = dataclasses.field(default_factory=list)
-    attributes: List[str] = dataclasses.field(default_factory=list)
+    bases: list[str] = dataclasses.field(default_factory=list)
+    methods: list[Method] = dataclasses.field(default_factory=list)
+    fields: list[Field] = dataclasses.field(default_factory=list)
+    attributes: list[str] = dataclasses.field(default_factory=list)
     source: str = ""
     line: int = 0
 
@@ -66,8 +71,8 @@ class Function:
     name: str
     namespace: str = ""
     ret: str = "void"
-    args: List[Arg] = dataclasses.field(default_factory=list)
-    attributes: List[str] = dataclasses.field(default_factory=list)
+    args: list[Arg] = dataclasses.field(default_factory=list)
+    attributes: list[str] = dataclasses.field(default_factory=list)
     line: int = 0
 
     @property
@@ -77,23 +82,12 @@ class Function:
 
 @dataclasses.dataclass
 class Root:
-    classes: List[Class] = dataclasses.field(default_factory=list)
-    functions: List["Function"] = dataclasses.field(default_factory=list)
+    classes: list[Class] = dataclasses.field(default_factory=list)
+    functions: list["Function"] = dataclasses.field(default_factory=list)
     codegen_ctx: CodegenContext | None = None
-    scan_warnings: List[str] = dataclasses.field(default_factory=list)
+    scan_warnings: list[str] = dataclasses.field(default_factory=list)
 
 
-_PLATFORMS = ("win", "imac", "m1", "ios", "android", "android32", "android64", "mac")
-_PLATFORM_BLOCK_TOKENS = frozenset(_PLATFORMS) | {"mac"}
-_PLATFORM_SCOPE_CANDIDATES = frozenset(INTERSECTION_PLATFORMS) | {"imac"}
-_PLATFORM_ALIAS_TOKENS: dict[str, frozenset[str]] = {
-    "mac": frozenset({"mac", "imac", "m1"}),
-    "imac": frozenset({"mac", "imac"}),
-    "m1": frozenset({"mac", "m1"}),
-    "android": frozenset({"android", "android32", "android64"}),
-    "android32": frozenset({"android", "android32"}),
-    "android64": frozenset({"android", "android64"}),
-}
 _QUALIFIERS = {"unsigned", "signed", "const", "volatile", "long", "short"}
 _PRIMITIVES = {
     "int",
@@ -108,10 +102,10 @@ _PRIMITIVES = {
 }
 
 
-def split_top_level(value: str) -> List[str]:
-    out: List[str] = []
+def split_top_level(value: str) -> list[str]:
+    out: list[str] = []
     depth = 0
-    cur: List[str] = []
+    cur: list[str] = []
     for ch in value:
         if ch in "<([{":
             depth += 1
@@ -200,7 +194,7 @@ def parse_file(path: str) -> Root:
 def parse_text(raw: str, source: str = "") -> Root:
     cur = Cursor(strip_comments(raw))
     root = Root()
-    pending_attrs: List[str] = []
+    pending_attrs: list[str] = []
 
     while not cur.at_end():
         cur.skip_ws()
@@ -256,8 +250,8 @@ def parse_text(raw: str, source: str = "") -> Root:
     return root
 
 
-def _parse_bases(value: str) -> List[str]:
-    bases: List[str] = []
+def _parse_bases(value: str) -> list[str]:
+    bases: list[str] = []
     for base in split_top_level(value):
         clean = re.sub(r"\b(public|private|protected|virtual)\b", "", base).strip()
         if clean:
@@ -271,7 +265,7 @@ def parse_class_body(
     *,
     field_platforms: frozenset[str] | None = None,
 ) -> None:
-    pending_method_attrs: List[str] = []
+    pending_method_attrs: list[str] = []
     current_access = "public"
     while not cur.at_end():
         cur.skip_ws()
@@ -314,7 +308,7 @@ def parse_class_body(
                     break
             elif ch == "{" and depth == 0:
                 head = cur.text[start:i].strip()
-                end = _skip_balanced_brace(cur.text, i)
+                end = min(balanced_delimiter_end(cur.text, i) + 1, len(cur.text))
                 block_platforms = _parse_platform_block_header(head)
                 if block_platforms is not None:
                     inner_start = i + 1
@@ -362,25 +356,11 @@ def parse_class_body(
             return
 
 
-def _skip_balanced_brace(text: str, start: int) -> int:
-    depth = 0
-    i = start
-    while i < len(text):
-        if text[i] == "{":
-            depth += 1
-        elif text[i] == "}":
-            depth -= 1
-            if depth == 0:
-                return i + 1
-        i += 1
-    return len(text)
-
-
-def _expand_platform_scope(tokens: List[str]) -> frozenset[str]:
+def _expand_platform_scope(tokens: list[str]) -> frozenset[str]:
     out: set[str] = set()
     for token in tokens:
-        for platform in _PLATFORM_SCOPE_CANDIDATES:
-            aliases = _PLATFORM_ALIAS_TOKENS.get(platform, frozenset({platform}))
+        for platform in PLATFORM_SCOPE_CANDIDATES:
+            aliases = PLATFORM_ALIASES.get(platform, frozenset({platform}))
             if token == platform or token in aliases:
                 out.add(platform)
     return frozenset(out)
@@ -390,7 +370,7 @@ def _parse_platform_block_header(head: str) -> frozenset[str] | None:
     if "(" in head:
         return None
     tokens = [part.strip() for part in head.split(",")]
-    if not tokens or not all(token in _PLATFORM_BLOCK_TOKENS for token in tokens):
+    if not tokens or not all(token in PLATFORM_BLOCK_TOKENS for token in tokens):
         return None
     return _expand_platform_scope(tokens)
 
@@ -399,11 +379,11 @@ def _parse_member(
     cls: Class,
     decl: str,
     line: int,
-    pending_method_attrs: List[str],
+    pending_method_attrs: list[str],
     current_access: str,
     *,
     field_platforms: frozenset[str] | None = None,
-) -> Optional[str]:
+) -> str | None:
     if not decl:
         return None
     head, addr_tail = _split_decl_and_addr(decl)
@@ -438,15 +418,15 @@ def _split_decl_and_addr(decl: str) -> tuple[str, str]:
     return decl, ""
 
 
-def _parse_platform_list(tail: str) -> Dict[str, str]:
-    out: Dict[str, str] = {}
+def _parse_platform_list(tail: str) -> dict[str, str]:
+    out: dict[str, str] = {}
     stripped = tail.strip()
     if stripped == "inline":
         out["inline"] = "inline"
         return out
     for part in split_top_level(tail):
         toks = part.strip().split(None, 1)
-        if not toks or toks[0] not in _PLATFORMS:
+        if not toks or toks[0] not in PLATFORMS:
             continue
         out[toks[0]] = toks[1].strip() if len(toks) > 1 else ""
     return out
@@ -454,7 +434,7 @@ def _parse_platform_list(tail: str) -> Dict[str, str]:
 
 def parse_method(
     class_name: str, head: str, line: int, default_access: str = "public"
-) -> Optional[Method]:
+) -> Method | None:
     flags = {"virtual": False, "static": False, "inline": False, "callback": False}
     access = default_access
     rest = head
@@ -517,7 +497,7 @@ def parse_method(
     )
 
 
-def _parse_field(head: str, line: int) -> Optional[Field]:
+def _parse_field(head: str, line: int) -> Field | None:
     m = re.match(
         r"^(?P<type>.+?)\s+(?P<name>[A-Za-z_]\w*)(?:\s*\[\s*(?P<count>\d+)\s*\])?\s*$",
         head,

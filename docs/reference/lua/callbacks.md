@@ -122,4 +122,5 @@ See [Limits and errors](../cpp/limits-and-errors.md) for callback budgets and or
 - `src/framework/callback/LuaCocosHandler.hpp`
 - `src/framework/callback/LuaTrampolineRegistry.hpp`
 - `tools/luau_codegen/convert/marshalling.py`
-- `tools/luau_codegen/convert/type_map.py`
+- `tools/luau_codegen/convert/type_primitives.py`
+- `tools/luau_codegen/convert/type_classification.py`

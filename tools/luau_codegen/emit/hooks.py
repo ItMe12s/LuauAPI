@@ -1,16 +1,18 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Dict
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from luau_codegen.model.codegen_context import CodegenContext
+    from luau_codegen.model.type_analysis import TypeAnalysis
 
 from luau_codegen.parse.broma import Class, Method
 from luau_codegen.policy.hooks import hook_address_expr
 from luau_codegen.convert.marshalling import emit_stack_check, push_value
 from luau_codegen.emit.types_binding import emit_value_local_decl
 from luau_codegen.model.domain import cxx_name, lua_namespace
-from luau_codegen.convert.type_map import TypeInfo, classify_arg, classify_return
+from luau_codegen.convert.type_primitives import TypeInfo
+from luau_codegen.convert.type_classification import classify_arg, classify_return
 from luau_codegen.util import cxx_id
 
 
@@ -116,16 +118,25 @@ def _emit_apply_return_fn(suffix: str, ret: TypeInfo, label: str, fn_name: str) 
 def emit_hook_target(
     cls: Class,
     m: Method,
-    objects: Dict[str, Class],
+    objects: dict[str, Class],
     target_platform: str,
     ctx: CodegenContext | None = None,
+    analysis: TypeAnalysis | None = None,
 ) -> str:
-    ret = classify_return(m.ret, objects, ctx=ctx)
+    ret = (
+        analysis.classify_return(m.ret, owner_class=cls.name)
+        if analysis
+        else classify_return(m.ret, objects, ctx=ctx)
+    )
     assert ret is not None
     args = []
     call_args = []
     for i, arg in enumerate(m.args):
-        info = classify_arg(arg.type, objects, ctx=ctx)
+        info = (
+            analysis.classify_arg(arg.type, owner_class=cls.name)
+            if analysis
+            else classify_arg(arg.type, objects, ctx=ctx)
+        )
         assert info is not None
         name = f"arg{i}"
         args.append((arg, info, name))
@@ -161,7 +172,7 @@ def emit_hook_target(
     out.append(f"    {ret_type} {hook_fn}({params_text}) {{\n")
     if ret.kind != "void":
         if ret.kind == "value":
-            out.append(f"        {emit_value_local_decl(ret.cxx_type, 'result')}\n")
+            out.append(f"        {emit_value_local_decl(ret, 'result')}\n")
         else:
             out.append(f"        {ret.cxx_type} result{{}};\n")
     for _, info, name in args:

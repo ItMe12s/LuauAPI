@@ -4,13 +4,17 @@ import os
 import tempfile
 import unittest
 
-from test_support import all_platforms, reinstall_fixture_value_struct_specs, types_text
+from test_support import all_platforms, types_text
 from luau_codegen.convert.marshalling import emit_stack_check  # type: ignore[import-unresolved]
-from luau_codegen.convert.type_map import TypeInfo  # type: ignore[import-unresolved]
+from luau_codegen.convert.type_primitives import TypeInfo  # type: ignore[import-unresolved]
 from luau_codegen.emit.bindings.free_functions import emit_free_functions_file  # type: ignore[import-unresolved]
 from luau_codegen.emit.bindings.class_file import _emit_class_file  # type: ignore[import-unresolved]
 from luau_codegen.emit.bindings.common import _emit_common_file  # type: ignore[import-unresolved]
-from luau_codegen.emit.cxx_templates import emit_hook_support, emit_internal_hpp  # type: ignore[import-unresolved]
+from luau_codegen.emit.cxx_templates import (  # type: ignore[import-unresolved]
+    emit_hook_support,
+    emit_internal_hpp,
+    file_preamble,
+)
 from luau_codegen.emit.luau_types import emit as emit_luau_types  # type: ignore[import-unresolved]
 from luau_codegen.emit.plan import collect_plan  # type: ignore[import-unresolved]
 from luau_codegen.parse.broma import Arg, Class, Field, Function, Method, Root  # type: ignore[import-unresolved]
@@ -206,6 +210,15 @@ class GeneratedSafetyTests(unittest.TestCase):
         self.assertIn("callback->ref.reset();", text)
         self.assertIn("state.hook->disable();", text)
         self.assertIn("!callback || callback->removed", text)
+
+    def test_generated_hooks_use_pinned_range_utilities(self) -> None:
+        text = emit_hook_support()
+
+        self.assertIn("geode::utils::ranges::contains", text)
+        self.assertIn("geode::utils::ranges::remove", text)
+        self.assertIn("std::ranges::lower_bound", text)
+        self.assertIn("#include <Geode/utils/ranges.hpp>", file_preamble())
+        self.assertEqual(emit_internal_hpp().count('#include "core/Runtime.hpp"'), 1)
 
     def test_hook_runtime_uses_named_deadline(self) -> None:
         text = emit_internal_hpp()
@@ -892,13 +905,11 @@ class GeneratedSafetyTests(unittest.TestCase):
         self.assertIn("static_cast<int>(self->m_attempts)", text)
 
     def test_deferred_value_struct_field_setter_uses_direct_assignment(self) -> None:
-        from pathlib import Path
-
         from luau_codegen.emit.value_struct_specs import (  # type: ignore[import-unresolved]
             collect_value_struct_specs,
-            install_value_struct_specs_module,
         )
         from luau_codegen.model import value_struct_gate as gate  # type: ignore[import-unresolved]
+        from luau_codegen.model.codegen_context import CodegenContext  # type: ignore[import-unresolved]
 
         saved = gate.VALUE_STRUCT_OPT_IN
         try:
@@ -919,18 +930,14 @@ class GeneratedSafetyTests(unittest.TestCase):
             )
             root = Root(classes=[ccobject, container, holder])
             specs = collect_value_struct_specs(root)
-            install_value_struct_specs_module(
-                specs,
-                specs_path=Path(tempfile.gettempdir()) / "_test_value_struct_specs.py",
-                module_name="luau_codegen.model.value_struct_specs",
-            )
+            ctx = CodegenContext.static().with_value_specs(specs)
             objects = {
                 "CCObject": ccobject,
                 "cocos2d::CCObject": ccobject,
                 "Holder": holder,
                 "ContainerStruct": container,
             }
-            grouped, _ = group_supported(holder, objects, "win")
+            grouped, _ = group_supported(holder, objects, "win", ctx=ctx)
             text = _emit_class_file(
                 holder,
                 grouped,
@@ -940,21 +947,19 @@ class GeneratedSafetyTests(unittest.TestCase):
                 set(),
                 1,
                 "win",
+                ctx=ctx,
             )
             self.assertIn("self->m_state = value;", text)
             self.assertNotIn("luax::assignValue", text)
         finally:
             gate.VALUE_STRUCT_OPT_IN = saved
-            reinstall_fixture_value_struct_specs()
 
     def test_deferred_value_struct_out_arg_uses_default_ctor_decl(self) -> None:
-        from pathlib import Path
-
         from luau_codegen.emit.value_struct_specs import (  # type: ignore[import-unresolved]
             collect_value_struct_specs,
-            install_value_struct_specs_module,
         )
         from luau_codegen.model import value_struct_gate as gate  # type: ignore[import-unresolved]
+        from luau_codegen.model.codegen_context import CodegenContext  # type: ignore[import-unresolved]
 
         saved = gate.VALUE_STRUCT_OPT_IN
         try:
@@ -982,25 +987,30 @@ class GeneratedSafetyTests(unittest.TestCase):
             )
             root = Root(classes=[ccobject, container, mgr])
             specs = collect_value_struct_specs(root)
-            install_value_struct_specs_module(
-                specs,
-                specs_path=Path(tempfile.gettempdir()) / "_test_value_struct_out_specs.py",
-                module_name="luau_codegen.model.value_struct_specs",
-            )
+            ctx = CodegenContext.static().with_value_specs(specs)
             objects = {
                 "CCObject": ccobject,
                 "cocos2d::CCObject": ccobject,
                 "StateManager": mgr,
                 "ContainerStruct": container,
             }
-            grouped, _ = group_supported(mgr, objects, "win")
-            text = _emit_class_file(mgr, grouped, [], [], objects, set(), 1, "win")
+            grouped, _ = group_supported(mgr, objects, "win", ctx=ctx)
+            text = _emit_class_file(
+                mgr,
+                grouped,
+                [],
+                [],
+                objects,
+                set(),
+                1,
+                "win",
+                ctx=ctx,
+            )
             self.assertIn("ContainerStruct arg0;", text)
             self.assertNotIn("ContainerStruct arg0{}", text)
             self.assertIn("self->fill(arg0)", text)
         finally:
             gate.VALUE_STRUCT_OPT_IN = saved
-            reinstall_fixture_value_struct_specs()
 
     def test_std_array_int_field_setter_uses_assign_container_value(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")

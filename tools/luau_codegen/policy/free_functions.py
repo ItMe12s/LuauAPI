@@ -6,18 +6,16 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from luau_codegen.model.codegen_context import CodegenContext
+    from luau_codegen.model.type_analysis import TypeAnalysis
 
 from luau_codegen.policy.containers import (
-    _CONTAINER_KINDS,
+    CONTAINER_KINDS,
     container_supported_as_arg,
     container_supported_as_return,
     is_out_container,
 )
-from luau_codegen.convert.type_map import (
-    classify_arg,
-    classify_return,
-    object_class_names,
-)
+from luau_codegen.convert.type_classification import classify_arg, classify_return
+from luau_codegen.convert.type_primitives import object_class_names
 from luau_codegen.model.denylist import INACCESSIBLE_CLASSES
 from luau_codegen.parse.broma import Class, Function
 
@@ -75,19 +73,28 @@ def free_function_key(fn: Function) -> str:
 
 
 def free_function_unsupported_reason(
-    fn: Function, objects: dict[str, Class], ctx: CodegenContext | None = None
+    fn: Function,
+    objects: dict[str, Class],
+    ctx: CodegenContext | None = None,
+    analysis: TypeAnalysis | None = None,
 ) -> str | None:
-    ret = classify_return(fn.ret, objects, ctx=ctx)
+    ret = (
+        analysis.classify_return(fn.ret) if analysis else classify_return(fn.ret, objects, ctx=ctx)
+    )
     if ret is None:
         return f"free-function-unsupported-return:{fn.ret}"
-    if ret.kind in _CONTAINER_KINDS and not container_supported_as_return(ret):
+    if ret.kind in CONTAINER_KINDS and not container_supported_as_return(ret):
         return f"free-function-unsupported-return:{fn.ret}"
     ret_kind = ret.kind
     for arg in fn.args:
-        info = classify_arg(arg.type, objects, ctx=ctx)
+        info = (
+            analysis.classify_arg(arg.type)
+            if analysis
+            else classify_arg(arg.type, objects, ctx=ctx)
+        )
         if info is None:
             return f"free-function-unsupported-arg:{arg.type}"
-        if info.kind in _CONTAINER_KINDS and not container_supported_as_arg(info, ret_kind):
+        if info.kind in CONTAINER_KINDS and not container_supported_as_arg(info, ret_kind):
             return f"free-function-unsupported-arg:{arg.type}"
         if info.is_out and not is_out_container(info):
             return f"free-function-out-arg:{arg.type}"
@@ -101,15 +108,22 @@ def free_function_skipped_object_ref(
     objects: dict[str, Class],
     skipped_classes: set[str],
     ctx: CodegenContext | None = None,
+    analysis: TypeAnalysis | None = None,
 ) -> str:
     blocked = skipped_classes | INACCESSIBLE_CLASSES
-    ret = classify_return(fn.ret, objects, ctx=ctx)
+    ret = (
+        analysis.classify_return(fn.ret) if analysis else classify_return(fn.ret, objects, ctx=ctx)
+    )
     if ret:
         for class_name in sorted(object_class_names(ret)):
             if class_name in blocked:
                 return class_name
     for arg in fn.args:
-        info = classify_arg(arg.type, objects, ctx=ctx)
+        info = (
+            analysis.classify_arg(arg.type)
+            if analysis
+            else classify_arg(arg.type, objects, ctx=ctx)
+        )
         if info:
             for class_name in sorted(object_class_names(info)):
                 if class_name in blocked:
@@ -126,12 +140,13 @@ def group_supported_free_functions(
     objects: dict[str, Class],
     target_platform: str = "win",
     ctx: CodegenContext | None = None,
+    analysis: TypeAnalysis | None = None,
 ) -> tuple[list[Function], list[FreeFunctionSkip]]:
     skipped: list[FreeFunctionSkip] = []
     by_name: dict[tuple[str, str], list[Function]] = defaultdict(list)
 
     for fn in functions:
-        reason = free_function_unsupported_reason(fn, objects, ctx=ctx)
+        reason = free_function_unsupported_reason(fn, objects, ctx=ctx, analysis=analysis)
         if reason:
             skipped.append(_skip_entry(fn, reason))
             continue

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
+
 from luau_codegen.model.codegen_context import CodegenContext
 from luau_codegen.emit.cxx_templates import file_preamble
 from luau_codegen.util import cxx_id
@@ -11,7 +13,7 @@ _INT_ENUM_ENTRY = "#define LUAX_INT_ENUM_ENTRY(name, value) {#name, value},\n"
 
 
 def _sorted_enum_members(
-    members: dict[str, tuple[tuple[str, int], ...]],
+    members: Mapping[str, tuple[tuple[str, int], ...]],
 ) -> list[tuple[str, tuple[tuple[str, int], ...]]]:
     return sorted(
         [(name, entries) for name, entries in members.items() if entries],
@@ -37,8 +39,8 @@ def _emit_enum_macro_lines(
 
 
 def emit_geode_enums_manifest(ctx: CodegenContext) -> str:
-    gd_enums = _sorted_enum_members(dict(ctx.gd_enum_members))
-    geode_enums = _sorted_enum_members(dict(ctx.geode_enum_members))
+    gd_enums = _sorted_enum_members(ctx.gd_enum_members)
+    geode_enums = _sorted_enum_members(ctx.geode_enum_members)
     lines = ["#pragma once\n", "\n", _INT_ENUM_ENTRY, "\n"]
     for enum_name, entries in gd_enums:
         lines.extend(_emit_enum_macro_lines("LUAX_GD_ENUM", enum_name, entries))
@@ -59,8 +61,8 @@ def _emit_entries_array(macro_prefix: str, array_prefix: str, enum_name: str) ->
 
 
 def emit_geode_enums_binding(ctx: CodegenContext) -> str:
-    gd_enums = _sorted_enum_members(dict(ctx.gd_enum_members))
-    geode_enums = _sorted_enum_members(dict(ctx.geode_enum_members))
+    gd_enums = _sorted_enum_members(ctx.gd_enum_members)
+    geode_enums = _sorted_enum_members(ctx.geode_enum_members)
     out = [
         file_preamble(),
         '#include "bindings/geode/GeodeEnums.manifest.hpp"\n',

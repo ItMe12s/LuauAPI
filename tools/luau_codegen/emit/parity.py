@@ -16,13 +16,12 @@ from luau_codegen.emit.plan import (
 from luau_codegen.policy.hooks import hook_address_expr
 from luau_codegen.policy.intersection import (
     hook_method_keys,
-    intersection_platforms,
     method_key,
     supported_free_function_keys,
     supported_method_keys,
 )
+from luau_codegen.model.platforms import intersection_platforms
 from luau_codegen.policy.free_functions import free_function_key
-from luau_codegen.model.domain import object_classes
 
 
 def _supported_keys(plan: EmitPlan) -> set[str]:
@@ -74,7 +73,7 @@ def collect_parity(
             plans[platform] = collect_platform_plan(root, platform)
     final_plan = collect_plan(root, target_platform, plans_by_platform=plans)
     total_methods = sum(len(cls.methods) for cls in root.classes)
-    object_count = len(object_classes(root))
+    object_count = len(final_plan.classes)
 
     summary: dict[str, dict[str, int]] = {}
     supported_by_platform: dict[str, set[str]] = {}
@@ -111,7 +110,7 @@ def collect_parity(
         }
 
     methods: dict[str, dict[str, Any]] = {}
-    for cls in object_classes(root):
+    for cls in final_plan.classes:
         for method in cls.methods:
             key = method_key(cls, method)
             supported_platforms = [

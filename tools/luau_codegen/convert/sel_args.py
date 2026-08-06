@@ -1,16 +1,18 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Dict, Iterator, List, Optional, Union
+from typing import TYPE_CHECKING
+from collections.abc import Iterator, Sequence
 
 from luau_codegen.parse.broma import Arg, Class, Function, Method
-from luau_codegen.convert.type_map import TypeInfo, classify_arg
+from luau_codegen.convert.type_primitives import TypeInfo
+from luau_codegen.convert.type_classification import classify_arg
 from luau_codegen.policy.containers import is_out_container
 
 if TYPE_CHECKING:
     from luau_codegen.model.codegen_context import CodegenContext
 
-CallableWithArgs = Union[Method, Function]
+CallableWithArgs = Method | Function
 
 
 def is_ccobject_ptr(info: TypeInfo) -> bool:
@@ -23,8 +25,8 @@ class LuaMethodArg:
     info: TypeInfo
     arg_index: int = 0
     sel_pair: bool = False
-    target_arg: Optional[Arg] = None
-    target_info: Optional[TypeInfo] = None
+    target_arg: Arg | None = None
+    target_info: TypeInfo | None = None
     implicit_self_target: bool = False
     handler_first: bool = True
     orphan: bool = False
@@ -33,7 +35,7 @@ class LuaMethodArg:
 
 def iter_lua_method_args(
     m: CallableWithArgs,
-    arg_infos: List[TypeInfo],
+    arg_infos: Sequence[TypeInfo],
     *,
     ret_kind: str,
     is_instance: bool = False,
@@ -101,7 +103,7 @@ def iter_lua_method_args(
 
 def count_lua_method_args(
     m: CallableWithArgs,
-    objects: Dict[str, Class],
+    objects: dict[str, Class],
     ret_kind: str,
     *,
     owner_class: str = "",

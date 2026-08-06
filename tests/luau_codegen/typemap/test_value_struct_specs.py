@@ -3,10 +3,7 @@ from __future__ import annotations
 import unittest
 
 from luau_codegen.emit.types_binding import _emit_check_struct, _emit_push_struct
-from luau_codegen.emit.value_struct_specs import (
-    collect_value_struct_specs,
-    emit_specs_py,
-)
+from luau_codegen.emit.value_struct_specs import collect_value_struct_specs
 from luau_codegen.model.value_types import CocosValueStructDescriptor
 from luau_codegen.parse.broma import Class, Field, Root
 
@@ -186,14 +183,3 @@ class EmitValueStructCheckPushTests(unittest.TestCase):
             'value.m_count = static_cast<int>(fieldNumber(L, idx, "m_count", method));',
             text,
         )
-
-    def test_emit_specs_py_round_trips_via_repr(self) -> None:
-        spec = self._spec_for(_FLAT_FIELDS, "RoundTrip")
-        text = emit_specs_py((spec,))
-        self.assertIn("from luau_codegen.model.value_types import", text)
-        self.assertIn("VALUE_STRUCT_SPECS: tuple[ValueTypeSpec, ...] = (", text)
-        self.assertIn("RoundTrip", text)
-        ns: dict = {}
-        exec(text, ns)
-        self.assertEqual(len(ns["VALUE_STRUCT_SPECS"]), 1)
-        self.assertEqual(ns["VALUE_STRUCT_SPECS"][0].lua_name, "RoundTrip")

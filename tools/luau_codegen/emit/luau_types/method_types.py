@@ -1,12 +1,14 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Dict, List
+from typing import TYPE_CHECKING
 
 from luau_codegen.parse.broma import Class, Method
 
 if TYPE_CHECKING:
     from luau_codegen.model.codegen_context import CodegenContext
-from luau_codegen.convert.type_map import TypeInfo, classify_arg, classify_return
+    from luau_codegen.model.type_analysis import TypeAnalysis
+from luau_codegen.convert.type_primitives import TypeInfo
+from luau_codegen.convert.type_classification import classify_arg, classify_return
 from luau_codegen.convert.sel_args import iter_lua_method_args
 
 _DUMMY_CLS = Class(name="")
@@ -43,7 +45,7 @@ LUAU_KEYWORDS = frozenset(
 )
 
 
-def lua_export_name(cpp_name: str, grouped: Dict[str, List[Method]] | None = None) -> str | None:
+def lua_export_name(cpp_name: str, grouped: dict[str, list[Method]] | None = None) -> str | None:
     if cpp_name not in LUAU_KEYWORDS:
         return cpp_name
     renamed = cpp_name + "ToLua"
@@ -53,21 +55,29 @@ def lua_export_name(cpp_name: str, grouped: Dict[str, List[Method]] | None = Non
 
 
 def _method_return_type(
-    cls: Class, m: Method, objects: Dict[str, Class], ctx: CodegenContext | None = None
+    cls: Class,
+    m: Method,
+    objects: dict[str, Class],
+    ctx: CodegenContext | None = None,
+    analysis: TypeAnalysis | None = None,
 ) -> str:
-    ret = classify_return(m.ret, objects, ctx=ctx)
+    signature = analysis.signature(m, owner_class=cls.name) if analysis else None
+    ret = signature.return_info if signature else classify_return(m.ret, objects, ctx=ctx)
     assert ret is not None
-    out_types: List[str] = []
+    out_types: list[str] = []
     if ret.kind != "void":
         out_types.append(ret.lua_type)
-    arg_infos: List[TypeInfo] = []
-    for arg in m.args:
-        info = classify_arg(arg.type, objects, owner_class=cls.name, ctx=ctx)
-        assert info is not None
-        arg_infos.append(info)
-    for lua_arg in iter_lua_method_args(m, arg_infos, ret_kind=ret.kind):
-        if lua_arg.out_only:
-            out_types.append(lua_arg.info.lua_type)
+    if signature:
+        out_types.extend(info.lua_type for info in signature.out_args)
+    else:
+        arg_infos: list[TypeInfo] = []
+        for arg in m.args:
+            info = classify_arg(arg.type, objects, owner_class=cls.name, ctx=ctx)
+            assert info is not None
+            arg_infos.append(info)
+        for lua_arg in iter_lua_method_args(m, arg_infos, ret_kind=ret.kind):
+            if lua_arg.out_only:
+                out_types.append(lua_arg.info.lua_type)
     if not out_types:
         return "()"
     if len(out_types) == 1:
@@ -76,8 +86,16 @@ def _method_return_type(
 
 
 def _classify_input_args(
-    cls: Class, m: Method, objects: Dict[str, Class], ctx: CodegenContext | None = None
-) -> List[TypeInfo]:
+    cls: Class,
+    m: Method,
+    objects: dict[str, Class],
+    ctx: CodegenContext | None = None,
+    analysis: TypeAnalysis | None = None,
+) -> list[TypeInfo]:
+    if analysis:
+        signature = analysis.signature(m, owner_class=cls.name)
+        assert signature is not None
+        return list(signature.lua_input_args)
     ret = classify_return(m.ret, objects, ctx=ctx)
     assert ret is not None
     arg_infos = []
@@ -94,14 +112,15 @@ def _classify_input_args(
 
 def _method_type(
     cls: Class,
-    methods: List[Method],
-    objects: Dict[str, Class],
+    methods: list[Method],
+    objects: dict[str, Class],
     ctx: CodegenContext | None = None,
+    analysis: TypeAnalysis | None = None,
 ) -> str:
     assert len(methods) == 1
     m = methods[0]
-    args = _classify_input_args(cls, m, objects, ctx=ctx)
-    ret_type = _method_return_type(cls, m, objects, ctx=ctx)
+    args = _classify_input_args(cls, m, objects, ctx=ctx, analysis=analysis)
+    ret_type = _method_return_type(cls, m, objects, ctx=ctx, analysis=analysis)
     params = []
     if not m.is_static:
         params.append(f"self: {cls.name}")
@@ -112,23 +131,24 @@ def _method_type(
 
 def _widened_method_type(
     cls: Class,
-    methods: List[Method],
-    objects: Dict[str, Class],
+    methods: list[Method],
+    objects: dict[str, Class],
     *,
     static: bool,
     ctx: CodegenContext | None = None,
+    analysis: TypeAnalysis | None = None,
 ) -> str:
-    arg_lists = [_classify_input_args(cls, m, objects, ctx=ctx) for m in methods]
-    prefix: List[str] = []
+    arg_lists = [_classify_input_args(cls, m, objects, ctx=ctx, analysis=analysis) for m in methods]
+    prefix: list[str] = []
     for i in range(min(len(a) for a in arg_lists)):
         types_at_i = {a[i].lua_type for a in arg_lists}
         if len(types_at_i) == 1:
             prefix.append(arg_lists[0][i].lua_type)
         else:
             break
-    returns = {_method_return_type(cls, m, objects, ctx=ctx) for m in methods}
+    returns = {_method_return_type(cls, m, objects, ctx=ctx, analysis=analysis) for m in methods}
     ret = returns.pop() if len(returns) == 1 else "any?"
-    params: List[str] = []
+    params: list[str] = []
     if not static:
         params.append(f"self: {cls.name}")
     params += [f"arg{i}: {t}" for i, t in enumerate(prefix, start=1)]

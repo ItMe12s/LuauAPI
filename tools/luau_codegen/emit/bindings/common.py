@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from typing import List
 
 from luau_codegen.parse.broma import Class
 from luau_codegen.emit.cxx_templates import emit_hook_support, file_preamble
@@ -9,7 +8,7 @@ from luau_codegen.emit.plan import EmitPlan
 from luau_codegen.emit.bindings.class_file import _gen_ns
 
 
-def _emit_common_file(emitted_classes: List[Class], plan: EmitPlan, target_platform: str) -> str:
+def _emit_common_file(emitted_classes: list[Class], plan: EmitPlan, target_platform: str) -> str:
     out = [
         file_preamble(),
         '#include "bindings_internal.hpp"\n',

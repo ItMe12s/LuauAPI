@@ -14,7 +14,7 @@ from luau_codegen.model.denylist import (  # type: ignore[import-unresolved]
     INACCESSIBLE_METHODS,
     PREFERRED_OVERLOADS,
 )
-from luau_codegen.convert.type_map import normalize_type  # type: ignore[import-unresolved]
+from luau_codegen.convert.type_primitives import normalize_type  # type: ignore[import-unresolved]
 
 
 def _load_root():

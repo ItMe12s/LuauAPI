@@ -6,7 +6,7 @@ import tempfile
 import unittest
 from unittest import mock
 
-import test_support
+import test_support  # noqa: F401 - adds tools to sys.path
 from luau_codegen.parse.broma import Class  # type: ignore[import-unresolved]
 from luau_codegen.policy.filtering import supported  # type: ignore[import-unresolved]
 from luau_codegen.policy.link_attrs import class_link_platforms  # type: ignore[import-unresolved]
@@ -16,7 +16,6 @@ class M1ScannerWarningTests(unittest.TestCase):
     def test_bad_header_emits_warning(self) -> None:
         from luau_codegen.parse.geode_sdk import (  # type: ignore[import-unresolved]
             scan_geode_sdk,
-            take_scan_warnings,
         )
 
         tmpdir = tempfile.mkdtemp()
@@ -28,15 +27,14 @@ class M1ScannerWarningTests(unittest.TestCase):
                 f.write('#include "ui/Bad.hpp"\n')
             with open(os.path.join(ui_dir, "Bad.hpp"), "w") as f:
                 f.write("this is not valid C++ {{{{ [[[ ;;;")
-            take_scan_warnings()
+            diagnostics: list[str] = []
             with self.assertLogs("luau_codegen.geode_sdk", level="WARNING") as logs:
                 with mock.patch(
                     "luau_codegen.parse.geode_sdk._scan_header",
                     side_effect=ValueError("bad"),
                 ):
-                    scan_geode_sdk(tmpdir)
-            recorded = take_scan_warnings()
-            self.assertTrue(any("[luauapi] failed to scan" in m for m in recorded))
+                    scan_geode_sdk(tmpdir, diagnostics=diagnostics)
+            self.assertTrue(any("[luauapi] failed to scan" in m for m in diagnostics))
             self.assertTrue(any("[luauapi] failed to scan" in line for line in logs.output))
         finally:
             shutil.rmtree(tmpdir)
@@ -78,6 +76,20 @@ class M1ScannerWarningTests(unittest.TestCase):
 
 
 class GeodeScannerFixtureTests(unittest.TestCase):
+    def test_public_methods_keep_exact_source_lines(self) -> None:
+        from luau_codegen.parse.geode_sdk import (  # type: ignore[import-unresolved]
+            _extract_public_methods,
+        )
+
+        body = (
+            "\nprivate:\n void hidden();\npublic:\n void first();\n\n int second() { return 2; }\n"
+        )
+        methods = _extract_public_methods("Example", body, 20)
+        self.assertEqual(
+            [(method.name, method.line) for method in methods],
+            [("first", 24), ("second", 26)],
+        )
+
     def test_nested_namespace_class_scanned(self) -> None:
         from luau_codegen.parse.geode_sdk import scan_geode_sdk  # type: ignore[import-unresolved]
 
@@ -266,17 +278,16 @@ class GeodeEnumParserTests(unittest.TestCase):
     def test_parse_enum_members_skips_unsupported_expression(self) -> None:
         from luau_codegen.parse.geode_sdk import (  # type: ignore[import-unresolved]
             parse_geode_enums,
-            take_scan_warnings,
         )
 
-        take_scan_warnings()
+        diagnostics: list[str] = []
         enums = parse_geode_enums(
             "enum class Bad { A = (1 << 2), B = 3 };",
             source="Bad.hpp",
+            diagnostics=diagnostics,
         )
         self.assertEqual(enums["Bad"].members, ())
-        warnings = take_scan_warnings()
-        self.assertTrue(any("unsupported enum value expression" in w for w in warnings))
+        self.assertTrue(any("unsupported enum value expression" in w for w in diagnostics))
 
     def test_scan_geode_enums_reads_enums_hpp(self) -> None:
         from luau_codegen.model.geode_enums import EnumMember  # type: ignore[import-unresolved]

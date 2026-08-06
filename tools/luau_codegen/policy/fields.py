@@ -1,23 +1,23 @@
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING, Dict
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from luau_codegen.model.codegen_context import CodegenContext
+    from luau_codegen.model.type_analysis import TypeAnalysis
 
 from luau_codegen.parse.broma import Class, Field
 from luau_codegen.model.denylist import INACCESSIBLE_CLASSES
-from luau_codegen.convert.type_map import (
+from luau_codegen.convert.type_primitives import (
     COMPOSITE_KINDS,
     TypeInfo,
-    classify_arg,
-    classify_return,
     normalize_type,
     object_class_names,
 )
+from luau_codegen.convert.type_classification import classify_arg, classify_return
 from luau_codegen.policy.containers import (
-    _CONTAINER_KINDS,
+    CONTAINER_KINDS,
     container_supported_as_arg,
     container_supported_as_return,
 )
@@ -48,9 +48,10 @@ def _mutable_pointer_field_container(info: TypeInfo) -> bool:
 
 def bindable_field(
     field: Field,
-    objects: Dict[str, Class],
+    objects: dict[str, Class],
     cls: Class | None = None,
     ctx: CodegenContext | None = None,
+    analysis: TypeAnalysis | None = None,
 ) -> tuple[bool, str, TypeInfo | None, TypeInfo | None]:
     normalized = normalize_type(field.type)
     if field.access != "public":
@@ -64,30 +65,38 @@ def bindable_field(
     if _is_function_pointer(normalized):
         return False, "function-pointer", None, None
     owner_class = cls.name if cls else ""
-    arg = classify_arg(
-        field.type,
-        objects,
-        owner_class=owner_class,
-        field_name=field.name,
-        ctx=ctx,
+    arg = (
+        analysis.classify_arg(field.type, owner_class=owner_class, field_name=field.name)
+        if analysis
+        else classify_arg(
+            field.type,
+            objects,
+            owner_class=owner_class,
+            field_name=field.name,
+            ctx=ctx,
+        )
     )
-    ret = classify_return(
-        field.type,
-        objects,
-        owner_class=owner_class,
-        field_name=field.name,
-        ctx=ctx,
+    ret = (
+        analysis.classify_return(field.type, owner_class=owner_class, field_name=field.name)
+        if analysis
+        else classify_return(
+            field.type,
+            objects,
+            owner_class=owner_class,
+            field_name=field.name,
+            ctx=ctx,
+        )
     )
     if arg is None:
         return False, f"unsupported-arg:{field.type}", None, ret
     if ret is None:
         return False, f"unsupported-return:{field.type}", arg, None
-    if ret.kind in _CONTAINER_KINDS and not container_supported_as_return(ret):
+    if ret.kind in CONTAINER_KINDS and not container_supported_as_return(ret):
         if not _mutable_pointer_field_container(ret):
             return False, f"unsupported-return:{field.type}", arg, ret
     readonly_container_field = ret.kind == "cc_c_array_view"
     if (
-        arg.kind in _CONTAINER_KINDS
+        arg.kind in CONTAINER_KINDS
         and not readonly_container_field
         and not container_supported_as_arg(arg, ret.kind)
         and not _mutable_pointer_field_container(arg)
@@ -104,22 +113,27 @@ def bindable_field(
 
 def field_skipped_object_ref(
     field: Field,
-    objects: Dict[str, Class],
+    objects: dict[str, Class],
     skipped_classes: set[str],
     cls: Class | None = None,
     ctx: CodegenContext | None = None,
+    analysis: TypeAnalysis | None = None,
 ) -> str:
     blocked = skipped_classes | INACCESSIBLE_CLASSES
     owner_class = cls.name if cls else ""
     for info in (
-        classify_arg(
+        analysis.classify_arg(field.type, owner_class=owner_class, field_name=field.name)
+        if analysis
+        else classify_arg(
             field.type,
             objects,
             owner_class=owner_class,
             field_name=field.name,
             ctx=ctx,
         ),
-        classify_return(
+        analysis.classify_return(field.type, owner_class=owner_class, field_name=field.name)
+        if analysis
+        else classify_return(
             field.type,
             objects,
             owner_class=owner_class,

@@ -5,7 +5,7 @@ from dataclasses import dataclass
 import unittest
 
 from test_support import all_platforms
-from luau_codegen.convert.symbols import android_symbol  # type: ignore[import-unresolved]
+from luau_codegen.convert.symbols import itanium_method_symbol  # type: ignore[import-unresolved]
 from luau_codegen.emit.bindings.class_file import _emit_class_file  # type: ignore[import-unresolved]
 from luau_codegen.emit.cxx_templates import emit_hook_support, emit_internal_hpp  # type: ignore[import-unresolved]
 from luau_codegen.parse.broma import Arg, Class, Method  # type: ignore[import-unresolved]
@@ -157,20 +157,20 @@ class HookOffsetTests(unittest.TestCase):
             hook_address_expr(cls, method, "mac"),
         )
 
-    def test_android_symbol_uses_itanium_name(self) -> None:
+    def test_itanium_method_symbol_uses_itanium_name(self) -> None:
         cls = Class(name="CCObject", namespace="cocos2d")
         method = Method(name="setTag", ret="void", args=[Arg("int", "tag")])
 
         self.assertEqual(
-            android_symbol(cls, method),
+            itanium_method_symbol(cls, method),
             "_ZN7cocos2d8CCObject6setTagEi",
         )
 
-    def test_android_symbol_preserves_pointer_const(self) -> None:
+    def test_itanium_method_symbol_preserves_pointer_const(self) -> None:
         cls = Class(name="Foo")
         method = Method(name="setText", ret="void", args=[Arg("char const*", "text")])
 
-        self.assertEqual(android_symbol(cls, method), "_ZN3Foo7setTextEPKc")
+        self.assertEqual(itanium_method_symbol(cls, method), "_ZN3Foo7setTextEPKc")
 
     def test_android_linked_hook_uses_dlsym_address(self) -> None:
         cls = Class(name="CCObject", namespace="cocos2d", attributes=["link(android)"])

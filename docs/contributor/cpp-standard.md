@@ -36,6 +36,21 @@ Use `geode::Result` instead.
 
 Do not use `std::ranges` when `geode::utils::ranges` covers the case.
 
+Generated C++ follows the same rule.
+Use `geode::utils::ranges::contains` and `geode::utils::ranges::remove`.
+Use `std::ranges::lower_bound` because Geode 5.8.2 has no matching helper.
+Use `std::to_underlying` only for real enums.
+Keep `geode::SeedValue` conversion explicit.
+
+The following utilities have different contracts.
+Do not use them to replace generated offset or `dlsym` hook resolution.
+Do not use them to replace ownership casts.
+
+- `geode::addresser`
+- `geode::cast`
+- `Ref`
+- `WeakRef`
+
 Codegen Geode import paths live in [Codegen](codegen/codegen.md).
 Do not duplicate that table here.
 

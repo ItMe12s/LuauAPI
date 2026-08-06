@@ -6,7 +6,7 @@ import tempfile
 import unittest
 
 from test_support import all_platforms, types_text
-from luau_codegen.convert.type_map import classify_arg  # type: ignore[import-unresolved]
+from luau_codegen.convert.type_classification import classify_arg  # type: ignore[import-unresolved]
 from luau_codegen.emit.bindings.class_file import _emit_class_file  # type: ignore[import-unresolved]
 from luau_codegen.emit.luau_types import emit as emit_luau_types  # type: ignore[import-unresolved]
 from luau_codegen.emit.plan import collect_plan  # type: ignore[import-unresolved]

@@ -1,12 +1,10 @@
 from __future__ import annotations
 
-from typing import List, Tuple
-
 
 def emit_arity_dispatcher(
     fn_name: str,
     top_expr: str,
-    cases: List[Tuple[int, str]],
+    cases: list[tuple[int, str]],
     error_label: str,
 ) -> str:
     out = [f"    int {fn_name}(lua_State* L) {{\n", f"        switch ({top_expr}) {{\n"]

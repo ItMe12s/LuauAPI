@@ -2,14 +2,10 @@ from __future__ import annotations
 
 import re
 
-from luau_codegen.parse.broma import Class, _PLATFORM_ALIAS_TOKENS
+from luau_codegen.model.platforms import platform_aliases
+from luau_codegen.parse.broma import Class
 
 _LINK_ATTR_RE = re.compile(r"link\(([^)]*)\)")
-
-
-def platform_aliases(target_platform: str) -> set[str]:
-    aliases = _PLATFORM_ALIAS_TOKENS.get(target_platform)
-    return set(aliases) if aliases else {target_platform}
 
 
 def class_link_platforms(cls: Class) -> set[str]:

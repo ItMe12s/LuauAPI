@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Dict, List
+from typing import TYPE_CHECKING
 
 from luau_codegen.parse.broma import Class, Function, Method
 
 if TYPE_CHECKING:
     from luau_codegen.model.codegen_context import CodegenContext
+    from luau_codegen.model.type_analysis import TypeAnalysis
 from luau_codegen.emit.luau_types.method_types import (
     _DUMMY_CLS,
     _method_type,
@@ -18,9 +19,9 @@ def _new_node() -> dict:
 
 
 def _build_function_tree(
-    functions: List[Function],
-    objects: Dict[str, Class],
-    manual_fields: Dict[str, List[str]] | None = None,
+    functions: list[Function],
+    objects: dict[str, Class],
+    manual_fields: dict[str, list[str]] | None = None,
 ) -> dict:
     tree: dict = _new_node()
     for fn in functions:
@@ -39,12 +40,13 @@ def _build_function_tree(
 
 def _emit_function_tree(
     node: dict,
-    objects: Dict[str, Class],
+    objects: dict[str, Class],
     indent: int,
     ctx: CodegenContext | None = None,
-) -> List[str]:
+    analysis: TypeAnalysis | None = None,
+) -> list[str]:
     pad = "    " * indent
-    lines: List[str] = []
+    lines: list[str] = []
     manual_names = {field.split(":", 1)[0].strip() for field in node.get("manual", [])}
     for name in sorted(node["functions"]):
         if name in manual_names:
@@ -54,14 +56,20 @@ def _emit_function_tree(
             for fn in node["functions"][name]
         ]
         if len(methods) > 1:
-            type_str = _widened_method_type(_DUMMY_CLS, methods, objects, static=True, ctx=ctx)
+            type_str = _widened_method_type(
+                _DUMMY_CLS, methods, objects, static=True, ctx=ctx, analysis=analysis
+            )
         else:
-            type_str = _method_type(_DUMMY_CLS, methods, objects, ctx=ctx)
+            type_str = _method_type(_DUMMY_CLS, methods, objects, ctx=ctx, analysis=analysis)
         lines.append(f"{pad}{name}: {type_str},\n")
     for field in sorted(node.get("manual", [])):
         lines.append(f"{pad}{field},\n")
     for seg in sorted(node["children"]):
         lines.append(f"{pad}{seg}: {{\n")
-        lines.extend(_emit_function_tree(node["children"][seg], objects, indent + 1, ctx=ctx))
+        lines.extend(
+            _emit_function_tree(
+                node["children"][seg], objects, indent + 1, ctx=ctx, analysis=analysis
+            )
+        )
         lines.append(f"{pad}}},\n")
     return lines

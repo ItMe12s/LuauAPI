@@ -13,7 +13,8 @@ from luau_codegen.convert.marshalling import (  # type: ignore[import-unresolved
     sel_call_args,
     sel_selector_call_arg,
 )
-from luau_codegen.convert.type_map import TypeInfo, classify_arg, classify_return  # type: ignore[import-unresolved]
+from luau_codegen.convert.type_primitives import TypeInfo  # type: ignore[import-unresolved]
+from luau_codegen.convert.type_classification import classify_arg, classify_return  # type: ignore[import-unresolved]
 from luau_codegen.parse.broma import Arg  # type: ignore[import-unresolved]
 
 
@@ -62,6 +63,11 @@ class F6NumericMarshallingTests(unittest.TestCase):
         text = "".join(lines)
         self.assertIn("check<int>", text)
 
+    def test_enum_push_uses_to_underlying(self) -> None:
+        info = TypeInfo(kind="enum", lua_type="number", cxx_type="Example")
+        text = "".join(push_value(info, "value"))
+        self.assertIn("std::to_underlying(value)", text)
+
     def test_seed_value_uses_int_marshalling(self) -> None:
         info = TypeInfo(
             kind="seed_value",
@@ -74,6 +80,7 @@ class F6NumericMarshallingTests(unittest.TestCase):
         self.assertIn("check<int>", check_text)
         self.assertNotIn("check<geode::SeedValueRSV>", check_text)
         self.assertIn("static_cast<int>(self->m_attempts)", push_text)
+        self.assertNotIn("std::to_underlying", push_text)
         self.assertIn("lua_pushnumber", push_text)
 
 

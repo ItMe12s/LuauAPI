@@ -2,10 +2,11 @@ from __future__ import annotations
 
 import dataclasses
 from collections import defaultdict
-from typing import TYPE_CHECKING, Dict, List
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from luau_codegen.model.codegen_context import CodegenContext
+    from luau_codegen.model.type_analysis import TypeAnalysis
 
 from luau_codegen.parse.broma import Class, Function, Method
 from luau_codegen.policy.fields import bindable_field
@@ -22,36 +23,22 @@ from luau_codegen.model.domain import (
     resolve_base,
     status_for,
 )
-from luau_codegen.policy.link_attrs import is_link_platform, platform_aliases
-from luau_codegen.convert.type_map import (
+from luau_codegen.model.platforms import STRICT_DIRECT_PLATFORMS, platform_aliases, platform_value
+from luau_codegen.policy.link_attrs import is_link_platform
+from luau_codegen.convert.type_classification import (
     classify_arg,
     classify_return,
     method_input_arg_count,
+)
+from luau_codegen.convert.type_primitives import (
     normalize_type,
     object_class_names,
 )
 from luau_codegen.policy.containers import (
-    _CONTAINER_KINDS,
+    CONTAINER_KINDS,
     container_supported_as_arg,
     container_supported_as_return,
 )
-
-STRICT_DIRECT_PLATFORMS: set[str] = {"ios"}
-
-
-def platform_value(m: Method, target_platform: str) -> str:
-    value = m.platforms.get(target_platform, "")
-    if value:
-        return value
-    if target_platform == "mac":
-        return m.platforms.get("imac", "") or m.platforms.get("m1", "")
-    if target_platform == "imac":
-        return m.platforms.get("mac", "")
-    if target_platform == "m1":
-        return m.platforms.get("mac", "")
-    if target_platform == "android":
-        return m.platforms.get("android64", "") or m.platforms.get("android32", "")
-    return ""
 
 
 def _method_missing_platforms(m: Method) -> set[str]:
@@ -75,7 +62,7 @@ def direct_callable(cls: Class, m: Method, target_platform: str) -> bool:
     if m.platforms.get("inline") == "inline":
         return True
 
-    value = platform_value(m, target_platform)
+    value = platform_value(m.platforms, target_platform)
     token = value.split()[0] if value else ""
     if target_platform in STRICT_DIRECT_PLATFORMS:
         return token == "link" or token.startswith("0x") or token == "inline"
@@ -110,9 +97,10 @@ def as_new_factory(cls: Class, m: Method) -> Method:
 def supported(
     cls: Class,
     m: Method,
-    objects: Dict[str, Class],
+    objects: dict[str, Class],
     target_platform: str,
     ctx: CodegenContext | None = None,
+    analysis: TypeAnalysis | None = None,
 ) -> tuple[bool, str]:
     if cls.name in INACCESSIBLE_CLASSES:
         return False, "inaccessible-class"
@@ -139,16 +127,24 @@ def supported(
             return False, "inaccessible"
     elif not direct_callable(cls, m, target_platform):
         return False, f"not-callable:{target_platform}"
-    ret = classify_return(m.ret, objects, ctx=ctx)
+    ret = (
+        analysis.classify_return(m.ret, owner_class=cls.name)
+        if analysis
+        else classify_return(m.ret, objects, owner_class=cls.name, ctx=ctx)
+    )
     if ret is None:
         return False, f"unsupported-return:{m.ret}"
-    if ret.kind in _CONTAINER_KINDS and not container_supported_as_return(ret):
+    if ret.kind in CONTAINER_KINDS and not container_supported_as_return(ret):
         return False, f"unsupported-return:{m.ret}"
     for arg in m.args:
-        info = classify_arg(arg.type, objects, owner_class=cls.name, ctx=ctx)
+        info = (
+            analysis.classify_arg(arg.type, owner_class=cls.name)
+            if analysis
+            else classify_arg(arg.type, objects, owner_class=cls.name, ctx=ctx)
+        )
         if info is None:
             return False, f"unsupported-arg:{arg.type}"
-        if info.kind in _CONTAINER_KINDS and not container_supported_as_arg(info, ret.kind):
+        if info.kind in CONTAINER_KINDS and not container_supported_as_arg(info, ret.kind):
             return False, f"unsupported-arg:{arg.type}"
         if info.kind == "sel":
             continue
@@ -175,9 +171,10 @@ def returns_owned(m: Method) -> bool:
 
 def group_supported(
     cls: Class,
-    objects: Dict[str, Class],
+    objects: dict[str, Class],
     target_platform: str = "win",
     ctx: CodegenContext | None = None,
+    analysis: TypeAnalysis | None = None,
 ) -> tuple[dict[str, list[Method]], list[tuple[Method, str]]]:
     skipped: list[tuple[Method, str]] = []
     by_name: dict[str, list[Method]] = defaultdict(list)
@@ -188,7 +185,7 @@ def group_supported(
             skipped.append((m, "duplicate-signature"))
             continue
         seen.add(key)
-        ok, reason = supported(cls, m, objects, target_platform, ctx=ctx)
+        ok, reason = supported(cls, m, objects, target_platform, ctx=ctx, analysis=analysis)
         if not ok:
             skipped.append((m, reason))
             continue
@@ -199,7 +196,13 @@ def group_supported(
     for name, methods in list(by_name.items()):
         by_arity: dict[int, list[Method]] = defaultdict(list)
         for m in methods:
-            by_arity[method_input_arg_count(m, objects, owner_class=cls.name, ctx=ctx)].append(m)
+            signature = analysis.signature(m, owner_class=cls.name) if analysis else None
+            arity = (
+                signature.input_arity
+                if signature
+                else method_input_arg_count(m, objects, owner_class=cls.name, ctx=ctx)
+            )
+            by_arity[arity].append(m)
         kept: list[Method] = []
         preferred = PREFERRED_OVERLOADS.get((cls.name, name))
         for arity, overloads in by_arity.items():
@@ -234,7 +237,7 @@ def _class_has_platform_support(cls: Class, target_platform: str) -> bool:
     for m in cls.methods:
         if m.is_static:
             continue
-        value = platform_value(m, target_platform)
+        value = platform_value(m.platforms, target_platform)
         if not value:
             continue
         token = value.split()[0]
@@ -244,29 +247,38 @@ def _class_has_platform_support(cls: Class, target_platform: str) -> bool:
 
 
 def linkless_class_names(
-    classes: List[Class],
-    objects: Dict[str, Class],
+    classes: list[Class],
+    objects: dict[str, Class],
     supported_by_class: dict[str, dict[str, list[Method]]],
     skipped_by_class: dict[str, list[tuple[Method, str]]],
     target_platform: str,
     ctx: CodegenContext | None = None,
-    free_functions: List[Function] | None = None,
+    free_functions: list[Function] | None = None,
+    analysis: TypeAnalysis | None = None,
 ) -> set[str]:
     referenced: set[str] = set()
-    for grouped in supported_by_class.values():
+    for owner_class, grouped in supported_by_class.items():
         for methods in grouped.values():
             for m in methods:
-                ret = classify_return(m.ret, objects, ctx=ctx)
+                ret = (
+                    analysis.classify_return(m.ret, owner_class=owner_class)
+                    if analysis
+                    else classify_return(m.ret, objects, owner_class=owner_class, ctx=ctx)
+                )
                 if ret:
                     referenced.update(object_class_names(ret))
                 for arg in m.args:
-                    info = classify_arg(arg.type, objects, ctx=ctx)
+                    info = (
+                        analysis.classify_arg(arg.type, owner_class=owner_class)
+                        if analysis
+                        else classify_arg(arg.type, objects, owner_class=owner_class, ctx=ctx)
+                    )
                     if info:
                         referenced.update(object_class_names(info))
 
     for cls in classes:
         for field in cls.fields:
-            ok, _, _, ret = bindable_field(field, objects, cls, ctx=ctx)
+            ok, _, _, ret = bindable_field(field, objects, cls, ctx=ctx, analysis=analysis)
             if not ok or not ret:
                 continue
             for class_name in object_class_names(ret):
@@ -275,11 +287,19 @@ def linkless_class_names(
                     referenced.add(class_name)
 
     for fn in free_functions or []:
-        ret = classify_return(fn.ret, objects, ctx=ctx)
+        ret = (
+            analysis.classify_return(fn.ret)
+            if analysis
+            else classify_return(fn.ret, objects, ctx=ctx)
+        )
         if ret:
             referenced.update(object_class_names(ret))
         for arg in fn.args:
-            info = classify_arg(arg.type, objects, ctx=ctx)
+            info = (
+                analysis.classify_arg(arg.type)
+                if analysis
+                else classify_arg(arg.type, objects, ctx=ctx)
+            )
             if info:
                 referenced.update(object_class_names(info))
 
@@ -329,17 +349,27 @@ def _is_skipped_object_type(class_name: str, skipped_classes: set[str]) -> bool:
 
 def _skipped_object_ref(
     m: Method,
-    objects: Dict[str, Class],
+    objects: dict[str, Class],
     skipped_classes: set[str],
     ctx: CodegenContext | None = None,
+    analysis: TypeAnalysis | None = None,
+    owner_class: str = "",
 ) -> str:
-    ret = classify_return(m.ret, objects, ctx=ctx)
+    ret = (
+        analysis.classify_return(m.ret, owner_class=owner_class)
+        if analysis
+        else classify_return(m.ret, objects, owner_class=owner_class, ctx=ctx)
+    )
     if ret:
         for class_name in sorted(object_class_names(ret)):
             if _is_skipped_object_type(class_name, skipped_classes):
                 return class_name
     for arg in m.args:
-        info = classify_arg(arg.type, objects, ctx=ctx)
+        info = (
+            analysis.classify_arg(arg.type, owner_class=owner_class)
+            if analysis
+            else classify_arg(arg.type, objects, owner_class=owner_class, ctx=ctx)
+        )
         if info:
             for class_name in sorted(object_class_names(info)):
                 if _is_skipped_object_type(class_name, skipped_classes):
@@ -350,17 +380,25 @@ def _skipped_object_ref(
 def prune_skipped_class_refs(
     supported_by_class: dict[str, dict[str, list[Method]]],
     skipped_by_class: dict[str, list[tuple[Method, str]]],
-    objects: Dict[str, Class],
+    objects: dict[str, Class],
     skipped_classes: set[str],
     target_platform: str,
     ctx: CodegenContext | None = None,
+    analysis: TypeAnalysis | None = None,
 ) -> list[tuple[str, str, str]]:
     pruned: list[tuple[str, str, str]] = []
     for cls_name, grouped in supported_by_class.items():
         for name, methods in list(grouped.items()):
             kept: list[Method] = []
             for m in methods:
-                skipped_ref = _skipped_object_ref(m, objects, skipped_classes, ctx=ctx)
+                skipped_ref = _skipped_object_ref(
+                    m,
+                    objects,
+                    skipped_classes,
+                    ctx=ctx,
+                    analysis=analysis,
+                    owner_class=cls_name,
+                )
                 if skipped_ref:
                     reason = f"not-callable-type:{target_platform}:{skipped_ref}"
                     skipped_by_class[cls_name].append((m, reason))

@@ -1,48 +1,43 @@
 from __future__ import annotations
 
-import sys
 import unittest
 
-from luau_codegen.model.value_types import (  # type: ignore[import-unresolved]
-    COCOS_VALUE_STRUCTS,
-    VALUE_CHECK_CXX_TYPES,
-    VALUE_TYPE_SPECS,
-    VALUE_TYPES,
-    _VALUE_TYPE_PROPAGATION,
-    _rebuild_value_type_maps,
+from luau_codegen.model.codegen_context import CodegenContext  # type: ignore[import-unresolved]
+from luau_codegen.model.delegate_specs import (  # type: ignore[import-unresolved]
+    DelegateCatalog,
+    DelegateSpec,
 )
+from luau_codegen.model.value_types import ValueTypeSpec  # type: ignore[import-unresolved]
 
-import test_support  # type: ignore[import-unresolved]
+
+class CodegenContextIsolationTests(unittest.TestCase):
+    def test_value_specs_do_not_leak_between_contexts(self) -> None:
+        derived = CodegenContext.static().with_value_specs(
+            (ValueTypeSpec(lua_name="SyntheticValue", cxx_type="SyntheticValue"),)
+        )
+        empty = CodegenContext.static()
+
+        self.assertEqual(derived.value_types.types["SyntheticValue"], "SyntheticValue")
+        self.assertNotIn("SyntheticValue", empty.value_types.types)
+
+    def test_delegate_specs_do_not_leak_between_contexts(self) -> None:
+        spec = DelegateSpec(
+            cxx_type="SyntheticDelegate",
+            lua_name="SyntheticDelegateTable",
+            cpp_class="LuaSyntheticDelegate",
+            create_fn="LuaSyntheticDelegate::create",
+            methods=(),
+        )
+        base = CodegenContext.static()
+        populated = base.with_catalogs(
+            value_types=base.value_types,
+            delegates=DelegateCatalog.from_specs({spec.cxx_type: spec}),
+        )
+        empty = CodegenContext.static()
+
+        self.assertIs(populated.delegates.lookup("SyntheticDelegate*"), spec)
+        self.assertIsNone(empty.delegates.lookup("SyntheticDelegate*"))
 
 
-class ValueTypePropagationTests(unittest.TestCase):
-    def setUp(self) -> None:
-        if not VALUE_TYPE_SPECS:
-            test_support.reinstall_fixture_value_struct_specs()
-        if not VALUE_TYPE_SPECS:
-            self.skipTest("value-struct specs unavailable (bindings dir not built)")
-
-    def test_specs_are_populated_after_fixture_install(self) -> None:
-        self.assertGreater(len(VALUE_TYPES), 0)
-        self.assertGreater(len(VALUE_CHECK_CXX_TYPES), 0)
-        self.assertGreater(len(COCOS_VALUE_STRUCTS), 0)
-
-    def test_rebuild_leaves_all_targets_in_sync(self) -> None:
-        for mod_name in _VALUE_TYPE_PROPAGATION:
-            if mod_name not in sys.modules:
-                __import__(mod_name)
-
-        _rebuild_value_type_maps()
-
-        for mod_name, attrs in _VALUE_TYPE_PROPAGATION.items():
-            mod = sys.modules[mod_name]
-            for attr in attrs:
-                self.assertTrue(
-                    hasattr(mod, attr),
-                    f"{mod_name}.{attr} missing after rebuild",
-                )
-                value = getattr(mod, attr)
-                if attr in ("VALUE_STUB_ORDER",):
-                    self.assertGreater(len(value), 0, f"{mod_name}.{attr} empty after rebuild")
-                elif isinstance(value, (dict, tuple, frozenset, set, list)):
-                    self.assertGreater(len(value), 0, f"{mod_name}.{attr} empty after rebuild")
+if __name__ == "__main__":
+    unittest.main()

@@ -3,7 +3,8 @@ from __future__ import annotations
 import unittest
 
 from luau_codegen.convert.marshalling import push_value  # type: ignore[import-unresolved]
-from luau_codegen.convert.type_map import TypeInfo, classify_arg, classify_return  # type: ignore[import-unresolved]
+from luau_codegen.convert.type_primitives import TypeInfo  # type: ignore[import-unresolved]
+from luau_codegen.convert.type_classification import classify_arg, classify_return  # type: ignore[import-unresolved]
 from luau_codegen.model.cc_c_array import (  # type: ignore[import-unresolved]
     CC_C_ARRAY_FIELD_ELEMENTS,
     proven_cc_c_array_element,

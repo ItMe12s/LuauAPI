@@ -4,32 +4,32 @@ import argparse
 import os
 from pathlib import Path
 import sys
-from typing import List
-
-from luau_codegen.util import VALID_PLATFORMS
-from luau_codegen.policy.intersection import intersection_platforms
+from luau_codegen.model.platforms import VALID_PLATFORMS, intersection_platforms
 from luau_codegen.emit import bindings as emit_bindings
 from luau_codegen.emit import luau_types as emit_types
+from luau_codegen.emit.luau_types import TYPES_FILE
 from luau_codegen.emit.luau_types.manual_fields import MANUAL_FREE_FN_FIELDS
 from luau_codegen.emit import parity
 from luau_codegen.emit import plan as emit_plan
 from luau_codegen.emit.plan import EmitPlan, ambiguous_overloads
 from luau_codegen.emit.delegates import (
-    collect as collect_delegate_specs,
+    build_delegate_catalog,
+    collect_delegate_specs,
     DELEGATE_GEN_REL_PATHS,
     emit_delegate_artifacts,
-    install_delegate_specs_module,
 )
 from luau_codegen.emit.types_binding import (
     types_gen_containers_rel_path,
     types_gen_rel_path,
     write_types_generated,
 )
-from luau_codegen.emit.value_struct_specs import emit_value_struct_artifacts
+from luau_codegen.emit.value_struct_specs import collect_value_struct_specs
+from luau_codegen.model.codegen_context import CodegenContext
+from luau_codegen.model.domain import ClassHierarchy, build_class_lookup
+from luau_codegen.model.type_analysis import TypeAnalysis
 from luau_codegen.parse.collect import collect_bindings_root
 from luau_codegen.cli.io import (
-    _cleanup_orphans,
-    _cleanup_type_orphans,
+    _cleanup_stale_bindings,
     _write_if_changed,
 )
 from luau_codegen.emit.metadata import emit_report, emit_schema
@@ -62,11 +62,7 @@ def _exit_on_ambiguous_overloads(
     return 6
 
 
-def main(argv: List[str]) -> int:
-    if sys.version_info < (3, 11):
-        log_error("Python 3.11 or newer is required")
-        return 2
-
+def _parse_and_validate(argv: list[str]) -> argparse.Namespace | int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--bindings", required=True)
     parser.add_argument("--out")
@@ -89,15 +85,7 @@ def main(argv: List[str]) -> int:
     parser.add_argument(
         "--emit-delegates",
         action="store_true",
-        help="Generate delegate_specs.py and LuaDelegates.gen.* only",
-    )
-    parser.add_argument(
-        "--delegate-specs-out",
-        help="Output path for delegate_specs.py (default: --out/delegate_specs.py)",
-    )
-    parser.add_argument(
-        "--value-struct-specs-out",
-        help="Output path for value_struct_specs.py (default: --out/value_struct_specs.py)",
+        help="Generate LuaDelegates.gen.* only",
     )
     args = parser.parse_args(argv)
 
@@ -118,88 +106,52 @@ def main(argv: List[str]) -> int:
     if args.audit_report_out:
         args.audit_report_out = str(Path(args.audit_report_out).resolve())
 
-    if args.delegate_specs_out:
-        args.delegate_specs_out = str(Path(args.delegate_specs_out).resolve())
-    if args.value_struct_specs_out:
-        args.value_struct_specs_out = str(Path(args.value_struct_specs_out).resolve())
-
     if not os.path.isdir(args.bindings):
         log_error(f"bindings dir missing: {args.bindings}")
         return 2
 
-    if args.emit_delegates:
-        if not args.out:
-            log_error("--out is required with --emit-delegates")
-            return 2
-        specs_out = args.delegate_specs_out or os.path.join(args.out, "delegate_specs.py")
-        try:
-            specs = emit_delegate_artifacts(
-                args.bindings,
-                specs_out=specs_out,
-                gen_out=args.out,
-                install_module=True,
-                preserve_existing_on_empty=True,
-            )
-        except OSError as exc:
-            log_error(f"I/O failed while writing delegate artifacts: {exc}")
-            return 4
-        log_info(f"delegates: {len(specs)} specs -> {specs_out}")
-        for rel in DELEGATE_GEN_REL_PATHS:
-            log_info(f"wrote {os.path.join(args.out, rel)}")
-        return 0
+    return args
 
+
+def _handle_delegate_only(args: argparse.Namespace) -> int:
+    if not args.out:
+        log_error("--out is required with --emit-delegates")
+        return 2
     try:
-        root = collect_bindings_root(args.bindings, geode_sdk_path=args.geode_sdk)
-    except OSError as exc:
-        log_error(f"I/O failed while collecting bindings: {exc}")
-        return 4
-
-    if not root.classes:
-        log_error(f"no Broma classes parsed from {args.bindings}")
-        return 3
-
-    delegate_specs_out = args.delegate_specs_out or (
-        os.path.join(args.out, "delegate_specs.py") if args.out else None
-    )
-    try:
-        delegate_specs = collect_delegate_specs(args.bindings)
-        install_delegate_specs_module(
-            delegate_specs,
-            specs_path=delegate_specs_out,
-            preserve_existing_on_empty=True,
+        specs = emit_delegate_artifacts(
+            args.bindings,
+            ctx=CodegenContext.static(),
+            gen_out=args.out,
         )
     except OSError as exc:
-        log_error(f"I/O failed while loading delegate specs: {exc}")
+        log_error(f"I/O failed while writing delegate artifacts: {exc}")
         return 4
+    log_info(f"delegates: {len(specs.specs)} specs")
+    for rel in DELEGATE_GEN_REL_PATHS:
+        log_info(f"wrote {os.path.join(args.out, rel)}")
+    return 0
 
-    value_struct_specs_out = args.value_struct_specs_out or (
-        os.path.join(args.out, "value_struct_specs.py") if args.out else None
-    )
-    try:
-        value_struct_specs = emit_value_struct_artifacts(
-            root,
-            specs_out=value_struct_specs_out,
-            install_module=True,
-            preserve_existing_on_empty=True,
-        )
-    except OSError as exc:
-        log_error(f"I/O failed while loading value-struct specs: {exc}")
-        return 4
-    except Exception as exc:
-        log_error(f"value-struct spec generation failed: {exc}")
-        return 5
-    log_info(f"value structs: {len(value_struct_specs)} derived")
 
-    plan_platforms = tuple(dict.fromkeys(intersection_platforms(args.platform) + (args.platform,)))
-    plans_by_platform = {
-        platform: emit_plan.collect_platform_plan(root, platform) for platform in plan_platforms
-    }
+def _handle_list_outputs(args: argparse.Namespace, root, plan: EmitPlan) -> int:
+    if (code := _exit_on_ambiguous_overloads(plan)) is not None:
+        return code
+    for rel in emit_plan.plan_outputs(root, args.platform, plan=plan):
+        print(f"binding:src/{rel}")
+    for rel in DELEGATE_GEN_REL_PATHS:
+        print(f"binding:{rel}")
+    print(f"binding:{types_gen_rel_path()}")
+    print(f"binding:{types_gen_containers_rel_path()}")
+    print(f"type:{TYPES_FILE}")
+    return 0
 
-    def collect_target_plan() -> EmitPlan:
-        return emit_plan.collect_plan(root, args.platform, plans_by_platform=plans_by_platform)
 
+def _handle_report_mode(
+    args: argparse.Namespace,
+    root,
+    plan: EmitPlan,
+    plans_by_platform: dict[str, EmitPlan],
+) -> int | None:
     if args.parity_report_out:
-        plan = collect_target_plan()
         if (code := _exit_on_ambiguous_overloads(plan, brief=True)) is not None:
             return code
         try:
@@ -214,9 +166,7 @@ def main(argv: List[str]) -> int:
             return 4
         log_info(f"wrote {args.parity_report_out}")
         return 0
-
     if args.audit_report_out:
-        plan = collect_target_plan()
         if (code := _exit_on_ambiguous_overloads(plan, brief=True)) is not None:
             return code
         try:
@@ -227,48 +177,36 @@ def main(argv: List[str]) -> int:
             return 4
         log_info(f"wrote {args.audit_report_out}")
         return 0
+    return None
 
-    if args.list_all_outputs:
-        plan = collect_target_plan()
-        if (code := _exit_on_ambiguous_overloads(plan)) is not None:
-            return code
-        for rel in emit_plan.plan_outputs(root, args.platform, plan=plan):
-            print(f"binding:src/{rel}")
-        for rel in DELEGATE_GEN_REL_PATHS:
-            print(f"binding:{rel}")
-        print(f"binding:{types_gen_rel_path()}")
-        print(f"binding:{types_gen_containers_rel_path()}")
-        type_files = emit_types.emit(
-            root, args.platform, plan=plan, manual_fields=MANUAL_FREE_FN_FIELDS
-        )
-        for name in sorted(type_files):
-            print(f"type:{name}")
-        return 0
 
+def _handle_full_generation(
+    args: argparse.Namespace,
+    root,
+    plan: EmitPlan,
+    delegate_specs,
+    plans_by_platform: dict[str, EmitPlan],
+) -> int:
     if not args.out or not args.types_out:
         log_error("--out and --types-out are required")
         return 2
 
-    specs_out = delegate_specs_out or os.path.join(args.out, "delegate_specs.py")
     try:
         specs = emit_delegate_artifacts(
             args.bindings,
-            specs_out=specs_out,
+            ctx=plan.ctx,
             gen_out=args.out,
-            install_module=True,
-            preserve_existing_on_empty=True,
+            specs=delegate_specs,
         )
     except OSError as exc:
         log_error(f"I/O failed while writing delegate artifacts: {exc}")
         return 4
-    log_info(f"delegates: {len(specs)} specs -> {specs_out}")
+    log_info(f"delegates: {len(specs.specs)} specs")
 
-    plan = collect_target_plan()
     if (code := _exit_on_ambiguous_overloads(plan)) is not None:
         return code
     written_paths: list[str] = []
     current_files: set[str] = set()
-
     try:
         binding_files, skipped = emit_bindings.emit(
             root, args.platform, plan=plan, manual_fields=MANUAL_FREE_FN_FIELDS
@@ -280,9 +218,8 @@ def main(argv: List[str]) -> int:
             _write_if_changed(cxx_path, content)
             written_paths.append(cxx_path)
 
-        _cleanup_orphans(args.out, current_files)
-
-        types_gen_path = write_types_generated(args.out)
+        _cleanup_stale_bindings(args.out, current_files)
+        types_gen_path = write_types_generated(args.out, plan.ctx)
         written_paths.append(types_gen_path)
         written_paths.append(str(Path(args.out) / types_gen_containers_rel_path()))
 
@@ -293,7 +230,6 @@ def main(argv: List[str]) -> int:
         )
         for filename, content in type_files.items():
             _write_if_changed(os.path.join(args.types_out, filename), content)
-        _cleanup_type_orphans(args.types_out, type_files)
         emit_schema(root, schema_path, plan)
         parity_path = os.path.join(args.out, "parity.json")
         parity_data = parity.collect_parity(
@@ -345,6 +281,79 @@ def main(argv: List[str]) -> int:
     log_info(f"wrote {report_path}")
     log_info(f"wrote {audit_path}")
     return 0
+
+
+def main(argv: list[str]) -> int:
+    parsed = _parse_and_validate(argv)
+    if isinstance(parsed, int):
+        return parsed
+    args = parsed
+
+    if args.emit_delegates:
+        return _handle_delegate_only(args)
+
+    try:
+        root = collect_bindings_root(args.bindings, geode_sdk_path=args.geode_sdk)
+    except OSError as exc:
+        log_error(f"I/O failed while collecting bindings: {exc}")
+        return 4
+
+    if not root.classes:
+        log_error(f"no Broma classes parsed from {args.bindings}")
+        return 3
+
+    try:
+        value_struct_specs = collect_value_struct_specs(root)
+    except OSError as exc:
+        log_error(f"I/O failed while loading value-struct specs: {exc}")
+        return 4
+    except Exception as exc:
+        log_error(f"value-struct spec generation failed: {exc}")
+        return 5
+    log_info(f"value structs: {len(value_struct_specs)} derived")
+
+    ctx = (root.codegen_ctx or CodegenContext.static()).with_value_specs(value_struct_specs)
+    try:
+        delegate_specs = collect_delegate_specs(args.bindings, ctx)
+    except OSError as exc:
+        log_error(f"I/O failed while loading delegate specs: {exc}")
+        return 4
+    delegate_catalog = build_delegate_catalog(delegate_specs, ctx)
+    ctx = ctx.with_catalogs(value_types=ctx.value_types, delegates=delegate_catalog)
+    root.codegen_ctx = ctx
+
+    plan_platforms = tuple(dict.fromkeys(intersection_platforms(args.platform) + (args.platform,)))
+    hierarchy = ClassHierarchy(root.classes)
+    objects = build_class_lookup(hierarchy.object_classes())
+    analysis = TypeAnalysis(objects, ctx)
+    plans_by_platform = {
+        platform: emit_plan.collect_platform_plan(
+            root,
+            platform,
+            hierarchy=hierarchy,
+            ctx=ctx,
+            analysis=analysis,
+        )
+        for platform in plan_platforms
+    }
+
+    def collect_target_plan() -> EmitPlan:
+        return emit_plan.collect_plan(root, args.platform, plans_by_platform=plans_by_platform)
+
+    if args.parity_report_out or args.audit_report_out:
+        report_code = _handle_report_mode(args, root, collect_target_plan(), plans_by_platform)
+        assert report_code is not None
+        return report_code
+
+    if args.list_all_outputs:
+        return _handle_list_outputs(args, root, collect_target_plan())
+    return _handle_full_generation(
+        args,
+        root,
+        collect_target_plan(),
+        delegate_specs,
+        plans_by_platform,
+    )
 
 
 def cli() -> int:

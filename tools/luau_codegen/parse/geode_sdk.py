@@ -4,26 +4,10 @@ import logging
 import os
 import re
 from dataclasses import dataclass
-from typing import Iterator, List
+from collections.abc import Iterator, MutableSequence
 
 from luau_codegen.model.free_fn_sources import FREE_FUNCTION_SOURCES
-
-_log = logging.getLogger("luau_codegen.geode_sdk")
-
-_SCAN_WARNINGS: List[str] = []
-
-
-def take_scan_warnings() -> List[str]:
-    global _SCAN_WARNINGS
-    warnings, _SCAN_WARNINGS = _SCAN_WARNINGS, []
-    return warnings
-
-
-def _record_scan_failure(message: str) -> None:
-    _log.warning(message)
-    _SCAN_WARNINGS.append(message)
-
-
+from luau_codegen.model.platforms import SCANNED_LINK_ATTR, SCANNED_LINK_PLATFORMS
 from luau_codegen.model.geode_enums import EnumInfo, parse_enum_members
 from luau_codegen.parse.broma import (
     Class,
@@ -37,22 +21,20 @@ from luau_codegen.parse.cpp_scan import (
     balanced_delimiter_end,
     find_unbalanced,
     scan_angle_block,
+    strip_comments,
     template_preceded,
 )
-from luau_codegen.parse.text import strip_comments
+
+_log = logging.getLogger("luau_codegen.geode_sdk")
+
+
+def _record_scan_failure(message: str, diagnostics: MutableSequence[str] | None = None) -> None:
+    _log.warning(message)
+    if diagnostics is not None:
+        diagnostics.append(message)
+
 
 _PREPROCESSOR = re.compile(r"^\s*#[^\n]*$", re.MULTILINE)
-
-_SCANNED_LINK_ATTR = "link(win, android, android32, android64, imac, m1, ios)"
-_SCANNED_LINK_PLATFORMS = (
-    "win",
-    "android",
-    "android32",
-    "android64",
-    "imac",
-    "m1",
-    "ios",
-)
 
 _GL_TYPE_ALIASES = {
     "GLubyte": "unsigned char",
@@ -133,13 +115,15 @@ def _iter_ui_headers(sdk_path: str) -> Iterator[tuple[str, str]]:
         yield os.path.join(ui_dir, filename), filename
 
 
-def scan_geode_sdk(sdk_path: str) -> List[Class]:
-    classes: List[Class] = []
+def scan_geode_sdk(
+    sdk_path: str, *, diagnostics: MutableSequence[str] | None = None
+) -> list[Class]:
+    classes: list[Class] = []
     for path, filename in _iter_ui_headers(sdk_path):
         try:
             classes.extend(_scan_header(path))
-        except Exception as exc:
-            _record_scan_failure(f"[luauapi] failed to scan {filename}: {exc}")
+        except (OSError, UnicodeError, ValueError) as exc:
+            _record_scan_failure(f"[luauapi] failed to scan {filename}: {exc}", diagnostics)
     return classes
 
 
@@ -156,15 +140,16 @@ def scan_geode_enums(
     sdk_path: str,
     *,
     bindings_dir: str | None = None,
+    diagnostics: MutableSequence[str] | None = None,
 ) -> dict[str, EnumInfo]:
     include_dir = os.path.join(sdk_path, "loader", "include", "Geode")
     out: dict[str, EnumInfo] = {}
 
     for path, filename in _iter_ui_headers(sdk_path):
         try:
-            out.update(_scan_header_enums(path))
-        except Exception as exc:
-            _record_scan_failure(f"[luauapi] failed to scan enums {filename}: {exc}")
+            out.update(_scan_header_enums(path, diagnostics=diagnostics))
+        except (OSError, UnicodeError, ValueError) as exc:
+            _record_scan_failure(f"[luauapi] failed to scan enums {filename}: {exc}", diagnostics)
 
     seen_headers: set[str] = set()
     for enums_hpp in [
@@ -178,24 +163,26 @@ def scan_geode_enums(
         if not os.path.isfile(enums_hpp):
             continue
         try:
-            out.update(_scan_header_enums(enums_hpp))
-        except Exception as exc:
-            _record_scan_failure(f"[luauapi] failed to scan enums {enums_hpp}: {exc}")
+            out.update(_scan_header_enums(enums_hpp, diagnostics=diagnostics))
+        except (OSError, UnicodeError, ValueError) as exc:
+            _record_scan_failure(f"[luauapi] failed to scan enums {enums_hpp}: {exc}", diagnostics)
 
     return out
 
 
-def scan_geode_functions(sdk_path: str) -> List[Function]:
+def scan_geode_functions(
+    sdk_path: str, *, diagnostics: MutableSequence[str] | None = None
+) -> list[Function]:
     include_dir = os.path.join(sdk_path, "loader", "include", "Geode")
-    out: List[Function] = []
+    out: list[Function] = []
     for rel, namespaces, names in FREE_FUNCTION_SOURCES:
         path = os.path.join(include_dir, *rel.split("/"))
         if not os.path.isfile(path):
             continue
         try:
             out.extend(_scan_header_functions(path, namespaces, names))
-        except Exception as exc:
-            _record_scan_failure(f"[luauapi] failed to scan functions {rel}: {exc}")
+        except (OSError, UnicodeError, ValueError) as exc:
+            _record_scan_failure(f"[luauapi] failed to scan functions {rel}: {exc}", diagnostics)
     return out
 
 
@@ -248,12 +235,16 @@ def _scan_cocos_class_addition(sdk_path: str, spec: _CocosClassScan) -> Class | 
     brace_end = balanced_delimiter_end(text, brace_start)
     body = text[brace_start + 1 : brace_end]
     if spec.body_filter is not None:
-        body = spec.body_filter.sub("", body)
+        body = spec.body_filter.sub(
+            lambda match: "".join("\n" if ch == "\n" else " " for ch in match.group()),
+            body,
+        )
     line = text[: match.start()].count("\n") + 1
+    body_line = text.count("\n", 0, brace_start + 1) + 1
     methods = _extract_public_methods(
         spec.name,
         body,
-        line,
+        body_line,
         geode_only=spec.geode_only,
         include_bodies=False,
         method_allowlist=spec.method_allowlist,
@@ -261,7 +252,7 @@ def _scan_cocos_class_addition(sdk_path: str, spec: _CocosClassScan) -> Class | 
     if not methods:
         return None
     for method in methods:
-        for platform in _SCANNED_LINK_PLATFORMS:
+        for platform in SCANNED_LINK_PLATFORMS:
             method.platforms.setdefault(platform, "link")
 
     return Class(
@@ -282,15 +273,15 @@ def scan_geode_ccarray_additions(sdk_path: str) -> Class | None:
     return _scan_cocos_class_addition(sdk_path, _COCOS_CLASS_SCANS[1])
 
 
-def _scan_header_functions(path: str, namespaces, names) -> List[Function]:
+def _scan_header_functions(path: str, namespaces, names) -> list[Function]:
     with open(path, "r", encoding="utf-8") as f:
         text = f.read()
     text = strip_comments(text)
     text = _strip_preproc(text)
 
-    out: List[Function] = []
-    ns_stack: List[str] = []
-    frames: List[str] = []
+    out: list[Function] = []
+    ns_stack: list[str] = []
+    frames: list[str] = []
     i = 0
     n = len(text)
     while i < n:
@@ -407,7 +398,12 @@ def _namespace_at(text: str, pos: int, class_ranges: list[tuple[int, int]]) -> s
     return "::".join(seg for seg in ns_stack if seg)
 
 
-def parse_geode_enums(text: str, *, source: str = "") -> dict[str, EnumInfo]:
+def parse_geode_enums(
+    text: str,
+    *,
+    source: str = "",
+    diagnostics: MutableSequence[str] | None = None,
+) -> dict[str, EnumInfo]:
     text = strip_comments(text)
     text = _strip_preproc(text)
 
@@ -428,17 +424,20 @@ def parse_geode_enums(text: str, *, source: str = "") -> dict[str, EnumInfo]:
         if warning:
             label = source or name
             _record_scan_failure(
-                f"[luauapi] failed to parse enum members {name} in {label}: {warning}"
+                f"[luauapi] failed to parse enum members {name} in {label}: {warning}",
+                diagnostics,
             )
             members = ()
         out[name] = EnumInfo(name=name, cxx_name=cxx_name, members=members)
     return out
 
 
-def _scan_header_enums(path: str) -> dict[str, EnumInfo]:
+def _scan_header_enums(
+    path: str, *, diagnostics: MutableSequence[str] | None = None
+) -> dict[str, EnumInfo]:
     with open(path, "r", encoding="utf-8") as f:
         text = f.read()
-    return parse_geode_enums(text, source=path)
+    return parse_geode_enums(text, source=path, diagnostics=diagnostics)
 
 
 def _strip_preproc(text: str) -> str:
@@ -450,8 +449,8 @@ def _find_namespace(text: str) -> str:
     return m.group(1) if m else ""
 
 
-def _parse_bases(raw: str) -> List[str]:
-    bases: List[str] = []
+def _parse_bases(raw: str) -> list[str]:
+    bases: list[str] = []
     for part in split_top_level(raw):
         clean = re.sub(r"\b(public|private|protected|virtual)\b", "", part).strip()
         clean = re.sub(r"<[^>]*>", "", clean).strip()
@@ -483,8 +482,8 @@ def _extract_public_methods(
     geode_only: bool = False,
     include_bodies: bool = True,
     method_allowlist: frozenset[str] | None = None,
-) -> List[Method]:
-    methods: List[Method] = []
+) -> list[Method]:
+    methods: list[Method] = []
     access = "private"
 
     i = 0
@@ -540,7 +539,8 @@ def _extract_public_methods(
                 and _method_stmt_allowed(stmt, geode_only)
             ):
                 cleaned = _clean_method_text(stmt)
-                m = parse_method(class_name, cleaned, base_line, access)
+                method_line = base_line + body.count("\n", 0, i)
+                m = parse_method(class_name, cleaned, method_line, access)
                 if m and (method_allowlist is None or m.name in method_allowlist):
                     methods.append(m)
             i = balanced_delimiter_end(body, brace) + 1
@@ -557,7 +557,8 @@ def _extract_public_methods(
                 and _method_stmt_allowed(stmt, geode_only)
             ):
                 cleaned = _clean_method_text(stmt)
-                m = parse_method(class_name, cleaned, base_line, access)
+                method_line = base_line + body.count("\n", 0, i)
+                m = parse_method(class_name, cleaned, method_line, access)
                 if m and (method_allowlist is None or m.name in method_allowlist):
                     methods.append(m)
             i = semi + 1
@@ -572,7 +573,7 @@ def _method_stmt_allowed(stmt: str, geode_only: bool) -> bool:
     return not geode_only or "GEODE_DLL" in stmt
 
 
-def _scan_header(path: str) -> List[Class]:
+def _scan_header(path: str) -> list[Class]:
     with open(path, "r", encoding="utf-8") as f:
         text = f.read()
 
@@ -580,7 +581,7 @@ def _scan_header(path: str) -> List[Class]:
     text = _strip_preproc(text)
     namespace = _find_namespace(text)
 
-    classes: List[Class] = []
+    classes: list[Class] = []
 
     for match in _CLASS_DECL.finditer(text):
         if template_preceded(text, match.start()):
@@ -595,14 +596,15 @@ def _scan_header(path: str) -> List[Class]:
         body = text[brace_start + 1 : brace_end]
 
         line = text[: match.start()].count("\n") + 1
-        methods = _extract_public_methods(name, body, line)
+        body_line = text.count("\n", 0, brace_start + 1) + 1
+        methods = _extract_public_methods(name, body, body_line)
 
         cls = Class(
             name=name,
             namespace=namespace,
             bases=bases,
             methods=methods,
-            attributes=[_SCANNED_LINK_ATTR],
+            attributes=[SCANNED_LINK_ATTR],
             source=path,
             line=line,
         )

@@ -107,6 +107,6 @@ See [Limits and errors](../cpp/limits-and-errors.md) for callback budgets and or
 ## Source
 
 - `src/framework/callback/LuaDelegate.hpp`
-- `build/luauapi-gen/delegate_specs.py` (generated at build time)
-- `tools/luau_codegen/model/delegate_specs.py` (repo stub, not the runtime source)
+- `tools/luau_codegen/model/delegate_specs.py`
+- `tools/luau_codegen/emit/delegates.py`
 - `tools/luau_codegen/cli/main.py`

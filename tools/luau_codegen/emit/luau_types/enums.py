@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from typing import Mapping, Tuple
+from collections.abc import Mapping
 
 from luau_codegen.model.codegen_context import CodegenContext
-from luau_codegen.convert.type_map import enum_lua_names
+from luau_codegen.convert.type_resolution import enum_lua_names
 
 
 def enum_namespace_type_name(enum_name: str) -> str:
@@ -13,7 +13,7 @@ def enum_namespace_type_name(enum_name: str) -> str:
 
 
 def enum_namespace_field_lines(
-    members: Mapping[str, Tuple[Tuple[str, int], ...]],
+    members: Mapping[str, tuple[tuple[str, int], ...]],
     indent: str = "    ",
 ) -> list[str]:
     lines: list[str] = []
@@ -33,7 +33,7 @@ def _enum_block(namespace: str, ctx: CodegenContext) -> str:
     return "".join(f"export type {name} = number\n" for name in names)
 
 
-def _emit_enum_namespace_type(enum_name: str, entries: Tuple[Tuple[str, int], ...]) -> str:
+def _emit_enum_namespace_type(enum_name: str, entries: tuple[tuple[str, int], ...]) -> str:
     fields = ", ".join(f"{name}: number" for name, _ in entries)
     ns_type = enum_namespace_type_name(enum_name)
     return f"export type {ns_type} = {{ {fields} }}\n"

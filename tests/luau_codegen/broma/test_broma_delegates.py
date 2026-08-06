@@ -3,10 +3,12 @@ from __future__ import annotations
 import os
 import tempfile
 import unittest
+from unittest import mock
 
-from luau_codegen.convert.type_map import strip_ref  # type: ignore[import-unresolved]
+from test_support import DELEGATE_FIXTURE_DIR, fixture_codegen_context
+from luau_codegen.convert.type_primitives import strip_ref  # type: ignore[import-unresolved]
 from luau_codegen.emit.delegates import (  # type: ignore[import-unresolved]
-    parse_broma,
+    parse_delegate_methods,
 )
 from luau_codegen.parse.broma_delegates import (  # type: ignore[import-unresolved]
     collect_delegate_ptrs,
@@ -14,6 +16,8 @@ from luau_codegen.parse.broma_delegates import (  # type: ignore[import-unresolv
 
 
 class BromaDelegateParserTests(unittest.TestCase):
+    ctx = fixture_codegen_context()
+
     def test_parse_nested_template_virtual_method(self) -> None:
         bro = """
 class NestedDelegate {
@@ -24,7 +28,7 @@ class NestedDelegate {
             path = os.path.join(tmpdir, "Nested.bro")
             with open(path, "w", encoding="utf-8") as f:
                 f.write(bro)
-            parsed = parse_broma(tmpdir)
+            parsed = parse_delegate_methods(tmpdir, self.ctx)
         self.assertNotIn("NestedDelegate", parsed)
 
     def test_parse_delegate_with_attributes_and_namespace(self) -> None:
@@ -38,7 +42,7 @@ class geode::ui::SampleDelegate {
             path = os.path.join(tmpdir, "Sample.bro")
             with open(path, "w", encoding="utf-8") as f:
                 f.write(bro)
-            parsed = parse_broma(tmpdir)
+            parsed = parse_delegate_methods(tmpdir, self.ctx)
         self.assertIn("geode::ui::SampleDelegate", parsed)
         methods = {m.name: m for m in parsed["geode::ui::SampleDelegate"]}
         self.assertEqual(methods["onEvent"].args, [("int", "id")])
@@ -57,7 +61,7 @@ class CCEGLViewProtocol {
             path = os.path.join(tmpdir, "View.bro")
             with open(path, "w", encoding="utf-8") as f:
                 f.write(bro)
-            parsed = parse_broma(tmpdir)
+            parsed = parse_delegate_methods(tmpdir, self.ctx)
         methods = {m.name: m for m in parsed["CCEGLViewProtocol"]}
         self.assertNotIn("~CCEGLViewProtocol", methods)
         self.assertEqual(methods["setFrameSize"].args, [("float", "arg0"), ("float", "arg1")])
@@ -74,7 +78,7 @@ class TableViewDelegate {
             path = os.path.join(tmpdir, "TableView.bro")
             with open(path, "w", encoding="utf-8") as f:
                 f.write(bro)
-            parsed = parse_broma(tmpdir)
+            parsed = parse_delegate_methods(tmpdir, self.ctx)
         method = parsed["TableViewDelegate"][0]
         self.assertEqual(method.args[0][0], "CCIndexPath&")
 
@@ -96,13 +100,28 @@ class CustomSongDelegate {
 
     def test_collect_matches_fixture_delegate_count(self) -> None:
         from luau_codegen.emit.delegates import (  # type: ignore[import-unresolved]
-            collect as collect_delegate_specs,
-            fallback_bindings_dir,
+            collect_delegate_specs,
         )
 
-        specs = collect_delegate_specs(fallback_bindings_dir())
+        specs = collect_delegate_specs(DELEGATE_FIXTURE_DIR, self.ctx)
         self.assertIn("cocos2d::CCDirectorDelegate", specs)
         self.assertIn("CustomSongDelegate", specs)
+
+    def test_collect_parses_each_broma_file_once(self) -> None:
+        from luau_codegen.emit.delegates import collect_delegate_specs
+        from luau_codegen.parse import broma_delegates
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            for name in ("One.bro", "Two.bro"):
+                with open(os.path.join(tmpdir, name), "w", encoding="utf-8") as f:
+                    f.write("class Empty {};\n")
+            with mock.patch.object(
+                broma_delegates,
+                "parse_text",
+                wraps=broma_delegates.parse_text,
+            ) as parse_text:
+                collect_delegate_specs(tmpdir, self.ctx)
+        self.assertEqual(parse_text.call_count, 2)
 
     def test_unsupported_delegate_method_not_parsed(self) -> None:
         bro = """
@@ -114,7 +133,7 @@ class SampleDelegate {
             path = os.path.join(tmpdir, "Sample.bro")
             with open(path, "w", encoding="utf-8") as f:
                 f.write(bro)
-            parsed = parse_broma(tmpdir)
+            parsed = parse_delegate_methods(tmpdir, self.ctx)
         self.assertNotIn("SampleDelegate", parsed)
 
     def test_parse_delegate_warns_skipped_methods(self) -> None:
@@ -133,7 +152,7 @@ class NestedDelegate {
 
             stderr = io.StringIO()
             with contextlib.redirect_stderr(stderr):
-                parsed = parse_broma(tmpdir)
+                parsed = parse_delegate_methods(tmpdir, self.ctx)
             self.assertIn("NestedDelegate", parsed)
             self.assertEqual([m.name for m in parsed["NestedDelegate"]], ["onEvent"])
             err = stderr.getvalue()

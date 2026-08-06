@@ -195,7 +195,7 @@ class ItaniumMangler:
         return ""
 
 
-def android_symbol(cls: Class, method: Method) -> str:
+def itanium_method_symbol(cls: Class, method: Method) -> str:
     mangler = ItaniumMangler()
     qualified = f"{cxx_name(cls)}::{method.name}"
     symbol = f"_Z{mangler.nested_name(qualified, method.is_const)}"

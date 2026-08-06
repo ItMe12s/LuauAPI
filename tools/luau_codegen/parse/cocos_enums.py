@@ -5,7 +5,7 @@ import os
 import re
 
 from luau_codegen.parse.broma import split_top_level
-from luau_codegen.parse.text import strip_comments
+from luau_codegen.parse.cpp_scan import strip_comments
 
 
 @dataclass(frozen=True)

@@ -6,7 +6,7 @@ import tempfile
 import unittest
 
 from luau_codegen.cli.main import main as codegen_main  # type: ignore[import-unresolved]
-from luau_codegen.convert.symbols import android_symbol  # type: ignore[import-unresolved]
+from luau_codegen.convert.symbols import itanium_method_symbol  # type: ignore[import-unresolved]
 from luau_codegen.parse.broma import Arg, Class, Method  # type: ignore[import-unresolved]
 from luau_codegen.policy.filtering import group_supported  # type: ignore[import-unresolved]
 
@@ -245,7 +245,7 @@ class F8ConstMethodManglingTests(unittest.TestCase):
             is_const=True,
             platforms={"android64": "0x1"},
         )
-        sym = android_symbol(cls, m)
+        sym = itanium_method_symbol(cls, m)
         self.assertTrue(sym.startswith("_ZNK"), f"Expected _ZNK prefix, got {sym}")
         self.assertIn("6getTag", sym)
 
@@ -257,7 +257,7 @@ class F8ConstMethodManglingTests(unittest.TestCase):
             args=[Arg(type="int", name="t")],
             platforms={"android64": "0x1"},
         )
-        sym = android_symbol(cls, m)
+        sym = itanium_method_symbol(cls, m)
         self.assertTrue(sym.startswith("_ZN"), f"Expected _ZN prefix, got {sym}")
         self.assertFalse(sym.startswith("_ZNK"))
 
@@ -277,12 +277,12 @@ class F8ConstMethodManglingTests(unittest.TestCase):
             is_const=False,
             platforms={"android64": "0x1"},
         )
-        self.assertNotEqual(android_symbol(cls, m_const), android_symbol(cls, m_non))
+        self.assertNotEqual(itanium_method_symbol(cls, m_const), itanium_method_symbol(cls, m_non))
 
     def test_reference_and_const_type_mangling(self) -> None:
         cls = Class(name="Foo")
         method = Method(name="take", ret="void", args=[Arg("int const&", "value")])
-        self.assertEqual(android_symbol(cls, method), "_ZN3Foo4takeERKi")
+        self.assertEqual(itanium_method_symbol(cls, method), "_ZN3Foo4takeERKi")
 
     def test_repeated_pointer_uses_substitution(self) -> None:
         cls = Class(name="Bar")
@@ -291,7 +291,7 @@ class F8ConstMethodManglingTests(unittest.TestCase):
             ret="void",
             args=[Arg("Foo*", "a"), Arg("Foo*", "b")],
         )
-        self.assertEqual(android_symbol(cls, method), "_ZN3Bar4takeEP3FooS0_")
+        self.assertEqual(itanium_method_symbol(cls, method), "_ZN3Bar4takeEP3FooS0_")
 
     def test_template_type_mangling_includes_defaults(self) -> None:
         cls = Class(name="Foo")
@@ -300,4 +300,4 @@ class F8ConstMethodManglingTests(unittest.TestCase):
             ret="void",
             args=[Arg("gd::vector<int>", "values")],
         )
-        self.assertEqual(android_symbol(cls, method), "_ZN3Foo4takeEN2gd6vectorIiSaIiEEE")
+        self.assertEqual(itanium_method_symbol(cls, method), "_ZN3Foo4takeEN2gd6vectorIiSaIiEEE")

@@ -8,7 +8,7 @@ from luau_codegen.convert.marshalling import (  # type: ignore[import-unresolved
     emit_stack_check,
     push_value,
 )
-from luau_codegen.convert.type_map import classify_arg  # type: ignore[import-unresolved]
+from luau_codegen.convert.type_classification import classify_arg  # type: ignore[import-unresolved]
 from luau_codegen.model.domain import build_class_lookup  # type: ignore[import-unresolved]
 from luau_codegen.parse.broma import Class, Field  # type: ignore[import-unresolved]
 from luau_codegen.parse.collect import collect_bindings_root  # type: ignore[import-unresolved]

@@ -3,7 +3,8 @@ from __future__ import annotations
 import unittest
 
 import test_support  # noqa: F401 - installs codegen test fixtures
-from luau_codegen.convert.type_map import TypeInfo, classify_return  # type: ignore[import-unresolved]
+from luau_codegen.convert.type_primitives import TypeInfo  # type: ignore[import-unresolved]
+from luau_codegen.convert.type_classification import classify_return  # type: ignore[import-unresolved]
 from luau_codegen.emit.bindings.class_file import _emit_invoke  # type: ignore[import-unresolved]
 from luau_codegen.emit.luau_types.method_types import _method_return_type  # type: ignore[import-unresolved]
 from luau_codegen.parse.broma import Arg, Class, Method  # type: ignore[import-unresolved]
@@ -97,6 +98,18 @@ class OutRefEmitTests(unittest.TestCase):
         text = _emit_invoke(cls, method, {}, "")
         self.assertIn("pushContainerValue<gd::vector<ChanceObject>>", text)
         self.assertIn("return 2", text)
+        self.assertNotIn("return 1;", text)
+
+    def test_scalar_return_with_multiple_out_refs_has_one_final_count(self) -> None:
+        cls = self._base_layer()
+        method = Method(
+            name="readPair",
+            ret="int",
+            args=[Arg("int&", "left"), Arg("float&", "right")],
+            platforms=all_platforms("0x1"),
+        )
+        text = _emit_invoke(cls, method, {}, "")
+        self.assertEqual(text.count("return 3;"), 1)
         self.assertNotIn("return 1;", text)
 
     def test_get_custom_enter_effects_emits_pointer_push(self) -> None:

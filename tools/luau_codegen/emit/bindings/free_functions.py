@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from typing import TYPE_CHECKING, Dict, List, Optional
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from luau_codegen.model.codegen_context import CodegenContext
+    from luau_codegen.model.type_analysis import TypeAnalysis
 
 from luau_codegen.model.free_fn_sources import free_function_includes
 from luau_codegen.parse.broma import Class, Function
@@ -15,7 +16,7 @@ from luau_codegen.emit.bindings.invoke_common import (
     emit_lua_invoke_arg,
 )
 from luau_codegen.convert.sel_args import iter_lua_method_args
-from luau_codegen.convert.type_map import (
+from luau_codegen.convert.type_classification import (
     require_classify_arg,
     require_classify_return,
 )
@@ -32,14 +33,20 @@ def _free_fn_base(fn: Function) -> str:
 
 def _emit_free_invoke(
     fn: Function,
-    objects: Dict[str, Class],
+    objects: dict[str, Class],
     suffix: str,
     ctx: CodegenContext | None = None,
+    analysis: TypeAnalysis | None = None,
 ) -> str:
     cname = _free_fn_base(fn) + suffix
     label = f"{fn.lua_path}.{fn.name}"
-    ret = require_classify_return(fn.ret, objects, ctx=ctx)
-    arg_infos = [require_classify_arg(arg.type, objects, ctx=ctx) for arg in fn.args]
+    signature = analysis.signature(fn) if analysis else None
+    ret = signature.return_info if signature else require_classify_return(fn.ret, objects, ctx=ctx)
+    arg_infos = (
+        list(signature.arg_infos)
+        if signature
+        else [require_classify_arg(arg.type, objects, ctx=ctx) for arg in fn.args]
+    )
     input_count = sum(
         1
         for lua_arg in iter_lua_method_args(fn, arg_infos, ret_kind=ret.kind)
@@ -53,9 +60,9 @@ def _emit_free_invoke(
     out.append(
         f'        auto const boundary = luax::diag::recordBindingEntry(L, "{label}", luax::diag::BoundaryKind::GeneratedBinding);\n'
     )
-    call_args: List[str] = []
-    selector_handlers: List[tuple[str, str]] = []
-    delegate_trampolines: List[str] = []
+    call_args: list[str] = []
+    selector_handlers: list[str] = []
+    delegate_trampolines: list[str] = []
     lua_idx = 1
     for lua_arg in iter_lua_method_args(fn, arg_infos, ret_kind=ret.kind):
         lines, lua_idx = emit_lua_invoke_arg(
@@ -99,7 +106,10 @@ def _emit_free_invoke(
 
 
 def _emit_free_dispatcher(
-    fns: List[Function], objects: Dict[str, Class], ctx: CodegenContext | None = None
+    fns: list[Function],
+    objects: dict[str, Class],
+    ctx: CodegenContext | None = None,
+    analysis: TypeAnalysis | None = None,
 ) -> str:
     if len(fns) == 1:
         return ""
@@ -107,8 +117,17 @@ def _emit_free_dispatcher(
     label = f"{fns[0].lua_path}.{fns[0].name}"
     cases = []
     for idx, fn in enumerate(fns):
-        arg_infos = [require_classify_arg(arg.type, objects, ctx=ctx) for arg in fn.args]
-        ret = require_classify_return(fn.ret, objects, ctx=ctx)
+        signature = analysis.signature(fn) if analysis else None
+        arg_infos = (
+            list(signature.arg_infos)
+            if signature
+            else [require_classify_arg(arg.type, objects, ctx=ctx) for arg in fn.args]
+        )
+        ret = (
+            signature.return_info
+            if signature
+            else require_classify_return(fn.ret, objects, ctx=ctx)
+        )
         input_count = sum(
             1
             for lua_arg in iter_lua_method_args(fn, arg_infos, ret_kind=ret.kind)
@@ -119,10 +138,11 @@ def _emit_free_dispatcher(
 
 
 def emit_free_functions_file(
-    functions: List[Function],
-    objects: Dict[str, Class],
+    functions: list[Function],
+    objects: dict[str, Class],
     ctx: CodegenContext | None = None,
-    manual_fields: Optional[Dict[str, List[str]]] = None,
+    manual_fields: dict[str, list[str]] | None = None,
+    analysis: TypeAnalysis | None = None,
 ) -> str:
     manual_names = manual_field_names_by_path(manual_fields)
     by_key: dict[tuple[str, str], list[Function]] = defaultdict(list)
@@ -141,8 +161,8 @@ def emit_free_functions_file(
     for fns in by_key.values():
         for idx, fn in enumerate(fns):
             suffix = "" if len(fns) == 1 else f"_{idx}"
-            out.append(_emit_free_invoke(fn, objects, suffix, ctx=ctx))
-        out.append(_emit_free_dispatcher(fns, objects, ctx=ctx))
+            out.append(_emit_free_invoke(fn, objects, suffix, ctx=ctx, analysis=analysis))
+        out.append(_emit_free_dispatcher(fns, objects, ctx=ctx, analysis=analysis))
     out.append("} // namespace\n\n")
 
     by_ns: dict[str, list[tuple[str, str]]] = defaultdict(list)

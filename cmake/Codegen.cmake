@@ -67,9 +67,7 @@ macro(luauapi_codegen_cli_args OUT_VAR MODE)
     elseif ("${MODE}" STREQUAL "generate")
         list(APPEND LUAUAPI_ARGS
             --out ${LUAUAPI_GEN_DIR}
-            --types-out ${LUAUAPI_TYPES_DIR}
-            --delegate-specs-out ${LUAUAPI_DELEGATE_SPECS_OUT}
-            --value-struct-specs-out ${LUAUAPI_VALUE_STRUCT_SPECS_OUT})
+            --types-out ${LUAUAPI_TYPES_DIR})
     else()
         message(FATAL_ERROR "Unknown luauapi_codegen_cli_args MODE: ${MODE}")
     endif()
@@ -85,10 +83,6 @@ macro(luauapi_setup_codegen)
         CACHE PATH "Path to Geode bindings/<gdver>/ dir")
     set(LUAUAPI_GEN_DIR "${CMAKE_BINARY_DIR}/luauapi-gen")
     set(LUAUAPI_TYPES_DIR "${CMAKE_CURRENT_SOURCE_DIR}/types")
-    set(LUAUAPI_DELEGATE_SPECS_OUT
-        "${LUAUAPI_GEN_DIR}/delegate_specs.py")
-    set(LUAUAPI_VALUE_STRUCT_SPECS_OUT
-        "${LUAUAPI_GEN_DIR}/value_struct_specs.py")
     set(LUAUAPI_CODEGEN_STAMP "${LUAUAPI_GEN_DIR}/codegen.stamp")
     file(TO_CMAKE_PATH "$ENV{GEODE_SDK}" LUAUAPI_GEODE_SDK_PATH)
 
@@ -160,8 +154,6 @@ macro(luauapi_setup_codegen)
                 ${LUAUAPI_CODEGEN_BINDING_BYPRODUCTS}
                 ${LUAUAPI_GENERATED_TYPE_FILES}
                 ${LUAUAPI_GENERATED_METADATA_FILES}
-                ${LUAUAPI_DELEGATE_SPECS_OUT}
-                ${LUAUAPI_VALUE_STRUCT_SPECS_OUT}
         COMMAND ${LUAUAPI_CODEGEN_CMD} ${LUAUAPI_CODEGEN_ARGS}
         COMMAND ${CMAKE_COMMAND} -E touch ${LUAUAPI_CODEGEN_STAMP}
         DEPENDS

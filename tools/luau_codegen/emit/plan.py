@@ -1,9 +1,7 @@
 from __future__ import annotations
 
-import copy
 from collections import defaultdict
-from dataclasses import dataclass, field
-from typing import Dict, List, Set
+from dataclasses import dataclass, field, replace
 
 from luau_codegen.parse.broma import Class, Field, Function, Method, Root
 from luau_codegen.policy.fields import (
@@ -28,16 +26,16 @@ from luau_codegen.policy.intersection import (
     IntersectionResult,
     IntersectionStats,
     collect_intersection,
-    intersection_platforms,
     method_key,
 )
+from luau_codegen.model.platforms import intersection_platforms
 from luau_codegen.model.domain import (
+    ClassHierarchy,
     build_class_lookup,
-    codegen_object_map,
-    object_classes,
     resolve_base,
 )
 from luau_codegen.model.codegen_context import CodegenContext
+from luau_codegen.model.type_analysis import TypeAnalysis
 from luau_codegen.util import binding_filename
 
 from luau_codegen.emit.bindings.cocos_enums import ENUM_KEY_CODES_MANIFEST
@@ -50,25 +48,32 @@ def _ctx_from_root(root: Root) -> CodegenContext:
 
 @dataclass
 class EmitPlan:
-    classes: List[Class]
-    objects: Dict[str, Class]
-    skipped: List[tuple[str, str, str]]
+    classes: list[Class]
+    objects: dict[str, Class]
+    skipped: list[tuple[str, str, str]]
     skipped_by_class: dict[str, list[tuple[Method, str]]]
-    skipped_classes: Set[str]
+    skipped_classes: set[str]
     supported_by_class: dict[str, dict[str, list[Method]]]
-    hook_targets_by_class: dict[str, List[tuple[Class, Method]]]
-    field_targets_by_class: dict[str, List[tuple[Class, Field]]]
+    hook_targets_by_class: dict[str, list[tuple[Class, Method]]]
+    field_targets_by_class: dict[str, list[tuple[Class, Field]]]
     depths: dict[str, int]
-    supported_free_functions: List[Function] = field(default_factory=list)
-    skipped_free_functions: List[FreeFunctionSkip] = field(default_factory=list)
-    emitted_classes: List[Class] = field(default_factory=list)
+    hierarchy: ClassHierarchy | None = None
+    supported_free_functions: list[Function] = field(default_factory=list)
+    skipped_free_functions: list[FreeFunctionSkip] = field(default_factory=list)
+    emitted_classes: list[Class] = field(default_factory=list)
     intersection_stats: IntersectionStats = field(default_factory=IntersectionStats)
     ctx: CodegenContext = field(default_factory=CodegenContext.static)
+    type_analysis: TypeAnalysis | None = field(default=None, repr=False)
+
+    def __post_init__(self) -> None:
+        if self.type_analysis is None:
+            self.type_analysis = TypeAnalysis(self.objects, self.ctx)
 
 
 def _type_needed_class_names(plan: EmitPlan) -> set[str]:
-    from luau_codegen.convert.type_map import classify_arg, classify_return, object_class_names
+    from luau_codegen.convert.type_primitives import object_class_names
 
+    assert plan.type_analysis is not None
     referenced: set[str] = set()
 
     def add(info) -> None:
@@ -79,23 +84,29 @@ def _type_needed_class_names(plan: EmitPlan) -> set[str]:
                 if name in plan.objects and not plan.objects[name].methods
             )
 
-    for grouped in plan.supported_by_class.values():
+    for cls_name, grouped in plan.supported_by_class.items():
         for methods in grouped.values():
             for m in methods:
-                add(classify_return(m.ret, plan.objects, ctx=plan.ctx))
+                add(plan.type_analysis.classify_return(m.ret, owner_class=cls_name))
                 for arg in m.args:
-                    add(classify_arg(arg.type, plan.objects, ctx=plan.ctx))
+                    add(plan.type_analysis.classify_arg(arg.type, owner_class=cls_name))
 
     for targets in plan.field_targets_by_class.values():
         for field_cls, bound_field in targets:
-            _, _, arg, ret = bindable_field(bound_field, plan.objects, field_cls, ctx=plan.ctx)
+            _, _, arg, ret = bindable_field(
+                bound_field,
+                plan.objects,
+                field_cls,
+                ctx=plan.ctx,
+                analysis=plan.type_analysis,
+            )
             add(arg)
             add(ret)
 
     for fn in plan.supported_free_functions:
-        add(classify_return(fn.ret, plan.objects, ctx=plan.ctx))
+        add(plan.type_analysis.classify_return(fn.ret))
         for arg in fn.args:
-            add(classify_arg(arg.type, plan.objects, ctx=plan.ctx))
+            add(plan.type_analysis.classify_arg(arg.type))
 
     lookup = build_class_lookup(plan.classes)
     keep_bases: set[str] = set()
@@ -109,19 +120,8 @@ def _type_needed_class_names(plan: EmitPlan) -> set[str]:
     return referenced | keep_bases
 
 
-def _inheritance_depth(cls: Class, lookup: Dict[str, Class], skipped_classes: Set[str]) -> int:
-    if cls.name == "CCObject":
-        return 0
-    values: List[int] = []
-    for base in cls.bases:
-        base_cls = resolve_base(lookup, base)
-        if base_cls and base_cls.name not in skipped_classes:
-            values.append(_inheritance_depth(base_cls, lookup, skipped_classes) + 1)
-    return max(values) if values else 1
-
-
-def _emitted_classes(plan: EmitPlan) -> List[Class]:
-    out: List[Class] = []
+def _emitted_classes(plan: EmitPlan) -> list[Class]:
+    out: list[Class] = []
     for cls in plan.classes:
         if cls.name in plan.skipped_classes:
             continue
@@ -136,18 +136,24 @@ def _emitted_classes(plan: EmitPlan) -> List[Class]:
 
 
 def _prune_field_object_refs(
-    field_targets_by_class: dict[str, List[tuple[Class, Field]]],
+    field_targets_by_class: dict[str, list[tuple[Class, Field]]],
     objects: dict[str, Class],
     skipped_classes: set[str],
     target_platform: str,
     ctx: CodegenContext | None = None,
+    analysis: TypeAnalysis | None = None,
 ) -> list[tuple[str, str, str]]:
     pruned: list[tuple[str, str, str]] = []
     for cls_name, targets in field_targets_by_class.items():
-        kept: List[tuple[Class, Field]] = []
+        kept: list[tuple[Class, Field]] = []
         for field_cls, bound_field in targets:
             skipped_ref = field_skipped_object_ref(
-                bound_field, objects, skipped_classes, field_cls, ctx=ctx
+                bound_field,
+                objects,
+                skipped_classes,
+                field_cls,
+                ctx=ctx,
+                analysis=analysis,
             )
             if skipped_ref:
                 reason = f"not-callable-type:{target_platform}:{skipped_ref}"
@@ -164,11 +170,14 @@ def _filter_free_function_object_refs(
     skipped_classes: set[str],
     target_platform: str,
     ctx: CodegenContext | None = None,
+    analysis: TypeAnalysis | None = None,
 ) -> tuple[list[Function], list[FreeFunctionSkip]]:
     kept: list[Function] = []
     skipped: list[FreeFunctionSkip] = []
     for fn in functions:
-        skipped_ref = free_function_skipped_object_ref(fn, objects, skipped_classes, ctx=ctx)
+        skipped_ref = free_function_skipped_object_ref(
+            fn, objects, skipped_classes, ctx=ctx, analysis=analysis
+        )
         if skipped_ref:
             reason = f"not-callable-type:{target_platform}:{skipped_ref}"
             skipped.append((free_function_key(fn), fn.lua_path, fn.name, reason))
@@ -177,24 +186,34 @@ def _filter_free_function_object_refs(
     return kept, skipped
 
 
-def collect_platform_plan(root: Root, target_platform: str = "win") -> EmitPlan:
-    classes = object_classes(root)
-    objects = codegen_object_map(root)
-    ctx = _ctx_from_root(root)
-    lookup = build_class_lookup(classes)
+def collect_platform_plan(
+    root: Root,
+    target_platform: str = "win",
+    *,
+    hierarchy: ClassHierarchy | None = None,
+    ctx: CodegenContext | None = None,
+    analysis: TypeAnalysis | None = None,
+) -> EmitPlan:
+    hierarchy = hierarchy or ClassHierarchy(root.classes)
+    classes = hierarchy.object_classes()
+    objects = build_class_lookup(classes)
+    ctx = ctx or _ctx_from_root(root)
+    type_analysis = analysis or TypeAnalysis(objects, ctx)
     skipped: list[tuple[str, str, str]] = []
     supported_by_class: dict[str, dict[str, list[Method]]] = {}
     skipped_by_class: dict[str, list[tuple[Method, str]]] = {}
 
     for cls in classes:
-        grouped, cls_skipped = group_supported(cls, objects, target_platform, ctx=ctx)
+        grouped, cls_skipped = group_supported(
+            cls, objects, target_platform, ctx=ctx, analysis=type_analysis
+        )
         supported_by_class[cls.name] = grouped
         skipped_by_class[cls.name] = cls_skipped
         for method, reason in cls_skipped:
             skipped.append((cls.name, method.name, reason))
 
     supported_free_functions, skipped_free_functions = group_supported_free_functions(
-        root.functions, objects, target_platform, ctx=ctx
+        root.functions, objects, target_platform, ctx=ctx, analysis=type_analysis
     )
 
     skipped_classes = linkless_class_names(
@@ -205,6 +224,7 @@ def collect_platform_plan(root: Root, target_platform: str = "win") -> EmitPlan:
         target_platform,
         ctx=ctx,
         free_functions=supported_free_functions,
+        analysis=type_analysis,
     )
     skipped.extend(
         prune_skipped_class_refs(
@@ -214,24 +234,38 @@ def collect_platform_plan(root: Root, target_platform: str = "win") -> EmitPlan:
             skipped_classes,
             target_platform,
             ctx=ctx,
+            analysis=type_analysis,
         )
     )
-    depths = {cls.name: _inheritance_depth(cls, lookup, skipped_classes) for cls in classes}
+    depths = {cls.name: hierarchy.depth(cls, skipped_classes) for cls in classes}
 
-    hook_targets_by_class: dict[str, List[tuple[Class, Method]]] = defaultdict(list)
-    field_targets_by_class: dict[str, List[tuple[Class, Field]]] = defaultdict(list)
+    hook_targets_by_class: dict[str, list[tuple[Class, Method]]] = defaultdict(list)
+    field_targets_by_class: dict[str, list[tuple[Class, Field]]] = defaultdict(list)
     for cls in classes:
         if cls.name in skipped_classes:
             continue
         grouped = supported_by_class[cls.name]
         for methods in grouped.values():
             for method in methods:
-                if hookable(cls, method, objects, target_platform, ctx=ctx):
+                if hookable(
+                    cls,
+                    method,
+                    objects,
+                    target_platform,
+                    ctx=ctx,
+                    analysis=type_analysis,
+                ):
                     hook_targets_by_class[cls.name].append((cls, method))
         for cls_field in cls.fields:
             if not field_applies_on_platform(cls_field, target_platform):
                 continue
-            ok, _, _, _ = bindable_field(cls_field, objects, cls, ctx=ctx)
+            ok, _, _, _ = bindable_field(
+                cls_field,
+                objects,
+                cls,
+                ctx=ctx,
+                analysis=type_analysis,
+            )
             if ok:
                 field_targets_by_class[cls.name].append((cls, cls_field))
 
@@ -242,11 +276,17 @@ def collect_platform_plan(root: Root, target_platform: str = "win") -> EmitPlan:
             skipped_classes,
             target_platform,
             ctx=ctx,
+            analysis=type_analysis,
         )
     )
 
     supported_free_functions, free_ref_skips = _filter_free_function_object_refs(
-        supported_free_functions, objects, skipped_classes, target_platform, ctx=ctx
+        supported_free_functions,
+        objects,
+        skipped_classes,
+        target_platform,
+        ctx=ctx,
+        analysis=type_analysis,
     )
     skipped_free_functions.extend(free_ref_skips)
 
@@ -261,6 +301,8 @@ def collect_platform_plan(root: Root, target_platform: str = "win") -> EmitPlan:
         hook_targets_by_class=hook_targets_by_class,
         field_targets_by_class=field_targets_by_class,
         depths=depths,
+        hierarchy=hierarchy,
+        type_analysis=type_analysis,
         supported_free_functions=supported_free_functions,
         skipped_free_functions=skipped_free_functions,
     )
@@ -320,6 +362,7 @@ def _prune_free_function_refs(
         plan.skipped_classes,
         target_platform,
         ctx=plan.ctx,
+        analysis=plan.type_analysis,
     )
     plan.supported_free_functions = kept
     for key, lua_path, name, reason in skipped:
@@ -346,7 +389,7 @@ def _apply_intersection(
     for cls in plan.classes:
         grouped = plan.supported_by_class[cls.name]
         for name, methods in list(grouped.items()):
-            kept: List[Method] = []
+            kept: list[Method] = []
             for method in methods:
                 key = method_key(cls, method)
                 if key in result.common_supported_method_keys:
@@ -365,7 +408,7 @@ def _apply_intersection(
             else:
                 del grouped[name]
 
-        kept_hooks: List[tuple[Class, Method]] = []
+        kept_hooks: list[tuple[Class, Method]] = []
         for hook_cls, method in plan.hook_targets_by_class.get(cls.name, []):
             key = method_key(hook_cls, method)
             if key in result.common_hook_method_keys:
@@ -376,7 +419,7 @@ def _apply_intersection(
             stats.removed_hooks.append((hook_cls.name, method.name, reason))
         plan.hook_targets_by_class[cls.name] = kept_hooks
 
-        kept_fields: List[tuple[Class, Field]] = []
+        kept_fields: list[tuple[Class, Field]] = []
         for field_cls, bound_field in plan.field_targets_by_class.get(cls.name, []):
             key = field_key(field_cls, bound_field)
             if key in result.common_field_keys:
@@ -411,6 +454,7 @@ def _apply_intersection(
             plan.skipped_classes,
             target_platform,
             ctx=plan.ctx,
+            analysis=plan.type_analysis,
         )
         if pruned:
             plan.skipped.extend(pruned)
@@ -422,6 +466,7 @@ def _apply_intersection(
             plan.skipped_classes,
             target_platform,
             ctx=plan.ctx,
+            analysis=plan.type_analysis,
         )
         if field_pruned:
             plan.skipped.extend(field_pruned)
@@ -435,13 +480,35 @@ def _apply_intersection(
                 plan.field_targets_by_class[cls_name] = []
                 changed = True
 
-    lookup = build_class_lookup(plan.classes)
-    plan.depths = {
-        cls.name: _inheritance_depth(cls, lookup, plan.skipped_classes) for cls in plan.classes
-    }
+    hierarchy = plan.hierarchy or ClassHierarchy(plan.classes)
+    plan.hierarchy = hierarchy
+    plan.depths = {cls.name: hierarchy.depth(cls, plan.skipped_classes) for cls in plan.classes}
     _prune_free_function_refs(plan, target_platform, stats)
     plan.emitted_classes = _emitted_classes(plan)
     return plan
+
+
+def _copy_mutable_plan_collections(plan: EmitPlan) -> EmitPlan:
+    return replace(
+        plan,
+        skipped=list(plan.skipped),
+        skipped_by_class={name: list(entries) for name, entries in plan.skipped_by_class.items()},
+        skipped_classes=set(plan.skipped_classes),
+        supported_by_class={
+            cls_name: {name: list(methods) for name, methods in grouped.items()}
+            for cls_name, grouped in plan.supported_by_class.items()
+        },
+        hook_targets_by_class={
+            name: list(targets) for name, targets in plan.hook_targets_by_class.items()
+        },
+        field_targets_by_class={
+            name: list(targets) for name, targets in plan.field_targets_by_class.items()
+        },
+        supported_free_functions=list(plan.supported_free_functions),
+        skipped_free_functions=list(plan.skipped_free_functions),
+        emitted_classes=list(plan.emitted_classes),
+        intersection_stats=IntersectionStats(),
+    )
 
 
 def collect_plan(
@@ -451,20 +518,38 @@ def collect_plan(
 ) -> EmitPlan:
     platforms = intersection_platforms(target_platform)
     raw_plans = plans_by_platform or {}
+    if raw_plans:
+        exemplar = next(iter(raw_plans.values()))
+        hierarchy = exemplar.hierarchy or ClassHierarchy(root.classes)
+        ctx = exemplar.ctx
+        analysis = exemplar.type_analysis or TypeAnalysis(exemplar.objects, ctx)
+    else:
+        hierarchy = ClassHierarchy(root.classes)
+        classes = hierarchy.object_classes()
+        ctx = _ctx_from_root(root)
+        analysis = TypeAnalysis(build_class_lookup(classes), ctx)
     missing = [platform for platform in platforms if platform not in raw_plans]
     if missing:
         raw_plans = dict(raw_plans)
         for platform in missing:
-            raw_plans[platform] = collect_platform_plan(root, platform)
+            raw_plans[platform] = collect_platform_plan(
+                root, platform, hierarchy=hierarchy, ctx=ctx, analysis=analysis
+            )
 
     if target_platform in raw_plans:
         plan = (
-            copy.deepcopy(raw_plans[target_platform])
+            _copy_mutable_plan_collections(raw_plans[target_platform])
             if plans_by_platform
             else raw_plans[target_platform]
         )
     else:
-        plan = collect_platform_plan(root, target_platform)
+        plan = collect_platform_plan(
+            root,
+            target_platform,
+            hierarchy=hierarchy,
+            ctx=ctx,
+            analysis=analysis,
+        )
 
     result = collect_intersection(raw_plans, platforms=platforms)
     return _apply_intersection(plan, target_platform, result)
@@ -475,7 +560,7 @@ def plan_outputs(
     target_platform: str = "win",
     plan: EmitPlan | None = None,
     plans_by_platform: dict[str, EmitPlan] | None = None,
-) -> List[str]:
+) -> list[str]:
     if plan is None:
         plan = collect_plan(root, target_platform, plans_by_platform=plans_by_platform)
     outputs = [

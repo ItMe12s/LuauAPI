@@ -159,8 +159,6 @@ After generation, `build/luauapi-gen/` holds:
   SDK scan warnings, unscanned GD enum aliases, and handwritten stub provenance
 - `parity.json`: cross-platform method support matrix (see [Platform parity](platform-parity.md))
 - `audit.md`: skip audit grouped by bucket (see Audit buckets below)
-- `delegate_specs.py`: generated delegate type specs, installed before binding emit
-- `value_struct_specs.py`: generated value-struct type specs, installed before binding emit
 
 `emit/metadata.py` writes the schema and report.
 `emit/parity.py` writes `parity.json`.
@@ -190,7 +188,9 @@ See `tests/luau_codegen/audit/test_audit.py` for bucket rules.
 ## Type classification
 
 `convert/type_classification.py` maps each C++ arg or return to a `TypeInfo` kind.
-Container parsing lives in the same module. Normalization helpers live in `convert/type_map.py`.
+Container parsing lives in the same module.
+Normalization helpers live in `convert/type_primitives.py`.
+Name resolution lives in `convert/type_resolution.py`.
 Binding, hook, delegate, and stub emit all call `classify_arg()` or `classify_return()`.
 
 Resolution order in `_classify_core()`:
@@ -199,16 +199,16 @@ Resolution order in `_classify_core()`:
 2. Root pointer containers, audited pointer-grid fields, `ccCArray` views, and recursive supported composites
 3. `SeedValue` wrappers
 4. Primitives: `bool`, wide integers as string, numeric, string
-5. Value structs from `VALUE_TYPES` in `model/value_types.py` (via `convert/type_map.py`)
+5. Value structs from the `CodegenContext` value-type catalog
 6. Enums from `CodegenContext`
 7. Opaque handles from `OPAQUE_HANDLE_TYPES`
 8. `geode::Result<>` as boolean or string
 9. Callbacks (`std::function`, `geode::Function`) on args only
 10. cocos2d selectors on args only
-11. Delegate pointers on args only, via `model/delegate_specs.py`
+11. Delegate pointers on args only, via the `CodegenContext` delegate catalog
 12. Object pointers last
 
-`CALLBACK_ALIASES` and `CLASS_CALLBACK_ALIASES` in `type_map.py` expand shorthand names before classification.
+`CALLBACK_ALIASES` and `CLASS_CALLBACK_ALIASES` in `type_primitives.py` expand shorthand names before classification.
 Unsupported types return `None`, which becomes a skip reason such as `unsupported-arg:<type>`.
 
 ### Geode task handles
@@ -249,9 +249,8 @@ If broma already defines `{name}ToLua`, codegen skips renaming `{name}` to avoid
 ## Value structs
 
 Value structs are plain-data C++ structs marshalled as Lua tables in both directions.
-`model/value_types.py` is the single registry.
+`model/value_types.py` defines the immutable catalog built into each `CodegenContext`.
 Each `ValueTypeSpec` drives type classification, Luau stub emission, and generated check/push C++.
-`convert/type_map.py` re-exports `VALUE_TYPES` and `VALUE_CHECK_CXX_TYPES`.
 
 ### Generated check/push headers
 
@@ -295,10 +294,8 @@ Handwritten check/push for `UIButtonConfig` and `SmartPrefabResult` stay in `Typ
    These are not hand-typed.
    `emit/value_struct_specs.py` reads each struct's fields from the parsed Broma root
    and derives the `ValueTypeSpec` (member kinds, Luau stub, deps) automatically.
-   Specs write to `build/luauapi-gen/value_struct_specs.py` and install into `model/value_struct_specs.py`.
-   The repo copy of `model/value_struct_specs.py` is a stub (empty `VALUE_STRUCT_SPECS`).
-   It is not the runtime source.
-   Same pattern as `delegate_specs.py`.
+   Specs stay in the root-owned `CodegenContext`.
+   No Python module is generated or patched.
 
 ### Opt-in list
 
@@ -424,14 +421,14 @@ Each listed signature becomes a synthetic static `new(...)` factory that calls `
 
 ## Delegates
 
-Delegate pointer args bind only when a spec exists in `delegate_specs.py`.
+Delegate pointer args bind only when the root-owned `CodegenContext` contains a spec.
 
-Collection (`emit/delegates.py` `collect()`):
+Collection (`emit/delegates.py` `collect_delegate_specs()`):
 
 1. `parse/broma_delegates.py` scans `*.bro` for `*Delegate` and `*Protocol` classes.
    It keeps virtual methods whose args and returns classify.
 2. Known cocos delegates merge from `COCOS_DELEGATES` in `emit/delegates.py`.
-3. Specs write to `build/luauapi-gen/delegate_specs.py` and install into `model/delegate_specs.py`.
+3. Specs enter the root-owned `CodegenContext` for the same generation run.
 4. `LuaDelegates.gen.hpp` and `LuaDelegates.gen.cpp` emit C++ trampolines that call a Lua table.
 
 `convert/type_classification.py` maps each bound delegate pointer to a Lua table type from the spec.
@@ -472,9 +469,9 @@ See [delegates](../../reference/lua/delegates.md) for how scripts use delegate t
 - `src/framework/stack/Types.hpp`
 - `src/framework/stack/ContainerTables.hpp`
 - `tools/luau_codegen/model/delegate_specs.py`
-- `tools/luau_codegen/model/value_struct_specs.py`
 - `tools/luau_codegen/convert/type_classification.py`
-- `tools/luau_codegen/convert/type_map.py`
+- `tools/luau_codegen/convert/type_primitives.py`
+- `tools/luau_codegen/convert/type_resolution.py`
 - `tools/luau_codegen/emit/bindings/geode_enums.py`
 - `tools/luau_codegen/emit/luau_types/enums.py`
 - `tools/luau_codegen/emit/delegates.py`

@@ -1,9 +1,8 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import Dict, Optional
 
-from luau_codegen.convert.type_map import (
+from luau_codegen.convert.type_primitives import (
     CALLBACK_ALIASES,
     CLASS_CALLBACK_ALIASES,
     COMPOSITE_KINDS,
@@ -11,23 +10,19 @@ from luau_codegen.convert.type_map import (
     OPAQUE_HANDLE_TYPES,
     SEL_TYPES,
     STRING_TYPES,
-    VALUE_TYPES,
     WIDE_INTEGER_TYPES,
     TypeInfo,
     callback_inner,
-    cxx_class_name,
-    enum_cxx_type,
     is_out_reference,
     is_reference_type,
     iter_type_tree,
     normalize_type,
-    resolve_object_class,
     sel_lua_type,
     sel_variant,
     strip_ref,
     template_inner,
 )
-from luau_codegen.model import delegate_specs as _delegate_specs
+from luau_codegen.convert.type_resolution import cxx_class_name, enum_cxx_type, resolve_object_class
 from luau_codegen.model.cc_c_array import (
     CC_C_ARRAY_POINTER_TYPES,
     proven_cc_c_array_element,
@@ -82,9 +77,9 @@ def _nested_lua_type(info: TypeInfo) -> str:
 
 def _classify_child(
     raw: str,
-    object_classes: Dict[str, Class],
+    object_classes: dict[str, Class],
     ctx: CodegenContext | None = None,
-) -> Optional[TypeInfo]:
+) -> TypeInfo | None:
     normalized = normalize_type(raw)
     if normalized.endswith("*"):
         pointee = _parse_composite(normalized[:-1].strip(), object_classes, ctx=ctx)
@@ -131,9 +126,9 @@ def _tuple_lua_type(items: tuple[TypeInfo, ...]) -> str:
 
 def parse_std_pair(
     n: str,
-    object_classes: Dict[str, Class],
+    object_classes: dict[str, Class],
     ctx: CodegenContext | None = None,
-) -> Optional[TypeInfo]:
+) -> TypeInfo | None:
     inner = template_inner(n, "std::pair")
     if inner is None:
         return None
@@ -162,9 +157,9 @@ def parse_map_container(
     n: str,
     prefix: str,
     kind: str,
-    object_classes: Dict[str, Class],
+    object_classes: dict[str, Class],
     ctx: CodegenContext | None = None,
-) -> Optional[TypeInfo]:
+) -> TypeInfo | None:
     inner = template_inner(n, prefix)
     if inner is None:
         return None
@@ -190,9 +185,9 @@ def parse_set_container(
     n: str,
     prefix: str,
     kind: str,
-    object_classes: Dict[str, Class],
+    object_classes: dict[str, Class],
     ctx: CodegenContext | None = None,
-) -> Optional[TypeInfo]:
+) -> TypeInfo | None:
     inner = template_inner(n, prefix)
     if inner is None:
         return None
@@ -212,9 +207,9 @@ def parse_set_container(
 
 def parse_container(
     n: str,
-    object_classes: Dict[str, Class],
+    object_classes: dict[str, Class],
     ctx: CodegenContext | None = None,
-) -> Optional[TypeInfo]:
+) -> TypeInfo | None:
     for prefix, kind in _MAP_CONTAINER_PREFIXES:
         parsed = parse_map_container(n, prefix, kind, object_classes, ctx=ctx)
         if parsed is not None:
@@ -237,9 +232,9 @@ def _with_ref_flags(
 
 def parse_std_array(
     n: str,
-    object_classes: Dict[str, Class],
+    object_classes: dict[str, Class],
     ctx: CodegenContext | None = None,
-) -> Optional[TypeInfo]:
+) -> TypeInfo | None:
     inner = template_inner(n, "std::array")
     if inner is None:
         return None
@@ -266,9 +261,9 @@ def parse_std_array(
 
 def parse_gd_vector(
     n: str,
-    object_classes: Dict[str, Class],
+    object_classes: dict[str, Class],
     ctx: CodegenContext | None = None,
-) -> Optional[TypeInfo]:
+) -> TypeInfo | None:
     inner = template_inner(n, "gd::vector")
     if inner is None:
         return None
@@ -297,9 +292,9 @@ def parse_cc_c_array_view(
     n: str,
     owner_class: str,
     field_name: str,
-    object_classes: Dict[str, Class],
+    object_classes: dict[str, Class],
     ctx: CodegenContext | None = None,
-) -> Optional[TypeInfo]:
+) -> TypeInfo | None:
     if normalize_type(n) not in CC_C_ARRAY_POINTER_TYPES:
         return None
     element_short = proven_cc_c_array_element(owner_class, field_name)
@@ -321,9 +316,9 @@ def parse_audited_gj_pointer_field(
     n: str,
     owner_class: str,
     field_name: str,
-    object_classes: Dict[str, Class],
+    object_classes: dict[str, Class],
     ctx: CodegenContext | None = None,
-) -> Optional[TypeInfo]:
+) -> TypeInfo | None:
     spec = audited_gj_pointer_field_spec(owner_class, field_name, n)
     if spec is None:
         return None
@@ -341,9 +336,9 @@ def parse_audited_gj_pointer_field(
 
 def parse_std_tuple(
     n: str,
-    object_classes: Dict[str, Class],
+    object_classes: dict[str, Class],
     ctx: CodegenContext | None = None,
-) -> Optional[TypeInfo]:
+) -> TypeInfo | None:
     inner = template_inner(n, "std::tuple")
     if inner is None:
         return None
@@ -364,9 +359,9 @@ def parse_std_tuple(
 
 def _parse_composite(
     n: str,
-    object_classes: Dict[str, Class],
+    object_classes: dict[str, Class],
     ctx: CodegenContext | None = None,
-) -> Optional[TypeInfo]:
+) -> TypeInfo | None:
     for parser in (
         parse_gd_vector,
         parse_std_array,
@@ -382,9 +377,9 @@ def _parse_composite(
 
 def _parse_root_pointer_composite(
     n: str,
-    object_classes: Dict[str, Class],
+    object_classes: dict[str, Class],
     ctx: CodegenContext | None = None,
-) -> Optional[TypeInfo]:
+) -> TypeInfo | None:
     for parser in (parse_gd_vector, parse_std_array, parse_container):
         parsed = parser(n, object_classes, ctx=ctx)
         if parsed is not None:
@@ -410,7 +405,7 @@ def _strip_task_handle_ref(t: str) -> tuple[str, str]:
     return raw, "value"
 
 
-def _task_handle_inner(n: str) -> Optional[str]:
+def _task_handle_inner(n: str) -> str | None:
     for prefix in ("arc::TaskHandle", "TaskHandle"):
         inner = template_inner(n, prefix)
         if inner is not None:
@@ -427,11 +422,11 @@ def _task_handle_lua_inner(inner: TypeInfo) -> str:
 
 def _parse_task_handle_type(
     t: str,
-    object_classes: Dict[str, Class],
+    object_classes: dict[str, Class],
     *,
     for_return: bool,
     ctx: CodegenContext | None = None,
-) -> Optional[TypeInfo]:
+) -> TypeInfo | None:
     raw, ref_kind = _strip_task_handle_ref(t)
     if not for_return:
         return None
@@ -471,7 +466,7 @@ def _parse_task_handle_type(
     )
 
 
-def _parse_result_type(n: str) -> Optional[TypeInfo]:
+def _parse_result_type(n: str) -> TypeInfo | None:
     s = strip_ref(n)
     for prefix in ("geode::Result<", "Result<"):
         if s.startswith(prefix) and s.endswith(">"):
@@ -483,8 +478,8 @@ def _parse_result_type(n: str) -> Optional[TypeInfo]:
 
 
 def _parse_callback(
-    n: str, object_classes: Dict[str, Class], ctx: CodegenContext | None = None
-) -> Optional[TypeInfo]:
+    n: str, object_classes: dict[str, Class], ctx: CodegenContext | None = None
+) -> TypeInfo | None:
     inner = callback_inner(n)
     if inner is None:
         return None
@@ -565,13 +560,13 @@ def _with_out_ptr_flags(info: TypeInfo) -> TypeInfo:
 
 def _classify_core(
     t: str,
-    object_classes: Dict[str, Class],
+    object_classes: dict[str, Class],
     *,
     for_return: bool,
     ctx: CodegenContext | None = None,
     owner_class: str = "",
     field_name: str = "",
-) -> Optional[TypeInfo]:
+) -> TypeInfo | None:
     resolved = _resolve_ctx(ctx)
     is_ref = is_reference_type(t)
     is_out = is_out_reference(t)
@@ -614,13 +609,17 @@ def _classify_core(
         return TypeInfo("number", n, "number", is_ref=is_ref, is_out=is_out)
     if n in STRING_TYPES:
         return TypeInfo("string", n, "string", is_ref=is_ref, is_out=is_out)
-    if n in VALUE_TYPES:
+    value_types = resolved.value_types.types
+    if n in value_types:
+        lua_type = value_types[n]
+        cxx_type = resolved.value_types.check_cxx_types.get(lua_type, n)
         return TypeInfo(
             "value",
-            n,
-            VALUE_TYPES.get(n, VALUE_TYPES.get(base, n)),
+            cxx_type,
+            lua_type,
             is_ref=is_ref,
             is_out=is_out,
+            value_deferred_init=cxx_type in resolved.value_types.deferred_cxx_types,
         )
     if base in resolved.enum_types or n in resolved.enum_types:
         cxx = enum_cxx_type(n, base, ctx=resolved)
@@ -654,7 +653,7 @@ def _classify_core(
                 class_name=sel_variant(n),
             )
     if n.endswith("*"):
-        spec = _delegate_specs.lookup_delegate(n)
+        spec = resolved.delegates.lookup(n)
         if spec is not None:
             lua_table = _delegate_lua_type(spec)
             return TypeInfo(
@@ -664,6 +663,7 @@ def _classify_core(
                 class_name=spec.lua_name,
                 is_ref=is_ref,
                 is_out=is_out,
+                delegate_create_fn=spec.create_fn,
             )
     if n.endswith("*"):
         cls = resolve_object_class(n, object_classes)
@@ -682,12 +682,12 @@ def _classify_core(
 
 def classify_arg(
     t: str,
-    object_classes: Dict[str, Class],
+    object_classes: dict[str, Class],
     *,
     owner_class: str = "",
     field_name: str = "",
     ctx: CodegenContext | None = None,
-) -> Optional[TypeInfo]:
+) -> TypeInfo | None:
     n = normalize_type(t)
     if owner_class:
         class_aliases = CLASS_CALLBACK_ALIASES.get(owner_class, {})
@@ -721,12 +721,12 @@ def classify_arg(
 
 def classify_return(
     t: str,
-    object_classes: Dict[str, Class],
+    object_classes: dict[str, Class],
     *,
     owner_class: str = "",
     field_name: str = "",
     ctx: CodegenContext | None = None,
-) -> Optional[TypeInfo]:
+) -> TypeInfo | None:
     n = strip_ref(t)
     if n in ("", "void"):
         return TypeInfo("void", "void", "()")
@@ -750,7 +750,7 @@ def classify_return(
 
 def require_classify_arg(
     t: str,
-    object_classes: Dict[str, Class],
+    object_classes: dict[str, Class],
     *,
     owner_class: str = "",
     ctx: CodegenContext | None = None,
@@ -762,7 +762,7 @@ def require_classify_arg(
 
 
 def require_classify_return(
-    t: str, object_classes: Dict[str, Class], *, ctx: CodegenContext | None = None
+    t: str, object_classes: dict[str, Class], *, ctx: CodegenContext | None = None
 ) -> TypeInfo:
     info = classify_return(t, object_classes, ctx=ctx)
     if info is None:
@@ -772,7 +772,7 @@ def require_classify_return(
 
 def method_input_arg_count(
     method,
-    object_classes: Dict[str, Class],
+    object_classes: dict[str, Class],
     *,
     owner_class: str = "",
     ctx: CodegenContext | None = None,

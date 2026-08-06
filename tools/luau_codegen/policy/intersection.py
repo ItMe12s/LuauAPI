@@ -6,14 +6,7 @@ from typing import Any
 from luau_codegen.policy.fields import field_key
 from luau_codegen.policy.filtering import method_key
 from luau_codegen.policy.free_functions import free_function_key
-from luau_codegen.util import INTERSECTION_PLATFORMS
-
-
-def intersection_platforms(target_platform: str = "win") -> tuple[str, ...]:
-    if target_platform == "mac":
-        return ("win", "imac", "m1", "ios", "android32", "android64")
-    mac = "imac" if target_platform == "imac" else "m1"
-    return ("win", mac, "ios", "android32", "android64")
+from luau_codegen.model.platforms import INTERSECTION_PLATFORMS
 
 
 @dataclass

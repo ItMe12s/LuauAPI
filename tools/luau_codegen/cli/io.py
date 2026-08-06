@@ -27,12 +27,8 @@ def _write_if_changed(path: str, content: str) -> None:
             raise
 
 
-def _cleanup_orphans(out_dir: str, current_files: set[str]) -> None:
+def _cleanup_stale_bindings(out_dir: str, current_files: set[str]) -> None:
     src_dir = os.path.join(out_dir, "src")
-    legacy = os.path.join(src_dir, "luauapi_generated_bindings.cpp")
-    if os.path.exists(legacy):
-        os.remove(legacy)
-
     if not os.path.isdir(src_dir):
         return
 
@@ -40,11 +36,3 @@ def _cleanup_orphans(out_dir: str, current_files: set[str]) -> None:
         rel = os.path.relpath(path, out_dir).replace("\\", "/")
         if rel not in current_files:
             os.remove(path)
-
-
-def _cleanup_type_orphans(types_out: str, type_files: dict[str, str]) -> None:
-    for pattern in ("*.d.luau", "luau-lsp.json"):
-        for orphan in glob.glob(os.path.join(types_out, pattern)):
-            name = os.path.basename(orphan)
-            if name not in type_files:
-                os.remove(orphan)

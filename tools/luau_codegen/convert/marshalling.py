@@ -1,16 +1,14 @@
 from __future__ import annotations
 
 from luau_codegen.parse.broma import Arg
-from luau_codegen.convert.type_map import (
+from luau_codegen.convert.type_primitives import (
     COMPOSITE_KINDS,
     TypeInfo,
     UNSIGNED_NUMERIC_TYPES,
-    VALUE_CHECK_CXX_TYPES,
     WIDE_INTEGER_TYPES,
     is_sel_type,
     sel_variant as sel_variant_name,
 )
-from luau_codegen.model import delegate_specs as _delegate_specs
 from luau_codegen.model.nested_containers import AUDITED_POINTER_GRID_KIND
 from luau_codegen.emit.types_binding import emit_value_default_expr, emit_value_local_decl
 
@@ -124,11 +122,8 @@ def emit_stack_check(
             f'        {_prefix(declare, var)} = luax::check<std::string>(L, {idx}, "{label}");\n'
         ]
     if info.kind == "value":
-        value_check = VALUE_CHECK_CXX_TYPES.get(info.lua_type)
-        if value_check is None:
-            raise ValueError(f"unsupported value type: {info.lua_type}")
         return [
-            f'        {_prefix(declare, var)} = luax::check<{value_check}>(L, {idx}, "{label}");\n'
+            f'        {_prefix(declare, var)} = luax::check<{info.cxx_type}>(L, {idx}, "{label}");\n'
         ]
     if info.kind == "opaque_handle":
         cxx = info.cxx_type
@@ -202,14 +197,13 @@ def _push_impl(
     if info.kind == "wideint":
         return [f"{indent}luax::pushIntegerString(L, {expr});\n"]
     if info.kind == "enum":
-        return [f"{indent}lua_pushnumber(L, static_cast<double>(static_cast<int>({expr})));\n"]
+        return [f"{indent}lua_pushnumber(L, static_cast<double>(std::to_underlying({expr})));\n"]
     if info.kind == "string":
         if info.cxx_type.endswith("*"):
             return [f"{indent}luax::push(L, {expr});\n"]
         return [f"{indent}luax::push(L, std::string({expr}));\n"]
     if info.kind == "value":
-        if info.lua_type in VALUE_CHECK_CXX_TYPES:
-            return [f"{indent}luax::push(L, {expr});\n"]
+        return [f"{indent}luax::push(L, {expr});\n"]
     if info.kind in ("task_handle", "optional_task_handle"):
         return _push_task_handle(info, expr, indent=indent)
     if info.kind == "opaque_handle":
@@ -368,14 +362,9 @@ def _emit_callback_pop(var: str, ret: TypeInfo) -> list[str]:
             "                },\n",
         ]
     if ret.kind == "value":
-        check_type = VALUE_CHECK_CXX_TYPES.get(ret.lua_type)
-        if check_type is None:
-            raise ValueError(
-                f"unsupported callback return value type {ret.lua_type!r} ({ret.cxx_type})"
-            )
         return [
             "                +[](lua_State* L, void* raw) {\n",
-            f'                    *static_cast<{ret.cxx_type}*>(raw) = luax::check<{check_type}>(L, -1, "{var} callback return");\n',
+            f'                    *static_cast<{ret.cxx_type}*>(raw) = luax::check<{ret.cxx_type}>(L, -1, "{var} callback return");\n',
             "                },\n",
         ]
     raise ValueError(
@@ -401,7 +390,7 @@ def _emit_invoke_failure_return(ret: TypeInfo) -> str:
     if ret.kind == "seed_value":
         return f"{ret.cxx_type}{{}}"
     if ret.kind == "value":
-        return emit_value_default_expr(ret.cxx_type)
+        return emit_value_default_expr(ret)
     if ret.kind == "string":
         return "std::string()"
     raise ValueError(
@@ -431,7 +420,7 @@ def _emit_callback_lambda(idx: int, var: str, info: TypeInfo, label: str) -> lis
     else:
         lines.append(f"        auto {var} = [{var}_cb]({params}) -> {ret_type} {{\n")
         if ret.kind == "value":
-            lines.append(f"            {emit_value_local_decl(ret.cxx_type, f'{var}_ret')}\n")
+            lines.append(f"            {emit_value_local_decl(ret, f'{var}_ret')}\n")
         else:
             lines.append(f"            {ret_type} {var}_ret{{}};\n")
     if info.callback_args:
@@ -552,14 +541,13 @@ def check_arg(arg: Arg, info: TypeInfo, idx: int, var: str, label: str) -> list[
     if info.kind == "sel":
         return check_sel_handler(idx, var, info, label)
     if info.kind == "delegate":
-        spec = _delegate_specs.lookup_delegate(info.cxx_type)
-        if spec is None:
+        if not info.delegate_create_fn:
             raise ValueError(f"unknown delegate: {info.cxx_type}")
         return [
             f'        if (!lua_istable(L, {idx})) luaL_error(L, "{label} expected delegate table at arg %d", {idx});\n',
-            f"        auto {var}_trampoline = luax::{spec.create_fn}(L, {idx});\n",
+            f"        auto {var}_trampoline = luax::{info.delegate_create_fn}(L, {idx});\n",
             f'        if (!{var}_trampoline) luaL_error(L, "{label}: failed to create delegate");\n',
-            f"        auto {var} = static_cast<{spec.cxx_type}*>({var}_trampoline);\n",
+            f"        auto {var} = static_cast<{info.cxx_type.removesuffix('*')}*>({var}_trampoline);\n",
         ]
     return emit_stack_check(info, idx, var, label, declare=True)
 

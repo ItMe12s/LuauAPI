@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import sys
+from functools import lru_cache
 from pathlib import Path
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -10,30 +11,7 @@ TOOLS_DIR = os.path.join(ROOT, "tools")
 if TOOLS_DIR not in sys.path:
     sys.path.insert(0, TOOLS_DIR)
 
-from luau_codegen.emit.delegates import (  # type: ignore[import-unresolved]
-    DELEGATE_SPECS_MODULE,
-    collect as collect_delegate_specs,
-    fallback_bindings_dir,
-    install_delegate_specs_module,
-)
-from luau_codegen.emit.luau_types import TYPES_FILE  # type: ignore[import-unresolved]
-from luau_codegen.emit.value_struct_specs import (  # type: ignore[import-unresolved]
-    VALUE_STRUCT_SPECS_MODULE,
-    collect_value_struct_specs,
-    install_value_struct_specs_module,
-)
-from luau_codegen.parse.collect import collect_bindings_root  # type: ignore[import-unresolved]
-
-
-def _install_fixture_delegate_specs() -> None:
-    fixture = fallback_bindings_dir()
-    if not fixture.is_dir():
-        return
-    install_delegate_specs_module(
-        collect_delegate_specs(fixture),
-        specs_path=fixture / "_fixture_delegate_specs.py",
-        module_name=DELEGATE_SPECS_MODULE,
-    )
+DELEGATE_FIXTURE_DIR = Path(ROOT) / "tests" / "luau_codegen" / "fixtures" / "delegate_bindings"
 
 
 def resolve_test_bindings_dir(
@@ -58,27 +36,28 @@ def resolve_test_bindings_dir(
     return None
 
 
-def _install_fixture_value_struct_specs() -> None:
+@lru_cache(maxsize=1)
+def fixture_codegen_context():
+    from luau_codegen.emit.delegates import build_delegate_catalog, collect_delegate_specs
+    from luau_codegen.emit.value_struct_specs import collect_value_struct_specs
+    from luau_codegen.model.codegen_context import CodegenContext
+    from luau_codegen.parse.collect import collect_bindings_root
+
+    ctx = CodegenContext.static()
     bindings = resolve_test_bindings_dir()
-    if not bindings:
-        return
-    root = collect_bindings_root(bindings)
-    specs = collect_value_struct_specs(root)
-    install_value_struct_specs_module(
-        specs,
-        specs_path=Path(bindings) / "_fixture_value_struct_specs.py",
-        module_name=VALUE_STRUCT_SPECS_MODULE,
-        preserve_existing_on_empty=True,
-    )
+    if bindings:
+        root = collect_bindings_root(bindings)
+        ctx = ctx.with_value_specs(collect_value_struct_specs(root))
+    if DELEGATE_FIXTURE_DIR.is_dir():
+        raw = collect_delegate_specs(DELEGATE_FIXTURE_DIR, ctx)
+        ctx = ctx.with_catalogs(
+            value_types=ctx.value_types,
+            delegates=build_delegate_catalog(raw, ctx),
+        )
+    return ctx
 
 
-_install_fixture_delegate_specs()
-_install_fixture_value_struct_specs()
-DELEGATE_SPECS = sys.modules[DELEGATE_SPECS_MODULE].DELEGATE_SPECS
-
-
-def reinstall_fixture_value_struct_specs() -> None:
-    _install_fixture_value_struct_specs()
+DELEGATE_SPECS = fixture_codegen_context().delegates.specs
 
 
 def all_platforms(value: str = "0x1") -> dict[str, str]:
@@ -92,4 +71,6 @@ def all_platforms(value: str = "0x1") -> dict[str, str]:
 
 
 def types_text(files: dict[str, str]) -> str:
+    from luau_codegen.emit.luau_types import TYPES_FILE
+
     return files[TYPES_FILE]

@@ -1,14 +1,18 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from luau_codegen.cli.io import _write_if_changed
 from luau_codegen.model.value_types import (
-    COCOS_VALUE_STRUCTS,
     CocosValueStructDescriptor,
     PushFieldDescriptor,
     _check_lines,
 )
+
+if TYPE_CHECKING:
+    from luau_codegen.convert.type_primitives import TypeInfo
+    from luau_codegen.model.codegen_context import CodegenContext
 
 TYPES_GEN_REL_PATH = "src/framework/stack/Types.generated.hpp"
 TYPES_GEN_CONTAINERS_REL_PATH = "src/framework/stack/Types.generated.containers.hpp"
@@ -22,54 +26,20 @@ def types_gen_containers_rel_path() -> str:
     return TYPES_GEN_CONTAINERS_REL_PATH
 
 
-_DEFER_FIELD_KINDS = frozenset({"container", "object_nullable", "opaque_nullable"})
+def _needs_deferred_emission(desc: CocosValueStructDescriptor, ctx: CodegenContext) -> bool:
+    return desc.cxx_type in ctx.value_types.deferred_cxx_types
 
 
-def _direct_defer(desc: CocosValueStructDescriptor) -> bool:
-    if any(field.kind in _DEFER_FIELD_KINDS for field in desc.check_fields):
-        return True
-    return any(field.kind in _DEFER_FIELD_KINDS for field in desc.push_fields)
+def emit_value_local_decl(info: TypeInfo, name: str) -> str:
+    if info.value_deferred_init:
+        return f"{info.cxx_type} {name};"
+    return f"{info.cxx_type} {name}{{}};"
 
 
-def _nested_refs(desc: CocosValueStructDescriptor) -> set[str]:
-    refs: set[str] = set()
-    for field in desc.check_fields:
-        if field.kind == "nested" and field.nested_type:
-            refs.add(field.nested_type)
-    for field in desc.push_fields:
-        if field.kind == "nested" and field.nested_type:
-            refs.add(field.nested_type)
-    return refs
-
-
-def _deferred_cxx_types() -> frozenset[str]:
-    deferred = {desc.cxx_type for desc in COCOS_VALUE_STRUCTS if _direct_defer(desc)}
-    changed = True
-    while changed:
-        changed = False
-        for desc in COCOS_VALUE_STRUCTS:
-            if desc.cxx_type in deferred:
-                continue
-            if _nested_refs(desc) & deferred:
-                deferred.add(desc.cxx_type)
-                changed = True
-    return frozenset(deferred)
-
-
-def _needs_deferred_emission(desc: CocosValueStructDescriptor) -> bool:
-    return desc.cxx_type in _deferred_cxx_types()
-
-
-def emit_value_local_decl(cxx_type: str, name: str) -> str:
-    if cxx_type in _deferred_cxx_types():
-        return f"{cxx_type} {name};"
-    return f"{cxx_type} {name}{{}};"
-
-
-def emit_value_default_expr(cxx_type: str) -> str:
-    if cxx_type in _deferred_cxx_types():
-        return f"{cxx_type}()"
-    return f"{cxx_type}{{}}"
+def emit_value_default_expr(info: TypeInfo) -> str:
+    if info.value_deferred_init:
+        return f"{info.cxx_type}()"
+    return f"{info.cxx_type}{{}}"
 
 
 def _emit_check_struct(desc: CocosValueStructDescriptor) -> str:
@@ -124,7 +94,7 @@ def _emit_push_field(field: PushFieldDescriptor) -> str:
         )
     if field.kind == "enum":
         return (
-            f"        lua_pushnumber(L, static_cast<double>(static_cast<int>({field.member})));\n"
+            f"        lua_pushnumber(L, static_cast<double>(std::to_underlying({field.member})));\n"
             f'        lua_setfield(L, -2, "{field.name}");\n'
         )
     if field.kind == "object_nullable":
@@ -183,36 +153,44 @@ def _types_preamble() -> list[str]:
         "\n",
         "#include <cocos2d.h>\n",
         "#include <lua.h>\n",
+        "#include <utility>\n",
         "\n",
         "namespace luax {\n",
     ]
 
 
-def emit_types_generated_hpp() -> str:
-    structs = [desc for desc in COCOS_VALUE_STRUCTS if not _needs_deferred_emission(desc)]
+def emit_types_generated_hpp(ctx: CodegenContext) -> str:
+    structs = [
+        desc for desc in ctx.value_types.cocos_structs if not _needs_deferred_emission(desc, ctx)
+    ]
+    emit_ccrect = any(spec.cocos_emit == "ccrect" for spec in ctx.value_types.specs)
+    lines = _types_preamble()
+    for desc in structs:
+        lines.append("\n")
+        lines.append(_emit_check_struct(desc))
+    if emit_ccrect:
+        lines.append("\n")
+        lines.append(_emit_ccrect_check())
+    lines.append("\n")
+    for desc in structs:
+        param = desc.push_fields[0].member.split(".", 1)[0]
+        lines.append(_emit_push_struct(desc, param))
+    if emit_ccrect:
+        lines.append("\n")
+        lines.append(_emit_ccrect_push())
+    lines.append("} // namespace luax\n")
+    return "".join(lines)
+
+
+def emit_types_generated_containers_hpp(ctx: CodegenContext) -> str:
+    structs = [
+        desc for desc in ctx.value_types.cocos_structs if _needs_deferred_emission(desc, ctx)
+    ]
     lines = _types_preamble()
     for desc in structs:
         lines.append("\n")
         lines.append(_emit_check_struct(desc))
     lines.append("\n")
-    lines.append(_emit_ccrect_check())
-    lines.append("\n")
-    for desc in structs:
-        param = desc.push_fields[0].member.split(".", 1)[0]
-        lines.append(_emit_push_struct(desc, param))
-    lines.append("\n")
-    lines.append(_emit_ccrect_push())
-    lines.append("} // namespace luax\n")
-    return "".join(lines)
-
-
-def emit_types_generated_containers_hpp() -> str:
-    structs = [desc for desc in COCOS_VALUE_STRUCTS if _needs_deferred_emission(desc)]
-    lines = _types_preamble()
-    for desc in structs:
-        lines.append("\n")
-        lines.append(_emit_check_struct(desc))
-    lines.append("\n")
     for desc in structs:
         param = desc.push_fields[0].member.split(".", 1)[0]
         lines.append(_emit_push_struct(desc, param))
@@ -220,9 +198,9 @@ def emit_types_generated_containers_hpp() -> str:
     return "".join(lines)
 
 
-def write_types_generated(gen_out: Path | str) -> str:
+def write_types_generated(gen_out: Path | str, ctx: CodegenContext) -> str:
     base_path = Path(gen_out) / TYPES_GEN_REL_PATH
     containers_path = Path(gen_out) / TYPES_GEN_CONTAINERS_REL_PATH
-    _write_if_changed(str(base_path), emit_types_generated_hpp())
-    _write_if_changed(str(containers_path), emit_types_generated_containers_hpp())
+    _write_if_changed(str(base_path), emit_types_generated_hpp(ctx))
+    _write_if_changed(str(containers_path), emit_types_generated_containers_hpp(ctx))
     return str(base_path)

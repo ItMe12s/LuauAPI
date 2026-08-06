@@ -5,6 +5,7 @@ import unittest
 from luau_codegen.parse.cpp_scan import (  # type: ignore[import-unresolved]
     balanced_delimiter_end,
     find_unbalanced,
+    strip_comments,
     template_preceded,
 )
 
@@ -31,3 +32,29 @@ class CppScanTests(unittest.TestCase):
     def test_template_preceded_false_without_template(self) -> None:
         header = "class GEODE_DLL Foo {"
         self.assertFalse(template_preceded(header, 0))
+
+    def test_strip_comments_preserves_literals_offsets_and_newlines(self) -> None:
+        text = (
+            'auto url = "https://example.test/*path*/"; // line\n'
+            "auto slash = '/'; /* block\ncomment */ int value;\n"
+            'auto raw = u8R"tag(// raw\n/* raw */)tag";\n'
+        )
+        stripped = strip_comments(text)
+        self.assertEqual(len(stripped), len(text))
+        self.assertEqual(stripped.count("\n"), text.count("\n"))
+        self.assertIn('"https://example.test/*path*/"', stripped)
+        self.assertIn('u8R"tag(// raw\n/* raw */)tag"', stripped)
+        self.assertNotIn("// line", stripped)
+        self.assertNotIn("/* block", stripped)
+
+    def test_strip_comments_handles_escaped_and_unterminated_input(self) -> None:
+        text = 'auto value = "escaped \\" // literal"; /* unterminated\nstill comment'
+        stripped = strip_comments(text)
+        self.assertIn('// literal"', stripped)
+        self.assertEqual(stripped.count("\n"), 1)
+        self.assertNotIn("unterminated", stripped)
+
+    def test_balanced_end_ignores_comments_and_raw_literal_braces(self) -> None:
+        text = 'void f() { /* } */ auto raw = R"tag({ })tag"; // }\n return; }'
+        start = text.index("{")
+        self.assertEqual(balanced_delimiter_end(text, start), len(text) - 1)
