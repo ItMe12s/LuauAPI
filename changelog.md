@@ -10,6 +10,8 @@
 ## 0.1.0-beta.21
 
 - Added `geode.MouseInputEvent`, `geode.MouseMoveEvent`, and `geode.ScrollWheelEvent` listeners.
+- Fixed `gd3d.Transform.fromAxisAngle` to normalize axes and return identity for near-zero axes.
+- Updated core, scheduler, listener, web, ImGui, and `gd3d` internals for simpler ownership and less hot-path work.
 
 ## 0.1.0-beta.20
 

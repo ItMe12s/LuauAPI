@@ -149,7 +149,7 @@ for subsystems that need runtime shutdown cleanup.
 - `clearAll` locks each live entry and runs a caller-supplied shutdown callback, then clears the pool.
 
 Web tasks/listeners and WebSocket connections/servers use this pool.
-Web, keyboard, and mouse listeners store `geode::ListenerHandle` directly; resetting or destroying it disconnects the listener.
+Web, keyboard, and mouse listeners store `geode::ListenerHandle` directly, resetting or destroying it disconnects the listener.
 On runtime shutdown, `clearWebState` clears web callbacks and `clearWsState` shuts down every live socket.
 
 ## Mod sandbox
