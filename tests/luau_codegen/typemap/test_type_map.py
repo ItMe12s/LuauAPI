@@ -5,7 +5,7 @@ import shutil
 import tempfile
 import unittest
 
-import test_support  # noqa: F401 - installs codegen test fixtures
+from test_support import fixture_codegen_context
 from luau_codegen.convert.type_primitives import (  # type: ignore[import-unresolved]
     COCOS_ENUM_TYPES,
     GD_ENUM_TYPES,
@@ -24,6 +24,8 @@ from luau_codegen.parse.collect import collect_bindings_root  # type: ignore[imp
 
 
 class GeodeEnumRegistrationTests(unittest.TestCase):
+    ctx = fixture_codegen_context()
+
     def test_with_geode_enums_stores_members(self) -> None:
         ctx = CodegenContext.with_geode_enums(
             {
@@ -199,7 +201,7 @@ class GeodeEnumRegistrationTests(unittest.TestCase):
     def test_classify_cctouch_delegate(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")
         objects = {"CCObject": ccobject}
-        info = classify_arg("cocos2d::CCTouchDelegate*", objects)
+        info = classify_arg("cocos2d::CCTouchDelegate*", objects, ctx=self.ctx)
         self.assertIsNotNone(info)
         assert info is not None
         self.assertEqual(info.kind, "delegate")
@@ -209,7 +211,7 @@ class GeodeEnumRegistrationTests(unittest.TestCase):
     def test_classify_cc_director_delegate(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")
         objects = {"CCObject": ccobject}
-        info = classify_arg("cocos2d::CCDirectorDelegate*", objects)
+        info = classify_arg("cocos2d::CCDirectorDelegate*", objects, ctx=self.ctx)
         self.assertIsNotNone(info)
         assert info is not None
         self.assertEqual(info.kind, "delegate")
@@ -736,6 +738,8 @@ class ContainerTypeMapTests(unittest.TestCase):
 
 
 class GdEnumTypeMapTests(unittest.TestCase):
+    ctx = fixture_codegen_context()
+
     _RESIDUAL_GD_ENUMS = (
         "BoomListType",
         "ChestSpriteState",
@@ -811,7 +815,7 @@ class GdEnumTypeMapTests(unittest.TestCase):
 
     def test_registered_state_structs_classify_as_value(self) -> None:
         for name in self._REGISTERED_STATE_VALUE_STRUCTS:
-            info = classify_arg(name, {})
+            info = classify_arg(name, {}, ctx=self.ctx)
             self.assertIsNotNone(info, name)
             assert info is not None
             self.assertEqual(info.kind, "value", name)
@@ -819,7 +823,7 @@ class GdEnumTypeMapTests(unittest.TestCase):
 
     def test_bound_runtime_state_class_is_value_not_enum(self) -> None:
         objects = codegen_object_map(Root(classes=[Class(name="GJGameState")]))
-        info = classify_arg("GJGameState", objects)
+        info = classify_arg("GJGameState", objects, ctx=self.ctx)
         self.assertIsNotNone(info)
         assert info is not None
         self.assertEqual(info.kind, "value")
@@ -952,6 +956,8 @@ class CocosOpaqueHandleTests(unittest.TestCase):
 
 
 class ValueStructGateTests(unittest.TestCase):
+    ctx = fixture_codegen_context()
+
     def test_classify_smart_prefab_result_value(self) -> None:
         info = classify_arg("SmartPrefabResult const&", {})
         self.assertIsNotNone(info)
@@ -970,7 +976,7 @@ class ValueStructGateTests(unittest.TestCase):
         self.assertEqual(info.value_type.lua_type, "SmartPrefabResult")
 
     def test_classify_chance_object_vector_is_value_vector(self) -> None:
-        info = classify_arg("gd::vector<ChanceObject>", {})
+        info = classify_arg("gd::vector<ChanceObject>", {}, ctx=self.ctx)
         self.assertIsNotNone(info)
         assert info is not None
         self.assertEqual(info.kind, "vector")

@@ -10,6 +10,7 @@ import warnings
 from unittest import mock
 
 from test_support import ROOT
+from luau_codegen.model.delegate_specs import DelegateCatalog  # type: ignore[import-unresolved]
 from luau_codegen.parse.broma import Class, Root  # type: ignore[import-unresolved]
 from luau_codegen.parse.collect import collect_bindings_root  # type: ignore[import-unresolved]
 
@@ -100,7 +101,7 @@ class CodegenExitCodeTests(unittest.TestCase):
                 with mock.patch.object(
                     cg,
                     "emit_delegate_artifacts",
-                    return_value=[],
+                    return_value=DelegateCatalog.empty(),
                 ):
                     with mock.patch.object(
                         cg.emit_bindings,

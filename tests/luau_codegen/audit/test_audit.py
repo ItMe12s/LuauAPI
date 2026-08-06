@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import unittest
 
-from test_support import all_platforms
+from test_support import all_platforms, fixture_codegen_context
 from luau_codegen.emit.audit import collect_audit, emit_markdown as emit_audit_markdown  # type: ignore[import-unresolved]
 from luau_codegen.emit.plan import collect_plan  # type: ignore[import-unresolved]
 from luau_codegen.parse.broma import Arg, Class, Function, Method, Root  # type: ignore[import-unresolved]
@@ -11,6 +11,8 @@ from luau_codegen.emit.plan import EmitPlan  # type: ignore[import-unresolved]
 
 
 class AuditReportTests(unittest.TestCase):
+    ctx = fixture_codegen_context()
+
     def test_audit_classifies_callback_method(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")
         target = Class(
@@ -55,7 +57,7 @@ class AuditReportTests(unittest.TestCase):
                 ),
             ],
         )
-        root = Root(classes=[ccobject, target])
+        root = Root(classes=[ccobject, target], codegen_ctx=self.ctx)
         plan = collect_plan(root, "win")
 
         data = collect_audit(plan, root)
@@ -80,7 +82,7 @@ class AuditReportTests(unittest.TestCase):
                 )
             ],
         )
-        root = Root(classes=[ccobject, target])
+        root = Root(classes=[ccobject, target], codegen_ctx=self.ctx)
         plan = collect_plan(root, "win")
 
         data = collect_audit(plan, root)

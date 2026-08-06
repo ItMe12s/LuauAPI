@@ -332,6 +332,7 @@ class CallbackMarshallingTests(unittest.TestCase):
             cxx_type="cocos2d::CCDirectorDelegate*",
             lua_type="{ updateProjection: ... }",
             class_name="CCDirectorDelegate",
+            delegate_create_fn="LuaCCDirectorDelegate::create",
         )
         text = "".join(
             check_arg(
@@ -352,6 +353,7 @@ class CallbackMarshallingTests(unittest.TestCase):
             cxx_type="cocos2d::CCTouchDelegate*",
             lua_type="{ ccTouchBegan: ... }",
             class_name="CCTouchDelegate",
+            delegate_create_fn="LuaCCTouchDelegate::create",
         )
         text = "".join(
             check_arg(
@@ -1026,7 +1028,7 @@ class FmodMarshallingTests(unittest.TestCase):
     def test_fmod_enum_return_pushes_number(self) -> None:
         info = TypeInfo(kind="enum", cxx_type="FMOD_OPENSTATE", lua_type="number")
         text = "".join(push_return(info, "state", False))
-        self.assertIn("static_cast<int>(state)", text)
+        self.assertIn("std::to_underlying(state)", text)
 
     def test_fmod_channel_arg_uses_opaque_handle_check(self) -> None:
         info = TypeInfo(

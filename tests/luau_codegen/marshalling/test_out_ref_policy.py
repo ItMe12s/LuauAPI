@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import unittest
 
-import test_support  # noqa: F401 - installs codegen test fixtures
 from luau_codegen.convert.type_primitives import TypeInfo  # type: ignore[import-unresolved]
 from luau_codegen.convert.type_classification import classify_return  # type: ignore[import-unresolved]
 from luau_codegen.emit.bindings.class_file import _emit_invoke  # type: ignore[import-unresolved]
@@ -13,7 +12,7 @@ from luau_codegen.policy.containers import (  # type: ignore[import-unresolved]
     container_supported_as_return,
 )
 from luau_codegen.policy.filtering import supported  # type: ignore[import-unresolved]
-from test_support import all_platforms
+from test_support import all_platforms, fixture_codegen_context
 
 
 def _value_vector(cxx: str, *, is_out: bool = False, is_vector_ptr: bool = False) -> TypeInfo:
@@ -32,6 +31,8 @@ def _value_vector(cxx: str, *, is_out: bool = False, is_vector_ptr: bool = False
 
 
 class OutRefPolicyUnitTests(unittest.TestCase):
+    ctx = fixture_codegen_context()
+
     def test_vector_ptr_value_return_allowed(self) -> None:
         info = _value_vector("gd::vector<PulseEffectAction>*", is_vector_ptr=True)
         self.assertTrue(container_supported_as_return(info))
@@ -71,7 +72,7 @@ class OutRefPolicyUnitTests(unittest.TestCase):
         self.assertTrue(container_supported_as_arg(info, "void"))
 
     def test_map_out_ref_return_allowed(self) -> None:
-        info = classify_return("gd::map<std::pair<int,int>, FMODSoundTween>&", {})
+        info = classify_return("gd::map<std::pair<int,int>, FMODSoundTween>&", {}, ctx=self.ctx)
         self.assertIsNotNone(info)
         assert info is not None
         self.assertTrue(container_supported_as_return(info))
@@ -84,6 +85,8 @@ class OutRefPolicyUnitTests(unittest.TestCase):
 
 
 class OutRefEmitTests(unittest.TestCase):
+    ctx = fixture_codegen_context()
+
     def _base_layer(self) -> Class:
         return Class(name="GJBaseGameLayer", bases=["CCObject"])
 
@@ -95,7 +98,7 @@ class OutRefEmitTests(unittest.TestCase):
             args=[Arg("gd::vector<ChanceObject>&", "spawnRemap")],
             platforms=all_platforms("0x1"),
         )
-        text = _emit_invoke(cls, method, {}, "")
+        text = _emit_invoke(cls, method, {}, "", ctx=self.ctx)
         self.assertIn("pushContainerValue<gd::vector<ChanceObject>>", text)
         self.assertIn("return 2", text)
         self.assertNotIn("return 1;", text)
@@ -123,7 +126,7 @@ class OutRefEmitTests(unittest.TestCase):
             ],
             platforms=all_platforms("0x1"),
         )
-        text = _emit_invoke(cls, method, {}, "")
+        text = _emit_invoke(cls, method, {}, "", ctx=self.ctx)
         self.assertIn("pushContainerValue<gd::vector<EnterEffectInstance>>", text)
         self.assertIn("return 1", text)
 
@@ -135,7 +138,7 @@ class OutRefEmitTests(unittest.TestCase):
             args=[Arg("gd::vector<ChanceObject>&", "spawnRemap")],
             platforms=all_platforms("0x1"),
         )
-        ret_type = _method_return_type(cls, method, {}, ctx=None)
+        ret_type = _method_return_type(cls, method, {}, ctx=self.ctx)
         self.assertEqual(ret_type, "(number, { ChanceObject })")
 
     def test_method_return_type_scalar_when_no_out_arg(self) -> None:
@@ -157,7 +160,7 @@ class OutRefEmitTests(unittest.TestCase):
             args=[Arg("int", "target")],
             platforms=all_platforms("0x1"),
         )
-        text = _emit_invoke(cls, method, {}, "")
+        text = _emit_invoke(cls, method, {}, "", ctx=self.ctx)
         self.assertIn("pushContainerValue<gd::map<std::pair<int, int>, FMODSoundTween>>", text)
         self.assertIn("&result", text)
         self.assertIn("return 1", text)
@@ -171,7 +174,7 @@ class OutRefEmitTests(unittest.TestCase):
             args=[Arg("int", "target")],
             platforms=all_platforms("0x1"),
         )
-        ret_type = _method_return_type(cls, method, {}, ctx=None)
+        ret_type = _method_return_type(cls, method, {}, ctx=self.ctx)
         self.assertEqual(
             ret_type,
             "{ { first: number, second: number, value: FMODSoundTween } }",

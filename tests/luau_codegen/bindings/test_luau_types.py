@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 import unittest
 
-from test_support import all_platforms, types_text
+from test_support import all_platforms, fixture_codegen_context, types_text
 from luau_codegen.convert.type_classification import (  # type: ignore[import-unresolved]
     classify_arg,
     method_input_arg_count as _input_arg_count,
@@ -649,7 +649,7 @@ class LuauTypeEmissionTests(unittest.TestCase):
                 ),
             ],
         )
-        root = Root(classes=[ccobject, dispatcher])
+        root = Root(classes=[ccobject, dispatcher], codegen_ctx=fixture_codegen_context())
         text = types_text(emit_luau_types(root))
         self.assertIn("declare class CCEvent end", text)
         self.assertIn("declare class CCEditBox end", text)
