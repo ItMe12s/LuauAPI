@@ -78,15 +78,13 @@ function Executor.execute(code: string)
 
     Executor.ranCount += 1
 
-    task.defer(function()
-        local ok, res = pcall(fn)
-        if ok then
-            local output = if res == nil then "(no return value)" else tostring(res)
-            Executor.setStatus(true, output)
-        else
-            Executor.setStatus(false, tostring(res))
-        end
-    end)
+    local ok, res = pcall(fn)
+    if ok then
+        local output = if res == nil then "(no return value)" else tostring(res)
+        Executor.setStatus(true, output)
+    else
+        Executor.setStatus(false, tostring(res))
+    end
 end
 
 function Executor.refreshDemoFiles()

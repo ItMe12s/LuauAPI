@@ -3,7 +3,9 @@
 ## Summary
 
 The `task` library schedules callbacks and the `time` library reads clocks.
-Tasks run on the game tick. They keep running when the game pauses. Speedhacks change task timing because timers use frame delta.
+Tasks run on the game tick. They keep running when the game pauses.
+Speedhacks change task timing because timers use frame delta.
+`task.spawn`, `task.delay`, `task.every`, and `task.defer` run on fresh coroutines, so `task.wait` works inside them.
 Types match `tools/luau_codegen/extra_bindings/task.dluau`.
 
 `loadstring` is a global, not part of `task`.
@@ -21,6 +23,7 @@ type TaskNamespace = {
     delay: (seconds: number, fn: () -> ()) -> TaskHandle,
     every: (seconds: number, fn: () -> ()) -> TaskHandle,
     defer: (fn: () -> ()) -> TaskHandle,
+    wait: (seconds: number?) -> number,
     cancel: (handle: TaskHandle) -> (),
 }
 
@@ -36,9 +39,9 @@ type TimeNamespace = {
 task.spawn(fn: (...any) -> ...any, ...any) -> ()
 ```
 
-Runs `fn` immediately under the callback budget. Extra arguments are passed to `fn`.
+Runs `fn` now under the callback budget. Extra arguments go to `fn`.
 Raises `task.spawn requires an initialized runtime` when the runtime is not ready.
-Errors inside `fn` are logged. The call returns nothing.
+Errors inside `fn` are logged. Returns nothing.
 
 ```lua
 task.spawn(function(name)
@@ -52,7 +55,7 @@ end, "world")
 task.delay(seconds: number, fn: () -> ()) -> TaskHandle
 ```
 
-Runs `fn` once after `seconds` and returns a handle. A negative value is clamped to zero.
+Runs `fn` once after `seconds` and returns a handle. Negative or NaN clamps to zero.
 
 ## task.every
 
@@ -60,8 +63,9 @@ Runs `fn` once after `seconds` and returns a handle. A negative value is clamped
 task.every(seconds: number, fn: () -> ()) -> TaskHandle
 ```
 
-Runs `fn` repeatedly every `seconds` and returns a handle.
-The interval must be greater than zero, otherwise the call raises an error.
+Runs `fn` every `seconds` and returns a handle.
+Interval must be greater than zero or the call raises `task.every: interval must be > 0`.
+If a callback waits longer than the interval, later runs can overlap.
 
 ## task.defer
 
@@ -71,13 +75,32 @@ task.defer(fn: () -> ()) -> TaskHandle
 
 Runs `fn` once on the next tick and returns a handle.
 
+## task.wait
+
+```lua
+task.wait(seconds: number?) -> number
+```
+
+Yields for `seconds` (default `0`) and returns actual elapsed seconds.
+Negative or NaN clamps to zero. `task.wait(0)` waits until the next tick.
+Must run from a coroutine or task callback.
+Otherwise raises `task.wait must be called from a coroutine or task callback`.
+
+```lua
+task.spawn(function()
+    local elapsed = task.wait(0.5)
+    print("waited", elapsed)
+end)
+```
+
 ## task.cancel
 
 ```lua
 task.cancel(handle: TaskHandle) -> ()
 ```
 
-Cancels a scheduled task. You can also call `handle:cancel()`.
+Cancels a scheduled task. Same as `handle:cancel()`.
+Stops future runs. An in-flight `task.wait` still finishes.
 
 ## The handle
 
@@ -93,9 +116,8 @@ time.now() -> number
 time.unix() -> number
 ```
 
-`time.now` returns the seconds since the runtime loaded the task library,
-using a steady clock, so it suits measuring elapsed time.
-`time.unix` returns the seconds since the unix epoch, using the system clock, so it suits wall clock time.
+`time.now` is seconds since the task library loaded (steady clock).
+`time.unix` is seconds since the unix epoch (system clock).
 
 ```lua
 print(time.now(), time.unix())
@@ -104,6 +126,7 @@ print(time.now(), time.unix())
 ## Limits
 
 Tasks use the game scheduler and share the main-thread callback budget.
+Each resume gets a fresh budget.
 See [Getting started](../../getting-started/overview.md) and [Limits and errors](../cpp/limits-and-errors.md).
 
 ## Related

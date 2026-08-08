@@ -3,60 +3,77 @@
 ## Summary
 
 The task scheduler runs `task` callbacks on the game tick. It lives in `src/bindings/task/`.
-The binding exposes the `task` and `time` libraries,
-and the scheduler stores the callbacks and fires them when due.
+The binding exposes `task` and `time`. The scheduler stores entries and fires them when due.
 
 ## The binding
 
-`TaskBinding.cpp` builds the `task` and `time` global tables and registers them.
-It sets the time origin, registers the handle metatable, arms the tick,
-and adds a shutdown hook that disarms the tick and clears the scheduler.
-Each scheduled call stores its Lua function as a `LuaRef`.
-The handle returned to Lua is a small userdata that holds a task id and a `cancel` method.
+`TaskBinding.cpp` does the following:
+
+- Builds the `task` and `time` globals
+- Sets the time origin
+- Registers the handle metatable
+- Arms the tick
+- Hooks shutdown to disarm and clear
+
+Each entry is a `LuaRef` to a function or waiting thread.
+Handles are userdata with a task id and `cancel`.
+
+`task.wait` refs the current thread, schedules a one-shot wait, and yields.
+When due, the scheduler resumes it with elapsed seconds.
 
 ## The scheduler
 
-`TaskScheduler` is a single instance.
+`TaskScheduler` is a single instance. Each task holds:
 
-Each task contains:
+- id
+- callback (function or suspended thread)
+- remaining time
+- interval
+- elapsed since schedule
+- cancelled flag
+- `isThread` for wait resumes
 
-- an id
-- a callback reference
-- the time remaining until it next fires
-- an interval
-- a cancelled flag
+Interval meaning:
 
-The interval encodes the kind of task:
+- `0` means one shot (`task.delay`, `task.wait`)
+- greater than zero means repeating (`task.every`)
+- deferred tasks use a separate store (`task.defer`)
 
-- `0` means one shot, used by `task.delay`.
-- A value greater than zero means repeating, used by `task.every`.
-- A value less than zero means deferred to the next tick, used by `task.defer`.
+`task.spawn` does not schedule. It resumes a fresh coroutine under the callback budget immediately.
 
-`task.spawn` does not schedule anything. It runs the callback immediately under the callback budget.
+## Coroutine execution
+
+`task.spawn` uses `LuaCallback::fireStackOnThread`.
+`task.delay`, `task.every`, and `task.defer` use `LuaCallback::fireOnThread` (same helper, no extra args).
+The helper creates a `lua_newthread`, moves the function, and `lua_resume`s under the budget.
+`LUA_OK` and `LUA_YIELD` count as success.
+`task.wait` uses `LuaCallback::resumeThread` with elapsed seconds.
+No diagnostics boundary frames on the resume path.
+
+Script cancel, overlap, and budget rules: [tasks and time](../../reference/lua/tasks.md).
 
 ## Advancing
 
-`advance(dt, L)` runs each frame.
-It also calls `diag::flushIfNeeded` so the crash sidecar file stays warm. See [Crash sidecar](crash-sidecar.md).
-It lowers each task timer by the frame delta and fires the tasks that are due.
-To fire a task it pushes the callback, sets the resources root scope,
-and calls the runtime protected call with the callback budget.
-A repeating task is rescheduled, while a one shot or deferred task is marked cancelled.
-Cancelled tasks are then removed.
-After that, the tick polls generated Geode task handles so native async results can fire Lua callbacks.
+The tick node calls `advance(dt, L)` each frame.
+`advance` updates elapsed and remaining, then fires due tasks.
+Functions get a fresh coroutine. Waits resume their thread with elapsed seconds.
+Repeating tasks reschedule. One shot, deferred, and wait tasks cancel after fire.
+Then the tick polls Geode task handles and calls `diag::flushIfNeeded`.
+See [Crash sidecar](crash-sidecar.md).
 
 ## Game integration
 
-`armTaskTick` creates a small `CCNode` and schedules its update with the Cocos2d scheduler.
-The update calls `advance`. Tasks use frame delta, so speedhacks change their timing.
-Tasks are not paused when the game pauses (game as in playing a level and the pause menu).
-If the director or scheduler is not ready, `armTaskTick` queues a one-shot retry on the main thread until arming works,
-so early scheduled callbacks still run. Failures are logged once. `disarmTaskTick` removes the node and stops any pending arm retry.
+`armTaskTick` schedules a small `CCNode` update on the Cocos2d scheduler.
+Tasks use frame delta, so speedhacks affect timing.
+They are not paused with the game pause menu.
+If the director or scheduler is not ready, arming retries on the main thread until it works.
+Failures log once. `disarmTaskTick` removes the node and stops pending retries.
 
 ## Limits
 
-Task count and callback budget caps are in [Limits and errors](../../reference/cpp/limits-and-errors.md).
-`task.every` rejects an interval that is not greater than zero.
+Caps are in [Limits and errors](../../reference/cpp/limits-and-errors.md).
+`task.every` rejects a non-positive interval.
+`task.wait` rejects a non-yieldable call.
 
 ## Related
 
@@ -73,4 +90,5 @@ Task count and callback budget caps are in [Limits and errors](../../reference/c
 - `src/bindings/task/TaskScheduler.hpp`
 - `src/bindings/task/TaskScheduler.cpp`
 - `src/bindings/geode/GeodeTaskHandleBinding.cpp`
+- `src/framework/callback/LuaCallback.hpp`
 - `src/core/Config.hpp`

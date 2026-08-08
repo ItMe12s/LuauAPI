@@ -108,6 +108,8 @@ namespace luax {
             return m_lastError;
         }
 
+        void reportError(std::string_view context, std::string_view message);
+
         void registerShutdownHook(geode::Function<void()> fn);
 
         geode::Result<std::reference_wrapper<std::string const>> getOrCompileBytecode(

@@ -1,6 +1,7 @@
 #include "bindings/task/TaskScheduler.hpp"
 #include "core/Runtime.hpp"
 #include "framework/Binding.hpp"
+#include "framework/callback/LuaCallback.hpp"
 #include "framework/schedule/ScheduledHandleBinding.hpp"
 #include "framework/stack/TableUtil.hpp"
 #include "framework/stack/UserdataTags.hpp"
@@ -66,18 +67,19 @@ namespace {
         if (!runtime || !runtime->ready()) {
             luaL_error(L, "task.spawn requires an initialized runtime");
         }
-        (void)runtime->protectedCall(L, nargs, 0, "task.spawn", kHookScriptDeadlineMs);
+        (void)LuaCallback::fireStackOnThread(
+            L, nargs, "task.spawn", kHookScriptDeadlineMs, runtime->resourcesRoot()
+        );
         return 0;
     }
 
     int taskDelay(lua_State* L) {
         double seconds = luaL_checknumber(L, 1);
         luaL_checktype(L, 2, LUA_TFUNCTION);
-        if (seconds < 0.0) seconds = 0.0;
+        if (!(seconds >= 0.0)) seconds = 0.0;
         ensureCapacity(L);
         ensureTaskTickArmed();
-        LuaRef ref;
-        ref.reset(L, 2);
+        LuaRef ref(L, 2);
         std::uint64_t id = TaskScheduler::get().add(std::move(ref), seconds, 0.0);
         pushHandle(L, id);
         return 1;
@@ -91,8 +93,7 @@ namespace {
         }
         ensureCapacity(L);
         ensureTaskTickArmed();
-        LuaRef ref;
-        ref.reset(L, 2);
+        LuaRef ref(L, 2);
         std::uint64_t id = TaskScheduler::get().add(std::move(ref), seconds, seconds);
         pushHandle(L, id);
         return 1;
@@ -102,11 +103,25 @@ namespace {
         luaL_checktype(L, 1, LUA_TFUNCTION);
         ensureCapacity(L);
         ensureTaskTickArmed();
-        LuaRef ref;
-        ref.reset(L, 1);
+        LuaRef ref(L, 1);
         std::uint64_t id = TaskScheduler::get().addDeferred(std::move(ref));
         pushHandle(L, id);
         return 1;
+    }
+
+    int taskWait(lua_State* L) {
+        double seconds = luaL_optnumber(L, 1, 0.0);
+        if (!(seconds >= 0.0)) seconds = 0.0;
+        if (!lua_isyieldable(L)) {
+            luaL_error(L, "task.wait must be called from a coroutine or task callback");
+        }
+        ensureCapacity(L);
+        ensureTaskTickArmed();
+        lua_pushthread(L);
+        LuaRef thread(L, -1);
+        lua_pop(L, 1);
+        TaskScheduler::get().addWait(std::move(thread), seconds);
+        return lua_yield(L, 0);
     }
 
     int taskCancel(lua_State* L) {
@@ -143,6 +158,7 @@ namespace luax {
         setTableCFunction(L, -1, "delay", &taskDelay);
         setTableCFunction(L, -1, "every", &taskEvery);
         setTableCFunction(L, -1, "defer", &taskDefer);
+        setTableCFunction(L, -1, "wait", &taskWait);
         setTableCFunction(L, -1, "cancel", &taskCancel);
         lua_setglobal(L, "task");
 

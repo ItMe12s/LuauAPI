@@ -15,7 +15,9 @@ namespace luax {
         return s_instance;
     }
 
-    std::uint64_t TaskScheduler::add(LuaRef callback, double delaySeconds, double intervalSeconds) {
+    std::uint64_t TaskScheduler::add(
+        LuaRef callback, double delaySeconds, double intervalSeconds, bool isThread
+    ) {
         if (full()) {
             return 0;
         }
@@ -24,6 +26,7 @@ namespace luax {
         task.callback = std::move(callback);
         task.remaining = delaySeconds;
         task.interval = intervalSeconds;
+        task.isThread = isThread;
         m_timed.insertWithId(id, std::move(task));
         return id;
     }
@@ -45,7 +48,12 @@ namespace luax {
     }
 
     bool TaskScheduler::fire(Task& task) {
-        return LuaCallback::fire(task.callback, "task", kHookScriptDeadlineMs);
+        if (task.isThread) {
+            return LuaCallback::resumeThread(
+                task.callback, task.elapsed, "task.wait", kHookScriptDeadlineMs
+            );
+        }
+        return LuaCallback::fireOnThread(task.callback, "task", kHookScriptDeadlineMs);
     }
 
     void TaskScheduler::fireDeferred() {
@@ -107,6 +115,7 @@ namespace luax {
         for (std::size_t i = 0; i < m_timed.size(); ++i) {
             Task& task = m_timed[i];
             if (task.cancelled) continue;
+            task.elapsed += dt;
             task.remaining -= dt;
             if (task.remaining <= 0.0) {
                 due.push_back(i);

@@ -507,6 +507,12 @@ namespace luax {
         m_lastError = redactHostPaths(error, m_resourcesRoot);
     }
 
+    void Runtime::reportError(std::string_view context, std::string_view message) {
+        auto err = fmt::format("[{}] {}", context, message);
+        geode::log::error("{}", err);
+        setLastError(std::move(err));
+    }
+
     geode::Result<void> Runtime::failWith(std::string error) {
         setLastError(std::move(error));
         return geode::Err(m_lastError);

@@ -286,7 +286,7 @@ class HandleGcGuardTests(unittest.TestCase):
         self.assertIn("protectedCall", callback_source)
 
         task_scheduler = read_repo_file(TASK_SCHEDULER)
-        self.assertIn("LuaCallback::fire", task_scheduler)
+        self.assertIn("LuaCallback::fireOnThread", task_scheduler)
 
         imgui_scheduler = read_repo_file(IMGUI_BINDING)
         self.assertIn("LuaCallback::fire", imgui_scheduler)

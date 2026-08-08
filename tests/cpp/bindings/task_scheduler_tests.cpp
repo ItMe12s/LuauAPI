@@ -1,18 +1,30 @@
 #include "bindings/task/TaskScheduler.hpp"
 #include "core/Config.hpp"
 #include "core/Runtime.hpp"
+#include "framework/Binding.hpp"
 #include "host/lua_test_helpers.hpp"
 
 #include <RuntimeTypes.hpp>
 #include <atomic>
+#include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <lua.h>
 #include <lualib.h>
+#include <string_view>
 #include <thread>
 #include <vector>
 
+namespace luax {
+    geode::Result<void> registerTask(lua_State* L);
+} // namespace luax
+
 namespace {
     using RuntimeGuard = luauapi_test::TaskSchedulerRuntimeGuard;
+
+    void registerTaskBinding(lua_State* L) {
+        luax::registerBinding({"task_lib", &luax::registerTask, 10});
+        REQUIRE(luax::applyAllBindings(L) == std::nullopt);
+    }
 } // namespace
 
 TEST_CASE("TaskScheduler fires one-shot tasks after delay") {
@@ -286,5 +298,61 @@ TEST_CASE(
     lua_pop(L, 1);
     lua_getglobal(L, "mixTimed");
     REQUIRE(lua_isnil(L, -1));
+    lua_pop(L, 1);
+}
+
+TEST_CASE("task.wait works inside task.delay callbacks") {
+    luauapi_test::HandleGcRuntimeGuard guard;
+    auto* runtime = luax::Runtime::getOrCreate();
+    auto* L = runtime->state();
+    registerTaskBinding(L);
+
+    REQUIRE(
+        luauapi_test::runScriptVoid(
+            L,
+            R"(
+            task.delay(0, function()
+                local elapsed = task.wait(0.1)
+                _G.delayWaitElapsed = elapsed
+                _G.delayWaitDone = true
+            end)
+        )"
+        )
+    );
+
+    auto& scheduler = luax::TaskScheduler::get();
+    scheduler.advance(0.0, L);
+    REQUIRE(scheduler.activeCount() == 1);
+
+    lua_getglobal(L, "delayWaitDone");
+    REQUIRE(lua_isnil(L, -1));
+    lua_pop(L, 1);
+
+    scheduler.advance(0.15, L);
+    REQUIRE(scheduler.activeCount() == 0);
+
+    lua_getglobal(L, "delayWaitDone");
+    REQUIRE(lua_toboolean(L, -1));
+    lua_pop(L, 1);
+    lua_getglobal(L, "delayWaitElapsed");
+    REQUIRE(lua_isnumber(L, -1));
+    REQUIRE(lua_tonumber(L, -1) == Catch::Approx(0.15));
+    lua_pop(L, 1);
+}
+
+TEST_CASE("task.wait errors when called outside a yieldable thread") {
+    luauapi_test::HandleGcRuntimeGuard guard;
+    auto* runtime = luax::Runtime::getOrCreate();
+    auto* L = runtime->state();
+    registerTaskBinding(L);
+
+    luauapi_test::loadFunction(L, "task.wait(0)");
+    REQUIRE(lua_pcall(L, 0, 0, 0) != 0);
+    char const* err = lua_tostring(L, -1);
+    REQUIRE(err != nullptr);
+    REQUIRE(
+        std::string_view(err).find("task.wait must be called from a coroutine or task callback") !=
+        std::string_view::npos
+    );
     lua_pop(L, 1);
 }

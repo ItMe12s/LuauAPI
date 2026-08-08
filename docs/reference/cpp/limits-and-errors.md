@@ -63,6 +63,9 @@ This page is the canonical list of caps, deadlines, and error strings for LuauAP
 | `geode.hook global callback limit exceeded` | Global hook cap hit | Lua error |
 | `geode.hook target callback limit exceeded for %s` | Per-target hook cap hit | Lua error |
 | `task: too many scheduled tasks (limit 4096)` | Task cap hit | Lua error |
+| `task.spawn requires an initialized runtime` | Spawn before runtime ready | Lua error |
+| `task.every: interval must be > 0` | Non-positive every interval | Lua error |
+| `task.wait must be called from a coroutine or task callback` | Wait on a non-yieldable state | Lua error |
 | `geode task handles: too many active handles (limit 4096)` | Geode task handle cap hit | Lua error |
 | (Arc exception text) | Native task raises `std::exception` | Geode task callback `nil, err` |
 | `Task failed with an unknown exception` | Native task raises another exception | Geode task callback `nil, err` |

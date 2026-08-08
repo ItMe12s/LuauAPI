@@ -7,6 +7,7 @@ export type TaskNamespace = {
     delay: (seconds: number, fn: () -> ()) -> TaskHandle,
     every: (seconds: number, fn: () -> ()) -> TaskHandle,
     defer: (fn: () -> ()) -> TaskHandle,
+    wait: (seconds: number?) -> number,
     cancel: (handle: TaskHandle) -> (),
 }
 

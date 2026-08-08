@@ -15,8 +15,15 @@ namespace luax {
     public:
         static TaskScheduler& get();
 
-        std::uint64_t add(LuaRef callback, double delaySeconds, double intervalSeconds);
+        std::uint64_t add(
+            LuaRef callback, double delaySeconds, double intervalSeconds, bool isThread = false
+        );
         std::uint64_t addDeferred(LuaRef callback);
+
+        std::uint64_t addWait(LuaRef thread, double seconds) {
+            return add(std::move(thread), seconds, 0.0, true);
+        }
+
         void cancel(std::uint64_t id);
         void advance(double dt, lua_State* L);
         void clear();
@@ -34,7 +41,9 @@ namespace luax {
             LuaRef callback;
             double remaining = 0.0;
             double interval = 0.0;
+            double elapsed = 0.0;
             bool cancelled = false;
+            bool isThread = false;
         };
 
         bool fire(Task& task);
