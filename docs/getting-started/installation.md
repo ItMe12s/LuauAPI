@@ -33,7 +33,7 @@ This is the recommended path and the easiest.
 2. Select the green `Code` button, then `Download ZIP`.
 3. Extract the archive and rename the project folder.
 4. Replace every `$GEODE_VERSION` and `$MOD_*` placeholder in `mod.json`.
-   Use `5.8.2` for `$GEODE_VERSION`.
+   Use `5.9.0` for `$GEODE_VERSION`.
 
 ## Install the mod
 
@@ -43,7 +43,7 @@ Download the `.geode` file and place it in your mods folder if you install manua
 LuauAPI ships with the mod id `imes.luauapi`.
 It loads early with first priority, so the runtime is ready for other mods as soon as the game starts.
 
-Requires Geode **5.8.2** or newer (see `mod.json` `"geode"` field).
+Requires Geode **5.9.0** or newer (see `mod.json` `"geode"` field).
 
 ## Finish the template setup
 

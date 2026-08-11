@@ -1,13 +1,13 @@
-local cocos = geode.cocos2d
+local cc2d = geode.cocos2d
 local modId = geode.Mod.getID()
 
 local handle = nil
 
 local function helloWorld(self)
-    local director = cocos.CCDirector.sharedDirector()
+    local director = cc2d.CCDirector.sharedDirector()
     if not director then return end
     local winSize = director:getWinSize()
-    local label = cocos.CCLabelBMFont.create("Hello, World!", "bigFont.fnt")
+    local label = geode.Label.create("Hello, World!", "bigFont.fnt")
     if not label then return end
     label:setID(modId .. "/hello-label")
     label:setZOrder(999)

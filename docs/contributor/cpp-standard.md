@@ -38,7 +38,7 @@ Do not use `std::ranges` when `geode::utils::ranges` covers the case.
 
 Generated C++ follows the same rule.
 Use `geode::utils::ranges::contains` and `geode::utils::ranges::remove`.
-Use `std::ranges::lower_bound` because Geode 5.8.2 has no matching helper.
+Use `std::ranges::lower_bound` because Geode 5.9.0 has no matching helper.
 Use `std::to_underlying` only for real enums.
 Keep `geode::SeedValue` conversion explicit.
 

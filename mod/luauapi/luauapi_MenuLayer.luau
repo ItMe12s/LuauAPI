@@ -32,7 +32,7 @@ function LuauAPIMenuLayer.init()
             end)
 
             if not isDeveloperModeEnabled then return result end
-            local label = cc2d.CCLabelBMFont.create("LuauAPI " .. geode.Mod.getVersion() .. " Developer Mode", "chatFont.fnt")
+            local label = geode.Label.create("LuauAPI " .. geode.Mod.getVersion() .. " Developer Mode", "chatFont.fnt")
             if not label then return end
             label:setID(modId .. "/developer-mode-label")
             label:setZOrder(999)
