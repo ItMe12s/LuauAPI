@@ -428,6 +428,7 @@ namespace luax::webdetail {
             {"getHeaders", requestGetHeaders},
             {"getUrlParams", requestGetUrlParams},
             {"getBody", requestGetBody},
+            {"getBodyRef", requestGetBodyRef},
             {"getTimeout", requestGetTimeout},
             {"getVersion", requestGetVersion},
             {"getProgress", requestGetProgress},

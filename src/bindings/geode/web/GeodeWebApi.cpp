@@ -507,6 +507,16 @@ namespace luax::webdetail {
         return 1;
     }
 
+    int requestGetBodyRef(lua_State* L) {
+        auto body = checkRequest(L, 1, "WebRequest:getBodyRef").getBodyRef();
+        if (!body) {
+            lua_pushnil(L);
+            return 1;
+        }
+        lua_pushlstring(L, reinterpret_cast<char const*>(body->data()), body->size());
+        return 1;
+    }
+
     int requestGetTimeout(lua_State* L) {
         auto timeout = checkRequest(L, 1, "WebRequest:getTimeout").getTimeout();
         if (!timeout) {

@@ -665,6 +665,11 @@ namespace geode::utils::web {
             return std::nullopt;
         }
 
+        std::optional<std::span<std::uint8_t const>> getBodyRef() const {
+            if (!m_body) return std::nullopt;
+            return *m_body;
+        }
+
         std::optional<std::chrono::seconds> getTimeout() const {
             return m_timeout;
         }

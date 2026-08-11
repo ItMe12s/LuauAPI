@@ -138,6 +138,18 @@ TEST_CASE("geode.utils.web newRequest and multipart metatables smoke") {
     ));
 }
 
+TEST_CASE("WebRequest getBodyRef returns request body") {
+    WebBindingGuard guard;
+    ModFixture fixture;
+
+    REQUIRE(runScriptReturnsBool(
+        fixture.L,
+        R"(
+        return geode.utils.web.newRequest():body("body"):getBodyRef() == "body"
+    )"
+    ));
+}
+
 TEST_CASE("geode.utils.web mock get completes on main thread") {
     WebBindingGuard guard;
     ModFixture fixture;

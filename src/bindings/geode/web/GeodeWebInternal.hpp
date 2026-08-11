@@ -77,6 +77,7 @@ namespace luax::webdetail {
     int requestGetHeaders(lua_State* L);
     int requestGetUrlParams(lua_State* L);
     int requestGetBody(lua_State* L);
+    int requestGetBodyRef(lua_State* L);
     int requestGetTimeout(lua_State* L);
     int requestGetVersion(lua_State* L);
     int requestGetProgress(lua_State* L);

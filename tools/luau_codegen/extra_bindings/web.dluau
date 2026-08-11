@@ -121,6 +121,7 @@ export type WebRequest = {
     getHeaders: (self: WebRequest) -> { [string]: { string } },
     getUrlParams: (self: WebRequest) -> { [string]: string },
     getBody: (self: WebRequest) -> string?,
+    getBodyRef: (self: WebRequest) -> string?,
     getTimeout: (self: WebRequest) -> number?,
     getVersion: (self: WebRequest) -> number,
     getProgress: (self: WebRequest) -> WebProgress,
