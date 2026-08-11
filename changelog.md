@@ -7,6 +7,12 @@
 - `29/7/2026`: [LuauAPI has an example/template mod now](https://github.com/ItMe12s/luauapi-example-mod).
 - `11/7/2026`: Bindings that are automatically picked up likely won't be included in the changelog.
 
+## 0.1.0-beta.23
+
+add stuff here...
+
+- Updated internal dependencies and Geode SDK to 5.9.0.
+
 ## 0.1.0-beta.22
 
 - Added `task.wait(seconds?)`, which yields the current coroutine and returns elapsed seconds.

@@ -34,6 +34,7 @@ _OPAQUE_STUB_BODY: dict[str, str] = {
     "DelayedSpawnNode": (
         "--- @type-only: non-CCObject GD type\ndeclare class DelayedSpawnNode end\n\n"
     ),
+    "DS_Dictionary": ("--- @type-only: non-CCObject GD type\ndeclare class DS_Dictionary end\n\n"),
 }
 
 _OPAQUE_STUB_ORDER = (
@@ -46,6 +47,7 @@ _OPAQUE_STUB_ORDER = (
     "CCEditBox",
     "GroupCommandObject2",
     "DelayedSpawnNode",
+    "DS_Dictionary",
 )
 
 

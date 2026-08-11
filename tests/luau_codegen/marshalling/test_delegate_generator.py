@@ -71,6 +71,27 @@ class DelegateGeneratorTests(unittest.TestCase):
         self.assertIn("invokeTableObject<LevelSettingsObject>", text)
         self.assertIn("getLevelSettings", text)
 
+    def test_dictionary_pointer_uses_opaque_handle(self) -> None:
+        spec = CppDelegateSpec(
+            cxx_type="ObjectDecoderDelegate",
+            lua_name="ObjectDecoderDelegate",
+            cpp_class="LuaObjectDecoderDelegate",
+            methods=[
+                CppDelegateMethod(
+                    "getDecodedObject",
+                    "cocos2d::CCObject*",
+                    [("DS_Dictionary*", "data")],
+                )
+            ],
+        )
+        text = emit_override(spec, spec.methods[0], self.ctx)
+        self.assertIn("pushOpaqueHandle(L, c->p0)", text)
+        self.assertNotIn("Usertype<DS_Dictionary>", text)
+        self.assertIn(
+            '#include "framework/usertype/OpaqueHandle.hpp"',
+            emit_delegate_hpp({spec.cxx_type: spec}, self.ctx),
+        )
+
     def test_override_emits_unique_parameter_names(self) -> None:
         spec = CppDelegateSpec(
             cxx_type="CCEGLViewProtocol",

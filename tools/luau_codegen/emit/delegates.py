@@ -431,6 +431,8 @@ def push_stmt(t: str, expr: str) -> str:
         return f"luax::push(L, {expr} ? std::string({expr}) : std::string())"
     if n == "gd::string":
         return f"luax::push(L, std::string({expr}.c_str()))"
+    if n == "DS_Dictionary*":
+        return f"luax::pushOpaqueHandle(L, {expr})"
     if "CCIndexPath" in n and not n.endswith("*"):
         return (
             f"lua_createtable(L, 0, 2);\n"
@@ -486,6 +488,7 @@ def emit_delegate_hpp(specs: dict[str, CppDelegateSpec], ctx: CodegenContext) ->
         '#include "framework/callback/LuaDelegate.hpp"\n'
         '#include "framework/stack/Stack.hpp"\n'
         '#include "framework/stack/Types.hpp"\n'
+        '#include "framework/usertype/OpaqueHandle.hpp"\n'
         '#include "framework/usertype/Usertype.hpp"\n\n'
         "#include <utility>\n\n"
         "namespace luax {\n" + "\n\n".join(classes) + "\n}\n"

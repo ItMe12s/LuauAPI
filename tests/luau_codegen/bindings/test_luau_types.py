@@ -17,6 +17,7 @@ from luau_codegen.emit.luau_types import TYPES_FILE, emit as emit_luau_types  # 
 from luau_codegen.emit.plan import collect_platform_plan  # type: ignore[import-unresolved]
 from luau_codegen.parse.broma import Arg, Class, Field, Function, Method, Root, parse_file  # type: ignore[import-unresolved]
 from luau_codegen.model.codegen_context import CodegenContext  # type: ignore[import-unresolved]
+from luau_codegen.model.delegate_specs import DelegateCatalog, DelegateMethodSpec, DelegateSpec  # type: ignore[import-unresolved]
 from luau_codegen.model.geode_enums import EnumInfo, EnumMember  # type: ignore[import-unresolved]
 from luau_codegen.emit.luau_types.manual_fields import (  # type: ignore[import-unresolved]
     MANUAL_FREE_FN_FIELDS,
@@ -24,6 +25,36 @@ from luau_codegen.emit.luau_types.manual_fields import (  # type: ignore[import-
 
 
 class LuauTypeEmissionTests(unittest.TestCase):
+    def test_dictionary_delegate_type_has_opaque_stub(self) -> None:
+        ctx = CodegenContext.static().with_catalogs(
+            value_types=CodegenContext.static().value_types,
+            delegates=DelegateCatalog.from_specs(
+                {
+                    "ObjectDecoderDelegate": DelegateSpec(
+                        cxx_type="ObjectDecoderDelegate",
+                        lua_name="ObjectDecoderDelegate",
+                        cpp_class="LuaObjectDecoderDelegate",
+                        create_fn="LuaObjectDecoderDelegate::create",
+                        methods=(
+                            DelegateMethodSpec(
+                                "getDecodedObject", "CCObject", ("number", "DS_Dictionary")
+                            ),
+                        ),
+                    )
+                }
+            ),
+        )
+        text = types_text(
+            emit_luau_types(
+                Root(classes=[Class(name="CCObject", namespace="cocos2d")], codegen_ctx=ctx)
+            )
+        )
+        self.assertIn("declare class DS_Dictionary end", text)
+        self.assertLess(
+            text.index("declare class DS_Dictionary end"),
+            text.index("export type ObjectDecoderDelegate"),
+        )
+
     def test_enum_prelude_uses_valid_luau_names(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")
         ccnode = Class(
