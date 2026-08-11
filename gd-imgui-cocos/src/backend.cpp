@@ -422,7 +422,7 @@ void ImGuiCocos::legacyRenderFrame() const {
         }
     }
 
-    for (int i = 0; i < drawData->CmdListsCount; ++i) {
+    for (int i = 0; i < drawData->CmdLists.Size; ++i) {
         auto* list = drawData->CmdLists[i];
         auto* idxBuffer = list->IdxBuffer.Data;
         auto* vtxBuffer = list->VtxBuffer.Data;
@@ -540,7 +540,7 @@ void ImGuiCocos::renderFrame() const {
     shader->use();
     shader->setUniformsForBuiltins();
 
-    for (int i = 0; i < drawData->CmdListsCount; ++i) {
+    for (int i = 0; i < drawData->CmdLists.Size; ++i) {
         auto* list = drawData->CmdLists[i];
 
         // convert vertex coords to cocos space

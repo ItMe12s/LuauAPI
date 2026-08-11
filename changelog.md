@@ -9,9 +9,8 @@
 
 ## 0.1.0-beta.23
 
-add stuff here...
-
-- Updated internal dependencies and Geode SDK to 5.9.0.
+- Updated to Geode SDK 5.9.0.
+- Updated internal dependencies and bindings.
 
 ## 0.1.0-beta.22
 

@@ -22,7 +22,7 @@ CMake downloads these during configuration, so you do not install them by hand.
 
 - Luau, pinned to tag `0.733`
 - Geode bindings, pinned through `LUAUAPI_BINDINGS_GIT_TAG` in `cmake/GeodeBindings.cmake`
-- Dear ImGui `v1.92.8`, pinned in `cmake/ImGui.cmake` for `imgui-cocos` and headless tests
+- Dear ImGui `v1.92.9b`, pinned in `cmake/ImGui.cmake` for `imgui-cocos` and headless tests
 - GLM `1.0.3`, used by the 3D math and glTF loader
 - IXWebSocket `v12.0.1` and mbedTLS `v3.6.6`, fetched for websocket support
 - Catch2 `v3.15.1`, fetched only when tests are on

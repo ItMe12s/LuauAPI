@@ -1,4 +1,4 @@
-set(LUAUAPI_IMGUI_VERSION "v1.92.8"
+set(LUAUAPI_IMGUI_VERSION "v1.92.9b"
     CACHE STRING "Pinned Dear ImGui release")
 
 include(FetchContent)
