@@ -90,8 +90,6 @@ server:onClientDisconnect(callback: (peer: WebSocketPeer, code: number, reason: 
 server:onError(callback: (message: string) -> ()) -> WebSocketServer
 ```
 
-The server binds to loopback by default. See Security for `host = "0.0.0.0"` LAN exposure.
-
 Peer-to-peer setups run `serve` on one peer and `connect` on the other:
 
 ```lua
@@ -152,7 +150,6 @@ Nothing closes them when an individual script run returns, so keep a reference f
 ## Related
 
 - [Getting started](../../getting-started/overview.md)
-- [Examples](../../getting-started/examples.md)
 - [LuauAPI mod guidelines](../../mod_guidelines.md)
 - [web](web.md)
 - [tasks and time](tasks.md)

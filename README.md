@@ -35,7 +35,6 @@ Start here if you are new:
 - [Installation](docs/getting-started/installation.md)
 - [Editor setup](docs/getting-started/editor-setup.md)
 - [Your first script](docs/getting-started/first-script.md)
-- [Examples](docs/getting-started/examples.md)
 - [Lua module index](docs/reference/lua/globals.md)
 - [LuauAPI example mod template](https://github.com/ItMe12s/luauapi-example-mod)
 - [LuauAPI mod guidelines](docs/mod_guidelines.md)

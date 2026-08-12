@@ -21,46 +21,13 @@ Read [LuauAPI mod guidelines](mod_guidelines.md) before you ship.
 | [Installation](getting-started/installation.md) | Dependency and platform setup |
 | [Editor setup](getting-started/editor-setup.md) | Autocomplete and stubs |
 | [Your first script](getting-started/first-script.md) | First `runFile` from C++ |
-| [Examples](getting-started/examples.md) | Runnable script samples |
 
 ## Reference
 
 API reference for scripts and C++ hosts.
 Start at [globals](reference/lua/globals.md) for the full Lua module index.
 
-### Lua
-
-| Group | Page | Role |
-| --- | --- | --- |
-| Core | [hooks](reference/lua/hooks.md) | Hook game functions |
-| Core | [modules](reference/lua/modules.md) | Sandboxed `require` |
-| Core | [sharing APIs between mods](reference/lua/sharing-apis.md) | `_G` mod APIs |
-| Core | [tasks and time](reference/lua/tasks.md) | `task` and `time` |
-| Core | [callbacks](reference/lua/callbacks.md) | C++ callback lifetime |
-| Core | [delegates](reference/lua/delegates.md) | Virtual interface tables |
-| Game | [enums](reference/lua/enums.md) | GD and Geode enum constants |
-| Game | [game objects](reference/lua/game-objects.md) | Cocos and GD objects |
-| Game | [cocos](reference/lua/cocos.md) | Node and color helpers |
-| Game | [ColorProvider](reference/lua/color-provider.md) | Theme colors |
-| Game | [Keybind](reference/lua/keybind.md) | Keybind strings |
-| Game | [Keyboard input](reference/lua/keyboard-input.md) | Keyboard events |
-| Game | [Mouse input](reference/lua/mouse-input.md) | Mouse events |
-| UI | [UI and layouts](reference/lua/ui.md) | Cocos UI factories and layouts |
-| UI | [imgui](reference/lua/imgui.md) | Dear ImGui overlay |
-| UI | [gd3d](reference/lua/gd3d.md) | 3D viewport rendering |
-| IO | [mod](reference/lua/mod.md) | Saved values and settings |
-| IO | [fs](reference/lua/fs.md) | Sandboxed filesystem |
-| IO | [json](reference/lua/json.md) | JSON parse and dump |
-| Network | [web](reference/lua/web.md) | HTTP client |
-| Network | [websocket](reference/lua/websocket.md) | WebSocket client and server |
-| Utils | [geode.utils](reference/lua/utils.md) | Clipboard, string, random, and other small helpers |
-| Utils | [game](reference/lua/game.md) | Game process control |
-| Utils | [base64](reference/lua/base64.md) | Base64 encode and decode |
-| Utils | [permission](reference/lua/permission.md) | OS permissions |
-| Utils | [VersionInfo](reference/lua/version-info.md) | Version parsing |
-| Meta | [type stubs](reference/lua/type-stubs.md) | `geode.d.luau` reference |
-
-### C++
+## C++
 
 | Page | Role |
 | --- | --- |

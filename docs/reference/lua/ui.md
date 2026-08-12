@@ -129,7 +129,6 @@ See [type stubs](type-stubs.md). For class behavior, read the upstream [Geode UI
 ## Related
 
 - [Getting started](../../getting-started/overview.md)
-- [Examples](../../getting-started/examples.md)
 - [LuauAPI mod guidelines](../../mod_guidelines.md)
 - [game objects](game-objects.md)
 - [callbacks](callbacks.md)

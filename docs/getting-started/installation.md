@@ -136,7 +136,6 @@ See [Native C++ registration](../reference/cpp/native-registration.md) for the f
 - [Getting started](overview.md)
 - [Editor setup](editor-setup.md)
 - [Your first script](first-script.md)
-- [Examples](examples.md)
 - [LuauAPI mod guidelines](../mod_guidelines.md)
 - [Building from source](../contributor/building.md)
 

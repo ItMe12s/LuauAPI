@@ -100,7 +100,6 @@ end
 ## Related
 
 - [Getting started](../../getting-started/overview.md)
-- [Examples](../../getting-started/examples.md)
 - [json](json.md)
 - [mod](mod.md)
 - [globals](globals.md)

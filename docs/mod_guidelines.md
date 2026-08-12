@@ -453,8 +453,6 @@ Good:
 local name = "New feature set, clear credit, and permission"
 ```
 
-Look, I can't come up with a funny example, but you get the point.
-
 ## Non rules
 
 These are allowed when done with care.

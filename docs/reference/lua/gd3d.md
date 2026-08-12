@@ -160,7 +160,51 @@ Draw order:
 
 Reloading a mesh uploads fresh GPU data.
 
-See [Examples](../../getting-started/examples.md) and [mod/demo/demo_viewport.luau](../../../mod/demo/demo_viewport.luau).
+## Example
+
+Load a glTF mesh, spin it in a viewport, and attach the viewport to a scene node:
+
+```lua
+local Transform = gd3d.Transform
+local cc2d = geode.cocos2d
+
+local mesh, err = gd3d.gltf.loadMesh("resources", "test_donut.glb")
+if not mesh then
+    print(err)
+    return
+end
+
+local vp = gd3d.ViewportFrame.new(200, 200)
+if not vp then
+    return
+end
+
+vp:setCamera(Transform.new({ x = 0, y = 1, z = 3 }), 90, 0.1, 100)
+
+local id = vp:addMesh(mesh, Transform.new())
+local angle = 0
+
+task.every(1 / 60, function()
+    angle += 0.02
+    vp:setInstanceTransform(id, Transform.fromEuler(0.4, angle, 0))
+end)
+
+geode.hook("geode.gd.MenuLayer:init/0", {
+    after = function(self, result)
+        local director = cc2d.CCDirector.sharedDirector()
+        if not director then
+            return result
+        end
+
+        local winSize = director:getWinSize()
+        vp:setPosition({ x = winSize.width / 2, y = winSize.height / 2 })
+        self:addChild(vp)
+        return result
+    end,
+})
+```
+
+See [mod/demo/demo_viewport.luau](../../../mod/demo/demo_viewport.luau) for the full demo.
 
 ## Limits
 
@@ -175,7 +219,6 @@ See [type stubs](type-stubs.md).
 
 - [fs](fs.md)
 - [type stubs](type-stubs.md)
-- [Examples](../../getting-started/examples.md)
 - [Getting started](../../getting-started/overview.md)
 - [globals](globals.md)
 - [game objects](game-objects.md)

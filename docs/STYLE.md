@@ -68,7 +68,7 @@ Do not repeat these topics. Link to the central page.
 | Hook usage in scripts | [hooks](reference/lua/hooks.md) |
 | Native crash Luau context | [Crash sidecar](contributor/internals/crash-sidecar.md) |
 | CCObject::release hook safety | [Release-hook safety](contributor/internals/release-hook-safety.md) |
-| Game object lifetime and refs | [game objects](reference/lua/game-objects.md) Ownership |
+| Game object lifetime and refs | [game objects](reference/lua/game-objects.md) |
 
 Keep hook policy in [LuauAPI mod guidelines](mod_guidelines.md).
 

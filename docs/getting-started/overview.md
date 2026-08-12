@@ -5,8 +5,7 @@
 LuauAPI is a Geode mod that ships a shared Luau runtime.
 It can power a script-first mod or add Luau to an existing C++ mod.
 Scripts call into Geometry Dash through generated bindings.
-This page is the entry point for mod authors who want to build a Geode mod using Luau,
-whether a brand new mod or one you already have.
+This page is the entry point for mod authors who want to build a Geode mod using Luau.
 
 ## Choose your path
 
@@ -38,7 +37,6 @@ whether a brand new mod or one you already have.
 - [Example mod template and installation](installation.md)
 - [Editor setup](editor-setup.md)
 - [Your first script](first-script.md)
-- [Examples](examples.md)
 - [LuauAPI mod guidelines](../mod_guidelines.md)
 
 ## Related

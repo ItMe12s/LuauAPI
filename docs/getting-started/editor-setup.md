@@ -85,12 +85,10 @@ The `definitionFiles` entry is a fixed single path, so you only reload after a s
 ## Next
 
 - [Your first script](first-script.md)
-- [Examples](examples.md)
 
 ## Related
 
 - [Getting started](overview.md)
-- [Examples](examples.md)
 - [type stubs](../reference/lua/type-stubs.md)
 - [Building from source](../contributor/building.md)
 

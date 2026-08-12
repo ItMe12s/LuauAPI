@@ -111,7 +111,6 @@ end)
 ## Related
 
 - [Getting started](../../getting-started/overview.md)
-- [Examples](../../getting-started/examples.md)
 - [fs](fs.md)
 - [json](json.md)
 - [globals](globals.md)

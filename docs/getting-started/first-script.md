@@ -64,13 +64,12 @@ Use it to test snippets without a build step.
 
 ## Next
 
-- [Examples](examples.md)
+- [modules](../reference/lua/modules.md)
 
 ## Related
 
 - [Getting started](overview.md)
 - [Editor setup](editor-setup.md)
-- [Examples](examples.md)
 - [globals](../reference/lua/globals.md)
 - [modules](../reference/lua/modules.md)
 - [C++ API reference](../reference/cpp/api-reference.md)

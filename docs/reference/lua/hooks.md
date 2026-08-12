@@ -16,8 +16,6 @@ geode.hook(target: string, callback: HookCallbackTable) -> HookHandle
 Registers a callback on a target function. You must pass exactly two arguments.
 An unknown target raises an error. The hook is enabled when you register it.
 
-See [Examples](../../getting-started/examples.md).
-
 ## Target id
 
 The target id is `namespace.Class:method/argCount`.
@@ -159,7 +157,6 @@ See [Limits and errors](../cpp/limits-and-errors.md) for callback caps and deadl
 ## Related
 
 - [Getting started](../../getting-started/overview.md)
-- [Examples](../../getting-started/examples.md)
 - [LuauAPI mod guidelines](../../mod_guidelines.md)
 - [tasks and time](tasks.md)
 - [callbacks](callbacks.md)

@@ -9,7 +9,22 @@ See [Installation](../../getting-started/installation.md) for how Geode packs re
 ## How to use it
 
 A module file returns one value, and the caller receives that value.
-See [Examples](../../getting-started/examples.md).
+
+```lua
+-- Math.luau
+local M = {}
+
+function M.add(a, b)
+    return a + b
+end
+
+return M
+```
+
+```lua
+local Math = require("./Math")
+print(Math.add(2, 3))
+```
 
 ## The rules
 
@@ -41,7 +56,6 @@ For the full load pipeline, see [Module system](../../contributor/internals/modu
 ## Related
 
 - [Getting started](../../getting-started/overview.md)
-- [Examples](../../getting-started/examples.md)
 - [globals](globals.md)
 - [sharing APIs between mods](sharing-apis.md)
 - [Module system](../../contributor/internals/module-system.md)

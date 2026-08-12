@@ -68,6 +68,8 @@ If a callback errors or times out, LuauAPI logs it and lets propagation continue
 
 ## Ctrl + A example
 
+Test a key and its modifiers with `bit32.band`:
+
 ```lua
 local keys = geode.cocos.enumKeyCodes
 local mods = geode.KeyboardModifier
@@ -79,15 +81,18 @@ local handle = geode.KeyboardInputEvent.listenFor(keys.KEY_A, function(data)
 
     print("Ctrl+A")
     return true
-end)
-
--- Disconnect later.
-handle:disconnect()
+end, 100)
 ```
+
+The optional priority argument works like other Geode event listeners.
+Higher priority runs first. A listener that returns `true` blocks lower ones.
+Store the handle and call `handle:disconnect()` when you no longer need input.
+Handles also disconnect during runtime shutdown.
 
 ## Listen to every key example
 
 Use `listen` to filter many keys in one place.
+`Repeat` fires while a key is held, so ignore it when you only want one action per physical press.
 
 ```lua
 local action = geode.KeyboardInputData.Action
@@ -98,47 +103,6 @@ geode.KeyboardInputEvent.listen(function(data)
         else "repeat"
 
     print("key", data.key, act, "mods", data.modifiers)
-    return false
-end)
-```
-
-## Press, release, and repeat example
-
-`Repeat` fires while a key is held. Ignore it when you only want one action per physical press.
-
-```lua
-local keys = geode.cocos.enumKeyCodes
-local action = geode.KeyboardInputData.Action
-
-geode.KeyboardInputEvent.listenFor(keys.KEY_Space, function(data)
-    if data.action == action.Press then
-        print("space down")
-    elseif data.action == action.Release then
-        print("space up")
-    end
-    return false
-end)
-```
-
-## Modifier shortcut example
-
-Test and combine modifiers with `bit32.band`.
-
-```lua
-local keys = geode.cocos.enumKeyCodes
-local mods = geode.KeyboardModifier
-local action = geode.KeyboardInputData.Action
-
-geode.KeyboardInputEvent.listenFor(keys.KEY_F5, function(data)
-    if data.action ~= action.Press then return false end
-
-    local shift = bit32.band(data.modifiers, mods.Shift) ~= 0
-    local ctrl = bit32.band(data.modifiers, mods.Control) ~= 0
-
-    if shift and not ctrl then
-        print("Shift+F5")
-        return true
-    end
     return false
 end)
 ```
@@ -159,45 +123,10 @@ geode.KeyboardInputEvent.listen(function(data)
 end)
 ```
 
-## Priority example
-
-The optional priority argument works like other Geode event listeners.
-Higher priority runs first. A listener that returns `true` blocks lower ones.
-
-```lua
-local keys = geode.cocos.enumKeyCodes
-
-geode.KeyboardInputEvent.listenFor(keys.KEY_Space, function(data)
-    print("high priority")
-    return true
-end, 100)
-
-geode.KeyboardInputEvent.listenFor(keys.KEY_Space, function(data)
-    print("normal priority")
-    return false
-end)
-```
-
-## Temporary listener example
-
-Store the handle and disconnect when you no longer need input.
-
-```lua
-local listener = geode.KeyboardInputEvent.listen(function(data)
-    print(data.key, data.timestamp)
-    return false
-end)
-
-task.delay(10, function()
-    listener:disconnect()
-end)
-```
-
 ## Related
 
 - [Mouse input](mouse-input.md)
 - [Getting started](../../getting-started/overview.md)
-- [Examples](../../getting-started/examples.md)
 - [callbacks](callbacks.md)
 - [Keybind](keybind.md)
 - [cocos](cocos.md)

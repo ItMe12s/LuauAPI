@@ -121,7 +121,6 @@ require(path: string) -> any
 
 Loads a sibling Luau module and returns its single value.
 See [modules](modules.md) for the full rules.
-See [Examples](../../getting-started/examples.md).
 
 ## _G
 
@@ -141,7 +140,6 @@ Hook helpers such as `geode.skip` are documented in [hooks](hooks.md).
 ## Related
 
 - [Getting started](../../getting-started/overview.md)
-- [Examples](../../getting-started/examples.md)
 - [modules](modules.md)
 - [sharing APIs between mods](sharing-apis.md)
 - [geode.utils](utils.md)

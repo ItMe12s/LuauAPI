@@ -107,7 +107,19 @@ Stops future runs. An in-flight `task.wait` still finishes.
 Keep the handle while you expect the callback to run.
 Dropping it cancels the task when Lua collects the handle userdata.
 
-See [Examples](../../getting-started/examples.md).
+Use a self-referencing handle to stop a repeating task from inside itself:
+
+```lua
+local ticks = 0
+local everyHandle
+everyHandle = task.every(0.5, function()
+    ticks += 1
+    print("tick", ticks)
+    if ticks >= 5 then
+        everyHandle:cancel()
+    end
+end)
+```
 
 ## time.now and time.unix
 
@@ -132,7 +144,6 @@ See [Getting started](../../getting-started/overview.md) and [Limits and errors]
 ## Related
 
 - [Getting started](../../getting-started/overview.md)
-- [Examples](../../getting-started/examples.md)
 - [Task scheduler](../../contributor/internals/task-scheduler.md)
 - [globals](globals.md)
 - [sharing APIs between mods](sharing-apis.md)

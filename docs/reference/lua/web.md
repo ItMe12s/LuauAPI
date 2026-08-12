@@ -174,7 +174,6 @@ Handwritten extras are in `tools/luau_codegen/extra_bindings/web.dluau`.
 - [websocket](websocket.md)
 - [fs](fs.md)
 - [Getting started](../../getting-started/overview.md)
-- [Examples](../../getting-started/examples.md)
 - [globals](globals.md)
 - [tasks and time](tasks.md)
 - [LuauAPI mod guidelines](../../mod_guidelines.md)

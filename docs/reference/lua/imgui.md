@@ -110,7 +110,7 @@ imgui.onDraw(function()
 end)
 ```
 
-See [Examples](../../getting-started/examples.md) and [mod/demo/demo_modmenu.luau](../../../mod/demo/demo_modmenu.luau).
+See [mod/demo/demo_modmenu.luau](../../../mod/demo/demo_modmenu.luau) for a full mod menu.
 
 ## Style and theme
 
@@ -174,7 +174,6 @@ Handwritten extras are in `tools/luau_codegen/extra_bindings/imgui.dluau`.
 
 - [UI and layouts](ui.md)
 - [type stubs](type-stubs.md)
-- [Examples](../../getting-started/examples.md)
 - [Getting started](../../getting-started/overview.md)
 - [globals](globals.md)
 - [LuauAPI mod guidelines](../../mod_guidelines.md)
