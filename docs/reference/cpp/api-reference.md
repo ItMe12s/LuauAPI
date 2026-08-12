@@ -19,6 +19,10 @@ Another Geode mod uses LuauAPI like this:
 2. Include `include/LuauAPI.hpp` (exported through `api.include` in `mod.json`).
 3. Call `runFile` or `runScript` with your resources directory.
 
+The dependency must be required to call `runFile`, `runScript`, and the status functions.
+Native registration alone works with an optional dependency.
+See [Native C++ registration](native-registration.md).
+
 Make sure your Geode SDK is up to date.
 See [Your first script](../../getting-started/first-script.md) and [Installation](../../getting-started/installation.md) for setup.
 
@@ -51,7 +55,7 @@ publication rules, callback behavior, and examples.
 | --- | --- | --- |
 | `runFile`, `runScript` | Main only | Full path validation, read, compile, and run |
 | `runFileAsync`, `runScriptAsync` | Any (not shutting down) | Path validation and file read on caller, script runs on main |
-| `registerFunction`, `registerValue` | Main only, runtime ready | Publish under the caller mod's exact `_G` key |
+| `registerFunction`, `registerValue` | Main only, runtime ready | Publish under the caller mod's exact `_G` key. Returns `Err` when LuauAPI is an optional dependency and not loaded |
 | `isReady`, `status`, `lastError` | Main only | Off main thread or during shutdown return safe defaults |
 | `memoryUsage`, `memoryLimit`, `codegenEnabled` | Main only | Return zeros or false off main thread |
 

@@ -4,12 +4,14 @@
 
 ## Announcements
 
+- `12/8/2026`: LuauAPI can now be an optional dependency for mods that only want to support Luau bindings.
 - `29/7/2026`: [LuauAPI has an example/template mod now](https://github.com/ItMe12s/luauapi-example-mod).
 - `11/7/2026`: Bindings that are automatically picked up likely won't be included in the changelog.
 
 ## 0.1.0-beta.24
 
-add stuff here...
+- Added Geode event dispatch for native C++ function and value registration.
+- Removed the old DLL export surface for native registration.
 
 ## 0.1.0-beta.23
 

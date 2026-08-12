@@ -9,6 +9,8 @@ Use this to let one mod expose an API to others.
 ## Publishing from C++
 
 Direct native registration publishes C++ functions and values under the caller's full mod id.
+It dispatches through Geode events, so a provider can publish with LuauAPI as an optional dependency.
+When LuauAPI is not loaded, each register call returns `Err("Unable to call method")`.
 The registering mod's own scripts can read this table through `_G[geode.Mod.getID()]`.
 Scripts from other mods use the registering mod's explicit id:
 

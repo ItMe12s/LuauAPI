@@ -8,11 +8,16 @@ Registration is direct and does not expose the Luau stack to the calling mod.
 
 ## Setup
 
-Declare LuauAPI as a required Geode dependency.
+Registration dispatches through Geode events, so it works with a required or optional `imes.luauapi` dependency.
 Include `LuauAPI.hpp` from the dependency's exported include directory.
 See [Installation](../../getting-started/installation.md) for dependency setup.
 
-A required mod dependency can expose a linked C++ API through its public headers.
+With a required dependency, you can also call the linked C++ API such as `runFile`.
+With an optional dependency, LuauAPI is not linked, so only registration is available.
+When LuauAPI is not loaded, each register call returns `Err("Unable to call method")`.
+Guard or ignore that error if your mod still works without LuauAPI.
+
+A dependency can expose functions and values through its public headers.
 Register a compatible free or static API function directly.
 For an unsupported signature, register a free or static wrapper in your mod that calls the dependency.
 Both forms still publish under the registering mod's id.
@@ -242,7 +247,7 @@ See [Limits and errors](limits-and-errors.md) for deadline and memory behavior.
 LuauAPI stores the function pointer bytes with the Lua closure.
 The registering mod and the module that owns the function pointer must stay loaded while its closure can exist.
 For a wrapper, the registering mod owns the pointer.
-For a directly registered dependency function, the required dependency owns it.
+For a directly registered dependency function, the dependency owns it.
 There is no unregister API or hot-unload support.
 Runtime shutdown releases closure storage without calling the registering mod.
 

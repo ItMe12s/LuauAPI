@@ -67,7 +67,7 @@ Add a dependency on `imes.luauapi` in your `mod.json` and declare your script fi
 ```json
 {
     "dependencies": {
-        "imes.luauapi": ">=0.1.0-beta.20"
+        "imes.luauapi": ">=0.1.0-beta.24"
     },
     "resources": {
         "files": [
@@ -79,6 +79,23 @@ Add a dependency on `imes.luauapi` in your `mod.json` and declare your script fi
     }
 }
 ```
+
+Use an optional dependency when your mod only registers native functions and values:
+
+```json
+{
+    "dependencies": {
+        "imes.luauapi": {
+            "version": ">=0.1.0-beta.24",
+            "required": false
+        }
+    }
+}
+```
+
+With an optional dependency, LuauAPI is not linked, so `runFile` and `runScript` are unavailable.
+Registration still works through Geode events and returns an error when LuauAPI is not loaded.
+See [Native C++ registration](../reference/cpp/native-registration.md).
 
 Put your `.luau` files under the resources path you declare.
 Geode packs them into a flat resources folder at runtime.
@@ -95,9 +112,11 @@ Most mods only need the dependency above.
 If your mod already has C++ entry points, it can run Luau scripts,
 expose typed C++ functions and values to those scripts, or do both.
 Call `imes::luauapi::runFile` or `runScript` with your resources directory.
+This needs a required dependency.
 See [Getting started](overview.md) for the main-thread rule, [Your first script](first-script.md),
 and the [C++ API reference](../reference/cpp/api-reference.md).
 Register C++ functions and values before running a script that needs them.
+Registration works with a required or optional dependency.
 See [Native C++ registration](../reference/cpp/native-registration.md) for the full example and supported types.
 
 ## Supported platforms
