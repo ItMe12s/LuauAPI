@@ -3,6 +3,9 @@
 #include "framework/stack/Stack.hpp"
 #include "require/PathSandbox.hpp"
 
+#if !defined(LUAUAPI_HOST_TESTS)
+    #define GEODE_DEFINE_EVENT_EXPORTS
+#endif
 #include <LuauAPI.hpp>
 
 #if !defined(LUAUAPI_HOST_TESTS)

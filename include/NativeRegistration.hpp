@@ -3,6 +3,9 @@
 #include "Export.hpp"
 
 #include <Geode/Geode.hpp>
+#if !defined(LUAUAPI_HOST_TESTS)
+    #include <Geode/loader/Dispatch.hpp>
+#endif
 #include <cmath>
 #include <concepts>
 #include <cstddef>
@@ -68,14 +71,35 @@ namespace imes::luauapi {
         static_assert(std::is_trivially_copyable_v<NativeCallOps>);
         static_assert(std::is_trivially_copyable_v<NativeCall>);
 
-        LUAUAPI_DLL geode::Result<void> registerNativeFunction(
+#if defined(LUAUAPI_HOST_TESTS)
+        geode::Result<void> registerNativeFunction(
             geode::Mod* provider, char const* pathData, std::uint64_t pathSize,
             NativeInvoker invoker, void const* functionBytes, std::uint64_t functionSize
         );
 
-        LUAUAPI_DLL geode::Result<void> registerNativeValue(
+        geode::Result<void> registerNativeValue(
             geode::Mod* provider, char const* pathData, std::uint64_t pathSize, NativeValue const* value
         );
+#else
+        // clang-format off
+        inline geode::Result<void> registerNativeFunction(
+            geode::Mod* provider, char const* pathData, std::uint64_t pathSize,
+            NativeInvoker invoker, void const* functionBytes, std::uint64_t functionSize
+        ) GEODE_EVENT_EXPORT_ID(
+            &registerNativeFunction,
+            (provider, pathData, pathSize, invoker, functionBytes, functionSize),
+            "imes.luauapi/registerNativeFunction"
+        );
+
+        inline geode::Result<void> registerNativeValue(
+            geode::Mod* provider, char const* pathData, std::uint64_t pathSize, NativeValue const* value
+        ) GEODE_EVENT_EXPORT_ID(
+            &registerNativeValue,
+            (provider, pathData, pathSize, value),
+            "imes.luauapi/registerNativeValue"
+        );
+        // clang-format on
+#endif
 
         template <class T>
         using Bare = std::remove_cv_t<std::remove_reference_t<T>>;
