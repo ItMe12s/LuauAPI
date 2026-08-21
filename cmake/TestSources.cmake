@@ -27,6 +27,7 @@ set(LUAUAPI_HOST_TEST_RUNTIME_SOURCES
     src/bindings/geode/web/GeodeWebApi.cpp
     src/bindings/geode/web/GeodeWebListeners.cpp
     src/bindings/geode/JsonConvert.cpp
+    src/bindings/lunar/LunarModel.cpp
     src/bindings/imgui/ImGuiCore.cpp
     src/bindings/imgui/ImGuiWidgetsLayout.cpp
     src/bindings/imgui/ImGuiPopupsTablesMenus.cpp
@@ -56,6 +57,7 @@ set(LUAUAPI_HOST_TEST_FIXTURE_SOURCES
     tests/host/render3d/Gd3dMeshBindingTests.cpp
     tests/host/render3d/FrustumTests.cpp
     tests/host/render3d/SceneDrawListTests.cpp
+    tests/host/lunar/LunarCompileTests.cpp
 )
 
 set(LUAUAPI_HOST_TEST_SOURCES

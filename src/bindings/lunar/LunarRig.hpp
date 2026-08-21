@@ -34,8 +34,6 @@ namespace luax::lunar {
         void removeChild(cocos2d::CCNode* child, bool cleanup) override;
 
     private:
-        bool init() override;
-
         geode::Result<void> registerId(std::string const& id, cocos2d::CCNode* node);
         void forgetNode(cocos2d::CCNode* node);
 

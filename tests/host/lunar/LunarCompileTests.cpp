@@ -1,0 +1,277 @@
+#include "bindings/lunar/LunarModel.hpp"
+
+#include <array>
+#include <catch2/catch_approx.hpp>
+#include <catch2/catch_test_macros.hpp>
+#include <string>
+#include <utility>
+#include <vector>
+
+namespace {
+    using namespace luax::lunar;
+    using Catch::Approx;
+
+    constexpr std::array<std::string_view, 25> kEasingNames{{
+        "linear",      "quad_in",      "quad_out",     "quad_in_out", "cubic_in",
+        "cubic_out",   "cubic_in_out", "quart_in",     "quart_out",   "quart_in_out",
+        "quint_in",    "quint_out",    "quint_in_out", "sine_in",     "sine_out",
+        "sine_in_out", "expo_in",      "expo_out",     "expo_in_out", "back_in",
+        "back_out",    "back_in_out",  "elastic_in",   "elastic_out", "elastic_in_out",
+    }};
+
+    Keyframe kf(double frame, std::string nodeId, NodePose pose) {
+        Keyframe out;
+        out.frame = frame;
+        out.targets.emplace_back(std::move(nodeId), std::move(pose));
+        return out;
+    }
+
+    TweenSeg const* findSeg(CompiledAnimation const& anim, std::string const& id, Prop prop, bool instant) {
+        for (auto const& track : anim.nodes) {
+            if (track.nodeId != id) continue;
+            for (auto const& seg : track.segs) {
+                if (seg.prop == prop && seg.instant == instant) return &seg;
+            }
+        }
+        return nullptr;
+    }
+} // namespace
+
+TEST_CASE("easingFromString parses known names and rejects unknown") {
+    auto linear = easingFromString("linear");
+    REQUIRE(linear);
+    REQUIRE(linear->kind == EasingKind::Linear);
+
+    auto quadIn = easingFromString("quad_in");
+    REQUIRE(quadIn);
+    REQUIRE(quadIn->kind == EasingKind::PowIn);
+    REQUIRE(quadIn->rate == Approx(2.F));
+
+    auto quintInOut = easingFromString("quint_in_out");
+    REQUIRE(quintInOut);
+    REQUIRE(quintInOut->kind == EasingKind::PowInOut);
+    REQUIRE(quintInOut->rate == Approx(5.F));
+
+    auto backOut = easingFromString("back_out");
+    REQUIRE(backOut);
+    REQUIRE(backOut->kind == EasingKind::BackOut);
+
+    REQUIRE_FALSE(easingFromString("nope"));
+    REQUIRE_FALSE(easingFromString(""));
+}
+
+TEST_CASE("easeProgress endpoints hold for every easing") {
+    for (auto const& name : kEasingNames) {
+        auto easing = easingFromString(name);
+        REQUIRE(easing);
+        INFO("easing: " << name);
+        REQUIRE(easeProgress(*easing, 0.F) == Approx(0.F).margin(1e-5));
+        REQUIRE(easeProgress(*easing, 1.F) == Approx(1.F).margin(1e-5));
+    }
+}
+
+TEST_CASE("easeProgress preserves shapes") {
+    auto linear = *easingFromString("linear");
+    REQUIRE(easeProgress(linear, 0.25F) == Approx(0.25F));
+    REQUIRE(easeProgress(linear, 0.75F) == Approx(0.75F));
+
+    auto quadIn = *easingFromString("quad_in");
+    REQUIRE(easeProgress(quadIn, 0.25F) == Approx(0.0625F));
+
+    auto quadOut = *easingFromString("quad_out");
+    REQUIRE(easeProgress(quadOut, 0.25F) == Approx(0.4375F));
+
+    auto cubicOut = *easingFromString("cubic_out");
+    REQUIRE(easeProgress(cubicOut, 0.5F) == Approx(0.875F));
+
+    auto backOut = *easingFromString("back_out");
+    REQUIRE(easeProgress(backOut, 0.8F) > 1.F);
+}
+
+TEST_CASE("compileAnimation builds tween and snap segments") {
+    std::vector<Keyframe> const keyframes = {
+        kf(10,
+           "arm",
+           [] {
+               NodePose pose;
+               pose.x = 10.F;
+               return pose;
+           }()),
+        kf(20, "arm", [] {
+            NodePose pose;
+            pose.x = 20.F;
+            return pose;
+        }()),
+    };
+
+    auto result = compileAnimation(keyframes, 10.0, false);
+    REQUIRE(result.isOk());
+    auto anim = std::move(result).unwrap();
+
+    REQUIRE(anim.looped == false);
+    REQUIRE(anim.duration == Approx(2.0));
+    REQUIRE(anim.nodes.size() == 1);
+    REQUIRE(anim.nodes[0].nodeId == "arm");
+
+    auto const* snap = findSeg(anim, "arm", Prop::PosX, true);
+    REQUIRE(snap);
+    REQUIRE(snap->start == Approx(1.0));
+    REQUIRE(snap->end == Approx(1.0));
+    REQUIRE(snap->to == Approx(10.F));
+
+    auto const* tween = findSeg(anim, "arm", Prop::PosX, false);
+    REQUIRE(tween);
+    REQUIRE(tween->start == Approx(1.0));
+    REQUIRE(tween->end == Approx(2.0));
+    REQUIRE(tween->from == Approx(10.F));
+    REQUIRE(tween->to == Approx(20.F));
+}
+
+TEST_CASE("compileAnimation last keyframe wins at a duplicate frame") {
+    std::vector<Keyframe> const keyframes = {
+        kf(5,
+           "arm",
+           [] {
+               NodePose pose;
+               pose.x = 5.F;
+               return pose;
+           }()),
+        kf(5, "arm", [] {
+            NodePose pose;
+            pose.x = 9.F;
+            return pose;
+        }()),
+    };
+
+    auto result = compileAnimation(keyframes, 10.0, false);
+    REQUIRE(result.isOk());
+    auto anim = std::move(result).unwrap();
+
+    REQUIRE(anim.nodes.size() == 1);
+    REQUIRE(anim.nodes[0].segs.size() == 1);
+    REQUIRE(anim.nodes[0].segs[0].instant);
+    REQUIRE(anim.nodes[0].segs[0].to == Approx(9.F));
+    REQUIRE(anim.duration == Approx(0.5));
+}
+
+TEST_CASE("compileAnimation keeps channels independent") {
+    NodePose kf1;
+    kf1.x = 0.F;
+    kf1.rot = 0.F;
+    NodePose kf2;
+    kf2.rot = 90.F;
+    NodePose kf3;
+    kf3.x = 100.F;
+    kf3.rot = 180.F;
+
+    std::vector<Keyframe> const keyframes = {
+        kf(1, "arm", kf1),
+        kf(2, "arm", kf2),
+        kf(3, "arm", kf3),
+    };
+
+    auto result = compileAnimation(keyframes, 1.0, false);
+    REQUIRE(result.isOk());
+    auto anim = std::move(result).unwrap();
+
+    auto const* xTween = findSeg(anim, "arm", Prop::PosX, false);
+    REQUIRE(xTween);
+    REQUIRE(xTween->start == Approx(1.0));
+    REQUIRE(xTween->end == Approx(3.0));
+    REQUIRE(xTween->to == Approx(100.F));
+
+    auto const* rot1 = findSeg(anim, "arm", Prop::Rotation, false);
+    REQUIRE(rot1);
+    REQUIRE(rot1->start == Approx(1.0));
+    REQUIRE(rot1->end == Approx(2.0));
+    REQUIRE(rot1->to == Approx(90.F));
+
+    REQUIRE(anim.duration == Approx(3.0));
+}
+
+TEST_CASE("compileAnimation validates fps and frame numbers") {
+    std::vector<Keyframe> const keyframes = {kf(1, "arm", [] {
+        NodePose pose;
+        pose.x = 0.F;
+        return pose;
+    }())};
+
+    REQUIRE(compileAnimation(keyframes, 0.0, false).isErr());
+    REQUIRE(compileAnimation(keyframes, -5.0, false).isErr());
+
+    std::vector<Keyframe> const negative = {kf(-1, "arm", [] {
+        NodePose pose;
+        pose.x = 0.F;
+        return pose;
+    }())};
+    REQUIRE(compileAnimation(negative, 10.0, false).isErr());
+}
+
+TEST_CASE("sliceAnimation clips elapsed tweens continuously") {
+    NodePose start;
+    start.x = 0.F;
+    NodePose mid;
+    mid.z = 5.F;
+    NodePose finish;
+    finish.x = 10.F;
+    finish.easing = *easingFromString("cubic_out");
+
+    std::vector<Keyframe> const keyframes = {
+        kf(0, "arm", start),
+        kf(1, "arm", mid),
+        kf(2, "arm", finish),
+    };
+
+    auto result = compileAnimation(keyframes, 2.0, false);
+    REQUIRE(result.isOk());
+    auto anim = std::move(result).unwrap();
+    REQUIRE(anim.duration == Approx(1.0));
+
+    SECTION("zero fromTime passes through") {
+        CompiledAnimation sliced = sliceAnimation(anim, 0.0);
+        REQUIRE(sliced.duration == Approx(1.0));
+        REQUIRE(sliced.nodes.size() == anim.nodes.size());
+    }
+
+    SECTION("midpoint slice interpolates the from value") {
+        CompiledAnimation sliced = sliceAnimation(anim, 0.5);
+        auto const* tween = findSeg(sliced, "arm", Prop::PosX, false);
+        REQUIRE(tween);
+        REQUIRE(tween->start == Approx(0.5));
+        REQUIRE(tween->end == Approx(1.0));
+        float const expected =
+            std::lerp(0.F, 10.F, easeProgress(*easingFromString("cubic_out"), 0.5F));
+        REQUIRE(tween->from == Approx(expected));
+        REQUIRE(tween->to == Approx(10.F));
+        REQUIRE(sliced.duration == Approx(0.5));
+
+        auto const* zSnap = findSeg(sliced, "arm", Prop::ZOrder, true);
+        REQUIRE(zSnap);
+        REQUIRE(zSnap->to == Approx(5.F));
+    }
+
+    SECTION("slice past an instant drops it") {
+        CompiledAnimation sliced = sliceAnimation(anim, 0.6);
+        REQUIRE_FALSE(findSeg(sliced, "arm", Prop::ZOrder, true));
+
+        auto const* tween = findSeg(sliced, "arm", Prop::PosX, false);
+        REQUIRE(tween);
+        float const expected =
+            std::lerp(0.F, 10.F, easeProgress(*easingFromString("cubic_out"), 0.6F));
+        REQUIRE(tween->from == Approx(expected));
+    }
+}
+
+TEST_CASE("sliceAnimation propagates looped flag") {
+    NodePose pose;
+    pose.x = 1.F;
+    std::vector<Keyframe> const keyframes = {kf(0, "arm", pose)};
+
+    auto result = compileAnimation(keyframes, 10.0, true);
+    REQUIRE(result.isOk());
+    auto anim = std::move(result).unwrap();
+    REQUIRE(anim.looped);
+
+    CompiledAnimation sliced = sliceAnimation(anim, 0.0);
+    REQUIRE(sliced.looped);
+}

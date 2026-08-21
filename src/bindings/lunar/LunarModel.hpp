@@ -104,10 +104,6 @@ namespace luax::lunar {
         double duration = 0.0;
         bool looped = false;
         std::vector<NodeTrack> nodes;
-
-        bool empty() const noexcept {
-            return nodes.empty();
-        }
     };
 
     geode::Result<CompiledAnimation> compileAnimation(

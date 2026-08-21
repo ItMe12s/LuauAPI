@@ -13,10 +13,6 @@ namespace luax::lunar {
         constexpr float kPi = 3.14159265358979F;
         constexpr float kTwoPi = kPi * 2.F;
 
-        float powEase(float p, float rate) {
-            return std::pow(p, rate);
-        }
-
         float bounceOut(float p) {
             constexpr float n1 = 7.5625F;
             constexpr float d1 = 2.75F;
@@ -66,10 +62,6 @@ namespace luax::lunar {
             {"elastic_out", EasingKind::ElasticOut, 1.F},
             {"elastic_in_out", EasingKind::ElasticInOut, 1.F},
         }};
-
-        float lerp(float a, float b, float t) {
-            return a + (b - a) * t;
-        }
 
         bool sameTime(double a, double b) {
             constexpr double kEps = 1e-9;
@@ -131,12 +123,12 @@ namespace luax::lunar {
         p = std::clamp(p, 0.F, 1.F);
         switch (easing.kind) {
             case K::Linear: return p;
-            case K::PowIn: return powEase(p, easing.rate);
-            case K::PowOut: return 1.F - powEase(1.F - p, easing.rate);
+            case K::PowIn: return std::pow(p, easing.rate);
+            case K::PowOut: return 1.F - std::pow(1.F - p, easing.rate);
             case K::PowInOut: {
                 float t = p * 2.F;
-                if (t < 1.F) return 0.5F * powEase(t, easing.rate);
-                return 1.F - 0.5F * powEase(2.F - t, easing.rate);
+                if (t < 1.F) return 0.5F * std::pow(t, easing.rate);
+                return 1.F - 0.5F * std::pow(2.F - t, easing.rate);
             }
             case K::SineIn: return 1.F - std::cos(p * kPi * 0.5F);
             case K::SineOut: return std::sin(p * kPi * 0.5F);
@@ -313,7 +305,7 @@ namespace luax::lunar {
                     float const p =
                         span > 0.0 ? static_cast<float>((fromTime - seg.start) / span) : 1.F;
                     float const eased = easeProgress(seg.easing, p);
-                    kept.from = lerp(seg.from, seg.to, eased);
+                    kept.from = std::lerp(seg.from, seg.to, eased);
                     kept.start = fromTime;
                 }
                 track.segs.push_back(kept);

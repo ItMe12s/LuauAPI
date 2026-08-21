@@ -69,22 +69,13 @@ namespace luax::lunar {
 
     LunarRig* LunarRig::create() {
         auto* ret = new LunarRig();
-        if (ret->init()) {
-            ret->autorelease();
-            return ret;
-        }
-        delete ret;
-        return nullptr;
+        ret->autorelease();
+        return ret;
     }
 
     void LunarRig::removeChild(cocos2d::CCNode* child, bool cleanup) {
         forgetNode(child);
         CCNode::removeChild(child, cleanup);
-    }
-
-    bool LunarRig::init() {
-        if (!CCNode::init()) return false;
-        return true;
     }
 
     geode::Result<void> LunarRig::registerId(std::string const& id, cocos2d::CCNode* node) {
@@ -167,7 +158,7 @@ namespace luax::lunar {
                     );
                 if (!frame) {
                     geode::log::warn(
-                        "rig node '{}': sprite frame '{}' not found, skipped",
+                        "[lunar] rig node '{}': sprite frame '{}' not found, skipped",
                         nodeSpec.id,
                         *nodeSpec.sprite
                     );
@@ -176,7 +167,7 @@ namespace luax::lunar {
                 node = cocos2d::CCSprite::createWithSpriteFrameName(nodeSpec.sprite->c_str());
                 if (!node) {
                     geode::log::warn(
-                        "rig node '{}': failed to create sprite '{}', skipped",
+                        "[lunar] rig node '{}': failed to create sprite '{}', skipped",
                         nodeSpec.id,
                         *nodeSpec.sprite
                     );
@@ -198,7 +189,8 @@ namespace luax::lunar {
                 }
                 else {
                     geode::log::warn(
-                        "rig node '{}': node type does not support opacity, ignored", nodeSpec.id
+                        "[lunar] rig node '{}': node type does not support opacity, ignored",
+                        nodeSpec.id
                     );
                 }
             }

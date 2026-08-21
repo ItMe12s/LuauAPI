@@ -535,7 +535,7 @@ namespace luax::lunar {
 
     void LunarTrack::play() {
         if (!m_rig) return;
-        if (m_anim.empty() || !(m_anim.duration > 0.0)) {
+        if (m_anim.nodes.empty() || !(m_anim.duration > 0.0)) {
             geode::log::warn("cannot play an animation without keyframes");
             return;
         }
