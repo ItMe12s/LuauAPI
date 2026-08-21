@@ -189,7 +189,7 @@ namespace luax::lunar {
                     to = cocos2d::CCScaleTo::create(dur, node->getScaleX(), seg.to);
                     break;
                 case P::Opacity: to = cocos2d::CCFadeTo::create(dur, opacityByte(seg.to)); break;
-                case P::ZOrder: break; // instant-only, never reaches here
+                case P::ZOrder: break; // Instant-only, never reaches here.
             }
             if (!to) return nullptr;
 
@@ -267,8 +267,6 @@ namespace luax::lunar {
                 node, 0, false
             );
         }
-
-        // -- LunarAnimationDef bindings --
 
         int animNew(lua_State* L) {
             Usertype<LunarAnimationDef>::pushOwned(L, LunarAnimationDef::create());

@@ -10,7 +10,7 @@
 namespace luax::lunar {
     namespace {
 
-        constexpr float kPi = 3.14159265358979F;
+        constexpr float kPi = 3.14159265358979F; // Could've use M_PI.
         constexpr float kTwoPi = kPi * 2.F;
 
         float bounceOut(float p) {
