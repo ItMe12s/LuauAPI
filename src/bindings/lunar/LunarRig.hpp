@@ -9,10 +9,28 @@
 #include <string>
 #include <string_view>
 #include <unordered_map>
+#include <vector>
 
 struct lua_State;
 
 namespace luax::lunar {
+
+    struct RigNodeSpec {
+        std::string id;
+        std::optional<std::string> sprite;
+        std::optional<std::string> parent;
+        float x = 0.F;
+        float y = 0.F;
+        float rot = 0.F;
+        float sx = 1.F;
+        float sy = 1.F;
+        float z = 0.F;
+        std::optional<float> opacity;
+    };
+
+    struct RigSpec {
+        std::vector<RigNodeSpec> nodes;
+    };
 
     class LunarRig final : public cocos2d::CCNode {
     public:

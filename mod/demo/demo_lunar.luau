@@ -27,12 +27,20 @@ local wave = lunar.animation.load({
             body = { rot = 0, opacity = 255 },
         },
         [6] = {
-            arm = { rot = 25, easing = "sine_in_out" },
-            body = { opacity = 180, easing = "sine_in_out" },
+            arm = { rot = 25, easing = "bounce_out" },
+            body = { opacity = 180, easing = "expo_out" },
         },
-        [12] = {
+        [18] = {
             arm = { rot = -25, easing = "sine_in_out" },
             body = { rot = -25, opacity = 255, easing = "sine_in_out" },
+        },
+        [24] = {
+            arm = { rot = 25, easing = "sine_in" },
+            body = { rot = 179, easing = "sine_in" }
+        },
+        [36] = {
+            arm = { rot = -25, easing = "sine_out" },
+            body = { rot = 0, opacity = 255, easing = "sine_out" },
         },
     },
 })
@@ -58,4 +66,4 @@ geode.hook("geode.gd.MenuLayer:init/0", {
     end,
 })
 
-print("lunar demo loaded. enter the menu to see it")
+print("lunar demo loaded. enter the menu to see it :3")

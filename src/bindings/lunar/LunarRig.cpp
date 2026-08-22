@@ -1,5 +1,6 @@
 #include "bindings/lunar/LunarRig.hpp"
 
+#include "bindings/lunar/LunarAnimation.hpp"
 #include "framework/stack/Stack.hpp"
 #include "framework/stack/TableUtil.hpp"
 #include "framework/usertype/Usertype.hpp"
@@ -63,6 +64,95 @@ namespace luax::lunar {
             }
             lua_pop(L, 1);
             return geode::Ok(std::move(spec));
+        }
+
+        int rigNew(lua_State* L) {
+            Usertype<LunarRig>::pushOwned(L, LunarRig::create());
+            return 1;
+        }
+
+        int rigAdd(lua_State* L) {
+            auto* self = Usertype<LunarRig>::check(L, 1, "LunarRig:add");
+            auto* node = Usertype<cocos2d::CCNode>::tryCheck(L, 2);
+            if (!node) {
+                luaL_error(L, "LunarRig:add expected a CCNode at arg 2");
+            }
+            std::optional<std::string> id;
+            if (lua_gettop(L) >= 3 && !lua_isnil(L, 3)) {
+                id = check<std::string>(L, 3, "LunarRig:add");
+            }
+            auto result = self->addMember(node, std::move(id));
+            if (result.isErr()) {
+                luaL_error(L, "LunarRig:add: %s", result.unwrapErr().c_str());
+            }
+            return 0;
+        }
+
+        int rigAddTo(lua_State* L) {
+            auto* self = Usertype<LunarRig>::check(L, 1, "LunarRig:addTo");
+            auto const parentId = check<std::string>(L, 2, "LunarRig:addTo");
+            auto* child = Usertype<cocos2d::CCNode>::tryCheck(L, 3);
+            if (!child) {
+                luaL_error(L, "LunarRig:addTo expected a CCNode at arg 3");
+            }
+            std::optional<std::string> id;
+            if (lua_gettop(L) >= 4 && !lua_isnil(L, 4)) {
+                id = check<std::string>(L, 4, "LunarRig:addTo");
+            }
+            auto result = self->addToParent(parentId, child, std::move(id));
+            if (result.isErr()) {
+                luaL_error(L, "LunarRig:addTo: %s", result.unwrapErr().c_str());
+            }
+            return 0;
+        }
+
+        int rigGetNode(lua_State* L) {
+            auto* self = Usertype<LunarRig>::check(L, 1, "LunarRig:getNode");
+            auto const id = check<std::string>(L, 2, "LunarRig:getNode");
+            if (auto* node = self->getNode(id)) {
+                Usertype<cocos2d::CCNode>::pushBorrowed(L, node);
+            }
+            else {
+                lua_pushnil(L);
+            }
+            return 1;
+        }
+
+        int rigLoad(lua_State* L) {
+            auto* self = Usertype<LunarRig>::check(L, 1, "LunarRig:load");
+            auto parsed = parseRigSpec(L, 2, "LunarRig:load");
+            if (parsed.isErr()) {
+                return pushNilErr(L, parsed.unwrapErr());
+            }
+            auto result = self->applySpec(std::move(parsed).unwrap());
+            if (result.isErr()) {
+                return pushNilErr(L, result.unwrapErr());
+            }
+            lua_pushvalue(L, 1);
+            return 1;
+        }
+
+        int rigLoadAnimation(lua_State* L) {
+            auto* rig = Usertype<LunarRig>::check(L, 1, "LunarRig:loadAnimation");
+            LunarAnimationDef* def = Usertype<LunarAnimationDef>::tryCheck(L, 2);
+            if (!def) {
+                if (lua_istable(L, 2)) {
+                    auto parsed = parseAnimTable(L, 2, "LunarRig:loadAnimation");
+                    if (parsed.isErr()) {
+                        return pushNilErr(L, parsed.unwrapErr());
+                    }
+                    def = std::move(parsed).unwrap();
+                }
+                else {
+                    luaL_error(L, "LunarRig:loadAnimation expected an animation or table at arg 2");
+                }
+            }
+            auto compiled = compileAnimation(def->keyframes(), def->fps(), def->looped());
+            if (compiled.isErr()) {
+                return pushNilErr(L, compiled.unwrapErr());
+            }
+            Usertype<LunarTrack>::pushOwned(L, LunarTrack::create(rig, std::move(compiled).unwrap()));
+            return 1;
         }
 
     } // namespace
@@ -140,6 +230,9 @@ namespace luax::lunar {
             if (nodeSpec.id.empty()) {
                 return geode::Err(std::string("rig node id must not be empty"));
             }
+            if (m_nodes.contains(nodeSpec.id)) {
+                return geode::Err(fmt::format("duplicate rig node id '{}'", nodeSpec.id));
+            }
             cocos2d::CCNode* parent = this;
             if (nodeSpec.parent) {
                 parent = getNode(*nodeSpec.parent);
@@ -152,15 +245,16 @@ namespace luax::lunar {
 
             cocos2d::CCNode* node = nullptr;
             if (nodeSpec.sprite) {
+                auto* fileUtils = cocos2d::CCFileUtils::get();
                 std::string const resolved =
-                    cocos2d::CCFileUtils::get()->fullPathForFilename(nodeSpec.sprite->c_str(), false);
-                bool const fileExists = resolved != *nodeSpec.sprite;
+                    fileUtils->fullPathForFilename(nodeSpec.sprite->c_str(), false);
+                bool const fileExists = fileUtils->isFileExist(resolved);
                 auto* sprite = fileExists ?
                     cocos2d::CCSprite::create(resolved.c_str()) :
                     cocos2d::CCSprite::createWithSpriteFrameName(nodeSpec.sprite->c_str());
                 if (!sprite) {
                     geode::log::warn(
-                        "[lunar] rig node '{}': failed to create sprite '{}', skipped",
+                        "rig node '{}': failed to create sprite '{}', skipped",
                         nodeSpec.id,
                         *nodeSpec.sprite
                     );
@@ -168,7 +262,7 @@ namespace luax::lunar {
                 }
                 if (!fileExists && sprite->isUsingFallback()) {
                     geode::log::warn(
-                        "[lunar] rig node '{}': sprite '{}' not found, mod sprites must be "
+                        "rig node '{}': sprite '{}' not found, mod sprites must be "
                         "prefixed '<mod-id>/name.png'",
                         nodeSpec.id,
                         *nodeSpec.sprite
@@ -187,12 +281,11 @@ namespace luax::lunar {
             node->setZOrder(static_cast<int>(nodeSpec.z));
             if (nodeSpec.opacity) {
                 if (auto* rgba = geode::cast::typeinfo_cast<cocos2d::CCRGBAProtocol*>(node)) {
-                    rgba->setOpacity(static_cast<GLubyte>(std::clamp(*nodeSpec.opacity, 0.F, 255.F)));
+                    rgba->setOpacity(opacityByte(*nodeSpec.opacity));
                 }
                 else {
                     geode::log::warn(
-                        "[lunar] rig node '{}': node type does not support opacity, ignored",
-                        nodeSpec.id
+                        "rig node '{}': node type does not support opacity, ignored", nodeSpec.id
                     );
                 }
             }
@@ -203,79 +296,6 @@ namespace luax::lunar {
         return geode::Ok();
     }
 
-} // namespace luax::lunar
-
-namespace luax::lunar {
-    namespace {
-
-        int rigNew(lua_State* L) {
-            Usertype<LunarRig>::pushOwned(L, LunarRig::create());
-            return 1;
-        }
-
-        int rigAdd(lua_State* L) {
-            auto* self = Usertype<LunarRig>::check(L, 1, "LunarRig:add");
-            auto* node = Usertype<cocos2d::CCNode>::tryCheck(L, 2);
-            if (!node) {
-                luaL_error(L, "LunarRig:add expected a CCNode at arg 2");
-            }
-            std::optional<std::string> id;
-            if (lua_gettop(L) >= 3 && !lua_isnil(L, 3)) {
-                id = check<std::string>(L, 3, "LunarRig:add");
-            }
-            auto result = self->addMember(node, std::move(id));
-            if (result.isErr()) {
-                luaL_error(L, "LunarRig:add: %s", result.unwrapErr().c_str());
-            }
-            return 0;
-        }
-
-        int rigAddTo(lua_State* L) {
-            auto* self = Usertype<LunarRig>::check(L, 1, "LunarRig:addTo");
-            auto const parentId = check<std::string>(L, 2, "LunarRig:addTo");
-            auto* child = Usertype<cocos2d::CCNode>::tryCheck(L, 3);
-            if (!child) {
-                luaL_error(L, "LunarRig:addTo expected a CCNode at arg 3");
-            }
-            std::optional<std::string> id;
-            if (lua_gettop(L) >= 4 && !lua_isnil(L, 4)) {
-                id = check<std::string>(L, 4, "LunarRig:addTo");
-            }
-            auto result = self->addToParent(parentId, child, std::move(id));
-            if (result.isErr()) {
-                luaL_error(L, "LunarRig:addTo: %s", result.unwrapErr().c_str());
-            }
-            return 0;
-        }
-
-        int rigGetNode(lua_State* L) {
-            auto* self = Usertype<LunarRig>::check(L, 1, "LunarRig:getNode");
-            auto const id = check<std::string>(L, 2, "LunarRig:getNode");
-            if (auto* node = self->getNode(id)) {
-                Usertype<cocos2d::CCNode>::pushBorrowed(L, node);
-            }
-            else {
-                lua_pushnil(L);
-            }
-            return 1;
-        }
-
-        int rigLoad(lua_State* L) {
-            auto* self = Usertype<LunarRig>::check(L, 1, "LunarRig:load");
-            auto parsed = parseRigSpec(L, 2, "LunarRig:load");
-            if (parsed.isErr()) {
-                luaL_error(L, "LunarRig:load: %s", parsed.unwrapErr().c_str());
-            }
-            auto result = self->applySpec(std::move(parsed).unwrap());
-            if (result.isErr()) {
-                luaL_error(L, "LunarRig:load: %s", result.unwrapErr().c_str());
-            }
-            lua_pushvalue(L, 1);
-            return 1;
-        }
-
-    } // namespace
-
     geode::Result<void> registerLunarRig(lua_State* L) {
         auto const ccNodeTag = Usertype<cocos2d::CCNode>::tag();
         auto registerResult = Usertype<LunarRig>::registerType(L, "LunarRig", {ccNodeTag});
@@ -285,6 +305,7 @@ namespace luax::lunar {
         Usertype<LunarRig>::method(L, "addTo", &rigAddTo);
         Usertype<LunarRig>::method(L, "getNode", &rigGetNode);
         Usertype<LunarRig>::method(L, "load", &rigLoad);
+        Usertype<LunarRig>::method(L, "loadAnimation", &rigLoadAnimation);
 
         getOrCreateTable(L, "lunar.rig");
         setTableCFunction(L, -1, "new", &rigNew);

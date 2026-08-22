@@ -1,6 +1,5 @@
 #include "bindings/lunar/LunarModel.hpp"
 
-#include <array>
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <string>
@@ -10,14 +9,6 @@
 namespace {
     using namespace luax::lunar;
     using Catch::Approx;
-
-    constexpr std::array<std::string_view, 25> kEasingNames{{
-        "linear",      "quad_in",      "quad_out",     "quad_in_out", "cubic_in",
-        "cubic_out",   "cubic_in_out", "quart_in",     "quart_out",   "quart_in_out",
-        "quint_in",    "quint_out",    "quint_in_out", "sine_in",     "sine_out",
-        "sine_in_out", "expo_in",      "expo_out",     "expo_in_out", "back_in",
-        "back_out",    "back_in_out",  "elastic_in",   "elastic_out", "elastic_in_out",
-    }};
 
     Keyframe kf(double frame, std::string nodeId, NodePose pose) {
         Keyframe out;
@@ -56,15 +47,19 @@ TEST_CASE("easingFromString parses known names and rejects unknown") {
     REQUIRE(backOut);
     REQUIRE(backOut->kind == EasingKind::BackOut);
 
+    auto bounceOut = easingFromString("bounce_out");
+    REQUIRE(bounceOut);
+    REQUIRE(bounceOut->kind == EasingKind::BounceOut);
+
     REQUIRE_FALSE(easingFromString("nope"));
     REQUIRE_FALSE(easingFromString(""));
 }
 
 TEST_CASE("easeProgress endpoints hold for every easing") {
-    for (auto const& name : kEasingNames) {
-        auto easing = easingFromString(name);
+    for (auto const& entry : kEasingNames) {
+        auto easing = easingFromString(entry.name);
         REQUIRE(easing);
-        INFO("easing: " << name);
+        INFO("easing: " << entry.name);
         REQUIRE(easeProgress(*easing, 0.F) == Approx(0.F).margin(1e-5));
         REQUIRE(easeProgress(*easing, 1.F) == Approx(1.F).margin(1e-5));
     }
@@ -86,6 +81,9 @@ TEST_CASE("easeProgress preserves shapes") {
 
     auto backOut = *easingFromString("back_out");
     REQUIRE(easeProgress(backOut, 0.8F) > 1.F);
+
+    auto bounceOut = *easingFromString("bounce_out");
+    REQUIRE(easeProgress(bounceOut, 0.5F) == Approx(0.765625F));
 }
 
 TEST_CASE("compileAnimation builds tween and snap segments") {

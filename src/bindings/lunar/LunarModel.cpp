@@ -10,7 +10,7 @@
 namespace luax::lunar {
     namespace {
 
-        constexpr float kPi = 3.14159265358979F; // Could've use M_PI.
+        constexpr float kPi = 3.14159265358979F;
         constexpr float kTwoPi = kPi * 2.F;
 
         float bounceOut(float p) {
@@ -29,43 +29,8 @@ namespace luax::lunar {
             return n1 * p * p + 0.984375F;
         }
 
-        struct EasingEntry {
-            std::string_view name;
-            EasingKind kind;
-            float rate;
-        };
-
-        constexpr std::array<EasingEntry, 25> kEasingNames{{
-            {"linear", EasingKind::Linear, 1.F},
-            {"quad_in", EasingKind::PowIn, 2.F},
-            {"quad_out", EasingKind::PowOut, 2.F},
-            {"quad_in_out", EasingKind::PowInOut, 2.F},
-            {"cubic_in", EasingKind::PowIn, 3.F},
-            {"cubic_out", EasingKind::PowOut, 3.F},
-            {"cubic_in_out", EasingKind::PowInOut, 3.F},
-            {"quart_in", EasingKind::PowIn, 4.F},
-            {"quart_out", EasingKind::PowOut, 4.F},
-            {"quart_in_out", EasingKind::PowInOut, 4.F},
-            {"quint_in", EasingKind::PowIn, 5.F},
-            {"quint_out", EasingKind::PowOut, 5.F},
-            {"quint_in_out", EasingKind::PowInOut, 5.F},
-            {"sine_in", EasingKind::SineIn, 1.F},
-            {"sine_out", EasingKind::SineOut, 1.F},
-            {"sine_in_out", EasingKind::SineInOut, 1.F},
-            {"expo_in", EasingKind::ExpoIn, 1.F},
-            {"expo_out", EasingKind::ExpoOut, 1.F},
-            {"expo_in_out", EasingKind::ExpoInOut, 1.F},
-            {"back_in", EasingKind::BackIn, 1.F},
-            {"back_out", EasingKind::BackOut, 1.F},
-            {"back_in_out", EasingKind::BackInOut, 1.F},
-            {"elastic_in", EasingKind::ElasticIn, 1.F},
-            {"elastic_out", EasingKind::ElasticOut, 1.F},
-            {"elastic_in_out", EasingKind::ElasticInOut, 1.F},
-        }};
-
         bool sameTime(double a, double b) {
-            constexpr double kEps = 1e-9;
-            return std::fabs(a - b) < kEps;
+            return std::fabs(a - b) < kTimeEps;
         }
 
         struct ChannelKey {
@@ -199,17 +164,16 @@ namespace luax::lunar {
     }
 
     geode::Result<CompiledAnimation> compileAnimation(
-        std::span<Keyframe const> keyframes, double fps, bool looped
+        std::vector<Keyframe> keyframes, double fps, bool looped
     ) {
         if (!(fps > 0.0) || !std::isfinite(fps)) {
             return geode::Err(std::string("fps must be a positive finite number"));
         }
 
-        std::vector<Keyframe> sorted(keyframes.begin(), keyframes.end());
-        std::sort(sorted.begin(), sorted.end(), [](Keyframe const& a, Keyframe const& b) {
+        std::sort(keyframes.begin(), keyframes.end(), [](Keyframe const& a, Keyframe const& b) {
             return a.frame < b.frame;
         });
-        for (auto const& kf : sorted) {
+        for (auto const& kf : keyframes) {
             if (kf.frame < 0.0 || !std::isfinite(kf.frame)) {
                 return geode::Err(
                     fmt::format("keyframe frame numbers must be >= 0 (got {})", kf.frame)
@@ -218,7 +182,7 @@ namespace luax::lunar {
         }
 
         std::unordered_map<std::string, ChannelMap> store;
-        for (auto const& kf : sorted) {
+        for (auto const& kf : keyframes) {
             double const time = kf.frame / fps;
             for (auto const& [nodeId, pose] : kf.targets) {
                 auto& channels = store[nodeId];

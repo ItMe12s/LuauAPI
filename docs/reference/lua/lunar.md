@@ -89,7 +89,7 @@ If a frame is not found, the node still loads and shows Geode's checkerboard fal
 The log names the prefix rule:
 
 ```text
-[lunar] rig node 'body': sprite 'robot.png' not found, mod sprites must be prefixed '<mod-id>/name.png'
+rig node 'body': sprite 'robot.png' not found, mod sprites must be prefixed '<mod-id>/name.png'
 ```
 
 ## Animation files
@@ -133,7 +133,16 @@ lunar.animation.new() -> LunarAnimationDef
 lunar.animation.load(def: LunarAnimationDefTable) -> LunarAnimationDef
 ```
 
-`animation.load` parses and validates a def table right away, so bad easing names or shapes fail at load time.
+`animation.load` parses and validates a def table right away.
+`lunar.animation.load`, `rig:load`, and `rig:loadAnimation`
+return `nil` plus an error message on a bad def or spec table:
+
+```lua
+local wave, err = lunar.animation.load(def)
+if not wave then
+    print("bad animation:", err)
+end
+```
 
 ## LunarRig
 
@@ -173,7 +182,7 @@ Keep a Luau reference to it while it runs, since dropping the last reference sto
 ```lua
 track:play() -> ()
 track:pause() -> ()
-track:continue() -> ()
+track:unpause() -> ()
 track:stop() -> ()
 track:setSpeed(speed: number) -> ()
 track:isPlaying() -> boolean
@@ -183,9 +192,9 @@ track:duration() -> number
 ```
 
 - `play` restarts from time zero. It warns and does nothing on an empty animation.
-- `pause` freezes playback. `continue` resumes it.
+- `pause` freezes playback. `unpause` resumes it.
 - `stop` halts and rewinds. The next `play` starts over.
-- `setSpeed` takes effect immediately, even mid-tween. The remaining timeline is re-sliced at the new rate.
+- `setSpeed` takes effect immediately, even mid-tween.
 - `duration` is the animation length in seconds, independent of speed.
 
 When a looped track reaches its end it wraps and keeps playing.
@@ -206,6 +215,7 @@ Easing is per pose. Every tweened channel in one pose shares the same curve.
 | `expo_in`, `expo_out`, `expo_in_out` | Exponential |
 | `back_in`, `back_out`, `back_in_out` | Overshoot |
 | `elastic_in`, `elastic_out`, `elastic_in_out` | Elastic wobble |
+| `bounce_in`, `bounce_out`, `bounce_in_out` | Bounce |
 
 An unknown easing string fails the load with the offending name in the message.
 

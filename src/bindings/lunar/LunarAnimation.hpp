@@ -7,7 +7,6 @@
 #include <Geode/utils/cocos.hpp>
 #include <cocos2d.h>
 #include <cstddef>
-#include <tuple>
 #include <vector>
 
 struct lua_State;
@@ -22,8 +21,8 @@ namespace luax::lunar {
             return m_keyframes;
         }
 
-        std::vector<Keyframe>& keyframes() {
-            return m_keyframes;
+        void setKeyframes(std::vector<Keyframe> keyframes) {
+            m_keyframes = std::move(keyframes);
         }
 
         double fps() const {
@@ -58,7 +57,7 @@ namespace luax::lunar {
 
         void play();
         void pause();
-        void continuePlayback();
+        void unpause();
         void stop();
         void setSpeed(float speed);
 
@@ -84,9 +83,15 @@ namespace luax::lunar {
         ~LunarTrack() override;
 
     private:
+        struct TimedSet {
+            double time;
+            Prop prop;
+            float value;
+        };
+
         struct TargetInstants {
             geode::Ref<cocos2d::CCNode> node;
-            std::vector<std::tuple<double, Prop, float>> sets;
+            std::vector<TimedSet> sets;
             std::size_t cursor = 0;
         };
 
@@ -99,8 +104,10 @@ namespace luax::lunar {
 
         geode::Ref<LunarRig> m_rig;
         CompiledAnimation m_anim;
+        CompiledAnimation const* m_active = nullptr;
         CompiledAnimation m_sliced;
         std::vector<geode::Ref<cocos2d::CCNode>> m_launched;
+        std::vector<geode::Ref<cocos2d::CCSpeed>> m_tweens;
         std::vector<TargetInstants> m_instants;
         double m_launchBase = 0.0;
         double m_elapsed = 0.0;
@@ -113,5 +120,7 @@ namespace luax::lunar {
     geode::Result<void> registerLunarAnimation(lua_State* L);
 
     void shutdownLunarTracks();
+
+    geode::Result<LunarAnimationDef*> parseAnimTable(lua_State* L, int idx, char const* method);
 
 } // namespace luax::lunar

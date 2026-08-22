@@ -51,7 +51,7 @@ end
 declare class LunarAnimationTrack
     function play(self): ()
     function pause(self): ()
-    function continue(self): ()
+    function unpause(self): ()
     function stop(self): ()
     function setSpeed(self, speed: number): ()
     function isPlaying(self): boolean

@@ -107,7 +107,7 @@ Runtime picks overload by arity only. One Lua key per C++ name. See [Codegen](..
 
 ## Luau keyword method names
 
-Luau keywords in C++ method names export with a `ToLua` suffix in stubs and runtime.
+Codegen-exported methods with Luau keyword names get a `ToLua` suffix in stubs and runtime.
 See [Codegen](../../contributor/codegen/codegen.md).
 
 ## Regenerating the stub
