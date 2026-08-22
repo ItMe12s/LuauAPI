@@ -523,7 +523,7 @@ namespace luax::lunar {
                 }
                 if (actions->count() == 0) continue;
                 auto* sequence = cocos2d::CCSequence::create(actions);
-                auto* speed = cocos2d::CCSpeed::create(sequence, m_speed);
+                auto* speed = LunarCCSpeed::create(sequence, m_speed);
                 speed->setTag(m_tag);
                 node->runAction(speed);
                 m_tweens.push_back(speed);
@@ -534,7 +534,7 @@ namespace luax::lunar {
 
     void LunarTrack::stopActions() {
         for (auto const& node : m_launched) {
-            // Bounded: at most one chain per property channel is ever tagged.
+            // At most one chain per property channel is ever tagged.
             for (std::size_t i = 0; i < kProps.size() && node->getActionByTag(m_tag); ++i) {
                 node->stopActionByTag(m_tag);
             }

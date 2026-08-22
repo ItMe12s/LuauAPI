@@ -1,5 +1,6 @@
 #pragma once
 
+#include "bindings/lunar/LunarCCSpeed.hpp"
 #include "bindings/lunar/LunarModel.hpp"
 #include "bindings/lunar/LunarRig.hpp"
 #include "framework/callback/LuaCallback.hpp"
@@ -117,7 +118,7 @@ namespace luax::lunar {
         CompiledAnimation const* m_active = nullptr;
         CompiledAnimation m_sliced;
         std::vector<geode::Ref<cocos2d::CCNode>> m_launched;
-        std::vector<geode::Ref<cocos2d::CCSpeed>> m_tweens;
+        std::vector<geode::Ref<LunarCCSpeed>> m_tweens;
         std::vector<TargetInstants> m_instants;
         std::vector<EventBind> m_eventBinds;
         double m_launchBase = 0.0;
