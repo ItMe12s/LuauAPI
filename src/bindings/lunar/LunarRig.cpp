@@ -16,27 +16,26 @@ namespace luax::lunar {
 
         geode::Result<RigSpec> parseRigSpec(lua_State* L, int idx, char const* method) {
             luaL_checktype(L, idx, LUA_TTABLE);
+            LuaStackGuard const guard(L);
             RigSpec spec;
 
             lua_getfield(L, idx, "nodes");
             if (!lua_istable(L, -1)) {
-                lua_pop(L, 1);
                 return geode::Err(std::string("'nodes' array is required"));
             }
             int const nodesIdx = lua_gettop(L);
             auto const count = lua_objlen(L, nodesIdx);
             spec.nodes.reserve(count);
+
             for (lua_Integer i = 1; i <= static_cast<lua_Integer>(count); ++i) {
                 lua_rawgeti(L, nodesIdx, i);
                 if (!lua_istable(L, -1)) {
-                    lua_pop(L, 1);
                     return geode::Err(fmt::format("nodes[{}] must be a table", i));
                 }
                 int const entry = lua_gettop(L);
                 RigNodeSpec node;
                 lua_getfield(L, entry, "id");
                 if (!lua_isstring(L, -1)) {
-                    lua_pop(L, 2);
                     return geode::Err(fmt::format("nodes[{}] requires a string 'id'", i));
                 }
                 size_t len = 0;
@@ -46,23 +45,33 @@ namespace luax::lunar {
 
                 node.sprite = optStringField(L, entry, "sprite", method);
                 node.parent = optStringField(L, entry, "parent", method);
-                if (auto v = optNumberField(L, entry, "x", method)) node.x = static_cast<float>(*v);
-                if (auto v = optNumberField(L, entry, "y", method)) node.y = static_cast<float>(*v);
-                if (auto v = optNumberField(L, entry, "rot", method))
-                    node.rot = static_cast<float>(*v);
-                if (auto v = optNumberField(L, entry, "sx", method))
-                    node.sx = static_cast<float>(*v);
-                if (auto v = optNumberField(L, entry, "sy", method))
-                    node.sy = static_cast<float>(*v);
-                if (auto v = optNumberField(L, entry, "z", method)) node.z = static_cast<float>(*v);
-                node.opacity = optNumberField(L, entry, "opacity", method).transform([](double v) {
-                    return static_cast<float>(v);
-                });
 
-                lua_pop(L, 1);
+                auto num = [&](char const* key) -> geode::Result<std::optional<float>> {
+                    if (auto v = optNumberField(L, entry, key, method)) {
+                        if (!std::isfinite(*v)) {
+                            return geode::Err(fmt::format("field '{}' must be finite", key));
+                        }
+                        return geode::Ok(static_cast<float>(*v));
+                    }
+                    return geode::Ok(std::nullopt);
+                };
+                if (auto v = num("x"); v.isErr()) return geode::Err(v.unwrapErr());
+                else node.x = v.unwrap().value_or(node.x);
+                if (auto v = num("y"); v.isErr()) return geode::Err(v.unwrapErr());
+                else node.y = v.unwrap().value_or(node.y);
+                if (auto v = num("rot"); v.isErr()) return geode::Err(v.unwrapErr());
+                else node.rot = v.unwrap().value_or(node.rot);
+                if (auto v = num("sx"); v.isErr()) return geode::Err(v.unwrapErr());
+                else node.sx = v.unwrap().value_or(node.sx);
+                if (auto v = num("sy"); v.isErr()) return geode::Err(v.unwrapErr());
+                else node.sy = v.unwrap().value_or(node.sy);
+                if (auto v = num("z"); v.isErr()) return geode::Err(v.unwrapErr());
+                else node.z = v.unwrap().value_or(node.z);
+                if (auto v = num("opacity"); v.isErr()) return geode::Err(v.unwrapErr());
+                else node.opacity = v.unwrap();
+
                 spec.nodes.push_back(std::move(node));
             }
-            lua_pop(L, 1);
             return geode::Ok(std::move(spec));
         }
 
@@ -121,13 +130,9 @@ namespace luax::lunar {
         int rigLoad(lua_State* L) {
             auto* self = Usertype<LunarRig>::check(L, 1, "LunarRig:load");
             auto parsed = parseRigSpec(L, 2, "LunarRig:load");
-            if (parsed.isErr()) {
-                return pushNilErr(L, parsed.unwrapErr());
-            }
+            if (auto err = returnIfErr(L, parsed)) return *err;
             auto result = self->applySpec(std::move(parsed).unwrap());
-            if (result.isErr()) {
-                return pushNilErr(L, result.unwrapErr());
-            }
+            if (auto err = returnIfErr(L, result)) return *err;
             lua_pushvalue(L, 1);
             return 1;
         }
@@ -138,9 +143,7 @@ namespace luax::lunar {
             if (!def) {
                 if (lua_istable(L, 2)) {
                     auto parsed = parseAnimTable(L, 2, "LunarRig:loadAnimation");
-                    if (parsed.isErr()) {
-                        return pushNilErr(L, parsed.unwrapErr());
-                    }
+                    if (auto err = returnIfErr(L, parsed)) return *err;
                     def = std::move(parsed).unwrap();
                 }
                 else {
@@ -148,9 +151,7 @@ namespace luax::lunar {
                 }
             }
             auto compiled = compileAnimation(def->keyframes(), def->fps(), def->looped());
-            if (compiled.isErr()) {
-                return pushNilErr(L, compiled.unwrapErr());
-            }
+            if (auto err = returnIfErr(L, compiled)) return *err;
             Usertype<LunarTrack>::pushOwned(L, LunarTrack::create(rig, std::move(compiled).unwrap()));
             return 1;
         }
@@ -226,18 +227,24 @@ namespace luax::lunar {
     }
 
     geode::Result<void> LunarRig::applySpec(RigSpec const& spec) {
+        std::vector<cocos2d::CCNode*> created;
+        std::vector<std::string> registeredIds;
+        auto fail = [&](std::string&& msg) -> geode::Result<void> {
+            for (auto* node : created)
+                node->removeFromParent();
+            for (auto const& id : registeredIds)
+                m_nodes.erase(id);
+            return geode::Err(std::move(msg));
+        };
         for (auto const& nodeSpec : spec.nodes) {
             if (nodeSpec.id.empty()) {
-                return geode::Err(std::string("rig node id must not be empty"));
-            }
-            if (m_nodes.contains(nodeSpec.id)) {
-                return geode::Err(fmt::format("duplicate rig node id '{}'", nodeSpec.id));
+                return fail("rig node id must not be empty");
             }
             cocos2d::CCNode* parent = this;
             if (nodeSpec.parent) {
                 parent = getNode(*nodeSpec.parent);
                 if (!parent) {
-                    return geode::Err(
+                    return fail(
                         fmt::format("rig node '{}' parent '{}' not found", nodeSpec.id, *nodeSpec.parent)
                     );
                 }
@@ -279,19 +286,18 @@ namespace luax::lunar {
             node->setScaleX(nodeSpec.sx);
             node->setScaleY(nodeSpec.sy);
             node->setZOrder(static_cast<int>(nodeSpec.z));
-            if (nodeSpec.opacity) {
-                if (auto* rgba = geode::cast::typeinfo_cast<cocos2d::CCRGBAProtocol*>(node)) {
-                    rgba->setOpacity(opacityByte(*nodeSpec.opacity));
-                }
-                else {
-                    geode::log::warn(
-                        "rig node '{}': node type does not support opacity, ignored", nodeSpec.id
-                    );
-                }
+            if (nodeSpec.opacity && !setNodeOpacity(node, *nodeSpec.opacity)) {
+                geode::log::warn(
+                    "rig node '{}': node type does not support opacity, ignored", nodeSpec.id
+                );
             }
             parent->addChild(node);
+            created.push_back(node);
             auto reg = registerId(nodeSpec.id, node);
-            if (reg.isErr()) return reg;
+            if (reg.isErr()) {
+                return fail(std::move(reg).unwrapErr());
+            }
+            registeredIds.push_back(nodeSpec.id);
         }
         return geode::Ok();
     }

@@ -2,6 +2,7 @@
 
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
+#include <limits>
 #include <string>
 #include <utility>
 #include <vector>
@@ -203,6 +204,84 @@ TEST_CASE("compileAnimation validates fps and frame numbers") {
         return pose;
     }())};
     REQUIRE(compileAnimation(negative, 10.0, false).isErr());
+}
+
+TEST_CASE("compileAnimation rejects non-finite pose values") {
+    auto makePose = [](float x) {
+        NodePose pose;
+        pose.x = x;
+        return pose;
+    };
+
+    std::vector<Keyframe> const nanX = {
+        kf(1, "arm", makePose(std::numeric_limits<float>::quiet_NaN()))
+    };
+    REQUIRE(compileAnimation(nanX, 10.0, false).isErr());
+
+    std::vector<Keyframe> const infOpacity = {kf(1, "arm", [] {
+        NodePose pose;
+        pose.opacity = std::numeric_limits<float>::infinity();
+        return pose;
+    }())};
+    REQUIRE(compileAnimation(infOpacity, 10.0, false).isErr());
+}
+
+TEST_CASE("compileAnimation merges near-duplicate frames keeping the last") {
+    std::vector<Keyframe> const keyframes = {
+        kf(5.0,
+           "arm",
+           [] {
+               NodePose pose;
+               pose.x = 5.F;
+               return pose;
+           }()),
+        kf(5.0 + 1e-10, "arm", [] {
+            NodePose pose;
+            pose.x = 9.F;
+            return pose;
+        }()),
+    };
+
+    auto result = compileAnimation(keyframes, 10.0, false);
+    REQUIRE(result.isOk());
+    auto anim = std::move(result).unwrap();
+    REQUIRE(anim.nodes.size() == 1);
+    REQUIRE(anim.nodes[0].segs.size() == 1);
+    REQUIRE(anim.nodes[0].segs[0].instant);
+    REQUIRE(anim.nodes[0].segs[0].to == Approx(9.F));
+}
+
+TEST_CASE("compileAnimation propagates easing onto tween segments") {
+    NodePose start;
+    start.x = 0.F;
+    NodePose finish;
+    finish.x = 10.F;
+    finish.easing = *easingFromString("back_in");
+
+    std::vector<Keyframe> const keyframes = {kf(0, "arm", start), kf(2, "arm", finish)};
+
+    auto result = compileAnimation(keyframes, 1.0, false);
+    REQUIRE(result.isOk());
+    auto anim = std::move(result).unwrap();
+    auto const* tween = findSeg(anim, "arm", Prop::PosX, false);
+    REQUIRE(tween);
+    REQUIRE(tween->easing.kind == EasingKind::BackIn);
+}
+
+TEST_CASE("sliceAnimation keeps an instant exactly at the cut point") {
+    NodePose start;
+    start.z = 5.F;
+
+    std::vector<Keyframe> const keyframes = {kf(1, "arm", start)};
+
+    auto result = compileAnimation(keyframes, 2.0, false);
+    REQUIRE(result.isOk());
+    auto anim = std::move(result).unwrap();
+
+    CompiledAnimation sliced = sliceAnimation(anim, 0.5);
+    auto const* zSnap = findSeg(sliced, "arm", Prop::ZOrder, true);
+    REQUIRE(zSnap);
+    REQUIRE(zSnap->to == Approx(5.F));
 }
 
 TEST_CASE("sliceAnimation clips elapsed tweens continuously") {

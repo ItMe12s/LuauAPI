@@ -41,11 +41,11 @@ declare class LunarAnimationDef
 end
 
 declare class LunarRig extends CCNode
-    function load(self, spec: LunarRigSpec): LunarRig
+    function load(self, spec: LunarRigSpec): (LunarRig?, string?)
     function add(self, node: CCNode, id: string?): ()
     function addTo(self, parentId: string, node: CCNode, id: string?): ()
     function getNode(self, id: string): CCNode?
-    function loadAnimation(self, anim: LunarAnimationDef | LunarAnimationDefTable): LunarAnimationTrack
+    function loadAnimation(self, anim: LunarAnimationDef | LunarAnimationDefTable): (LunarAnimationTrack?, string?)
 end
 
 declare class LunarAnimationTrack
@@ -66,6 +66,6 @@ declare lunar: {
     },
     animation: {
         new: () -> LunarAnimationDef,
-        load: (def: LunarAnimationDefTable) -> LunarAnimationDef,
+        load: (def: LunarAnimationDefTable) -> (LunarAnimationDef?, string?),
     },
 }

@@ -18,11 +18,7 @@ namespace luax::lunar {
     namespace {
 
         Keyframe& keyframeFor(std::vector<Keyframe>& keyframes, double frame) {
-            auto it = std::lower_bound(
-                keyframes.begin(), keyframes.end(), frame, [](Keyframe const& kf, double f) {
-                    return kf.frame < f;
-                }
-            );
+            auto it = std::ranges::lower_bound(keyframes, frame, {}, &Keyframe::frame);
             if (it != keyframes.end() && std::fabs(it->frame - frame) < kTimeEps) return *it;
             Keyframe kf;
             kf.frame = frame;
@@ -42,11 +38,11 @@ namespace luax::lunar {
         geode::Result<NodePose> parseNodePose(lua_State* L, int idx, std::string_view nodeId) {
             idx = lua_absindex(L, idx);
             luaL_checktype(L, idx, LUA_TTABLE);
+            LuaStackGuard const guard(L);
             NodePose pose;
             lua_pushnil(L);
             while (lua_next(L, idx) != 0) {
                 if (lua_type(L, -2) != LUA_TSTRING) {
-                    lua_pop(L, 1);
                     return geode::Err(
                         fmt::format("keyframe property keys must be strings (node '{}')", nodeId)
                     );
@@ -58,6 +54,11 @@ namespace luax::lunar {
 
                 if (isNumber) {
                     float const value = static_cast<float>(lua_tonumber(L, -1));
+                    if (!std::isfinite(value)) {
+                        return geode::Err(
+                            fmt::format("property '{}' must be finite (node '{}')", name, nodeId)
+                        );
+                    }
                     if (name == "x") pose.x = value;
                     else if (name == "y") pose.y = value;
                     else if (name == "rot") pose.rot = value;
@@ -71,13 +72,11 @@ namespace luax::lunar {
                 }
                 else if (name == "easing") {
                     if (lua_type(L, -1) != LUA_TSTRING) {
-                        lua_pop(L, 1);
                         return geode::Err(fmt::format("'easing' must be a string (node '{}')", nodeId));
                     }
                     char const* easingName = lua_tostring(L, -1);
                     auto easing = easingFromString(easingName ? easingName : "");
                     if (!easing) {
-                        lua_pop(L, 1);
                         return geode::Err(
                             fmt::format(
                                 "unknown easing '{}' (node '{}')", easingName ? easingName : "?", nodeId
@@ -145,6 +144,14 @@ namespace luax::lunar {
             return wrapped;
         }
 
+        bool setNodeOpacityImpl(cocos2d::CCNode* node, float value) {
+            if (auto* rgba = geode::cast::typeinfo_cast<cocos2d::CCRGBAProtocol*>(node)) {
+                rgba->setOpacity(opacityByte(value));
+                return true;
+            }
+            return false;
+        }
+
         void applyInstant(cocos2d::CCNode* node, Prop prop, float value) {
             using P = Prop;
             switch (prop) {
@@ -153,12 +160,7 @@ namespace luax::lunar {
                 case P::Rotation: node->setRotation(value); break;
                 case P::ScaleX: node->setScaleX(value); break;
                 case P::ScaleY: node->setScaleY(value); break;
-                case P::Opacity: {
-                    if (auto* rgba = geode::cast::typeinfo_cast<cocos2d::CCRGBAProtocol*>(node)) {
-                        rgba->setOpacity(opacityByte(value));
-                    }
-                    break;
-                }
+                case P::Opacity: setNodeOpacityImpl(node, value); break;
                 case P::ZOrder: node->setZOrder(static_cast<int>(value)); break;
             }
         }
@@ -203,9 +205,7 @@ namespace luax::lunar {
 
         int animLoad(lua_State* L) {
             auto parsed = parseAnimTable(L, 1, "animation.load");
-            if (parsed.isErr()) {
-                return pushNilErr(L, parsed.unwrapErr());
-            }
+            if (auto err = returnIfErr(L, parsed)) return *err;
             Usertype<LunarAnimationDef>::pushOwned(L, std::move(parsed).unwrap());
             return 1;
         }
@@ -315,6 +315,7 @@ namespace luax::lunar {
 
     geode::Result<LunarAnimationDef*> parseAnimTable(lua_State* L, int idx, char const* method) {
         luaL_checktype(L, idx, LUA_TTABLE);
+        LuaStackGuard const guard(L);
         auto* out = LunarAnimationDef::create();
 
         if (auto fps = optNumberField(L, idx, "fps", method)) {
@@ -325,25 +326,21 @@ namespace luax::lunar {
 
         lua_getfield(L, idx, "keyframes");
         if (!lua_istable(L, -1)) {
-            lua_pop(L, 1);
             return geode::Err(std::string("'keyframes' table is required"));
         }
         int const kfsIdx = lua_gettop(L);
         lua_pushnil(L);
         while (lua_next(L, kfsIdx) != 0) {
             if (!lua_isnumber(L, -2)) {
-                lua_pop(L, 1);
                 return geode::Err(std::string("'keyframes' must be keyed by frame number"));
             }
             double const keyedFrame = lua_tonumber(L, -2);
             if (keyedFrame < 0.0 || !std::isfinite(keyedFrame)) {
-                lua_pop(L, 1);
                 return geode::Err(
                     fmt::format("keyframe frame numbers must be >= 0 (got {})", keyedFrame)
                 );
             }
             if (!lua_istable(L, -1)) {
-                lua_pop(L, 1);
                 return geode::Err(fmt::format("keyframes[{}] must be a table", keyedFrame));
             }
             int const entry = lua_gettop(L);
@@ -352,13 +349,11 @@ namespace luax::lunar {
             while (lua_next(L, entry) != 0) {
                 if (lua_type(L, -2) == LUA_TSTRING &&
                     std::string_view(lua_tostring(L, -2)) == "frame") {
-                    lua_pop(L, 1);
                     return geode::Err(
                         fmt::format("keyframes[{}] has a 'frame' key, use the table key as the frame number", keyedFrame)
                     );
                 }
                 if (lua_type(L, -2) != LUA_TSTRING) {
-                    lua_pop(L, 1);
                     return geode::Err(
                         fmt::format("keyframes[{}] entries must map node ids to tables", keyedFrame)
                     );
@@ -366,16 +361,13 @@ namespace luax::lunar {
                 char const* nodeId = lua_tostring(L, -2);
                 auto poseResult = parseNodePose(L, -1, nodeId ? nodeId : "");
                 if (poseResult.isErr()) {
-                    std::string err = poseResult.unwrapErr();
-                    lua_pop(L, 1);
-                    return geode::Err(std::move(err));
+                    return geode::Err(poseResult.unwrapErr());
                 }
                 out->addKeyframe(keyedFrame, nodeId ? nodeId : "", std::move(poseResult).unwrap());
                 lua_pop(L, 1);
             }
             lua_pop(L, 1);
         }
-        lua_pop(L, 1);
         return geode::Ok(out);
     }
 
@@ -383,6 +375,10 @@ namespace luax::lunar {
         auto* ret = new LunarAnimationDef();
         ret->autorelease();
         return ret;
+    }
+
+    bool setNodeOpacity(cocos2d::CCNode* node, float value) {
+        return setNodeOpacityImpl(node, value);
     }
 
     void LunarAnimationDef::addKeyframe(double frame, std::string_view nodeId, NodePose pose) {
@@ -434,15 +430,16 @@ namespace luax::lunar {
             instants.node = node;
             for (auto const& seg : nodeTrack.segs) {
                 if (!seg.instant) continue;
-                instants.sets.push_back({std::max(0.0, seg.start - fromTime), seg.prop, seg.to});
+                instants.sets.push_back(
+                    TimedSet{
+                        .time = std::max(0.0, seg.start - fromTime), .prop = seg.prop, .value = seg.to
+                    }
+                );
             }
-            std::sort(instants.sets.begin(), instants.sets.end(), [](auto const& a, auto const& b) {
-                return a.time < b.time;
-            });
+            std::ranges::sort(instants.sets, {}, &TimedSet::time);
             if (!instants.sets.empty()) m_instants.push_back(std::move(instants));
 
-            for (int p = 0; p < static_cast<int>(Prop::ZOrder); ++p) {
-                auto const prop = static_cast<Prop>(p);
+            for (auto const prop : kProps) {
                 auto* actions = cocos2d::CCArray::create();
                 double prevEnd = fromTime;
                 for (auto const& seg : nodeTrack.segs) {
@@ -470,7 +467,8 @@ namespace luax::lunar {
 
     void LunarTrack::stopActions() {
         for (auto const& node : m_launched) {
-            while (node->getActionByTag(m_tag)) {
+            // Bounded: at most one chain per property channel is ever tagged.
+            for (std::size_t i = 0; i < kProps.size() && node->getActionByTag(m_tag); ++i) {
                 node->stopActionByTag(m_tag);
             }
         }
@@ -570,7 +568,11 @@ namespace luax::lunar {
         }
         liveTracks().clear();
         if (auto*& node = tickNode()) {
-            cocos2d::CCDirector::sharedDirector()->getScheduler()->unscheduleUpdateForTarget(node);
+            if (auto* director = cocos2d::CCDirector::sharedDirector()) {
+                if (auto* scheduler = director->getScheduler()) {
+                    scheduler->unscheduleUpdateForTarget(node);
+                }
+            }
             node->release();
             node = nullptr;
         }

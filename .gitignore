@@ -69,6 +69,7 @@ build-*/
 .ruff_cache/
 /types/
 /dummy-mods/
+imgui.ini
 
 # Lmao this guy is vibecoding
 .cursor/

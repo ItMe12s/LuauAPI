@@ -130,7 +130,7 @@ Unknown ids are skipped with a warning at play time.
 ```lua
 lunar.rig.new() -> LunarRig
 lunar.animation.new() -> LunarAnimationDef
-lunar.animation.load(def: LunarAnimationDefTable) -> LunarAnimationDef
+lunar.animation.load(def: LunarAnimationDefTable) -> LunarAnimationDef?
 ```
 
 `animation.load` parses and validates a def table right away.
@@ -149,11 +149,11 @@ end
 `LunarRig` extends `CCNode`, so all node methods work on it.
 
 ```lua
-rig:load(spec: LunarRigSpec) -> LunarRig
+rig:load(spec: LunarRigSpec) -> LunarRig?
 rig:add(node: CCNode, id: string?) -> ()
 rig:addTo(parentId: string, node: CCNode, id: string?) -> ()
 rig:getNode(id: string) -> CCNode?
-rig:loadAnimation(anim: LunarAnimationDef | LunarAnimationDefTable) -> LunarAnimationTrack
+rig:loadAnimation(anim: LunarAnimationDef | LunarAnimationDefTable) -> LunarAnimationTrack?
 ```
 
 `load` applies a spec table and can be called again to add more nodes.

@@ -22,4 +22,6 @@ namespace luax {
     }
 } // namespace luax
 
+#if !defined(LUAUAPI_HOST_TESTS)
 LUAX_BINDING(lunar_lib, luax::registerLunar)
+#endif

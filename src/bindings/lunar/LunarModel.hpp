@@ -14,7 +14,7 @@ namespace luax::lunar {
 
     constexpr double kTimeEps = 1e-9;
 
-    inline std::uint8_t opacityByte(float v) {
+    inline constexpr std::uint8_t opacityByte(float v) noexcept {
         return static_cast<std::uint8_t>(std::clamp(v, 0.F, 255.F));
     }
 
@@ -29,6 +29,16 @@ namespace luax::lunar {
     };
 
     static_assert(static_cast<int>(Prop::ZOrder) == 6);
+
+    inline constexpr std::array<Prop, 7> kProps{
+        Prop::PosX,
+        Prop::PosY,
+        Prop::Rotation,
+        Prop::ScaleX,
+        Prop::ScaleY,
+        Prop::Opacity,
+        Prop::ZOrder,
+    };
 
     enum class EasingKind : std::uint8_t {
         Linear,

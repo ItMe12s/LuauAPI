@@ -17,27 +17,27 @@ namespace luax::lunar {
     public:
         static LunarAnimationDef* create();
 
-        std::vector<Keyframe> const& keyframes() const {
+        std::vector<Keyframe> const& keyframes() const noexcept {
             return m_keyframes;
         }
 
-        void setKeyframes(std::vector<Keyframe> keyframes) {
+        void setKeyframes(std::vector<Keyframe> keyframes) noexcept {
             m_keyframes = std::move(keyframes);
         }
 
-        double fps() const {
+        double fps() const noexcept {
             return m_fps;
         }
 
-        void setFps(double fps) {
+        void setFps(double fps) noexcept {
             m_fps = fps;
         }
 
-        bool looped() const {
+        bool looped() const noexcept {
             return m_looped;
         }
 
-        void setLooped(bool looped) {
+        void setLooped(bool looped) noexcept {
             m_looped = looped;
         }
 
@@ -61,15 +61,15 @@ namespace luax::lunar {
         void stop();
         void setSpeed(float speed);
 
-        bool isPlaying() const {
+        bool isPlaying() const noexcept {
             return m_playing;
         }
 
-        bool isPaused() const {
+        bool isPaused() const noexcept {
             return m_paused;
         }
 
-        float speed() const {
+        float speed() const noexcept {
             return m_speed;
         }
 
@@ -122,5 +122,7 @@ namespace luax::lunar {
     void shutdownLunarTracks();
 
     geode::Result<LunarAnimationDef*> parseAnimTable(lua_State* L, int idx, char const* method);
+
+    bool setNodeOpacity(cocos2d::CCNode* node, float value);
 
 } // namespace luax::lunar

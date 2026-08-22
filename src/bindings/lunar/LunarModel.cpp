@@ -4,16 +4,17 @@
 #include <array>
 #include <cmath>
 #include <fmt/format.h>
+#include <numbers>
 #include <string_view>
 #include <unordered_map>
 
 namespace luax::lunar {
     namespace {
 
-        constexpr float kPi = 3.14159265358979F;
+        constexpr float kPi = std::numbers::pi_v<float>;
         constexpr float kTwoPi = kPi * 2.F;
 
-        float bounceOut(float p) {
+        constexpr float bounceOut(float p) {
             constexpr float n1 = 7.5625F;
             constexpr float d1 = 2.75F;
             if (p < 1.F / d1) return n1 * p * p;
@@ -29,7 +30,7 @@ namespace luax::lunar {
             return n1 * p * p + 0.984375F;
         }
 
-        bool sameTime(double a, double b) {
+        constexpr bool sameTime(double a, double b) {
             return std::fabs(a - b) < kTimeEps;
         }
 
@@ -42,9 +43,7 @@ namespace luax::lunar {
         using ChannelMap = std::array<std::vector<ChannelKey>, 7>;
 
         std::vector<TweenSeg> buildSegs(Prop prop, std::vector<ChannelKey>& keys) {
-            std::sort(keys.begin(), keys.end(), [](ChannelKey const& a, ChannelKey const& b) {
-                return a.time < b.time;
-            });
+            std::ranges::sort(keys, {}, &ChannelKey::time);
             // Last one wins.
             std::vector<ChannelKey> deduped;
             for (auto it = keys.begin(); it != keys.end(); ++it) {
@@ -57,19 +56,30 @@ namespace luax::lunar {
             if (deduped.empty()) return segs;
             segs.reserve(deduped.size());
             segs.push_back(
-                {prop,
-                 deduped.front().time,
-                 deduped.front().time,
-                 0.F,
-                 deduped.front().value,
-                 deduped.front().easing,
-                 true}
+                TweenSeg{
+                    .prop = prop,
+                    .start = deduped.front().time,
+                    .end = deduped.front().time,
+                    .from = 0.F,
+                    .to = deduped.front().value,
+                    .easing = deduped.front().easing,
+                    .instant = true
+                }
             );
             for (std::size_t i = 1; i < deduped.size(); ++i) {
                 auto const& prev = deduped[i - 1];
                 auto const& cur = deduped[i];
                 if (sameTime(prev.time, cur.time)) continue;
-                segs.push_back({prop, prev.time, cur.time, prev.value, cur.value, cur.easing, false});
+                segs.push_back(
+                    TweenSeg{
+                        .prop = prop,
+                        .start = prev.time,
+                        .end = cur.time,
+                        .from = prev.value,
+                        .to = cur.value,
+                        .easing = cur.easing
+                    }
+                );
             }
             return segs;
         }
@@ -170,14 +180,24 @@ namespace luax::lunar {
             return geode::Err(std::string("fps must be a positive finite number"));
         }
 
-        std::sort(keyframes.begin(), keyframes.end(), [](Keyframe const& a, Keyframe const& b) {
-            return a.frame < b.frame;
-        });
+        std::ranges::sort(keyframes, {}, &Keyframe::frame);
         for (auto const& kf : keyframes) {
             if (kf.frame < 0.0 || !std::isfinite(kf.frame)) {
                 return geode::Err(
                     fmt::format("keyframe frame numbers must be >= 0 (got {})", kf.frame)
                 );
+            }
+        }
+
+        for (auto const& kf : keyframes) {
+            for (auto const& [nodeId, pose] : kf.targets) {
+                auto finite = [](std::optional<float> const& v) {
+                    return !v || std::isfinite(*v);
+                };
+                if (!finite(pose.x) || !finite(pose.y) || !finite(pose.rot) || !finite(pose.sx) ||
+                    !finite(pose.sy) || !finite(pose.opacity) || !finite(pose.z)) {
+                    return geode::Err(fmt::format("pose values for node '{}' must be finite", nodeId));
+                }
             }
         }
 
@@ -199,16 +219,6 @@ namespace luax::lunar {
                 push(pose.z, Prop::ZOrder);
             }
         }
-
-        constexpr std::array<Prop, 7> kProps = {
-            Prop::PosX,
-            Prop::PosY,
-            Prop::Rotation,
-            Prop::ScaleX,
-            Prop::ScaleY,
-            Prop::Opacity,
-            Prop::ZOrder,
-        };
 
         CompiledAnimation out;
         out.looped = looped;
