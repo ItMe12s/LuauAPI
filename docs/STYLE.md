@@ -25,17 +25,32 @@ Link to [Limits and errors](reference/cpp/limits-and-errors.md) instead of copyi
 
 - Use ASCII prose.
 - No semicolons in prose.
+- A colon introduces a list or a code example. Do not put a sentence after a colon.
 - Keep sentences short.
 - Keep one idea per sentence when you can.
 - Use plain words. Prefer "run on the main thread" over jargon.
 - Code blocks, API names, file paths, and error strings can use any characters they need.
+
+## Code examples
+
+- Tag every code fence (`lua`, `cpp`, `json`, `text`, `bash`).
+  Use `lua` for Luau even though files are `.luau`.
+- Reference pages have one section per API.
+  The pattern is `## api.name`, a fenced signature line, short prose, then a fenced example.
+- Put runnable examples in an `## Example` section after the body sections and before `## Limits`.
+  One runnable block per page is enough. Link to `mod/demo/*.luau` for longer demos.
+- Example style: locals at the top, guard clauses like `if not node then return end`,
+  keep handles alive while callbacks must run, cancel repeating tasks when done.
+- Quoting an error string next to its API call is fine.
+  Cap numbers live only in [Limits and errors](reference/cpp/limits-and-errors.md).
 
 ## Links
 
 - Link to files only.
 - Use relative paths like `../reference/lua/globals.md`.
 - Do not link to headings.
-- Use the page title or a short label.
+- Use the page title as the label. API pages keep their exact lowercase title (`[globals]`, `[mod]`).
+- When several links target one file with different meanings, use distinct short labels instead.
 - Link outside the repo when this repo does not own the topic.
 - Put shared facts in one place.
 
@@ -46,29 +61,32 @@ Link to [Limits and errors](reference/cpp/limits-and-errors.md) instead of copyi
 - Do not skip levels.
 - API reference pages may use API names as titles.
 - Put three to ten links in `## Related`.
-- Put closest links first.
-- Include the parent hub for deep pages.
+- Order links closest first, sibling pages, then the parent hub, then cross-cutting pages like [Limits and errors](reference/cpp/limits-and-errors.md).
 - Use backtick paths in `## Source`.
 - Omit `## Source` on pure policy pages.
+- Tutorials put `## Next` between the body and `## Related`.
+- Use `## Limits` only when a page needs caps. One or two sentences, then link [Limits and errors](reference/cpp/limits-and-errors.md).
 
 ## Central sources
 
 Do not repeat these topics. Link to the central page.
 
-| Topic | Canonical page |
-| --- | --- |
-| Lua module index | [globals](reference/lua/globals.md) |
-| Caps, deadlines, error strings | [Limits and errors](reference/cpp/limits-and-errors.md) |
-| Codegen overview | [Codegen](contributor/codegen/codegen.md) |
-| Test map | [Testing](contributor/testing.md) |
-| Mod policy overlay | [LuauAPI mod guidelines](mod_guidelines.md) |
-| Main-thread and runtime basics | [Getting started](getting-started/overview.md) |
-| C++ host API surface | [C++ API reference](reference/cpp/api-reference.md) |
-| Native C++ registration | [Native C++ registration](reference/cpp/native-registration.md) |
-| Hook usage in scripts | [hooks](reference/lua/hooks.md) |
-| Native crash Luau context | [Crash sidecar](contributor/internals/crash-sidecar.md) |
-| CCObject::release hook safety | [Release-hook safety](contributor/internals/release-hook-safety.md) |
-| Game object lifetime and refs | [game objects](reference/lua/game-objects.md) |
+| Topic                          | Canonical page                                                      |
+| ------------------------------ | ------------------------------------------------------------------- |
+| Lua module index               | [globals](reference/lua/globals.md)                                 |
+| Require and path rules         | [modules](reference/lua/modules.md)                                 |
+| Signature truth source         | [type stubs](reference/lua/type-stubs.md)                           |
+| Caps, deadlines, error strings | [Limits and errors](reference/cpp/limits-and-errors.md)             |
+| Codegen overview               | [Codegen](contributor/codegen/codegen.md)                           |
+| Test map                       | [Testing](contributor/testing.md)                                   |
+| Mod policy overlay             | [LuauAPI mod guidelines](mod_guidelines.md)                         |
+| Main-thread and runtime basics | [Getting started](getting-started/overview.md)                      |
+| C++ host API surface           | [C++ API reference](reference/cpp/api-reference.md)                 |
+| Native C++ registration        | [Native C++ registration](reference/cpp/native-registration.md)     |
+| Hook usage in scripts          | [hooks](reference/lua/hooks.md)                                     |
+| Native crash Luau context      | [Crash sidecar](contributor/internals/crash-sidecar.md)             |
+| CCObject::release hook safety  | [Release-hook safety](contributor/internals/release-hook-safety.md) |
+| Game object lifetime and refs  | [game objects](reference/lua/game-objects.md)                       |
 
 Keep hook policy in [LuauAPI mod guidelines](mod_guidelines.md).
 

@@ -77,7 +77,8 @@ namespace luax::lunar {
                         .end = cur.time,
                         .from = prev.value,
                         .to = cur.value,
-                        .easing = cur.easing
+                        .easing = cur.easing,
+                        .instant = prop == Prop::ZOrder
                     }
                 );
             }

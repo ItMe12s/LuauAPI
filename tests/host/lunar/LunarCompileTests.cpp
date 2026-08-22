@@ -276,6 +276,45 @@ TEST_CASE("compileAnimation propagates easing onto tween segments") {
     REQUIRE(tween->easing.kind == EasingKind::BackIn);
 }
 
+TEST_CASE("compileAnimation applies every z keyframe instantly") {
+    std::vector<Keyframe> const keyframes = {
+        kf(0,
+           "arm",
+           [] {
+               NodePose pose;
+               pose.z = 1.F;
+               return pose;
+           }()),
+        kf(12, "arm", [] {
+            NodePose pose;
+            pose.z = 5.F;
+            return pose;
+        }()),
+    };
+
+    auto result = compileAnimation(keyframes, 12.0, false);
+    REQUIRE(result.isOk());
+    auto anim = std::move(result).unwrap();
+
+    std::vector<TweenSeg const*> snaps;
+    for (auto const& track : anim.nodes) {
+        if (track.nodeId != "arm") continue;
+        for (auto const& seg : track.segs) {
+            INFO("prop kind: " << static_cast<int>(seg.prop));
+            REQUIRE(seg.instant);
+            snaps.push_back(&seg);
+        }
+    }
+
+    REQUIRE(snaps.size() == 2);
+    REQUIRE(snaps[0]->end == Approx(0.0));
+    REQUIRE(snaps[0]->to == Approx(1.F));
+    REQUIRE(snaps[1]->end == Approx(1.0));
+    REQUIRE(snaps[1]->to == Approx(5.F));
+
+    REQUIRE_FALSE(findSeg(anim, "arm", Prop::ZOrder, false));
+}
+
 TEST_CASE("sliceAnimation keeps an instant exactly at the cut point") {
     NodePose start;
     start.z = 5.F;
