@@ -1,6 +1,8 @@
 #include <Geode/Geode.hpp>
 #include <Geode/modify/CCIMEDispatcher.hpp>
-#include <Geode/modify/CCKeyboardDispatcher.hpp>
+#ifndef GEODE_IS_IOS
+    #include <Geode/modify/CCKeyboardDispatcher.hpp>
+#endif
 #include <Geode/modify/CCMouseDispatcher.hpp>
 #include <Geode/modify/CCTouchDispatcher.hpp>
 #include <imgui-cocos.hpp>
