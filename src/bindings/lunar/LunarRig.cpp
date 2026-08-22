@@ -70,6 +70,10 @@ namespace luax::lunar {
                 else node.z = v.unwrap().value_or(node.z);
                 if (auto v = num("opacity"); v.isErr()) return geode::Err(v.unwrapErr());
                 else node.opacity = v.unwrap();
+                if (auto v = num("ax"); v.isErr()) return geode::Err(v.unwrapErr());
+                else node.ax = v.unwrap();
+                if (auto v = num("ay"); v.isErr()) return geode::Err(v.unwrapErr());
+                else node.ay = v.unwrap();
 
                 spec.nodes.push_back(std::move(node));
             }
@@ -287,6 +291,10 @@ namespace luax::lunar {
             node->setScaleX(nodeSpec.sx);
             node->setScaleY(nodeSpec.sy);
             node->setZOrder(static_cast<int>(nodeSpec.z));
+            if (nodeSpec.ax || nodeSpec.ay) {
+                auto const cur = node->getAnchorPoint();
+                node->setAnchorPoint({nodeSpec.ax.value_or(cur.x), nodeSpec.ay.value_or(cur.y)});
+            }
             if (nodeSpec.opacity && !setNodeOpacity(node, *nodeSpec.opacity)) {
                 geode::log::warn(
                     "rig node '{}': node type does not support opacity, ignored", nodeSpec.id

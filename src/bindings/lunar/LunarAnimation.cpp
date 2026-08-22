@@ -1,5 +1,6 @@
 #include "bindings/lunar/LunarAnimation.hpp"
 
+#include "bindings/lunar/LunarCCAction.hpp"
 #include "bindings/lunar/LunarRig.hpp"
 #include "core/Config.hpp"
 #include "core/Runtime.hpp"
@@ -67,6 +68,8 @@ namespace luax::lunar {
                     else if (name == "sy") pose.sy = value;
                     else if (name == "opacity") pose.opacity = value;
                     else if (name == "z") pose.z = value;
+                    else if (name == "ax") pose.ax = value;
+                    else if (name == "ay") pose.ay = value;
                     else {
                         geode::log::warn("ignoring unknown animation property '{}'", name);
                     }
@@ -125,26 +128,21 @@ namespace luax::lunar {
             return geode::Ok();
         }
 
-        cocos2d::CCFiniteTimeAction* makeTween(TweenSeg const& seg, cocos2d::CCNode* node) {
+        cocos2d::CCFiniteTimeAction* makeTween(TweenSeg const& seg) {
             float const dur = static_cast<float>(std::max(0.0, seg.end - seg.start));
             using P = Prop;
+            using Axis = LunarCCAxisTo::Axis;
             cocos2d::CCActionInterval* to = nullptr;
             switch (seg.prop) {
-                case P::PosX:
-                    to = cocos2d::CCMoveTo::create(dur, {seg.to, node->getPositionY()});
-                    break;
-                case P::PosY:
-                    to = cocos2d::CCMoveTo::create(dur, {node->getPositionX(), seg.to});
-                    break;
+                case P::PosX: to = LunarCCAxisTo::create(dur, Axis::PosX, seg.to); break;
+                case P::PosY: to = LunarCCAxisTo::create(dur, Axis::PosY, seg.to); break;
                 case P::Rotation: to = cocos2d::CCRotateTo::create(dur, seg.to); break;
-                case P::ScaleX:
-                    to = cocos2d::CCScaleTo::create(dur, seg.to, node->getScaleY());
-                    break;
-                case P::ScaleY:
-                    to = cocos2d::CCScaleTo::create(dur, node->getScaleX(), seg.to);
-                    break;
+                case P::ScaleX: to = LunarCCAxisTo::create(dur, Axis::ScaleX, seg.to); break;
+                case P::ScaleY: to = LunarCCAxisTo::create(dur, Axis::ScaleY, seg.to); break;
                 case P::Opacity: to = cocos2d::CCFadeTo::create(dur, opacityByte(seg.to)); break;
                 case P::ZOrder: break; // Instant-only, never reaches here.
+                case P::AnchorX: to = LunarCCAxisTo::create(dur, Axis::AnchorX, seg.to); break;
+                case P::AnchorY: to = LunarCCAxisTo::create(dur, Axis::AnchorY, seg.to); break;
             }
             if (!to) return nullptr;
 
@@ -194,6 +192,8 @@ namespace luax::lunar {
                 case P::ScaleY: node->setScaleY(value); break;
                 case P::Opacity: setNodeOpacityImpl(node, value); break;
                 case P::ZOrder: node->setZOrder(static_cast<int>(value)); break;
+                case P::AnchorX: node->setAnchorPoint({value, node->getAnchorPoint().y}); break;
+                case P::AnchorY: node->setAnchorPoint({node->getAnchorPoint().x, value}); break;
             }
         }
 
@@ -516,7 +516,7 @@ namespace luax::lunar {
                             cocos2d::CCDelayTime::create(static_cast<float>(seg.start - prevEnd))
                         );
                     }
-                    if (auto* tween = makeTween(seg, node)) {
+                    if (auto* tween = makeTween(seg)) {
                         actions->addObject(tween);
                     }
                     prevEnd = seg.end;

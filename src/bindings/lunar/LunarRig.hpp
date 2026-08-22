@@ -26,6 +26,8 @@ namespace luax::lunar {
         float sy = 1.F;
         float z = 0.F;
         std::optional<float> opacity;
+        std::optional<float> ax;
+        std::optional<float> ay;
     };
 
     struct RigSpec {

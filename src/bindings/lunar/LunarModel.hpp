@@ -26,11 +26,13 @@ namespace luax::lunar {
         ScaleY,
         Opacity,
         ZOrder,
+        AnchorX,
+        AnchorY,
     };
 
     static_assert(static_cast<int>(Prop::ZOrder) == 6);
 
-    inline constexpr std::array<Prop, 7> kProps{
+    inline constexpr std::array<Prop, 9> kProps{
         Prop::PosX,
         Prop::PosY,
         Prop::Rotation,
@@ -38,6 +40,8 @@ namespace luax::lunar {
         Prop::ScaleY,
         Prop::Opacity,
         Prop::ZOrder,
+        Prop::AnchorX,
+        Prop::AnchorY,
     };
 
     enum class EasingKind : std::uint8_t {
@@ -116,6 +120,8 @@ namespace luax::lunar {
         std::optional<float> sy;
         std::optional<float> opacity;
         std::optional<float> z;
+        std::optional<float> ax;
+        std::optional<float> ay;
         Easing easing{};
     };
 

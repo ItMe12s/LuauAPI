@@ -51,16 +51,17 @@ return {
 
 Each entry in `nodes` becomes one cocos node:
 
-| Field | Type | Default | Notes |
-| --- | --- | --- | --- |
-| `id` | string | required | Unique within the rig. Used by animations and lookups. |
-| `sprite` | string? | nil | Sprite name. Without it you get an invisible container node. |
-| `parent` | string? | nil | Id of an earlier node. Children move and rotate with their parent. |
-| `x`, `y` | number | 0 | Position relative to the parent. |
-| `rot` | number | 0 | Rotation in degrees. |
-| `sx`, `sy` | number | 1 | Scale per axis. |
-| `z` | number | 0 | Z order. |
-| `opacity` | number? | nil | 0 to 255, sprites only. |
+| Field      | Type    | Default  | Notes                                                                                             |
+| ---------- | ------- | -------- | ------------------------------------------------------------------------------------------------- |
+| `id`       | string  | required | Unique within the rig. Used by animations and lookups.                                            |
+| `sprite`   | string? | nil      | Sprite name. Without it you get an invisible container node.                                      |
+| `parent`   | string? | nil      | Id of an earlier node. Children move and rotate with their parent.                                |
+| `x`, `y`   | number  | 0        | Position relative to the parent.                                                                  |
+| `rot`      | number  | 0        | Rotation in degrees.                                                                              |
+| `sx`, `sy` | number  | 1        | Scale per axis.                                                                                   |
+| `z`        | number  | 0        | Z order.                                                                                          |
+| `opacity`  | number? | nil      | 0 to 255, sprites only.                                                                           |
+| `ax`, `ay` | number? | nil      | Anchor point per axis, 0 to 1 (values outside work too). Defaults to cocos' 0.5, 0.5 for sprites. |
 
 Duplicate ids are an error.
 `load` gives each created node a string id of `<mod-id>/<node-id>` automatically.
@@ -111,16 +112,17 @@ return {
 }
 ```
 
-| Field | Type | Default | Notes |
-| --- | --- | --- | --- |
-| `fps` | number | 30 | Frames per second. Frame 12 at fps 24 is half a second. Must be above 0. |
-| `looped` | boolean | false | Wrap back to the start when finished. |
-| `keyframes` | table | required | Keyed by frame number. Each value maps node ids to poses and may carry an `events` list. |
+| Field       | Type    | Default  | Notes                                                                                    |
+| ----------- | ------- | -------- | ---------------------------------------------------------------------------------------- |
+| `fps`       | number  | 30       | Frames per second. Frame 12 at fps 24 is half a second. Must be above 0.                 |
+| `looped`    | boolean | false    | Wrap back to the start when finished.                                                    |
+| `keyframes` | table   | required | Keyed by frame number. Each value maps node ids to poses and may carry an `events` list. |
 
-A pose (`LunarNodePose`) sets any of `x`, `y`, `rot`, `sx`, `sy`, `opacity`, `z`, plus `easing`.
+A pose (`LunarNodePose`) sets any of `x`, `y`, `rot`, `sx`, `sy`, `opacity`, `z`, `ax`, `ay`, plus `easing`.
 All fields are optional and missing channels hold their previous value.
 The first keyframe snaps instantly instead of tweening.
 Every channel except `z` tweens between keys. `z` always applies instantly.
+`ax` and `ay` tween the anchor point per axis, so they shift how the sprite sits on its position without moving the node itself.
 
 A keyframe entry can also carry animation events. Set `events` to one name or an array of names.
 Events do nothing on their own. A playing track fires an event when the playhead reaches its frame.
@@ -221,18 +223,18 @@ Tracks stop cleanly when the runtime shuts down.
 
 Easing is per pose. Every tweened channel in one pose shares the same curve.
 
-| Names | Family |
-| --- | --- |
-| `linear` | Constant speed |
-| `quad_in`, `quad_out`, `quad_in_out` | Power 2 |
-| `cubic_in`, `cubic_out`, `cubic_in_out` | Power 3 |
-| `quart_in`, `quart_out`, `quart_in_out` | Power 4 |
-| `quint_in`, `quint_out`, `quint_in_out` | Power 5 |
-| `sine_in`, `sine_out`, `sine_in_out` | Smooth sine |
-| `expo_in`, `expo_out`, `expo_in_out` | Exponential |
-| `back_in`, `back_out`, `back_in_out` | Overshoot |
+| Names                                         | Family         |
+| --------------------------------------------- | -------------- |
+| `linear`                                      | Constant speed |
+| `quad_in`, `quad_out`, `quad_in_out`          | Power 2        |
+| `cubic_in`, `cubic_out`, `cubic_in_out`       | Power 3        |
+| `quart_in`, `quart_out`, `quart_in_out`       | Power 4        |
+| `quint_in`, `quint_out`, `quint_in_out`       | Power 5        |
+| `sine_in`, `sine_out`, `sine_in_out`          | Smooth sine    |
+| `expo_in`, `expo_out`, `expo_in_out`          | Exponential    |
+| `back_in`, `back_out`, `back_in_out`          | Overshoot      |
 | `elastic_in`, `elastic_out`, `elastic_in_out` | Elastic wobble |
-| `bounce_in`, `bounce_out`, `bounce_in_out` | Bounce |
+| `bounce_in`, `bounce_out`, `bounce_in_out`    | Bounce         |
 
 An unknown easing string fails the load with the offending name in the message.
 

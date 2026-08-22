@@ -13,7 +13,7 @@ local armSprite = modId .. "/TestSprite2.png"
 local rig = lunar.rig.new():load({
     nodes = {
         { id = "body", sprite = bodySprite },
-        { id = "arm", sprite = armSprite, parent = "body", x = 70, y = 40 },
+        { id = "arm", sprite = armSprite, parent = "body", x = 50, y = 30, ax = 0, ay = 0.5 },
     },
 })
 if not rig then
@@ -28,25 +28,25 @@ local wave = lunar.animation.load({
     looped = true,
     keyframes = {
         [0] = {
-            arm = { rot = -25 },
-            body = { rot = 0, opacity = 255 },
+            arm = { rot = -25, ay = 0.5 },
+            body = { rot = 0, sx = 1.5, sy = 1, opacity = 255 },
         },
         [6] = {
             arm = { rot = 25, easing = "bounce_out" },
-            body = { opacity = 180, easing = "expo_out" },
+            body = { opacity = 180, sx = 1.2, sy = 1.2, easing = "expo_out" },
         },
         [10] = { events = "epic event" },
         [18] = {
-            arm = { rot = -25, easing = "sine_in_out" },
+            arm = { rot = -25, ay = 1, easing = "sine_in_out" },
             body = { rot = -25, opacity = 255, easing = "sine_in_out" },
         },
         [26] = {
             events = { "bye" },
             arm = { rot = 25, easing = "sine_in" },
-            body = { rot = 179, easing = "sine_in" }
+            body = { rot = 179, sx = 1.5, sy = 1, easing = "sine_in" }
         },
         [36] = {
-            arm = { rot = -25, easing = "sine_out" },
+            arm = { rot = -25, ay = 0.5, easing = "sine_out" },
             body = { rot = 0, opacity = 255, easing = "sine_out" },
         },
     },
@@ -77,6 +77,7 @@ geode.hook("geode.gd.MenuLayer:init/0", {
                 if label then return end
                 label = geode.Label.create("hi from " .. name .. "!!!", "bigFont.fnt")
                 if not label then return end
+                label:setID(modId .. "/epic-label-from-rig")
                 label:setScale(0.5)
                 label:setAnchorPoint({ x = 0.5, y = 0.5 })
                 label:setPosition({ x = 0, y = 50 })

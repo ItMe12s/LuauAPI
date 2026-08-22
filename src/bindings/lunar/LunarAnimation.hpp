@@ -1,6 +1,6 @@
 #pragma once
 
-#include "bindings/lunar/LunarCCSpeed.hpp"
+#include "bindings/lunar/LunarCCAction.hpp"
 #include "bindings/lunar/LunarModel.hpp"
 #include "bindings/lunar/LunarRig.hpp"
 #include "framework/callback/LuaCallback.hpp"
