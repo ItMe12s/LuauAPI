@@ -32,6 +32,7 @@ Caps and error strings live in [Limits and errors](../cpp/limits-and-errors.md).
 | Core | [delegates](delegates.md) | Virtual interface tables |
 | Game | [enums](enums.md) | GD and Geode enum constants |
 | Game | [game objects](game-objects.md) | Cocos and GD objects |
+| Game | [lunar](lunar.md) | Rigging and sprite animation |
 | Game | [cocos](cocos.md) | Node and color helpers |
 | Game | [ColorProvider](color-provider.md) | Theme colors |
 | Game | [Keybind](keybind.md) | Keybind strings |

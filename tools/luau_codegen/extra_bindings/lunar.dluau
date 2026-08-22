@@ -1,0 +1,71 @@
+export type LunarNodePose = {
+    x: number?,
+    y: number?,
+    rot: number?,
+    sx: number?,
+    sy: number?,
+    opacity: number?,
+    z: number?,
+    easing: string?,
+}
+
+export type LunarRigNodeSpec = {
+    id: string,
+    sprite: string?,
+    parent: string?,
+    x: number?,
+    y: number?,
+    rot: number?,
+    sx: number?,
+    sy: number?,
+    z: number?,
+    opacity: number?,
+}
+
+export type LunarRigSpec = {
+    nodes: { LunarRigNodeSpec },
+}
+
+export type LunarAnimationDefTable = {
+    fps: number?,
+    looped: boolean?,
+    keyframes: { [number]: { [string]: LunarNodePose } },
+}
+
+declare class LunarAnimationDef
+    function setFps(self, fps: number): ()
+    function getFps(self): number
+    function setLooped(self, looped: boolean): ()
+    function getLooped(self): boolean
+    function addKeyframe(self, frame: number, nodeId: string, pose: LunarNodePose): ()
+end
+
+declare class LunarRig extends CCNode
+    function load(self, spec: LunarRigSpec): LunarRig
+    function add(self, node: CCNode, id: string?): ()
+    function addTo(self, parentId: string, node: CCNode, id: string?): ()
+    function getNode(self, id: string): CCNode?
+    function loadAnimation(self, anim: LunarAnimationDef | LunarAnimationDefTable): LunarAnimationTrack
+end
+
+declare class LunarAnimationTrack
+    function play(self): ()
+    function pause(self): ()
+    function continue(self): ()
+    function stop(self): ()
+    function setSpeed(self, speed: number): ()
+    function isPlaying(self): boolean
+    function isPaused(self): boolean
+    function speed(self): number
+    function duration(self): number
+end
+
+declare lunar: {
+    rig: {
+        new: () -> LunarRig,
+    },
+    animation: {
+        new: () -> LunarAnimationDef,
+        load: (def: LunarAnimationDefTable) -> LunarAnimationDef,
+    },
+}

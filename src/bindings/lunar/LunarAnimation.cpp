@@ -45,6 +45,7 @@ namespace luax::lunar {
         }
 
         geode::Result<NodePose> parseNodePose(lua_State* L, int idx, std::string_view nodeId) {
+            idx = lua_absindex(L, idx);
             luaL_checktype(L, idx, LUA_TTABLE);
             NodePose pose;
             lua_pushnil(L);
@@ -230,7 +231,7 @@ namespace luax::lunar {
                 case P::ScaleX: node->setScaleX(value); break;
                 case P::ScaleY: node->setScaleY(value); break;
                 case P::Opacity: {
-                    if (auto* rgba = dynamic_cast<cocos2d::CCRGBAProtocol*>(node)) {
+                    if (auto* rgba = geode::cast::typeinfo_cast<cocos2d::CCRGBAProtocol*>(node)) {
                         rgba->setOpacity(opacityByte(value));
                     }
                     break;
@@ -390,30 +391,27 @@ namespace luax::lunar {
 
         int rigLoadAnimation(lua_State* L) {
             auto* rig = Usertype<LunarRig>::check(L, 1, "LunarRig:loadAnimation");
-            CompiledAnimation compiled;
+            ParsedAnim parsed;
             if (auto* def = Usertype<LunarAnimationDef>::tryCheck(L, 2)) {
-                auto result = compileAnimation(def->keyframes(), def->fps(), def->looped());
-                if (result.isErr()) {
-                    luaL_error(L, "LunarRig:loadAnimation: %s", result.unwrapErr().c_str());
-                }
-                compiled = std::move(result).unwrap();
+                parsed.keyframes = def->keyframes();
+                parsed.fps = def->fps();
+                parsed.looped = def->looped();
             }
             else if (lua_istable(L, 2)) {
-                auto parsed = parseAnimTable(L, 2, "LunarRig:loadAnimation");
-                if (parsed.isErr()) {
-                    luaL_error(L, "LunarRig:loadAnimation: %s", parsed.unwrapErr().c_str());
-                }
-                auto value = std::move(parsed).unwrap();
-                auto result = compileAnimation(value.keyframes, value.fps, value.looped);
+                auto result = parseAnimTable(L, 2, "LunarRig:loadAnimation");
                 if (result.isErr()) {
                     luaL_error(L, "LunarRig:loadAnimation: %s", result.unwrapErr().c_str());
                 }
-                compiled = std::move(result).unwrap();
+                parsed = std::move(result).unwrap();
             }
             else {
                 luaL_error(L, "LunarRig:loadAnimation expected an animation or table at arg 2");
             }
-            Usertype<LunarTrack>::pushOwned(L, LunarTrack::create(rig, std::move(compiled)));
+            auto compiled = compileAnimation(parsed.keyframes, parsed.fps, parsed.looped);
+            if (compiled.isErr()) {
+                luaL_error(L, "LunarRig:loadAnimation: %s", compiled.unwrapErr().c_str());
+            }
+            Usertype<LunarTrack>::pushOwned(L, LunarTrack::create(rig, std::move(compiled).unwrap()));
             return 1;
         }
 

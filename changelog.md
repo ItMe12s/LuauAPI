@@ -10,7 +10,8 @@
 
 ## 0.1.0-beta.25
 
-add stuff here...
+- Added `lunar` global for sprite rigging and keyframe animation with easing tweens.
+- Added `.rig.luau` and `.anim.luau` module conventions.
 
 ## 0.1.0-beta.24
 

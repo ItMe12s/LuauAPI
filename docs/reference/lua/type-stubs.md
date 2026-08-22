@@ -17,23 +17,34 @@ Every file in `tools/luau_codegen/extra_bindings/` is appended to the same outpu
 
 - [`task.dluau`](../../../tools/luau_codegen/extra_bindings/task.dluau) adds `task`, `time`, `loadstring`, and `warn`.
   See [tasks and time](tasks.md) and [globals](globals.md).
-- [`imgui.dluau`](../../../tools/luau_codegen/extra_bindings/imgui.dluau) adds `imgui`. See [imgui](imgui.md).
-- [`web.dluau`](../../../tools/luau_codegen/extra_bindings/web.dluau) adds `WebNamespace` and its request and response types. See [web](web.md).
+- [`imgui.dluau`](../../../tools/luau_codegen/extra_bindings/imgui.dluau) adds `imgui`.
+  See [imgui](imgui.md).
+- [`web.dluau`](../../../tools/luau_codegen/extra_bindings/web.dluau) adds `WebNamespace` and its request and response types.
+  See [web](web.md).
 - [`hook.dluau`](../../../tools/luau_codegen/extra_bindings/hook.dluau) adds `HookHandle` and `HookCallbackTable`. See [hooks](hooks.md).
-- [`mod.dluau`](../../../tools/luau_codegen/extra_bindings/mod.dluau) adds `ModNamespace`. See [mod](mod.md).
-- [`loader.dluau`](../../../tools/luau_codegen/extra_bindings/loader.dluau) adds `LoaderModInfo` and `LoaderNamespace`. See [loader](loader.md).
-- [`json.dluau`](../../../tools/luau_codegen/extra_bindings/json.dluau) adds `JsonNamespace`. See [json](json.md).
-- [`keyboard.dluau`](../../../tools/luau_codegen/extra_bindings/keyboard.dluau) adds keyboard input support types. See [Keyboard input](keyboard-input.md).
-- [`mouse.dluau`](../../../tools/luau_codegen/extra_bindings/mouse.dluau) adds mouse input support types. See [Mouse input](mouse-input.md).
-- [`fs.dluau`](../../../tools/luau_codegen/extra_bindings/fs.dluau) adds `FsRoot` and `FsNamespace`. See [fs](fs.md).
+- [`mod.dluau`](../../../tools/luau_codegen/extra_bindings/mod.dluau) adds `ModNamespace`.
+  See [mod](mod.md).
+- [`loader.dluau`](../../../tools/luau_codegen/extra_bindings/loader.dluau) adds `LoaderModInfo` and `LoaderNamespace`.
+  See [loader](loader.md).
+- [`json.dluau`](../../../tools/luau_codegen/extra_bindings/json.dluau) adds `JsonNamespace`.
+  See [json](json.md).
+- [`keyboard.dluau`](../../../tools/luau_codegen/extra_bindings/keyboard.dluau) adds keyboard input support types.
+  See [Keyboard input](keyboard-input.md).
+- [`mouse.dluau`](../../../tools/luau_codegen/extra_bindings/mouse.dluau) adds mouse input support types.
+  See [Mouse input](mouse-input.md).
+- [`fs.dluau`](../../../tools/luau_codegen/extra_bindings/fs.dluau) adds `FsRoot` and `FsNamespace`.
+  See [fs](fs.md).
 - [`gd3d.dluau`](../../../tools/luau_codegen/extra_bindings/gd3d.dluau) adds `gd3d`,
-  Transform, Mesh, Material, Texture, and ViewportFrame types. See [gd3d](gd3d.md).
+  Transform, Mesh, Material, Texture, and ViewportFrame types.
+  See [gd3d](gd3d.md).
 - [`websocket.dluau`](../../../tools/luau_codegen/extra_bindings/websocket.dluau) adds `websocket` and its connection and server types.
   See [websocket](websocket.md).
 - [`color.dluau`](../../../tools/luau_codegen/extra_bindings/color.dluau) adds Geode color support types.
   See [cocos](cocos.md).
 - [`popup.dluau`](../../../tools/luau_codegen/extra_bindings/popup.dluau) adds managed popup support types.
   See [UI and layouts](ui.md).
+- [`lunar.dluau`](../../../tools/luau_codegen/extra_bindings/lunar.dluau) adds `lunar`, `LunarRig`, `LunarAnimationDef`, and `LunarAnimationTrack` types.
+  See [lunar](lunar.md).
 
 Files for a global like `task` use `declare`. Files that only add support types use `export type`.
 There is no separate `imgui.d.luau` after a build.

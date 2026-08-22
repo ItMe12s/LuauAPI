@@ -152,20 +152,13 @@ namespace luax::lunar {
 
             cocos2d::CCNode* node = nullptr;
             if (nodeSpec.sprite) {
-                auto* frame =
-                    cocos2d::CCSpriteFrameCache::sharedSpriteFrameCache()->spriteFrameByName(
-                        nodeSpec.sprite->c_str()
-                    );
-                if (!frame) {
-                    geode::log::warn(
-                        "[lunar] rig node '{}': sprite frame '{}' not found, skipped",
-                        nodeSpec.id,
-                        *nodeSpec.sprite
-                    );
-                    continue;
-                }
-                node = cocos2d::CCSprite::createWithSpriteFrameName(nodeSpec.sprite->c_str());
-                if (!node) {
+                std::string const resolved =
+                    cocos2d::CCFileUtils::get()->fullPathForFilename(nodeSpec.sprite->c_str(), false);
+                bool const fileExists = resolved != *nodeSpec.sprite;
+                auto* sprite = fileExists ?
+                    cocos2d::CCSprite::create(resolved.c_str()) :
+                    cocos2d::CCSprite::createWithSpriteFrameName(nodeSpec.sprite->c_str());
+                if (!sprite) {
                     geode::log::warn(
                         "[lunar] rig node '{}': failed to create sprite '{}', skipped",
                         nodeSpec.id,
@@ -173,6 +166,15 @@ namespace luax::lunar {
                     );
                     continue;
                 }
+                if (!fileExists && sprite->isUsingFallback()) {
+                    geode::log::warn(
+                        "[lunar] rig node '{}': sprite '{}' not found, mod sprites must be "
+                        "prefixed '<mod-id>/name.png'",
+                        nodeSpec.id,
+                        *nodeSpec.sprite
+                    );
+                }
+                node = sprite;
             }
             else {
                 node = cocos2d::CCNode::create();
@@ -184,7 +186,7 @@ namespace luax::lunar {
             node->setScaleY(nodeSpec.sy);
             node->setZOrder(static_cast<int>(nodeSpec.z));
             if (nodeSpec.opacity) {
-                if (auto* rgba = dynamic_cast<cocos2d::CCRGBAProtocol*>(node)) {
+                if (auto* rgba = geode::cast::typeinfo_cast<cocos2d::CCRGBAProtocol*>(node)) {
                     rgba->setOpacity(static_cast<GLubyte>(std::clamp(*nodeSpec.opacity, 0.F, 255.F)));
                 }
                 else {

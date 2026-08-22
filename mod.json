@@ -27,9 +27,13 @@
 		]
 	},
 	"resources": {
+		"sprites": [
+			"resources/sprites/*.png"
+		],
 		"files": [
 			"mod/**/*.luau",
-			"resources/**/*"
+			"resources/*.ttf",
+			"resources/*.glb"
 		]
 	},
 	"settings": {

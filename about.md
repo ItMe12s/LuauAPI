@@ -20,6 +20,7 @@ It's easy to use, fast to start, and provides clear error logging with fewer cra
 - In-game developer tools (enable via developer mode)
 - JIT and JIT-less support
 - Easy-to-use 3D APIs and viewports through `gd3d`
+- Rigging and animating sprites through `lunar`
 - Rich built-in libraries, including `task`, `loadstring`, `websocket`, `imgui`, and more
 
 ---
@@ -28,7 +29,6 @@ It's easy to use, fast to start, and provides clear error logging with fewer cra
 
 - Custom UI builder, framework, pre-made assets
 - More advanced 3D functionality and support
-- Sprite and rig animator with keyframes
 - The remaining 0.1% of bindings and m_Fields
 - Argon support
 - Box2D support
