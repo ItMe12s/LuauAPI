@@ -90,6 +90,13 @@ namespace {
         bool closable = false;
         bool open = true;
         if (lua_istable(L, 3)) {
+            ImVec2 vec;
+            if (optFieldVec2(L, 3, "size", vec, "imgui.popupModal")) {
+                auto cond = static_cast<ImGuiCond>(
+                    optFieldNumber(L, 3, "sizeCond", static_cast<float>(ImGuiCond_FirstUseEver))
+                );
+                ImGui::SetNextWindowSize(vec, cond);
+            }
             flags = static_cast<ImGuiWindowFlags>(optFieldNumber(L, 3, "flags", 0.0f));
             closable = optFieldBool(L, 3, "closable", false);
         }

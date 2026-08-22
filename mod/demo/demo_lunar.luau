@@ -35,12 +35,12 @@ local wave = lunar.animation.load({
             arm = { rot = 25, easing = "bounce_out" },
             body = { opacity = 180, easing = "expo_out" },
         },
-        [12] = { events = "pop" },
+        [10] = { events = "epic event" },
         [18] = {
             arm = { rot = -25, easing = "sine_in_out" },
             body = { rot = -25, opacity = 255, easing = "sine_in_out" },
         },
-        [24] = {
+        [26] = {
             events = { "bye" },
             arm = { rot = 25, easing = "sine_in" },
             body = { rot = 179, easing = "sine_in" }
@@ -73,13 +73,13 @@ geode.hook("geode.gd.MenuLayer:init/0", {
             _G.lunarDemoTrack = track
 
             local label = nil
-            track:bindEvent("pop", function(name)
+            track:bindEvent("epic event", function(name)
                 if label then return end
-                label = geode.Label.create("hi from " .. name .. "! :3", "bigFont.fnt")
+                label = geode.Label.create("hi from " .. name .. "!!!", "bigFont.fnt")
                 if not label then return end
                 label:setScale(0.5)
                 label:setAnchorPoint({ x = 0.5, y = 0.5 })
-                label:setPosition({ x = 0, y = 100 })
+                label:setPosition({ x = 0, y = 50 })
                 rig:addChild(label)
             end)
             track:bindEvent("bye", function()

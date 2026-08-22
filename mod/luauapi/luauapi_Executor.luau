@@ -107,89 +107,95 @@ function Executor.refreshDemoFiles()
     table.sort(Executor.demoFiles)
 end
 
-function Executor.draw()
-    local function drawContent()
-        imgui.style.with(getThemeOpts(), function()
-            imgui.window("Executor", function()
-                local avail = imgui.getContentRegionAvail()
-                local buttonWidth = math.max(
-                    (avail.x - Executor.spacing * (Executor.buttonColumns - 1)) / Executor.buttonColumns,
-                    1
-                )
-
-                Executor.code = imgui.inputTextMultiline("##code", Executor.code, { x = -1, y = -Executor.footer })
-
-                if imgui.button("Execute", { size = { x = buttonWidth, y = 0 } }) then
-                    Executor.execute(Executor.code)
-                end
-
-                imgui.sameLine()
-                if imgui.button("Paste", { size = { x = buttonWidth, y = 0 } }) then
-                    local paste = geode.utils.clipboard.read()
-                    if paste then
-                        Executor.code = paste
-                    end
-                end
-
-                imgui.sameLine()
-                if imgui.button("Clear", { size = { x = buttonWidth, y = 0 } }) then
-                    Executor.code = ""
-                    Executor.setStatus(true, "Code cleared")
-                end
-
-                imgui.sameLine()
-                if imgui.button("Load Demo", { size = { x = buttonWidth, y = 0 } }) then
-                    Executor.refreshDemoFiles()
-                    imgui.openPopup("load-demo")
-                end
-
-                imgui.popupModal("load-demo", function()
-                    imgui.text("Choose a demo file to load:")
-                    if #Executor.demoFiles == 0 and Executor.demoError == "" then
-                        imgui.text("No demo files found.")
-                    else
-                        for _, filename in Executor.demoFiles do
-                            if imgui.selectable(filename, Executor.selectedDemo == filename, {
-                                flags = imgui.Flag.Selectable.NoAutoClosePopups,
-                            }) then
-                                Executor.selectedDemo = filename
-                                Executor.demoError = ""
-                            end
-                        end
-                    end
-
-                    if Executor.demoError ~= "" then
-                        imgui.text("Error: " .. Executor.demoError)
-                    end
-
-                    if imgui.button("Load") then
-                        if Executor.selectedDemo == "" then
-                            Executor.demoError = "Select a demo file"
-                            Executor.setStatus(false, Executor.demoError)
-                        else
-                            local source, err = geode.fs.read("resources", Executor.selectedDemo)
-                            if source then
-                                Executor.code = source
-                                Executor.setStatus(true, "Loaded " .. Executor.selectedDemo)
-                                imgui.closeCurrentPopup()
-                            else
-                                Executor.demoError = tostring(err)
-                                Executor.setStatus(false, Executor.demoError)
-                            end
-                        end
-                    end
-
-                    imgui.sameLine()
-                    if imgui.button("Cancel") then
-                        imgui.closeCurrentPopup()
-                    end
-                end)
-
-                imgui.text(Executor.status)
-            end, { size = { x = Executor.windowWidth, y = Executor.windowHeight } })
-        end)
+local function drawDemoPopup()
+    imgui.text("Choose a demo file to load:")
+    if #Executor.demoFiles == 0 and Executor.demoError == "" then
+        imgui.text("No demo files found.")
+    else
+        for _, filename in Executor.demoFiles do
+            if imgui.selectable(filename, Executor.selectedDemo == filename, {
+                flags = imgui.Flag.Selectable.NoAutoClosePopups,
+            }) then
+                Executor.selectedDemo = filename
+                Executor.demoError = ""
+            end
+        end
     end
 
+    if Executor.demoError ~= "" then
+        imgui.text("Error: " .. Executor.demoError)
+    end
+
+    if imgui.button("Load") then
+        if Executor.selectedDemo == "" then
+            Executor.demoError = "Select a demo file"
+            Executor.setStatus(false, Executor.demoError)
+        else
+            local source, err = geode.fs.read("resources", Executor.selectedDemo)
+            if source then
+                Executor.code = source
+                Executor.setStatus(true, "Loaded " .. Executor.selectedDemo)
+                imgui.closeCurrentPopup()
+            else
+                Executor.demoError = tostring(err)
+                Executor.setStatus(false, Executor.demoError)
+            end
+        end
+    end
+
+    imgui.sameLine()
+    if imgui.button("Cancel") then
+        imgui.closeCurrentPopup()
+    end
+end
+
+local function drawWindow()
+    local avail = imgui.getContentRegionAvail()
+    local buttonWidth = math.max((avail.x - Executor.spacing * (Executor.buttonColumns - 1)) / Executor.buttonColumns, 1)
+
+    Executor.code = imgui.inputTextMultiline("##code", Executor.code, { x = -1, y = -Executor.footer })
+
+    if imgui.button("Execute", { size = { x = buttonWidth, y = 0 } }) then
+        Executor.execute(Executor.code)
+    end
+
+    imgui.sameLine()
+    if imgui.button("Paste", { size = { x = buttonWidth, y = 0 } }) then
+        local paste = geode.utils.clipboard.read()
+        if paste then
+            Executor.code = paste
+        end
+    end
+
+    imgui.sameLine()
+    if imgui.button("Clear", { size = { x = buttonWidth, y = 0 } }) then
+        Executor.code = ""
+        Executor.setStatus(true, "Code cleared")
+    end
+
+    imgui.sameLine()
+    if imgui.button("Load Demo", { size = { x = buttonWidth, y = 0 } }) then
+        Executor.refreshDemoFiles()
+        imgui.openPopup("load-demo")
+    end
+
+    imgui.popupModal("load-demo", drawDemoPopup, {
+        size = { x = 250, y = 300 },
+        sizeCond = imgui.Cond.Always
+    })
+
+    imgui.text(Executor.status)
+end
+
+local function drawContent()
+    imgui.style.with(getThemeOpts(), function()
+        imgui.window("Executor", drawWindow, {
+            size = { x = Executor.windowWidth, y = Executor.windowHeight },
+        })
+    end)
+end
+
+function Executor.draw()
     if Executor.font then
         imgui.font.with(Executor.font, drawContent)
     else

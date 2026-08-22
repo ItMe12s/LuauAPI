@@ -12,6 +12,7 @@
 
 - Added `lunar` global for sprite rigging and keyframe animation with easing tweens.
 - Added `.rig.luau` and `.anim.luau` module conventions.
+- Added size opts for imgui popup modal.
 
 ## 0.1.0-beta.24
 

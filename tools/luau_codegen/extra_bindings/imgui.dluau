@@ -57,7 +57,12 @@ export type ImGuiTabItemOpts = { flags: number?, closable: boolean? }
 
 export type ImGuiPopupOpts = { flags: number? }
 
-export type ImGuiPopupModalOpts = { flags: number?, closable: boolean? }
+export type ImGuiPopupModalOpts = {
+    flags: number?,
+    closable: boolean?,
+    size: ImGuiVec2?,
+    sizeCond: number?,
+}
 
 export type ImGuiTableOpts = { flags: number?, outerSize: ImGuiVec2?, innerWidth: number? }
 
