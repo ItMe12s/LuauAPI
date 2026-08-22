@@ -20,6 +20,7 @@ if not rig then
     print("lunar demo rig failed to load")
     return
 end
+rig:setID(modId .. "/lunar-demo-rig")
 _G.lunarDemoRig = rig
 
 local wave = lunar.animation.load({

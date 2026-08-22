@@ -63,6 +63,7 @@ Each entry in `nodes` becomes one cocos node:
 | `opacity` | number? | nil | 0 to 255, sprites only. |
 
 Duplicate ids are an error.
+`load` gives each created node a string id of `<mod-id>/<node-id>` automatically.
 A missing sprite loads the node with Geode's checkerboard fallback texture.
 The load logs a warning, and the rest of the rig still works.
 
@@ -243,8 +244,10 @@ Full round trip with separate files:
 -- Main script.
 local Robot = require("./Robot.rig")
 local Wave = require("./Wave.anim")
+local modId = geode.Mod.getID()
 
 local rig = lunar.rig.new():load(Robot)
+rig:setID(modId .. "/robot-rig")
 local director = geode.cocos2d.CCDirector.sharedDirector()
 local winSize = director:getWinSize()
 rig:setPosition({ x = winSize.width / 2, y = winSize.height / 2 })

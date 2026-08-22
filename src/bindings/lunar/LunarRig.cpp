@@ -1,5 +1,6 @@
 #include "bindings/lunar/LunarRig.hpp"
 
+#include "bindings/geode/CurrentMod.hpp"
 #include "bindings/lunar/LunarAnimation.hpp"
 #include "framework/stack/Stack.hpp"
 #include "framework/stack/TableUtil.hpp"
@@ -290,6 +291,9 @@ namespace luax::lunar {
                 geode::log::warn(
                     "rig node '{}': node type does not support opacity, ignored", nodeSpec.id
                 );
+            }
+            if (auto* mod = currentMod()) {
+                node->setID(fmt::format("{}/{}", mod->getID(), nodeSpec.id));
             }
             parent->addChild(node);
             created.push_back(node);
