@@ -26,10 +26,15 @@ export type LunarRigSpec = {
     nodes: { LunarRigNodeSpec },
 }
 
+export type LunarKeyframeEntry = {
+    events: (string | { string })?,
+    [string]: LunarNodePose,
+}
+
 export type LunarAnimationDefTable = {
     fps: number?,
     looped: boolean?,
-    keyframes: { [number]: { [string]: LunarNodePose } },
+    keyframes: { [number]: LunarKeyframeEntry },
 }
 
 declare class LunarAnimationDef
@@ -38,6 +43,7 @@ declare class LunarAnimationDef
     function setLooped(self, looped: boolean): ()
     function getLooped(self): boolean
     function addKeyframe(self, frame: number, nodeId: string, pose: LunarNodePose): ()
+    function addEvent(self, frame: number, name: string): ()
 end
 
 declare class LunarRig extends CCNode
@@ -58,6 +64,7 @@ declare class LunarAnimationTrack
     function isPaused(self): boolean
     function speed(self): number
     function duration(self): number
+    function bindEvent(self, name: string, callback: (eventName: string) -> ()): ()
 end
 
 declare lunar: {

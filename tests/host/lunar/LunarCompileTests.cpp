@@ -19,6 +19,13 @@ namespace {
         return out;
     }
 
+    Keyframe eventKf(double frame, std::vector<std::string> names) {
+        Keyframe out;
+        out.frame = frame;
+        out.events = std::move(names);
+        return out;
+    }
+
     TweenSeg const* findSeg(CompiledAnimation const& anim, std::string const& id, Prop prop, bool instant) {
         for (auto const& track : anim.nodes) {
             if (track.nodeId != id) continue;
@@ -352,4 +359,70 @@ TEST_CASE("sliceAnimation propagates looped flag") {
 
     CompiledAnimation sliced = sliceAnimation(anim, 0.0);
     REQUIRE(sliced.looped);
+}
+
+TEST_CASE("compileAnimation collects events sorted and extends duration") {
+    NodePose pose;
+    pose.x = 0.F;
+
+    std::vector<Keyframe> const keyframes = {
+        eventKf(67, {"late"}),
+        kf(10, "arm", pose),
+        eventKf(6, {"b", "a"}),
+        eventKf(6, {"c"}),
+    };
+
+    auto result = compileAnimation(keyframes, 10.0, false);
+    REQUIRE(result.isOk());
+    auto anim = std::move(result).unwrap();
+
+    REQUIRE(anim.events.size() == 4);
+    REQUIRE(anim.events[0].time == Approx(0.6));
+    REQUIRE(anim.events[0].name == "b");
+    REQUIRE(anim.events[1].time == Approx(0.6));
+    REQUIRE(anim.events[1].name == "a");
+    REQUIRE(anim.events[2].time == Approx(0.6));
+    REQUIRE(anim.events[2].name == "c");
+    REQUIRE(anim.events[3].time == Approx(6.7));
+    REQUIRE(anim.events[3].name == "late");
+
+    REQUIRE(anim.duration == Approx(6.7));
+
+    REQUIRE(anim.nodes.size() == 1);
+}
+
+TEST_CASE("sliceAnimation shifts and drops events past the cut") {
+    NodePose pose;
+    pose.x = 0.F;
+
+    std::vector<Keyframe> const keyframes = {
+        eventKf(0, {"start"}),
+        kf(10, "arm", pose),
+        eventKf(20, {"mid"}),
+        eventKf(40, {"end"}),
+    };
+
+    auto result = compileAnimation(keyframes, 10.0, false);
+    REQUIRE(result.isOk());
+    auto anim = std::move(result).unwrap();
+    REQUIRE(anim.duration == Approx(4.0));
+
+    SECTION("zero fromTime keeps everything") {
+        CompiledAnimation sliced = sliceAnimation(anim, 0.0);
+        REQUIRE(sliced.events.size() == 3);
+        REQUIRE(sliced.duration == Approx(4.0));
+    }
+
+    SECTION("mid slice drops earlier events and shifts kept ones") {
+        CompiledAnimation sliced = sliceAnimation(anim, 2.5);
+        REQUIRE(sliced.events.size() == 1);
+        REQUIRE(sliced.events[0].name == "end");
+        REQUIRE(sliced.events[0].time == Approx(1.5));
+        REQUIRE(sliced.duration == Approx(1.5));
+    }
+
+    SECTION("slice past everything leaves no events") {
+        CompiledAnimation sliced = sliceAnimation(anim, 5.0);
+        REQUIRE(sliced.events.empty());
+    }
 }

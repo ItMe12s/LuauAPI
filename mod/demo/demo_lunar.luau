@@ -16,6 +16,10 @@ local rig = lunar.rig.new():load({
         { id = "arm", sprite = armSprite, parent = "body", x = 70, y = 40 },
     },
 })
+if not rig then
+    print("lunar demo rig failed to load")
+    return
+end
 _G.lunarDemoRig = rig
 
 local wave = lunar.animation.load({
@@ -30,11 +34,13 @@ local wave = lunar.animation.load({
             arm = { rot = 25, easing = "bounce_out" },
             body = { opacity = 180, easing = "expo_out" },
         },
+        [12] = { events = "pop" },
         [18] = {
             arm = { rot = -25, easing = "sine_in_out" },
             body = { rot = -25, opacity = 255, easing = "sine_in_out" },
         },
         [24] = {
+            events = { "bye" },
             arm = { rot = 25, easing = "sine_in" },
             body = { rot = 179, easing = "sine_in" }
         },
@@ -44,6 +50,10 @@ local wave = lunar.animation.load({
         },
     },
 })
+if not wave then
+    print("lunar demo animation failed to load")
+    return
+end
 
 geode.hook("geode.gd.MenuLayer:init/0", {
     after = function(self, result)
@@ -57,8 +67,25 @@ geode.hook("geode.gd.MenuLayer:init/0", {
             self:addChild(rig)
 
             local track = rig:loadAnimation(wave)
+            if not track then return end
             track:play()
             _G.lunarDemoTrack = track
+
+            local label = nil
+            track:bindEvent("pop", function(name)
+                if label then return end
+                label = geode.Label.create("hi from " .. name .. "! :3", "bigFont.fnt")
+                if not label then return end
+                label:setScale(0.5)
+                label:setAnchorPoint({ x = 0.5, y = 0.5 })
+                label:setPosition({ x = 0, y = 100 })
+                rig:addChild(label)
+            end)
+            track:bindEvent("bye", function()
+                if not label then return end
+                label:removeFromParent()
+                label = nil
+            end)
 
             print("lunar demo playing")
         end)

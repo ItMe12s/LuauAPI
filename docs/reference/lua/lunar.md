@@ -114,12 +114,23 @@ return {
 | --- | --- | --- | --- |
 | `fps` | number | 30 | Frames per second. Frame 12 at fps 24 is half a second. Must be above 0. |
 | `looped` | boolean | false | Wrap back to the start when finished. |
-| `keyframes` | table | required | Keyed by frame number. Each value maps node ids to poses. |
+| `keyframes` | table | required | Keyed by frame number. Each value maps node ids to poses and may carry an `events` list. |
 
 A pose (`LunarNodePose`) sets any of `x`, `y`, `rot`, `sx`, `sy`, `opacity`, `z`, plus `easing`.
 All fields are optional and missing channels hold their previous value.
 The first keyframe snaps instantly instead of tweening.
 Every channel except `z` tweens between keys. `z` always applies instantly.
+
+A keyframe entry can also carry animation events. Set `events` to one name or an array of names.
+Events do nothing on their own. A playing track fires an event when the playhead reaches its frame.
+Event-only keyframes still count toward the animation length. Events fire again on every loop.
+
+```lua
+keyframes = {
+    [12] = { arm = { rot = 25 } },
+    [67] = { events = { "particle_thingy", "sound1" } },
+},
+```
 
 Animations are decoupled from rigs.
 They target node ids, so one animation can drive any rig with matching ids.
@@ -169,6 +180,7 @@ def:getFps() -> number
 def:setLooped(looped: boolean) -> ()
 def:getLooped() -> boolean
 def:addKeyframe(frame: number, nodeId: string, pose: LunarNodePose) -> ()
+def:addEvent(frame: number, name: string) -> ()
 ```
 
 `new` starts from fps 30, not looped, no keyframes.
@@ -189,6 +201,7 @@ track:isPlaying() -> boolean
 track:isPaused() -> boolean
 track:speed() -> number
 track:duration() -> number
+track:bindEvent(name: string, fn: (eventName: string) -> ()) -> ()
 ```
 
 - `play` restarts from time zero. It warns and does nothing on an empty animation.
@@ -196,6 +209,9 @@ track:duration() -> number
 - `stop` halts and rewinds. The next `play` starts over.
 - `setSpeed` takes effect immediately, even mid-tween.
 - `duration` is the animation length in seconds, independent of speed.
+- `bindEvent` registers `fn` to run whenever an event with that name fires.
+  Multiple fns per name are allowed, and every bound fn fires once per matching marker.
+  Markers already passed before `play` or `unpause` are skipped.
 
 When a looped track reaches its end it wraps and keeps playing.
 Tracks stop cleanly when the runtime shuts down.

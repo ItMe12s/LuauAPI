@@ -180,7 +180,7 @@ namespace luax::lunar {
             return geode::Err(std::string("fps must be a positive finite number"));
         }
 
-        std::ranges::sort(keyframes, {}, &Keyframe::frame);
+        std::ranges::stable_sort(keyframes, {}, &Keyframe::frame);
         for (auto const& kf : keyframes) {
             if (kf.frame < 0.0 || !std::isfinite(kf.frame)) {
                 return geode::Err(
@@ -248,6 +248,18 @@ namespace luax::lunar {
                 out.nodes.push_back(std::move(track));
             }
         }
+
+        std::vector<AnimEvent> events;
+        for (auto const& kf : keyframes) {
+            double const time = kf.frame / fps;
+            for (auto const& name : kf.events) {
+                duration = std::max(duration, time);
+                events.push_back(AnimEvent{time, name});
+            }
+        }
+        std::ranges::stable_sort(events, {}, &AnimEvent::time);
+        out.events = std::move(events);
+
         out.duration = duration;
         return geode::Ok(std::move(out));
     }
@@ -258,6 +270,7 @@ namespace luax::lunar {
         if (fromTime <= 0.0) {
             out.duration = src.duration;
             out.nodes = src.nodes;
+            out.events = src.events;
             return out;
         }
 
@@ -289,6 +302,14 @@ namespace luax::lunar {
             }
             if (!track.segs.empty()) out.nodes.push_back(std::move(track));
         }
+
+        for (auto const& ev : src.events) {
+            if (ev.time < fromTime) continue;
+            double const shifted = ev.time - fromTime;
+            duration = std::max(duration, shifted);
+            out.events.push_back(AnimEvent{shifted, ev.name});
+        }
+
         out.duration = std::max(0.0, duration);
         return out;
     }

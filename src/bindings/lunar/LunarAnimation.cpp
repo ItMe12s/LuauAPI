@@ -1,6 +1,7 @@
 #include "bindings/lunar/LunarAnimation.hpp"
 
 #include "bindings/lunar/LunarRig.hpp"
+#include "core/Config.hpp"
 #include "core/Runtime.hpp"
 #include "framework/stack/Stack.hpp"
 #include "framework/stack/TableUtil.hpp"
@@ -91,6 +92,37 @@ namespace luax::lunar {
                 lua_pop(L, 1);
             }
             return geode::Ok(pose);
+        }
+
+        geode::Result<void> parseKeyframeEvents(
+            lua_State* L, int idx, double frame, LunarAnimationDef* out
+        ) {
+            idx = lua_absindex(L, idx);
+            if (lua_type(L, idx) == LUA_TSTRING) {
+                size_t len = 0;
+                char const* name = lua_tolstring(L, idx, &len);
+                out->addEvent(frame, std::string(name ? name : "", len));
+                return geode::Ok();
+            }
+            if (!lua_istable(L, idx)) {
+                return geode::Err(std::string("'events' must be a string or an array of strings"));
+            }
+            lua_pushnil(L);
+            while (lua_next(L, idx) != 0) {
+                if (!lua_isnumber(L, -2)) {
+                    return geode::Err(std::string("'events' must be an array of strings"));
+                }
+                if (lua_type(L, -1) != LUA_TSTRING) {
+                    return geode::Err(
+                        fmt::format("'events'[{}] must be a string", lua_tonumber(L, -2))
+                    );
+                }
+                size_t len = 0;
+                char const* name = lua_tolstring(L, -1, &len);
+                out->addEvent(frame, std::string(name ? name : "", len));
+                lua_pop(L, 1);
+            }
+            return geode::Ok();
         }
 
         cocos2d::CCFiniteTimeAction* makeTween(TweenSeg const& seg, cocos2d::CCNode* node) {
@@ -253,6 +285,17 @@ namespace luax::lunar {
             return 0;
         }
 
+        int animAddEvent(lua_State* L) {
+            auto* self = Usertype<LunarAnimationDef>::check(L, 1, "LunarAnimationDef:addEvent");
+            double const frame = check<double>(L, 2, "LunarAnimationDef:addEvent");
+            if (!(frame >= 0.0)) {
+                luaL_error(L, "LunarAnimationDef:addEvent expected frame >= 0");
+            }
+            auto const name = check<std::string>(L, 3, "LunarAnimationDef:addEvent");
+            self->addEvent(frame, name);
+            return 0;
+        }
+
         int trackPlay(lua_State* L) {
             auto* self = Usertype<LunarTrack>::check(L, 1, "LunarAnimationTrack:play");
             self->play();
@@ -311,6 +354,14 @@ namespace luax::lunar {
             return 1;
         }
 
+        int trackBindEvent(lua_State* L) {
+            auto* self = Usertype<LunarTrack>::check(L, 1, "LunarAnimationTrack:bindEvent");
+            auto const name = check<std::string>(L, 2, "LunarAnimationTrack:bindEvent");
+            luaL_checktype(L, 3, LUA_TFUNCTION);
+            self->bindEvent(name, LuaCallback{L, 3});
+            return 0;
+        }
+
     } // namespace
 
     geode::Result<LunarAnimationDef*> parseAnimTable(lua_State* L, int idx, char const* method) {
@@ -353,6 +404,17 @@ namespace luax::lunar {
                         fmt::format("keyframes[{}] has a 'frame' key, use the table key as the frame number", keyedFrame)
                     );
                 }
+                if (lua_type(L, -2) == LUA_TSTRING &&
+                    std::string_view(lua_tostring(L, -2)) == "events") {
+                    auto events = parseKeyframeEvents(L, -1, keyedFrame, out);
+                    if (events.isErr()) {
+                        return geode::Err(
+                            fmt::format("keyframes[{}]: {}", keyedFrame, events.unwrapErr())
+                        );
+                    }
+                    lua_pop(L, 1);
+                    continue;
+                }
                 if (lua_type(L, -2) != LUA_TSTRING) {
                     return geode::Err(
                         fmt::format("keyframes[{}] entries must map node ids to tables", keyedFrame)
@@ -385,6 +447,10 @@ namespace luax::lunar {
         setPoseTarget(keyframeFor(m_keyframes, frame), nodeId, std::move(pose));
     }
 
+    void LunarAnimationDef::addEvent(double frame, std::string name) {
+        keyframeFor(m_keyframes, frame).events.push_back(std::move(name));
+    }
+
     LunarTrack* LunarTrack::create(LunarRig* rig, CompiledAnimation anim) {
         static std::atomic<int> s_nextTag{1};
         auto* ret = new LunarTrack();
@@ -413,6 +479,7 @@ namespace luax::lunar {
         }
         m_launchBase = fromTime;
         m_elapsed = 0.0;
+        m_eventCursor = 0;
         m_instants.clear();
         m_launched.clear();
 
@@ -485,6 +552,34 @@ namespace luax::lunar {
         }
     }
 
+    void LunarTrack::applyDueEvents() {
+        if (!m_active) return;
+        std::vector<std::string> due;
+        while (m_eventCursor < m_active->events.size() &&
+               m_active->events[m_eventCursor].time <= m_elapsed + kTimeEps) {
+            due.push_back(m_active->events[m_eventCursor].name);
+            ++m_eventCursor;
+        }
+        // Handlers can bind more fns while a fire is in progress btw.
+        auto binds = m_eventBinds;
+        for (auto const& name : due) {
+            for (auto const& bind : binds) {
+                if (bind.name != name) continue;
+                std::string arg = name;
+                bind.callback.invoke(
+                    1,
+                    0,
+                    "LunarAnimationTrack:event",
+                    kHookScriptDeadlineMs,
+                    +[](lua_State* L, void* ctx) {
+                        push(L, *static_cast<std::string*>(ctx));
+                    },
+                    &arg
+                );
+            }
+        }
+    }
+
     void LunarTrack::finish() {
         stopActions();
         m_playing = false;
@@ -494,7 +589,7 @@ namespace luax::lunar {
 
     void LunarTrack::play() {
         if (!m_rig) return;
-        if (m_anim.nodes.empty() || !(m_anim.duration > 0.0)) {
+        if (!(m_anim.duration > 0.0)) {
             geode::log::warn("cannot play an animation without keyframes");
             return;
         }
@@ -536,10 +631,15 @@ namespace luax::lunar {
         }
     }
 
+    void LunarTrack::bindEvent(std::string name, LuaCallback callback) {
+        m_eventBinds.push_back(EventBind{std::move(name), std::move(callback)});
+    }
+
     void LunarTrack::tick(float dt) {
         if (!m_playing || m_paused) return;
         m_elapsed += dt * m_speed;
         applyDueInstants();
+        applyDueEvents();
         if (!m_active || m_elapsed + kTimeEps < m_active->duration) return;
         if (m_active->looped) {
             m_elapsed = std::fmod(m_elapsed, m_active->duration);
@@ -558,6 +658,7 @@ namespace luax::lunar {
         m_launched.clear();
         m_tweens.clear();
         m_instants.clear();
+        m_eventBinds.clear();
         m_playing = false;
         m_paused = false;
     }
@@ -589,12 +690,14 @@ namespace luax::lunar {
         Usertype<LunarAnimationDef>::method(L, "setLooped", &animSetLooped);
         Usertype<LunarAnimationDef>::method(L, "getLooped", &animGetLooped);
         Usertype<LunarAnimationDef>::method(L, "addKeyframe", &animAddKeyframe);
+        Usertype<LunarAnimationDef>::method(L, "addEvent", &animAddEvent);
 
         Usertype<LunarTrack>::method(L, "play", &trackPlay);
         Usertype<LunarTrack>::method(L, "pause", &trackPause);
         Usertype<LunarTrack>::method(L, "unpause", &trackUnpause);
         Usertype<LunarTrack>::method(L, "stop", &trackStop);
         Usertype<LunarTrack>::method(L, "setSpeed", &trackSetSpeed);
+        Usertype<LunarTrack>::method(L, "bindEvent", &trackBindEvent);
         Usertype<LunarTrack>::method(L, "isPlaying", &trackIsPlaying);
         Usertype<LunarTrack>::method(L, "isPaused", &trackIsPaused);
         Usertype<LunarTrack>::method(L, "speed", &trackSpeed);

@@ -2,6 +2,7 @@
 
 #include "bindings/lunar/LunarModel.hpp"
 #include "bindings/lunar/LunarRig.hpp"
+#include "framework/callback/LuaCallback.hpp"
 
 #include <Geode/Result.hpp>
 #include <Geode/utils/cocos.hpp>
@@ -43,6 +44,8 @@ namespace luax::lunar {
 
         void addKeyframe(double frame, std::string_view nodeId, NodePose pose);
 
+        void addEvent(double frame, std::string name);
+
     private:
         ~LunarAnimationDef() override = default;
 
@@ -60,6 +63,7 @@ namespace luax::lunar {
         void unpause();
         void stop();
         void setSpeed(float speed);
+        void bindEvent(std::string name, LuaCallback callback);
 
         bool isPlaying() const noexcept {
             return m_playing;
@@ -95,11 +99,17 @@ namespace luax::lunar {
             std::size_t cursor = 0;
         };
 
+        struct EventBind {
+            std::string name;
+            LuaCallback callback;
+        };
+
         LunarTrack() = default;
 
         void launch(double fromTime);
         void stopActions();
         void applyDueInstants();
+        void applyDueEvents();
         void finish();
 
         geode::Ref<LunarRig> m_rig;
@@ -109,12 +119,14 @@ namespace luax::lunar {
         std::vector<geode::Ref<cocos2d::CCNode>> m_launched;
         std::vector<geode::Ref<cocos2d::CCSpeed>> m_tweens;
         std::vector<TargetInstants> m_instants;
+        std::vector<EventBind> m_eventBinds;
         double m_launchBase = 0.0;
         double m_elapsed = 0.0;
         float m_speed = 1.F;
         bool m_playing = false;
         bool m_paused = false;
         int m_tag = 0;
+        std::size_t m_eventCursor = 0;
     };
 
     geode::Result<void> registerLunarAnimation(lua_State* L);

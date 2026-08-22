@@ -122,6 +122,12 @@ namespace luax::lunar {
     struct Keyframe {
         double frame = 0.0;
         std::vector<std::pair<std::string, NodePose>> targets;
+        std::vector<std::string> events;
+    };
+
+    struct AnimEvent {
+        double time = 0.0;
+        std::string name;
     };
 
     struct TweenSeg {
@@ -143,6 +149,7 @@ namespace luax::lunar {
         double duration = 0.0;
         bool looped = false;
         std::vector<NodeTrack> nodes;
+        std::vector<AnimEvent> events;
     };
 
     geode::Result<CompiledAnimation> compileAnimation(
