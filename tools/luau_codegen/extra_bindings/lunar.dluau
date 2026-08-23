@@ -63,6 +63,8 @@ declare class LunarRig extends CCNode
     function add(self, node: CCNode, id: string?): ()
     function addTo(self, parentId: string, node: CCNode, id: string?): ()
     function getNode(self, id: string): CCNode?
+    function listNodes(self): { string }
+    function getPose(self, id: string): LunarNodePose?
     function loadAnimation(self, anim: LunarAnimationDef | LunarAnimationDefTable): (LunarAnimationTrack?, string?)
 end
 

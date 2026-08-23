@@ -48,6 +48,10 @@ namespace luax::lunar {
 
         cocos2d::CCNode* getNode(std::string_view id) const;
 
+        std::unordered_map<std::string, geode::WeakRef<cocos2d::CCNode>> const& nodes() const noexcept {
+            return m_nodes;
+        }
+
         geode::Result<void> applySpec(RigSpec const& spec);
 
     protected:

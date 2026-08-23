@@ -175,18 +175,30 @@ rig:load(spec: LunarRigSpec) -> LunarRig?
 rig:add(node: CCNode, id: string?) -> ()
 rig:addTo(parentId: string, node: CCNode, id: string?) -> ()
 rig:getNode(id: string) -> CCNode?
+rig:listNodes() -> { string }
+rig:getPose(id: string) -> LunarNodePose?
 rig:loadAnimation(anim: LunarAnimationDef | LunarAnimationDefTable) -> LunarAnimationTrack?
 ```
 
 `load` applies a spec table and can be called again to add more nodes.
 `add` and `addTo` attach existing cocos nodes into the rig, optionally registering an id for animations.
 `getNode` returns nil for unknown or removed ids.
+`listNodes` returns the live node ids, sorted alphabetically.
+`getPose` reads a node's current transform into a pose table.
+It returns nil for unknown or removed ids.
+Channels the node type does not support, like opacity on a plain node, are left out.
+The pose has no `easing` field.
 `loadAnimation` accepts a def object or a raw def table and compiles it for this rig.
 
 ```lua
 local arm = rig:getNode("arm")
 if arm then
     arm:setScaleX(1.5)
+end
+
+for _, id in ipairs(rig:listNodes()) do
+    local pose = rig:getPose(id)
+    print(id, pose.x, pose.y)
 end
 
 local badge = geode.Label.create("hello")

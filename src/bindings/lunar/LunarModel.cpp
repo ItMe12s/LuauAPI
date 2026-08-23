@@ -120,7 +120,7 @@ namespace luax::lunar {
         switch (easing.kind) {
             case K::Linear: return p;
             case K::PowIn: return std::pow(p, easing.rate);
-            case K::PowOut: return 1.F - std::pow(1.F - p, easing.rate);
+            case K::PowOut: return std::pow(p, 1.F / easing.rate);
             case K::PowInOut: {
                 float t = p * 2.F;
                 if (t < 1.F) return 0.5F * std::pow(t, easing.rate);
