@@ -8,6 +8,8 @@ export type LunarNodePose = {
     z: number?,
     ax: number?,
     ay: number?,
+    skx: number?,
+    sky: number?,
     easing: string?,
 }
 
@@ -24,6 +26,8 @@ export type LunarRigNodeSpec = {
     opacity: number?,
     ax: number?,
     ay: number?,
+    skx: number?,
+    sky: number?,
 }
 
 export type LunarRigSpec = {

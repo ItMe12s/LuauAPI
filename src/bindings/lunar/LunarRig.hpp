@@ -28,6 +28,8 @@ namespace luax::lunar {
         std::optional<float> opacity;
         std::optional<float> ax;
         std::optional<float> ay;
+        std::optional<float> skx;
+        std::optional<float> sky;
     };
 
     struct RigSpec {

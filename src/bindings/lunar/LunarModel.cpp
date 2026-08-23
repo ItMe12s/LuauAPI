@@ -40,7 +40,7 @@ namespace luax::lunar {
             Easing easing;
         };
 
-        using ChannelMap = std::array<std::vector<ChannelKey>, 9>;
+        using ChannelMap = std::array<std::vector<ChannelKey>, 11>;
 
         std::vector<TweenSeg> buildSegs(Prop prop, std::vector<ChannelKey>& keys) {
             std::ranges::sort(keys, {}, &ChannelKey::time);
@@ -197,7 +197,7 @@ namespace luax::lunar {
                 };
                 if (!finite(pose.x) || !finite(pose.y) || !finite(pose.rot) || !finite(pose.sx) ||
                     !finite(pose.sy) || !finite(pose.opacity) || !finite(pose.z) ||
-                    !finite(pose.ax) || !finite(pose.ay)) {
+                    !finite(pose.ax) || !finite(pose.ay) || !finite(pose.skx) || !finite(pose.sky)) {
                     return geode::Err(fmt::format("pose values for node '{}' must be finite", nodeId));
                 }
             }
@@ -221,6 +221,8 @@ namespace luax::lunar {
                 push(pose.z, Prop::ZOrder);
                 push(pose.ax, Prop::AnchorX);
                 push(pose.ay, Prop::AnchorY);
+                push(pose.skx, Prop::SkewX);
+                push(pose.sky, Prop::SkewY);
             }
         }
 

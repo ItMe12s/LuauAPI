@@ -10,7 +10,7 @@
 
 ## 0.1.0-beta.26
 
-add stuff here...
+- Added skewing support to lunar.
 
 ## 0.1.0-beta.25
 

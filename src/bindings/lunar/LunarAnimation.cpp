@@ -70,6 +70,8 @@ namespace luax::lunar {
                     else if (name == "z") pose.z = value;
                     else if (name == "ax") pose.ax = value;
                     else if (name == "ay") pose.ay = value;
+                    else if (name == "skx") pose.skx = value;
+                    else if (name == "sky") pose.sky = value;
                     else {
                         geode::log::warn("ignoring unknown animation property '{}'", name);
                     }
@@ -143,6 +145,8 @@ namespace luax::lunar {
                 case P::ZOrder: break; // Instant-only, never reaches here.
                 case P::AnchorX: to = LunarCCAxisTo::create(dur, Axis::AnchorX, seg.to); break;
                 case P::AnchorY: to = LunarCCAxisTo::create(dur, Axis::AnchorY, seg.to); break;
+                case P::SkewX: to = LunarCCAxisTo::create(dur, Axis::SkewX, seg.to); break;
+                case P::SkewY: to = LunarCCAxisTo::create(dur, Axis::SkewY, seg.to); break;
             }
             if (!to) return nullptr;
 
@@ -194,6 +198,8 @@ namespace luax::lunar {
                 case P::ZOrder: node->setZOrder(static_cast<int>(value)); break;
                 case P::AnchorX: node->setAnchorPoint({value, node->getAnchorPoint().y}); break;
                 case P::AnchorY: node->setAnchorPoint({node->getAnchorPoint().x, value}); break;
+                case P::SkewX: node->setSkewX(value); break;
+                case P::SkewY: node->setSkewY(value); break;
             }
         }
 

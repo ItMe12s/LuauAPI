@@ -53,17 +53,18 @@ return {
 
 Each entry in `nodes` becomes one cocos node:
 
-| Field      | Type    | Default  | Notes                                                                                             |
-| ---------- | ------- | -------- | ------------------------------------------------------------------------------------------------- |
-| `id`       | string  | required | Unique within the rig. Used by animations and lookups.                                            |
-| `sprite`   | string? | nil      | Sprite name. Without it you get an invisible container node.                                      |
-| `parent`   | string? | nil      | Id of an earlier node. Children move and rotate with their parent.                                |
-| `x`, `y`   | number  | 0        | Position relative to the parent.                                                                  |
-| `rot`      | number  | 0        | Rotation in degrees.                                                                              |
-| `sx`, `sy` | number  | 1        | Scale per axis.                                                                                   |
-| `z`        | number  | 0        | Z order.                                                                                          |
-| `opacity`  | number? | nil      | 0 to 255, sprites only.                                                                           |
-| `ax`, `ay` | number? | nil      | Anchor point per axis, 0 to 1 (values outside work too). Defaults to cocos' 0.5, 0.5 for sprites. |
+| Field        | Type    | Default  | Notes                                                                                |
+| ------------ | ------- | -------- | ------------------------------------------------------------------------------------ |
+| `id`         | string  | required | Unique within the rig. Used by animations and lookups.                               |
+| `sprite`     | string? | nil      | Sprite name. Without it you get an invisible container node.                         |
+| `parent`     | string? | nil      | Id of an earlier node. Children move and rotate with their parent.                   |
+| `x`, `y`     | number  | 0        | Position relative to the parent.                                                     |
+| `rot`        | number  | 0        | Rotation in degrees.                                                                 |
+| `sx`, `sy`   | number  | 1        | Scale per axis.                                                                      |
+| `skx`, `sky` | number? | nil      | Skew per axis in degrees. Defaults to 0.                                             |
+| `z`          | number  | 0        | Z order.                                                                             |
+| `opacity`    | number? | nil      | 0 to 255, sprites only.                                                              |
+| `ax`, `ay`   | number? | nil      | Anchor point per axis, 0 to 1 (not capped). Defaults to cocos' 0.5, 0.5 for sprites. |
 
 Duplicate ids are an error.
 `load` sets each created node's Geode ID to `<mod-id>/<node-id>`.
@@ -123,12 +124,13 @@ return {
 
 Frame 12 at fps 24 is half a second.
 
-A pose (`LunarNodePose`) sets any of `x`, `y`, `rot`, `sx`, `sy`, `opacity`, `z`, `ax`, `ay`, plus `easing`.
+A pose (`LunarNodePose`) sets any of `x`, `y`, `rot`, `sx`, `sy`, `skx`, `sky`, `opacity`, `z`, `ax`, `ay`, plus `easing`.
 All fields are optional and missing channels hold their previous value.
 The first keyframe snaps instantly instead of tweening.
 Every channel except `z` tweens between keys.
 Every `z` key applies instantly at its frame. Later `z` keys never tween.
 `ax` and `ay` tween the anchor point per axis, so they shift how the sprite sits on its position without moving the node itself.
+`skx` and `sky` tween the skew per axis in degrees.
 
 A keyframe entry can also carry animation events. Set `events` to one name or an array of names.
 Events do nothing on their own. A playing track fires an event when the playhead reaches its frame.

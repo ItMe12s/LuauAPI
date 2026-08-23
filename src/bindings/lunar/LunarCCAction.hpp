@@ -72,6 +72,8 @@ namespace luax::lunar {
             ScaleY,
             AnchorX,
             AnchorY,
+            SkewX,
+            SkewY,
         };
 
         static LunarCCAxisTo* create(float duration, Axis axis, float value) {
@@ -108,6 +110,8 @@ namespace luax::lunar {
                 case Axis::ScaleY: return target->getScaleY();
                 case Axis::AnchorX: return target->getAnchorPoint().x;
                 case Axis::AnchorY: return target->getAnchorPoint().y;
+                case Axis::SkewX: return target->getSkewX();
+                case Axis::SkewY: return target->getSkewY();
             }
             return 0.F;
         }
@@ -124,6 +128,8 @@ namespace luax::lunar {
                 case Axis::AnchorY:
                     target->setAnchorPoint({target->getAnchorPoint().x, value});
                     break;
+                case Axis::SkewX: target->setSkewX(value); break;
+                case Axis::SkewY: target->setSkewY(value); break;
             }
         }
 

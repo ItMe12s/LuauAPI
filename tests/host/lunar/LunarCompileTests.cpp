@@ -498,3 +498,52 @@ TEST_CASE("sliceAnimation shifts and drops events past the cut") {
         REQUIRE(sliced.events.empty());
     }
 }
+
+TEST_CASE("compileAnimation tweens skew channels") {
+    NodePose start;
+    start.skx = 0.F;
+    NodePose finish;
+    finish.skx = 20.F;
+    finish.sky = -10.F;
+
+    std::vector<Keyframe> const keyframes = {kf(0, "arm", start), kf(2, "arm", finish)};
+
+    auto result = compileAnimation(keyframes, 1.0, false);
+    REQUIRE(result.isOk());
+    auto anim = std::move(result).unwrap();
+
+    auto const* snap = findSeg(anim, "arm", Prop::SkewX, true);
+    REQUIRE(snap);
+    REQUIRE(snap->start == Approx(0.0));
+    REQUIRE(snap->end == Approx(0.0));
+    REQUIRE(snap->to == Approx(0.F));
+
+    auto const* xTween = findSeg(anim, "arm", Prop::SkewX, false);
+    REQUIRE(xTween);
+    REQUIRE(xTween->from == Approx(0.F));
+    REQUIRE(xTween->to == Approx(20.F));
+
+    auto const* ySnap = findSeg(anim, "arm", Prop::SkewY, true);
+    REQUIRE(ySnap);
+    REQUIRE(ySnap->to == Approx(-10.F));
+    REQUIRE_FALSE(findSeg(anim, "arm", Prop::SkewY, false));
+
+    CompiledAnimation sliced = sliceAnimation(anim, 1.0);
+    auto const* clipped = findSeg(sliced, "arm", Prop::SkewX, false);
+    REQUIRE(clipped);
+    REQUIRE(clipped->from == Approx(10.F));
+    REQUIRE(clipped->start == Approx(1.0));
+    REQUIRE(clipped->to == Approx(20.F));
+}
+
+TEST_CASE("compileAnimation rejects non-finite skew values") {
+    NodePose nanSkx;
+    nanSkx.skx = std::numeric_limits<float>::quiet_NaN();
+    std::vector<Keyframe> const nanKeyframes = {kf(1, "arm", nanSkx)};
+    REQUIRE(compileAnimation(nanKeyframes, 10.0, false).isErr());
+
+    NodePose infSky;
+    infSky.sky = std::numeric_limits<float>::infinity();
+    std::vector<Keyframe> const infKeyframes = {kf(1, "arm", infSky)};
+    REQUIRE(compileAnimation(infKeyframes, 10.0, false).isErr());
+}
