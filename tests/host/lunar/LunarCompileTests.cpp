@@ -547,3 +547,82 @@ TEST_CASE("compileAnimation rejects non-finite skew values") {
     std::vector<Keyframe> const infKeyframes = {kf(1, "arm", infSky)};
     REQUIRE(compileAnimation(infKeyframes, 10.0, false).isErr());
 }
+
+TEST_CASE("samplePose evaluates eased channels and step z") {
+    NodePose armStart;
+    armStart.x = 0.F;
+    NodePose armEnd;
+    armEnd.x = 100.F;
+    NodePose legStart;
+    legStart.y = 0.F;
+    NodePose legEnd;
+    legEnd.y = 100.F;
+    legEnd.easing = *easingFromString("quad_in");
+    NodePose tailPose;
+    tailPose.x = -5.F;
+    NodePose zA;
+    zA.z = 5.F;
+    NodePose zB;
+    zB.z = 7.F;
+    NodePose zC;
+    zC.z = 3.F;
+    NodePose fade;
+    fade.opacity = 127.6F;
+
+    std::vector<Keyframe> keyframes = {
+        kf(0, "arm", armStart),
+        kf(0, "leg", legStart),
+        kf(0, "znode", zA),
+        kf(0, "fader", fade),
+        kf(1, "ghost", NodePose{}),
+        kf(1, "znode", zB),
+        kf(2, "arm", armEnd),
+        kf(2, "leg", legEnd),
+        kf(2, "znode", zC),
+        kf(4, "tail", tailPose),
+    };
+
+    auto result = compileAnimation(std::move(keyframes), 10.0, false);
+    REQUIRE(result.isOk());
+    auto anim = std::move(result).unwrap();
+
+    SECTION("linear and eased midpoints") {
+        auto poses = samplePose(anim, 0.1);
+        REQUIRE(poses.at("arm").x == Approx(50.F));
+        REQUIRE(poses.at("leg").y == Approx(25.F));
+    }
+
+    SECTION("channels hold past their last key") {
+        auto poses = samplePose(anim, 5.0);
+        REQUIRE(poses.at("arm").x == Approx(100.F));
+        REQUIRE(poses.at("tail").x == Approx(-5.F));
+    }
+
+    SECTION("pre-first-key channels are omitted") {
+        auto poses = samplePose(anim, 0.1);
+        REQUIRE_FALSE(poses.at("tail").x.has_value());
+    }
+
+    SECTION("nodes without channels are omitted entirely") {
+        auto poses = samplePose(anim, 0.1);
+        REQUIRE(poses.find("ghost") == poses.end());
+    }
+
+    SECTION("z steps instead of tweening") {
+        REQUIRE(samplePose(anim, 0.05).at("znode").z == Approx(5.F));
+        REQUIRE(samplePose(anim, 0.15).at("znode").z == Approx(7.F));
+        REQUIRE(samplePose(anim, 0.25).at("znode").z == Approx(3.F));
+    }
+
+    SECTION("opacity quantizes to a byte") {
+        auto poses = samplePose(anim, 1.0);
+        REQUIRE(poses.at("fader").opacity == Approx(127.F));
+    }
+
+    SECTION("empty animation samples to an empty map") {
+        auto emptyResult = compileAnimation({}, 10.0, false);
+        REQUIRE(emptyResult.isOk());
+        auto emptyAnim = std::move(emptyResult).unwrap();
+        REQUIRE(samplePose(emptyAnim, 0.5).empty());
+    }
+}

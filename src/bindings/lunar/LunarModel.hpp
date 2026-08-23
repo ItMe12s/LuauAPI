@@ -7,6 +7,7 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -169,5 +170,7 @@ namespace luax::lunar {
     );
 
     CompiledAnimation sliceAnimation(CompiledAnimation const& src, double fromTime);
+
+    std::unordered_map<std::string, NodePose> samplePose(CompiledAnimation const& anim, double time);
 
 } // namespace luax::lunar

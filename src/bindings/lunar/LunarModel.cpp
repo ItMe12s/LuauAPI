@@ -85,6 +85,22 @@ namespace luax::lunar {
             return segs;
         }
 
+        std::optional<float> sampleChannel(std::vector<TweenSeg> const& segs, Prop prop, double t) {
+            std::optional<float> value;
+            for (auto const& seg : segs) {
+                if (seg.prop != prop) continue;
+                if (seg.start > t + kTimeEps) continue;
+                if (seg.instant || t >= seg.end - kTimeEps) {
+                    value = seg.to;
+                    continue;
+                }
+                double const span = seg.end - seg.start;
+                float const p = span > 0.0 ? static_cast<float>((t - seg.start) / span) : 1.F;
+                value = std::lerp(seg.from, seg.to, easeProgress(seg.easing, p));
+            }
+            return value;
+        }
+
     } // namespace
 
     std::optional<Easing> easingFromString(std::string_view name) {
@@ -317,6 +333,30 @@ namespace luax::lunar {
         }
 
         out.duration = std::max(0.0, duration);
+        return out;
+    }
+
+    std::unordered_map<std::string, NodePose> samplePose(CompiledAnimation const& anim, double time) {
+        std::unordered_map<std::string, NodePose> out;
+        out.reserve(anim.nodes.size());
+        for (auto const& track : anim.nodes) {
+            NodePose pose;
+            pose.x = sampleChannel(track.segs, Prop::PosX, time);
+            pose.y = sampleChannel(track.segs, Prop::PosY, time);
+            pose.rot = sampleChannel(track.segs, Prop::Rotation, time);
+            pose.sx = sampleChannel(track.segs, Prop::ScaleX, time);
+            pose.sy = sampleChannel(track.segs, Prop::ScaleY, time);
+            pose.opacity = sampleChannel(track.segs, Prop::Opacity, time);
+            pose.z = sampleChannel(track.segs, Prop::ZOrder, time);
+            pose.ax = sampleChannel(track.segs, Prop::AnchorX, time);
+            pose.ay = sampleChannel(track.segs, Prop::AnchorY, time);
+            pose.skx = sampleChannel(track.segs, Prop::SkewX, time);
+            pose.sky = sampleChannel(track.segs, Prop::SkewY, time);
+            if (pose.opacity) {
+                pose.opacity = static_cast<float>(opacityByte(*pose.opacity));
+            }
+            out.emplace(track.nodeId, std::move(pose));
+        }
         return out;
     }
 

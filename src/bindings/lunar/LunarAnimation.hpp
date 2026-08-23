@@ -9,6 +9,8 @@
 #include <Geode/utils/cocos.hpp>
 #include <cocos2d.h>
 #include <cstddef>
+#include <string>
+#include <unordered_map>
 #include <vector>
 
 struct lua_State;
@@ -80,6 +82,8 @@ namespace luax::lunar {
 
         double duration() const;
 
+        std::unordered_map<std::string, NodePose> sample(double time);
+
         void tick(float dt);
 
         void detachForShutdown();
@@ -137,5 +141,7 @@ namespace luax::lunar {
     geode::Result<LunarAnimationDef*> parseAnimTable(lua_State* L, int idx, char const* method);
 
     bool setNodeOpacity(cocos2d::CCNode* node, float value);
+
+    void applyPose(LunarRig* rig, std::unordered_map<std::string, NodePose> const& poses);
 
 } // namespace luax::lunar

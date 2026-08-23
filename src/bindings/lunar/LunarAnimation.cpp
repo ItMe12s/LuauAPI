@@ -368,6 +368,34 @@ namespace luax::lunar {
             return 0;
         }
 
+        int trackSample(lua_State* L) {
+            auto* self = Usertype<LunarTrack>::check(L, 1, "LunarAnimationTrack:sample");
+            double const time = check<double>(L, 2, "LunarAnimationTrack:sample");
+            auto poses = self->sample(time);
+            lua_createtable(L, 0, static_cast<int>(poses.size()));
+            for (auto const& [id, pose] : poses) {
+                lua_createtable(L, 0, 11);
+                auto set = [&](char const* key, std::optional<float> const& value) {
+                    if (!value) return;
+                    lua_pushnumber(L, static_cast<lua_Number>(*value));
+                    lua_setfield(L, -2, key);
+                };
+                set("x", pose.x);
+                set("y", pose.y);
+                set("rot", pose.rot);
+                set("sx", pose.sx);
+                set("sy", pose.sy);
+                set("opacity", pose.opacity);
+                set("z", pose.z);
+                set("ax", pose.ax);
+                set("ay", pose.ay);
+                set("skx", pose.skx);
+                set("sky", pose.sky);
+                lua_setfield(L, -2, id.c_str());
+            }
+            return 1;
+        }
+
     } // namespace
 
     geode::Result<LunarAnimationDef*> parseAnimTable(lua_State* L, int idx, char const* method) {
@@ -669,6 +697,34 @@ namespace luax::lunar {
         m_paused = false;
     }
 
+    std::unordered_map<std::string, NodePose> LunarTrack::sample(double time) {
+        auto poses = samplePose(m_anim, time);
+        applyPose(m_rig, poses);
+        return poses;
+    }
+
+    void applyPose(LunarRig* rig, std::unordered_map<std::string, NodePose> const& poses) {
+        if (!rig) return;
+        for (auto const& [id, pose] : poses) {
+            auto* node = rig->getNode(id);
+            if (!node) continue;
+            auto apply = [&](std::optional<float> const& value, Prop prop) {
+                if (value) applyInstant(node, prop, *value);
+            };
+            apply(pose.x, Prop::PosX);
+            apply(pose.y, Prop::PosY);
+            apply(pose.rot, Prop::Rotation);
+            apply(pose.sx, Prop::ScaleX);
+            apply(pose.sy, Prop::ScaleY);
+            apply(pose.opacity, Prop::Opacity);
+            apply(pose.z, Prop::ZOrder);
+            apply(pose.ax, Prop::AnchorX);
+            apply(pose.ay, Prop::AnchorY);
+            apply(pose.skx, Prop::SkewX);
+            apply(pose.sky, Prop::SkewY);
+        }
+    }
+
     void shutdownLunarTracks() {
         for (auto* track : liveTracks()) {
             if (track) track->detachForShutdown();
@@ -708,6 +764,7 @@ namespace luax::lunar {
         Usertype<LunarTrack>::method(L, "isPaused", &trackIsPaused);
         Usertype<LunarTrack>::method(L, "speed", &trackSpeed);
         Usertype<LunarTrack>::method(L, "duration", &trackDuration);
+        Usertype<LunarTrack>::method(L, "sample", &trackSample);
 
         getOrCreateTable(L, "lunar.animation");
         setTableCFunction(L, -1, "new", &animNew);
