@@ -652,7 +652,7 @@ TEST_CASE("sliceAnimation strictly excludes events at the boundary") {
 }
 
 TEST_CASE("keyframe CRUD helpers preserve ordering and merge semantics") {
-    NodePose poseX(float x) {
+    auto poseX = [](float x) {
         NodePose p;
         p.x = x;
         return p;
@@ -745,6 +745,6 @@ TEST_CASE("easingName round-trips canonical names") {
         REQUIRE(easingName(*easing) == name);
     }
 
-    Easing customPow{EasingKind::PowIn, 3.F};
+    Easing customPow{EasingKind::PowIn, 2.5F};
     REQUIRE(easingName(customPow) == "quad_in");
 }

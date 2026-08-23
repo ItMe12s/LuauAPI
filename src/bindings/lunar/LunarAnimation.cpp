@@ -284,6 +284,30 @@ namespace luax::lunar {
             return 0;
         }
 
+        void pushPoseTable(lua_State* L, NodePose const& pose) {
+            lua_createtable(L, 0, 12);
+            auto set = [&](char const* key, std::optional<float> const& value) {
+                if (!value) return;
+                lua_pushnumber(L, static_cast<lua_Number>(*value));
+                lua_setfield(L, -2, key);
+            };
+            set("x", pose.x);
+            set("y", pose.y);
+            set("rot", pose.rot);
+            set("sx", pose.sx);
+            set("sy", pose.sy);
+            set("opacity", pose.opacity);
+            set("z", pose.z);
+            set("ax", pose.ax);
+            set("ay", pose.ay);
+            set("skx", pose.skx);
+            set("sky", pose.sky);
+            if (pose.easing.kind != EasingKind::Linear) {
+                push(L, std::string(easingName(pose.easing)));
+                lua_setfield(L, -2, "easing");
+            }
+        }
+
         void pushTargetsTable(lua_State* L, Keyframe const& kf) {
             lua_createtable(L, 0, static_cast<int>(kf.targets.size()));
             for (auto const& [id, pose] : kf.targets) {
@@ -416,30 +440,6 @@ namespace luax::lunar {
             auto* self = Usertype<LunarTrack>::check(L, 1, "LunarAnimationTrack:duration");
             push(L, self->duration());
             return 1;
-        }
-
-        void pushPoseTable(lua_State* L, NodePose const& pose) {
-            lua_createtable(L, 0, 12);
-            auto set = [&](char const* key, std::optional<float> const& value) {
-                if (!value) return;
-                lua_pushnumber(L, static_cast<lua_Number>(*value));
-                lua_setfield(L, -2, key);
-            };
-            set("x", pose.x);
-            set("y", pose.y);
-            set("rot", pose.rot);
-            set("sx", pose.sx);
-            set("sy", pose.sy);
-            set("opacity", pose.opacity);
-            set("z", pose.z);
-            set("ax", pose.ax);
-            set("ay", pose.ay);
-            set("skx", pose.skx);
-            set("sky", pose.sky);
-            if (pose.easing.kind != EasingKind::Linear) {
-                push(L, std::string(easingName(pose.easing)));
-                lua_setfield(L, -2, "easing");
-            }
         }
 
         int trackBindEvent(lua_State* L) {

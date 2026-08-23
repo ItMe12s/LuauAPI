@@ -90,7 +90,11 @@ namespace luax::lunar {
             for (auto const& seg : segs) {
                 if (seg.prop != prop) continue;
                 if (seg.start > t + kTimeEps) continue;
-                if (seg.instant || t >= seg.end - kTimeEps) {
+                if (seg.instant) {
+                    value = t >= seg.end - kTimeEps ? seg.to : seg.from;
+                    continue;
+                }
+                if (t >= seg.end - kTimeEps) {
                     value = seg.to;
                     continue;
                 }
@@ -360,12 +364,24 @@ namespace luax::lunar {
         return out;
     }
 
-    Keyframe& keyframeFor(std::vector<Keyframe>& keyframes, double frame) {
+    std::vector<Keyframe>::iterator matchKeyframe(std::vector<Keyframe>& keyframes, double frame) {
         auto it = std::ranges::lower_bound(keyframes, frame, {}, &Keyframe::frame);
-        if (it != keyframes.end() && std::fabs(it->frame - frame) < kTimeEps) return *it;
+        if (it != keyframes.end() && std::fabs(it->frame - frame) < kTimeEps) return it;
+        if (it != keyframes.begin()) {
+            auto prev = std::prev(it);
+            if (std::fabs(prev->frame - frame) < kTimeEps) return prev;
+        }
+        return keyframes.end();
+    }
+
+    Keyframe& keyframeFor(std::vector<Keyframe>& keyframes, double frame) {
+        auto it = matchKeyframe(keyframes, frame);
+        if (it != keyframes.end()) return *it;
         Keyframe kf;
         kf.frame = frame;
-        return *keyframes.insert(it, std::move(kf));
+        return *keyframes.insert(
+            std::ranges::lower_bound(keyframes, frame, {}, &Keyframe::frame), std::move(kf)
+        );
     }
 
     void setPoseTarget(Keyframe& kf, std::string_view nodeId, NodePose pose) {
@@ -379,15 +395,15 @@ namespace luax::lunar {
     }
 
     bool removeKeyframe(std::vector<Keyframe>& keyframes, double frame) {
-        auto it = std::ranges::lower_bound(keyframes, frame, {}, &Keyframe::frame);
-        if (it == keyframes.end() || !(std::fabs(it->frame - frame) < kTimeEps)) return false;
+        auto it = matchKeyframe(keyframes, frame);
+        if (it == keyframes.end()) return false;
         keyframes.erase(it);
         return true;
     }
 
     bool moveKeyframe(std::vector<Keyframe>& keyframes, double from, double to) {
-        auto it = std::ranges::lower_bound(keyframes, from, {}, &Keyframe::frame);
-        if (it == keyframes.end() || !(std::fabs(it->frame - from) < kTimeEps)) return false;
+        auto it = matchKeyframe(keyframes, from);
+        if (it == keyframes.end()) return false;
         Keyframe source = std::move(*it);
         keyframes.erase(it);
         Keyframe& dest = keyframeFor(keyframes, to);

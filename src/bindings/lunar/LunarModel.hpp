@@ -120,12 +120,13 @@ namespace luax::lunar {
     inline std::string_view easingName(Easing const& easing) noexcept {
         bool const powKind = easing.kind == EasingKind::PowIn ||
             easing.kind == EasingKind::PowOut || easing.kind == EasingKind::PowInOut;
+        std::string_view fallback = "linear";
         for (auto const& entry : kEasingNames) {
-            if (entry.kind == easing.kind && (!powKind || entry.rate == easing.rate)) {
-                return entry.name;
-            }
+            if (entry.kind != easing.kind) continue;
+            if (!powKind || entry.rate == easing.rate) return entry.name;
+            if (fallback == "linear") fallback = entry.name;
         }
-        return "linear";
+        return fallback;
     }
 
     float easeProgress(Easing const& easing, float p);
