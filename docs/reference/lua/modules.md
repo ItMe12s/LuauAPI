@@ -22,8 +22,8 @@ return M
 ```
 
 ```lua
-local Math = require("./Math")       -- finds Math.luau
-local Util = require("./Util.luau")  -- explicit form also works
+local Math = require("./Math")       -- Finds Math.luau
+local Util = require("./Util.luau")  -- Explicit form also works.
 print(Math.add(2, 3))
 ```
 
