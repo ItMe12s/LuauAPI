@@ -28,7 +28,7 @@ local wave = lunar.animation.load({
     looped = true,
     keyframes = {
         [0] = {
-            arm = { rot = -25, ay = 0.5 },
+            arm = { rot = -25, ay = 0.5, z = 1 },
             body = { rot = 0, sx = 1.5, sy = 1, opacity = 255 },
         },
         [6] = {
@@ -37,7 +37,7 @@ local wave = lunar.animation.load({
         },
         [10] = { events = "epic event" },
         [18] = {
-            arm = { rot = -25, ay = 1, easing = "sine_in_out" },
+            arm = { rot = -25, ay = 1, easing = "sine_in_out", z = -1 },
             body = { rot = -25, opacity = 255, easing = "sine_in_out" },
         },
         [26] = {
@@ -46,7 +46,7 @@ local wave = lunar.animation.load({
             body = { rot = 179, sx = 1.5, sy = 1, easing = "sine_in" }
         },
         [36] = {
-            arm = { rot = -25, ay = 0.5, easing = "sine_out" },
+            arm = { rot = -25, ay = 0.5, easing = "sine_out", z = 1 },
             body = { rot = 0, opacity = 255, easing = "sine_out" },
         },
     },
