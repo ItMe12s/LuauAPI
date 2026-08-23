@@ -499,7 +499,7 @@ namespace luax::lunar {
                 if (!seg.instant) continue;
                 instants.sets.push_back(
                     TimedSet{
-                        .time = std::max(0.0, seg.start - fromTime), .prop = seg.prop, .value = seg.to
+                        .time = std::max(0.0, seg.end - fromTime), .prop = seg.prop, .value = seg.to
                     }
                 );
             }

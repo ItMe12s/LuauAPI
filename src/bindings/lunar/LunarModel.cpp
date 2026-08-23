@@ -286,7 +286,7 @@ namespace luax::lunar {
             track.segs.reserve(node.segs.size());
             for (auto const& seg : node.segs) {
                 if (seg.instant) {
-                    if (seg.start >= fromTime) track.segs.push_back(seg);
+                    if (seg.end >= fromTime) track.segs.push_back(seg);
                     continue;
                 }
                 if (seg.end <= fromTime) continue;

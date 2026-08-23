@@ -331,6 +331,39 @@ TEST_CASE("sliceAnimation keeps an instant exactly at the cut point") {
     REQUIRE(zSnap->to == Approx(5.F));
 }
 
+TEST_CASE("sliceAnimation keeps pending z instants by their own key time") {
+    NodePose low;
+    low.z = 1.F;
+    NodePose high;
+    high.z = 9.F;
+
+    std::vector<Keyframe> const keyframes = {kf(1, "arm", low), kf(3, "arm", high)};
+
+    auto result = compileAnimation(keyframes, 2.0, false);
+    REQUIRE(result.isOk());
+    auto anim = std::move(result).unwrap();
+
+    SECTION("cut between two z keys keeps the upcoming flip") {
+        CompiledAnimation sliced = sliceAnimation(anim, 0.8);
+        auto const* zSnap = findSeg(sliced, "arm", Prop::ZOrder, true);
+        REQUIRE(zSnap);
+        REQUIRE(zSnap->to == Approx(9.F));
+        REQUIRE(zSnap->end == Approx(1.5));
+    }
+
+    SECTION("cut exactly at a z key keeps it") {
+        CompiledAnimation sliced = sliceAnimation(anim, 1.5);
+        auto const* zSnap = findSeg(sliced, "arm", Prop::ZOrder, true);
+        REQUIRE(zSnap);
+        REQUIRE(zSnap->to == Approx(9.F));
+    }
+
+    SECTION("cut past every z key drops them all") {
+        CompiledAnimation sliced = sliceAnimation(anim, 1.6);
+        REQUIRE_FALSE(findSeg(sliced, "arm", Prop::ZOrder, true));
+    }
+}
+
 TEST_CASE("sliceAnimation clips elapsed tweens continuously") {
     NodePose start;
     start.x = 0.F;
