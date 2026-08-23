@@ -1,10 +1,10 @@
 # LuauAPI
 
-**Make Geode mods in Luau!**
+One shared VM for all your Geode mods that uses Luau.
 
-LuauAPI lets you make Geode mods and tools in Luau, no C++ needed. (1)
+Write full mods, tools, and APIs in Luau without the C++ stuff. (1)
 
-It's easy to use, fast to start, and provides clear error logging with fewer crashes.
+Easy to start, fast to compile, with clear error logging when something breaks.
 
 **READ THE PSA AND NOTES AT THE BOTTOM!!!**
 
@@ -12,20 +12,21 @@ It's easy to use, fast to start, and provides clear error logging with fewer cra
 
 ## Currently implemented
 
-- Fully cross-platform
-- Write fully functional Geode mods in Luau (2)
-- Luau LSP autocompletion support (3)
-- Create your own API mods in Luau
-- Manually expose APIs from required C++ mods to Luau
-- In-game developer tools (enable via developer mode)
+- Fully cross-platform on Windows, Android, iOS and macOS
+- Real mods written fully in Luau using hooks, callbacks, delegates, saved values and settings (2)
+- ~99.9% binding coverage of GD and cocos classes generated from Geode's Broma bindings
+- Cross-mod APIs published under your mod id, and C++ mods can expose functions and values too
+- Rich built-in libraries like `task`, `imgui`, `websocket` client/server, `json`, `fs`, HTTP, keybinds and enums
+- 3D viewports, glTF meshes and materials through `gd3d`
+- Sprite rigging and animation through `lunar`
+- Sandboxed with deadlines, memory caps and file access. Errors get logged instead of crashing the game
+- In-game developer tools including a live script executor
+- Luau LSP autocompletion and strict mode type checking for VSCode (3)
 - JIT and JIT-less support
-- Easy-to-use 3D APIs and viewports through `gd3d`
-- Rigging and animating sprites through `lunar`
-- Rich built-in libraries, including `task`, `loadstring`, `websocket`, `imgui`, and more
 
 ---
 
-## Upcoming
+## Coming next
 
 - Custom UI builder, framework, pre-made assets
 - More advanced 3D functionality and support
@@ -34,31 +35,36 @@ It's easy to use, fast to start, and provides clear error logging with fewer cra
 - Box2D support
 - SQLite support
 - In-game IDE
-- Other quality of life features
+- Other QoL features
 
 ---
 
 ## Learn more
 
-[>>> Check out the LuauAPI Documentation <<<](https://github.com/ItMe12s/LuauAPI/blob/master/README.md)
+[>>> Read the LuauAPI Documentation <<<](https://github.com/ItMe12s/LuauAPI/blob/master/docs/README.md)
+
+Starting a new project? Use the [example mod template](https://github.com/ItMe12s/luauapi-example-mod).
+
+Need help? Join the [Discord](https://discord.gg/E8f6D6XqbW).
 
 ---
 
-## PSA: NORMAL USERS READ THIS
+## PSA: NORMAL USERS, READ THIS
 
-### LuauAPI Crashlog
+### Making a crash report
 
-Find **Enable Crash Context File** in LuauAPI mod settings under User Settings.
-Turn it on for debugging only, it can cause lag.
+First turn on **Enable Crash Context File** in LuauAPI's mod settings under User Settings.
+Debugging only!!! it can cause lag, so leave it off after you are done.
 
-When the game crashed and you see a `Geode Crash Handler` window,
-click `Open crashlog folder` to get the `luauapi-last-context.txt` file.
+Then crash the game. In the `Geode Crash Handler` window click `Open crashlog folder`.
 
-It will be overwritten on the next launch so copy it before restarting the game.
+Send both files to the developers, the `luauapi-last-context.txt` sidecar file and the Geode crashlog.
 
-### Developer Mode
+`luauapi-last-context.txt` gets overwritten on the next launch, so copy it somewhere safe before restarting.
 
-If someone wants you to **turn on Developer Mode** and execute a script, **DON'T DO IT**.
+### Never run scripts from strangers
+
+If someone asks you to **turn on Developer Mode and execute a script, DON'T.**
 
 They're trying to trick you. Running untrusted scripts can:
 
@@ -77,8 +83,12 @@ Only download mods from the official [Geode SDK](https://geode-sdk.org/) index o
 2. Certain functionality may be sandboxed or restricted for security and stability.
 3. Requires the Luau Language Server VSCode extension by JohnnyMorganz with some setups.
 
-Current limitations and when to use C++
+### When to still use C++
+
+For now, C++ is still the tool for:
 
 - Heavy data processing and databases
 - Low-level functionality and optimizations
 - Multithreading
+
+Work is ongoing to shrink this list. These will be solved in the future :3

@@ -12,9 +12,11 @@
 	"developer": "imes",
 	"early-load": true,
 	"load-priority": "first",
-	"description": "Make Geode mods in Luau :3",
+	"description": "Luau development toolkit for Geode :3",
 	"tags": [
 		"universal",
+		"interface",
+		"utility",
 		"developer"
 	],
 	"links": {
