@@ -8,13 +8,15 @@ For signatures, use editor autocomplete from [type stubs](type-stubs.md).
 
 Use `geode.cocos.enumKeyCodes.KEY_*` values for keys and `geode.KeyboardModifier` for modifier masks.
 
-| Field | Type | Notes |
-| --- | --- | --- |
-| `key` | number | `geode.cocos.enumKeyCodes.KEY_*` |
-| `action` | number | `geode.KeyboardInputData.Action.*` |
-| `modifiers` | number | bit mask of held modifier keys |
-| `timestamp` | number | native event time |
-| `native` | `{ code: number, extra: number }` | platform-specific key data |
+## KeyboardInputData
+
+| Field       | Type                              | Notes                              |
+| ----------- | --------------------------------- | ---------------------------------- |
+| `key`       | number                            | `geode.cocos.enumKeyCodes.KEY_*`   |
+| `action`    | number                            | `geode.KeyboardInputData.Action.*` |
+| `modifiers` | number                            | bit mask of held modifier keys     |
+| `timestamp` | number                            | native event time                  |
+| `native`    | `{ code: number, extra: number }` | platform-specific key data         |
 
 ## KeyboardModifier
 
@@ -58,7 +60,7 @@ Listens only for one key code.
 handle:disconnect() -> ()
 ```
 
-Disconnects a listener handle. Handles also disconnect during runtime shutdown.
+Disconnects a listener handle. Handles also disconnect during garbage collection and runtime shutdown.
 
 ## Return value
 
@@ -86,8 +88,6 @@ end, 100)
 
 The optional priority argument works like other Geode event listeners.
 Higher priority runs first. A listener that returns `true` blocks lower ones.
-Store the handle and call `handle:disconnect()` when you no longer need input.
-Handles also disconnect during runtime shutdown.
 
 ## Listen to every key example
 
@@ -102,7 +102,7 @@ geode.KeyboardInputEvent.listen(function(data)
         elseif data.action == action.Release then "release"
         else "repeat"
 
-    print("key", data.key, act, "mods", data.modifiers)
+    print("key", data.key, act, "mods", data.modifiers, "native code", data.native.code)
     return false
 end)
 ```
@@ -122,6 +122,8 @@ geode.KeyboardInputEvent.listen(function(data)
     return false
 end)
 ```
+
+Store the handle and call `handle:disconnect()` when you no longer need input.
 
 ## Related
 

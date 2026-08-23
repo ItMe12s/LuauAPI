@@ -20,6 +20,14 @@ end
 
 Cocos `enumKeyCodes` is similar but lives on `geode.cocos`. See [cocos](cocos.md).
 
+```lua
+local keys = geode.cocos.enumKeyCodes
+
+if keyCode == keys.KEY_A then
+    print("A pressed")
+end
+```
+
 ## Runtime values
 
 Bindings pass enum arguments and returns as plain numbers.
@@ -36,12 +44,13 @@ Each bound enum has two shapes in `types/geode.d.luau`:
 - `export type GJLevelTypeNamespace = { Saved: number, SearchResult: number, ... }` for the constant table
 
 The type checker types every enum as `number`, so it does not block compares across different enum names.
-Only the integer value matters.
+Only the integer value matters. The special-cased stub type for `enumKeyCodes` is `EnumKeyCodesNamespace`.
 
 Prefer named constants over magic numbers.
 
-Some `GD_ENUM_TYPES` names have no scanned `geode.gd` table. Stubs still use `number`.
-Runtime is plain integers. Named constants may be missing. Listed as `unscannedGdEnums` in `schema.json` and the codegen report.
+Some `GD_ENUM_TYPES` names have no scanned `geode.gd` table.
+Stubs still use `number` and runtime values are plain integers, so named constants may be missing.
+They are listed as `unscannedGdEnums` in `schema.json` and the codegen report.
 
 ## Related
 

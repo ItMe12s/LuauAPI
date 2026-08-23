@@ -163,14 +163,14 @@ See [Limits and errors](limits-and-errors.md) for exact error strings.
 
 `registerValue` supports these values:
 
-| C++ value | Luau value | Rules |
-| --- | --- | --- |
-| `bool` | `boolean` | No truthiness conversion |
-| Integral types and enums | `number` or `integer` | Must fit in signed 64 bits |
-| `float`, `double` | `number` | Must be finite and range safe |
-| `std::string`, `std::string_view` | `string` | Embedded NUL bytes are preserved |
-| Character arrays and C strings | `string` | A null C string returns `Err` |
-| `std::optional<T>` | inner value | Must be engaged and contain a supported scalar |
+| C++ value                         | Luau value            | Rules                                          |
+| --------------------------------- | --------------------- | ---------------------------------------------- |
+| `bool`                            | `boolean`             | No truthiness conversion                       |
+| Integral types and enums          | `number` or `integer` | Must fit in signed 64 bits                     |
+| `float`, `double`                 | `number`              | Must be finite and range safe                  |
+| `std::string`, `std::string_view` | `string`              | Embedded NUL bytes are preserved               |
+| Character arrays and C strings    | `string`              | A null C string returns `Err`                  |
+| `std::optional<T>`                | inner value           | Must be engaged and contain a supported scalar |
 
 The direct types `wchar_t`, `char8_t`, `char16_t`, and `char32_t`
 are rejected as registered values, function parameters, and return values.
@@ -184,14 +184,14 @@ Published strings are copied into Luau.
 Free and static function pointers are supported, including `noexcept` functions.
 Parameters may be supported scalars, optionals, or const references to those types.
 
-| C++ parameter | Input rule |
-| --- | --- |
-| `bool` | Requires a Luau boolean |
+| C++ parameter         | Input rule                                         |
+| --------------------- | -------------------------------------------------- |
+| `bool`                | Requires a Luau boolean                            |
 | Integral type or enum | Requires an integral, destination-range-safe value |
-| `float`, `double` | Requires a finite, range-safe value |
-| `std::string` | Receives owned bytes |
-| `std::string_view` | Borrows Lua bytes until the callback returns |
-| `std::optional<T>` | Accepts the inner value or explicit `nil` |
+| `float`, `double`     | Requires a finite, range-safe value                |
+| `std::string`         | Receives owned bytes                               |
+| `std::string_view`    | Borrows Lua bytes until the callback returns       |
+| `std::optional<T>`    | Accepts the inner value or explicit `nil`          |
 
 Pointers, mutable references, rvalue references, member functions, captured callables,
 `std::function`, nested optionals, and C-string parameters are rejected.
@@ -201,7 +201,7 @@ Omitted arguments work only when every remaining parameter is optional.
 A non-trailing optional needs an explicit value or `nil` when a required parameter follows it.
 Colon calls add a `self` argument and fail unless the signature accepts that argument.
 
-## Choosing a callback return
+## Function returns
 
 Use a supported return type other than `geode::Result<R>` when the callback does not need to report a recoverable failure.
 Use `geode::Result<R>` when the callback can reject a domain value or report a recoverable failure.
@@ -214,17 +214,15 @@ The callback result is created when Luau invokes the registered function.
 It is separate from the `geode::Result<void>` returned by `registerFunction`,
 which reports whether LuauAPI published the function.
 
-## Function returns
-
 Callbacks may return these shapes:
 
-| C++ return | Luau result |
-| --- | --- |
-| `void` | No values |
-| Supported scalar | One value |
-| `std::optional<T>` | One value or `nil` |
-| `std::tuple<...>` | Ordered multiple values |
-| `std::tuple<>` | No values |
+| C++ return         | Luau result                             |
+| ------------------ | --------------------------------------- |
+| `void`             | No values                               |
+| Supported scalar   | One value                               |
+| `std::optional<T>` | One value or `nil`                      |
+| `std::tuple<...>`  | Ordered multiple values                 |
+| `std::tuple<>`     | No values                               |
 | `geode::Result<R>` | The supported `R` shape or a Luau error |
 
 Optional tuple elements produce `nil` in their positions.
@@ -235,6 +233,23 @@ Protected script execution adds the normal traceback.
 
 Pointer returns, reference returns, nested tuples, `std::optional<std::tuple<...>>`,
 and custom `Result` error types are rejected. Callbacks must not throw.
+
+A multi-value return:
+
+```cpp
+static std::tuple<int, std::string> bestRun(int levelId) {
+    return { 42, "normal" };
+}
+```
+
+Optional parameters:
+
+```cpp
+// Luau may pass two or three arguments. A non-trailing optional needs an explicit value or nil.
+static double scale(double value, std::optional<double> factor) {
+    return value * factor.value_or(1.0);
+}
+```
 
 ## Lifetime and access
 

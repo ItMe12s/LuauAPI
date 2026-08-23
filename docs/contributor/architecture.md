@@ -14,9 +14,9 @@ This page names the main parts and traces how a script gets from a file to runni
 - Bindings framework. Exposes C++ types to Lua. See [Bindings framework](internals/bindings-framework.md).
 - Module system. Implements sandboxed `require`. See [Module system](internals/module-system.md).
 - Task scheduler. Drives `task` callbacks on the game tick. See [Task scheduler](internals/task-scheduler.md).
-- ImGui draw scheduler. Drives `imgui.onDraw` callbacks each frame.
-  See [ImGui draw scheduler](internals/imgui-draw-scheduler.md).
+- ImGui draw scheduler. Drives `imgui.onDraw` callbacks each frame. See [ImGui draw scheduler](internals/imgui-draw-scheduler.md).
 - WebSocket. Client and local server bindings backed by IXWebSocket. See [websocket](../reference/lua/websocket.md).
+- Lunar bindings. Sprite rigging and keyframe animation. See [lunar](../reference/lua/lunar.md).
 - 3D rendering. Loads glTF meshes and draws them through `gd3d.ViewportFrame` sprites. See [gd3d](../reference/lua/gd3d.md).
 - Codegen. Generates the game bindings and the type stubs. See [Codegen](codegen/codegen.md).
 - Diagnostics. Crash sidecar for Luau context at native faults. See [Crash sidecar](internals/crash-sidecar.md).
@@ -37,9 +37,11 @@ This page names the main parts and traces how a script gets from a file to runni
 - `src/bindings/websocket/`: WebSocket client, server, and peer bindings.
 - `src/bindings/imgui/`: ImGui binding and draw scheduler.
 - `src/bindings/task/`: task scheduler bindings.
+- `src/bindings/lunar/`: handwritten `lunar` rig and animation bindings.
 - `src/bindings/render3d/`: handwritten `gd3d` bindings.
 - `src/render3d/`: glTF loading, GPU rendering, and the `CCViewportFrame` sprite.
 - `src/require/`: the requirer and the path rules.
+- `src/diagnostics/`: the crash sidecar boundary recorder. See [Crash sidecar](internals/crash-sidecar.md).
 - `build/luauapi-gen/src/`: generated C++ bindings from codegen.
 - `tools/luau_codegen/`: the Python code generator.
 - `mod/luauapi/`: LuauAPI bootstrap, executor, and other scripts. See [Installation](../getting-started/installation.md).
@@ -54,7 +56,8 @@ and the bootstrap script runs before the handler returns. Shutdown runs on game 
 
 ## How a script runs
 
-The host calls `runFile` on the main thread. The runtime resolves the path, compiles or loads cached bytecode, and runs it under a deadline.
+The host calls `runFile` on the main thread.
+The runtime resolves the path, compiles or loads cached bytecode, and runs it under a deadline.
 Errors are caught and returned to the host.
 See [Runtime](internals/runtime.md) for the full pipeline.
 
@@ -69,20 +72,14 @@ A registered closure owns the copied bridge data in the Lua state.
 It invokes native code through the coroutine state that called it and records a native-function diagnostic boundary.
 Closing the Lua state releases the closure storage without calling the registering mod.
 
-## How a hook runs
+## Request-driven flows
 
-A script registers with `geode.hook`. Generated hook code runs before callbacks, the original, then after callbacks.
-See [hooks](../reference/lua/hooks.md) and [Codegen](codegen/codegen.md).
-
-## How ImGui draw runs
-
-A script registers with `imgui.onDraw`. The draw scheduler runs callbacks each frame inside an ImGui frame.
-See [ImGui draw scheduler](internals/imgui-draw-scheduler.md).
-
-## How a ViewportFrame draws
-
-Scripts load meshes, add them to `gd3d.ViewportFrame`, and parent the sprite in the scene graph.
-See [gd3d](../reference/lua/gd3d.md) for the rendering model.
+- **Hooks.** A script registers with `geode.hook`. Generated hook code runs before callbacks, the original, then after callbacks.
+  See [hooks](../reference/lua/hooks.md) and [Codegen](codegen/codegen.md).
+- **ImGui draws.** A script registers with `imgui.onDraw`. The draw scheduler runs callbacks each frame inside an ImGui frame.
+  See [ImGui draw scheduler](internals/imgui-draw-scheduler.md).
+- **Viewports.** Scripts load meshes, add them to `gd3d.ViewportFrame`, and parent the sprite in the scene graph.
+  See [gd3d](../reference/lua/gd3d.md) for the rendering model.
 
 ## Threading
 

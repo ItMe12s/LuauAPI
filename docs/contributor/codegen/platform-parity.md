@@ -2,8 +2,7 @@
 
 ## Summary
 
-Codegen produces a single Luau stub and C++ binding set,
-but GD uses different binding addresses per platform.
+Codegen produces a single Luau stub and C++ binding set, but GD uses different binding addresses per platform.
 This explains how the generator keeps cross-platform safety and how to read the parity report when symbols are missing.
 
 ## Forced intersection
@@ -19,15 +18,14 @@ Per-platform plan:
 Intersection platforms:
 
 - The main platforms are `win`, `m1` (or `imac`, or both for universal `mac`), `ios`, `android32`, and `android64`.
-- These are defined in `policy/intersection.py` as `intersection_platforms`.
+- These are defined in `model/platforms.py` as `intersection_platforms`.
 - Universal macOS builds use platform `mac`, which intersects against both `imac` and `m1`.
 
 Forced intersection:
 
 - `collect_plan()` calls `_apply_intersection()`.
 - A method is kept only if it is supported on every intersection platform.
-- If a method is supported on some but not all platforms,
-  it is dropped with the reason `intersection-missing-platform:<platforms>`.
+- If a method is supported on some but not all platforms, it is dropped with the reason `intersection-missing-platform:<platforms>`.
 - This rule applies to hooks, fields, and namespace free functions as well.
 - Classes with no members left after intersection become type-only stubs or are skipped entirely.
 
@@ -70,9 +68,8 @@ The `intersection` block lists:
 
 ## Platform-scoped fields
 
-Broma bindings may wrap members in platform blocks.
-The parser attaches a `platforms` set to such fields. Per-platform plans only consider fields that apply on that platform,
-and the intersected stub omits platform-only members entirely.
+Broma bindings may wrap members in platform blocks. The parser attaches a `platforms` set to such fields.
+Per-platform plans only consider fields that apply on that platform, and the intersected stub omits platform-only members entirely.
 
 ## Policy
 
@@ -91,6 +88,7 @@ and the intersected stub omits platform-only members entirely.
 ## Source
 
 - `tools/luau_codegen/emit/plan.py`
+- `tools/luau_codegen/model/platforms.py`
 - `tools/luau_codegen/policy/intersection.py`
 - `tools/luau_codegen/policy/filtering.py`
 - `tools/luau_codegen/emit/parity.py`

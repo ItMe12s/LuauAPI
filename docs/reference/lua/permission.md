@@ -3,13 +3,14 @@
 ## Summary
 
 `geode.utils.permission` reads and requests operating system permissions. This matters on mobile.
-On Windows and macOS, accepted permissions return granted. Use the `Permission` table for the values.
-A bad permission value raises a Lua error.
+On Windows and macOS every permission reports granted. On Android and iOS the system decides.
+On iOS, `ReadAllFiles` is always denied. Android shows the system dialog for `RecordAudio`.
+A bad permission value raises a Lua error. Use the `Permission` table for the values.
 
-| Name | Value |
-| --- | --- |
-| `ReadAllFiles` | 3 |
-| `RecordAudio` | 4 |
+| Name           | Value |
+| -------------- | ----- |
+| `ReadAllFiles` | 3     |
+| `RecordAudio`  | 4     |
 
 ## getPermissionStatus
 
@@ -51,10 +52,10 @@ end
 ## Related
 
 - [geode.utils](utils.md)
-- [base64](base64.md)
 - [callbacks](callbacks.md)
 - [globals](globals.md)
 
 ## Source
 
 - `src/bindings/geode/GeodeSmallBindings.cpp`
+- `tools/luau_codegen/emit/luau_types/manual_fields.py`

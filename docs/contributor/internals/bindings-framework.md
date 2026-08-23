@@ -11,8 +11,10 @@ This page explains how to register a binding and how the pieces fit together.
 A binding is a function that takes a `lua_State*` and returns a `geode::Result<void>`.
 Register it with `LUAX_BINDING`, which uses a default priority of `10`.
 Use `LUAX_BINDING_PRIORITY` to set a different priority.
-`applyAllBindings` runs every binding in priority order at startup.
-Each binding runs once when the runtime is built.
+`applyAllBindings` runs every binding in priority order at startup,
+called from the `Runtime` constructor.
+Each binding runs once. `OpaqueHandle` registers at priority `0`,
+so its metatable exists before every default-priority binding.
 
 ## Handwritten bindings
 
@@ -20,48 +22,51 @@ Most game types come from codegen.
 
 A few libraries are handwritten in C++ under `src/bindings/geode/` and `src/framework/`:
 
-| File | Lua Module / Description |
-| --- | --- |
-| `GeodeFsBinding.cpp` | `geode.fs` |
-| `GeodeModBinding.cpp` | `geode.Mod` |
-| `GeodeLoaderBinding.cpp` | `geode.Loader` |
-| `GeodeSmallBindings.cpp` | `geode.json`, `geode.utils.base64`, `geode.utils.permission`, `geode.ColorProvider`,`geode.Keybind`, `geode.VersionInfo` (see host-test split below) |
-| `GeodeKeyboardBinding.cpp` | `geode.KeyboardModifier`, `geode.KeyboardInputData`, `geode.KeyboardInputEvent` |
-| `GeodeMouseBinding.cpp` | `geode.MouseInputData`, `geode.MouseInputEvent`, `geode.MouseMoveEvent`, `geode.ScrollWheelEvent` |
-| `GeodeWebCore.cpp` and siblings under `web/` | `geode.utils.web` |
-| `GeodeCocosBinding.cpp` | Handwritten `geode.cocos` helpers |
-| `task/TaskBinding.cpp` | `task` and `time` |
-| `imgui/ImGuiCore.cpp` | `imgui` |
-| `render3d/Gd3dRegister.cpp` | `gd3d` entry (`registerGd3d`) |
-| `render3d/TransformBinding.cpp` | `gd3d.Transform` |
-| `render3d/GltfBinding.cpp` | `gd3d.gltf` |
-| `render3d/ProceduralMeshBinding.cpp` | `gd3d.mesh` |
-| `render3d/TextureBinding.cpp` | `gd3d.texture` |
-| `render3d/MaterialBinding.cpp` | `gd3d.Material` |
-| `render3d/ViewportFrameBinding.cpp` | `gd3d.ViewportFrame` |
-| `render3d/internal/MeshHandleBinding.cpp` | shared `Mesh` userdata metatable |
-| `render3d/internal/Marshaling.hpp` | vec3/color parsers |
-| `render3d/internal/Handles.hpp` | mesh/material/texture handle types |
+| File                                         | Lua Module / Description                                                                                                                                       |
+| -------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GeodeFsBinding.cpp`                         | `geode.fs`                                                                                                                                                     |
+| `GeodeModBinding.cpp`                        | `geode.Mod`                                                                                                                                                    |
+| `GeodeLoaderBinding.cpp`                     | `geode.Loader`                                                                                                                                                 |
+| `GeodeSmallBindings.cpp`                     | `geode.json`, `geode.utils.base64`, `geode.utils.permission`, `geode.utils.random`, `geode.ColorProvider`, `geode.Keybind`, `geode.VersionInfo`, `geode.Color` |
+| `GeodePopupBinding.cpp`                      | `geode.PopupManager`                                                                                                                                           |
+| `GeodeKeyboardBinding.cpp`                   | `geode.KeyboardModifier`, `geode.KeyboardInputData`, `geode.KeyboardInputEvent`                                                                                |
+| `GeodeMouseBinding.cpp`                      | `geode.MouseInputData`, `geode.MouseInputEvent`, `geode.MouseMoveEvent`, `geode.ScrollWheelEvent`                                                              |
+| `GeodeTaskHandleBinding.cpp`                 | `GeodeTaskHandle` userdata metatable for async results                                                                                                         |
+| `GeodeWebCore.cpp` and siblings under `web/` | `geode.utils.web`                                                                                                                                              |
+| `GeodeCocosBinding.cpp`                      | Handwritten `geode.cocos` helpers                                                                                                                              |
+| `lunar/LunarBinding.cpp` and siblings        | `lunar.rig` and `lunar.animation`                                                                                                                              |
+| `task/TaskBinding.cpp`                       | `task` and `time`                                                                                                                                              |
+| `imgui/ImGuiCore.cpp`                        | `imgui`                                                                                                                                                        |
+| `render3d/Gd3dRegister.cpp`                  | `gd3d` entry (`registerGd3d`)                                                                                                                                  |
+| `render3d/TransformBinding.cpp`              | `gd3d.Transform`                                                                                                                                               |
+| `render3d/GltfBinding.cpp`                   | `gd3d.gltf`                                                                                                                                                    |
+| `render3d/ProceduralMeshBinding.cpp`         | `gd3d.mesh`                                                                                                                                                    |
+| `render3d/TextureBinding.cpp`                | `gd3d.texture`                                                                                                                                                 |
+| `render3d/MaterialBinding.cpp`               | `gd3d.Material`                                                                                                                                                |
+| `render3d/ViewportFrameBinding.cpp`          | `gd3d.ViewportFrame`                                                                                                                                           |
+| `render3d/internal/MeshHandleBinding.cpp`    | shared `Mesh` userdata metatable                                                                                                                               |
+| `render3d/internal/Marshaling.hpp`           | vec3/color parsers                                                                                                                                             |
+| `render3d/internal/Handles.hpp`              | mesh/material/texture handle types                                                                                                                             |
 
 The `gd3d` Lua module lives in `src/bindings/render3d/`.
 Rendering and asset code lives in `src/render3d/`.
 
 The web binding is split across three translation units:
 
-| File | Role |
-| --- | --- |
-| `GeodeWebCore.cpp` | Entry registration, userdata metatables, request options, and multipart builders |
-| `GeodeWebApi.cpp` | Fluent `WebRequest` chain methods, `send`, and `WebResponse` accessors |
-| `GeodeWebListeners.cpp` | Request intercept and response listeners |
+| File                    | Role                                                                             |
+| ----------------------- | -------------------------------------------------------------------------------- |
+| `GeodeWebCore.cpp`      | Entry registration, userdata metatables, request options, and multipart builders |
+| `GeodeWebApi.cpp`       | Fluent `WebRequest` chain methods, `send`, and `WebResponse` accessors           |
+| `GeodeWebListeners.cpp` | Request intercept and response listeners                                         |
 
 The websocket binding lives under `src/bindings/websocket/`:
 
-| File | Role |
-| --- | --- |
-| `WebSocketBinding.cpp` | Entry registration and userdata metatables |
-| `WebSocketConnection.cpp` | `WebSocketConnection` client methods and callbacks |
-| `WebSocketServer.cpp` | `WebSocketServer` and `WebSocketPeer` methods, broadcast, and `serve` |
-| `WebSocketInternal.hpp` | Shared types, limits, and marshaling helpers |
+| File                      | Role                                                                  |
+| ------------------------- | --------------------------------------------------------------------- |
+| `WebSocketBinding.cpp`    | Entry registration and userdata metatables                            |
+| `WebSocketConnection.cpp` | `WebSocketConnection` client methods and callbacks                    |
+| `WebSocketServer.cpp`     | `WebSocketServer` and `WebSocketPeer` methods, broadcast, and `serve` |
+| `WebSocketInternal.hpp`   | Shared types, limits, and marshaling helpers                          |
 
 Generated free functions in `bindings_free_functions.cpp` cover the rest of `geode.cocos`.
 Luau types for these bindings come from `tools/luau_codegen/emit/luau_types/` or `extra_bindings/`.
@@ -77,6 +82,7 @@ Luau types for these bindings come from `tools/luau_codegen/emit/luau_types/` or
 - `check(L, idx, method)` reads and validates the userdata or raises.
   `tryCheck(L, idx)` returns null on mismatch.
 - `pushOwned(L, obj)` pushes the object as Lua owned. `pushBorrowed(L, obj)` pushes a weak borrow.
+  Both push `nil` if the metatable was never registered.
 - `pushOwnedDynamic` and `pushBorrowedDynamic` pick the closest registered runtime type.
 
 The metatable holds a methods table, a fields table, and `__index` and `__newindex` handlers.
@@ -96,27 +102,27 @@ Each record holds:
 - Name
 - Metatable name
 - Base tags (for inheritance)
-- Runtime matcher
+- `isNode` flag (used to route node field access and dynamic pushes)
 
 `registerType` takes one direct base tag. Its closure fills `baseClosure` for `hasBase` and method lookup.
 More than one direct base is an error.
 
 ### Luau tag vs internal type id
 
-Luau userdata tags are 8-bit (`uint8_t`). Only 256 Luau tag slots exist. That is too small for one tag per game class.
+Luau caps userdata tags at `LUA_UTAG_LIMIT` (128). That is too small for one tag per game class.
 
 Usertypes use two layers:
 
-- Luau tag: all `Usertype<T>` userdata share `kSharedUsertypeTag` (12).
+- Luau tag: all `Usertype<T>` userdata share `kSharedUsertypeTag` (13).
 - Internal type id: the real class id is in `UserdataBlock::typeTag` and `UsertypeRegistry`.
 
-`requireLive`, `tryCandidate`, and GC check the shared Luau tag first, then read `typeTag`.
+`checkCandidate` and `tryCandidate` check the shared Luau tag first, then read `typeTag` to find the registered type.
+`liveObject` decides whether a borrowed target is still alive.
 
-On push, `pushUserdataOwned` and `pushUserdataBorrowed` create userdata with the shared Luau tag,
-set `block->typeTag`, and call `lua_setmetatable`. One destructor is registered on the shared Luau tag.
+On push, `pushUserdataOwned` and `pushUserdataBorrowed` create userdata with the shared Luau tag, set `block->typeTag`, and call `lua_setmetatable`.
+One destructor is registered on the shared Luau tag.
 
-Reserved userdata (handles, websocket, gd3d assets, and so on) still get their own Luau tags
-through `registerTaggedMetatable` and `lua_setuserdatametatable`.
+Reserved userdata still get their own Luau tags through `registerTaggedMetatable` and `lua_setuserdatametatable`.
 
 Tag assignments:
 
@@ -132,17 +138,17 @@ Tag assignments:
   - `kMaterialUserdataTag` (9)
   - `kTextureUserdataTag` (10)
   - `kImGuiFontHandleUserdataTag` (11)
+  - `kManagedPopupUserdataTag` (12)
 - Shared Luau tag for all usertypes:
-  - `kSharedUsertypeTag` (12)
+  - `kSharedUsertypeTag` (13)
 - Internal registry ids for usertypes:
-  - Start at `kFirstDynamicUsertypeTag` (13)
+  - Start at `kFirstDynamicUsertypeTag` (14)
 
 Codegen picks the next free internal id at registration. That id goes in `UserdataBlock::typeTag`, not in the Luau userdata tag.
 
 ## Handle pools
 
-`WeakHandlePool` in `src/framework/lifecycle/Lifecycle.hpp` tracks live handles
-for subsystems that need runtime shutdown cleanup.
+`WeakHandlePool` in `src/framework/lifecycle/Lifecycle.hpp` tracks live handles for subsystems that need runtime shutdown cleanup.
 
 - `track` stores a `shared_ptr` or `weak_ptr`.
 - `compactAndCountLive` drops expired weak entries and returns the live count.
@@ -159,6 +165,7 @@ On runtime shutdown, `clearWebState` clears web callbacks and `clearWsState` shu
 - `resolveSandboxTarget(L, rootIdx, pathIdx, method, requireWritable)` maps a root name
   (`save`, `config`, `persistent`, or `resources`) and a relative path to a canonical path inside that directory.
 - `readSandboxTextFile(path)` reads a regular file with the filesystem read cap.
+- `readSandboxBinaryFile(path)` does the same for binary content (fonts, textures, uploads).
 
 Used by `geode.fs`, `geode.utils.web` (`WebResponse:saveTo`, `MultipartForm:fileFrom`), and `gd3d` asset loaders.
 
@@ -178,12 +185,12 @@ The orphan trampoline registry resets its `registered` flag inside its shutdown 
 
 ## Host-test binding split
 
-When `LUAUAPI_HOST_TESTS` is defined, several bindings compile a reduced surface so tests avoid Geode-only APIs:
+When `LUAUAPI_HOST_TESTS` is defined, bindings compile a reduced surface so tests avoid Geode-only APIs:
 
 - Bindings wrapped in `#if !defined(LUAUAPI_HOST_TESTS)` omit their `LUAX_BINDING` static registrar.
   Host tests call `resetBindingsForTests()`, register only what they need with `registerBinding()`, then call `applyAllBindings`.
-- `GeodeSmallBindings.cpp` exposes `registerGeodeJson` for tests.
-  Base64, permission, `ColorProvider`, `Keybind`, and `VersionInfo` registrars are omitted.
+- Every registrar in `GeodeSmallBindings.cpp` is compiled out under host tests.
+  Only `registerGeodeJson` remains available for tests to call directly.
 - `GeodeWebCore.cpp`, websocket entry registration,
   and several gd3d viewport or GPU paths are wrapped in `#if !defined(LUAUAPI_HOST_TESTS)`.
 - Host tests use stubs under `tests/host/` for web async behavior.
@@ -193,13 +200,22 @@ When `LUAUAPI_HOST_TESTS` is defined, several bindings compile a reduced surface
 An owned userdata holds a strong pointer and increases the C++ retain count.
 A borrowed userdata holds a weak reference and does not retain. The global retain map in `Ref.hpp` tracks owned objects.
 When an owned userdata is collected the retain is released, and on shutdown all Lua retains are cleared.
+See [game objects](../../reference/lua/game-objects.md) for the script-facing rules.
+
+### Deferred release
+
+Releases queued during Lua execution do not touch the game's refcounts immediately.
+`DeferredRelease.cpp` queues owned and borrowed deaths with `deferOwnedRelease` and `deferBorrowedRelease`.
+Every frame, a `CCDirector::drawScene` post-hook in `src/framework/usertype/DeferredReleaseDrainHook.cpp` drains them.
+A shutdown hook drains the remainder.
 
 ## Stack, value types, and containers
 
-`Stack.hpp` provides overloaded `push` and `check` helpers for primitives and strings, plus helpers
-for reading numeric and boolean table fields and writing integers as strings to avoid float precision loss.
+`Stack.hpp` provides overloaded `push` and `check` helpers for primitives and strings,
+plus helpers for reading numeric and boolean table fields and writing integers as strings to avoid float precision loss.
 
-`Types.hpp`:
+`Types.hpp` holds handwritten check/push for `UIButtonConfig` and `SmartPrefabResult`.
+Point, size, rect, and color conversions come from the generated `Types.generated.hpp`.
 
 - `check<T>` and `push(T)` functions for cocos value types:
   - points
@@ -211,13 +227,15 @@ for reading numeric and boolean table fields and writing integers as strings to 
 `ContainerTables.hpp` provides recursive table checks, pushes, and field updates.
 Field setters call `assignContainerValue` instead of assigning whole containers.
 Maps with a pair key use an entry list. See [Pair containers](../codegen/pair-containers.md).
-The full grammar and audited field-only pointer-grid adapter are documented in
-[Recursive containers](../codegen/nested-containers.md).
+The full grammar and audited field-only pointer-grid adapter are documented in [Recursive containers](../codegen/nested-containers.md).
+
+`framework/view/` holds the read-only sequence views:
+`ReadOnlyView.hpp`, `ReadOnlySequenceView.hpp`, `ReadOnlyVectorView.hpp`, and `ReadOnlyCCArrayView.hpp`.
+They expose direct object-element vectors as 1-based read-only Lua sequences.
 
 ## Tagged userdata metatables
 
-Handwritten bindings that expose tagged or untagged userdata share `registerTaggedMetatable` in
-`src/framework/stack/TaggedMetatable.hpp`.
+Handwritten bindings that expose tagged or untagged userdata share `registerTaggedMetatable` in `src/framework/stack/TaggedMetatable.hpp`.
 
 The helper registers a named metatable from a `luaL_Reg` method table, sets `__index`, locks `__metatable`, and optionally adds:
 
@@ -237,9 +255,9 @@ Repeat calls with the same tag still set the tag destructor when one is provided
 Keep storage alive while Lua uses it. `ReadOnlyOpaqueVectorView` holds a weak owner ref.
 
 `Usertype<T>` uses `kSharedUsertypeTag` instead.
-`pushOwned` and `pushBorrowed` push `nil` if the metatable was never registered.
 
-`ScheduledHandleBinding` uses the same helper for task and imgui draw handles.
+`ScheduledHandleBinding` uses `registerTaggedMetatable` for task and imgui draw handles.
+The handles carry a scheduler slot id and cancel on GC or explicit `:cancel()`.
 
 ## References and callback bridge
 
@@ -285,6 +303,7 @@ In practice most game types are generated. See [Codegen](../codegen/codegen.md).
 - [Architecture](../architecture.md)
 - [Runtime](runtime.md)
 - [Codegen](../codegen/codegen.md)
+- [game objects](../../reference/lua/game-objects.md)
 - [callbacks](../../reference/lua/callbacks.md)
 - [delegates](../../reference/lua/delegates.md)
 
@@ -300,7 +319,16 @@ In practice most game types are generated. See [Codegen](../codegen/codegen.md).
 - `src/framework/usertype/Ref.hpp`
 - `src/framework/stack/Types.hpp`
 - `src/framework/stack/ContainerTables.hpp`
+- `src/framework/view/ReadOnlyView.hpp`
+- `src/framework/view/ReadOnlySequenceView.hpp`
+- `src/framework/view/ReadOnlyVectorView.hpp`
+- `src/framework/view/ReadOnlyCCArrayView.hpp`
+- `src/framework/schedule/ScheduledHandleBinding.hpp`
+- `src/framework/schedule/CancellableSlots.hpp`
 - `src/framework/usertype/Fields.cpp`
+- `src/framework/usertype/DeferredRelease.hpp`
+- `src/framework/usertype/DeferredRelease.cpp`
+- `src/framework/usertype/DeferredReleaseDrainHook.cpp`
 - `src/framework/lifecycle/Lifecycle.hpp`
 - `src/bindings/geode/ModSandbox.hpp`
 - `src/require/PathSandbox.hpp`

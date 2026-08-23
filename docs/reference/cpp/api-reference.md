@@ -4,11 +4,12 @@
 
 The public C++ API in `imes::luauapi`. Signatures match `include/LuauAPI.hpp`.
 
-| Call style | Caller thread | Execution |
-| --- | --- | --- |
-| Sync run and status | Main only | Full work on main |
-| Async run | Any (not shutting down) | Prepare on caller, run on main |
+| Call style          | Caller thread           | Execution                                         |
+| ------------------- | ----------------------- | ------------------------------------------------- |
+| Sync run and status | Main only               | Full work on main                                 |
+| Async run           | Any (not shutting down) | Prepare when the future runs, script runs on main |
 
+See Threading below for per-function rules.
 See [Getting started](../../getting-started/overview.md) for the user-facing threading rule.
 
 ## Integration
@@ -34,11 +35,11 @@ Runtime ownership:
 
 When a run fails, check these surfaces:
 
-| Error kind | `Result` | `lastError()` |
-| --- | --- | --- |
-| Sync run failure | Message on `Err` | Updated |
-| Async preparation (bad path, oversized file, shutdown) | `Err` on future | Not updated |
-| Async execution | `Err` on future | Updated |
+| Error kind                                             | `Result`         | `lastError()` |
+| ------------------------------------------------------ | ---------------- | ------------- |
+| Sync run failure                                       | Message on `Err` | Updated       |
+| Async preparation (bad path, oversized file, shutdown) | `Err` on future  | Not updated   |
+| Async execution                                        | `Err` on future  | Updated       |
 
 See Threading below for per-function thread rules.
 
@@ -51,15 +52,15 @@ publication rules, callback behavior, and examples.
 
 ## Threading
 
-| API | Caller thread | Notes |
-| --- | --- | --- |
-| `runFile`, `runScript` | Main only | Full path validation, read, compile, and run |
-| `runFileAsync`, `runScriptAsync` | Any (not shutting down) | Path validation and file read on caller, script runs on main |
-| `registerFunction`, `registerValue` | Main only, runtime ready | Publish under the caller mod's exact `_G` key. Returns `Err` when LuauAPI is an optional dependency and not loaded |
-| `isReady`, `status`, `lastError` | Main only | Off main thread or during shutdown return safe defaults |
-| `memoryUsage`, `memoryLimit`, `codegenEnabled` | Main only | Return zeros or false off main thread |
+| API                                            | Caller thread            | Notes                                                                                                              |
+| ---------------------------------------------- | ------------------------ | ------------------------------------------------------------------------------------------------------------------ |
+| `runFile`, `runScript`                         | Main only                | Full path validation, read, compile, and run                                                                       |
+| `runFileAsync`, `runScriptAsync`               | Any (not shutting down)  | Work starts when the future first runs. The script executes on the main thread                                     |
+| `registerFunction`, `registerValue`            | Main only, runtime ready | Publish under the caller mod's exact `_G` key. Returns `Err` when LuauAPI is an optional dependency and not loaded |
+| `isReady`, `status`, `lastError`               | Main only                | Off main thread or during shutdown return safe defaults                                                            |
+| `memoryUsage`, `memoryLimit`, `codegenEnabled` | Main only                | Return zeros or false off main thread                                                                              |
 
-Preparation errors return `Err` on the caller thread for async calls and do not update `lastError()`.
+Preparation errors resolve the async future with `Err` and do not update `lastError()`.
 Execution errors populate both the async `Result` and `lastError()`.
 
 ## Run functions
@@ -76,10 +77,10 @@ geode::Result<void> runScript(
 );
 ```
 
-| Function | Role |
-| --- | --- |
-| `runFile` | Read and run a `.luau` file. `relativePath` must be a flat `.luau` name inside `resourcesRoot` |
-| `runScript` | Run inline source. `chunkName` names the chunk in logs and errors |
+| Function    | Role                                                                                           |
+| ----------- | ---------------------------------------------------------------------------------------------- |
+| `runFile`   | Read and run a `.luau` file. `relativePath` must be a flat `.luau` name inside `resourcesRoot` |
+| `runScript` | Run inline source. `chunkName` names the chunk in logs and errors                              |
 
 Both return `Ok` or `Err` with a message.
 See [Limits and errors](limits-and-errors.md) for path and size rules.
@@ -98,8 +99,10 @@ arc::Future<geode::Result<void>> runScriptAsync(
 );
 ```
 
-These prepare on the calling thread, hop to the main thread to run the script, and return a future.
-Preparation and execution errors follow the rule in Threading above.
+Calling these functions does no work.
+When the returned future first runs, it prepares, hops to the main thread to run the script, and resolves.
+Spawn or await the future (for example with `geode::async::spawn`).
+Dropping the future destroys the coroutine without running it.
 If main-thread dispatch is cancelled, the future resolves with `"luau main-thread execution cancelled"`.
 
 ## Status functions
@@ -110,11 +113,11 @@ RuntimeStatus status();
 std::string lastError();
 ```
 
-| Function | Role |
-| --- | --- |
-| `isReady` | True only on the main thread when the runtime is initialized and not shutting down |
-| `status` | Runtime status, or `NotReady` off the main thread or while shutting down |
-| `lastError` | Copy of the last runtime error string. Empty off the main thread or while shutting down |
+| Function    | Role                                                                                                                                  |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `isReady`   | True only on the main thread when the runtime is initialized and not shutting down                                                    |
+| `status`    | Runtime status, or `NotReady` off the main thread or while shutting down                                                              |
+| `lastError` | Copy of the last runtime error string. Empty off the main thread or while shutting down. A successful run clears it, so it is per-run |
 
 ## Resource functions
 
@@ -124,11 +127,11 @@ std::size_t memoryLimit();
 bool codegenEnabled();
 ```
 
-| Function | Role |
-| --- | --- |
-| `memoryUsage` | Current Lua memory use in bytes. Returns `0` off the main thread or while shutting down |
-| `memoryLimit` | Memory cap in bytes. Returns `0` off the main thread or while shutting down |
-| `codegenEnabled` | True when native code generation is on |
+| Function         | Role                                                                                    |
+| ---------------- | --------------------------------------------------------------------------------------- |
+| `memoryUsage`    | Current Lua memory use in bytes. Returns `0` off the main thread or while shutting down |
+| `memoryLimit`    | Memory cap in bytes. Returns `0` off the main thread or while shutting down             |
+| `codegenEnabled` | True when native code generation is on                                                  |
 
 ## RuntimeStatus
 
@@ -141,12 +144,12 @@ enum class RuntimeStatus {
 };
 ```
 
-| Value | Meaning |
-| --- | --- |
-| `NotReady` | Off the main thread, not initialized, or shutting down |
-| `Ready` | Runtime is up and scripts can run |
-| `InitFailed` | Startup failed |
-| `Panicked` | Unrecoverable Lua panic. The runtime will not run scripts again |
+| Value        | Meaning                                                         |
+| ------------ | --------------------------------------------------------------- |
+| `NotReady`   | Off the main thread, not initialized, or shutting down          |
+| `Ready`      | Runtime is up and scripts can run                               |
+| `InitFailed` | Startup failed                                                  |
+| `Panicked`   | Unrecoverable Lua panic. The runtime will not run scripts again |
 
 ## Defaults and caps
 
@@ -159,6 +162,7 @@ See [Limits and errors](limits-and-errors.md).
 
 ## Related
 
+- [Native C++ registration](native-registration.md)
 - [Getting started](../../getting-started/overview.md)
 - [Your first script](../../getting-started/first-script.md)
 - [Limits and errors](limits-and-errors.md)

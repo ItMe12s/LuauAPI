@@ -53,6 +53,13 @@ geode.ColorProvider.define(id, { r = 255, g = 128, b = 0, a = 255 })
 
 local c = geode.ColorProvider.color(id)
 print(c.r, c.g, c.b) -- 255 128 0
+
+-- Override and restore.
+geode.ColorProvider.override(id, { r = 0, g = 200, b = 255, a = 255 })
+sprite:setColor(geode.ColorProvider.color3b(id))
+
+local restored = geode.ColorProvider.reset(id)
+print(restored.r, restored.g, restored.b, restored.a)
 ```
 
 ## Related
@@ -60,6 +67,7 @@ print(c.r, c.g, c.b) -- 255 128 0
 - [globals](globals.md)
 - [cocos](cocos.md)
 - [mod](mod.md)
+- [type stubs](type-stubs.md)
 
 ## Source
 

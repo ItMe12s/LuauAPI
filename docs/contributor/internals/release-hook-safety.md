@@ -12,8 +12,9 @@ Read this before you change any function reachable from `release` or the drain.
 ## The rule
 
 Any function reachable from `CCObject::release` or the deferred release drain must do a non-virtual membership check first.
-No virtual call, no RTTI cast, no map `at`, no `retainCount`, nothing that dereferences or dispatches on the object,
-until a map lookup confirms the object is tracked. If the lookup misses, return before touching the object.
+No virtual call, no RTTI cast, no map `at`, no `retainCount`,
+nothing that dereferences or dispatches on the object, until a map lookup confirms the object is tracked.
+If the lookup misses, return before touching the object.
 
 ## Why
 
@@ -26,8 +27,7 @@ A virtual call on a mid-destruction object is not safe.
 `geode::cast::typeinfo_cast` walks typeinfo, and that walk has faulted on a half-dead object during this exact cascade.
 That was the June 2026 crash fixed in `v0.1.0-beta.9`.
 
-Before the hook runs, most objects are untracked.
-The map `find` only hashes and compares the address value.
+Before the hook runs, most objects are untracked. The map `find` only hashes and compares the address value.
 It never dereferences the object, so it is safe on a half-dead pointer and costs one hash miss for the common case.
 Virtual work must wait until after that miss.
 
@@ -63,8 +63,9 @@ void luaapi_fields_release_hook(cocos2d::CCObject* self) {
 Codegen resolves the `CCObject::release` address per platform and hooks it with `geode::Mod::get()->hook`.
 A failed resolve, install, or enable is non-fatal.
 The hook is skipped and the mod logs a warning, so a bad binding address never blocks the mod from loading.
+`OpaqueHandle` userdata has no release-reachable path. It never touches a `CCObject`.
 
-All three `evictIfFinalRelease` calls must obey this rule because all three run on every release.
+All three final-release evictors must obey this rule because all three run on every release.
 
 ## The compliant functions
 
@@ -103,7 +104,7 @@ Geode `WeakRef::lock` and `valid` call `isManaged`.
 When `retainCount == 1`, only the WeakRef pool still holds the object.
 `isManaged` then runs `WeakRefPool::forget`, which calls `release` again.
 That re-enters LuauAPI's release hook.
-Inside `forget`, `unordered_map::at` can throw `std::out_of_range` with the message `unordered_map::at: key not found`.
+Inside `forget`, `unordered_map::at` can throw `std::out_of_range` when nested release erases the pool entry between the contains check and `at` call.
 
 Never call `lock` or `valid` when `retainCount <= 1`.
 `liveObject` erases the borrowed target and returns `nullptr` instead.
@@ -115,15 +116,18 @@ so `retainCount <= 1` means pool-only there too.
 ## What the drain must do too
 
 The deferred release drain in `src/framework/usertype/DeferredRelease.cpp`
-runs every frame from the `CCDirector::drawScene` hook in `src/bindings/task/TaskSchedulerDrainHook.cpp`.
+runs every frame from the `CCDirector::drawScene` hook in `src/framework/usertype/DeferredReleaseDrainHook.cpp`.
 It calls `release` on owned objects it has held onto.
 
 A release inside the drain re-enters the global hook.
-So the drain inherits the same risk: every object it releases is one more pass through the hook body.
+So the drain inherits the same risk. Every object it releases is one more pass through the hook body.
 On a normal drain the WeakRefs are destroyed after the owned releases so the pool retain can drop.
-During shutdown the drain parks WeakRefs instead (`WeakRefShutdown.hpp`) and skips the logical release,
-because pool teardown is unsafe mid-exit.
+During shutdown the drain parks WeakRefs instead (`WeakRefShutdown.hpp`) and skips the extra logical release,
+because refcounts no longer matter mid-exit. Every queued object still drops its deferred retain.
 Any new drain logic must assume the released object is already being destroyed and must not inspect it after release.
+
+`evictTrampolinesIfFinalRelease` defers physical trampoline releases into `deferredTrampolineReleases()`,
+drained later by `drainDeferredReleases()`. That connects this page's evictors to the drain.
 
 ## When you can use a cast freely
 
@@ -139,9 +143,8 @@ If yes, gate on a membership check first. If no, cast normally.
 
 These checks keep the rule alive after this page:
 
-- A Python guard test in `tests/luau_codegen/guards/test_binding_guards_framework.py`
-  checks that `evictIfFinalRelease` skips `typeinfo_cast`, uses `fieldTables()` and `retainCount`,
-  and never calls `WeakRef::valid`, `lock`, or `entryStillOwnsNode`.
+- A Python guard test in `tests/luau_codegen/guards/test_binding_guards_framework.py` checks that `evictIfFinalRelease` skips `typeinfo_cast`,
+  uses `fieldTables()` and `retainCount`, and never calls `WeakRef::valid`, `lock`, or `entryStillOwnsNode`.
   It also checks that `dropBorrowedTargetIfFinalRelease` looks up `borrowedTargets()` before `retainCount`,
   while `evict(CCObject*)` still uses `typeinfo_cast`.
 - Host tests in `tests/cpp/framework/fields_tests.cpp` cover the no-op case for an untracked node and for a non-node CCObject.
@@ -168,7 +171,7 @@ Extend the guard test so the next change cannot quietly put a virtual call back 
 - `src/framework/callback/LuaTrampolineRegistry.cpp`
 - `src/framework/usertype/DeferredRelease.cpp`
 - `src/framework/usertype/WeakRefShutdown.hpp`
-- `src/bindings/task/TaskSchedulerDrainHook.cpp`
+- `src/framework/usertype/DeferredReleaseDrainHook.cpp`
 - `tools/luau_codegen/emit/bindings/common.py`
 - `tests/cpp/framework/fields_tests.cpp`
 - `tests/cpp/framework/usertype_tests.cpp`

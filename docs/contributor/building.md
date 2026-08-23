@@ -11,21 +11,21 @@ See [Installation](../getting-started/installation.md).
 
 Versions come from `CMakeLists.txt`.
 
-- CMake 3.21 or newer
+- CMake 3.21 or newer.
 - A compiler with C++23 support. See [C++ standard](cpp-standard.md) for Geode utils and style rules.
-- Python 3.11 or newer, used by the binding code generator
-- The Geode SDK, found through the `GEODE_SDK` environment variable
+- Python 3.11 or newer, used by the binding code generator.
+- The Geode SDK, found through the `GEODE_SDK` environment variable.
 
 ## Fetched dependencies
 
 CMake downloads these during configuration, so you do not install them by hand.
 
-- Luau, pinned to tag `0.734`
-- Geode bindings, pinned through `LUAUAPI_BINDINGS_GIT_TAG` in `cmake/GeodeBindings.cmake`
-- Dear ImGui `v1.92.9b`, pinned in `cmake/ImGui.cmake` for `imgui-cocos` and headless tests
-- GLM `1.0.3`, used by the 3D math and glTF loader
-- IXWebSocket `v12.0.1` and mbedTLS `v3.6.6`, fetched for websocket support
-- Catch2 `v3.15.1`, fetched only when tests are on
+- Luau, pinned to tag `0.734`.
+- Geode bindings, pinned through `LUAUAPI_BINDINGS_GIT_TAG` in `cmake/GeodeBindings.cmake`.
+- Dear ImGui `v1.92.9b`, pinned in `cmake/ImGui.cmake` for `imgui-cocos` and headless tests.
+- GLM `1.0.3`, used by the 3D math and glTF loader.
+- IXWebSocket `v12.0.1` and mbedTLS `v3.6.7`, fetched for websocket support.
+- Catch2 `v3.15.1` and fmt `12.2.0`, fetched only when tests are on.
 
 ## Vendored dependencies
 
@@ -42,11 +42,6 @@ Vendored headers in `vendor/` are not fetched by CMake:
 
 The `gd3d` stack is always built into the mod. There is no CMake option to disable it.
 OpenGL comes from Geode and cocos2d, not from a standalone `find_package(OpenGL)` call.
-
-To bump bindings for a new Geometry Dash version, update `mod.json`
-and the `LUAUAPI_BINDINGS_GIT_TAG` cache variable to a matching commit from the Geode bindings repo.
-LuauAPI sets `GEODE_BINDINGS_REPO_PATH` to that same pinned fetch
-so Geode Codegen does not clone bindings `main` on its own.
 
 ## Build
 
@@ -69,6 +64,11 @@ For platform builds, use the Geode CLI or the CI workflow in `.github/workflows/
 The build runs the `luauapi_codegen` target before the main library.
 See [Codegen](codegen/codegen.md).
 
+To bump bindings for a new Geometry Dash version, update `mod.json`
+and the `LUAUAPI_BINDINGS_GIT_TAG` cache variable to a matching commit from the Geode bindings repo.
+LuauAPI sets `GEODE_BINDINGS_REPO_PATH` to that same pinned fetch
+so Geode Codegen does not clone bindings `main` on its own.
+
 ## Supported platforms
 
 See [Installation](../getting-started/installation.md) for the supported platform list.
@@ -85,7 +85,7 @@ See [Testing](testing.md).
 Before pushing changes, run the format script from the repo root.
 You need `clang-format` and `ruff` on PATH.
 
-```sh
+```bash
 python tools/format.py --check
 ```
 

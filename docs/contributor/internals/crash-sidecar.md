@@ -28,7 +28,7 @@ Caught Lua errors from `protectedCall` stay in the Geode log. They do not update
 
 ## File shape
 
-**This example matches a real fault.**
+**This example matches a real fault.** Field values reflect the run that crashed.
 An after-hook on `MenuLayer:init` calls `addChild`, and `libcocos2d.dll` crashes on the native call.
 
 The force crash script:
@@ -84,13 +84,18 @@ Three layers:
    See [Codegen](../codegen/codegen.md).
 2. **Generated bindings.** Each generated method and free function calls `recordBindingEntry` at CFunction entry.
    That returns a `BoundaryScope` that pops when the binding returns.
-3. **Universal choke point.** `Runtime::protectedCallImpl` records script, task, imgui, websocket, web,
+3. **Universal choke point.** `Runtime::protectedCallImpl` records script, imgui, websocket, web,
    and delegate labels from the `context` string each caller passes.
-   Nested ImGui draw closures pass `{.record = false}` so only the top-level `imgui.onDraw` callback pushes a boundary.
-   The sidecar labels that frame `imgui.draw`.
    A `BoundaryScope` pops when the call returns.
 
-Task, imgui, websocket, web, and delegate paths route through `Runtime::protectedCall` without extra site instrumentation.
+Task callbacks record no boundary.
+They resume coroutines through `lua_resume` in `LuaCallback::resumeAndReport`,
+so a fault inside a running task shows the enclosing boundary instead.
+Module loads through `require` also resume via bare `lua_resume` and record nothing.
+
+Imgui draws and the websocket, web, cocos-handler, and delegate invokes route through `Runtime::protectedCall`.
+Nested ImGui widget closures pass `{.record = false}` so only the top-level `imgui.onDraw` callback pushes a boundary.
+The sidecar labels that frame `imgui.draw`.
 Generated bindings record separately because they run native code inside an outer `protectedCall`
 but are not themselves a `protectedCall` site.
 
@@ -104,12 +109,10 @@ but are not themselves a `protectedCall` site.
 ## Flush policy
 
 - In-memory state updates on every boundary push or pop.
-- Flush to disk on boundary push when the active boundary changes.
+- Flush to disk on boundary push when the active boundary changes or the flush interval elapsed.
 - Flush on the task scheduler interval.
 - Flush before generated binding native code runs (`recordBindingEntry` force flush).
 - Pop does not flush. The next push, binding entry, or task tick writes the restored outer frame.
-- Nested ImGui widget closures (`imgui.window`, `imgui.style.with`, and similar) do not push boundaries.
-  Only the top-level `imgui.onDraw` callback records. The sidecar labels that frame `imgui.draw`.
 - Before writing, refresh the active Luau stack from the VM.
   Skip disk when the semantic payload is unchanged from the last write.
   Semantic payload is everything except the `timestamp:` line.
@@ -119,6 +122,8 @@ but are not themselves a `protectedCall` site.
 - I/O errors are swallowed. The sidecar must not wedge the tick or crash the runtime.
 
 See [Limits and errors](../../reference/cpp/limits-and-errors.md) for flush interval and stack depth caps.
+
+How it is tested: `tests/cpp/diagnostics/boundary_recorder_tests.cpp`.
 
 ## Threading
 
@@ -140,12 +145,6 @@ See [hooks](../../reference/lua/hooks.md) for when the sidecar helps with native
 
 `currentMod()` comes from the active resources root. See [mod](../../reference/lua/mod.md).
 It is null outside a script scope. The sidecar still writes. Mod fields show as `(none)`.
-
-## Log prefix
-
-`print`, `warn`, and Luau panic log as `[<mod.id>]` instead of `[lua]`.
-When no mod is in scope the prefix falls back to `[lua]`.
-Panic uses `[<mod.id>:panic code=N]`.
 
 ## Related
 

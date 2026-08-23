@@ -4,16 +4,15 @@
 
 Small helpers under `geode.utils` are documented here. Larger ones have their own page.
 For signatures, use editor autocomplete from [type stubs](type-stubs.md).
-Wide integer types appear as `string` in the stub (see type stubs for the rule).
 
 ## Libraries
 
-| Module | Page | Role |
-| --- | --- | --- |
-| `geode.utils.web` | [web](web.md) | Async HTTP requests |
-| `geode.utils.base64` | [base64](base64.md) | Base64 encode and decode |
-| `geode.utils.permission` | [permission](permission.md) | OS permission checks |
-| `geode.utils.game` | [game](game.md) | Exit, restart, uninstaller |
+| Module                   | Page                        | Role                       |
+| ------------------------ | --------------------------- | -------------------------- |
+| `geode.utils.web`        | [web](web.md)               | Async HTTP requests        |
+| `geode.utils.base64`     | [base64](base64.md)         | Base64 encode and decode   |
+| `geode.utils.permission` | [permission](permission.md) | OS permission checks       |
+| `geode.utils.game`       | [game](game.md)             | Exit, restart, uninstaller |
 
 Related top-level helpers outside this prefix:
 
@@ -24,40 +23,39 @@ Related top-level helpers outside this prefix:
 
 These functions sit directly on `geode.utils`, not in a child table.
 
-| Function | Role |
-| --- | --- |
-| `formatSystemError` | Turn a system error code into text |
-| `getDisplayFactor` | Ratio of physical pixels to logical pixels on one axis |
-| `getEnvironmentVariable` | Read a process environment variable by name. Not available on iOS |
-| `getInputTimestamp` | Latest input timestamp in seconds |
-| `getSafeAreaRect` | Safe area rectangle relative to the window size |
+| Function            | Role                                                   |
+| ------------------- | ------------------------------------------------------ |
+| `formatSystemError` | Turn a system error code into text                     |
+| `getDisplayFactor`  | Ratio of physical pixels to logical pixels on one axis |
+| `getInputTimestamp` | Latest input timestamp in seconds                      |
+| `getSafeAreaRect`   | Safe area rectangle relative to the window size        |
 
 ## platform
 
-| Function | Role |
-| --- | --- |
-| `getString` | Human-readable platform label for crash logs and compatibility checks |
-| `isWine` | Whether the Windows build runs under Wine. Always false on other platforms |
+| Function    | Role                                                                       |
+| ----------- | -------------------------------------------------------------------------- |
+| `getString` | Human-readable platform label for crash logs and compatibility checks      |
+| `isWine`    | Whether the Windows build runs under Wine. Always false on other platforms |
 
 ## thread
 
 Read or set the current thread name for debugging and logging.
 
-| Function | Role |
-| --- | --- |
-| `getDefaultName` | Default thread name |
-| `getName` | Current name, or the default when no custom name was set |
-| `setName` | Assign a custom name |
+| Function         | Role                                                     |
+| ---------------- | -------------------------------------------------------- |
+| `getDefaultName` | Default thread name                                      |
+| `getName`        | Current name, or the default when no custom name was set |
+| `setName`        | Assign a custom name                                     |
 
 ## clipboard
 
 `geode.utils.clipboard` reads and writes the system clipboard as plain text.
 Use it for paste into a text field or copy a result for the user.
 
-| Function | Role |
-| --- | --- |
-| `read` | Current clipboard text. Empty string when empty or read fails |
-| `write` | Copy text to the clipboard. Returns success as a boolean |
+| Function | Role                                                          |
+| -------- | ------------------------------------------------------------- |
+| `read`   | Current clipboard text. Empty string when empty or read fails |
+| `write`  | Copy text to the clipboard. Returns success as a boolean      |
 
 ```lua
 local clip = geode.utils.clipboard
@@ -73,18 +71,18 @@ clip.write("copied from Luau")
 ## random
 
 `geode.utils.random` generates random strings and UUIDs from Geode's PRNG.
-These are not cryptographically secure OS random bytes unless Geode says otherwise elsewhere.
+They are not cryptographically secure.
 
 Length arguments use the wide-integer binding rule. The stub types them as `string`.
 At runtime you must pass a decimal integer string such as `"16"`, not a bare number.
 
-| Function | Role |
-| --- | --- |
-| `generateUUID` | Random UUID v4 string |
-| `generateHexString` | Random lowercase hex string with the given length |
-| `generateAlphanumericString` | Random string using `[0-9A-Za-z]` |
-| `generateString` | Random string from a custom alphabet. `alphabet` must not be empty |
-| `choice` | Random value from a dense, one-based array |
+| Function                           | Role                                                                                                         |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `generateUUID`                     | Random UUID v4 string                                                                                        |
+| `generateHexString`                | Random lowercase hex string with the given length                                                            |
+| `generateAlphanumericString`       | Random string using `[0-9A-Za-z]`                                                                            |
+| `generateString(length, alphabet)` | Random string from a custom alphabet. Length comes first, as an integer string. `alphabet` must not be empty |
+| `choice`                           | Random value from a dense, one-based array                                                                   |
 
 ```lua
 local rand = geode.utils.random
@@ -94,6 +92,9 @@ print(id)
 
 local token = rand.generateHexString("16")
 print(token)
+
+local code = rand.generateString("8", "ABCDEFGHJKMNPQRSTUVWXYZ23456789")
+print(code)
 
 local direction = rand.choice({ "left", "right" })
 print(direction)
@@ -106,16 +107,16 @@ print(direction)
 `geode.utils.string` holds small string helpers from Geode.
 They do not replace Luau's built-in string library.
 
-| Function | Role |
-| --- | --- |
-| `trim`, `trimLeft`, `trimRight` | Remove whitespace or a custom character set from ends |
-| `toLower`, `toUpper` | Case-changed copy |
-| `contains`, `startsWith`, `endsWith` | Substring tests |
-| `replace` | Swap every occurrence of one substring for another |
-| `remove` | Delete every occurrence of a substring |
-| `filter` | Keep only characters in a given set |
-| `normalize` | Collapse repeated spaces per Geode rules |
-| `count` | Count byte occurrences. Pass `c` as a byte value such as `string.byte("e")`. Result is a decimal integer string |
+| Function                             | Role                                                                                                            |
+| ------------------------------------ | --------------------------------------------------------------------------------------------------------------- |
+| `trim`, `trimLeft`, `trimRight`      | Remove whitespace or a custom character set from ends                                                           |
+| `toLower`, `toUpper`                 | Case-changed copy                                                                                               |
+| `contains`, `startsWith`, `endsWith` | Substring tests                                                                                                 |
+| `replace`                            | Swap every occurrence of one substring for another                                                              |
+| `remove`                             | Delete every occurrence of a substring                                                                          |
+| `filter`                             | Keep only characters in a given set                                                                             |
+| `normalize`                          | Collapse repeated spaces per Geode rules                                                                        |
+| `count`                              | Count byte occurrences. Pass `c` as a byte value such as `string.byte("e")`. Result is a decimal integer string |
 
 ```lua
 local str = geode.utils.string
@@ -128,19 +129,18 @@ print(str.count("hello", string.byte("l"))) -- "2"
 
 ## Related
 
-- [Getting started](../../getting-started/overview.md)
 - [globals](globals.md)
 - [web](web.md)
 - [base64](base64.md)
 - [permission](permission.md)
 - [game](game.md)
+- [Getting started](../../getting-started/overview.md)
 
 ## Source
 
 - `src/bindings/geode/GeodeSmallBindings.cpp`
-- `src/bindings/geode/web/GeodeWebCore.cpp`
-- `tools/luau_codegen/extra_bindings/web.dluau`
 - `tools/luau_codegen/model/free_fn_sources.py`
 - `tools/luau_codegen/emit/luau_types/manual_fields.py`
+- `tools/luau_codegen/policy/free_functions.py`
 - `build/luauapi-gen/src/`
 - `types/geode.d.luau`

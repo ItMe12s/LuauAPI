@@ -21,23 +21,24 @@ This page is the entry point for mod authors who want to build a Geode mod using
 ## Key concepts
 
 - One runtime, one main thread. The runtime is created once and reused.
-  Almost every entry point must run on the main thread, and the runtime checks this on each call.
+  Sync entry points must run on the main thread, and the runtime rejects off-thread calls.
+  Async variants hop to the main thread for you.
 - Resources root and flat paths. Scripts load from a resources directory the host passes.
   Names are flat `.luau` file names. See [modules](../reference/lua/modules.md) for path rules.
-- Deadlines and memory. Each run has a time budget in milliseconds. Going over raises an error.
-  Memory has a hard cap with no soft limit.
+- Deadlines and memory. Each run has a time budget and a memory cap.
   See [Limits and errors](../reference/cpp/limits-and-errors.md).
-- Errors are logged, not fatal. LuauAPI runs scripts in a protected call when you call `runFile` or `runScript`,
-  so an error is caught and written to the log instead of crashing the game.
+- Errors are logged, not fatal. LuauAPI runs scripts in a protected call when you call `runFile` or `runScript`.
+  An error is caught and written to the log instead of crashing the game.
 - C++ and Luau can live in the same mod. Register C++ functions and values before running scripts that need them.
-  Registered functions and values use the calling mod's `_G` table and can also be shared with other mods.
+  Registered functions and values live in the shared `_G` table under the calling mod's id, so other mods can call them too.
+
+Working examples live in the demo scripts under `mod/demo/` in this repo.
 
 ## Next
 
-- [Example mod template and installation](installation.md)
+- [Installation](installation.md)
 - [Editor setup](editor-setup.md)
 - [Your first script](first-script.md)
-- [LuauAPI mod guidelines](../mod_guidelines.md)
 
 ## Related
 

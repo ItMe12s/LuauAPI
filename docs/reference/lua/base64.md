@@ -6,12 +6,12 @@
 Every function takes an optional `variant` that picks the alphabet and padding.
 Use the `Variant` table for the values.
 
-| Name | Value | Notes |
-| --- | --- | --- |
-| `Normal` | 0 | standard alphabet |
-| `NormalNoPad` | 1 | standard alphabet, no padding |
-| `Url` | 2 | url safe alphabet |
-| `UrlWithPad` | 3 | url safe alphabet, with padding |
+| Name          | Value | Notes                           |
+| ------------- | ----- | ------------------------------- |
+| `Normal`      | 0     | standard alphabet               |
+| `NormalNoPad` | 1     | standard alphabet, no padding   |
+| `Url`         | 2     | url safe alphabet               |
+| `UrlWithPad`  | 3     | url safe alphabet, with padding |
 
 A bad variant value raises a Lua error.
 The decode functions use the recoverable error shape. See [globals](globals.md) Error shapes.
@@ -66,7 +66,7 @@ print(back) -- hello
 ## Related
 
 - [geode.utils](utils.md)
-- [permission](permission.md)
+- [json](json.md)
 - [globals](globals.md)
 
 ## Source

@@ -37,7 +37,7 @@ Read back position, basis vectors, and euler angles through instance methods.
 `gd3d.gltf.loadMeshFromBytes(bytes)` loads glTF data already in memory. Pass a Luau `buffer` or raw `string`.
 See [Limits and errors](../cpp/limits-and-errors.md) for the read cap.
 The first argument uses the same roots as [fs](fs.md): `"save"`, `"config"`, `"persistent"`, or `"resources"`.
-Shipped assets belong under `"resources"`.
+Unpacked assets belong under `"resources"`.
 
 Returns a mesh handle, or `nil` and an error message. See [globals](globals.md) Error shapes.
 `addMesh` keeps the mesh alive. You do not need to keep the handle after adding.
@@ -78,19 +78,33 @@ Materials from a mesh keep the mesh data alive and may include a base color text
 ## Procedural meshes
 
 `gd3d.mesh.new(data)` builds a mesh from CPU-side geometry without a glTF file.
-Returns the same `Mesh` handle type as `gd3d.gltf.loadMesh`,
-so it works with `viewport:addMesh`, materials, and the rest of the gd3d pipeline.
+Returns the same `Mesh` handle type as `gd3d.gltf.loadMesh`, so it works with `viewport:addMesh`, materials, and the rest of the gd3d pipeline.
 
 `positions` is required and must contain at least one vertex.
 See [Limits and errors](../cpp/limits-and-errors.md) for the vertex cap.
 `indices` is required. Use 1-based vertex indices (Luau convention).
 Each group of three entries is one triangle. The count must be a multiple of three.
 
-If `normals` is omitted, flat normals are computed from face normals.
+If `normals` is omitted, normals are computed from face normals and averaged per vertex.
 `normals` and `uvs`, when provided, must match `positions` length.
 
 The mesh has one primitive and no embedded materials (`materialCount()` is `0`).
 Set a material with `viewport:addMesh` or `viewport:setInstanceMaterial`.
+
+```lua
+local tri = gd3d.mesh.new({
+    positions = {
+        { x = 0, y = 0.35, z = 0 },
+        { x = -0.3, y = -0.25, z = 0 },
+        { x = 0.3, y = -0.25, z = 0 },
+    },
+    indices = { 1, 2, 3 },
+})
+if not tri then return end
+
+local mat = gd3d.Material.new({ color = { r = 0.2, g = 0.7, b = 1, a = 1 } })
+local id = vp:addMesh(tri, gd3d.Transform.new({ x = -1.2, y = 0, z = 0 }), mat)
+```
 
 ## Texture loading
 
@@ -101,22 +115,22 @@ Texture data is released when the handle is collected and no material references
 Materials that reference a texture keep it alive on their own.
 Viewport render targets from `viewport:texture()` are also `Texture` handles with the same methods.
 
+```lua
+local tex, err = gd3d.texture.load("resources", "crate.png")
+if not tex then return print(err) end
+
+vp:setInstanceMaterial(id, gd3d.Material.new({
+    color = { r = 1, g = 1, b = 1 },
+    texture = tex,
+}))
+```
+
 ## Material
 
 `gd3d.Material.new({ color, texture? })` creates a material with a solid base color.
 Pass an optional `texture` field to sample an image loaded with `gd3d.texture.load`.
 Use `{ r, g, b, a }` for RGBA, or a `Vec3` `{ x, y, z }` for opaque RGB.
 `hasTexture` is `true` for a loaded image, viewport render target, or glTF base color texture.
-
-### Instance override
-
-By default each primitive uses its glTF `materialIndex`.
-Pass a fourth argument to `addMesh`, or call `setInstanceMaterial`, to replace all primitives with one material.
-Pass `nil` to clear that override.
-
-`setInstancePrimitiveMaterial` overrides one primitive (0-based index).
-Per-primitive overrides beat the instance-wide override.
-`setInstanceColor` tints the shaded result. Default is white `{ x = 1, y = 1, z = 1 }`.
 
 ## ViewportFrame
 
@@ -139,7 +153,17 @@ Alpha below 1 lets the 2D scene show through.
 `setCompositeEnabled(false)` skips compositing into the 2D scene. The 3D pass still runs so `texture()` works.
 
 `texture()` returns a `Texture` for the color buffer. Use it in `gd3d.Material.new{ texture = ... }`.
-Content is from the previous render in the same frame. Resizing recreates the framebuffer.
+Content is whatever the last completed 3D pass wrote. Resizing recreates the framebuffer.
+
+### Instance overrides
+
+By default each primitive uses its glTF `materialIndex`.
+Pass a fourth argument to `addMesh`, or call `setInstanceMaterial`, to replace all primitives with one material.
+Pass `nil` to clear that override.
+
+`setInstancePrimitiveMaterial` overrides one primitive (0-based index).
+Per-primitive overrides beat the instance-wide override.
+`setInstanceColor` tints the shaded result. Default is white `{ x = 1, y = 1, z = 1 }`.
 
 `addDebugLine` draws a world-space line and returns an id. `setDebugBounds(true)` draws green boxes around instance bounds.
 Debug lines read depth but do not write it. Full mesh wireframe is not supported.
@@ -205,15 +229,6 @@ geode.hook("geode.gd.MenuLayer:init/0", {
 ```
 
 See [mod/demo/demo_viewport.luau](../../../mod/demo/demo_viewport.luau) for the full demo.
-
-## Limits
-
-See [Limits and errors](../cpp/limits-and-errors.md) for mesh, texture, procedural caps, and GPU session disable.
-
-## Finding signatures
-
-The authoritative argument lists live in the generated type stubs, surfaced as editor autocomplete.
-See [type stubs](type-stubs.md).
 
 ## Related
 

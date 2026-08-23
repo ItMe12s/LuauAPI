@@ -44,7 +44,8 @@ Interval meaning:
 ## Coroutine execution
 
 `task.spawn` uses `LuaCallback::fireStackOnThread`.
-`task.delay`, `task.every`, and `task.defer` use `LuaCallback::fireOnThread` (same helper, no extra args).
+`task.delay`, `task.every`, and `task.defer` use `LuaCallback::fireOnThread`.
+Both paths funnel into `fireStackOnThread`. `fireOnThread` is the wrapper for a stored `LuaRef` with no arguments.
 The helper creates a `lua_newthread`, moves the function, and `lua_resume`s under the budget.
 `LUA_OK` and `LUA_YIELD` count as success.
 `task.wait` uses `LuaCallback::resumeThread` with elapsed seconds.
@@ -66,6 +67,7 @@ See [Crash sidecar](crash-sidecar.md).
 `armTaskTick` schedules a small `CCNode` update on the Cocos2d scheduler.
 Tasks use frame delta, so speedhacks affect timing.
 They are not paused with the game pause menu.
+The tick node also records the main thread id if `$on_mod(Loaded)` has not set it yet.
 If the director or scheduler is not ready, arming retries on the main thread until it works.
 Failures log once. `disarmTaskTick` removes the node and stops pending retries.
 
@@ -89,6 +91,8 @@ Caps are in [Limits and errors](../../reference/cpp/limits-and-errors.md).
 - `src/bindings/task/TaskBinding.cpp`
 - `src/bindings/task/TaskScheduler.hpp`
 - `src/bindings/task/TaskScheduler.cpp`
+- `src/framework/schedule/ScheduledHandleBinding.hpp`
+- `src/framework/schedule/CancellableSlots.hpp`
 - `src/bindings/geode/GeodeTaskHandleBinding.cpp`
 - `src/framework/callback/LuaCallback.hpp`
 - `src/core/Config.hpp`

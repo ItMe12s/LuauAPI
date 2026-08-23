@@ -22,8 +22,7 @@ Values are JSON types:
 - array
 - `null` (returns `nil` in Luau)
 
-A missing key returns `nil` only.
-A stored JSON `null` also returns `nil` only.
+A missing key returns `nil` only. A stored JSON `null` also returns `nil` only.
 Recoverable read or conversion failures return `nil` and an error message.
 See [globals](globals.md) Error shapes.
 
@@ -33,8 +32,8 @@ See [globals](globals.md) Error shapes.
 geode.Mod.setSavedValue(key: string, value: any) -> (boolean?, string?)
 ```
 
-Writes a JSON value to the mod save file.
-Returns `true` on success. Returns `nil` and an error message when conversion or save fails.
+Writes a JSON value to your mod save data. Returns `true` on success.
+Returns `nil` and an error message when the value cannot be converted or stored.
 
 ## getSettingValue
 
@@ -59,7 +58,7 @@ geode.Mod.listenForSettingChanges(key: string, callback: (value: any) -> ())
 ```
 
 Calls your function whenever the setting with this key changes.
-The listener stays active until the script unloads.
+The listener stays active until the runtime shuts down.
 
 ## listenForAllSettingChanges
 
@@ -103,18 +102,30 @@ See [Limits and errors](../cpp/limits-and-errors.md) for caps and error strings.
 geode.Mod.setSavedValue("count", 3)
 print(geode.Mod.getSavedValue("count"))
 
+geode.Mod.setSavedValue("best", { level = 12, stars = 40 })
+local saved = geode.Mod.getSavedValue("best")
+if saved then
+    print(saved.level, saved.stars)
+end
+
+print(geode.Mod.getSettingValue("my-toggle"))
+
 geode.Mod.listenForSettingChanges("my-toggle", function(value)
     print("my-toggle is now", value)
+end)
+
+geode.Mod.listenForAllSettingChanges(function(key, value)
+    print(key .. " changed to", value)
 end)
 ```
 
 ## Related
 
-- [Getting started](../../getting-started/overview.md)
 - [fs](fs.md)
 - [json](json.md)
 - [globals](globals.md)
 - [Limits and errors](../cpp/limits-and-errors.md)
+- [Getting started](../../getting-started/overview.md)
 
 ## Source
 

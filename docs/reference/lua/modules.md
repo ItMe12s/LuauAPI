@@ -22,7 +22,8 @@ return M
 ```
 
 ```lua
-local Math = require("./Math")
+local Math = require("./Math")       -- finds Math.luau
+local Util = require("./Util.luau")  -- explicit form also works
 print(Math.add(2, 3))
 ```
 
@@ -31,7 +32,7 @@ print(Math.add(2, 3))
 The rules are strict by design, so loading stays inside the resources root.
 
 - You can only require from a script file. Its chunk name must start with `@`.
-- The require path must start with `./` or `@`.
+- The require path is relative. It must start with `./`.
 - Use `./ModuleName` for a sibling module in the same resources root.
 - Module names are flat. A single file name with no folders in the path.
 - Parent paths such as `../Module` are not supported.

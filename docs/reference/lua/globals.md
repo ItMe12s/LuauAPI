@@ -10,52 +10,49 @@ Core script globals in every Luau chunk:
 - `require`
 - `_G`
 
-Standard Luau libraries and LuauAPI namespaces (`task`, `geode`, `imgui`, `gd3d`, and others) are included.
+Standard Luau libraries and LuauAPI namespaces
+(`task`, `geode`, `imgui`, `gd3d`, and others) are included.
 See Other globals below.
-
 This page covers signatures for the core globals plus error shapes.
-
-## Script basics
-
 Runtime rules live in [Getting started](../../getting-started/overview.md).
 Caps and error strings live in [Limits and errors](../cpp/limits-and-errors.md).
 
 ## All modules
 
-| Group | Page | Role |
-| --- | --- | --- |
-| Core | [hooks](hooks.md) | Hook game functions |
-| Core | [modules](modules.md) | Sandboxed `require` |
-| Core | [sharing APIs between mods](sharing-apis.md) | `_G` mod APIs |
-| Core | [tasks and time](tasks.md) | `task` and `time` |
-| Core | [callbacks](callbacks.md) | C++ callback lifetime |
-| Core | [delegates](delegates.md) | Virtual interface tables |
-| Game | [enums](enums.md) | GD and Geode enum constants |
-| Game | [game objects](game-objects.md) | Cocos and GD objects |
-| Game | [lunar](lunar.md) | Rigging and sprite animation |
-| Game | [cocos](cocos.md) | Node and color helpers |
-| Game | [ColorProvider](color-provider.md) | Theme colors |
-| Game | [Keybind](keybind.md) | Keybind strings |
-| Game | [Keyboard input](keyboard-input.md) | Keyboard events |
-| Game | [Mouse input](mouse-input.md) | Mouse events |
-| UI | [UI and layouts](ui.md) | Cocos UI factories |
-| UI | [imgui](imgui.md) | Dear ImGui overlay |
-| UI | [gd3d](gd3d.md) | 3D viewport rendering |
-| IO | [mod](mod.md) | Saved values and settings |
-| IO | [loader](loader.md) | Installed mod list |
-| IO | [fs](fs.md) | Sandboxed filesystem |
-| IO | [json](json.md) | JSON parse and dump |
-| Network | [web](web.md) | HTTP client |
-| Network | [websocket](websocket.md) | WebSocket client and server |
-| Utils | [geode.utils](utils.md) | Utils namespace index |
-| Utils | [clipboard](utils.md) | System clipboard |
-| Utils | [string](utils.md) | String helpers |
-| Utils | [random](utils.md) | Random strings and UUIDs |
-| Utils | [game](game.md) | Game process control |
-| Utils | [base64](base64.md) | Base64 encode and decode |
-| Utils | [permission](permission.md) | OS permissions |
-| Utils | [VersionInfo](version-info.md) | Version parsing |
-| Meta | [type stubs](type-stubs.md) | `geode.d.luau` reference |
+| Group   | Page                                         | Role                         |
+| ------- | -------------------------------------------- | ---------------------------- |
+| Core    | [hooks](hooks.md)                            | Hook game functions          |
+| Core    | [modules](modules.md)                        | Sandboxed `require`          |
+| Core    | [Sharing APIs between mods](sharing-apis.md) | `_G` mod APIs                |
+| Core    | [tasks and time](tasks.md)                   | `task` and `time`            |
+| Core    | [callbacks](callbacks.md)                    | C++ callback lifetime        |
+| Core    | [delegates](delegates.md)                    | Virtual interface tables     |
+| Game    | [enums](enums.md)                            | GD and Geode enum constants  |
+| Game    | [Game objects](game-objects.md)              | Cocos and GD objects         |
+| Game    | [lunar](lunar.md)                            | Rigging and sprite animation |
+| Game    | [cocos](cocos.md)                            | Node and color helpers       |
+| Game    | [ColorProvider](color-provider.md)           | Theme colors                 |
+| Game    | [Keybind](keybind.md)                        | Keybind strings              |
+| Game    | [Keyboard input](keyboard-input.md)          | Keyboard events              |
+| Game    | [Mouse input](mouse-input.md)                | Mouse events                 |
+| UI      | [UI and layouts](ui.md)                      | Cocos UI factories           |
+| UI      | [imgui](imgui.md)                            | Dear ImGui overlay           |
+| UI      | [gd3d](gd3d.md)                              | 3D viewport rendering        |
+| IO      | [mod](mod.md)                                | Saved values and settings    |
+| IO      | [loader](loader.md)                          | Installed mod list           |
+| IO      | [fs](fs.md)                                  | Sandboxed filesystem         |
+| IO      | [json](json.md)                              | JSON parse and dump          |
+| Network | [web](web.md)                                | HTTP client                  |
+| Network | [websocket](websocket.md)                    | WebSocket client and server  |
+| Utils   | [geode.utils](utils.md)                      | Utils namespace index        |
+| Utils   | [clipboard](utils.md)                        | System clipboard             |
+| Utils   | [string](utils.md)                           | String helpers               |
+| Utils   | [random](utils.md)                           | Random strings and UUIDs     |
+| Utils   | [game](game.md)                              | Game process control         |
+| Utils   | [base64](base64.md)                          | Base64 encode and decode     |
+| Utils   | [permission](permission.md)                  | OS permissions               |
+| Utils   | [VersionInfo](version-info.md)               | Version parsing              |
+| Meta    | [Type stubs](type-stubs.md)                  | `geode.d.luau` reference     |
 
 ## Error shapes
 
@@ -131,20 +128,21 @@ _G: { [string]: any }
 
 The shared global table for every script in the runtime.
 Values you set on `_G` are visible to all scripts and mods.
-Read shared values through `_G[key]` rather than as a bare global name. See [sharing APIs between mods](sharing-apis.md).
+Read shared values through `_G[key]` rather than as a bare global name.
+See [Sharing APIs between mods](sharing-apis.md).
 
 ## Other globals
 
-Standard Luau libraries and LuauAPI namespaces (`task`, `geode`, `imgui`, `gd3d`, and others) are listed in [type stubs](type-stubs.md).
+Standard Luau libraries and LuauAPI namespaces (`task`, `geode`, `imgui`, `gd3d`, and others) are listed in [Type stubs](type-stubs.md).
 Hook helpers such as `geode.skip` are documented in [hooks](hooks.md).
 
 ## Related
 
-- [Getting started](../../getting-started/overview.md)
 - [modules](modules.md)
-- [sharing APIs between mods](sharing-apis.md)
+- [Sharing APIs between mods](sharing-apis.md)
 - [geode.utils](utils.md)
-- [type stubs](type-stubs.md)
+- [Type stubs](type-stubs.md)
+- [Getting started](../../getting-started/overview.md)
 - [Limits and errors](../cpp/limits-and-errors.md)
 
 ## Source

@@ -4,15 +4,17 @@
 
 `geode.Keybind` reads and writes key combinations. A keybind is a plain table.
 
-| Field | Type | Notes |
-| --- | --- | --- |
-| `key` | number | a key code |
+| Field       | Type   | Notes                            |
+| ----------- | ------ | -------------------------------- |
+| `key`       | number | a key code                       |
 | `modifiers` | number | a bit mask of held modifier keys |
 
 Use `geode.cocos.enumKeyCodes.KEY_*` values for `key`.
 Use `geode.KeyboardModifier` constants for `modifiers`.
+`modifiers` is optional and defaults to `0`.
 
 `fromString` returns `nil` and an error message on a bad string.
+`toString` and `createNode` raise a Lua error when the `key` field is missing or not a number.
 See [globals](globals.md) Error shapes.
 
 ## fromString
@@ -50,7 +52,20 @@ if not kb then return print(err) end
 print(geode.Keybind.toString(kb)) -- Ctrl+A
 
 local node = geode.Keybind.createNode(kb)
-if node then someMenu:addChild(node) end
+if not node then return end
+
+local menu = self:getChildByID("bottom-menu")
+if menu then menu:addChild(node) end
+```
+
+Test held modifiers with `bit32.band`:
+
+```lua
+local mods = geode.KeyboardModifier
+
+local function hasControl(kb)
+    return bit32.band(kb.modifiers, mods.Control) ~= 0
+end
 ```
 
 ## Related

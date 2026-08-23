@@ -2,13 +2,12 @@
 
 ## Summary
 
-`geode.json` converts between JSON text and Luau values,
-using the same JSON model as `geode.Mod.getSavedValue` and `setSavedValue`.
+`geode.json` converts between JSON text and Luau values, using the same JSON model as `geode.Mod.getSavedValue` and `setSavedValue`.
 
 JSON types map to Lua as boolean, number, string, `nil` (null), array table, and object table.
-Past depth and size limits, tuple APIs fail recoverably and `dump` raises.
+`parse` returns `nil` plus an error string past the size or depth cap. `dump` raises a Lua error past the depth cap.
 See [globals](globals.md) Error shapes and [Limits and errors](../cpp/limits-and-errors.md).
-Unsupported Luau types serialize as JSON `null`.
+Unsupported Luau types serialize as JSON `null`. A sparse array (missing numeric keys) dumps its holes as JSON `null`.
 
 ## parse
 
@@ -38,8 +37,7 @@ Serializes a Luau value to a JSON string.
 
 - If `#table > 0`, the table becomes a JSON array. Only numeric keys `1..#table` are kept. String keys are dropped.
 - Otherwise the table becomes a JSON object. Only string keys are kept.
-- `indent` controls formatting. The default is compact.
-  A positive number indents with that many spaces, and `-1` indents with tabs.
+- `indent` controls formatting. The default is compact. A positive number indents with that many spaces, and `-1` indents with tabs.
 
 ```lua
 geode.json.dump({ x = true })   -- '{"x":true}'
@@ -54,14 +52,15 @@ See [Limits and errors](../cpp/limits-and-errors.md).
 
 ## Related
 
-- [Getting started](../../getting-started/overview.md)
 - [mod](mod.md)
 - [fs](fs.md)
 - [globals](globals.md)
 - [Limits and errors](../cpp/limits-and-errors.md)
+- [Getting started](../../getting-started/overview.md)
 
 ## Source
 
 - `src/bindings/geode/GeodeSmallBindings.cpp`
 - `src/bindings/geode/JsonConvert.hpp`
+- `src/bindings/geode/JsonConvert.cpp`
 - `tools/luau_codegen/extra_bindings/json.dluau`

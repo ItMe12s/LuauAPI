@@ -13,8 +13,7 @@ It registers the handle metatable and adds a shutdown hook that clears the sched
 Each callback stores its Lua function as a `LuaRef`.
 The handle returned to Lua is a small userdata that holds a draw id and a `cancel` method.
 
-Widget and window functions call `requireFrame` first,
-which rejects a call made off the main thread or outside a draw callback.
+Widget and window functions call `requireFrame` first, which rejects a call made off the main thread or outside a draw callback.
 So a stray `imgui.button` from a `task` callback errors cleanly instead of breaking the ImGui frame.
 `imgui.window`, `imgui.child`, tabs, popups, tables, menus, groups, and style helpers are scoped wrappers.
 They call the matching ImGui begin or push function, run the Lua closure through the runtime protected call,
@@ -34,7 +33,7 @@ The binding is split by feature:
 `ImGuiDrawScheduler` is a single instance.
 Each entry holds an id, a callback reference, and a cancelled flag.
 It does not track visibility, since `ImGuiCocos` owns that. `drawAll()` runs once per frame from inside the ImGui frame.
-It collects the live ids, runs each callback, and sets an `inFrame` flag while it runs them.
+It snapshots the live slots, runs each callback, and sets an `inFrame` flag while it runs them.
 A callback that errors is marked cancelled and removed, so a broken script is dropped instead of logging every frame.
 The scheduler only runs Lua callbacks. It never calls ImGui `Begin` or `End` itself.
 Only the host draw lambda calls `drawAll()`. There is no `CCNode` tick like the task scheduler has.
@@ -45,18 +44,17 @@ Only the host draw lambda calls `drawAll()`. There is no `CCNode` tick like the 
 `initImGuiHost()` is idempotent. It reads the `imgui-scale` mod setting (see [imgui](../../reference/lua/imgui.md)) and listens for live changes.
 It sets up ImGuiCocos and registers the draw lambda that calls `drawAll()`.
 The setup callback rebuilds the font atlas through `imguiFontRebuildAtlas()` after each ImGui init or reload.
-It runs lazily on the first `imgui.onDraw`, so a script that never uses ImGui pays nothing.
+The host starts on its own once game textures load.
+The `TexturesLoaded` handler queues `initImGuiHost()`, and the ImGui frame hook retries it every frame while the GPU session is ready.
+`imgui.onDraw` forces an immediate attempt.
 If there's no OpenGL view yet, setup waits until available, making early `imgui.onDraw` safe.
 All host entry points return early while game textures are unloaded. See [Limits and errors](../../reference/cpp/limits-and-errors.md).
 `shutdownImGuiHost()` clears the scheduler, font registry, and tears down the backend.
 `src/main.cpp` calls it on game exit before `Runtime::shutdown()`, so the draw lambda detaches before the Lua state closes.
-The default input mode stays in place, so the game keeps input unless an ImGui window is hovered or focused.
+gd-imgui-cocos forwards game input by default. Keys and touches reach the game unless ImGui reports a hovered window or captured keyboard.
 `imgui.setVisible`, `imgui.toggle`, and `imgui.isVisible` forward to `ImGuiCocos`.
-gd-imgui-cocos is vendored in `gd-imgui-cocos/`. See [Building from source](../building.md).
-
-## Limits
-
-Draw callback count, per-callback deadlines, font errors, and GPU session disable are in [Limits and errors](../../reference/cpp/limits-and-errors.md).
+gd-imgui-cocos is vendored in `gd-imgui-cocos/` and diverges from upstream
+(no input-mode API, GPU-session gate baked into `drawFrame`). See [Building from source](../building.md).
 
 ## Related
 
@@ -76,6 +74,7 @@ Draw callback count, per-callback deadlines, font errors, and GPU session disabl
 - `src/bindings/imgui/ImGuiDrawScheduler.hpp`
 - `src/bindings/imgui/ImGuiFontRegistry.hpp`
 - `src/bindings/imgui/ImGuiHost.hpp`
+- `src/framework/schedule/ScheduledHandleBinding.hpp`
 - `src/render3d/gpu/GpuSessionDisable.cpp`
 - `gd-imgui-cocos/src/backend.cpp`
 - `gd-imgui-cocos/src/hooks.cpp`

@@ -17,7 +17,7 @@ The goals:
 - Do not crash the game.
 - Do not harm other mods.
 - Do not abuse shared runtime state.
-- Do not ship code that looks like malware.
+- Do not write code that looks like malware.
 
 ## Rejection rules
 
@@ -151,7 +151,8 @@ See [sharing APIs between mods](reference/lua/sharing-apis.md).
 
 Do not abuse the 3D renderer without meaningful user value.
 
-A Luau mod should not turn a menu into a benchmark. If it lags mid range devices like an iPhone 15 or RTX 3050, it is not ready.
+A Luau mod should not turn a menu into a benchmark.
+If it lags mid range devices like an iPhone 15 or RTX 3050, it is not ready.
 
 Bad:
 
@@ -208,7 +209,8 @@ end)
 
 Do not leak handles, nodes, callbacks, or long lived references.
 
-The garbage collector can only clean unreachable values. If you keep old objects in tables forever, the leak is yours.
+The garbage collector can only clean unreachable values.
+If you keep old objects in tables forever, the leak is yours.
 
 Bad:
 
@@ -238,7 +240,7 @@ Do not use Lua reserved keywords or LuauAPI globals as variable names.
 
 Keywords do not parse. Global names hide APIs and make code confusing.
 
-Lua reserved keywords include: `and`, `break`, `continue`, `do`, `else`, `elseif`, `end`, `false`, `for`,
+Reserved keywords include: `and`, `break`, `continue`, `do`, `else`, `elseif`, `end`, `false`, `for`,
 `function`, `if`, `in`, `local`, `nil`, `not`, `or`, `repeat`, `return`, `then`, `true`, `until`, and `while`.
 
 Bad:
@@ -309,11 +311,13 @@ end
 
 ## Other rules
 
-A mod found breaking these rules may still be approved. You should expect review feedback. Repeated abuse can become a rejection.
+A mod found breaking these rules may still be approved.
+You should expect review feedback. Repeated abuse can become a rejection.
 
 ### `other-semicolons`
 
-Semicolons are fine for a tiny guard clause. They are not fine as a way to hide many statements on one line.
+Semicolons are fine for a tiny guard clause.
+They are not fine as a way to hide many statements on one line.
 
 Bad:
 
@@ -336,10 +340,9 @@ if not something then return end
 
 ### `other-nice-codebase-bro`
 
-Do not put a large mod into `bootstrap.luau`.
+Do not put a large mod into `Bootstrap.luau`.
 
-It is called bootstrap because it should start the mod. It should not become the whole mod.
-
+It is called bootstrap because it should start the mod and not become the whole mod.
 Small mods are fine. If the file is around 500 to 600 lines or more, consider modules.
 
 Bad:
@@ -367,8 +370,8 @@ Renderer.start()
 
 Use any readable Lua style. Keep it consistent.
 
-Lua has no single official style guide. The community often follows patterns from LuaRocks, Olivine Labs, and StyLua.
-
+Lua has no single official style guide.
+The community often follows patterns from LuaRocks, Olivine Labs, and StyLua.
 Mixing styles like a blender makes review slower.
 
 Bad:
@@ -404,7 +407,7 @@ Bad:
 ```lua
 geode.hook("geode.gd.MenuLayer:init/0", {
     after = function(self, result)
-        local label = geode.cocos2d.CCLabelBMFont.create("hi", "bigFont.fnt")
+        local label = geode.Label.create("hi")
         if not label then return end
         local director = geode.cocos2d.CCDirector.sharedDirector()
         if not director then return end
@@ -427,7 +430,7 @@ geode.hook("geode.gd.MenuLayer:init/0", {
         local button = makeButton() -- Bring your own button function here.
         button:setID(geode.Mod.getID() .. "/open-button")
         menu:addChild(button)
-        menu:updateLayout()
+        menu:updateLayout(true)
         return result
     end,
 })
@@ -439,7 +442,8 @@ See [game objects](reference/lua/game-objects.md) and [hooks](reference/lua/hook
 
 Do not remake an existing Index mod in Luau with the same purpose and no meaningful changes.
 
-Users do not need the same mod twice. Contribute to the original mod, ask permission, or add something meaningfully new.
+Users do not need the same mod twice.
+Contribute to the original mod, ask permission, or add something meaningfully new.
 
 Bad:
 
@@ -457,7 +461,7 @@ local name = "New feature set, clear credit, and permission"
 
 These are allowed when done with care.
 
-1. The whole mod is just a small `bootstrap.luau` file.
+1. The whole mod is just a small `Bootstrap.luau` file.
 2. One line guards that stay readable.
 3. A stable `_G["your.modid"]` API table filled from Luau, C++, or both.
 4. Performance heavy features that are meaningful, optional, and optimized.

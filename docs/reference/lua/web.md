@@ -4,7 +4,7 @@
 
 `geode.utils.web` exposes Geode async web requests to Lua.
 Requests run on the web worker and callbacks run on the main thread.
-This binding does not expose `openLinkUnsafe` or any `*Sync` method, and file writes stay inside mod sandbox roots.
+This binding does not expose `openLinkUnsafe` or any `*Sync` method.
 For signatures, use editor autocomplete from [type stubs](type-stubs.md). Threading and Security are covered below.
 
 ## Entry points
@@ -23,9 +23,9 @@ See [globals](globals.md) Error shapes.
 3. `fetch(options, callback)` - read `url` from `options` (required). `method` defaults to `GET`.
 
 `multipart()` returns a `MultipartForm` builder for file uploads.
+Version, proxy, auth, and error constants live in the `HttpVersion`, `ProxyType`, `HttpAuth`, and `Error` tables.
 
 Userdata types include `WebRequest`, `WebResponse`, `WebHandle`, `MultipartForm`, and `WebListenerHandle`.
-Request timings are in milliseconds.
 See Security for `certVerification` and TLS behavior.
 
 ## WebRequest
@@ -50,7 +50,7 @@ Status checks:
 
 - `:info()` - 1xx response.
 - `:ok()` - 2xx response.
-- `:redirected()` - followed a redirect.
+- `:redirected()` - 3xx response.
 - `:badClient()` - 4xx response.
 - `:badServer()` - 5xx response.
 - `:error()` - network or transfer error.
@@ -65,10 +65,27 @@ Geode does not expose a pre-download or streaming size cap to LuauAPI, so an ove
 `:text()`, `:bytes()`, `:json()`, and `:saveTo()` return `nil` and an error when the body is too large.
 Async callbacks and response listeners receive `(response?, err?)`.
 
+```lua
+geode.utils.web.post("https://api.example.com/save", {
+    headers = { ["Content-Type"] = "application/json" },
+    bodyJson = { score = 10 },
+    timeout = 10,
+}, function(response, err)
+    if not response then return print(err) end
+    print(response:ok(), response:code())
+end)
+
+geode.utils.web.get("https://example.com/logo.png", function(response, err)
+    if not response then return print(err) end
+    local ok, werr = response:saveTo("save", "logo.png")
+    if not ok then print(werr) end
+end)
+```
+
 ## WebHandle
 
 `:cancel()` returns true if the request was still pending.
-`:id()` returns the Geode request id, or `nil` if there is no active task.
+`:id()` returns the Geode request id.
 
 ## MultipartForm
 
@@ -98,6 +115,12 @@ local handle = geode.utils.web.onRequestIntercept(function(modID, request)
 end)
 
 handle:disconnect()
+
+local listener = geode.utils.web.onResponse(function(modID, response, err)
+    print(modID .. " got a response")
+    return false
+end)
+listener:disconnect()
 ```
 
 ## Threading
@@ -160,12 +183,6 @@ Listeners:
 
 For WebSocket LAN exposure with `host = "0.0.0.0"`, see [websocket](websocket.md).
 See [LuauAPI mod guidelines](../../mod_guidelines.md) for loadstring and network abuse rules.
-
-## Finding signatures
-
-The authoritative argument lists live in the generated type stubs, surfaced as editor autocomplete.
-See [type stubs](type-stubs.md).
-Handwritten extras are in `tools/luau_codegen/extra_bindings/web.dluau`.
 
 ## Related
 

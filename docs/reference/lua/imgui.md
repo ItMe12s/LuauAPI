@@ -4,19 +4,43 @@
 
 `imgui` draws Dear ImGui UI over the game through gd-imgui-cocos.
 Use it for player mod menus, settings panels, tabs, popups, and debug tools.
-For signatures, use editor autocomplete from [type stubs](type-stubs.md).
 
 ## Model
 
 ### Registration and lifecycle
 
 Register one draw callback with `imgui.onDraw`. Build all ImGui UI inside that callback.
-Widget calls must run on the main thread and inside `imgui.onDraw`.
-See [Getting started](../../getting-started/overview.md) for the shared runtime threading rule.
+Widget calls must run inside `imgui.onDraw`.
+See [Getting started](../../getting-started/overview.md) for the shared main-thread rule.
 
 `onDraw` starts the backend on first use. `cancel` removes a callback.
 Dropping the handle cancels it on GC. A callback that errors is removed.
 Use `setVisible`, `toggle`, and `isVisible` to show or hide the overlay without unregistering.
+
+A minimal closable window:
+
+```lua
+local open = true
+local enabled = true
+
+imgui.onDraw(function()
+    if not open then return end
+
+    open = imgui.window("my.mod/quick", function()
+        enabled = imgui.checkbox("Enabled", enabled)
+    end, { closable = true })
+end)
+```
+
+An input text round-trip (the shared buffer means you save the return every frame):
+
+```lua
+local name = ""
+
+imgui.onDraw(function()
+    name = imgui.inputText("Name", name, 64)
+end)
+```
 
 ### Immediate mode
 
@@ -31,14 +55,14 @@ Focused ImGui windows capture the input they need.
 `window`, `child`, `group`, `tabBar`, `tabItem`, `popup`, `popupModal`, `table`, `menuBar`, `menu`, `style.with`,
 and `font.with` always close their ImGui region after `fn`, even when `fn` errors.
 
-- `window` returns false when its close button is pressed.
-- You do not have to name the window with your mod name or ID.
+- `window` returns false when its close button is pressed. Set `closable = true` to get the close button.
+- All mods share one ImGui context. Identical window titles collide silently, so prefix windows with your mod id.
 - Use `sizeCond` or `posCond` with `imgui.Cond.Always` for animated windows.
 
 ### Widgets, buffers, and indexes
 
 - Text is drawn as raw text, so percent signs are safe.
-- Input text uses a shared per-thread buffer. Default max length is 16384 and the cap is 65536.
+- Input text uses a shared per-thread buffer with a length cap. See [Limits and errors](../cpp/limits-and-errors.md).
 - Combo and list indexes are zero-based. Colors use `{ x, y, z, w }` floats from 0 to 1.
 - `treeNode` returns a tracked open value only when `opts.open` is set.
 - `tabItem` and `popupModal` return a close state only when `closable` is true.
@@ -121,16 +145,14 @@ Color keys can be `imgui.Col.*` values or color names from `imgui.Col`.
 
 ## Display scale
 
-LuauAPI exposes an ImGui scale slider in its Geode mod settings under User Settings.
-Higher values make the UI smaller. Default is 4.5. Range is 2.0 to 6.0.
-The value applies at backend init and updates live when you change the setting.
-There is no Lua API for this. It is consistent across Retina, SDL, and other display setups.
+LuauAPI exposes an ImGui scale slider in its Geode mod settings.
+There is no Lua API for this.
 
 ## Fonts
 
-Register fonts before or outside `imgui.onDraw` with `imgui.font.add(root, path, size)`.
+Call `imgui.font.add(root, path, size)` outside `imgui.onDraw`. It errors if called inside a draw callback.
 Use raw `.ttf` resource files, not GD bitmap fonts. The first argument uses the same roots as [fs](fs.md).
-Before ImGui init, `add` returns a handle and loads at first use.
+Before the backend initializes, `add` stores the font and builds it at backend init.
 `imgui.font.with(font, fn)` must run inside `imgui.onDraw` and always pops after `fn`, even when `fn` errors.
 See [Limits and errors](../cpp/limits-and-errors.md) for font error strings.
 
@@ -147,28 +169,18 @@ imgui.onDraw(function()
 end)
 ```
 
-## Constants
-
-Use constants instead of magic numbers:
-
-- `imgui.Flag.Window.*`
-- `imgui.Flag.Combo.*`
-- `imgui.Flag.Table.*`
-- `imgui.Col.*`
-- `imgui.StyleVar.*`
-- `imgui.Cond.*`
-
-See Finding signatures below for the full constant tables.
-
 ## Limits
 
-See [Limits and errors](../cpp/limits-and-errors.md) for draw callback caps, script deadlines, font errors, and GPU session disable.
+See [Limits and errors](../cpp/limits-and-errors.md) for draw callback caps,
+script deadlines, input text caps, font errors, and GPU session disable.
 
 ## Finding signatures
 
 The authoritative argument lists live in the generated type stubs, surfaced as editor autocomplete.
 See [type stubs](type-stubs.md).
 Handwritten extras are in `tools/luau_codegen/extra_bindings/imgui.dluau`.
+Constant tables live under `imgui.Flag.*`, `imgui.Col.*`, `imgui.StyleVar.*`, and `imgui.Cond.*`.
+Use constants instead of magic numbers.
 
 ## Related
 

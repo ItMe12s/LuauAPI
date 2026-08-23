@@ -12,7 +12,7 @@ See [LuauAPI mod guidelines](../../mod_guidelines.md) before shipping a mod that
 
 - `exit` and `restart` can close or reload the whole game.
 - `launchLoaderUninstaller` starts the loader uninstall flow and can delete save data.
-- Index reviewers may reject mods that call these without good reason.
+- Reviewers may reject mods that call these without good reason. Policy lives in [LuauAPI mod guidelines](../../mod_guidelines.md).
 - There is no undo. Test on a dev build first.
 
 ## exit
@@ -32,8 +32,8 @@ geode.utils.game.restart(saveData: boolean) -> ()
 Restarts the game. When `saveData` is true, Geode saves game data before restarting.
 
 The published Luau stub exposes one boolean only.
-Upstream Geode also has a two-argument `restart` with a safe-mode flag on some Windows builds,
-but LuauAPI omits it for cross-platform parity.
+Upstream Geode also has a two-argument `restart` with a safe-mode flag.
+That overload is missing on some platforms, so LuauAPI binds the one-boolean form everywhere.
 
 ## launchLoaderUninstaller
 
@@ -48,13 +48,14 @@ Geode logs an error and does not launch the uninstaller.
 
 ## Related
 
-- [Getting started](../../getting-started/overview.md)
-- [LuauAPI mod guidelines](../../mod_guidelines.md)
 - [geode.utils](utils.md)
+- [LuauAPI mod guidelines](../../mod_guidelines.md)
 - [globals](globals.md)
 - [Limits and errors](../cpp/limits-and-errors.md)
+- [Getting started](../../getting-started/overview.md)
 
 ## Source
 
 - `tools/luau_codegen/model/free_fn_sources.py`
-- Generated free-function bindings at build time
+- `tools/luau_codegen/policy/free_functions.py`
+- `build/luauapi-gen/src/bindings_free_functions.cpp`

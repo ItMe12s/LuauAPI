@@ -31,10 +31,8 @@ Only the listed `gd` containers and `std::array`, `std::pair`, and `std::tuple` 
 `std::vector`, `std::map`, and `std::set` remain unsupported.
 
 Direct `gd::vector<Object*>` and `gd::vector<Opaque*>` values use read-only sequence views.
-Other recursive values use table snapshots.
-Plain Lua table rules apply to snapshots.
-A `nil` indexed leaf creates a hole.
-A `nil` value in a dictionary-shaped map removes that entry.
+Other recursive values use table snapshots. Plain Lua table rules apply to snapshots.
+A `nil` indexed leaf creates a hole. A `nil` value in a dictionary-shaped map removes that entry.
 
 ## Luau shapes
 
@@ -56,8 +54,7 @@ Array output order from unordered sets and unordered pair-key maps is unspecifie
 ## Surfaces
 
 By-value trees bind on class fields, method arguments, method returns, and free functions.
-Existing root pointer and out-parameter behavior stays unchanged.
-Hooks remain container-free.
+Existing root pointer and out-parameter behavior stays unchanged. Hooks remain container-free.
 
 Recursive values reject:
 
@@ -71,10 +68,8 @@ Recursive values reject:
 Seven audited `GJBaseGameLayer` pointer-grid fields use one field-only adapter.
 The read-only fields are `m_sectionSizes`, `m_nonEffectObjectsSizes`, and `m_collisionBlockSectionSizes`.
 The writable fields are `m_nonEffectObjectsFlags`, `m_collisionBlockSections`, `m_sections`, and `m_nonEffectObjects`.
-Null children through this adapter still appear as empty tables.
-Lua cannot distinguish those null children from empty children.
-Writing `{}` creates or keeps a non-null empty row.
-Codegen emits the adapter only for these seven fields.
+Null children through this adapter still appear as empty tables. Lua cannot distinguish those null children from empty children.
+Writing `{}` creates or keeps a non-null empty row. Codegen emits the adapter only for these seven fields.
 
 ## Runtime and codegen
 
@@ -100,7 +95,7 @@ These helpers preserve the existing read, write, and null-child behavior without
 - [Codegen](codegen.md)
 - [ccCArray read-only fields](cc-c-array.md)
 - [Testing](../testing.md)
-- [Game objects](../../reference/lua/game-objects.md)
+- [game objects](../../reference/lua/game-objects.md)
 - [Limits and errors](../../reference/cpp/limits-and-errors.md)
 
 ## Source

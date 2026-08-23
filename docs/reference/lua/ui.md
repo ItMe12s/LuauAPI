@@ -24,10 +24,16 @@ The result can be nil, so check it.
 local cc2d = geode.cocos2d
 local modId = geode.Mod.getID()
 
-local sprite = geode.CircleButtonSprite.create(cc2d.CCSprite.create("GJ_plusBtn_001.png"))
+local sprite = geode.CircleButtonSprite.create(
+    cc2d.CCSprite.create("GJ_plusBtn_001.png"),
+    geode.CircleBaseSize.Medium,
+    geode.CircleBaseColor.Blue
+)
 if not sprite then return end
 sprite:setID(modId .. "/add-button")
 ```
+
+Generated bindings require every argument listed in the stub, even where C++ has defaults.
 
 Common factories include:
 
@@ -39,10 +45,11 @@ Common factories include:
 ## Layouts
 
 A layout positions a node's children for you.
-Set a layout on any `CCNode` with `:setLayout()`, then call `:updateLayout()` after adding children.
+Set a layout on any `CCNode` with `:setLayout(layout, apply, respectAnchor)`,
+then call `:updateLayout(updateChildOrder)` after adding children.
+Both calls require every argument. The flag semantics come from the Geode SDK.
 
-- `geode.AxisLayout`, with shorthands `geode.RowLayout` and `geode.ColumnLayout`,
-  arranges children along an axis.
+- `geode.AxisLayout`, with shorthands `geode.RowLayout` and `geode.ColumnLayout`, arranges children along an axis.
 - `geode.AnchorLayout` pins children to anchor points of the parent.
 - The `*Options` factories tweak per-child behavior, attached with `:setLayoutOptions()`.
 
@@ -52,9 +59,9 @@ local modId = geode.Mod.getID()
 
 local menu = cc2d.CCMenu.create()
 menu:setID(modId .. "/my-menu")
-menu:setLayout(geode.ColumnLayout.create())
+menu:setLayout(geode.ColumnLayout.create(), true, false)
 -- Add your buttons to the menu here.
-menu:updateLayout()
+menu:updateLayout(true)
 ```
 
 ## Quick popups
@@ -83,16 +90,16 @@ Use `alert` for a one-button message, `quickPopup` for a two-button prompt, or `
 
 `manage` returns a `ManagedPopup`:
 
-| Method | Role |
-| --- | --- |
-| `getInner` | Get the managed native popup |
-| `setPersistent` | Keep the popup visible across scene transitions |
-| `setPriority` | Set its queue priority |
-| `blockClosingFor` | Temporarily prevent closing |
-| `showInstant` | Show immediately |
-| `showQueue` | Add it to the popup queue |
-| `isShown` | Whether it is currently shown |
-| `shouldPreventClosing` | Whether closing is currently blocked |
+| Method                 | Role                                            |
+| ---------------------- | ----------------------------------------------- |
+| `getInner`             | Get the managed native popup                    |
+| `setPersistent`        | Keep the popup visible across scene transitions |
+| `setPriority`          | Set its queue priority                          |
+| `blockClosingFor`      | Temporarily prevent closing                     |
+| `showInstant`          | Show immediately                                |
+| `showQueue`            | Add it to the popup queue                       |
+| `isShown`              | Whether it is currently shown                   |
+| `shouldPreventClosing` | Whether closing is currently blocked            |
 
 Use `geode.PopupManager.isManaged(popup)` to test a popup and
 `geode.PopupManager.hasPendingPopups()` to test the queue.
@@ -104,37 +111,47 @@ The stub also exposes a few free functions on `geode` itself:
 
 - `geode.createDefaultLogo()` and `geode.createServerModLogo(modId)` for mod branding nodes.
   `createServerModLogo` takes a server mod ID string, not a local package path.
-- `geode.openModsList()` to open the in-game mod list
+- `geode.openModsList()` to open the in-game mod list.
 - `geode.openInfoPopup(modID)` to show an installed mod or fetch mod info.
-  It returns nil when the mod is installed.
-  Otherwise it returns a `GeodeTaskHandle<boolean>` for the async lookup.
-- `geode.Notification.create(text, icon, duration)` for toast overlays
-- `geode.pushSceneWithLayer(layer)` to wrap a `CCLayer` in a new scene and push it
+  It returns a `GeodeTaskHandle<boolean>?`. It can be nil when no async lookup is needed.
+  For the exact condition, see the [Geode SDK docs](https://docs.geode-sdk.org/).
+- `geode.Notification.create(text, icon, duration)` for toast overlays.
+  Pass an icon from `geode.NotificationIcon.*`.
+- `geode.pushSceneWithLayer(layer)` to wrap a `CCLayer` in a new scene and push it.
 
-`geode.Button:setDisplayNode(node)` replaces a button's display node while preserving Geode's button Z-order behavior.
+A toast notification:
+
+```lua
+local note = geode.Notification.create("Saved!", geode.NotificationIcon.Success, 2)
+if note then
+    note:show()
+end
+```
+
+Queueing an existing popup:
+
+```lua
+local popup = geode.PopupManager.manage(alertLayer)
+if popup then
+    popup:blockClosingFor(2)
+    popup:showQueue()
+end
+```
+
+A `Button` node's `:setDisplayNode(node)` replaces its display node while preserving Geode's button Z-order behavior.
 
 Not every factory is listed here.
 For the rest, read [type stubs](type-stubs.md) and the [Geode SDK docs](https://docs.geode-sdk.org/).
 
-## ImGui mod menus
-
-See [imgui](imgui.md) and [mod/demo/demo_modmenu.luau](../../../mod/demo/demo_modmenu.luau) for overlay menus.
-
-## Finding signatures
-
-These classes are generated from the Geode bindings.
-The authoritative argument lists live in the generated type stubs, surfaced as editor autocomplete.
-See [type stubs](type-stubs.md). For class behavior, read the upstream [Geode UI docs](https://docs.geode-sdk.org/).
-
 ## Related
 
-- [Getting started](../../getting-started/overview.md)
-- [LuauAPI mod guidelines](../../mod_guidelines.md)
+- [globals](globals.md)
 - [game objects](game-objects.md)
-- [callbacks](callbacks.md)
 - [imgui](imgui.md)
+- [callbacks](callbacks.md)
 - [type stubs](type-stubs.md)
 - [gd3d](gd3d.md)
+- [LuauAPI mod guidelines](../../mod_guidelines.md)
 
 ## Source
 

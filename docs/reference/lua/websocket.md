@@ -68,12 +68,22 @@ local ws = websocket.connect("wss://echo.websocket.org")
 ws:onOpen(function()
     ws:send("hello")
 end):onMessage(function(data, isBinary)
-    print("received:", data)
+    if isBinary then
+        print("binary payload:", #data)
+    else
+        print("received:", data)
+    end
 end):onClose(function(code, reason, remote)
     print("closed:", code, reason)
 end):onError(function(message)
     print("error:", message)
 end)
+
+-- Options example.
+local auth = websocket.connect("wss://api.example.com/socket", {
+    headers = { Authorization = "Bearer " .. token },
+    pingIntervalSecs = 15,
+})
 ```
 
 ## WebSocketServer
@@ -117,7 +127,9 @@ peer:id() -> string?            -- Stable per connection. Use as a table key.
 
 Peer userdata handed to different callbacks may be distinct Lua values for the same connection.
 Use `peer:id()` to key tables.
-Methods on a disconnected peer return `nil` and `"websocket peer is disconnected"`.
+`send` and `sendBinary` on a disconnected peer return `nil` and `"websocket peer is disconnected"`.
+`close` on a disconnected peer does nothing.
+`remoteAddress` and `id` keep returning their last values.
 
 ## Limits
 
@@ -134,7 +146,6 @@ Only do this intentionally.
 
 TLS on the client:
 
-- `certVerification` defaults to `true` for `wss://`.
 - Setting `certVerification = false` disables verification. This is unsafe for production (see [web](web.md) Security).
 - On platforms without a usable system certificate store for mbedTLS, pass a PEM bundle via `caBundle`.
 - The server side does not support TLS.
@@ -149,12 +160,12 @@ Nothing closes them when an individual script run returns, so keep a reference f
 
 ## Related
 
-- [Getting started](../../getting-started/overview.md)
-- [LuauAPI mod guidelines](../../mod_guidelines.md)
 - [web](web.md)
+- [Getting started](../../getting-started/overview.md)
+- [Limits and errors](../cpp/limits-and-errors.md)
+- [LuauAPI mod guidelines](../../mod_guidelines.md)
 - [tasks and time](tasks.md)
 - [globals](globals.md)
-- [Limits and errors](../cpp/limits-and-errors.md)
 
 ## Source
 

@@ -17,6 +17,7 @@ It keeps all loading inside the resources root.
 - `jump_to_alias` is not supported and always reports not found.
 - `is_module_present` checks that the resolved file exists.
 - `get_chunkname` and `get_loadname` report the chunk name and resolved path.
+  Chunk names look like `@name.luau`.
 - `get_cache_key` reads the module file and returns `fileCacheKey(path, contents)`.
 - `load` reads, compiles, and runs the module.
 
@@ -34,7 +35,7 @@ User-facing require rules are in [modules](../../reference/lua/modules.md).
 
 1. Resolve the module path inside the root, or raise an error.
 2. Check the file size against the [Limits and errors](../../reference/cpp/limits-and-errors.md).
-3. Read the file.
+3. Read the file, reusing the contents fetched during the cache key step when they match.
 4. Compile to bytecode, using the runtime cache.
 5. Create a new thread and sandbox it.
 6. Load the bytecode, and apply codegen if enabled.
@@ -44,15 +45,12 @@ User-facing require rules are in [modules](../../reference/lua/modules.md).
 
 ## File cache keys
 
-`BytecodeCacheKey.hpp` builds cache keys from file metadata and content.
-`fileCacheKey` combines path, size, mtime, and content hash.
-Both `get_cache_key` and bytecode compilation use it,
-so the require and bytecode caches stay in sync when a file or its contents change.
+`BytecodeCacheKey.hpp` builds cache keys from file metadata and content. `fileCacheKey` combines path, size, mtime, and content hash.
+Both `get_cache_key` and bytecode compilation use it, so the require and bytecode caches stay in sync when a file or its contents change.
 
 ## Sandbox
 
-The path sandbox helpers in `PathSandbox.hpp` read files with a size check
-and resolve a candidate path so it stays inside the root.
+The path sandbox helpers in `PathSandbox.hpp` read files with a size check and resolve a candidate path so it stays inside the root.
 This is the same containment used by the public `runFile` path.
 
 ## Limits
@@ -74,3 +72,4 @@ See [Limits and errors](../../reference/cpp/limits-and-errors.md).
 - `src/require/Requirer.hpp`
 - `src/require/PathSandbox.hpp`
 - `src/require/BytecodeCacheKey.hpp`
+- `src/require/BytecodeCacheKey.cpp`

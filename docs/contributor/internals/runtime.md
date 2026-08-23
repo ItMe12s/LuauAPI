@@ -33,7 +33,7 @@ and applies all bindings. After this, `status` reports `Ready`.
 The state uses `boundedAlloc`, a custom allocator.
 It tracks current use in `m_memoryUsage` and caps it at `m_memoryLimit`.
 See [Limits and errors](../../reference/cpp/limits-and-errors.md) for the cap and out-of-memory behavior.
-The helper logic lives in private helpers inside `src/core/Runtime.cpp`.
+Allocator arithmetic lives in anonymous-namespace helpers at the top of `src/core/Runtime.cpp`.
 
 ## Deadlines and budget
 
@@ -58,9 +58,21 @@ The cache key is built in the module layer. See [Module system](module-system.md
 - `protectedCall` wraps `lua_pcall` with a traceback handler and a budget.
   The task and hook layers call it to run Lua callbacks safely.
 - Errors are formatted with a traceback and stored in `m_lastError`.
+  Each run clears it first, and host paths are redacted before storage.
+  It surfaces publicly through `imes::luauapi::lastError()` in `src/api.cpp`.
+
+The runtime also replaces the script globals:
+
+- `print` and `warn` join arguments with a tab, redact host paths, and log as `[<mod-id>] <text>`.
+- A custom `loadstring` compiles through the shared bytecode cache with chunk name `=loadstring` by default.
+  It enforces the script size cap. See [globals](../../reference/lua/globals.md).
+- The constructor marks globals safe with `lua_setsafeenv`, so bare global reads cannot cache stale values.
+
+A Lua panic sets status to `Panicked`. Afterwards only traceback-style calls run, and they fail with the cached error until restart.
 
 ## Crash sidecar
 
+When sidecar recording is enabled,
 `protectedCallImpl` pushes a `BoundaryScope` for each protected call and pops it when the call returns.
 Hook calls pass hook kind and callback id through `ProtectedCallBoundary`.
 See [Crash sidecar](crash-sidecar.md).
@@ -72,8 +84,7 @@ The requirer uses this root to resolve modules.
 
 ## Generation counter
 
-`m_generation` increases across runtime restarts.
-A `LuaRef` records the generation it was created in.
+`m_generation` increases across runtime restarts. A `LuaRef` records the generation it was created in.
 After a restart, an old reference sees a generation mismatch and reports itself as invalid.
 
 Recreating the runtime does not reset `UsertypeRegistry`. Usertype tags and metatable names stay for the process.
@@ -82,15 +93,17 @@ See [Bindings framework](bindings-framework.md).
 ## Shutdown
 
 `registerShutdownHook` adds a cleanup callback.
-On shutdown the runtime runs the hooks, releases Lua owned C++ objects, clears field tables, and closes the Lua state.
+On shutdown the runtime runs the hooks, closes the Lua state, then releases Lua owned C++ objects.
+Collecting owned userdata during the close also evicts its per-node field table.
 
-Hooks run in **LIFO** order: the most recently registered hook runs first, then earlier ones.
+Hooks run in **LIFO** order. The most recently registered hook runs first, then earlier ones.
 Subsystems that register during startup therefore shut down in reverse registration order.
 Hooks registered while a shutdown pass is already running are deferred until the next `runShutdownHooks` call.
 Tests in `tests/cpp/core/runtime_tests.cpp` preserve this contract.
 
 Subsystems register hooks through `ensureShutdownHook` in `src/framework/lifecycle/Lifecycle.hpp`.
-WebSocket uses this to close live connections and servers. See [Bindings framework](bindings-framework.md) Shutdown hooks.
+WebSocket uses this to close live connections and servers.
+See [Bindings framework](bindings-framework.md).
 
 ## Related
 
@@ -104,6 +117,7 @@ WebSocket uses this to close live connections and servers. See [Bindings framewo
 
 - `src/core/Runtime.hpp`
 - `src/core/Runtime.cpp`
+- `src/api.cpp`
 - `src/core/StackFormat.hpp`
 - `src/core/StackFormat.cpp`
 - `src/core/Config.hpp`

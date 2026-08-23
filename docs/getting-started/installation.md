@@ -2,16 +2,14 @@
 
 ## Summary
 
-The fastest way to start a LuauAPI mod is the example template.
-Create it with the Geode CLI or download it from GitHub.
-For an existing mod, add the dependency and resources manually.
+Start new mods from the example template.
+Existing mods add a dependency and resources.
 You do not need to build LuauAPI from source.
-See the [README](../README.md) beta note for release stability.
+See the [LuauAPI documentation](../README.md) beta note for release stability.
 
 ## Start a new mod from the template
 
-The [LuauAPI example mod template](https://github.com/ItMe12s/luauapi-example-mod)
-already contains the dependency, resources, editor config, and first script.
+The [LuauAPI example mod template](https://github.com/ItMe12s/luauapi-example-mod) already contains the dependency, resources, editor config, and first script.
 
 ### Geode CLI
 
@@ -19,7 +17,7 @@ This is the recommended path and the easiest.
 
 1. Run:
 
-   ```sh
+   ```bash
    geode new
    ```
 
@@ -32,15 +30,13 @@ This is the recommended path and the easiest.
 1. Visit the [template repository](https://github.com/ItMe12s/luauapi-example-mod).
 2. Select the green `Code` button, then `Download ZIP`.
 3. Extract the archive and rename the project folder.
-4. Replace every `$GEODE_VERSION` and `$MOD_*` placeholder in `mod.json`.
-   Use `5.9.0` for `$GEODE_VERSION`.
+4. Replace every `$GEODE_VERSION` and `$MOD_*` placeholder in `mod.json`. Use `5.9.0` for `$GEODE_VERSION`.
 
 ## Install the mod
 
-Install LuauAPI from [GitHub releases](https://github.com/ItMe12s/LuauAPI/releases) for the latest features and patches,
-or from the Geode in-game mod index when it is listed there (more stable and approved by index staff).
-Download the `.geode` file and place it in your mods folder if you install manually.
-LuauAPI ships with the mod id `imes.luauapi`.
+Install LuauAPI from [GitHub releases](https://github.com/ItMe12s/LuauAPI/releases) for the latest features and patches.
+Or install from the Geode in-game mod index when it is listed there. Index versions are reviewed by index staff.
+Download the `.geode` file and place it in your mods folder if you install manually. LuauAPI's mod id is `imes.luauapi`.
 It loads early with first priority, so the runtime is ready for other mods as soon as the game starts.
 
 Requires Geode **5.9.0** or newer (see `mod.json` `"geode"` field).
@@ -54,7 +50,7 @@ For either template path:
 3. Follow [Editor setup](editor-setup.md) to download `types/geode.d.luau`.
 4. Build the project:
 
-```sh
+```bash
 geode build
 ```
 
@@ -102,20 +98,14 @@ Geode packs them into a flat resources folder at runtime.
 There are no subdirectories. Use unique file names.
 Subfolders in your repo, such as `mod/luauapi/`, are for organization only.
 They load from your mod resources directory at runtime.
-Ship 3D assets the same way. Pack `.glb` or `.gltf` files under `"resources"` and load them with `gd3d.gltf.loadMesh`.
+Add 3D assets the same way. Pack `.glb` or `.gltf` files under `"resources"` and load them with `gd3d.gltf.loadMesh`.
 Include `.ttf` files when you use custom ImGui fonts.
 See [gd3d](../reference/lua/gd3d.md) and [imgui](../reference/lua/imgui.md).
 
 ## Use C++ and Luau together
 
-Most mods only need the dependency above.
-If your mod already has C++ entry points, it can run Luau scripts,
-expose typed C++ functions and values to those scripts, or do both.
-Call `imes::luauapi::runFile` or `runScript` with your resources directory.
-This needs a required dependency.
-See [Getting started](overview.md) for the main-thread rule, [Your first script](first-script.md),
-and the [C++ API reference](../reference/cpp/api-reference.md).
-Register C++ functions and values before running a script that needs them.
+If your mod already has C++ entry points, it can run Luau scripts, expose typed C++ functions and values to those scripts, or do both.
+This needs a required dependency. See [Your first script](first-script.md) and the [C++ API reference](../reference/cpp/api-reference.md).
 Registration works with a required or optional dependency.
 See [Native C++ registration](../reference/cpp/native-registration.md) for the full example and supported types.
 
@@ -133,13 +123,12 @@ See [Native C++ registration](../reference/cpp/native-registration.md) for the f
 
 ## Related
 
-- [Getting started](overview.md)
-- [Editor setup](editor-setup.md)
-- [Your first script](first-script.md)
 - [LuauAPI mod guidelines](../mod_guidelines.md)
+- [Getting started](overview.md)
 - [Building from source](../contributor/building.md)
 
 ## Source
 
 - `mod.json`
+- `dummy-mods/`
 - `CMakeLists.txt`

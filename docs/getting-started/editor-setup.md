@@ -15,7 +15,7 @@ Install VSCode and the Luau Language Server extension, `luau-lsp` by JohnnyMorga
 
 ## Step 2: get the type stub
 
-Download `geode.d.luau` from the LuauAPI GitHub release tab.
+Download `geode.d.luau` from the [LuauAPI releases](https://github.com/ItMe12s/LuauAPI/releases) tab.
 It sits next to the `.geode` mod file. No build is needed.
 If you build LuauAPI from source instead, the stub is written to `types/` after a build.
 See [Building from source](../contributor/building.md).
@@ -76,6 +76,7 @@ The stub is generated output, not source. Add this to your mod `.gitignore`.
 ## Step 7: reload
 
 Reload the VSCode window, open a `.luau` file, and type `geode.` to confirm autocomplete works.
+For a quick sanity check, `geode.Mod.getID()` should show hover type `string`.
 
 ## Keeping types current
 

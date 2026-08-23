@@ -29,8 +29,9 @@ Returns `nil` and an error message if either string is bad.
 geode.VersionInfo.matches(constraint: string, version: string) -> (boolean?, string?)
 ```
 
-Tests a version against a constraint such as `>=v1.2.0`. Returns `true` or `false`, or `nil` and an
-error message.
+Tests a version against a constraint such as `>=v1.2.0`. Returns `true` or `false`, or `nil` and an error message.
+Different major numbers never match, even with `>=`.
+Tags are limited to `alpha`, `beta`, and `prerelease`, for example `v1.2.3-beta.1`.
 
 ## Example
 
@@ -42,12 +43,13 @@ print(parts.major, parts.minor, parts.patch) -- 1 2 3
 
 print(v.compare("v1.0.0", "v1.2.0"))   -- -1
 print(v.matches(">=v1.2.0", "v1.3.0")) -- true
+print(v.matches(">=v1.2.0", "v2.0.0")) -- false: major versions never match.
 ```
 
 ## Related
 
 - [globals](globals.md)
-- [mod](mod.md)
+- [loader](loader.md)
 - [sharing APIs between mods](sharing-apis.md)
 
 ## Source

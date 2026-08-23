@@ -21,8 +21,11 @@ Codegen adds a small set of read methods from `Geode/cocos/cocoa/CCArray.h`.
 Example:
 
 ```lua
-local lists = localLevelManager:getCreatedLists(0)
-if not lists or lists:count() == 0 then return nil end
+local manager = geode.gd.LocalLevelManager.sharedState()
+if not manager then return end
+
+local lists = manager:getCreatedLists(0)
+if not lists or lists:count() == 0 then return end
 
 local first = lists:objectAtIndex(0)
 ```

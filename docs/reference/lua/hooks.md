@@ -26,8 +26,9 @@ The target id is `namespace.Class:method/argCount`.
 
 Examples: `geode.gd.MenuLayer:init/0`, `geode.gd.GameManager:setIntGameVariable/2`.
 
-The id uses argument count only, not argument types. C++ overloads that share the same arity hook the same target,
-codegen rejects ambiguous same-arity overloads at build time.
+The id uses argument count only, not argument types.
+Two C++ overloads with the same argument count would collide on one id,
+so codegen picks a preferred overload or rejects the ambiguity at build time.
 
 ## HookCallbackTable
 
@@ -41,12 +42,6 @@ type HookCallbackTable = {
 
 Provide at least one of `before` or `after`. `priority` orders callbacks on the same target, default `0`.
 
-## Nil object arguments
-
-Normal API calls reject nil object pointers.
-Hook `before` and `after` callbacks may pass nil for object pointer arguments when you need to observe or rewrite a call with a missing object.
-This does not apply to regular method calls outside hooks.
-
 ## The before callback
 
 `before` receives `self` and the method arguments. Its return decides what happens:
@@ -55,8 +50,7 @@ This does not apply to regular method calls outside hooks.
 - `{ args = {...} }`: replace arguments (positional or named keys).
   Wrong types are logged and the original args are kept.
 - `geode.skip(value)`: skip the original and use `value` as the return.
-  For void methods use `geode.skip()`.
-  Skip also suppresses all `after` callbacks for that invocation.
+  For void methods use `geode.skip()`. Skip also suppresses all `after` callbacks for that invocation.
 - Any other non-nil value: logged and ignored, original still runs.
 
 ```lua
@@ -69,9 +63,29 @@ geode.hook("geode.gd.GameManager:setIntGameVariable/2", {
 })
 ```
 
+Argument overrides also accept named keys:
+
+```lua
+geode.hook("geode.gd.GameManager:setIntGameVariable/2", {
+    before = function(self, key, value)
+        if value < 0 then
+            return { args = { key = key, value = 0 } }
+        end
+    end,
+})
+```
+
+A failing or timed-out `before` behaves like returning nothing. The original still runs.
+
+### Nil object arguments in overrides
+
+When rewriting arguments, hook callbacks may pass nil for object pointer arguments.
+Normal API calls reject nil object pointers. This only applies inside hook argument overrides.
+
 ## The after callback
 
 `after` receives `self`, the method arguments, then the return value last.
+Void methods pass no return value, so the callback ends with the last argument.
 It runs only when the original C++ call runs on that invocation.
 If `before` returns `geode.skip()`, neither the original nor any `after` callback runs.
 
@@ -104,6 +118,16 @@ Builds a skip marker for use as a `before` return.
 The original does not run, the value becomes the return, and `after` callbacks do not run.
 Use no argument for functions that return nothing.
 
+```lua
+geode.hook("geode.gd.GameManager:getIntGameVariable/1", {
+    before = function(self, key)
+        if blockedKey(key) then
+            return geode.skip(0)
+        end
+    end,
+})
+```
+
 ## HookHandle
 
 ```lua
@@ -133,13 +157,11 @@ Per-node Lua storage. See [game objects](game-objects.md) for `geode.fields`, `m
 ## Prefer the right tool
 
 A hook is a sharp tool. Reach for a built-in API first when one exists.
+Do not hook `CCScheduler::update` for per-frame work.
+Use [tasks and time](tasks.md) (`task.every`) or a node's `schedule` selector.
 
-- Per frame work: do not hook `CCScheduler::update`. Use [tasks and time](tasks.md) (`task.every`) or a node's `schedule` selector.
-- Nodes that survive scene changes: do not re-add them from each layer's `init`. Use `OverlayManager`.
-- Reading another mod's effect: check for the node or value it produces instead of hooking.
-
-Hooking hot functions to do work an existing API already covers is a common Index rejection reason.
-See the [Geode SDK guidelines tips](https://docs.geode-sdk.org/mods/guidelines-tips/) and [LuauAPI mod guidelines](../../mod_guidelines.md).
+See [LuauAPI mod guidelines](../../mod_guidelines.md) for when hooks are the wrong choice,
+and the [Geode SDK guidelines tips](https://docs.geode-sdk.org/mods/guidelines-tips/) for review rules.
 
 Luau hooks call originals through Geode's tulip wrapper for the hooked address,
 so they compose with C++ `$modify` mods on the same method.

@@ -3,15 +3,13 @@
 ## Summary
 
 How to read and create game objects from a script.
-Covers the `geode.cocos2d` and `geode.gd` namespaces,
-table-shaped values like points and sizes, and per-object fields.
+Covers the `geode.cocos2d` and `geode.gd` namespaces, table-shaped values like points and sizes, and per-object fields.
 
 ## The two namespaces
 
 `geode.cocos2d` holds engine classes, e.g.:
 
 - `CCDirector`
-- `CCLabelBMFont`
 - `CCSprite`
 - action classes such as `CCMoveTo`
 
@@ -36,7 +34,7 @@ local gm = gd.GameManager.get()
 Many classes provide a `create` factory. Always check the result, because it can be nil.
 
 ```lua
-local label = cc2d.CCLabelBMFont.create("Hello, World!", "bigFont.fnt")
+local label = cc2d.CCLabelBMFont.create("Hello, World!", "chatFont.fnt") -- You would prefer geode.Label.create over this.
 if not label then return end
 label:setScale(0.5)
 ```
@@ -51,10 +49,9 @@ When creating a node, always call `:setID()` and pass an id string:
 - Use lowercase kebab-case.
 - Do not use spaces.
 
-Example: `mod-id/my-node-id`
+Example: `mod-id/my-node-id`.
 
-String IDs let you find nodes with `getChildByID` and layouts instead of fragile child indexes,
-which is how Geode mods stay compatible.
+String IDs let you find nodes with `getChildByID` and layouts instead of fragile child indexes, which is how Geode mods stay compatible.
 
 ```lua
 local cc2d = geode.cocos2d
@@ -79,10 +76,22 @@ Some APIs return a `CCArray`. Use Cocos methods to read it.
 `objectAtIndex` starts at index `0`.
 
 ```lua
-local lists = localLevelManager:getCreatedLists(0)
-if not lists or lists:count() == 0 then return nil end
+local manager = geode.gd.LocalLevelManager.sharedState()
+if not manager then return end
+
+local lists = manager:getCreatedLists(0)
+if not lists or lists:count() == 0 then return end
 
 local first = lists:objectAtIndex(0)
+```
+
+Read-only sequence views (such as handler queues) use 1-based indexes:
+
+```lua
+local queue = dispatcher.m_pHandlersToAdd
+print(#queue)
+
+local first = queue[1] -- 1-based, may be nil
 ```
 
 ## Table-shaped values
@@ -119,18 +128,19 @@ A `nil` indexed leaf creates a hole.
 A `nil` value in a dictionary-shaped map removes that entry.
 Map table iteration order and unordered container order are unspecified.
 
-Writing a container field updates its native value recursively without whole-container assignment.
+Writing a container field copies your table into the native value.
+Nested containers update entry by entry.
 Some generated container fields are read-only.
 Check the type stubs for the exact surface.
 Read-only handler queues on input dispatchers use `{ Handler? }` sequences and 1-based indexes.
 
-Binding details for recursive containers, pairs, and ccCArray views:
+Use [type stubs](type-stubs.md) for the exact stub type on each member.
+
+Implementation details:
 
 - [Pair containers](../../contributor/codegen/pair-containers.md)
 - [Recursive containers](../../contributor/codegen/nested-containers.md)
 - [ccCArray read-only fields](../../contributor/codegen/cc-c-array.md)
-
-Use [type stubs](type-stubs.md) for the exact stub type on each member.
 
 ## Per-object fields
 
@@ -170,12 +180,23 @@ GD and Geode enums are integer constant tables on `geode.gd` and `geode`. See [e
 
 ## Ownership
 
-The runtime tracks Lua-owned vs borrowed objects and handles C++ lifetime for you.
-Luau does not bind `retain()` or `release()`.
+The runtime tracks Lua-owned vs borrowed objects and handles C++ lifetime for you. Luau does not bind `retain()` or `release()`.
 Manual ref counting fights LuauAPI bookkeeping and can crash the game, leak nodes, or break callback and `geode.fields` cleanup.
 
-Keep a normal Luau reference when you need an object to stay alive. Use a local, a module table, or the scene graph.
+For objects you create from Luau, keep the Luau reference alive. Use a local or a module table.
+For borrowed objects such as hook arguments, a Luau reference does not keep the C++ object alive.
+Keep them alive through the scene graph or another C++ owner.
 See the [Bindings framework](../../contributor/internals/bindings-framework.md).
+
+```lua
+-- Owned: created here, the local keeps it alive.
+local label = geode.Label.create("hi")
+
+-- Borrowed: a hook's self. It can die when the scene drops it, even if your script still holds it.
+geode.hook("geode.gd.MenuLayer:init/0", {
+    after = function(self) end,
+})
+```
 
 ## Related
 

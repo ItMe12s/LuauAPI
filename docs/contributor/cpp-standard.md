@@ -18,18 +18,18 @@ See [Building from source](building.md).
 
 Reach for [Geode Utils](https://docs.geode-sdk.org/tutorials/utils) before custom code.
 
-| Need | Use |
-| --- | --- |
-| Fallible return values | `geode::Result`, `geode::Ok`, `geode::Err` |
-| String split, join, trim, contains, prefix/suffix | `geode::utils::string` |
-| Container find, remove, filter, map | `geode::utils::ranges` |
-| File read, write, create directories, atomic write | `geode::utils::file` |
-| Directory iteration | `std::filesystem::directory_iterator` with `std::error_code` |
-| Filesystem path text | `geode::utils::string::pathToString` |
-| Exhaustive switch default | `geode::utils::unreachable` |
-| GD type casts | `geode::cast` |
-| Cocos helpers and colors | `geode::cocos` |
-| CCObject lifetime | `geode::Ref`, `geode::WeakRef` |
+| Need                                               | Use                                                          |
+| -------------------------------------------------- | ------------------------------------------------------------ |
+| Fallible return values                             | `geode::Result`, `geode::Ok`, `geode::Err`                   |
+| String split, join, trim, contains, prefix/suffix  | `geode::utils::string`                                       |
+| Container find, remove, filter, map                | `geode::utils::ranges`                                       |
+| File read, write, create directories, atomic write | `geode::utils::file`                                         |
+| Directory iteration                                | `std::filesystem::directory_iterator` with `std::error_code` |
+| Filesystem path text                               | `geode::utils::string::pathToString`                         |
+| Exhaustive switch default                          | `geode::utils::unreachable`                                  |
+| GD type casts                                      | `geode::cast`                                                |
+| Cocos helpers and colors                           | `geode::cocos`                                               |
+| CCObject lifetime                                  | `geode::Ref`, `geode::WeakRef`                               |
 
 Do not use `std::expected` for new mod APIs.
 Use `geode::Result` instead.
@@ -65,7 +65,7 @@ Iterate directories with explicit `directory_iterator(path, ec)` and `increment(
 Convert filesystem paths with `geode::utils::string::pathToString`, not `path.string()`.
 
 Do not add `throw` or new `try`/`catch` flow to runtime code.
-The sole exception boundary is the two Arc 1.5.6 `TaskHandle` pollers.
+The sole exception boundary is the two Arc `TaskHandle` pollers.
 They convert standard and unknown Arc failures to Lua `nil, err` callbacks.
 Keep exception handling enabled while Geode and Arc require it.
 
@@ -101,6 +101,8 @@ Tests may link fmt through CMake when Catch2 or host helpers need it.
 Cocos, GLFW, OpenGL, and Luau C APIs sometimes require raw pointers, `new`, or `delete`.
 Mark deliberate lifetime shortcuts with a short comment when the API owns the object.
 
+Formatting lives in `.clang-format` at the repo root. Run it with the format script in [Building from source](building.md).
+
 ## Related
 
 - [Building from source](building.md)
@@ -113,5 +115,4 @@ Mark deliberate lifetime shortcuts with a short comment when the API owns the ob
 
 - `CMakeLists.txt`
 - `cmake/Helpers.cmake`
-- `src/`
-- `gd-imgui-cocos/`
+- `.clang-format`

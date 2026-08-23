@@ -9,13 +9,10 @@ It is a Python tool in `tools/luau_codegen/`. This is an overview, not a full re
 
 The generator reads Broma binding files for one Geometry Dash version and one platform, then writes:
 
-- C++ binding sources into `build/luauapi-gen/src`.
-  These expose game classes to Lua and implement the hook functions.
-- Value struct check/push headers into `build/luauapi-gen/src/framework/stack/`
-  (`Types.generated.hpp` and `Types.generated.containers.hpp`).
+- C++ binding sources into `build/luauapi-gen/src`. These expose game classes to Lua and implement the hook functions.
+- Value struct check/push headers into `build/luauapi-gen/src/framework/stack/` (`Types.generated.hpp` and `Types.generated.containers.hpp`).
   See Value structs below for split and include order.
-- One Luau type stub at `types/geode.d.luau`,
-  holding all bound classes, factories, enum names, and the root `geode` namespace.
+- One Luau type stub at `types/geode.d.luau`, holding all bound classes, factories, enum names, and the root `geode` namespace.
   The `types/` folder is created in the repo root during build and is gitignored.
 - Metadata files: a schema, a report, a parity file, and an audit.
 
@@ -34,23 +31,20 @@ The stamp command runs codegen in one step:
 - Trampolines are loaded.
 - Bindings and stubs are emitted.
 
-The codegen platform comes from the build target.
-See `cmake/Codegen.cmake` `luauapi_set_codegen_platform()`.
+The codegen platform comes from the build target. See `cmake/Codegen.cmake` `luauapi_set_codegen_platform()`.
 
-| Build target | Codegen platform |
-| --- | --- |
-| Windows | `win` |
-| Android arm64-v8a | `android64` |
-| Android armeabi-v7a | `android32` |
-| iOS | `ios` |
-| macOS universal (`arm64` + `x86_64`) | `mac` |
-| macOS arm64 only | `m1` |
-| macOS x86_64 only | `imac` |
+| Build target                         | Codegen platform |
+| ------------------------------------ | ---------------- |
+| Windows                              | `win`            |
+| Android arm64-v8a                    | `android64`      |
+| Android armeabi-v7a                  | `android32`      |
+| iOS                                  | `ios`            |
+| macOS universal (`arm64` + `x86_64`) | `mac`            |
+| macOS arm64 only                     | `m1`             |
+| macOS x86_64 only                    | `imac`           |
 
-The GD bindings version comes from `mod.json` `gd.<key>`.
-The key follows the codegen platform.
-Android ABIs use `android`.
-Apple desktop platforms use `mac`.
+The GD bindings version comes from `mod.json` `gd.<key>`. The key follows the codegen platform.
+Android ABIs use `android`. Apple desktop platforms use `mac`.
 If the key is missing, CMake falls back to `gd.win`, then to `2.2081`.
 The Broma tree is `geode_bindings/bindings/<version>/`.
 Keep `LUAUAPI_BINDINGS_GIT_TAG` in CMake aligned with the mod.json GD version.
@@ -100,14 +94,14 @@ The custom command depends on the following. A change to any reruns codegen:
 The manifest is the single source for both the scanner and the generated `#include` list.
 `test_binding_guards_framework.py` `FreeFnManifestSyncTests` fails on drift.
 
-| SDK header | Namespaces | Name filter |
-| --- | --- | --- |
-| `utils/general.hpp` | `geode::utils`, `geode::utils::clipboard`, `geode::utils::game`, `geode::utils::thread`, `geode::utils::platform` | all |
-| `ui/Popup.hpp` | `geode` | `createQuickPopup` only |
-| `ui/GeodeUI.hpp` | `geode` | all |
-| `utils/string.hpp` | `geode::utils::string` | all |
-| `utils/random.hpp` | `geode::utils::random` | all |
-| `utils/cocos.hpp` | `geode::cocos` | all |
+| SDK header          | Namespaces                                                                                                        | Name filter             |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------- | ----------------------- |
+| `utils/general.hpp` | `geode::utils`, `geode::utils::clipboard`, `geode::utils::game`, `geode::utils::thread`, `geode::utils::platform` | all                     |
+| `ui/Popup.hpp`      | `geode`                                                                                                           | `createQuickPopup` only |
+| `ui/GeodeUI.hpp`    | `geode`                                                                                                           | all                     |
+| `utils/string.hpp`  | `geode::utils::string`                                                                                            | all                     |
+| `utils/random.hpp`  | `geode::utils::random`                                                                                            | all                     |
+| `utils/cocos.hpp`   | `geode::cocos`                                                                                                    | all                     |
 
 Only `GEODE_DLL` declarations are processed, and functions must be marshallable.
 Only the first free function per name and arity is kept.
@@ -131,8 +125,9 @@ Their type signatures still need to be in `types/geode.d.luau`.
 Two ways to add them:
 
 - `tools/luau_codegen/extra_bindings/*.dluau`: appended at the end of the stub.
-  Current files: `fs.dluau`, `gd3d.dluau`, `hook.dluau`, `imgui.dluau`, `json.dluau`,
-  `keyboard.dluau`, `loader.dluau`, `mod.dluau`, `mouse.dluau`, `task.dluau`, `web.dluau`, `websocket.dluau`.
+  Current files: `color.dluau`, `fs.dluau`, `gd3d.dluau`, `hook.dluau`, `imgui.dluau`, `json.dluau`,
+  `keyboard.dluau`, `loader.dluau`, `lunar.dluau`, `mod.dluau`, `mouse.dluau`, `popup.dluau`,
+  `task.dluau`, `web.dluau`, `websocket.dluau`.
   Use this for new globals and for support types the `geode` namespace references.
 - `tools/luau_codegen/emit/luau_types/manual_fields.py`: injects fields into a namespace
   that codegen already emits, such as `geode.cocos`.
@@ -170,17 +165,17 @@ Run `--audit-report-out` or `--parity-report-out` to regenerate a report without
 `emit/audit.py` groups skipped methods and free functions into buckets.
 Each bucket has a count, a reason histogram, and up to 25 sample skips.
 
-| Bucket id | Category |
-| --- | --- |
-| `callback_method` | Broma callback methods |
-| `sel_arg` | cocos2d selector args |
-| `std_function_arg` | `std::function` / `geode::Function` args |
-| `callback_alias` | `Callback` alias args |
-| `delegate_arg` | delegate pointer args without a bound spec |
-| `container_arg` | unsupported `gd` container args |
-| `value_type_arg` | FMOD / Kazmath value types (see FMOD binding below) |
-| `http_async_excluded` | HTTP / async free functions |
-| `other` | unclassified skips |
+| Bucket id             | Category                                            |
+| --------------------- | --------------------------------------------------- |
+| `callback_method`     | Broma callback methods                              |
+| `sel_arg`             | cocos2d selector args                               |
+| `std_function_arg`    | `std::function` / `geode::Function` args            |
+| `callback_alias`      | `Callback` alias args                               |
+| `delegate_arg`        | delegate pointer args without a bound spec          |
+| `container_arg`       | unsupported `gd` container args                     |
+| `value_type_arg`      | FMOD / Kazmath value types (see FMOD binding below) |
+| `http_async_excluded` | HTTP / async free functions                         |
+| `other`               | unclassified skips                                  |
 
 Supported bindings do not appear in these buckets.
 See `tests/luau_codegen/audit/test_audit.py` for bucket rules.
@@ -256,10 +251,10 @@ Each `ValueTypeSpec` drives type classification, Luau stub emission, and generat
 
 `emit/types_binding.py` writes two headers under `build/luauapi-gen/src/framework/stack/`:
 
-| Header | Contents |
-| --- | --- |
-| `Types.generated.hpp` | Primitive cocos structs and simple opt-in structs (numbers, enums, strings, nested non-deferred value types) |
-| `Types.generated.containers.hpp` | Structs that need container helpers, nullable usertypes, opaque handles, or nested deferred members |
+| Header                           | Contents                                                                                                     |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `Types.generated.hpp`            | Primitive cocos structs and simple opt-in structs (numbers, enums, strings, nested non-deferred value types) |
+| `Types.generated.containers.hpp` | Structs that need container helpers, nullable usertypes, opaque handles, or nested deferred members          |
 
 Defer rule in `types_binding.py`:
 
@@ -270,8 +265,7 @@ Defer rule in `types_binding.py`:
 Production include order:
 
 - `Types.hpp` includes `Types.generated.hpp` before `Usertype.hpp`.
-- `ContainerTables.hpp` includes `Types.generated.containers.hpp` after the public container helper
-  declarations.
+- `ContainerTables.hpp` includes `Types.generated.containers.hpp` after the public container helper declarations.
 - Recursive container traits are declared before that include.
 - Their leaf operations are defined after it.
   Any nested path can then call `luax::check<T>` and `luax::push` on deferred types.
@@ -294,12 +288,11 @@ Handwritten check/push for `UIButtonConfig` and `SmartPrefabResult` stay in `Typ
    These are not hand-typed.
    `emit/value_struct_specs.py` reads each struct's fields from the parsed Broma root
    and derives the `ValueTypeSpec` (member kinds, Luau stub, deps) automatically.
-   Specs stay in the root-owned `CodegenContext`.
-   No Python module is generated or patched.
+   Specs stay in the root-owned `CodegenContext`. No Python module is generated or patched.
 
 ### Opt-in list
 
-`model/value_struct_gate.py` holds `VALUE_STRUCT_OPT_IN`:
+`model/value_struct_gate.py` holds `VALUE_STRUCT_OPT_IN`,
 a tuple of class names (leaf-first for nested resolution) that the derived-specs generator binds.
 To add a struct, append its name.
 Its layout, stub, deps, and C++ check/push regenerate on the next codegen run.
@@ -333,17 +326,14 @@ All eight `SeedValue` variant names share this policy.
 
 Skipped fields appear as `-- skipped <name>: <reason>` comments in the stub.
 
-`bindable_field()` uses recursive container policy. `cc_c_array_view` and direct object-element
-`vector_view` fields remain getter-only.
-Opaque-element `vector_view` fields bind read-write via table assign
-(clear plus repopulate through `assignOpaqueVectorView`).
+`bindable_field()` uses recursive container policy. `cc_c_array_view` and direct object-element `vector_view` fields remain getter-only.
+Opaque-element `vector_view` fields bind read-write via table assign (clear plus repopulate through `assignOpaqueVectorView`).
 For example, `CCMoveCNode.m_groupObjects` (`gd::vector<GroupCommandObject2*>`) accepts `moveNode.m_groupObjects = { cmd1, cmd2 }`.
 Object-element `vector_view` stays getter-only until a retain-aware setter exists.
 
 Composite field setters use `assignContainerValue` instead of whole-container `operator=`.
 This avoids the missing `_Rb_tree::_M_move_assign` in Geode gnustl on Android.
-The recursive grammar, pointer-grid exception, assignment behavior, and array cap are documented in
-[Recursive containers](nested-containers.md).
+The recursive grammar, pointer-grid exception, assignment behavior, and array cap are documented in [Recursive containers](nested-containers.md).
 See [Pair containers](pair-containers.md) and [ccCArray read-only fields](cc-c-array.md) for their table shapes.
 
 ### Out-ref and multi-return
@@ -363,11 +353,11 @@ Emit tests lock the shape in `tests/luau_codegen/marshalling/test_out_ref_policy
 
 FMOD types split into three buckets:
 
-| Bucket | Examples | Luau shape |
-| --- | --- | --- |
-| Value structs | `FMODMusic`, `FMODSound`, `FMODQueuedEffect`, `FMODSoundTween` | Table types from `VALUE_STRUCT_OPT_IN` |
-| Opaque handles | `FMODSystem`, `FMODDSP`, `FMODChannel`, `FMODChannelGroup` | `@type-only` stub classes |
-| Renamed handle | `FMOD::Sound*` | `FMODSoundHandle` (not `FMODSound`) |
+| Bucket         | Examples                                                       | Luau shape                             |
+| -------------- | -------------------------------------------------------------- | -------------------------------------- |
+| Value structs  | `FMODMusic`, `FMODSound`, `FMODQueuedEffect`, `FMODSoundTween` | Table types from `VALUE_STRUCT_OPT_IN` |
+| Opaque handles | `FMODSystem`, `FMODDSP`, `FMODChannel`, `FMODChannelGroup`     | `@type-only` stub classes              |
+| Renamed handle | `FMOD::Sound*`                                                 | `FMODSoundHandle` (not `FMODSound`)    |
 
 `FMODSound` is now the value struct name.
 The opaque sound pointer stub is `FMODSoundHandle`.
@@ -379,14 +369,14 @@ Opaque values use the handle stub type, not a value struct table.
 
 Some audit one-offs stay skipped on purpose. Do not re-triage them without a new binding design.
 
-| Item | Reason |
-| --- | --- |
-| `ChallengesPage.updateTimers` | Broma `callback` method. GD scheduler hook, not mod-facing API. Hard-skipped in `policy/filtering.py` when `m.is_callback`. |
-| `DailyLevelPage.updateTimers` | Same as above. |
-| `RewardsPage.updateTimers` | Same as above. |
-| `HardStreak.updateStroke` | Same as above. |
-| `MusicDownloadManager.ProcessHttpRequest` | Same as above. |
-| `MDPopup.void` | Broma-parsed method (not a field). Scanner artifact with return type `geode::Function<...>`. Real surface is `create` and `setOnClick` with working callback marshalling. |
+| Item                                      | Reason                                                                                                                                                                    |
+| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ChallengesPage.updateTimers`             | Broma `callback` method. GD scheduler hook, not mod-facing API. Hard-skipped in `policy/filtering.py` when `m.is_callback`.                                               |
+| `DailyLevelPage.updateTimers`             | Same as above.                                                                                                                                                            |
+| `RewardsPage.updateTimers`                | Same as above.                                                                                                                                                            |
+| `HardStreak.updateStroke`                 | Same as above.                                                                                                                                                            |
+| `MusicDownloadManager.ProcessHttpRequest` | Same as above.                                                                                                                                                            |
+| `MDPopup.void`                            | Broma-parsed method (not a field). Scanner artifact with return type `geode::Function<...>`. Real surface is `create` and `setOnClick` with working callback marshalling. |
 
 ## Denylist maintenance
 
@@ -411,13 +401,13 @@ Each listed signature becomes a synthetic static `new(...)` factory that calls `
 
 ## CLI exit codes
 
-| Code | Meaning |
-| --- | --- |
-| 2 | Bad arguments, missing required directories, or Python below 3.11 |
-| 3 | No Broma classes found after parsing |
-| 4 | I/O error reading inputs or writing outputs |
-| 5 | Unexpected exception during emit |
-| 6 | Ambiguous overloads remain after building the emit plan |
+| Code | Meaning                                                           |
+| ---- | ----------------------------------------------------------------- |
+| 2    | Bad arguments, missing required directories, or Python below 3.11 |
+| 3    | No Broma classes found after parsing                              |
+| 4    | I/O error reading inputs or writing outputs                       |
+| 5    | Unexpected exception during emit                                  |
+| 6    | Ambiguous overloads remain after building the emit plan           |
 
 ## Delegates
 

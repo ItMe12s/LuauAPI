@@ -11,7 +11,8 @@ Use it when scripts need mod ids, names, versions, or load status.
 geode.Loader.getAllMods() -> { LoaderModInfo }
 ```
 
-Returns one table per installed mod. Each entry has:
+Returns one table per installed mod.
+Disabled mods still appear, with `enabled = false`. Each entry has:
 
 - `id`: mod id string
 - `name`: display name
@@ -27,6 +28,10 @@ Order matches Geode loader order.
 ```lua
 for _, mod in geode.Loader.getAllMods() do
     print(mod.id, mod.name, mod.version)
+end
+
+for _, mod in geode.Loader.getAllMods() do
+    if mod.enabled then print(mod.id) end
 end
 ```
 

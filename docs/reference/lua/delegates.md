@@ -8,7 +8,6 @@ Some C++ APIs take a delegate pointer for an interface with virtual methods:
 - keyboard delegates
 - scroll view delegates
 - alert protocols
-- similar interface delegates
 
 In Luau, pass a table with method names as keys and Luau functions as values.
 The runtime builds a C++ trampoline that calls the matching table function for each virtual method.
@@ -19,8 +18,13 @@ Each supported delegate has a Luau type stub.
 The stub lists optional function fields, one per virtual method.
 Include only the methods you care about.
 
+Touch delegates register on the dispatcher, not on the layer:
+
 ```lua
-layer:registerWithTouchDispatcher({
+local director = geode.cocos2d.CCDirector.sharedDirector()
+if not director then return end
+
+director:getTouchDispatcher():addTargetedDelegate({
     ccTouchBegan = function(touch: CCTouch, event: CCEvent): boolean
         return true
     end,
@@ -40,7 +44,7 @@ Method names and argument types match the C++ interface. Multi-touch variants us
 
 ## Keyboard delegate
 
-Use `CCKeyboardDelegate` when you need cocos dispatcher integration on a node or layer.
+Pass a `CCKeyboardDelegate` table to `CCKeyboardDispatcher:addDelegate`.
 Use [Keyboard input](keyboard-input.md) for the global Geode event stream.
 
 ```lua
@@ -56,6 +60,8 @@ director:getKeyboardDispatcher():addDelegate({
     end,
 })
 ```
+
+Dispatchers also expose `removeDelegate` and `forceRemoveDelegate` to unregister.
 
 ## Lifetime and anchoring
 
@@ -78,14 +84,26 @@ Supported interfaces include:
   - `CCKeyboardDelegate`
   - `CCKeypadDelegate`
   - `CCMouseDelegate`
-  - `CCAccelerometerDelegate`
   - `CCIMEDelegate`
   - `CCTextFieldDelegate`
-  - (and others)
+  - `CCEditBoxDelegate`
 - Geode/game interfaces from Broma, such as:
   - alert protocols
   - scroll delegates
   - download callbacks
+
+Geode and game interfaces follow the Broma `*Delegate`/`*Protocol` types.
+See the exact members in [type stubs](type-stubs.md).
+
+The dominant Geode pattern is a delegate-typed field:
+
+```lua
+popup.m_delegate = {
+    setIDPopupClosed = function(popup: SetIDPopup, id: number)
+        print("closed", id)
+    end,
+}
+```
 
 Generated trampolines live under `build/luauapi-gen/src/framework/callback/` and regenerate with the normal build.
 See [Codegen](../../contributor/codegen/codegen.md).
@@ -96,13 +114,12 @@ See [Limits and errors](../cpp/limits-and-errors.md) for callback budgets and or
 
 ## Related
 
-- [Getting started](../../getting-started/overview.md)
 - [callbacks](callbacks.md)
 - [Keyboard input](keyboard-input.md)
 - [game objects](game-objects.md)
 - [type stubs](type-stubs.md)
-- [Codegen](../../contributor/codegen/codegen.md)
 - [globals](globals.md)
+- [Codegen](../../contributor/codegen/codegen.md)
 
 ## Source
 

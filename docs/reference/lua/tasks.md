@@ -3,35 +3,12 @@
 ## Summary
 
 The `task` library schedules callbacks and the `time` library reads clocks.
-Tasks run on the game tick. They keep running when the game pauses.
+Scheduled tasks run on the game tick. They keep running when the game pauses.
 Speedhacks change task timing because timers use frame delta.
 `task.spawn`, `task.delay`, `task.every`, and `task.defer` run on fresh coroutines, so `task.wait` works inside them.
-Types match `tools/luau_codegen/extra_bindings/task.dluau`.
 
 `loadstring` is a global, not part of `task`.
 See [globals](globals.md).
-
-## Types
-
-```lua
-type TaskHandle = {
-    cancel: (self: TaskHandle) -> (),
-}
-
-type TaskNamespace = {
-    spawn: (fn: (...any) -> ...any, ...any) -> (),
-    delay: (seconds: number, fn: () -> ()) -> TaskHandle,
-    every: (seconds: number, fn: () -> ()) -> TaskHandle,
-    defer: (fn: () -> ()) -> TaskHandle,
-    wait: (seconds: number?) -> number,
-    cancel: (handle: TaskHandle) -> (),
-}
-
-type TimeNamespace = {
-    now: () -> number,
-    unix: () -> number,
-}
-```
 
 ## task.spawn
 
@@ -56,6 +33,15 @@ task.delay(seconds: number, fn: () -> ()) -> TaskHandle
 ```
 
 Runs `fn` once after `seconds` and returns a handle. Negative or NaN clamps to zero.
+
+```lua
+local handle = task.delay(5, function()
+    print("five seconds passed")
+end)
+
+-- Changed your mind.
+handle:cancel()
+```
 
 ## task.every
 
@@ -143,11 +129,11 @@ See [Getting started](../../getting-started/overview.md) and [Limits and errors]
 
 ## Related
 
-- [Getting started](../../getting-started/overview.md)
-- [Task scheduler](../../contributor/internals/task-scheduler.md)
 - [globals](globals.md)
 - [sharing APIs between mods](sharing-apis.md)
+- [Getting started](../../getting-started/overview.md)
 - [Limits and errors](../cpp/limits-and-errors.md)
+- [Task scheduler](../../contributor/internals/task-scheduler.md)
 
 ## Source
 

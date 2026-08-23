@@ -44,23 +44,23 @@ $on_mod(Loaded) {
 
 See [Getting started](overview.md) for the main-thread rule.
 `$on_mod(Loaded)` already runs on the main thread, so call `runFile` directly there.
-LuauAPI owns the runtime, so you do not start it. Check `status()` is `Ready` first if you need to.
+LuauAPI owns the runtime, so you do not start it.
+Check `imes::luauapi::status()` returns `RuntimeStatus::Ready` if you need to.
 If `Bootstrap.luau` needs functions or values from your C++ code, register them before `runFile`.
+
+Run the mod. The Geode console shows `Hello from Luau`.
 
 ## The rules
 
 The file name must be a flat `.luau` resource name inside the resources directory you pass.
 See [Installation](installation.md) for how Geode packs resource files.
-See [modules](../reference/lua/modules.md) and [Limits and errors](../reference/cpp/limits-and-errors.md).
+Path and size rules live in [modules](../reference/lua/modules.md) and [Limits and errors](../reference/cpp/limits-and-errors.md).
 
 ## Using the executor
 
-LuauAPI includes a built-in script executor.
-It is an ImGui window where you write Luau and run it live in the game.
-Turn on **Enable Developer Mode** under Developer Settings in LuauAPI mod settings,
-restart the game, then turn on **Enable Script Executor**.
+LuauAPI includes a built-in script executor. It is an ImGui window where you write Luau and run it live in the game.
+Turn on **Enable Developer Mode** under Developer Settings in LuauAPI mod settings, restart the game, then turn on **Enable Script Executor**.
 The executor toggle appears only after developer mode is on.
-Use it to test snippets without a build step.
 
 ## Next
 
@@ -71,7 +71,7 @@ Use it to test snippets without a build step.
 - [Getting started](overview.md)
 - [Editor setup](editor-setup.md)
 - [globals](../reference/lua/globals.md)
-- [modules](../reference/lua/modules.md)
+- [tasks and time](../reference/lua/tasks.md)
 - [C++ API reference](../reference/cpp/api-reference.md)
 
 ## Source

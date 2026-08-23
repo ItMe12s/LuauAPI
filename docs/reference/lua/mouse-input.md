@@ -10,12 +10,12 @@ Return `true` from a callback to stop propagation to later listeners and the gam
 
 Mouse button callbacks receive a mutable table.
 
-| Field | Type | Notes |
-| --- | --- | --- |
-| `button` | number | `geode.MouseInputData.Button.*` |
-| `action` | number | `geode.MouseInputData.Action.*` |
+| Field       | Type   | Notes                             |
+| ----------- | ------ | --------------------------------- |
+| `button`    | number | `geode.MouseInputData.Button.*`   |
+| `action`    | number | `geode.MouseInputData.Action.*`   |
 | `modifiers` | number | `geode.KeyboardModifier` bit mask |
-| `timestamp` | number | native event time |
+| `timestamp` | number | native event time                 |
 
 ```lua
 geode.MouseInputData.Action.Press: number
@@ -75,8 +75,26 @@ geode.ScrollWheelEvent.listen(callback: (xOffset: number, yOffset: number) -> bo
 Listens to horizontal and vertical wheel offsets.
 
 ```lua
+local zoom = 1
+
 geode.ScrollWheelEvent.listen(function(xOffset, yOffset)
-    print("scroll", xOffset, yOffset)
+    zoom = math.clamp(zoom + yOffset * 0.1, 0.5, 2)
+    print("zoom", zoom)
+    return false
+end)
+```
+
+A side button bind:
+
+```lua
+local button = geode.MouseInputData.Button
+local action = geode.MouseInputData.Action
+
+geode.MouseInputEvent.listen(function(data)
+    if data.button == button.Button4 and data.action == action.Press then
+        print("back")
+        return false
+    end
     return false
 end)
 ```

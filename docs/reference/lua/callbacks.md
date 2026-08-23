@@ -22,15 +22,21 @@ When a bound method takes a C++ callback (such as a `std::function`, Geode `Func
 pass a Luau function with a matching signature.
 
 ```lua
--- Void callback.
+-- Shape only, real APIs vary.
 someObject:doLater(function(arg1: CCNode)
     print("called from C++", arg1)
 end)
+```
 
--- Non-void return (shape only, real APIs vary).
-local ok = someObject:tryAction(function(layer: FLAlertLayer, accepted: boolean): boolean
-    return accepted
-end)
+A real bound API that takes a callback:
+
+```lua
+geode.utils.permission.requestPermission(
+    geode.utils.permission.Permission.RecordAudio,
+    function(granted: boolean)
+        print("audio permission granted:", granted)
+    end
+)
 ```
 
 Supported callback arguments must use only bindable argument types (no nested callbacks)
@@ -50,19 +56,20 @@ Supported bindable return types include:
 Cocos2d APIs normally take a target object and a selector.
 In Luau, pass one function with the signature implied by the selector type.
 
-| C++ selector | Luau function shape |
-| --- | --- |
-| `SEL_MenuHandler` | `(sender: CCObject) -> ()` |
-| `SEL_SCHEDULE` | `(dt: number) -> ()` |
-| `SEL_CallFunc` | `() -> ()` |
-| `SEL_CallFuncN` | `(node: CCNode) -> ()` |
-| `SEL_CallFuncND` | `(node: CCNode, data: userdata) -> ()` |
-| `SEL_CallFuncO` | `(obj: CCObject) -> ()` |
+| C++ selector      | Luau function shape                    |
+| ----------------- | -------------------------------------- |
+| `SEL_MenuHandler` | `(sender: CCObject) -> ()`             |
+| `SEL_SCHEDULE`    | `(dt: number) -> ()`                   |
+| `SEL_CallFunc`    | `() -> ()`                             |
+| `SEL_CallFuncN`   | `(node: CCNode) -> ()`                 |
+| `SEL_CallFuncND`  | `(node: CCNode, data: userdata) -> ()` |
+| `SEL_CallFuncO`   | `(obj: CCObject) -> ()`                |
 
 When a method has `(CCObject* target, SEL_* selector)`, the pair collapses to one Luau argument.
 
 ```lua
-local item = CCMenuItemSpriteExtra:create(normal, selected, disabled, function(sender: CCObject)
+-- Shape only, real APIs vary.
+local item = geode.cocos2d.CCMenuItemSpriteExtra.create(sprite, function(sender: CCObject)
     print("menu item clicked", sender)
 end)
 
@@ -84,10 +91,11 @@ Each selector handler trampoline is retained and associated with an anchor `CCOb
 
 - The returned `CCObject*` when the method returns one.
 - `self` for instance methods that do not return an object.
-- The orphan registry for static calls and void-return methods, cleared on runtime shutdown.
+- The orphan registry for static calls that do not return an object, cleared on runtime shutdown.
 
 When the anchor's retain count drops to one before `release`, all its handlers are cleaned up,
 like `geode.fields` tables. `std::function` wrappers are held for the duration of the C++ call that received them.
+A failed boolean callback reports `false`.
 Task and ImGui handles cancel their callback when you call `:cancel()` or when the handle userdata is collected.
 
 Selector, menu, delegate, setting, web, and permission callbacks keep their registration lifetime.
@@ -96,8 +104,8 @@ Task intervals and ImGui draw callbacks are removed after an error to avoid log 
 ## Shutdown
 
 While the runtime is shutting down, `LuaCallback::invoke` returns `false` immediately and does not enter Lua.
-Orphan selector trampolines are released through a runtime shutdown hook.
-See [Runtime](../../contributor/internals/runtime.md) Shutdown for LIFO hook order.
+Orphan selector trampolines are released through a runtime shutdown hook. Hook order is LIFO.
+See [Runtime](../../contributor/internals/runtime.md).
 
 ## Limits
 
@@ -105,15 +113,14 @@ See [Limits and errors](../cpp/limits-and-errors.md) for callback budgets and or
 
 ## Related
 
-- [Getting started](../../getting-started/overview.md)
 - [delegates](delegates.md)
 - [hooks](hooks.md)
 - [tasks and time](tasks.md)
-- [enums](enums.md)
 - [game objects](game-objects.md)
-- [mod](mod.md)
-- [web](web.md)
+- [enums](enums.md)
 - [imgui](imgui.md)
+- [web](web.md)
+- [Getting started](../../getting-started/overview.md)
 - [Limits and errors](../cpp/limits-and-errors.md)
 
 ## Source
