@@ -1,5 +1,6 @@
 #include "bindings/lunar/LunarModel.hpp"
 
+#include <algorithm>
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <cmath>
@@ -625,4 +626,125 @@ TEST_CASE("samplePose evaluates eased channels and step z") {
         auto emptyAnim = std::move(emptyResult).unwrap();
         REQUIRE(samplePose(emptyAnim, 0.5).empty());
     }
+}
+
+TEST_CASE("sliceAnimation strictly excludes events at the boundary") {
+    std::vector<Keyframe> keyframes = {
+        eventKf(0, {"a"}),
+        eventKf(1, {"b"}),
+        eventKf(2, {"c"}),
+    };
+    auto result = compileAnimation(std::move(keyframes), 10.0, false);
+    REQUIRE(result.isOk());
+    auto anim = std::move(result).unwrap();
+
+    SECTION("slice at zero keeps everything") {
+        auto sliced = sliceAnimation(anim, 0.0);
+        REQUIRE(sliced.events.size() == 3);
+    }
+
+    SECTION("event exactly at the seek target is skipped") {
+        auto sliced = sliceAnimation(anim, 0.1);
+        REQUIRE(sliced.events.size() == 1);
+        REQUIRE(sliced.events[0].name == "c");
+        REQUIRE(sliced.events[0].time == Approx(0.1));
+    }
+}
+
+TEST_CASE("keyframe CRUD helpers preserve ordering and merge semantics") {
+    NodePose poseX(float x) {
+        NodePose p;
+        p.x = x;
+        return p;
+    };
+
+    SECTION("keyframeFor inserts sorted with epsilon dedup") {
+        std::vector<Keyframe> v;
+        keyframeFor(v, 0.0);
+        keyframeFor(v, 2.0);
+        keyframeFor(v, 1.0);
+        REQUIRE(v.size() == 3);
+        REQUIRE(v[0].frame == Approx(0.0));
+        REQUIRE(v[1].frame == Approx(1.0));
+        REQUIRE(v[2].frame == Approx(2.0));
+        REQUIRE(&keyframeFor(v, 1.0 + 1e-12) == &v[1]);
+        REQUIRE(v.size() == 3);
+    }
+
+    SECTION("removeKeyframe removes only the matching frame") {
+        std::vector<Keyframe> v;
+        keyframeFor(v, 0.0);
+        keyframeFor(v, 1.0);
+        REQUIRE(removeKeyframe(v, 1.0));
+        REQUIRE(v.size() == 1);
+        REQUIRE_FALSE(removeKeyframe(v, 5.0));
+        REQUIRE(v.size() == 1);
+    }
+
+    SECTION("move onto occupied frame merges last-wins and appends events") {
+        std::vector<Keyframe> v;
+        auto& k0 = keyframeFor(v, 0.0);
+        setPoseTarget(k0, "arm", poseX(1.F));
+        k0.events.push_back("e0");
+        auto& k2 = keyframeFor(v, 2.0);
+        setPoseTarget(k2, "arm", poseX(3.F));
+        setPoseTarget(k2, "leg", poseX(7.F));
+        k2.events.push_back("e2");
+
+        REQUIRE(moveKeyframe(v, 0.0, 2.0));
+        REQUIRE(v.size() == 1);
+        REQUIRE(v[0].frame == Approx(2.0));
+        auto armIt = std::ranges::find_if(v[0].targets, [](auto const& t) {
+            return t.first == "arm";
+        });
+        REQUIRE(armIt != v[0].targets.end());
+        REQUIRE(armIt->second.x == Approx(1.F));
+        auto legIt = std::ranges::find_if(v[0].targets, [](auto const& t) {
+            return t.first == "leg";
+        });
+        REQUIRE(legIt != v[0].targets.end());
+        REQUIRE(legIt->second.x == Approx(7.F));
+        REQUIRE(v[0].events.size() == 2);
+        REQUIRE(v[0].events[0] == "e2");
+        REQUIRE(v[0].events[1] == "e0");
+    }
+
+    SECTION("move to an empty frame relocates and keeps sort") {
+        std::vector<Keyframe> v;
+        keyframeFor(v, 0.0);
+        keyframeFor(v, 1.0).targets.push_back({"arm", {}});
+        REQUIRE(moveKeyframe(v, 1.0, 5.0));
+        REQUIRE(v.size() == 2);
+        REQUIRE(v[0].frame == Approx(0.0));
+        REQUIRE(v[1].frame == Approx(5.0));
+    }
+
+    SECTION("move with missing source is a no-op returning false") {
+        std::vector<Keyframe> v;
+        keyframeFor(v, 0.0);
+        REQUIRE_FALSE(moveKeyframe(v, 9.0, 1.0));
+        REQUIRE(v.size() == 1);
+    }
+}
+
+TEST_CASE("easingName round-trips canonical names") {
+    for (auto const& name :
+         {"linear",
+          "quad_in",
+          "quad_out",
+          "quad_in_out",
+          "cubic_in",
+          "quint_in_out",
+          "sine_in_out",
+          "expo_in",
+          "back_in_out",
+          "elastic_in",
+          "bounce_in_out"}) {
+        auto easing = easingFromString(name);
+        REQUIRE(easing.has_value());
+        REQUIRE(easingName(*easing) == name);
+    }
+
+    Easing customPow{EasingKind::PowIn, 3.F};
+    REQUIRE(easingName(customPow) == "quad_in");
 }

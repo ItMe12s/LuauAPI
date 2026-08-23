@@ -19,24 +19,6 @@
 namespace luax::lunar {
     namespace {
 
-        Keyframe& keyframeFor(std::vector<Keyframe>& keyframes, double frame) {
-            auto it = std::ranges::lower_bound(keyframes, frame, {}, &Keyframe::frame);
-            if (it != keyframes.end() && std::fabs(it->frame - frame) < kTimeEps) return *it;
-            Keyframe kf;
-            kf.frame = frame;
-            return *keyframes.insert(it, std::move(kf));
-        }
-
-        void setPoseTarget(Keyframe& kf, std::string_view nodeId, NodePose pose) {
-            for (auto& [id, existing] : kf.targets) {
-                if (id == nodeId) {
-                    existing = std::move(pose);
-                    return;
-                }
-            }
-            kf.targets.emplace_back(std::string(nodeId), std::move(pose));
-        }
-
         geode::Result<NodePose> parseNodePose(lua_State* L, int idx, std::string_view nodeId) {
             idx = lua_absindex(L, idx);
             luaL_checktype(L, idx, LUA_TTABLE);
@@ -302,6 +284,82 @@ namespace luax::lunar {
             return 0;
         }
 
+        void pushTargetsTable(lua_State* L, Keyframe const& kf) {
+            lua_createtable(L, 0, static_cast<int>(kf.targets.size()));
+            for (auto const& [id, pose] : kf.targets) {
+                pushPoseTable(L, pose);
+                lua_setfield(L, -2, id.c_str());
+            }
+        }
+
+        void pushEventsTable(lua_State* L, std::vector<std::string> const& events) {
+            lua_createtable(L, static_cast<int>(events.size()), 0);
+            for (std::size_t e = 0; e < events.size(); ++e) {
+                push(L, events[e]);
+                lua_rawseti(L, -2, static_cast<int>(e) + 1);
+            }
+        }
+
+        void pushKeyframeEntry(lua_State* L, Keyframe const& kf) {
+            lua_createtable(L, 0, 2);
+            pushTargetsTable(L, kf);
+            lua_setfield(L, -2, "targets");
+            pushEventsTable(L, kf.events);
+            lua_setfield(L, -2, "events");
+        }
+
+        int animListKeyframes(lua_State* L) {
+            auto* self = Usertype<LunarAnimationDef>::check(L, 1, "LunarAnimationDef:listKeyframes");
+            auto const& keyframes = self->keyframes();
+            lua_createtable(L, static_cast<int>(keyframes.size()), 0);
+            for (std::size_t i = 0; i < keyframes.size(); ++i) {
+                auto const& kf = keyframes[i];
+                lua_createtable(L, 0, 3);
+                lua_pushnumber(L, static_cast<lua_Number>(kf.frame));
+                lua_setfield(L, -2, "frame");
+                pushTargetsTable(L, kf);
+                lua_setfield(L, -2, "targets");
+                pushEventsTable(L, kf.events);
+                lua_setfield(L, -2, "events");
+                lua_rawseti(L, -2, static_cast<int>(i) + 1);
+            }
+            return 1;
+        }
+
+        int animGetKeyAt(lua_State* L) {
+            auto* self = Usertype<LunarAnimationDef>::check(L, 1, "LunarAnimationDef:getKeyAt");
+            double const frame = check<double>(L, 2, "LunarAnimationDef:getKeyAt");
+            auto const& keyframes = self->keyframes();
+            auto it = std::ranges::lower_bound(keyframes, frame, {}, &Keyframe::frame);
+            if (it == keyframes.end() || !(std::fabs(it->frame - frame) < kTimeEps)) {
+                lua_pushnil(L);
+                return 1;
+            }
+            pushKeyframeEntry(L, *it);
+            return 1;
+        }
+
+        int animRemoveKeyframe(lua_State* L) {
+            auto* self = Usertype<LunarAnimationDef>::check(L, 1, "LunarAnimationDef:removeKeyframe");
+            double const frame = check<double>(L, 2, "LunarAnimationDef:removeKeyframe");
+            if (!(frame >= 0.0)) {
+                luaL_error(L, "LunarAnimationDef:removeKeyframe expected frame >= 0");
+            }
+            push(L, self->removeKeyframeAt(frame));
+            return 1;
+        }
+
+        int animMoveKeyframe(lua_State* L) {
+            auto* self = Usertype<LunarAnimationDef>::check(L, 1, "LunarAnimationDef:moveKeyframe");
+            double const from = check<double>(L, 2, "LunarAnimationDef:moveKeyframe");
+            double const to = check<double>(L, 3, "LunarAnimationDef:moveKeyframe");
+            if (!(from >= 0.0 && to >= 0.0)) {
+                luaL_error(L, "LunarAnimationDef:moveKeyframe expected frames >= 0");
+            }
+            push(L, self->moveKeyframeFromTo(from, to));
+            return 1;
+        }
+
         int trackPlay(lua_State* L) {
             auto* self = Usertype<LunarTrack>::check(L, 1, "LunarAnimationTrack:play");
             self->play();
@@ -360,6 +418,30 @@ namespace luax::lunar {
             return 1;
         }
 
+        void pushPoseTable(lua_State* L, NodePose const& pose) {
+            lua_createtable(L, 0, 12);
+            auto set = [&](char const* key, std::optional<float> const& value) {
+                if (!value) return;
+                lua_pushnumber(L, static_cast<lua_Number>(*value));
+                lua_setfield(L, -2, key);
+            };
+            set("x", pose.x);
+            set("y", pose.y);
+            set("rot", pose.rot);
+            set("sx", pose.sx);
+            set("sy", pose.sy);
+            set("opacity", pose.opacity);
+            set("z", pose.z);
+            set("ax", pose.ax);
+            set("ay", pose.ay);
+            set("skx", pose.skx);
+            set("sky", pose.sky);
+            if (pose.easing.kind != EasingKind::Linear) {
+                push(L, std::string(easingName(pose.easing)));
+                lua_setfield(L, -2, "easing");
+            }
+        }
+
         int trackBindEvent(lua_State* L) {
             auto* self = Usertype<LunarTrack>::check(L, 1, "LunarAnimationTrack:bindEvent");
             auto const name = check<std::string>(L, 2, "LunarAnimationTrack:bindEvent");
@@ -374,25 +456,22 @@ namespace luax::lunar {
             auto poses = self->sample(time);
             lua_createtable(L, 0, static_cast<int>(poses.size()));
             for (auto const& [id, pose] : poses) {
-                lua_createtable(L, 0, 11);
-                auto set = [&](char const* key, std::optional<float> const& value) {
-                    if (!value) return;
-                    lua_pushnumber(L, static_cast<lua_Number>(*value));
-                    lua_setfield(L, -2, key);
-                };
-                set("x", pose.x);
-                set("y", pose.y);
-                set("rot", pose.rot);
-                set("sx", pose.sx);
-                set("sy", pose.sy);
-                set("opacity", pose.opacity);
-                set("z", pose.z);
-                set("ax", pose.ax);
-                set("ay", pose.ay);
-                set("skx", pose.skx);
-                set("sky", pose.sky);
+                pushPoseTable(L, pose);
                 lua_setfield(L, -2, id.c_str());
             }
+            return 1;
+        }
+
+        int trackSeek(lua_State* L) {
+            auto* self = Usertype<LunarTrack>::check(L, 1, "LunarAnimationTrack:seek");
+            double const time = check<double>(L, 2, "LunarAnimationTrack:seek");
+            self->seek(time);
+            return 0;
+        }
+
+        int trackCurrentTime(lua_State* L) {
+            auto* self = Usertype<LunarTrack>::check(L, 1, "LunarAnimationTrack:currentTime");
+            push(L, self->currentTime());
             return 1;
         }
 
@@ -688,6 +767,22 @@ namespace luax::lunar {
         return m_anim.duration;
     }
 
+    void LunarTrack::seek(double time) {
+        double const target = std::clamp(time, 0.0, std::max(0.0, m_anim.duration));
+        if (m_playing && !m_paused && m_rig) {
+            launch(target);
+            return;
+        }
+        // Idle (paused/stopped/never started): no actions, direct pose write.
+        // Events stay unarmed, the next launch() re-slices strictly past target.
+        stopActions();
+        m_sliced = sliceAnimation(m_anim, target);
+        m_active = &m_sliced;
+        m_launchBase = target;
+        m_elapsed = 0.0;
+        applyPose(m_rig, samplePose(m_anim, target));
+    }
+
     void LunarTrack::detachForShutdown() {
         m_launched.clear();
         m_tweens.clear();
@@ -753,6 +848,10 @@ namespace luax::lunar {
         Usertype<LunarAnimationDef>::method(L, "getLooped", &animGetLooped);
         Usertype<LunarAnimationDef>::method(L, "addKeyframe", &animAddKeyframe);
         Usertype<LunarAnimationDef>::method(L, "addEvent", &animAddEvent);
+        Usertype<LunarAnimationDef>::method(L, "listKeyframes", &animListKeyframes);
+        Usertype<LunarAnimationDef>::method(L, "getKeyAt", &animGetKeyAt);
+        Usertype<LunarAnimationDef>::method(L, "removeKeyframe", &animRemoveKeyframe);
+        Usertype<LunarAnimationDef>::method(L, "moveKeyframe", &animMoveKeyframe);
 
         Usertype<LunarTrack>::method(L, "play", &trackPlay);
         Usertype<LunarTrack>::method(L, "pause", &trackPause);
@@ -765,6 +864,8 @@ namespace luax::lunar {
         Usertype<LunarTrack>::method(L, "speed", &trackSpeed);
         Usertype<LunarTrack>::method(L, "duration", &trackDuration);
         Usertype<LunarTrack>::method(L, "sample", &trackSample);
+        Usertype<LunarTrack>::method(L, "seek", &trackSeek);
+        Usertype<LunarTrack>::method(L, "currentTime", &trackCurrentTime);
 
         getOrCreateTable(L, "lunar.animation");
         setTableCFunction(L, -1, "new", &animNew);

@@ -115,6 +115,19 @@ namespace luax::lunar {
 
     std::optional<Easing> easingFromString(std::string_view name);
 
+    // Canonical name for an easing. Pow* kinds match on kind+rate,
+    // a custom pow rate with no table entry degrades to the first same-kind name (rate lost).
+    inline std::string_view easingName(Easing const& easing) noexcept {
+        bool const powKind = easing.kind == EasingKind::PowIn ||
+            easing.kind == EasingKind::PowOut || easing.kind == EasingKind::PowInOut;
+        for (auto const& entry : kEasingNames) {
+            if (entry.kind == easing.kind && (!powKind || entry.rate == easing.rate)) {
+                return entry.name;
+            }
+        }
+        return "linear";
+    }
+
     float easeProgress(Easing const& easing, float p);
 
     struct NodePose {
@@ -172,5 +185,13 @@ namespace luax::lunar {
     CompiledAnimation sliceAnimation(CompiledAnimation const& src, double fromTime);
 
     std::unordered_map<std::string, NodePose> samplePose(CompiledAnimation const& anim, double time);
+
+    Keyframe& keyframeFor(std::vector<Keyframe>& keyframes, double frame);
+
+    void setPoseTarget(Keyframe& kf, std::string_view nodeId, NodePose pose);
+
+    bool removeKeyframe(std::vector<Keyframe>& keyframes, double frame);
+
+    bool moveKeyframe(std::vector<Keyframe>& keyframes, double from, double to);
 
 } // namespace luax::lunar

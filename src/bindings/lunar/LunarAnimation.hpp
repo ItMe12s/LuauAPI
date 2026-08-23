@@ -7,6 +7,7 @@
 
 #include <Geode/Result.hpp>
 #include <Geode/utils/cocos.hpp>
+#include <algorithm>
 #include <cocos2d.h>
 #include <cstddef>
 #include <string>
@@ -17,6 +18,10 @@ struct lua_State;
 
 namespace luax::lunar {
 
+    bool removeKeyframe(std::vector<Keyframe>& keyframes, double frame);
+
+    bool moveKeyframe(std::vector<Keyframe>& keyframes, double from, double to);
+
     class LunarAnimationDef final : public cocos2d::CCObject {
     public:
         static LunarAnimationDef* create();
@@ -25,8 +30,9 @@ namespace luax::lunar {
             return m_keyframes;
         }
 
-        void setKeyframes(std::vector<Keyframe> keyframes) noexcept {
+        void setKeyframes(std::vector<Keyframe> keyframes) {
             m_keyframes = std::move(keyframes);
+            std::ranges::stable_sort(m_keyframes, {}, &Keyframe::frame);
         }
 
         double fps() const noexcept {
@@ -48,6 +54,14 @@ namespace luax::lunar {
         void addKeyframe(double frame, std::string_view nodeId, NodePose pose);
 
         void addEvent(double frame, std::string name);
+
+        bool removeKeyframeAt(double frame) {
+            return removeKeyframe(m_keyframes, frame);
+        }
+
+        bool moveKeyframeFromTo(double from, double to) {
+            return moveKeyframe(m_keyframes, from, to);
+        }
 
     private:
         ~LunarAnimationDef() override = default;
@@ -81,6 +95,12 @@ namespace luax::lunar {
         }
 
         double duration() const;
+
+        void seek(double time);
+
+        double currentTime() const noexcept {
+            return m_launchBase + m_elapsed;
+        }
 
         std::unordered_map<std::string, NodePose> sample(double time);
 

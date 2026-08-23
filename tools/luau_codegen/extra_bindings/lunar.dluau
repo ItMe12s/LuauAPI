@@ -52,6 +52,10 @@ declare class LunarAnimationDef
     function getLooped(self): boolean
     function addKeyframe(self, frame: number, nodeId: string, pose: LunarNodePose): ()
     function addEvent(self, frame: number, name: string): ()
+    function listKeyframes(self): { { frame: number, targets: { [string]: LunarNodePose }, events: { string } } }
+    function getKeyAt(self, frame: number): ({ targets: { [string]: LunarNodePose }, events: { string } })?
+    function removeKeyframe(self, frame: number): boolean
+    function moveKeyframe(self, from: number, to: number): boolean
 end
 
 declare class LunarRig extends CCNode
@@ -73,6 +77,8 @@ declare class LunarAnimationTrack
     function speed(self): number
     function duration(self): number
     function sample(self, t: number): { [string]: LunarNodePose }
+    function seek(self, t: number): ()
+    function currentTime(self): number
     function bindEvent(self, name: string, callback: (eventName: string) -> ()): ()
 end
 

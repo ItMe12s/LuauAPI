@@ -326,7 +326,7 @@ namespace luax::lunar {
         }
 
         for (auto const& ev : src.events) {
-            if (ev.time < fromTime) continue;
+            if (ev.time <= fromTime) continue;
             double const shifted = ev.time - fromTime;
             duration = std::max(duration, shifted);
             out.events.push_back(AnimEvent{shifted, ev.name});
@@ -358,6 +358,44 @@ namespace luax::lunar {
             out.emplace(track.nodeId, std::move(pose));
         }
         return out;
+    }
+
+    Keyframe& keyframeFor(std::vector<Keyframe>& keyframes, double frame) {
+        auto it = std::ranges::lower_bound(keyframes, frame, {}, &Keyframe::frame);
+        if (it != keyframes.end() && std::fabs(it->frame - frame) < kTimeEps) return *it;
+        Keyframe kf;
+        kf.frame = frame;
+        return *keyframes.insert(it, std::move(kf));
+    }
+
+    void setPoseTarget(Keyframe& kf, std::string_view nodeId, NodePose pose) {
+        for (auto& [id, existing] : kf.targets) {
+            if (id == nodeId) {
+                existing = std::move(pose);
+                return;
+            }
+        }
+        kf.targets.emplace_back(std::string(nodeId), std::move(pose));
+    }
+
+    bool removeKeyframe(std::vector<Keyframe>& keyframes, double frame) {
+        auto it = std::ranges::lower_bound(keyframes, frame, {}, &Keyframe::frame);
+        if (it == keyframes.end() || !(std::fabs(it->frame - frame) < kTimeEps)) return false;
+        keyframes.erase(it);
+        return true;
+    }
+
+    bool moveKeyframe(std::vector<Keyframe>& keyframes, double from, double to) {
+        auto it = std::ranges::lower_bound(keyframes, from, {}, &Keyframe::frame);
+        if (it == keyframes.end() || !(std::fabs(it->frame - from) < kTimeEps)) return false;
+        Keyframe source = std::move(*it);
+        keyframes.erase(it);
+        Keyframe& dest = keyframeFor(keyframes, to);
+        for (auto& [id, pose] : source.targets) {
+            setPoseTarget(dest, id, std::move(pose));
+        }
+        dest.events.insert(dest.events.end(), source.events.begin(), source.events.end());
+        return true;
     }
 
 } // namespace luax::lunar
