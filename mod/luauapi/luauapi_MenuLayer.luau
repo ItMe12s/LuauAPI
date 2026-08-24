@@ -1,3 +1,4 @@
+--!nocheck
 local LuauAPIMenuLayer = {}
 
 local cc2d = geode.cocos2d
@@ -41,6 +42,7 @@ function LuauAPIMenuLayer.init()
             label:setAnchorPoint({ x = 0, y = 0 })
             label:setPosition({ x = 4, y = 4 })
             self:addChild(label)
+            require("./leditf_MenuBtn").addButton(self)
             return result
         end,
     })
