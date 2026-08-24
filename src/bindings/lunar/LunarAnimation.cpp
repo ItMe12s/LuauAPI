@@ -115,20 +115,12 @@ namespace luax::lunar {
         cocos2d::CCFiniteTimeAction* makeTween(TweenSeg const& seg) {
             float const dur = static_cast<float>(std::max(0.0, seg.end - seg.start));
             using P = Prop;
-            using Axis = LunarCCAxisTo::Axis;
             cocos2d::CCActionInterval* to = nullptr;
             switch (seg.prop) {
-                case P::PosX: to = LunarCCAxisTo::create(dur, Axis::PosX, seg.to); break;
-                case P::PosY: to = LunarCCAxisTo::create(dur, Axis::PosY, seg.to); break;
                 case P::Rotation: to = cocos2d::CCRotateTo::create(dur, seg.to); break;
-                case P::ScaleX: to = LunarCCAxisTo::create(dur, Axis::ScaleX, seg.to); break;
-                case P::ScaleY: to = LunarCCAxisTo::create(dur, Axis::ScaleY, seg.to); break;
                 case P::Opacity: to = cocos2d::CCFadeTo::create(dur, opacityByte(seg.to)); break;
                 case P::ZOrder: break; // Instant-only, never reaches here.
-                case P::AnchorX: to = LunarCCAxisTo::create(dur, Axis::AnchorX, seg.to); break;
-                case P::AnchorY: to = LunarCCAxisTo::create(dur, Axis::AnchorY, seg.to); break;
-                case P::SkewX: to = LunarCCAxisTo::create(dur, Axis::SkewX, seg.to); break;
-                case P::SkewY: to = LunarCCAxisTo::create(dur, Axis::SkewY, seg.to); break;
+                default: to = LunarCCAxisTo::create(dur, seg.prop, seg.to); break;
             }
             if (!to) return nullptr;
 
@@ -160,14 +152,6 @@ namespace luax::lunar {
             return wrapped;
         }
 
-        bool setNodeOpacityImpl(cocos2d::CCNode* node, float value) {
-            if (auto* rgba = geode::cast::typeinfo_cast<cocos2d::CCRGBAProtocol*>(node)) {
-                rgba->setOpacity(opacityByte(value));
-                return true;
-            }
-            return false;
-        }
-
         void applyInstant(cocos2d::CCNode* node, Prop prop, float value) {
             using P = Prop;
             switch (prop) {
@@ -176,7 +160,7 @@ namespace luax::lunar {
                 case P::Rotation: node->setRotation(value); break;
                 case P::ScaleX: node->setScaleX(value); break;
                 case P::ScaleY: node->setScaleY(value); break;
-                case P::Opacity: setNodeOpacityImpl(node, value); break;
+                case P::Opacity: setNodeOpacity(node, value); break;
                 case P::ZOrder: node->setZOrder(static_cast<int>(value)); break;
                 case P::AnchorX: node->setAnchorPoint({value, node->getAnchorPoint().y}); break;
                 case P::AnchorY: node->setAnchorPoint({node->getAnchorPoint().x, value}); break;
@@ -369,7 +353,7 @@ namespace luax::lunar {
             if (!(frame >= 0.0)) {
                 luaL_error(L, "LunarAnimationDef:removeKeyframe expected frame >= 0");
             }
-            push(L, self->removeKeyframeAt(frame));
+            push(L, self->removeKeyframe(frame));
             return 1;
         }
 
@@ -380,7 +364,7 @@ namespace luax::lunar {
             if (!(from >= 0.0 && to >= 0.0)) {
                 luaL_error(L, "LunarAnimationDef:moveKeyframe expected frames >= 0");
             }
-            push(L, self->moveKeyframeFromTo(from, to));
+            push(L, self->moveKeyframe(from, to));
             return 1;
         }
 
@@ -553,7 +537,11 @@ namespace luax::lunar {
     }
 
     bool setNodeOpacity(cocos2d::CCNode* node, float value) {
-        return setNodeOpacityImpl(node, value);
+        if (auto* rgba = geode::cast::typeinfo_cast<cocos2d::CCRGBAProtocol*>(node)) {
+            rgba->setOpacity(opacityByte(value));
+            return true;
+        }
+        return false;
     }
 
     void LunarAnimationDef::addKeyframe(double frame, std::string_view nodeId, NodePose pose) {

@@ -56,28 +56,30 @@ namespace luax::lunar {
                     }
                     return geode::Ok(std::nullopt);
                 };
-                if (auto v = num("x"); v.isErr()) return geode::Err(v.unwrapErr());
-                else node.x = v.unwrap().value_or(node.x);
-                if (auto v = num("y"); v.isErr()) return geode::Err(v.unwrapErr());
-                else node.y = v.unwrap().value_or(node.y);
-                if (auto v = num("rot"); v.isErr()) return geode::Err(v.unwrapErr());
-                else node.rot = v.unwrap().value_or(node.rot);
-                if (auto v = num("sx"); v.isErr()) return geode::Err(v.unwrapErr());
-                else node.sx = v.unwrap().value_or(node.sx);
-                if (auto v = num("sy"); v.isErr()) return geode::Err(v.unwrapErr());
-                else node.sy = v.unwrap().value_or(node.sy);
-                if (auto v = num("z"); v.isErr()) return geode::Err(v.unwrapErr());
-                else node.z = v.unwrap().value_or(node.z);
-                if (auto v = num("opacity"); v.isErr()) return geode::Err(v.unwrapErr());
-                else node.opacity = v.unwrap();
-                if (auto v = num("ax"); v.isErr()) return geode::Err(v.unwrapErr());
-                else node.ax = v.unwrap();
-                if (auto v = num("ay"); v.isErr()) return geode::Err(v.unwrapErr());
-                else node.ay = v.unwrap();
-                if (auto v = num("skx"); v.isErr()) return geode::Err(v.unwrapErr());
-                else node.skx = v.unwrap();
-                if (auto v = num("sky"); v.isErr()) return geode::Err(v.unwrapErr());
-                else node.sky = v.unwrap();
+
+                struct NumField {
+                    char const* key;
+                    std::optional<float> RigNodeSpec::* member;
+                };
+
+                static constexpr NumField kNumFields[] = {
+                    {"x", &RigNodeSpec::x},
+                    {"y", &RigNodeSpec::y},
+                    {"rot", &RigNodeSpec::rot},
+                    {"sx", &RigNodeSpec::sx},
+                    {"sy", &RigNodeSpec::sy},
+                    {"z", &RigNodeSpec::z},
+                    {"opacity", &RigNodeSpec::opacity},
+                    {"ax", &RigNodeSpec::ax},
+                    {"ay", &RigNodeSpec::ay},
+                    {"skx", &RigNodeSpec::skx},
+                    {"sky", &RigNodeSpec::sky},
+                };
+                for (auto const& field : kNumFields) {
+                    auto v = num(field.key);
+                    if (v.isErr()) return geode::Err(v.unwrapErr());
+                    node.*(field.member) = std::move(v).unwrap();
+                }
 
                 spec.nodes.push_back(std::move(node));
             }
@@ -335,11 +337,11 @@ namespace luax::lunar {
                 node = cocos2d::CCNode::create();
             }
 
-            node->setPosition(nodeSpec.x, nodeSpec.y);
-            node->setRotation(nodeSpec.rot);
-            node->setScaleX(nodeSpec.sx);
-            node->setScaleY(nodeSpec.sy);
-            node->setZOrder(static_cast<int>(nodeSpec.z));
+            node->setPosition(nodeSpec.x.value_or(0.F), nodeSpec.y.value_or(0.F));
+            node->setRotation(nodeSpec.rot.value_or(0.F));
+            node->setScaleX(nodeSpec.sx.value_or(1.F));
+            node->setScaleY(nodeSpec.sy.value_or(1.F));
+            node->setZOrder(static_cast<int>(nodeSpec.z.value_or(0.F)));
             if (nodeSpec.ax || nodeSpec.ay) {
                 auto const cur = node->getAnchorPoint();
                 node->setAnchorPoint({nodeSpec.ax.value_or(cur.x), nodeSpec.ay.value_or(cur.y)});

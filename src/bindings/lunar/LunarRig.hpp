@@ -19,12 +19,12 @@ namespace luax::lunar {
         std::string id;
         std::optional<std::string> sprite;
         std::optional<std::string> parent;
-        float x = 0.F;
-        float y = 0.F;
-        float rot = 0.F;
-        float sx = 1.F;
-        float sy = 1.F;
-        float z = 0.F;
+        std::optional<float> x;
+        std::optional<float> y;
+        std::optional<float> rot;
+        std::optional<float> sx;
+        std::optional<float> sy;
+        std::optional<float> z;
         std::optional<float> opacity;
         std::optional<float> ax;
         std::optional<float> ay;

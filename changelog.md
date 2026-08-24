@@ -11,6 +11,8 @@
 ## 0.1.0-beta.26
 
 - Added skewing support to lunar.
+- Added pose sampling, seek, and current time to lunar animation tracks.
+- Added keyframe CRUD to `LunarAnimationDef` and node listing plus pose readback to `LunarRig`.
 
 ## 0.1.0-beta.25
 

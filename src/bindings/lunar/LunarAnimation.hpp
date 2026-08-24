@@ -7,7 +7,6 @@
 
 #include <Geode/Result.hpp>
 #include <Geode/utils/cocos.hpp>
-#include <algorithm>
 #include <cocos2d.h>
 #include <cstddef>
 #include <string>
@@ -30,11 +29,6 @@ namespace luax::lunar {
             return m_keyframes;
         }
 
-        void setKeyframes(std::vector<Keyframe> keyframes) {
-            m_keyframes = std::move(keyframes);
-            std::ranges::stable_sort(m_keyframes, {}, &Keyframe::frame);
-        }
-
         double fps() const noexcept {
             return m_fps;
         }
@@ -55,12 +49,12 @@ namespace luax::lunar {
 
         void addEvent(double frame, std::string name);
 
-        bool removeKeyframeAt(double frame) {
-            return removeKeyframe(m_keyframes, frame);
+        bool removeKeyframe(double frame) {
+            return ::luax::lunar::removeKeyframe(m_keyframes, frame);
         }
 
-        bool moveKeyframeFromTo(double from, double to) {
-            return moveKeyframe(m_keyframes, from, to);
+        bool moveKeyframe(double from, double to) {
+            return ::luax::lunar::moveKeyframe(m_keyframes, from, to);
         }
 
     private:

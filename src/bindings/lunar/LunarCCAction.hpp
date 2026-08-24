@@ -1,5 +1,7 @@
 #pragma once
 
+#include "bindings/lunar/LunarModel.hpp"
+
 #include <cmath>
 #include <cocos2d.h>
 
@@ -65,21 +67,10 @@ namespace luax::lunar {
     // This tweens exactly one axis.
     class LunarCCAxisTo final : public cocos2d::CCActionInterval {
     public:
-        enum class Axis : std::uint8_t {
-            PosX,
-            PosY,
-            ScaleX,
-            ScaleY,
-            AnchorX,
-            AnchorY,
-            SkewX,
-            SkewY,
-        };
-
-        static LunarCCAxisTo* create(float duration, Axis axis, float value) {
+        static LunarCCAxisTo* create(float duration, Prop prop, float value) {
             auto* ret = new LunarCCAxisTo();
             if (ret->initWithDuration(duration)) {
-                ret->m_axis = axis;
+                ret->m_prop = prop;
                 ret->m_value = value;
                 ret->autorelease();
                 return ret;
@@ -103,37 +94,41 @@ namespace luax::lunar {
 
     private:
         float read(cocos2d::CCNode* target) const {
-            switch (m_axis) {
-                case Axis::PosX: return target->getPositionX();
-                case Axis::PosY: return target->getPositionY();
-                case Axis::ScaleX: return target->getScaleX();
-                case Axis::ScaleY: return target->getScaleY();
-                case Axis::AnchorX: return target->getAnchorPoint().x;
-                case Axis::AnchorY: return target->getAnchorPoint().y;
-                case Axis::SkewX: return target->getSkewX();
-                case Axis::SkewY: return target->getSkewY();
+            using P = Prop;
+            switch (m_prop) {
+                case P::PosX: return target->getPositionX();
+                case P::PosY: return target->getPositionY();
+                case P::ScaleX: return target->getScaleX();
+                case P::ScaleY: return target->getScaleY();
+                case P::AnchorX: return target->getAnchorPoint().x;
+                case P::AnchorY: return target->getAnchorPoint().y;
+                case P::SkewX: return target->getSkewX();
+                case P::SkewY: return target->getSkewY();
+                case P::Rotation: break;
+                case P::Opacity: break;
+                case P::ZOrder: break;
             }
             return 0.F;
         }
 
         void write(cocos2d::CCNode* target, float value) const {
-            switch (m_axis) {
-                case Axis::PosX: target->setPositionX(value); break;
-                case Axis::PosY: target->setPositionY(value); break;
-                case Axis::ScaleX: target->setScaleX(value); break;
-                case Axis::ScaleY: target->setScaleY(value); break;
-                case Axis::AnchorX:
-                    target->setAnchorPoint({value, target->getAnchorPoint().y});
-                    break;
-                case Axis::AnchorY:
-                    target->setAnchorPoint({target->getAnchorPoint().x, value});
-                    break;
-                case Axis::SkewX: target->setSkewX(value); break;
-                case Axis::SkewY: target->setSkewY(value); break;
+            using P = Prop;
+            switch (m_prop) {
+                case P::PosX: target->setPositionX(value); break;
+                case P::PosY: target->setPositionY(value); break;
+                case P::ScaleX: target->setScaleX(value); break;
+                case P::ScaleY: target->setScaleY(value); break;
+                case P::AnchorX: target->setAnchorPoint({value, target->getAnchorPoint().y}); break;
+                case P::AnchorY: target->setAnchorPoint({target->getAnchorPoint().x, value}); break;
+                case P::SkewX: target->setSkewX(value); break;
+                case P::SkewY: target->setSkewY(value); break;
+                case P::Rotation: break;
+                case P::Opacity: break;
+                case P::ZOrder: break;
             }
         }
 
-        Axis m_axis = Axis::PosX;
+        Prop m_prop = Prop::PosX;
         float m_value = 0.F;
         float m_start = 0.F;
     };

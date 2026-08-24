@@ -216,10 +216,20 @@ def:setLooped(looped: boolean) -> ()
 def:getLooped() -> boolean
 def:addKeyframe(frame: number, nodeId: string, pose: LunarNodePose) -> ()
 def:addEvent(frame: number, name: string) -> ()
+def:listKeyframes() -> { { frame: number, targets: { [string]: LunarNodePose }, events: { string } } }
+def:getKeyAt(frame: number) -> ({ targets: { [string]: LunarNodePose }, events: { string } })?
+def:removeKeyframe(frame: number) -> boolean
+def:moveKeyframe(from: number, to: number) -> boolean
 ```
 
 `new` starts from fps 30, not looped, no keyframes.
 Build defs by hand with `addKeyframe` or load whole tables with `lunar.animation.load`.
+
+`listKeyframes` returns every keyframe sorted by frame.
+`getKeyAt` returns the keyframe at a frame, or nil when none is there.
+`removeKeyframe` deletes the keyframe at a frame and returns whether one was removed.
+`moveKeyframe` moves a keyframe to another frame and returns whether one was moved.
+Moving onto an occupied frame merges poses, with the moved targets winning, and appends its events.
 
 ## LunarAnimationTrack
 
@@ -237,6 +247,9 @@ track:isPaused() -> boolean
 track:speed() -> number
 track:duration() -> number
 track:bindEvent(name: string, fn: (eventName: string) -> ()) -> ()
+track:sample(t: number) -> { [string]: LunarNodePose }
+track:seek(t: number) -> ()
+track:currentTime() -> number
 ```
 
 - `play` restarts from time zero. It warns and does nothing on an empty animation.
@@ -263,6 +276,13 @@ track:play()
 
 When a looped track reaches its end it wraps and keeps playing.
 Tracks stop cleanly when the runtime shuts down.
+
+`sample` reads poses at a time without moving the playhead, and writes them onto the rig.
+`seek` jumps the playhead to a time.
+On a playing track it relaunches from that time, so seeked events fire.
+On a paused or stopped track it writes the sampled pose directly.
+`currentTime` is the playhead in seconds, independent of speed.
+Seeking past the end lands on the last frame.
 
 ## Easing
 
