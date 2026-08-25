@@ -72,6 +72,9 @@ function M.reparent(d: any, id: any, parent: any?, ukey: any?): (boolean, string
 	if node == nil then
 		return false, "no such node: " .. tostring(id)
 	end
+	if node.parent == parent then
+		return true, nil
+	end
 	local before = snapshot(d)
 	if parent ~= nil then
 		if findNode(d, parent) == nil then

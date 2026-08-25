@@ -1,12 +1,15 @@
 local State = require("./leditf_State")
+local Doc = require("./leditb_Doc")
 
 local cc2d = geode.cocos2d
 local modId = geode.Mod.getID()
 
 local state = State.new()
 local drawHandle = nil
+local layerRef: CCLayerColor? = nil
+local attachedRig: CCNode? = nil
 
-local WINDOWS = {
+local WINDOWS: { { id: string, title: string, mod: any, pos: any, size: any } } = {
 	{ id = "Browser", title = "Project Browser", mod = require("./leditf_Browser"), pos = { x = 12, y = 40 }, size = { x = 230, y = 170 } },
 	{ id = "RigTree", title = "Rig Tree", mod = require("./leditf_RigTree"), pos = { x = 12, y = 220 }, size = { x = 230, y = 330 } },
 	{ id = "Anims", title = "Animations", mod = require("./leditf_Anims"), pos = { x = 252, y = 40 }, size = { x = 190, y = 280 } },
@@ -15,16 +18,21 @@ local WINDOWS = {
 }
 
 local RED = { x = 0.9, y = 0.25, z = 0.25, w = 1 }
+local TOAST_LIFE = 4
 
 local function drawToasts(id)
-	local err = state.toasts[id]
-	if not err then return end
+	local t = state.toasts[id]
+	if not t then return end
+	if os.clock() - t.at > TOAST_LIFE then
+		state.toasts[id] = nil
+		return
+	end
 	imgui.style.with({ colors = { Text = RED } }, function()
-		imgui.textWrapped(err)
+		imgui.textWrapped(t.msg)
 	end)
 end
 
-local function drawWindows()
+local function drawWindows(): any
 	for _, w in WINDOWS do
 		imgui.window(w.title, function()
 			drawToasts(w.id)
@@ -37,6 +45,7 @@ local function drawWindows()
 			flags = imgui.Flag.Window.NoCollapse,
 		})
 	end
+	return nil
 end
 
 local function ensureDrawHandle()
@@ -44,8 +53,25 @@ local function ensureDrawHandle()
 	drawHandle = imgui.onDraw(function()
 		if not state.active then return end
 		imgui.theme.apply("dark")
-		drawWindows()
+		local ok, err = pcall(drawWindows)
+		if not ok then
+			warn("[ledit] ui error: " .. tostring(err))
+		end
 	end)
+end
+
+local function tick()
+	local doc = state.doc
+	if doc and doc.rig and layerRef and doc.rig ~= attachedRig then
+		if attachedRig then attachedRig:removeFromParent() end
+		local director = cc2d.CCDirector.sharedDirector()
+		if director then
+			local s = director:getWinSize()
+			doc.rig:setPosition({ x = s.width / 2, y = s.height / 2 })
+		end
+		layerRef:addChild(doc.rig)
+		attachedRig = doc.rig
+	end
 end
 
 local App = {}
@@ -55,6 +81,8 @@ function App.open()
 	local layer = cc2d.CCLayerColor.create({ r = 26, g = 26, b = 30, a = 255 })
 	if not layer then return end
 	layer:setID(modId .. "/animator-stage")
+
+	state.doc = state.doc or Doc.new()
 
 	local director = cc2d.CCDirector.sharedDirector(); if not director then return end
 	local winSize = director:getWinSize()
@@ -76,6 +104,10 @@ function App.open()
 
 	layer:addChild(menu)
 
+	layerRef = layer
+	attachedRig = nil
+	layer:schedule(tick)
+
 	state.active = true
 	ensureDrawHandle()
 	geode.pushSceneWithLayer(layer)
@@ -83,6 +115,9 @@ end
 
 function App.close()
 	state.active = false
+	if state.doc then state.doc:stop() end
+	layerRef = nil
+	attachedRig = nil
 	local director = cc2d.CCDirector.sharedDirector()
 	if director then director:popScene() end
 end
