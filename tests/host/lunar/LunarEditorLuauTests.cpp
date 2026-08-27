@@ -74,6 +74,27 @@ end
                 lua_setfield(l, -2, name);
                 lua_pop(l, 2);
             }
+            for (char const* name :
+                 {"leditf_State",
+                  "leditf_App",
+                  "leditf_MenuBtn",
+                  "leditf_Browser",
+                  "leditf_RigTree",
+                  "leditf_Anims",
+                  "leditf_Props",
+                  "leditf_Timeline"}) {
+                auto source = readModuleFile((std::string(name) + ".luau").c_str());
+                REQUIRE(source.has_value());
+                auto bytecode = luauapi_test::compile(*source);
+                std::string chunk = std::string("@") + name + ".luau";
+                INFO(name);
+                if (luau_load(l, chunk.c_str(), bytecode.data(), bytecode.size(), 0) != 0) {
+                    char const* msg = lua_tostring(l, -1);
+                    FAIL(std::string(name) + ": " + (msg ? msg : "unknown"));
+                    lua_pop(l, 1);
+                }
+                lua_pop(l, 1);
+            }
         }
 
         bool run(std::string const& body) const {

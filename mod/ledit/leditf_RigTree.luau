@@ -1,24 +1,11 @@
-local CHANNELS = {
-	{ k = "x", speed = 1 },
-	{ k = "y", speed = 1 },
-	{ k = "rot", speed = 0.5 },
-	{ k = "sx", speed = 0.02 },
-	{ k = "sy", speed = 0.02 },
-	{ k = "skx", speed = 0.02 },
-	{ k = "sky", speed = 0.02 },
-	{ k = "z", speed = 1, fmt = "%.0f" },
-	{ k = "opacity", speed = 2, min = 0, max = 255, fmt = "%.0f" },
-	{ k = "ax", speed = 0.01, min = 0, max = 1 },
-	{ k = "ay", speed = 0.01, min = 0, max = 1 },
-}
-
-local FALLBACK = { x = 0, y = 0, rot = 0, sx = 1, sy = 1, skx = 0, sky = 0, z = 0, opacity = 255, ax = 0.5, ay = 0.5 }
-
 local M = {}
 
 function M.draw(state: any)
 	local doc = state.doc
 	if doc == nil then return end
+
+	local CHANNELS = state.CHANNELS
+	local FALLBACK = state.FALLBACK
 
 	local index, kids, roots = {}, {}, {}
 	for i, n in ipairs(doc.rigSpec.nodes) do
