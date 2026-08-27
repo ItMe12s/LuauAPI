@@ -68,7 +68,7 @@ function M.draw(state: any)
 		imgui.text("Selected: " .. sel)
 		local node = doc.rigSpec.nodes[index[sel]]
 
-		imgui.separatorText("Rename / Sprite")
+		imgui.separatorText("Rename")
 		local newName = state:text("rename", "##rename", sel)
 		if imgui.button("Rename") and newName ~= "" then
 			if state:act("RigTree", function()
@@ -77,7 +77,8 @@ function M.draw(state: any)
 				state:select(newName)
 			end
 		end
-		imgui.sameLine()
+
+		imgui.separatorText("Sprite")
 		local sprite = state:text("sprite", "##sprite", node.sprite or "")
 		if imgui.button("Set Sprite") then
 			state:act("RigTree", function()

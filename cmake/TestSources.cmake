@@ -58,6 +58,7 @@ set(LUAUAPI_HOST_TEST_FIXTURE_SOURCES
     tests/host/render3d/FrustumTests.cpp
     tests/host/render3d/SceneDrawListTests.cpp
     tests/host/lunar/LunarCompileTests.cpp
+    tests/host/lunar/LunarEditorLuauTests.cpp
 )
 
 set(LUAUAPI_HOST_TEST_SOURCES

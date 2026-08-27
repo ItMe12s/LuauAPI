@@ -25,11 +25,16 @@ function M.addNode(d: any, entry: any, ukey: any?): (boolean, string?)
 end
 
 function M.deleteNode(d: any, id: any, ukey: any?): (boolean, string?)
-	local _, index = findNode(d, id)
+	local node, index = findNode(d, id)
 	if index == nil then
 		return false, "no such node: " .. tostring(id)
 	end
 	local before = snapshot(d)
+	for _, n in ipairs(d.rigSpec.nodes) do
+		if n.parent == id then
+			n.parent = node.parent
+		end
+	end
 	table.remove(d.rigSpec.nodes, index)
 	return finishOp(d, ukey, before, swapRig(d))
 end

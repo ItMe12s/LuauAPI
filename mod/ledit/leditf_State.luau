@@ -1,14 +1,32 @@
 local State = {} :: any
 
 function State.new(): any
-	return {
+	return setmetatable({
 		active = false,
 		doc = nil,
 		toasts = {},
 		selNode = nil,
+		selFrame = nil,
+		playing = false,
 		buffers = {},
 		combos = {},
-	}
+	}, { __index = State })
+end
+
+function State.fps(self: any): number
+	local doc = self.doc
+	local def = if doc ~= nil and doc.activeAnim ~= nil then doc.animations[doc.activeAnim] else nil
+	return (def and def.fps) or 30
+end
+
+function State.frameOf(self: any): number
+	local doc = self.doc
+	if doc == nil then return 0 end
+	return math.floor(doc.playhead * self:fps())
+end
+
+function State.timeOf(self: any, frame: number): number
+	return frame / self:fps()
 end
 
 function State.toast(self: any, id: any, msg: any)

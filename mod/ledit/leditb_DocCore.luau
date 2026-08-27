@@ -30,7 +30,7 @@ function Core.validFrame(f: any): boolean
 	return type(f) == "number" and f >= 0 and f % 1 == 0
 end
 
-function Core.findNode(d: any, id: any): (any, number?)
+function Core.findNode(d: any, id: any): (any, any)
 	for i, node in ipairs(d.rigSpec.nodes) do
 		if node.id == id then
 			return node, i
@@ -39,8 +39,39 @@ function Core.findNode(d: any, id: any): (any, number?)
 	return nil, nil
 end
 
+function Core.orderedSpec(spec: any): any
+	local nodes = spec.nodes or {}
+	local out = {}
+	local seen = {}
+	local function visit(node: any, depth: number)
+		if depth > 64 or seen[node.id] then
+			return
+		end
+		seen[node.id] = true
+		if node.parent ~= nil then
+			for _, n in ipairs(nodes) do
+				if n.id == node.parent then
+					visit(n, depth + 1)
+					break
+				end
+			end
+		end
+		out[#out + 1] = Core.clone(node)
+	end
+	for _, node in ipairs(nodes) do
+		if type(node) == "table" and type(node.id) == "string" and not seen[node.id] then
+			visit(node, 0)
+		else
+			out[#out + 1] = Core.clone(node)
+		end
+	end
+	local ordered = Core.clone(spec)
+	ordered.nodes = out
+	return ordered
+end
+
 function Core.rebuildRig(d: any): (any, string?)
-	local rig, err = d.lunar.rig.new():load(d.rigSpec)
+	local rig, err = d.lunar.rig.new():load(Core.orderedSpec(d.rigSpec))
 	d.track = nil
 	if rig == nil then
 		d.rig = nil
@@ -126,11 +157,11 @@ function Core.replay(d: any, s: any)
 end
 
 function Core.pushUndo(d: any, ukey: any, before: any)
-	if d.replaying or d.undo == nil then
+	if d.replaying or d.undoStack == nil then
 		return
 	end
 	local after = Core.snapshot(d)
-	d.undo:push(ukey, function()
+	d.undoStack:push(ukey, function()
 		Core.replay(d, before)
 	end, function()
 		Core.replay(d, after)

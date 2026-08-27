@@ -16,7 +16,29 @@ local function num(v: any): string
 end
 
 local function str(v: any): string
-	return string.format("%q", tostring(v))
+	local s = tostring(v)
+	local out = { '"' }
+	for i = 1, #s do
+		local c = s:sub(i, i)
+		local b = c:byte()
+		if c == "\\" then
+			out[#out + 1] = "\\\\"
+		elseif c == '"' then
+			out[#out + 1] = '\\"'
+		elseif c == "\n" then
+			out[#out + 1] = "\\n"
+		elseif c == "\r" then
+			out[#out + 1] = "\\r"
+		elseif c == "\t" then
+			out[#out + 1] = "\\t"
+		elseif b < 32 or b == 127 then
+			out[#out + 1] = string.format("\\%03d", b)
+		else
+			out[#out + 1] = c
+		end
+	end
+	out[#out + 1] = '"'
+	return table.concat(out)
 end
 
 function Ser.value(v: any): string
@@ -58,7 +80,7 @@ function Ser.spec(spec: any): string
 			local v = node[key]
 			if v ~= nil then
 				local rendered
-				if key == "sprite" or key == "parent" then
+				if key == "sprite" or key == "parent" or key == "id" then
 					rendered = str(v)
 				else
 					rendered = num(v)

@@ -72,6 +72,15 @@ local function tick()
 		layerRef:addChild(doc.rig)
 		attachedRig = doc.rig
 	end
+
+	if doc.track ~= nil then
+		state.playing = doc.track:isPlaying()
+		if state.playing then
+			doc.playhead = doc.track:currentTime()
+		end
+	else
+		state.playing = false
+	end
 end
 
 local App = {}
@@ -115,6 +124,7 @@ end
 
 function App.close()
 	state.active = false
+	state.playing = false
 	if state.doc then state.doc:stop() end
 	layerRef = nil
 	attachedRig = nil

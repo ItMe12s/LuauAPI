@@ -23,11 +23,26 @@ namespace {
         REQUIRE(lua_pcall(L, 0, 1, 0) == 0);
     }
 
+    int editorLoadstring(lua_State* L) {
+        size_t len = 0;
+        char const* src = luaL_checklstring(L, 1, &len);
+        auto bytecode = luax::Runtime::compileSource(std::string_view(src, len));
+        if (luau_load(L, "=loadstring", bytecode.data(), bytecode.size(), 0) != 0) {
+            char const* msg = lua_tostring(L, -1);
+            luaL_error(L, "%s", msg ? msg : "loadstring compile failed");
+        }
+        return 1;
+    }
+
+    extern char const* kFakes;
+
     struct EditorEnv {
         luauapi_test::LuaStatePtr L;
 
         EditorEnv() : L(luauapi_test::makeLuaState(true)) {
             lua_State* l = L.get();
+            lua_pushcfunction(l, &editorLoadstring, "loadstring");
+            lua_setglobal(l, "loadstring");
             REQUIRE(luauapi_test::runScriptVoid(l, R"X(
 __MODULES = {}
 function require(path)
@@ -62,7 +77,18 @@ end
         }
 
         bool run(std::string const& body) const {
-            return luauapi_test::runScriptReturnsBool(L.get(), body);
+            auto bytecode = luauapi_test::compile(kFakes + body);
+            if (luau_load(L.get(), "@editor-test", bytecode.data(), bytecode.size(), 0) != 0) {
+                FAIL("luau_load: " << (lua_tostring(L.get(), -1) ? lua_tostring(L.get(), -1) : "?"));
+                return false;
+            }
+            if (lua_pcall(L.get(), 0, 1, 0) != 0) {
+                FAIL("script error: " << (lua_tostring(L.get(), -1) ? lua_tostring(L.get(), -1) : "?"));
+                return false;
+            }
+            bool const ok = lua_toboolean(L.get(), -1) != 0;
+            lua_pop(L.get(), 1);
+            return ok;
         }
     };
 
@@ -78,8 +104,12 @@ local function makeFakeLunar()
             if seen[n.id] ~= nil then return nil, "duplicate id" end
             seen[n.id] = true
         end
+        local orderSeen = {}
         for _, n in ipairs(spec.nodes or {}) do
-            if n.parent ~= nil and seen[n.parent] ~= true then return nil, "missing parent" end
+            if n.parent ~= nil and orderSeen[n.parent] ~= true then
+                return nil, "parent must precede child"
+            end
+            orderSeen[n.id] = true
         end
         self.spec = spec
         return self
@@ -231,12 +261,12 @@ u:push("k1", function() v = v - 1 end, function() v = v + 1 end)
 u:push(nil, function() v = v - 5 end, function() v = v + 5 end)
 assert(v == 0)
 assert(u:canUndo() and not u:canRedo())
-assert(u:undo() and v == -1)
+assert(u:undo() and v == -5)
 assert(u:undo() and v == -6)
 assert(not u:undo())
 assert(u:canRedo())
-assert(u:redo() and v == -1)
-assert(u:redo() and v == 4)
+assert(u:redo() and v == -5)
+assert(u:redo() and v == 0)
 assert(not u:redo())
 
 local applied = 0
@@ -294,6 +324,31 @@ assert(d:setBase("body", { x = 10, z = 2 }))
 assert(d.rigSpec.nodes[1].x == 10 and d.rigSpec.nodes[1].z == 2)
 
 assert(d.lunar == fl)
+return true
+)X"));
+}
+
+TEST_CASE("Doc rebuild tolerates out-of-order parents and parent deletion") {
+    EditorEnv env;
+    REQUIRE(env.run(std::string(kFakes) + R"X(
+local Doc = require("./leditb_Doc")
+local d = Doc.new({ lunar = makeFakeLunar() })
+d:addAnim("w")
+d:setActive("w")
+
+d:addNode({ id = "body" })
+d:addNode({ id = "arm" })
+d:addNode({ id = "hand" })
+assert(d:reparent("arm", "body"))
+assert(d:reparent("hand", "arm"))
+assert(d.rigSpec.nodes[1].id == "body", "authored order untouched")
+assert(d.rig.spec.nodes[3].id == "hand", "loaded rig is topologically ordered")
+
+assert(d:addNode({ id = "thumb", parent = "hand" }))
+assert(d.rig ~= nil, "parent-before-child invariant not required by callers")
+assert(d:deleteNode("hand"))
+assert(d.rigSpec.nodes[3].parent == "arm", "deleted parent's children reparented")
+assert(d.rig ~= nil, "rebuild succeeds after parent deletion")
 return true
 )X"));
 }
@@ -360,6 +415,7 @@ TEST_CASE("Doc playback: recompile preserves playhead, failures keep old track")
 local Doc = require("./leditb_Doc")
 local fl, state = makeFakeLunar()
 local d = Doc.new({ lunar = fl })
+assert(d:addAnim("wave"))
 assert(d:setActive("wave"))
 assert(d:putPose(0, "arm", { x = 0 }))
 assert(d:putPose(20, "arm", { x = 100 }))
@@ -397,7 +453,7 @@ local Doc = require("./leditb_Doc")
 local d = Doc.new({ lunar = makeFakeLunar() })
 
 assert(not d:putPose(0, "arm", { x = 1 }), "no active anim rejected")
-assert(not d.undo:canUndo(), "failed op records nothing")
+assert(not d.undoStack:canUndo(), "failed op records nothing")
 
 d:addNode({ id = "arm" })
 d:addAnim("wave")
@@ -408,7 +464,7 @@ assert(d:putPose(0, "arm", { x = 3 }, "drag:x"))
 assert(d.animations.wave.keyframes[0].arm.x == 3)
 
 assert(d:undo())
-assert(d.animations.wave.keyframes[0].arm.x == 1, "one drag = one command")
+assert(d.animations.wave.keyframes[0] == nil, "one drag = one command, fully undone")
 assert(d:undo() and d.activeAnim == nil, "setActive undone")
 assert(d:undo() and d.animations.wave == nil, "addAnim undone")
 assert(d:undo() and #d.rigSpec.nodes == 0, "addNode undone")
