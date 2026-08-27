@@ -104,7 +104,9 @@ function Core.recompile(d: any): (boolean, string?)
 	d.track = track
 	track:setSpeed(d.speed)
 	track:seek(math.clamp(d.playhead, 0, track:duration()))
-	d.playhead = track:currentTime()
+	if track:duration() > 0 then
+		d.playhead = track:currentTime()
+	end
 	if wasPlaying then
 		track:play()
 	end

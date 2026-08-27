@@ -77,6 +77,13 @@ function State.setGridSel(self: any, id: any, f: any)
 	self.gridSelF = f
 end
 
+function State.resetAnimSel(self: any)
+	self.selFrame = nil
+	self:setGridSel(nil, nil)
+	self.buffers.animrename = nil
+	self.buffers.animdup = nil
+end
+
 function State.select(self: any, id: any)
 	self.selNode = id
 	self.buffers.rename = nil

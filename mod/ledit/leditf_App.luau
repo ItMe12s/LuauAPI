@@ -10,7 +10,7 @@ local layerRef: CCLayerColor? = nil
 local attachedRig: CCNode? = nil
 
 local WINDOWS: { { id: string, title: string, mod: any, pos: any, size: any } } = {
-	{ id = "Browser", title = "Project Browser", mod = require("./leditf_Browser"), pos = { x = 12, y = 40 }, size = { x = 230, y = 170 } },
+	{ id = "Browser", title = "Project Browser", mod = require("./leditf_Browser"), pos = { x = 12, y = 40 }, size = { x = 230, y = 360 } },
 	{ id = "RigTree", title = "Rig Tree", mod = require("./leditf_RigTree"), pos = { x = 12, y = 220 }, size = { x = 230, y = 330 } },
 	{ id = "Anims", title = "Animations", mod = require("./leditf_Anims"), pos = { x = 252, y = 40 }, size = { x = 190, y = 280 } },
 	{ id = "Props", title = "Properties", mod = require("./leditf_Props"), pos = { x = 452, y = 40 }, size = { x = 210, y = 360 } },
@@ -60,6 +60,28 @@ local function ensureDrawHandle()
 	end)
 end
 
+local lastTrack: any = nil
+
+local function bindMarkers(doc: any)
+	local def = if doc.activeAnim ~= nil then doc.animations[doc.activeAnim] else nil
+	if def == nil or doc.track == nil then return end
+	local seen = {}
+	for _, kf in pairs(def.keyframes) do
+		local evs = kf.events
+		if evs ~= nil then
+			local names = if type(evs) == "table" then evs else { evs }
+			for _, name in ipairs(names) do
+				if seen[name] == nil then
+					seen[name] = true
+					doc.track:bindEvent(name, function(n)
+						state:toast("Timeline", "event: " .. tostring(n))
+					end)
+				end
+			end
+		end
+	end
+end
+
 local function tick()
 	local doc = state.doc
 	if doc and doc.rig and layerRef and doc.rig ~= attachedRig then
@@ -71,6 +93,11 @@ local function tick()
 		end
 		layerRef:addChild(doc.rig)
 		attachedRig = doc.rig
+	end
+
+	if doc ~= nil and doc.track ~= lastTrack then
+		lastTrack = doc.track
+		bindMarkers(doc)
 	end
 
 	if doc.track ~= nil then

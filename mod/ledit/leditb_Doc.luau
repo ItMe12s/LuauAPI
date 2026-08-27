@@ -96,8 +96,9 @@ function Doc:scrubToTime(t)
 	if self.track == nil then
 		return false, "no track"
 	end
-	self.track:seek(math.clamp(t, 0, self.track:duration()))
-	self.playhead = self.track:currentTime()
+	local dur = self.track:duration()
+	self.track:seek(math.clamp(t, 0, dur))
+	self.playhead = if dur > 0 then self.track:currentTime() else math.max(t, 0)
 	return true, nil
 end
 

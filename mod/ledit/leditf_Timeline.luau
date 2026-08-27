@@ -27,17 +27,35 @@ local function seek(state: any, f: number)
 	end)
 end
 
+local function hasChannels(def: any): boolean
+	for _, kf in pairs(def.keyframes) do
+		for id, pose in pairs(kf) do
+			if id ~= "events" then
+				for k in pairs(pose) do
+					if k ~= "easing" then return true end
+				end
+			end
+		end
+	end
+	return false
+end
+
 function M.draw(state: any)
 	local doc = state.doc
 	if doc == nil then return end
+	local def = if doc.activeAnim ~= nil then doc.animations[doc.activeAnim] else nil
 
 	imgui.text(("%s  f:%d  %.2fs / %.2fs"):format(
 		tostring(doc.activeAnim or "-"), state:frameOf(), doc.playhead, doc:length()))
 	imgui.spacing()
 	if imgui.button("Play") then
-		state:act("Timeline", function()
-			return doc:play()
-		end)
+		if def == nil or not hasChannels(def) then
+			state:toast("Timeline", "no channel keys yet - drag a property field")
+		else
+			state:act("Timeline", function()
+				return doc:play()
+			end)
+		end
 	end
 	imgui.sameLine()
 	if imgui.button("Pause") then
@@ -71,10 +89,8 @@ function M.draw(state: any)
 		end)
 	end
 
-	local def = if doc.activeAnim ~= nil then doc.animations[doc.activeAnim] else nil
-	if def == nil then return end
-
 	-- Markers
+	if def == nil then return end
 	imgui.separatorText("Markers")
 	local first = true
 	local evs = {}
@@ -109,16 +125,22 @@ function M.draw(state: any)
 	local mf = numBuf(state, "mkframe", "##mkat", state:frameOf(), 1)
 	local mkName = state:text("mkname", "##markername", "")
 	if imgui.button("Add Marker") and mkName ~= "" then
-		state:act("Timeline", function()
+		if state:act("Timeline", function()
 			return doc:addEvent(mf, mkName)
-		end)
+		end) then
+			state.buffers.mkname = ""
+		end
 	end
 
 	imgui.separator()
 
 	-- Selected cell controls
+	local inSpec = {}
+	for _, n in ipairs(doc.rigSpec.nodes) do
+		inSpec[n.id] = true
+	end
 	local gsId, gsF = state.gridSelId, state.gridSelF
-	local gk = if gsId ~= nil and def.keyframes[gsF] ~= nil then def.keyframes[gsF][gsId] else nil
+	local gk = if gsId ~= nil and inSpec[gsId] and def.keyframes[gsF] ~= nil then def.keyframes[gsF][gsId] else nil
 	if gk ~= nil then
 		imgui.text(("key %s @ %d"):format(gsId, gsF))
 		if gsF > 0 and imgui.button("<") then
@@ -136,7 +158,7 @@ function M.draw(state: any)
 				return ok, err
 			end)
 		end
-		local mv = numBuf(state, "mvframe", "##mvto", gsF, 1)
+		local mv = numBuf(state, "mv:" .. gsId .. ":" .. gsF, "##mvto", gsF, 1)
 		imgui.sameLine()
 		if imgui.button("Move To") then
 			state:act("Timeline", function()
@@ -162,12 +184,11 @@ function M.draw(state: any)
 	-- Grid
 	local fps = state:fps()
 	local maxF = math.max(31, math.floor(doc:length() * fps + 0.5))
-	if maxF > MAX_COLS then maxF = MAX_COLS end
-
-	local inSpec = {}
-	for _, n in ipairs(doc.rigSpec.nodes) do
-		inSpec[n.id] = true
+	if maxF > MAX_COLS then
+		maxF = MAX_COLS
+		imgui.text("(>1024 frames truncated)")
 	end
+
 	local rows = {}
 	local seenRows = {}
 	for _, kf in pairs(def.keyframes) do

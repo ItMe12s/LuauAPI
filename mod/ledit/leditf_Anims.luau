@@ -15,9 +15,11 @@ function M.draw(state: any)
 
 	for _, name in ipairs(sortedNames(doc)) do
 		if imgui.selectable(name, doc.activeAnim == name) and doc.activeAnim ~= name then
-			state:act("Anims", function()
+			if state:act("Anims", function()
 				return doc:setActive(name)
-			end)
+			end) then
+				state:resetAnimSel()
+			end
 		end
 	end
 
@@ -30,9 +32,11 @@ function M.draw(state: any)
 			return doc:addAnim(newName)
 		end) then
 			state.buffers.animnew = ""
-			state:act("Anims", function()
+			if state:act("Anims", function()
 				return doc:setActive(newName)
-			end)
+			end) then
+				state:resetAnimSel()
+			end
 		end
 	end
 
@@ -65,16 +69,17 @@ function M.draw(state: any)
 			state.buffers.animrename = nil
 		end
 	end
+
 	local dup = state:text("animdup", "##dup", "")
 	imgui.sameLine()
 	if imgui.button("Duplicate") then
-		if dup ~= "" then
-			state:act("Anims", function()
-				return doc:duplicateAnim(act, dup)
-			end)
+		if dup ~= "" and state:act("Anims", function()
+			return doc:duplicateAnim(act, dup)
+		end) then
+			state.buffers.animdup = ""
 		end
 	end
-	imgui.sameLine()
+
 	if imgui.button("Delete") then
 		state:act("Anims", function()
 			return doc:deleteAnim(act)

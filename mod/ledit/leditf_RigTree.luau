@@ -118,16 +118,17 @@ function M.draw(state: any)
 	local newId = state:text("addid", "id", "")
 	local addSprite = state:text("addsprite", "sprite (optional)", "")
 	local addParent = select(2, state:combo("addparent", "parent", parentItems()))
-	if imgui.button("Add Node") then
+	if imgui.button("Add Node") and newId ~= "" then
 		if state:act("RigTree", function()
-		return doc:addNode({
-			id = newId,
-			sprite = if addSprite ~= "" then addSprite else nil,
-			parent = if addParent == "(root)" then nil else addParent,
-		})
+			return doc:addNode({
+				id = newId,
+				sprite = if addSprite ~= "" then addSprite else nil,
+				parent = if addParent == "(root)" then nil else addParent,
+			})
 		end) then
 			state.buffers.addid = ""
 			state.buffers.addsprite = ""
+			state.combos.addparent = nil
 			state:select(newId)
 		end
 	end

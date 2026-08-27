@@ -138,11 +138,21 @@ local function makeFakeLunar()
     function Rig:loadAnimation(def)
         if state.failAnim then return nil, "forced failure" end
         local t = setmetatable({ def = def, playing = false, paused = false, t = 0, speed = 1 }, Track)
-        local maxFrame = 0
-        for f in pairs(def.keyframes or {}) do
-            if f > maxFrame then maxFrame = f end
+        local fps = def.fps or 30
+        local maxChF, maxEvT = 0, 0
+        for f, kf in pairs(def.keyframes or {}) do
+            local hasCh = false
+            for id, pose in pairs(kf) do
+                if id ~= "events" then
+                    for k in pairs(pose) do
+                        if k ~= "easing" then hasCh = true end
+                    end
+                end
+            end
+            if hasCh and f > maxChF then maxChF = f end
+            if kf.events ~= nil and f / fps > maxEvT then maxEvT = f / fps end
         end
-        t.dur = maxFrame / (def.fps or 30)
+        t.dur = math.max(maxChF / fps, maxEvT)
         return t
     end
     function Track:isPlaying() return self.playing end
@@ -208,7 +218,12 @@ local function makeFakeFs()
             return true
         end,
         remove = function(root, path)
-            files[full(root, path)] = nil
+            local target = full(root, path)
+            if files[target] ~= nil then
+                files[target] = nil
+            elseif dirs[target] == true then
+                dirs[target] = nil
+            end
             return true
         end,
     }
@@ -463,6 +478,13 @@ assert(d:stop() and d.playhead == 0)
 d:addAnim("other")
 assert(d:setActive("other"))
 assert(d.playhead == 0 and d.track ~= nil)
+
+assert(d:putPose(5, "arm", {}), "empty skeleton key ok")
+assert(d.track:duration() == 0, "skeleton-only track has zero duration")
+assert(d:scrubToTime(5 / 30))
+assert(d.playhead == 5 / 30, "empty track keeps scrub playhead")
+assert(d:putPose(5, "arm", { x = 1 }), "autokey over skeleton")
+assert(math.abs(d.playhead - 5 / 30) < 1e-9, "playhead survives recompile to real key")
 return true
 )X"));
 }
@@ -556,6 +578,20 @@ assert(fs.files[walkPath] == before, "byte-stable resave")
 doc2.animations.walk = nil
 assert(pj:save(doc2))
 assert(fs.files[walkPath] == nil, "stale anim files swept")
+
+assert(pj:saveAs(doc2, "demo two"))
+assert(fs.files["save/projects/demo two/demo two.rig.luau"] ~= nil, "save-as copies under new name")
+assert(doc2.name == "demo two")
+assert(pj:saveAs(doc2, "demo two"), "save-as onto own name = plain save")
+assert(not pj:saveAs(doc2, "demo rig"), "save-as onto existing project rejected")
+
+local doc3 = assert(pj:load("demo two"))
+assert(doc3.rigSpec.nodes[1].id == "root")
+
+assert(pj:delete("demo two"))
+assert(fs.files["save/projects/demo two/demo two.rig.luau"] == nil, "delete removes files")
+assert(pj:load("demo two") == nil, "deleted project unlistable")
+assert(pj:delete("demo two"), "delete idempotent")
 return true
 )X"));
 }

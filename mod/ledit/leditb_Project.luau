@@ -147,4 +147,42 @@ function Project:save(doc: any): (boolean, string?)
 	return true, nil
 end
 
+function Project:saveAs(doc: any, newName: any): (boolean, string?)
+	if not sanitize(newName) then
+		return false, "invalid project name"
+	end
+	if newName ~= doc.name and self.fs.exists("save", dirFor(newName)) then
+		return false, "project exists: " .. newName
+	end
+	local old = doc.name
+	doc.name = newName
+	local ok, err = self:save(doc)
+	if not ok then
+		doc.name = old
+	end
+	return ok, err
+end
+
+function Project:delete(name: any): (boolean, string?)
+	if not sanitize(name) then
+		return false, "invalid project name"
+	end
+	local dir = dirFor(name)
+	local entries, lerr = self.fs.list("save", dir)
+	if entries == nil then
+		return false, lerr
+	end
+	for _, file in ipairs(entries) do
+		local ok, err = self.fs.remove("save", dir .. "/" .. file)
+		if not ok then
+			return false, err
+		end
+	end
+	local ok, derr = self.fs.remove("save", dir)
+	if not ok then
+		return false, derr
+	end
+	return true, nil
+end
+
 return Project
