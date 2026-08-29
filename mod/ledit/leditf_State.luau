@@ -39,6 +39,7 @@ function State.new(): any
 		gridSelId = nil,
 		gridSelF = nil,
 		playing = false,
+		tickError = nil,
 		buffers = {},
 		combos = {},
 	}, { __index = State })

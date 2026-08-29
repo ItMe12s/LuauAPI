@@ -75,9 +75,23 @@ function Core.rebuildRig(d: any): (any, string?)
 	d.track = nil
 	if rig == nil then
 		d.rig = nil
+		d.rigWarn = nil
 		return false, err
 	end
 	d.rig = rig
+	local live = {}
+	for _, id in ipairs(rig:listNodes()) do
+		live[id] = true
+	end
+	local missing = {}
+	for _, n in ipairs(d.rigSpec.nodes) do
+		if not live[n.id] then
+			table.insert(missing, n.id)
+		end
+	end
+	d.rigWarn = if #missing > 0
+		then "nodes skipped (sprite failed to load?): " .. table.concat(missing, ", ")
+		else nil
 	return rig, nil
 end
 

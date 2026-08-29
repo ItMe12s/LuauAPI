@@ -133,7 +133,17 @@ local function makeFakeLunar()
             orderSeen[n.id] = true
         end
         self.spec = spec
+        self.live = {}
+        for _, n in ipairs(spec.nodes or {}) do
+            if n.sprite ~= "__skip__" then self.live[n.id] = true end
+        end
         return self
+    end
+    function Rig:listNodes()
+        local ids = {}
+        for id in pairs(self.live or {}) do table.insert(ids, id) end
+        table.sort(ids)
+        return ids
     end
     function Rig:loadAnimation(def)
         if state.failAnim then return nil, "forced failure" end
@@ -364,6 +374,21 @@ return true
 )X"));
 }
 
+TEST_CASE("Doc rigWarn flags nodes skipped by rig load") {
+    EditorEnv env;
+    REQUIRE(env.run(std::string(kFakes) + R"X(
+local Doc = require("./leditb_Doc")
+local d = Doc.new({ lunar = makeFakeLunar() })
+assert(d:addNode({ id = "body" }))
+assert(d.rigWarn == nil, "no warning when all nodes load")
+assert(d:addNode({ id = "ghost", sprite = "__skip__" }))
+assert(d.rigWarn ~= nil and d.rigWarn:find("ghost") ~= nil, "skipped node flagged")
+assert(d:setSprite("ghost", "ok.png"))
+assert(d.rigWarn == nil, "warning clears once the node loads")
+return true
+)X"));
+}
+
 TEST_CASE("Doc rebuild tolerates out-of-order parents and parent deletion") {
     EditorEnv env;
     REQUIRE(env.run(std::string(kFakes) + R"X(
@@ -441,6 +466,28 @@ assert(d.animations.wave2.keyframes[0].arm.rot == 10)
 assert(not d:duplicateAnim("wave", "wave2"))
 assert(d:renameAnim("wave2", "wave3") and d.animations.wave3 ~= nil)
 assert(d:deleteAnim("wave3"))
+return true
+)X"));
+}
+
+TEST_CASE("Doc putPose keeps multi-frame keys distinct") {
+    EditorEnv env;
+    REQUIRE(env.run(std::string(kFakes) + R"X(
+local Doc = require("./leditb_Doc")
+local d = Doc.new({ lunar = makeFakeLunar() })
+d:addNode({ id = "arm" })
+d:addAnim("wave")
+assert(d:setActive("wave"))
+for i = 0, 30, 10 do
+    assert(d:putPose(i, "arm", { x = i + 0.0 }))
+end
+local kf = d.animations.wave.keyframes
+assert(kf[0].arm.x == 0 and kf[10].arm.x == 10, "frame 0 and 10 distinct")
+assert(kf[20].arm.x == 20 and kf[30].arm.x == 30, "frame 20 and 30 distinct")
+local n = 0
+for _ in pairs(kf) do n = n + 1 end
+assert(n == 4, "exactly four keyframes")
+assert(d:length() == 1.0, "duration spans to the last key")
 return true
 )X"));
 }

@@ -104,7 +104,7 @@ function M.draw(state: any)
 		local names = if type(ev.events) == "table" then ev.events else { ev.events }
 		for _, name in ipairs(names) do
 			first = false
-			if imgui.selectable(name .. " @ " .. ev.f, state.selFrame == ev.f) then
+			if imgui.selectable(name .. " @ " .. ev.f, state.selFrame == ev.f) and state.selFrame ~= ev.f then
 				state.selFrame = ev.f
 				seek(state, ev.f)
 			end
@@ -225,7 +225,7 @@ function M.draw(state: any)
 			for _, id in ipairs(rows) do
 				imgui.tableNextRow()
 				if imgui.tableSetColumnIndex(0) then
-					if imgui.selectable(id, state.selNode == id) then
+					if imgui.selectable(id, state.selNode == id) and state.selNode ~= id then
 						state:select(id)
 					end
 				end
@@ -246,10 +246,11 @@ function M.draw(state: any)
 						if occ then
 							seek(state, f)
 						else
-							state:act("Timeline", function()
-								return doc:putPose(f, id, {})
-							end)
 							seek(state, f)
+							local pose = if doc.rig ~= nil then doc.rig:getPose(id) else nil
+							state:act("Timeline", function()
+								return doc:putPose(f, id, pose or {})
+							end)
 						end
 					end
 				end

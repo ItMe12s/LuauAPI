@@ -32,13 +32,13 @@ function M.draw(state: any)
 		local selected = state.selNode == id
 		if kids[id] then
 			imgui.treeNode(id, function()
-				if imgui.selectable(id, selected) then state:select(id) end
+			if imgui.selectable(id, selected) and not selected then state:select(id) end
 				for _, cid in ipairs(kids[id]) do
 					drawNode(cid, depth + 1)
 				end
 			end)
 		else
-			if imgui.selectable(id, selected) then state:select(id) end
+			if imgui.selectable(id, selected) and not selected then state:select(id) end
 		end
 	end
 
@@ -67,6 +67,7 @@ function M.draw(state: any)
 
 		imgui.separatorText("Sprite")
 		local sprite = state:text("sprite", "##sprite", node.sprite or "")
+		imgui.textWrapped("own mod: sprites/file.png | cross-mod: <mod-id>/file.png")
 		if imgui.button("Set Sprite") then
 			state:act("RigTree", function()
 				return doc:setSprite(sel, sprite ~= "" and sprite or nil)

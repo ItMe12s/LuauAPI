@@ -686,6 +686,9 @@ namespace luax::lunar {
         m_playing = false;
         m_paused = false;
         m_elapsed = m_active ? m_active->duration : 0.0;
+        if (m_rig) {
+            applyPose(m_rig, samplePose(m_anim, m_launchBase + m_elapsed));
+        }
     }
 
     void LunarTrack::play() {

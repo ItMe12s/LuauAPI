@@ -9,14 +9,6 @@ local drawHandle = nil
 local layerRef: CCLayerColor? = nil
 local attachedRig: CCNode? = nil
 
-local WINDOWS: { { id: string, title: string, mod: any, pos: any, size: any } } = {
-	{ id = "Browser", title = "Project Browser", mod = require("./leditf_Browser"), pos = { x = 12, y = 40 }, size = { x = 230, y = 360 } },
-	{ id = "RigTree", title = "Rig Tree", mod = require("./leditf_RigTree"), pos = { x = 12, y = 220 }, size = { x = 230, y = 330 } },
-	{ id = "Anims", title = "Animations", mod = require("./leditf_Anims"), pos = { x = 252, y = 40 }, size = { x = 190, y = 280 } },
-	{ id = "Props", title = "Properties", mod = require("./leditf_Props"), pos = { x = 452, y = 40 }, size = { x = 210, y = 360 } },
-	{ id = "Timeline", title = "Timeline", mod = require("./leditf_Timeline"), pos = { x = 672, y = 40 }, size = { x = 580, y = 380 } },
-}
-
 local RED = { x = 0.9, y = 0.25, z = 0.25, w = 1 }
 local TOAST_LIFE = 4
 
@@ -32,11 +24,42 @@ local function drawToasts(id)
 	end)
 end
 
+local function drawStatus(): any
+	local doc = state.doc
+	local warn = if doc ~= nil then doc.rigWarn else nil
+	if state.tickError == nil and warn == nil then
+		imgui.text("ok")
+		return nil
+	end
+	imgui.style.with({ colors = { Text = RED } }, function()
+		if state.tickError ~= nil then
+			imgui.textWrapped("tick: " .. state.tickError)
+		end
+		if warn ~= nil then
+			imgui.textWrapped(warn)
+		end
+	end)
+	return nil
+end
+
+local WINDOWS: { { id: string, title: string, mod: any, pos: any, size: any, draw: any? } } = {
+	{ id = "Browser", title = "Project Browser", mod = require("./leditf_Browser"), pos = { x = 12, y = 40 }, size = { x = 230, y = 360 } },
+	{ id = "RigTree", title = "Rig Tree", mod = require("./leditf_RigTree"), pos = { x = 12, y = 220 }, size = { x = 230, y = 330 } },
+	{ id = "Anims", title = "Animations", mod = require("./leditf_Anims"), pos = { x = 252, y = 40 }, size = { x = 190, y = 280 } },
+	{ id = "Props", title = "Properties", mod = require("./leditf_Props"), pos = { x = 452, y = 40 }, size = { x = 210, y = 360 } },
+	{ id = "Timeline", title = "Timeline", mod = require("./leditf_Timeline"), pos = { x = 672, y = 40 }, size = { x = 580, y = 380 } },
+	{ id = "Status", title = "Status", mod = nil, pos = { x = 672, y = 436 }, size = { x = 280, y = 110 }, draw = drawStatus },
+}
+
 local function drawWindows(): any
 	for _, w in WINDOWS do
 		imgui.window(w.title, function()
 			drawToasts(w.id)
-			w.mod.draw(state)
+			if w.draw ~= nil then
+				w.draw(state)
+			else
+				w.mod.draw(state)
+			end
 		end, {
 			pos = w.pos,
 			posCond = imgui.Cond.FirstUseEver,
@@ -48,20 +71,7 @@ local function drawWindows(): any
 	return nil
 end
 
-local function ensureDrawHandle()
-	if drawHandle then return end
-	drawHandle = imgui.onDraw(function()
-		if not state.active then return end
-		imgui.theme.apply("dark")
-		local ok, err = pcall(drawWindows)
-		if not ok then
-			warn("[ledit] ui error: " .. tostring(err))
-		end
-	end)
-end
-
 local lastTrack: any = nil
-
 local function bindMarkers(doc: any)
 	local def = if doc.activeAnim ~= nil then doc.animations[doc.activeAnim] else nil
 	if def == nil or doc.track == nil then return end
@@ -82,7 +92,7 @@ local function bindMarkers(doc: any)
 	end
 end
 
-local function tick()
+local function tickBody(): any
 	local doc = state.doc
 	if doc and doc.rig and layerRef and doc.rig ~= attachedRig then
 		if attachedRig then attachedRig:removeFromParent() end
@@ -102,12 +112,29 @@ local function tick()
 
 	if doc.track ~= nil then
 		state.playing = doc.track:isPlaying()
-		if state.playing then
-			doc.playhead = doc.track:currentTime()
-		end
+		doc.playhead = doc.track:currentTime()
 	else
 		state.playing = false
 	end
+	return nil
+end
+
+local function tick()
+	local ok, err = pcall(tickBody)
+	state.tickError = if ok then nil else tostring(err)
+end
+
+local function ensureDrawHandle()
+	if drawHandle then return end
+	drawHandle = imgui.onDraw(function()
+		if not state.active then return end
+		imgui.theme.apply("dark")
+		tick()
+		local ok, err = pcall(drawWindows)
+		if not ok then
+			warn("[ledit] ui error: " .. tostring(err))
+		end
+	end)
 end
 
 local App = {}
@@ -142,7 +169,7 @@ function App.open()
 
 	layerRef = layer
 	attachedRig = nil
-	layer:schedule(tick)
+	lastTrack = nil
 
 	state.active = true
 	ensureDrawHandle()
