@@ -10,6 +10,7 @@ local layerRef: CCLayerColor? = nil
 local attachedRig: CCNode? = nil
 
 local RED = { x = 0.9, y = 0.25, z = 0.25, w = 1 }
+local YELLOW = { x = 0.95, y = 0.85, z = 0.2, w = 1 }
 local TOAST_LIFE = 4
 
 local function drawToasts(id)
@@ -19,7 +20,7 @@ local function drawToasts(id)
 		state.toasts[id] = nil
 		return
 	end
-	imgui.style.with({ colors = { Text = RED } }, function()
+	imgui.style.with({ colors = { Text = YELLOW } }, function()
 		imgui.textWrapped(t.msg)
 	end)
 end
@@ -83,7 +84,7 @@ local function bindMarkers(doc: any)
 				if seen[name] == nil then
 					seen[name] = true
 					doc.track:bindEvent(name, function(n)
-						state:toast("Timeline", "event: " .. tostring(n))
+						state:toast("Timeline", "Event marker: " .. tostring(n))
 					end)
 				end
 			end

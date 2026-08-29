@@ -30,20 +30,42 @@ function M.draw(state: any)
 	local function drawNode(id, depth)
 		if depth > 64 then return end
 		local selected = state.selNode == id
-		if kids[id] then
-			imgui.treeNode(id, function()
-				if imgui.selectable(id, selected) and not selected then state:select(id) end
-				for _, cid in ipairs(kids[id]) do
+		local childIds = kids[id]
+		if childIds ~= nil then
+			local open = if state.trees[id] == nil then true else state.trees[id]
+			local flags = if selected then imgui.Flag.TreeNode.Selected else imgui.Flag.TreeNode.None
+			local tracked = imgui.treeNode(id .. "##tree:" .. id, function()
+				if imgui.isItemClicked() and not selected then
+					state:select(id)
+				end
+				for _, cid in ipairs(childIds) do
 					drawNode(cid, depth + 1)
 				end
-			end)
+			end, { open = open, flags = flags })
+			if tracked == false and imgui.isItemClicked() and not selected then
+				state:select(id)
+			end
+			if tracked ~= nil then
+				state.trees[id] = tracked
+			end
 		else
-			if imgui.selectable(id, selected) and not selected then state:select(id) end
+			if imgui.selectable(id, selected) and not selected then
+				state:select(id)
+			end
 		end
 	end
 
-	for _, id in ipairs(roots) do
-		drawNode(id, 0)
+	local rootOpen = if state.trees["(root)"] == nil then true else state.trees["(root)"]
+	local rootTracked = imgui.treeNode("(root)", function()
+		if #roots == 0 then
+			imgui.text("(no nodes)")
+		end
+		for _, id in ipairs(roots) do
+			drawNode(id, 0)
+		end
+	end, { open = rootOpen })
+	if rootTracked ~= nil then
+		state.trees["(root)"] = rootTracked
 	end
 
 	imgui.separator()
@@ -56,7 +78,7 @@ function M.draw(state: any)
 		local node = doc.rigSpec.nodes[index[sel]]
 
 		imgui.separatorText("Rename")
-		local newName = state:text("rename", "##rename", sel)
+		local newName = state:text("rename", "##rename")
 		if imgui.button("Rename") and newName ~= "" then
 			if state:act("RigTree", function()
 				return doc:renameNode(sel, newName)
@@ -67,7 +89,7 @@ function M.draw(state: any)
 
 		imgui.separatorText("Sprite")
 		local sprite = state:text("sprite", "##sprite", node.sprite or "")
-		imgui.textWrapped("own mod: sprites/file.png | cross-mod: <mod-id>/file.png")
+		imgui.textWrapped("Geometry Dash: file.png | Mod: <mod-id>/file.png")
 		if imgui.button("Set Sprite") then
 			state:act("RigTree", function()
 				return doc:setSprite(sel, sprite ~= "" and sprite or nil)
@@ -97,6 +119,7 @@ function M.draw(state: any)
 				return doc:deleteNode(sel)
 			end) then
 				state:select(nil)
+				state:setGridSel(nil, nil)
 			end
 		end
 

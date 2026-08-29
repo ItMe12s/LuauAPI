@@ -361,7 +361,7 @@ assert(d:reparent("grip", nil))
 
 assert(d:putPose(3, "grip", { y = 7 }))
 assert(d:deleteNode("grip"))
-assert(d.animations.wave.keyframes[3].grip.y == 7, "orphan poses are data-preserving")
+assert(d.animations.wave.keyframes[3] == nil, "deleted node's poses removed")
 
 assert(not d:setBase("ghost", { x = 1 }), "unknown node rejected")
 assert(not d:setBase("body", { nope = 1 }), "unknown channel rejected")
@@ -748,7 +748,11 @@ assert(pj:load("bad") == nil, "unsanitizable anim filename rejected")
 fs.files["save/projects/bad/.anim.luau"] = nil
 fs.files["save/projects/bad/walk.anim.luau"] = "return { fps = 12, keyframes = 5 }"
 assert(pj:load("bad") == nil, "non-table keyframes rejected")
+local vok, verrs = pj:validate("bad")
+assert(not vok and verrs ~= nil and #verrs == 1, "validate lists exactly the corrupt file")
+assert(verrs[1]:find("walk", 1, true) ~= nil, "validate names the corrupt file")
 fs.files["save/projects/bad/walk.anim.luau"] = "return { fps = 12 }"
+assert(pj:validate("bad"), "validate clears once files are fixed")
 local doc = assert(pj:load("bad"))
 assert(type(doc.animations.walk.keyframes) == "table", "missing keyframes normalized")
 assert(pj:save(doc), "loaded project is savable")

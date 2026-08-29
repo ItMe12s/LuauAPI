@@ -44,6 +44,16 @@ function M.deleteNode(d: any, id: any, ukey: any?): (boolean, string?)
 		end
 	end
 	table.remove(d.rigSpec.nodes, index)
+	for _, anim in pairs(d.animations) do
+		for f, kf in pairs(anim.keyframes or {}) do
+			if kf[id] ~= nil then
+				kf[id] = nil
+				if next(kf) == nil then
+					anim.keyframes[f] = nil
+				end
+			end
+		end
+	end
 	return finishOp(d, ukey, before, swapRig(d))
 end
 

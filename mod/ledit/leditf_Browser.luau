@@ -3,19 +3,30 @@ local Project = require("./leditb_Project")
 local M = {}
 
 local GREEN = { x = 0.4, y = 0.85, z = 0.4, w = 1 }
+local RED = { x = 0.9, y = 0.25, z = 0.25, w = 1 }
 
 local function resetDocUi(state: any)
 	state.selNode = nil
 	state:resetAnimSel()
 	state.buffers = {}
 	state.combos = {}
+	state.trees = {}
+	state.tlPage = 0
 end
 
 local function refreshList(state: any)
 	local names, err = state.proj:list()
 	state.projects = names or {}
+	state.corrupt = {}
 	if err then
 		state:toast("Browser", err)
+		return
+	end
+	for _, name in ipairs(state.projects) do
+		local ok, errors = state.proj:validate(name)
+		if not ok then
+			state.corrupt[name] = errors
+		end
 	end
 end
 
@@ -31,6 +42,11 @@ local function openProject(state: any, name: any)
 	end)
 end
 
+local function requestConfirm(state: any, kind: string, name: string)
+	state.buffers.confirm = { kind = kind, name = name }
+	imgui.openPopup("Confirm##ledit")
+end
+
 function M.draw(state: any)
 	local doc = state.doc
 	if doc == nil then return end
@@ -43,9 +59,23 @@ function M.draw(state: any)
 
 	local names = state.projects
 	for _, name in ipairs(names) do
+		local errors = state.corrupt[name]
 		local label = if doc.name == name then name .. " *" else name
-		if imgui.selectable(label, false) then
-			openProject(state, name)
+		local clicked
+		if errors ~= nil then
+			imgui.style.with({ colors = { Text = RED } }, function()
+				clicked = imgui.selectable(label .. " (corrupt)", false)
+			end)
+		else
+			clicked = imgui.selectable(label, false)
+		end
+		if clicked then
+			if errors ~= nil then
+				state.buffers.corrupt = { name = name, errors = errors }
+				imgui.openPopup("Corrupt##ledit")
+			else
+				requestConfirm(state, "load", name)
+			end
 		end
 	end
 	if #names == 0 then
@@ -59,13 +89,7 @@ function M.draw(state: any)
 	local nn = state:text("newproj", "##newproj", "")
 	imgui.sameLine()
 	if imgui.button("Create") and nn ~= "" then
-		if state:act("Browser", function()
-			return state.proj:create(nn)
-		end) then
-			state.buffers.newproj = ""
-			refreshList(state)
-			openProject(state, nn)
-		end
+		requestConfirm(state, "create", nn)
 	end
 
 	imgui.separatorText("Current Project")
@@ -117,6 +141,56 @@ function M.draw(state: any)
 		imgui.style.with({ colors = { Text = GREEN } }, function()
 			imgui.text("Saved")
 		end)
+	end
+
+	local pending = state.buffers.confirm
+	if pending ~= nil then
+		imgui.popupModal("Confirm##ledit", function()
+			if pending.kind == "load" then
+				imgui.text(("Load '%s'?"):format(tostring(pending.name)))
+			else
+				imgui.text(("Create '%s'?"):format(tostring(pending.name)))
+			end
+			imgui.textWrapped("Unsaved changes will be lost.")
+			if imgui.button("Yes") then
+				state.buffers.confirm = nil
+				imgui.closeCurrentPopup()
+				if pending.kind == "load" then
+					openProject(state, pending.name)
+				elseif state:act("Browser", function()
+					return state.proj:create(pending.name)
+				end) then
+					state.buffers.newproj = ""
+					refreshList(state)
+					openProject(state, pending.name)
+				end
+			end
+			imgui.sameLine()
+			if imgui.button("No") then
+				state.buffers.confirm = nil
+				imgui.closeCurrentPopup()
+			end
+		end, { size = { x = 340, y = 220 }, sizeCond = imgui.Cond.Always })
+	end
+
+	local corrupt = state.buffers.corrupt
+	if corrupt ~= nil then
+		imgui.popupModal("Corrupt##ledit", function()
+			imgui.text(("Project '%s' is corrupt:"):format(tostring(corrupt.name)))
+			imgui.spacing()
+			for _, e in ipairs(corrupt.errors or {}) do
+				imgui.style.with({ colors = { Text = RED } }, function()
+					imgui.textWrapped("- " .. e)
+				end)
+			end
+			imgui.spacing()
+			imgui.textWrapped("Inspect and fix the listed files with a text editor, then click Refresh.")
+			imgui.spacing()
+			if imgui.button("OK") then
+				state.buffers.corrupt = nil
+				imgui.closeCurrentPopup()
+			end
+		end, { size = { x = 340, y = 220 }, sizeCond = imgui.Cond.Always })
 	end
 end
 

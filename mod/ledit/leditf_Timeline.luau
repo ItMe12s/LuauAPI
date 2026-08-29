@@ -1,12 +1,14 @@
 local KEY_COLOR = { x = 0.95, y = 0.75, z = 0.2, w = 1 }
 local CELL = { x = 15, y = 15 }
 local HDR_DUMMY = { x = 8, y = 8 }
-local MAX_FRAMES = 509
-local COL_LABELS = {}
-do
-	for f = 0, MAX_FRAMES do
-		COL_LABELS[f] = ("c%d"):format(f)
-	end
+local PAGE = 30
+
+local function isTick(f: number): boolean
+	return f == 0 or f == 1 or f == 5 or (f >= 10 and f % 5 == 0)
+end
+
+local function colLabel(f: number): string
+	return "c" .. tostring(f)
 end
 
 local M = {}
@@ -28,6 +30,10 @@ local function seek(state: any, f: number)
 	state:act("Timeline", function()
 		return state.doc:scrubToTime(f / state:fps())
 	end)
+end
+
+local function jumpTo(state: any, f: number)
+	state.tlPage = math.floor(f / PAGE)
 end
 
 local function hasChannels(def: any): boolean
@@ -53,7 +59,7 @@ function M.draw(state: any)
 	imgui.spacing()
 	if imgui.button("Play") then
 		if def == nil or not hasChannels(def) then
-			state:toast("Timeline", "no channel keys yet - drag a property field")
+			state:toast("Timeline", "No channel keys yet, drag a property field.")
 		else
 			state:act("Timeline", function()
 				return doc:play()
@@ -115,16 +121,14 @@ function M.draw(state: any)
 			sawMarker = true
 			if imgui.selectable(name .. " @ " .. ev.f, state.selFrame == ev.f) and state.selFrame ~= ev.f then
 				state.selFrame = ev.f
+				state.tlPage = math.floor(ev.f / PAGE)
 				seek(state, ev.f)
 			end
 			imgui.sameLine()
-			if imgui.button("-##mk:" .. name .. ":" .. ev.f) then
+			if imgui.button("Delete Marker##mk:" .. name .. ":" .. ev.f) then
 				state:act("Timeline", function()
 					return doc:removeEvent(ev.f, name)
 				end)
-			end
-			if imgui.isItemHovered() then
-				imgui.setTooltip("remove marker")
 			end
 		end
 	end
@@ -160,18 +164,24 @@ function M.draw(state: any)
 	local gk = if gsId ~= nil and doc:findNode(gsId) ~= nil and def.keyframes[gsF] ~= nil then def.keyframes[gsF][gsId] else nil
 	if gk ~= nil then
 		imgui.text(("key %s @ %d"):format(gsId, gsF))
-		if gsF > 0 and imgui.button("<") then
+		if gsF > 0 and imgui.button("<##mvprev") then
 			state:act("Timeline", function()
 				local ok, err = doc:moveFrame(gsF, gsF - 1)
-				if ok then state:setGridSel(gsId, gsF - 1) end
+				if ok then
+					state:setGridSel(gsId, gsF - 1)
+					jumpTo(state, gsF - 1)
+				end
 				return ok, err
 			end)
 		end
 		imgui.sameLine()
-		if imgui.button(">") then
+		if imgui.button(">##mvnext") then
 			state:act("Timeline", function()
 				local ok, err = doc:moveFrame(gsF, gsF + 1)
-				if ok then state:setGridSel(gsId, gsF + 1) end
+				if ok then
+					state:setGridSel(gsId, gsF + 1)
+					jumpTo(state, gsF + 1)
+				end
 				return ok, err
 			end)
 		end
@@ -185,31 +195,44 @@ function M.draw(state: any)
 		if imgui.button("Move To") then
 			state:act("Timeline", function()
 				local ok, err = doc:moveFrame(gsF, mv)
-				if ok then state:setGridSel(gsId, mv) end
+				if ok then
+					state:setGridSel(gsId, mv)
+					jumpTo(state, mv)
+				end
 				return ok, err
 			end)
 		end
 
-		if imgui.button("Del Key") then
+		if imgui.button("Delete Key") then
 			state:act("Timeline", function()
 				return doc:clearPose(gsF, gsId)
 			end)
 		end
 		imgui.sameLine()
-		if imgui.button("Del Frame") then
+		if imgui.button("Delete Frame") then
 			state:act("Timeline", function()
 				return doc:removeFrame(gsF)
 			end)
 		end
 	end
 
+	imgui.separator()
+
 	-- Grid
 	local fps = state:fps()
-	local maxF = math.max(31, math.floor(doc:length() * fps + 0.5))
-	if maxF > MAX_FRAMES then
-		maxF = MAX_FRAMES
-		imgui.text("(>509 frames truncated)")
+	local lenF = math.floor(doc:length() * fps + 0.5)
+	if state.tlPage < 0 then
+		state.tlPage = 0
 	end
+	local totalPages = math.max(math.floor((lenF - 1) / PAGE) + 1, state.tlPage + 1, 1)
+	if state.playing then
+		local cur = state:frameOf()
+		if cur < state.tlPage * PAGE or cur >= (state.tlPage + 1) * PAGE then
+			state.tlPage = math.max(math.floor(cur / PAGE), 0)
+			totalPages = math.max(totalPages, state.tlPage + 1)
+		end
+	end
+	local start = state.tlPage * PAGE
 
 	local rows = {}
 	local seenRows = {}
@@ -227,18 +250,31 @@ function M.draw(state: any)
 		return
 	end
 
+	if imgui.button("<##pgprev") then
+		if state.tlPage > 0 then
+			state.tlPage -= 1
+		end
+	end
+	imgui.sameLine()
+	if imgui.button(">##pgnext") then
+		state.tlPage += 1
+	end
+	imgui.sameLine()
+	imgui.text(("f %d-%d"):format(start, start + PAGE - 1))
+
 	imgui.child("tlgrid", function()
-		imgui.table("tl", maxF + 2, function()
+		imgui.table("tl", PAGE + 1, function()
 			imgui.tableSetupColumn("##node", { width = 70 })
-			for f = 0, maxF do
-				imgui.tableSetupColumn(COL_LABELS[f], { width = 17 })
+			for i = 0, PAGE - 1 do
+				imgui.tableSetupColumn(colLabel(start + i), { width = 17 })
 			end
 			imgui.tableNextRow()
 			imgui.tableSetColumnIndex(0)
 			imgui.dummy({ x = 0, y = 6 })
-			for f = 0, maxF do
-				if not imgui.tableSetColumnIndex(f + 1) then break end
-				if f % 5 == 0 then
+			for i = 0, PAGE - 1 do
+				if not imgui.tableSetColumnIndex(i + 1) then break end
+				local f = start + i
+				if isTick(f) then
 					imgui.text(tostring(f))
 				else
 					imgui.dummy(HDR_DUMMY)
@@ -251,8 +287,9 @@ function M.draw(state: any)
 						state:select(id)
 					end
 				end
-				for f = 0, maxF do
-					if not imgui.tableSetColumnIndex(f + 1) then break end
+				for i = 0, PAGE - 1 do
+					if not imgui.tableSetColumnIndex(i + 1) then break end
+					local f = start + i
 					local occ = def.keyframes[f] ~= nil and def.keyframes[f][id] ~= nil
 					local cellId = "##" .. id .. ":" .. f
 					local pressed
@@ -275,7 +312,7 @@ function M.draw(state: any)
 								end)
 								seek(state, f)
 							else
-								state:toast("Timeline", "nothing to key at frame " .. f)
+								state:toast("Timeline", "Nothing to key at frame " .. f)
 							end
 						end
 					end

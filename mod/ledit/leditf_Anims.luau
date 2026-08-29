@@ -61,9 +61,9 @@ function M.draw(state: any)
 		end)
 	end
 
-	local rn = state:text("animrename", "new name", act)
+	local rn = state:text("animrename", "new name")
 	imgui.sameLine()
-	if imgui.button("Rename") then
+	if imgui.button("Rename") and rn ~= "" and rn ~= act then
 		if state:act("Anims", function()
 			return doc:renameAnim(act, rn)
 		end) then
@@ -78,6 +78,9 @@ function M.draw(state: any)
 			return doc:duplicateAnim(act, dup)
 		end) then
 			state.buffers.animdup = ""
+			state:act("Anims", function()
+				return doc:setActive(dup)
+			end)
 		end
 	end
 

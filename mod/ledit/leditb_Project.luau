@@ -125,6 +125,66 @@ function Project:load(name: any): (any, string?)
 	return DocModule.restore({ lunar = self.lunar }, name, spec, animations)
 end
 
+function Project:validate(name: any): (boolean, {string}?)
+	local errors = {}
+	if not Core.validName(name) then
+		errors[1] = "invalid project name: " .. tostring(name)
+		return false, errors
+	end
+	local dir = dirFor(name)
+	local src = self.fs.read("save", dir .. "/" .. name .. ".rig.luau")
+	if src == nil then
+		errors[#errors + 1] = name .. ".rig.luau: missing or unreadable"
+	else
+		local spec, evalErr = evalSource(src, "=check/" .. name .. "/rig")
+		if type(spec) ~= "table" or type(spec.nodes) ~= "table" then
+			errors[#errors + 1] = name .. ".rig.luau: " .. tostring(evalErr)
+		elseif not pcall(Ser.spec, spec) then
+			errors[#errors + 1] = name .. ".rig.luau: serialization failed"
+		end
+	end
+	local entries = self.fs.list("save", dir)
+	if entries == nil then
+		errors[#errors + 1] = "project folder unreadable"
+		return false, errors
+	end
+	table.sort(entries)
+	for _, file in ipairs(entries) do
+		if file:sub(-#ANIM_SUFFIX) == ANIM_SUFFIX then
+			local animName = file:sub(1, -(#ANIM_SUFFIX + 1))
+			if not Core.validName(animName) then
+				errors[#errors + 1] = file .. ": invalid anim file name"
+			else
+				local asrc = self.fs.read("save", dir .. "/" .. file)
+				if asrc == nil then
+					errors[#errors + 1] = file .. ": unreadable"
+				else
+					local def, derr = evalSource(asrc, "=check/" .. name .. "/" .. animName)
+					if type(def) ~= "table" then
+						errors[#errors + 1] = file .. ": " .. tostring(derr)
+					elseif type(def.keyframes) ~= "table" and def.keyframes ~= nil then
+						errors[#errors + 1] = file .. ": keyframes must be a table"
+					else
+						if def.keyframes == nil then
+							def.keyframes = {}
+						end
+						local loaded, verr = self.lunar.animation.load(def)
+						if loaded == nil then
+							errors[#errors + 1] = file .. ": " .. tostring(verr)
+						elseif not pcall(Ser.anim, def) then
+							errors[#errors + 1] = file .. ": serialization failed"
+						end
+					end
+				end
+			end
+		end
+	end
+	if #errors > 0 then
+		return false, errors
+	end
+	return true, nil
+end
+
 function Project:save(doc: any): (boolean, string?)
 	local name = doc.name
 	if not Core.validName(name) then

@@ -41,6 +41,8 @@ function State.new(): any
 		playing = false,
 		tickError = nil,
 		lastActiveAnim = nil,
+		tlPage = 0,
+		trees = {},
 		buffers = {},
 		combos = {},
 	}, { __index = State })
@@ -84,6 +86,7 @@ end
 function State.resetAnimSel(self: any)
 	self.selFrame = nil
 	self:setGridSel(nil, nil)
+	self.tlPage = 0
 	self.buffers.animrename = nil
 	self.buffers.animdup = nil
 end

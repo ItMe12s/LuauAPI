@@ -17,7 +17,7 @@ function M.draw(state: any)
 	end
 
 	if doc:findNode(sel) == nil then
-		imgui.text("Deleted node")
+		state:select(nil)
 		return
 	end
 
@@ -39,6 +39,7 @@ function M.draw(state: any)
 		if changed then
 			state:act("Props", function()
 				if state.playing then
+					state:toast("Props", "Paused for keying")
 					local ok, err = doc:pause()
 					if not ok then return false, err end
 				end
@@ -52,16 +53,18 @@ function M.draw(state: any)
 
 	local kf = def.keyframes[frame]
 	local target = kf ~= nil and kf[sel] or nil
-	local ease = target ~= nil and target.easing or nil
-	local easedIdx = nil
+	if target == nil then
+		imgui.text("(no key at this frame)")
+		return
+	end
+
+	local ease = target.easing
+	local easedIdx = 0
 	for i, name in ipairs(state.EASINGS) do
 		if name == ease then
 			easedIdx = i - 1
 			break
 		end
-	end
-	if easedIdx == nil then
-		easedIdx = 0
 	end
 	local comboKey = "e:" .. sel .. ":" .. frame
 	if state.combos.lastEaseKey ~= comboKey then
@@ -72,10 +75,6 @@ function M.draw(state: any)
 	end
 
 	state:combo("easing", "##ease", state.EASINGS, function(_, picked)
-		if target == nil then
-			state:toast("Props", "no key at this frame - key a channel first")
-			return
-		end
 		state:act("Props", function()
 			return doc:putPose(frame, sel, { easing = picked },
 				("ease:%d:%s"):format(frame, sel))
