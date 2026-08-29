@@ -699,7 +699,7 @@ assert(d3:play())
 assert(d3:addNode({ id = "b", parent = "a" }), "structural edit while playing")
 assert(d3.track ~= nil and d3.track:isPlaying(), "swapRig preserves playing")
 
--- renameEvent identity is a no-op; removeFrame on missing frame is a no-op
+-- renameEvent identity is a no-op, removeFrame on missing frame is a no-op
 local eDepth = #d3.undoStack.undoStack
 assert(d3:addEvent(2, "hit"))
 assert(d3:renameEvent("hit", "hit"), "identity rename ok")
@@ -707,7 +707,7 @@ assert(d3.animations.w.keyframes[2].events[1] == "hit", "identity rename keeps e
 assert(d3:removeFrame(999), "missing frame no-op ok")
 assert(#d3.undoStack.undoStack == eDepth + 1, "no-ops record no undo")
 
--- addAnim normalizes missing keyframes; non-table def rejected
+-- addAnim normalizes missing keyframes, non-table def rejected
 assert(d3:addAnim("bare", { fps = 12 }))
 assert(type(d3.animations.bare.keyframes) == "table", "keyframes normalized")
 assert(not d3:addAnim("bad", "nope"), "non-table def rejected")
@@ -732,7 +732,7 @@ return true
 )X"));
 }
 
-TEST_CASE("Project load validates files; save never partial") {
+TEST_CASE("Project load validates files, save never partial") {
     EditorEnv env;
     REQUIRE(env.run(std::string(kFakes) + R"X(
 local Project = require("./leditb_Project")
