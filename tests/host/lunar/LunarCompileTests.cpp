@@ -418,6 +418,13 @@ TEST_CASE("sliceAnimation clips elapsed tweens continuously") {
             std::lerp(0.F, 10.F, easeProgress(*easingFromString("cubic_out"), 0.6F));
         REQUIRE(tween->from == Approx(expected));
     }
+
+    SECTION("sliced tween holds its clipped start at the cut") {
+        CompiledAnimation sliced = sliceAnimation(anim, 0.5);
+        float const expected =
+            std::lerp(0.F, 10.F, easeProgress(*easingFromString("cubic_out"), 0.5F));
+        REQUIRE(samplePose(sliced, 0.0).at("arm").x == Approx(expected));
+    }
 }
 
 TEST_CASE("sliceAnimation propagates looped flag") {
@@ -599,9 +606,9 @@ TEST_CASE("samplePose evaluates eased channels and step z") {
         REQUIRE(poses.at("tail").x == Approx(-5.F));
     }
 
-    SECTION("pre-first-key channels are omitted") {
+    SECTION("channels hold their first key value before it") {
         auto poses = samplePose(anim, 0.1);
-        REQUIRE_FALSE(poses.at("tail").x.has_value());
+        REQUIRE(poses.at("tail").x == Approx(-5.F));
     }
 
     SECTION("nodes without channels are omitted entirely") {

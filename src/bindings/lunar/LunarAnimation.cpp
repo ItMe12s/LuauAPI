@@ -584,6 +584,10 @@ namespace luax::lunar {
         m_instants.clear();
         m_launched.clear();
 
+        if (m_rig) {
+            applyPose(m_rig, samplePose(*m_active, 0.0));
+        }
+
         for (auto const& nodeTrack : m_active->nodes) {
             auto* node = m_rig ? m_rig->getNode(nodeTrack.nodeId) : nullptr;
             if (!node) {

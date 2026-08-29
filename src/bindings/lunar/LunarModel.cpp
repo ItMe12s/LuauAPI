@@ -89,7 +89,10 @@ namespace luax::lunar {
             std::optional<float> value;
             for (auto const& seg : segs) {
                 if (seg.prop != prop) continue;
-                if (seg.start > t + kTimeEps) continue;
+                if (seg.start > t + kTimeEps) {
+                    if (!value) value = seg.instant ? seg.to : seg.from;
+                    break;
+                }
                 if (seg.instant) {
                     value = t >= seg.end - kTimeEps ? seg.to : seg.from;
                     continue;
