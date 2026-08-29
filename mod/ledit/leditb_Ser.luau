@@ -9,7 +9,10 @@ local POSE_KEYS = {
 }
 
 local function num(v: any): string
-	if type(v) ~= "number" or v ~= v or v == math.huge or v == -math.huge then
+	if type(v) ~= "number" then
+		error("expected number", 0)
+	end
+	if v ~= v or v == math.huge or v == -math.huge then
 		error("non-finite number", 0)
 	end
 	return string.format("%.14g", v)
@@ -95,14 +98,21 @@ function Ser.spec(spec: any): string
 	return table.concat(out, "\n")
 end
 
-local function eventLine(kf: any, indent: string): string?
-	local events = kf.events
+function Ser.eventArray(events: any): {any}
 	if events == nil then
-		return nil
+		return {}
 	end
 	if type(events) == "string" then
-		events = { events }
+		return { events }
 	end
+	return events
+end
+
+local function eventLine(kf: any, indent: string): string?
+	if kf.events == nil then
+		return nil
+	end
+	local events = Ser.eventArray(kf.events)
 	local items = {}
 	for _, name in ipairs(events) do
 		if type(name) ~= "string" then
@@ -131,7 +141,10 @@ function Ser.anim(def: any): string
 		out[#out + 1] = "\tfps = " .. num(def.fps) .. ","
 	end
 	if def.looped ~= nil then
-		out[#out + 1] = "\tlooped = " .. tostring(def.looped == true) .. ","
+		if type(def.looped) ~= "boolean" then
+			error("looped must be a boolean", 0)
+		end
+		out[#out + 1] = "\tlooped = " .. tostring(def.looped) .. ","
 	end
 	local keyframes = def.keyframes or {}
 	local frames = sortedFrames(keyframes)

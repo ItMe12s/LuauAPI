@@ -526,12 +526,17 @@ d:addAnim("other")
 assert(d:setActive("other"))
 assert(d.playhead == 0 and d.track ~= nil)
 
-assert(d:putPose(5, "arm", {}), "empty skeleton key ok")
+assert(d:putPose(5, "arm", {}), "empty pose is an accepted no-op")
+local nKeys = 0
+for _ in pairs(d.animations.other.keyframes) do nKeys = nKeys + 1 end
+assert(nKeys == 0, "no ghost key from empty pose")
 assert(d.track:duration() == 0, "skeleton-only track has zero duration")
 assert(d:scrubToTime(5 / 30))
-assert(d.playhead == 5 / 30, "empty track keeps scrub playhead")
+assert(d.playhead == 0, "empty track clamps scrub playhead to length")
 assert(d:putPose(5, "arm", { x = 1 }), "autokey over skeleton")
-assert(math.abs(d.playhead - 5 / 30) < 1e-9, "playhead survives recompile to real key")
+assert(math.abs(d.track:duration() - 5 / 30) < 1e-9, "real key gives duration")
+assert(d:scrubToTime(5 / 30))
+assert(math.abs(d.playhead - 5 / 30) < 1e-9, "playhead seeks to real key")
 return true
 )X"));
 }
@@ -635,10 +640,126 @@ assert(not pj:saveAs(doc2, "demo rig"), "save-as onto existing project rejected"
 local doc3 = assert(pj:load("demo two"))
 assert(doc3.rigSpec.nodes[1].id == "root")
 
-assert(pj:delete("demo two"))
-assert(fs.files["save/projects/demo two/demo two.rig.luau"] == nil, "delete removes files")
-assert(pj:load("demo two") == nil, "deleted project unlistable")
-assert(pj:delete("demo two"), "delete idempotent")
+    assert(pj:delete("demo two"))
+    assert(fs.files["save/projects/demo two/demo two.rig.luau"] == nil, "delete removes files")
+    assert(pj:load("demo two") == nil, "deleted project unlistable")
+    assert(pj:delete("demo two"), "delete idempotent")
+    return true
+)X"));
+}
+
+TEST_CASE("Doc editor regressions: orderedSpec, failed ops, playing swaps, no-ops") {
+    EditorEnv env;
+    REQUIRE(env.run(std::string(kFakes) + R"X(
+local Doc = require("./leditb_Doc")
+
+-- reparent to a node later in the spec must not corrupt orderedSpec
+local d = Doc.new({ lunar = makeFakeLunar() })
+assert(d:addNode({ id = "a" }))
+assert(d:addNode({ id = "b" }))
+assert(d:reparent("a", "b"), "reparent to later node ok")
+assert(d.rig ~= nil, "rig rebuilt with parent-first order")
+assert(d:addNode({ id = "c" }), "rig ops still work after reparent")
+assert(d:renameNode("a", "z"))
+
+-- failed op restores data and records no undo
+local fl, st = makeFakeLunar()
+local d2 = Doc.new({ lunar = fl })
+d2:addNode({ id = "a" })
+d2:addAnim("w")
+d2:setActive("w")
+d2:putPose(0, "a", { x = 1 })
+d2:putPose(4, "a", { x = 2 })
+local depth = #d2.undoStack.undoStack
+st.failAnim = true
+assert(not d2:removeFrame(0), "forced recompile failure surfaces")
+assert(#d2.undoStack.undoStack == depth, "failed op records no undo")
+assert(d2.animations.w.keyframes[0] ~= nil, "failed op restores data")
+assert(d2.animations.w.keyframes[4] ~= nil, "failed op restores data (2)")
+st.failAnim = false
+
+-- undo replay must not alias command snapshots
+assert(d2:putPose(9, "a", { x = 9 }, nil))
+assert(d2:putPose(10, "a", { x = 10 }, nil))
+assert(d2:undo())
+assert(d2.animations.w.keyframes[10] == nil, "undone")
+d2:putPose(11, "a", { x = 11 }, nil)
+assert(d2:undo())
+assert(d2:undo())
+assert(d2.animations.w.keyframes[9] == nil, "earlier undo unaffected by post-undo edits")
+
+-- swapRig preserves playing state across structural edits
+local d3 = Doc.new({ lunar = makeFakeLunar() })
+d3:addNode({ id = "a" })
+d3:addAnim("w")
+d3:setActive("w")
+d3:putPose(0, "a", { x = 0 })
+d3:putPose(20, "a", { x = 100 })
+assert(d3:play())
+assert(d3:addNode({ id = "b", parent = "a" }), "structural edit while playing")
+assert(d3.track ~= nil and d3.track:isPlaying(), "swapRig preserves playing")
+
+-- renameEvent identity is a no-op; removeFrame on missing frame is a no-op
+local eDepth = #d3.undoStack.undoStack
+assert(d3:addEvent(2, "hit"))
+assert(d3:renameEvent("hit", "hit"), "identity rename ok")
+assert(d3.animations.w.keyframes[2].events[1] == "hit", "identity rename keeps event")
+assert(d3:removeFrame(999), "missing frame no-op ok")
+assert(#d3.undoStack.undoStack == eDepth + 1, "no-ops record no undo")
+
+-- addAnim normalizes missing keyframes; non-table def rejected
+assert(d3:addAnim("bare", { fps = 12 }))
+assert(type(d3.animations.bare.keyframes) == "table", "keyframes normalized")
+assert(not d3:addAnim("bad", "nope"), "non-table def rejected")
+assert(d3:setActive("bare"))
+assert(d3:putPose(0, "a", { x = 5 }))
+assert(d3.animations.bare.keyframes[0].a.x == 5)
+
+-- addNode validates ids and channels
+assert(not d3:addNode({ id = "" }), "empty id rejected")
+assert(not d3:addNode({ id = "b@d" }), "invalid id rejected")
+assert(not d3:addNode({ id = "ok", x = 0 / 0 }), "non-finite channel rejected")
+
+-- cyclic loaded spec: reparent walk terminates and rejects
+local d4 = Doc.new({ lunar = makeFakeLunar() })
+d4.rigSpec = { nodes = {
+    { id = "a", parent = "b" },
+    { id = "b", parent = "c" },
+    { id = "c", parent = "a" },
+} }
+assert(not d4:reparent("a", "c"), "cycle walk terminates and rejects")
+return true
+)X"));
+}
+
+TEST_CASE("Project load validates files; save never partial") {
+    EditorEnv env;
+    REQUIRE(env.run(std::string(kFakes) + R"X(
+local Project = require("./leditb_Project")
+local fs = makeFakeFs()
+local pj = Project.new({ fs = fs, lunar = makeFakeLunar() })
+
+fs.mkdir("save", "projects/bad")
+fs.files["save/projects/bad/bad.rig.luau"] = "return { nodes = { { id = 'a', x = 0/0 } } }"
+assert(pj:load("bad") == nil, "NaN rig rejected at load")
+fs.files["save/projects/bad/bad.rig.luau"] = "return { nodes = { { id = 'a' } } }"
+fs.files["save/projects/bad/.anim.luau"] = "return { fps = 10 }"
+assert(pj:load("bad") == nil, "unsanitizable anim filename rejected")
+fs.files["save/projects/bad/.anim.luau"] = nil
+fs.files["save/projects/bad/walk.anim.luau"] = "return { fps = 12, keyframes = 5 }"
+assert(pj:load("bad") == nil, "non-table keyframes rejected")
+fs.files["save/projects/bad/walk.anim.luau"] = "return { fps = 12 }"
+local doc = assert(pj:load("bad"))
+assert(type(doc.animations.walk.keyframes) == "table", "missing keyframes normalized")
+assert(pj:save(doc), "loaded project is savable")
+
+-- save with unserializable data fails before any write
+local doc2 = assert(pj:load("bad"))
+doc2.animations.ok = { fps = 10, looped = false, keyframes = { [0] = { a = { x = 1 } } } }
+doc2.animations.broken = { fps = 10, looped = false, keyframes = { [0] = { a = { x = 0/0 } } } }
+assert(not pj:save(doc2), "unserializable anim fails save")
+assert(fs.files["save/projects/bad/bad.rig.luau"] ~= nil, "rig file still intact")
+assert(fs.files["save/projects/bad/ok.anim.luau"] == nil, "no partial writes")
 return true
 )X"));
 }

@@ -13,11 +13,19 @@ local snapshot = Core.snapshot
 local finishOp = Core.finishOp
 
 function M.addNode(d: any, entry: any, ukey: any?): (boolean, string?)
-	if type(entry) ~= "table" or type(entry.id) ~= "string" or entry.id == "" then
-		return false, "node id required"
+	if type(entry) ~= "table" then
+		return false, "node table required"
+	end
+	if not validName(entry.id) then
+		return false, "invalid node id"
 	end
 	if findNode(d, entry.id) ~= nil then
 		return false, "duplicate node id: " .. entry.id
+	end
+	for k, v in pairs(entry) do
+		if BASE_CHANNELS[k] and not finite(v) then
+			return false, "channel " .. k .. " must be a finite number"
+		end
 	end
 	local before = snapshot(d)
 	table.insert(d.rigSpec.nodes, clone(entry))
@@ -80,23 +88,26 @@ function M.reparent(d: any, id: any, parent: any?, ukey: any?): (boolean, string
 	if node.parent == parent then
 		return true, nil
 	end
-	local before = snapshot(d)
 	if parent ~= nil then
 		if findNode(d, parent) == nil then
 			return false, "no such parent: " .. tostring(parent)
 		end
+		local walked = {}
 		local cur = parent
 		while cur ~= nil do
+			if walked[cur] then
+				break
+			end
+			walked[cur] = true
 			if cur == id then
 				return false, "reparent cycle: " .. id
 			end
 			local pn = findNode(d, cur)
 			cur = pn ~= nil and pn.parent or nil
 		end
-		node.parent = parent
-	else
-		node.parent = nil
 	end
+	local before = snapshot(d)
+	node.parent = parent
 	return finishOp(d, ukey, before, swapRig(d))
 end
 

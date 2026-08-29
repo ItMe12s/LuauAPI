@@ -16,14 +16,7 @@ function M.draw(state: any)
 		return
 	end
 
-	local inSpec = false
-	for _, n in ipairs(doc.rigSpec.nodes) do
-		if n.id == sel then
-			inSpec = true
-			break
-		end
-	end
-	if not inSpec then
+	if doc:findNode(sel) == nil then
 		imgui.text("Deleted node")
 		return
 	end
@@ -74,9 +67,15 @@ function M.draw(state: any)
 	if state.combos.lastEaseKey ~= comboKey then
 		state.combos.lastEaseKey = comboKey
 		state.combos.easing = easedIdx
+	elseif state.combos.easing ~= easedIdx and state.EASINGS[state.combos.easing + 1] ~= ease then
+		state.combos.easing = easedIdx
 	end
 
 	state:combo("easing", "##ease", state.EASINGS, function(_, picked)
+		if target == nil then
+			state:toast("Props", "no key at this frame - key a channel first")
+			return
+		end
 		state:act("Props", function()
 			return doc:putPose(frame, sel, { easing = picked },
 				("ease:%d:%s"):format(frame, sel))

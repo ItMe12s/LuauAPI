@@ -24,41 +24,40 @@ local function drawToasts(id)
 	end)
 end
 
-local function drawStatus(): any
-	local doc = state.doc
+local function drawStatus(st)
+	local doc = st.doc
 	local warn = if doc ~= nil then doc.rigWarn else nil
-	if state.tickError == nil and warn == nil then
+	if st.tickError == nil and warn == nil then
 		imgui.text("ok")
-		return nil
+		return
 	end
 	imgui.style.with({ colors = { Text = RED } }, function()
-		if state.tickError ~= nil then
-			imgui.textWrapped("tick: " .. state.tickError)
+		if st.tickError ~= nil then
+			imgui.textWrapped("tick: " .. st.tickError)
 		end
 		if warn ~= nil then
 			imgui.textWrapped(warn)
 		end
 	end)
-	return nil
 end
 
-local WINDOWS: { { id: string, title: string, mod: any, pos: any, size: any, draw: any? } } = {
-	{ id = "Browser", title = "Project Browser", mod = require("./leditf_Browser"), pos = { x = 12, y = 40 }, size = { x = 230, y = 360 } },
-	{ id = "RigTree", title = "Rig Tree", mod = require("./leditf_RigTree"), pos = { x = 12, y = 220 }, size = { x = 230, y = 330 } },
-	{ id = "Anims", title = "Animations", mod = require("./leditf_Anims"), pos = { x = 252, y = 40 }, size = { x = 190, y = 280 } },
-	{ id = "Props", title = "Properties", mod = require("./leditf_Props"), pos = { x = 452, y = 40 }, size = { x = 210, y = 360 } },
-	{ id = "Timeline", title = "Timeline", mod = require("./leditf_Timeline"), pos = { x = 672, y = 40 }, size = { x = 580, y = 380 } },
-	{ id = "Status", title = "Status", mod = nil, pos = { x = 672, y = 436 }, size = { x = 280, y = 110 }, draw = drawStatus },
+local WINDOWS: { { id: string, title: string, pos: any, size: any, draw: any } } = {
+	{ id = "Browser", title = "Project Browser", draw = require("./leditf_Browser").draw, pos = { x = 12, y = 40 }, size = { x = 230, y = 360 } },
+	{ id = "RigTree", title = "Rig Tree", draw = require("./leditf_RigTree").draw, pos = { x = 12, y = 220 }, size = { x = 230, y = 330 } },
+	{ id = "Anims", title = "Animations", draw = require("./leditf_Anims").draw, pos = { x = 252, y = 40 }, size = { x = 190, y = 280 } },
+	{ id = "Props", title = "Properties", draw = require("./leditf_Props").draw, pos = { x = 452, y = 40 }, size = { x = 210, y = 360 } },
+	{ id = "Timeline", title = "Timeline", draw = require("./leditf_Timeline").draw, pos = { x = 672, y = 40 }, size = { x = 580, y = 380 } },
+	{ id = "Status", title = "Status", draw = drawStatus, pos = { x = 672, y = 436 }, size = { x = 280, y = 110 } },
 }
 
-local function drawWindows(): any
+local function drawWindows()
 	for _, w in WINDOWS do
 		imgui.window(w.title, function()
 			drawToasts(w.id)
-			if w.draw ~= nil then
-				w.draw(state)
-			else
-				w.mod.draw(state)
+			local ok, err = pcall(w.draw, state)
+			if not ok then
+				warn("[ledit] " .. w.id .. ": " .. tostring(err))
+				state:toast(w.id, tostring(err))
 			end
 		end, {
 			pos = w.pos,
@@ -92,7 +91,7 @@ local function bindMarkers(doc: any)
 	end
 end
 
-local function tickBody(): any
+local function tickBody()
 	local doc = state.doc
 	if doc and doc.rig and layerRef and doc.rig ~= attachedRig then
 		if attachedRig then attachedRig:removeFromParent() end

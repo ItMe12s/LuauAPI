@@ -1,27 +1,30 @@
 local KEY_COLOR = { x = 0.95, y = 0.75, z = 0.2, w = 1 }
 local CELL = { x = 15, y = 15 }
 local HDR_DUMMY = { x = 8, y = 8 }
-local MAX_COLS = 1024
+local MAX_FRAMES = 509
 local COL_LABELS = {}
 do
-	for f = 0, MAX_COLS do
+	for f = 0, MAX_FRAMES do
 		COL_LABELS[f] = ("c%d"):format(f)
 	end
 end
 
 local M = {}
 
-local function numBuf(state: any, key: string, label: string, initial: number, delta: number?): (number, boolean)
+local function numBuf(state: any, key: string, label: string, initial: number): (number, boolean)
 	local cur = state.buffers[key]
 	if type(cur) ~= "number" then
 		cur = initial
 	end
-	local v = imgui.inputInt(label, cur, { step = delta })
+	local v = imgui.inputInt(label, cur)
 	state.buffers[key] = v
 	return v, v ~= cur
 end
 
 local function seek(state: any, f: number)
+	if state.doc == nil or state.doc.track == nil then
+		return
+	end
 	state:act("Timeline", function()
 		return state.doc:scrubToTime(f / state:fps())
 	end)
@@ -64,6 +67,12 @@ function M.draw(state: any)
 		end)
 	end
 	imgui.sameLine()
+	if imgui.button("Continue") then
+		state:act("Timeline", function()
+			return doc:unpause()
+		end)
+	end
+	imgui.sameLine()
 	if imgui.button("Stop") then
 		state:act("Timeline", function()
 			return doc:stop()
@@ -92,7 +101,7 @@ function M.draw(state: any)
 	-- Markers
 	if def == nil then return end
 	imgui.separatorText("Markers")
-	local first = true
+	local sawMarker = false
 	local evs = {}
 	for f, kf in pairs(def.keyframes) do
 		if kf.events ~= nil then
@@ -103,7 +112,7 @@ function M.draw(state: any)
 	for _, ev in ipairs(evs) do
 		local names = if type(ev.events) == "table" then ev.events else { ev.events }
 		for _, name in ipairs(names) do
-			first = false
+			sawMarker = true
 			if imgui.selectable(name .. " @ " .. ev.f, state.selFrame == ev.f) and state.selFrame ~= ev.f then
 				state.selFrame = ev.f
 				seek(state, ev.f)
@@ -119,16 +128,24 @@ function M.draw(state: any)
 			end
 		end
 	end
-	if first then
+	if not sawMarker then
 		imgui.text("(none)")
 	end
-	local mf = numBuf(state, "mkframe", "##mkat", state:frameOf(), 1)
+	if not state.buffers.mkframeDirty then
+		state.buffers.mkframe = state:frameOf()
+	end
+	local mf, mfChanged = numBuf(state, "mkframe", "##mkat", state:frameOf())
+	if mfChanged then
+		state.buffers.mkframeDirty = true
+	end
 	local mkName = state:text("mkname", "##markername", "")
 	if imgui.button("Add Marker") and mkName ~= "" then
 		if state:act("Timeline", function()
 			return doc:addEvent(mf, mkName)
 		end) then
 			state.buffers.mkname = ""
+			state.buffers.mkframeDirty = nil
+			state.buffers.mkframe = state:frameOf()
 		end
 	end
 
@@ -140,7 +157,7 @@ function M.draw(state: any)
 		inSpec[n.id] = true
 	end
 	local gsId, gsF = state.gridSelId, state.gridSelF
-	local gk = if gsId ~= nil and inSpec[gsId] and def.keyframes[gsF] ~= nil then def.keyframes[gsF][gsId] else nil
+	local gk = if gsId ~= nil and doc:findNode(gsId) ~= nil and def.keyframes[gsF] ~= nil then def.keyframes[gsF][gsId] else nil
 	if gk ~= nil then
 		imgui.text(("key %s @ %d"):format(gsId, gsF))
 		if gsF > 0 and imgui.button("<") then
@@ -158,7 +175,12 @@ function M.draw(state: any)
 				return ok, err
 			end)
 		end
-		local mv = numBuf(state, "mv:" .. gsId .. ":" .. gsF, "##mvto", gsF, 1)
+		if state.buffers.mvSelId ~= gsId or state.buffers.mvSelF ~= gsF then
+			state.buffers.mvSelId = gsId
+			state.buffers.mvSelF = gsF
+			state.buffers.mvto = gsF
+		end
+		local mv = numBuf(state, "mvto", "##mvto", gsF)
 		imgui.sameLine()
 		if imgui.button("Move To") then
 			state:act("Timeline", function()
@@ -184,9 +206,9 @@ function M.draw(state: any)
 	-- Grid
 	local fps = state:fps()
 	local maxF = math.max(31, math.floor(doc:length() * fps + 0.5))
-	if maxF > MAX_COLS then
-		maxF = MAX_COLS
-		imgui.text("(>1024 frames truncated)")
+	if maxF > MAX_FRAMES then
+		maxF = MAX_FRAMES
+		imgui.text("(>509 frames truncated)")
 	end
 
 	local rows = {}
@@ -246,11 +268,15 @@ function M.draw(state: any)
 						if occ then
 							seek(state, f)
 						else
-							seek(state, f)
 							local pose = if doc.rig ~= nil then doc.rig:getPose(id) else nil
-							state:act("Timeline", function()
-								return doc:putPose(f, id, pose or {})
-							end)
+							if pose ~= nil and next(pose) ~= nil then
+								state:act("Timeline", function()
+									return doc:putPose(f, id, pose)
+								end)
+								seek(state, f)
+							else
+								state:toast("Timeline", "nothing to key at frame " .. f)
+							end
 						end
 					end
 				end

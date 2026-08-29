@@ -42,16 +42,14 @@ function M.draw(state: any)
 	imgui.text("projects/" .. tostring(doc.name))
 
 	local names = state.projects
-	if names ~= nil then
-		for _, name in ipairs(names) do
-			local label = if doc.name == name then name .. " *" else name
-			if imgui.selectable(label, false) then
-				openProject(state, name)
-			end
+	for _, name in ipairs(names) do
+		local label = if doc.name == name then name .. " *" else name
+		if imgui.selectable(label, false) then
+			openProject(state, name)
 		end
-		if #names == 0 then
-			imgui.text("(no projects)")
-		end
+	end
+	if #names == 0 then
+		imgui.text("(no projects)")
 	end
 	if imgui.button("Refresh") then
 		refreshList(state)

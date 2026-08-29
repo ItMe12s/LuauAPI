@@ -13,13 +13,16 @@ function M.draw(state: any)
 	local doc = state.doc
 	if doc == nil then return end
 
+	if state.lastActiveAnim ~= doc.activeAnim then
+		state.lastActiveAnim = doc.activeAnim
+		state:resetAnimSel()
+	end
+
 	for _, name in ipairs(sortedNames(doc)) do
 		if imgui.selectable(name, doc.activeAnim == name) and doc.activeAnim ~= name then
-			if state:act("Anims", function()
+			state:act("Anims", function()
 				return doc:setActive(name)
-			end) then
-				state:resetAnimSel()
-			end
+			end)
 		end
 	end
 
@@ -32,11 +35,9 @@ function M.draw(state: any)
 			return doc:addAnim(newName)
 		end) then
 			state.buffers.animnew = ""
-			if state:act("Anims", function()
+			state:act("Anims", function()
 				return doc:setActive(newName)
-			end) then
-				state:resetAnimSel()
-			end
+			end)
 		end
 	end
 

@@ -40,6 +40,7 @@ function State.new(): any
 		gridSelF = nil,
 		playing = false,
 		tickError = nil,
+		lastActiveAnim = nil,
 		buffers = {},
 		combos = {},
 	}, { __index = State })
@@ -66,7 +67,9 @@ function State.toast(self: any, id: any, msg: any)
 end
 
 function State.act(self: any, winId: any, op: any): (boolean, string?)
-	local ok, err = op()
+	local pok, r1, r2 = pcall(op)
+	local ok = pok and r1 == true
+	local err = if not pok then tostring(r1) else r2
 	if not ok then
 		self:toast(winId, err or "unknown error")
 	end
@@ -92,15 +95,14 @@ function State.select(self: any, id: any)
 	self.combos.reparent = nil
 end
 
-function State.text(self: any, key: any, label: string, initial: string?): (string, boolean)
+function State.text(self: any, key: any, label: string, initial: string?): string
 	local b = self.buffers[key]
 	if b == nil then
 		b = initial or ""
 	end
 	local v = imgui.inputText(label, b)
-	local changed = v ~= b
 	self.buffers[key] = v
-	return v, changed
+	return v
 end
 
 function State.drag(self: any, label: string, value: number, opts: any): (number, boolean)

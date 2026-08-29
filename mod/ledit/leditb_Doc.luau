@@ -42,6 +42,10 @@ for k, fn in pairs(DefOps) do
 	Doc[k] = fn
 end
 
+function Doc:findNode(id: any)
+	return (Core.findNode(self, id))
+end
+
 function Doc:play()
 	if self.track == nil then
 		local ok, err = Core.recompile(self)
@@ -77,7 +81,8 @@ function Doc:stop()
 		return false, "no track"
 	end
 	self.track:stop()
-	self.playhead = self.track:currentTime()
+	self.track:seek(0)
+	self.playhead = 0
 	return true, nil
 end
 
@@ -98,7 +103,7 @@ function Doc:scrubToTime(t)
 	end
 	local dur = self.track:duration()
 	self.track:seek(math.clamp(t, 0, dur))
-	self.playhead = if dur > 0 then self.track:currentTime() else math.max(t, 0)
+	self.playhead = if dur > 0 then self.track:currentTime() else math.clamp(t, 0, self:length())
 	return true, nil
 end
 

@@ -1,4 +1,5 @@
 local Ser = require("./leditb_Ser")
+local Core = require("./leditb_DocCore")
 local DocModule = require("./leditb_Doc")
 
 local Project = {} :: any
@@ -6,10 +7,6 @@ Project.__index = Project
 
 local DIR = "projects"
 local ANIM_SUFFIX = ".anim.luau"
-
-local function sanitize(name: any): boolean
-	return type(name) == "string" and #name > 0 and name:match("^[%w%-_ ]+$") ~= nil
-end
 
 local function dirFor(name: any): string
 	return DIR .. "/" .. name
@@ -30,7 +27,7 @@ function Project:list(): ({string}?, string?)
 	end
 	local out = {}
 	for _, name in ipairs(entries) do
-		if sanitize(name)
+		if Core.validName(name)
 			and self.fs.exists("save", dirFor(name) .. "/" .. name .. ".rig.luau")
 		then
 			out[#out + 1] = name
@@ -41,7 +38,7 @@ function Project:list(): ({string}?, string?)
 end
 
 function Project:create(name: any): (boolean, string?)
-	if not sanitize(name) then
+	if not Core.validName(name) then
 		return false, "invalid project name"
 	end
 	local dir = dirFor(name)
@@ -54,6 +51,7 @@ function Project:create(name: any): (boolean, string?)
 	end
 	ok, err = self.fs.write("save", dir .. "/" .. name .. ".rig.luau", Ser.spec({ nodes = {} }))
 	if not ok then
+		self.fs.remove("save", dir)
 		return false, err
 	end
 	return true, nil
@@ -72,7 +70,7 @@ local function evalSource(src: any, chunk: any): (any, string?)
 end
 
 function Project:load(name: any): (any, string?)
-	if not sanitize(name) then
+	if not Core.validName(name) then
 		return nil, "invalid project name"
 	end
 	local dir = dirFor(name)
@@ -84,6 +82,10 @@ function Project:load(name: any): (any, string?)
 	if type(spec) ~= "table" or type(spec.nodes) ~= "table" then
 		return nil, "invalid rig file: " .. tostring(evalErr)
 	end
+	local rigOk, rigErr = pcall(Ser.spec, spec)
+	if not rigOk then
+		return nil, "invalid rig file: " .. tostring(rigErr)
+	end
 	local entries, lerr = self.fs.list("save", dir)
 	if entries == nil then
 		return nil, lerr
@@ -93,6 +95,9 @@ function Project:load(name: any): (any, string?)
 	for _, file in ipairs(entries) do
 		if file:sub(-#ANIM_SUFFIX) == ANIM_SUFFIX then
 			local animName = file:sub(1, -(#ANIM_SUFFIX + 1))
+			if not Core.validName(animName) then
+				return nil, "invalid anim file name: " .. file
+			end
 			local asrc, aerr = self.fs.read("save", dir .. "/" .. file)
 			if asrc == nil then
 				return nil, aerr
@@ -101,9 +106,18 @@ function Project:load(name: any): (any, string?)
 			if type(def) ~= "table" then
 				return nil, "invalid anim file " .. animName .. ": " .. tostring(derr)
 			end
-			local ok, verr = self.lunar.animation.load(def)
-			if ok == nil then
+			if def.keyframes == nil then
+				def.keyframes = {}
+			elseif type(def.keyframes) ~= "table" then
+				return nil, "invalid anim file " .. animName .. ": keyframes must be a table"
+			end
+			local loaded, verr = self.lunar.animation.load(def)
+			if loaded == nil then
 				return nil, animName .. ": " .. tostring(verr)
+			end
+			local animOk, aerr2 = pcall(Ser.anim, def)
+			if not animOk then
+				return nil, "invalid anim file " .. animName .. ": " .. tostring(aerr2)
 			end
 			animations[animName] = def
 		end
@@ -113,22 +127,34 @@ end
 
 function Project:save(doc: any): (boolean, string?)
 	local name = doc.name
-	if not sanitize(name) then
+	if not Core.validName(name) then
 		return false, "invalid project name"
+	end
+	local rigOk, rigSrc = pcall(Ser.spec, doc.rigSpec)
+	if not rigOk then
+		return false, tostring(rigSrc)
+	end
+	local animSrcs = {}
+	for animName, def in pairs(doc.animations) do
+		if not Core.validName(animName) then
+			return false, "invalid animation name: " .. tostring(animName)
+		end
+		local animOk, src = pcall(Ser.anim, def)
+		if not animOk then
+			return false, tostring(src)
+		end
+		animSrcs[animName] = src
 	end
 	local dir = dirFor(name)
 	self.fs.mkdir("save", dir)
-	local ok, err = self.fs.write("save", dir .. "/" .. name .. ".rig.luau", Ser.spec(doc.rigSpec))
+	local ok, err = self.fs.write("save", dir .. "/" .. name .. ".rig.luau", rigSrc)
 	if not ok then
 		return false, err
 	end
 	local written = {}
-	for animName, def in pairs(doc.animations) do
-		if not sanitize(animName) then
-			return false, "invalid animation name: " .. tostring(animName)
-		end
+	for animName, src in pairs(animSrcs) do
 		local file = animName .. ANIM_SUFFIX
-		ok, err = self.fs.write("save", dir .. "/" .. file, Ser.anim(def))
+		ok, err = self.fs.write("save", dir .. "/" .. file, src)
 		if not ok then
 			return false, err
 		end
@@ -148,7 +174,7 @@ function Project:save(doc: any): (boolean, string?)
 end
 
 function Project:saveAs(doc: any, newName: any): (boolean, string?)
-	if not sanitize(newName) then
+	if not Core.validName(newName) then
 		return false, "invalid project name"
 	end
 	if newName ~= doc.name and self.fs.exists("save", dirFor(newName)) then
@@ -164,7 +190,7 @@ function Project:saveAs(doc: any, newName: any): (boolean, string?)
 end
 
 function Project:delete(name: any): (boolean, string?)
-	if not sanitize(name) then
+	if not Core.validName(name) then
 		return false, "invalid project name"
 	end
 	local dir = dirFor(name)

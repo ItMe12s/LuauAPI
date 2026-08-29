@@ -1,4 +1,5 @@
 local Core = require("./leditb_DocCore")
+local Ser = require("./leditb_Ser")
 
 local activeDef = Core.activeDef
 local clone = Core.clone
@@ -18,9 +19,15 @@ function M.addAnim(d: any, name: any, def: any?, ukey: any?): (boolean, string?)
 	if d.animations[name] ~= nil then
 		return false, "animation exists: " .. name
 	end
+	if def ~= nil and type(def) ~= "table" then
+		return false, "animation def must be a table"
+	end
 	local before = snapshot(d)
-	def = def or { fps = 30, looped = false, keyframes = {} }
-	d.animations[name] = clone(def)
+	local copy = clone(def or { fps = 30, looped = false, keyframes = {} })
+	if type(copy.keyframes) ~= "table" then
+		copy.keyframes = {}
+	end
+	d.animations[name] = copy
 	return finishOp(d, ukey, before, true, nil)
 end
 
@@ -127,23 +134,8 @@ local function validatePose(pose: any): string?
 	return nil
 end
 
-local function eventArray(events: any): {any}
-	if events == nil then
-		return {}
-	end
-	if type(events) == "string" then
-		return { events }
-	end
-	return events
-end
-
 local function mergeEvents(dst: any, incoming: {any})
-	local events = dst.events
-	if type(events) == "string" then
-		events = { events }
-	elseif events == nil then
-		events = {}
-	end
+	local events = Ser.eventArray(dst.events)
 	local seen = {}
 	for _, name in ipairs(events) do
 		seen[name] = true
@@ -168,6 +160,9 @@ function M.putPose(d: any, frame: any, id: any, pose: any, ukey: any?): (boolean
 	err = validatePose(pose)
 	if err ~= nil then
 		return false, err
+	end
+	if next(pose) == nil then
+		return true, nil
 	end
 	local before = snapshot(d)
 	local kf = anim.keyframes[frame]
@@ -214,6 +209,9 @@ function M.removeFrame(d: any, frame: any, ukey: any?): (boolean, string?)
 	if not validFrame(frame) then
 		return false, "frame must be an integer >= 0"
 	end
+	if anim.keyframes[frame] == nil then
+		return true, nil
+	end
 	local before = snapshot(d)
 	anim.keyframes[frame] = nil
 	return finishOp(d, ukey, before, recompile(d))
@@ -241,7 +239,7 @@ function M.moveFrame(d: any, from: any, to: any, ukey: any?): (boolean, string?)
 	end
 	for key, value in pairs(src) do
 		if key == "events" then
-			mergeEvents(dst, eventArray(value))
+			mergeEvents(dst, Ser.eventArray(value))
 		else
 			dst[key] = value
 		end
@@ -283,7 +281,7 @@ function M.removeEvent(d: any, frame: any, name: any, ukey: any?): (boolean, str
 	end
 	local kept = {}
 	local removed = false
-	for _, existing in ipairs(eventArray(kf.events)) do
+	for _, existing in ipairs(Ser.eventArray(kf.events)) do
 		if existing == name then
 			removed = true
 		else
@@ -313,11 +311,14 @@ function M.renameEvent(d: any, old: any, new: any, ukey: any?): (boolean, string
 	if type(new) ~= "string" or new == "" then
 		return false, "event name required"
 	end
+	if old == new then
+		return true, nil
+	end
 	local before = snapshot(d)
 	local changed = false
 	for f, kf in pairs(anim.keyframes) do
 		if kf.events ~= nil then
-			local events = eventArray(kf.events)
+			local events = Ser.eventArray(kf.events)
 			local seenNew = false
 			for _, e in ipairs(events) do
 				if e == new then

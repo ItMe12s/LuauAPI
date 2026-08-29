@@ -42,7 +42,6 @@ function Undo:undo(): boolean
 		return false
 	end
 	cmd.undo()
-	cmd.time = os.clock()
 	self.redoStack[#self.redoStack + 1] = cmd
 	return true
 end
@@ -53,7 +52,6 @@ function Undo:redo(): boolean
 		return false
 	end
 	cmd.redo()
-	cmd.time = os.clock()
 	self.undoStack[#self.undoStack + 1] = cmd
 	return true
 end

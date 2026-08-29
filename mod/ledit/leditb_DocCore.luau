@@ -59,10 +59,8 @@ function Core.orderedSpec(spec: any): any
 		out[#out + 1] = Core.clone(node)
 	end
 	for _, node in ipairs(nodes) do
-		if type(node) == "table" and type(node.id) == "string" and not seen[node.id] then
+		if type(node) == "table" and type(node.id) == "string" then
 			visit(node, 0)
-		else
-			out[#out + 1] = Core.clone(node)
 		end
 	end
 	local ordered = Core.clone(spec)
@@ -71,12 +69,17 @@ function Core.orderedSpec(spec: any): any
 end
 
 function Core.rebuildRig(d: any): (any, string?)
+	for i, n in ipairs(d.rigSpec.nodes) do
+		if type(n) ~= "table" or type(n.id) ~= "string" or n.id == "" then
+			return nil, "node " .. i .. ": id required"
+		end
+	end
 	local rig, err = d.lunar.rig.new():load(Core.orderedSpec(d.rigSpec))
 	d.track = nil
 	if rig == nil then
 		d.rig = nil
 		d.rigWarn = nil
-		return false, err
+		return nil, err
 	end
 	d.rig = rig
 	local live = {}
@@ -128,6 +131,7 @@ function Core.recompile(d: any): (boolean, string?)
 end
 
 function Core.swapRig(d: any): (boolean, string?)
+	local wasPlaying = d.track ~= nil and d.track:isPlaying() or false
 	local ok, err = Core.rebuildRig(d)
 	if not ok then
 		return false, err
@@ -135,6 +139,9 @@ function Core.swapRig(d: any): (boolean, string?)
 	ok, err = Core.recompile(d)
 	if not ok then
 		return false, err
+	end
+	if wasPlaying and d.track ~= nil then
+		d.track:play()
 	end
 	return true, nil
 end
@@ -146,7 +153,7 @@ function Core.activeDef(d: any): (any, string?)
 			return anim, nil
 		end
 	end
-	return false, "no active animation"
+	return nil, "no active animation"
 end
 
 function Core.snapshot(d: any): any
@@ -158,9 +165,9 @@ function Core.snapshot(d: any): any
 	}
 end
 
-function Core.restoreSnap(d: any, s: any)
-	d.rigSpec = s.spec
-	d.animations = s.anims
+local function restoreSnap(d: any, s: any)
+	d.rigSpec = Core.clone(s.spec)
+	d.animations = Core.clone(s.anims)
 	d.activeAnim = s.active
 	d.playhead = s.head
 	Core.swapRig(d)
@@ -168,12 +175,12 @@ end
 
 function Core.replay(d: any, s: any)
 	d.replaying = true
-	Core.restoreSnap(d, s)
+	restoreSnap(d, s)
 	d.replaying = nil
 end
 
 function Core.pushUndo(d: any, ukey: any, before: any)
-	if d.replaying or d.undoStack == nil then
+	if d.replaying then
 		return
 	end
 	local after = Core.snapshot(d)
@@ -186,6 +193,10 @@ end
 
 function Core.finishOp(d: any, ukey: any, before: any, ok: any, err: any): (boolean, string?)
 	if not ok then
+		d.rigSpec = before.spec
+		d.animations = before.anims
+		d.activeAnim = before.active
+		d.playhead = before.head
 		return false, err
 	end
 	Core.pushUndo(d, ukey, before)

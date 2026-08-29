@@ -32,7 +32,7 @@ function M.draw(state: any)
 		local selected = state.selNode == id
 		if kids[id] then
 			imgui.treeNode(id, function()
-			if imgui.selectable(id, selected) and not selected then state:select(id) end
+				if imgui.selectable(id, selected) and not selected then state:select(id) end
 				for _, cid in ipairs(kids[id]) do
 					drawNode(cid, depth + 1)
 				end
@@ -75,13 +75,18 @@ function M.draw(state: any)
 		end
 
 		imgui.separatorText("Reparent")
-		if state.combos.reparent == nil then
-			local curParent = node.parent or "(root)"
-			for i, item in ipairs(parentItems()) do
-				if item == curParent then state.combos.reparent = i - 1 end
+		local pItems = parentItems()
+		local curParent = node.parent or "(root)"
+		if state.combos.reparent == nil or pItems[state.combos.reparent + 1] ~= curParent then
+			state.combos.reparent = 0
+			for i, item in ipairs(pItems) do
+				if item == curParent then
+					state.combos.reparent = i - 1
+					break
+				end
 			end
 		end
-		state:combo("reparent", "##reparent", parentItems(), function(_, item)
+		state:combo("reparent", "##reparent", pItems, function(_, item)
 			local parent = if item == "(root)" then nil else item
 			state:act("RigTree", function()
 				return doc:reparent(sel, parent)
