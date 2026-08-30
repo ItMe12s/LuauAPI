@@ -1,5 +1,11 @@
 local M = {}
 
+local function tip(t: string)
+	if imgui.isItemHovered() then
+		imgui.setTooltip(t)
+	end
+end
+
 local function sortedNames(doc: any): { string }
 	local names = {}
 	for name in pairs(doc.animations) do
@@ -24,6 +30,7 @@ function M.draw(state: any)
 				return doc:setActive(name)
 			end)
 		end
+		tip("select this animation")
 	end
 
 	imgui.separator()
@@ -40,6 +47,7 @@ function M.draw(state: any)
 			end)
 		end
 	end
+	tip("create animation with entered name")
 
 	local act = doc.activeAnim
 	local def = if act ~= nil then doc.animations[act] else nil
@@ -53,6 +61,7 @@ function M.draw(state: any)
 			return doc:setFps(v, "animfps")
 		end)
 	end
+	tip("frames per second")
 
 	local lb = imgui.checkbox("Looped", def.looped == true)
 	if lb ~= (def.looped == true) then
@@ -60,6 +69,7 @@ function M.draw(state: any)
 			return doc:setLooped(lb)
 		end)
 	end
+	tip("loop playback")
 
 	local rn = state:text("animrename", "new name")
 	imgui.sameLine()
@@ -70,6 +80,7 @@ function M.draw(state: any)
 			state.buffers.animrename = nil
 		end
 	end
+	tip("rename to entered name")
 
 	local dup = state:text("animdup", "##dup", "")
 	imgui.sameLine()
@@ -83,12 +94,14 @@ function M.draw(state: any)
 			end)
 		end
 	end
+	tip("copy under entered name")
 
 	if imgui.button("Delete") then
 		state:act("Anims", function()
 			return doc:deleteAnim(act)
 		end)
 	end
+	tip("delete this animation")
 end
 
 return M

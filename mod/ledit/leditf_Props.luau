@@ -1,5 +1,11 @@
 local M = {}
 
+local function tip(t: string)
+	if imgui.isItemHovered() then
+		imgui.setTooltip(t)
+	end
+end
+
 function M.draw(state: any)
 	local doc = state.doc
 	if doc == nil then return end
@@ -47,6 +53,7 @@ function M.draw(state: any)
 					("pose:%d:%s:%s"):format(frame, sel, ch.k))
 			end)
 		end
+		tip(ch.tip)
 	end
 
 	imgui.separatorText("Easing")
@@ -66,6 +73,7 @@ function M.draw(state: any)
 				("ease:%d:%s"):format(frame, sel))
 		end)
 	end)
+	tip("interpolation curve to next key")
 end
 
 return M

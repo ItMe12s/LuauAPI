@@ -14,6 +14,12 @@ end
 
 local M = {}
 
+local function tip(t: string)
+	if imgui.isItemHovered() then
+		imgui.setTooltip(t)
+	end
+end
+
 local function numBuf(state: any, key: string, label: string, initial: number): (number, boolean)
 	local cur = state.buffers[key]
 	if type(cur) ~= "number" then
@@ -67,24 +73,28 @@ function M.draw(state: any)
 			end)
 		end
 	end
+	tip("play from playhead")
 	imgui.sameLine()
 	if imgui.button("Pause") then
 		state:act("Timeline", function()
 			return doc:pause()
 		end)
 	end
+	tip("pause playback")
 	imgui.sameLine()
 	if imgui.button("Continue") then
 		state:act("Timeline", function()
 			return doc:unpause()
 		end)
 	end
+	tip("resume playback")
 	imgui.sameLine()
 	if imgui.button("Stop") then
 		state:act("Timeline", function()
 			return doc:stop()
 		end)
 	end
+	tip("stop and rewind")
 	imgui.sameLine()
 	local sp, spChanged = state:drag("Speed", doc.speed, { speed = 0.01, min = 0.05, max = 5, fmt = "%.2f" })
 	if spChanged then
@@ -92,18 +102,21 @@ function M.draw(state: any)
 			return doc:setSpeed(sp)
 		end)
 	end
+	tip("playback speed")
 
 	if imgui.button("Undo") then
 		state:act("Timeline", function()
 			return doc:undo()
 		end)
 	end
+	tip("undo last change")
 	imgui.sameLine()
 	if imgui.button("Redo") then
 		state:act("Timeline", function()
 			return doc:redo()
 		end)
 	end
+	tip("redo last change")
 
 	-- Markers
 	if def == nil then return end
@@ -124,12 +137,14 @@ function M.draw(state: any)
 				jumpTo(state, ev.f)
 				seek(state, ev.f)
 			end
+			tip("jump to marker")
 			imgui.sameLine()
 			if imgui.button("Delete Marker##mk:" .. name .. ":" .. ev.f) then
 				state:act("Timeline", function()
 					return doc:removeEvent(ev.f, name)
 				end)
 			end
+			tip("remove marker")
 		end
 	end
 	if not sawMarker then
@@ -142,7 +157,9 @@ function M.draw(state: any)
 	if mfChanged then
 		state.buffers.mkframeDirty = true
 	end
+	tip("marker frame")
 	local mkName = state:text("mkname", "##markername", "")
+	tip("marker name")
 	if imgui.button("Add Marker") and mkName ~= "" then
 		if state:act("Timeline", function()
 			return doc:addEvent(mf, mkName)
@@ -152,6 +169,7 @@ function M.draw(state: any)
 			state.buffers.mkframe = state:frameOf()
 		end
 	end
+	tip("add marker at entered frame")
 
 	imgui.separator()
 
@@ -174,6 +192,7 @@ function M.draw(state: any)
 				return ok, err
 			end)
 		end
+		tip("move key one frame earlier")
 		imgui.sameLine()
 		if imgui.button(">##mvnext") then
 			state:act("Timeline", function()
@@ -185,6 +204,7 @@ function M.draw(state: any)
 				return ok, err
 			end)
 		end
+		tip("move key one frame later")
 		if state.buffers.mvSelId ~= gsId or state.buffers.mvSelF ~= gsF then
 			state.buffers.mvSelId = gsId
 			state.buffers.mvSelF = gsF
@@ -202,18 +222,21 @@ function M.draw(state: any)
 				return ok, err
 			end)
 		end
+		tip("move key to entered frame")
 
 		if imgui.button("Delete Key") then
 			state:act("Timeline", function()
 				return doc:clearPose(gsF, gsId)
 			end)
 		end
+		tip("delete keyframe")
 		imgui.sameLine()
 		if imgui.button("Delete Frame") then
 			state:act("Timeline", function()
 				return doc:removeFrame(gsF)
 			end)
 		end
+		tip("delete all keys on frame")
 	end
 
 	imgui.separator()
@@ -255,10 +278,12 @@ function M.draw(state: any)
 			state.tlPage -= 1
 		end
 	end
+	tip("previous frame page")
 	imgui.sameLine()
 	if imgui.button(">##pgnext") then
 		state.tlPage += 1
 	end
+	tip("next frame page")
 	imgui.sameLine()
 	imgui.text(("f %d-%d"):format(start, start + PAGE - 1))
 
@@ -286,6 +311,7 @@ function M.draw(state: any)
 					if imgui.selectable(id, state.selNode == id) and state.selNode ~= id then
 						state:select(id)
 					end
+					tip("select node")
 				end
 				for i = 0, PAGE - 1 do
 					if not imgui.tableSetColumnIndex(i + 1) then break end
@@ -316,6 +342,7 @@ function M.draw(state: any)
 							end
 						end
 					end
+					tip(if occ then "select key" else "add key here")
 				end
 			end
 		end, {

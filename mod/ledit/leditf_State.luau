@@ -1,17 +1,17 @@
 local State = {} :: any
 
 State.CHANNELS = {
-	{ k = "x", speed = 1 },
-	{ k = "y", speed = 1 },
-	{ k = "rot", speed = 0.5 },
-	{ k = "sx", speed = 0.02 },
-	{ k = "sy", speed = 0.02 },
-	{ k = "skx", speed = 0.02 },
-	{ k = "sky", speed = 0.02 },
-	{ k = "z", speed = 1, fmt = "%.0f" },
-	{ k = "opacity", speed = 2, min = 0, max = 255, fmt = "%.0f" },
-	{ k = "ax", speed = 0.01, min = 0, max = 1 },
-	{ k = "ay", speed = 0.01, min = 0, max = 1 },
+	{ k = "x", speed = 1, tip = "position x" },
+	{ k = "y", speed = 1, tip = "position y" },
+	{ k = "rot", speed = 0.5, tip = "rotation in degrees" },
+	{ k = "sx", speed = 0.02, tip = "scale x" },
+	{ k = "sy", speed = 0.02, tip = "scale y" },
+	{ k = "skx", speed = 0.02, tip = "skew x" },
+	{ k = "sky", speed = 0.02, tip = "skew y" },
+	{ k = "z", speed = 1, fmt = "%.0f", tip = "render order" },
+	{ k = "opacity", speed = 2, min = 0, max = 255, fmt = "%.0f", tip = "opacity 0 to 255" },
+	{ k = "ax", speed = 0.01, min = 0, max = 1, tip = "anchor x" },
+	{ k = "ay", speed = 0.01, min = 0, max = 1, tip = "anchor y" },
 }
 
 State.FALLBACK = { x = 0, y = 0, rot = 0, sx = 1, sy = 1, skx = 0, sky = 0, z = 0, opacity = 255, ax = 0.5, ay = 0.5 }

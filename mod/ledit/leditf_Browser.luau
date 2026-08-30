@@ -5,6 +5,12 @@ local M = {}
 local GREEN = { x = 0.4, y = 0.85, z = 0.4, w = 1 }
 local RED = { x = 0.9, y = 0.25, z = 0.25, w = 1 }
 
+local function tip(t: string)
+	if imgui.isItemHovered() then
+		imgui.setTooltip(t)
+	end
+end
+
 local function resetDocUi(state: any)
 	state.selNode = nil
 	state:resetAnimSel()
@@ -66,8 +72,10 @@ function M.draw(state: any)
 			imgui.style.with({ colors = { Text = RED } }, function()
 				clicked = imgui.selectable(label .. " (corrupt)", false)
 			end)
+			tip("project failed validation")
 		else
 			clicked = imgui.selectable(label, false)
+			tip("load this project")
 		end
 		if clicked then
 			if errors ~= nil then
@@ -84,6 +92,7 @@ function M.draw(state: any)
 	if imgui.button("Refresh") then
 		refreshList(state)
 	end
+	tip("reload project list")
 
 	imgui.separatorText("New Project")
 	local nn = state:text("newproj", "##newproj", "")
@@ -91,6 +100,7 @@ function M.draw(state: any)
 	if imgui.button("Create") and nn ~= "" then
 		requestConfirm(state, "create", nn)
 	end
+	tip("create project with entered name")
 
 	imgui.separatorText("Current Project")
 	if imgui.button("Save") then
@@ -101,9 +111,7 @@ function M.draw(state: any)
 			refreshList(state)
 		end
 	end
-	if imgui.isItemHovered() then
-		imgui.setTooltip("writes rig + all anims")
-	end
+	tip("save rig and animations to disk")
 
 	local sa = state:text("saveas", "##saveas", "")
 	imgui.sameLine()
@@ -116,14 +124,13 @@ function M.draw(state: any)
 			refreshList(state)
 		end
 	end
+	tip("save copy under entered name")
 
 	if state.buffers.confirmDel == nil then
 		if imgui.button("Delete Project") then
 			state.buffers.confirmDel = true
 		end
-		if imgui.isItemHovered() then
-			imgui.setTooltip("removes files on disk")
-		end
+		tip("delete project files on disk")
 	else
 		if imgui.button("Confirm Delete") then
 			if state:act("Browser", function()
@@ -133,9 +140,7 @@ function M.draw(state: any)
 			end
 			state.buffers.confirmDel = nil
 		end
-		if imgui.isItemHovered() then
-			imgui.setTooltip("click again to confirm")
-		end
+		tip("confirm deletion")
 	end
 	if state.buffers.savedAt ~= nil and os.clock() - state.buffers.savedAt < 2 then
 		imgui.style.with({ colors = { Text = GREEN } }, function()
@@ -165,11 +170,13 @@ function M.draw(state: any)
 					openProject(state, pending.name)
 				end
 			end
+			tip("confirm")
 			imgui.sameLine()
 			if imgui.button("No") then
 				state.buffers.confirm = nil
 				imgui.closeCurrentPopup()
 			end
+			tip("cancel")
 		end, { size = { x = 340, y = 220 }, sizeCond = imgui.Cond.Always })
 	end
 
@@ -190,6 +197,7 @@ function M.draw(state: any)
 				state.buffers.corrupt = nil
 				imgui.closeCurrentPopup()
 			end
+			tip("close")
 		end, { size = { x = 340, y = 220 }, sizeCond = imgui.Cond.Always })
 	end
 end

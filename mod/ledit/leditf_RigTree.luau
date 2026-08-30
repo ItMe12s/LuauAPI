@@ -1,5 +1,11 @@
 local M = {}
 
+local function tip(t: string)
+	if imgui.isItemHovered() then
+		imgui.setTooltip(t)
+	end
+end
+
 function M.draw(state: any)
 	local doc = state.doc
 	if doc == nil then return end
@@ -42,6 +48,7 @@ function M.draw(state: any)
 					drawNode(cid, depth + 1)
 				end
 			end, { open = open, flags = flags })
+			tip("select node")
 			if tracked == false and imgui.isItemClicked() and not selected then
 				state:select(id)
 			end
@@ -52,6 +59,7 @@ function M.draw(state: any)
 			if imgui.selectable(id, selected) and not selected then
 				state:select(id)
 			end
+			tip("select node")
 		end
 	end
 
@@ -86,6 +94,7 @@ function M.draw(state: any)
 				state:select(newName)
 			end
 		end
+		tip("rename to entered name")
 
 		imgui.separatorText("Sprite")
 		local sprite = state:text("sprite", "##sprite", node.sprite or "")
@@ -95,6 +104,7 @@ function M.draw(state: any)
 				return doc:setSprite(sel, sprite ~= "" and sprite or nil)
 			end)
 		end
+		tip("set node sprite")
 
 		imgui.separatorText("Reparent")
 		local pItems = parentItems()
@@ -105,6 +115,7 @@ function M.draw(state: any)
 				return doc:reparent(sel, parent)
 			end)
 		end)
+		tip("change parent node")
 		if imgui.button("Delete Node") then
 			if state:act("RigTree", function()
 				return doc:deleteNode(sel)
@@ -113,6 +124,7 @@ function M.draw(state: any)
 				state:setGridSel(nil, nil)
 			end
 		end
+		tip("delete node from rig")
 
 		imgui.separatorText("Base Transform")
 		for _, ch in ipairs(CHANNELS) do
@@ -129,6 +141,7 @@ function M.draw(state: any)
 					return doc:setBase(sel, { [ch.k] = v }, "base:" .. sel .. ":" .. ch.k)
 				end)
 			end
+			tip(ch.tip)
 		end
 	end
 
@@ -138,6 +151,7 @@ function M.draw(state: any)
 	local newId = state:text("addid", "id", "")
 	local addSprite = state:text("addsprite", "sprite (optional)", "")
 	local addParent = select(2, state:combo("addparent", "parent", parentItems()))
+	tip("parent for new node")
 	if imgui.button("Add Node") and newId ~= "" then
 		if state:act("RigTree", function()
 			return doc:addNode({
@@ -152,6 +166,7 @@ function M.draw(state: any)
 			state:select(newId)
 		end
 	end
+	tip("add node with entered details")
 end
 
 return M
