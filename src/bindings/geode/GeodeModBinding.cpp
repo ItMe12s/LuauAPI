@@ -87,13 +87,11 @@ namespace {
 
     int modGetSettingValue(lua_State* L) {
         auto key = checkKey(L, 1);
-        auto result = requireCurrentMod(L)->getSavedSettingsData().get(key);
-        if (result.isErr()) {
-            lua_pushnil(L);
-            return 1;
+        if (auto setting = requireCurrentMod(L)->getSetting(key)) {
+            pushSettingValue(L, setting);
         }
-        if (auto pushed = pushJson(L, result.unwrap(), 0); pushed.isErr()) {
-            return pushNilErr(L, pushed.unwrapErr());
+        else {
+            lua_pushnil(L);
         }
         return 1;
     }
