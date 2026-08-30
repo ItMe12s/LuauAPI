@@ -76,7 +76,18 @@ TEST_CASE("OpaqueHandle rejects light userdata") {
 
     int payload = 7;
     lua_pushlightuserdata(L, &payload);
-    REQUIRE_THROWS_AS(luax::checkOpaqueHandle<int>(L, -1, "test"), std::exception);
+    lua_pushcfunction(
+        L,
+        +[](lua_State* state) -> int {
+            luax::checkOpaqueHandle<int>(state, 1, "test");
+            return 0;
+        },
+        "checkOpaqueHandle"
+    );
+    lua_pushvalue(L, -2);
+    REQUIRE(lua_pcall(L, 1, 0, 0) != 0);
+    REQUIRE(lua_isstring(L, -1));
+    lua_pop(L, 2);
 }
 
 TEST_CASE("ReadOnlyOpaqueVectorView indexes tagged opaque handles") {
