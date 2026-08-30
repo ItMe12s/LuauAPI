@@ -365,6 +365,16 @@ Defaults are generous so scripts can finish under load. For C++ callers, pass a 
 The memory cap is hard. There is no soft limit and no extra collection step.
 When an allocation would cross the cap, it fails and Lua reports an out of memory error.
 
+## Lunar
+
+| Constant          | Value | Meaning                                                   |
+| ----------------- | ----- | --------------------------------------------------------- |
+| `fps`             | `> 0` | `lunar.animation.load` and `setFps` reject fps 0 or below |
+| track `speed`     | `> 0` | `LunarAnimationTrack:setSpeed` errors on zero or negative |
+| editor undo depth | `256` | Lunar Animator undo history per project (`leditb_Undo`)   |
+
+Anchor values `ax`/`ay` accept any finite number, including outside 0 to 1.
+
 ## Related
 
 - [Getting started](../../getting-started/overview.md)

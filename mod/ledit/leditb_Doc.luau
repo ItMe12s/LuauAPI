@@ -17,6 +17,7 @@ function Doc.new(deps: any)
 	d.playhead = 0
 	d.speed = 1
 	d.undoStack = deps.undoStack or Undo.new()
+	d.rev = 0
 	d.rig = nil
 	d.track = nil
 	return d
@@ -108,19 +109,11 @@ function Doc:scrubToTime(t)
 end
 
 function Doc:undo()
-	if not self.undoStack:canUndo() then
-		return false, "nothing to undo"
-	end
-	self.undoStack:undo()
-	return true, nil
+	return self.undoStack:undo()
 end
 
 function Doc:redo()
-	if not self.undoStack:canRedo() then
-		return false, "nothing to redo"
-	end
-	self.undoStack:redo()
-	return true, nil
+	return self.undoStack:redo()
 end
 
 return Doc

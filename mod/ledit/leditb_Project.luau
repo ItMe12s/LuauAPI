@@ -196,18 +196,28 @@ function Project:save(doc: any): (boolean, string?)
 	end
 	local dir = dirFor(name)
 	self.fs.mkdir("save", dir)
-	local ok, err = self.fs.write("save", dir .. "/" .. name .. ".rig.luau", rigSrc)
-	if not ok then
-		return false, err
-	end
-	local written = {}
+
+	local files = { [name .. ".rig.luau"] = rigSrc }
 	for animName, src in pairs(animSrcs) do
-		local file = animName .. ANIM_SUFFIX
-		ok, err = self.fs.write("save", dir .. "/" .. file, src)
+		files[animName .. ANIM_SUFFIX] = src
+	end
+
+	local prev = {}
+	for file in pairs(files) do
+		prev[file] = self.fs.read("save", dir .. "/" .. file)
+	end
+	for file, src in pairs(files) do
+		local ok, err = self.fs.write("save", dir .. "/" .. file, src)
 		if not ok then
+			for f, old in pairs(prev) do
+				if old ~= nil then
+					self.fs.write("save", dir .. "/" .. f, old)
+				else
+					self.fs.remove("save", dir .. "/" .. f)
+				end
+			end
 			return false, err
 		end
-		written[file] = true
 	end
 
 	local entries, lerr = self.fs.list("save", dir)
@@ -215,7 +225,7 @@ function Project:save(doc: any): (boolean, string?)
 		return false, lerr
 	end
 	for _, file in ipairs(entries) do
-		if written[file] ~= true and file:sub(-#ANIM_SUFFIX) == ANIM_SUFFIX then
+		if files[file] == nil and file:sub(-#ANIM_SUFFIX) == ANIM_SUFFIX then
 			self.fs.remove("save", dir .. "/" .. file)
 		end
 	end

@@ -17,10 +17,6 @@ struct lua_State;
 
 namespace luax::lunar {
 
-    bool removeKeyframe(std::vector<Keyframe>& keyframes, double frame);
-
-    bool moveKeyframe(std::vector<Keyframe>& keyframes, double from, double to);
-
     class LunarAnimationDef final : public cocos2d::CCObject {
     public:
         static LunarAnimationDef* create();
@@ -155,7 +151,5 @@ namespace luax::lunar {
     geode::Result<LunarAnimationDef*> parseAnimTable(lua_State* L, int idx, char const* method);
 
     bool setNodeOpacity(cocos2d::CCNode* node, float value);
-
-    void applyPose(LunarRig* rig, std::unordered_map<std::string, NodePose> const& poses);
 
 } // namespace luax::lunar

@@ -1,12 +1,9 @@
-local M = {}
+local Props = {}
 
-local function tip(t: string)
-	if imgui.isItemHovered() then
-		imgui.setTooltip(t)
-	end
-end
+local State = require("./leditf_State")
+local tip = State.tip
 
-function M.draw(state: any)
+function Props.draw(state: any)
 	local doc = state.doc
 	if doc == nil then return end
 
@@ -31,30 +28,15 @@ function M.draw(state: any)
 	imgui.text(sel .. " @ " .. tostring(frame))
 	local pose = if doc.rig ~= nil then doc.rig:getPose(sel) else nil
 
-	for _, ch in ipairs(state.CHANNELS) do
-		local cur = pose ~= nil and pose[ch.k] or nil
-		if cur == nil then
-			cur = state.FALLBACK[ch.k]
+	state:channelDrags("Props", pose or {}, function(ch, v)
+		if state.playing then
+			state:toast("Props", "Paused for keying")
+			local ok, err = doc:pause()
+			if not ok then return false, err end
 		end
-		local v, changed = state:drag(ch.k, cur, {
-			speed = ch.speed,
-			min = ch.min,
-			max = ch.max,
-			fmt = ch.fmt,
-		})
-		if changed then
-			state:act("Props", function()
-				if state.playing then
-					state:toast("Props", "Paused for keying")
-					local ok, err = doc:pause()
-					if not ok then return false, err end
-				end
-				return doc:putPose(frame, sel, { [ch.k] = v },
-					("pose:%d:%s:%s"):format(frame, sel, ch.k))
-			end)
-		end
-		tip(ch.tip)
-	end
+		return doc:putPose(frame, sel, { [ch.k] = v },
+			("pose:%d:%s:%s"):format(frame, sel, ch.k))
+	end)
 
 	imgui.separatorText("Easing")
 
@@ -76,4 +58,4 @@ function M.draw(state: any)
 	tip("interpolation curve to next key")
 end
 
-return M
+return Props

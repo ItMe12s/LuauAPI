@@ -63,6 +63,10 @@ local function inlinePose(pose: any): string
 end
 
 function Ser.spec(spec: any): string
+	local known = {}
+	for _, key in ipairs(NODE_KEYS) do
+		known[key] = true
+	end
 	local out = { "return {", "\tnodes = {" }
 	for i, node in ipairs(spec.nodes or {}) do
 		if type(node) ~= "table" or type(node.id) ~= "string" or node.id == "" then
@@ -80,6 +84,29 @@ function Ser.spec(spec: any): string
 				end
 				parts[#parts + 1] = key .. " = " .. rendered
 			end
+		end
+		-- Pass through unknown scalar fields so they survive save/load.
+		local extras = {}
+		for k, v in pairs(node) do
+			local t = type(k)
+			local tv = type(v)
+			if not known[k] and t == "string"
+				and (tv == "number" or tv == "string" or tv == "boolean") then
+				extras[#extras + 1] = k
+			end
+		end
+		table.sort(extras)
+		for _, key in ipairs(extras) do
+			local v = node[key]
+			local rendered
+			if type(v) == "number" then
+				rendered = num(v)
+			elseif type(v) == "boolean" then
+				rendered = tostring(v)
+			else
+				rendered = str(v)
+			end
+			parts[#parts + 1] = key .. " = " .. rendered
 		end
 		out[#out + 1] = "\t\t{ " .. table.concat(parts, ", ") .. " },"
 	end

@@ -1,28 +1,12 @@
-local M = {}
+local RigTree = {}
 
-local function tip(t: string)
-	if imgui.isItemHovered() then
-		imgui.setTooltip(t)
-	end
-end
+local State = require("./leditf_State")
+local tip = State.tip
 
-function M.draw(state: any)
-	local doc = state.doc
-	if doc == nil then return end
-
-	local CHANNELS = state.CHANNELS
-	local FALLBACK = state.FALLBACK
-
+local function buildLayout(doc: any)
 	local index, kids, roots = {}, {}, {}
 	for i, n in ipairs(doc.rigSpec.nodes) do
 		index[n.id] = i
-	end
-	local function parentItems()
-		local items = { "(root)" }
-		for _, n in ipairs(doc.rigSpec.nodes) do
-			table.insert(items, n.id)
-		end
-		return items
 	end
 	for _, n in ipairs(doc.rigSpec.nodes) do
 		if n.parent ~= nil and index[n.parent] then
@@ -32,6 +16,21 @@ function M.draw(state: any)
 			table.insert(roots, n.id)
 		end
 	end
+	local parents = { "(root)" }
+	for _, n in ipairs(doc.rigSpec.nodes) do
+		table.insert(parents, n.id)
+	end
+	return { index = index, kids = kids, roots = roots, parents = parents }
+end
+
+function RigTree.draw(state: any)
+	local doc = state.doc
+	if doc == nil then return end
+
+	local layout = state:cached("treelayout", doc, function()
+		return buildLayout(doc)
+	end)
+	local index, kids, roots, parentItems = layout.index, layout.kids, layout.roots, layout.parents
 
 	local function drawNode(id, depth)
 		if depth > 64 then return end
@@ -107,9 +106,8 @@ function M.draw(state: any)
 		tip("set node sprite")
 
 		imgui.separatorText("Reparent")
-		local pItems = parentItems()
 		local curParent = node.parent or "(root)"
-		state:combo("reparent", "##reparent", pItems, curParent, function(_, item)
+		state:combo("reparent", "##reparent", parentItems, curParent, function(_, item)
 			local parent = if item == "(root)" then nil else item
 			state:act("RigTree", function()
 				return doc:reparent(sel, parent)
@@ -127,22 +125,9 @@ function M.draw(state: any)
 		tip("delete node from rig")
 
 		imgui.separatorText("Base Transform")
-		for _, ch in ipairs(CHANNELS) do
-			local cur = node[ch.k]
-			if cur == nil then cur = FALLBACK[ch.k] end
-			local v, changed = state:drag(ch.k, cur, {
-				speed = ch.speed,
-				min = ch.min,
-				max = ch.max,
-				fmt = ch.fmt,
-			})
-			if changed then
-				state:act("RigTree", function()
-					return doc:setBase(sel, { [ch.k] = v }, "base:" .. sel .. ":" .. ch.k)
-				end)
-			end
-			tip(ch.tip)
-		end
+		state:channelDrags("RigTree", node, function(ch, v)
+			return doc:setBase(sel, { [ch.k] = v }, "base:" .. sel .. ":" .. ch.k)
+		end)
 	end
 
 	imgui.separator()
@@ -150,7 +135,7 @@ function M.draw(state: any)
 	imgui.separatorText("Add Node")
 	local newId = state:text("addid", "id", "")
 	local addSprite = state:text("addsprite", "sprite (optional)", "")
-	local addParent = select(2, state:combo("addparent", "parent", parentItems()))
+	local addParent = select(2, state:combo("addparent", "parent", parentItems))
 	tip("parent for new node")
 	if imgui.button("Add Node") and newId ~= "" then
 		if state:act("RigTree", function()
@@ -169,4 +154,4 @@ function M.draw(state: any)
 	tip("add node with entered details")
 end
 
-return M
+return RigTree

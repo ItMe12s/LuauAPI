@@ -10,7 +10,7 @@ local drawHandle = nil
 local layerRef: CCLayerColor? = nil
 local attachedRig: CCNode? = nil
 
-local RED = { x = 0.9, y = 0.25, z = 0.25, w = 1 }
+local RED = State.RED
 local YELLOW = { x = 0.95, y = 0.85, z = 0.2, w = 1 }
 local TOAST_LIFE = 4
 
@@ -31,16 +31,24 @@ local function drawStatus(st)
 	local warn = if doc ~= nil then doc.rigWarn else nil
 	if st.tickError == nil and warn == nil then
 		imgui.text("ok")
-		return
+	else
+		imgui.style.with({ colors = { Text = RED } }, function()
+			if st.tickError ~= nil then
+				imgui.textWrapped("tick: " .. st.tickError)
+			end
+			if warn ~= nil then
+				imgui.textWrapped(warn)
+			end
+		end)
 	end
-	imgui.style.with({ colors = { Text = RED } }, function()
-		if st.tickError ~= nil then
-			imgui.textWrapped("tick: " .. st.tickError)
-		end
-		if warn ~= nil then
-			imgui.textWrapped(warn)
-		end
-	end)
+	-- TODO: temporary onboarding tip, remove when real docs.
+	imgui.separatorText("Read me!!!")
+	imgui.text("No docs for the animator yet, sorry.")
+	imgui.text("Projects save to LuauAPI's save data folder:")
+	imgui.text("Geode -> LuauAPI -> Settings page -> Save Data button.")
+	imgui.text("Each project has one .rig.luau and one .anim.luau per animation.")
+	imgui.text("Copy them into your mod, load with lunar.rig and lunar.animation.")
+	imgui.text("Thanks for using LuauAPI's Lunar Animator :3")
 end
 
 local WINDOWS: { { id: string, title: string, pos: any, size: any, draw: any } } = {
@@ -49,7 +57,7 @@ local WINDOWS: { { id: string, title: string, pos: any, size: any, draw: any } }
 	{ id = "Anims", title = "Animations", draw = require("./leditf_Anims").draw, pos = { x = 252, y = 40 }, size = { x = 190, y = 280 } },
 	{ id = "Props", title = "Properties", draw = require("./leditf_Props").draw, pos = { x = 452, y = 40 }, size = { x = 210, y = 360 } },
 	{ id = "Timeline", title = "Timeline", draw = require("./leditf_Timeline").draw, pos = { x = 672, y = 40 }, size = { x = 580, y = 380 } },
-	{ id = "Status", title = "Status", draw = drawStatus, pos = { x = 672, y = 436 }, size = { x = 280, y = 110 } },
+	{ id = "Status", title = "Status", draw = drawStatus, pos = { x = 672, y = 436 }, size = { x = 280, y = 210 } },
 }
 
 local function drawWindows()

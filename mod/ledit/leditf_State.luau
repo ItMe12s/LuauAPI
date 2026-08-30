@@ -1,18 +1,28 @@
 local State = {} :: any
 
-State.CHANNELS = {
-	{ k = "x", speed = 1, tip = "position x" },
-	{ k = "y", speed = 1, tip = "position y" },
-	{ k = "rot", speed = 0.5, tip = "rotation in degrees" },
-	{ k = "sx", speed = 0.02, tip = "scale x" },
-	{ k = "sy", speed = 0.02, tip = "scale y" },
-	{ k = "skx", speed = 0.02, tip = "skew x" },
-	{ k = "sky", speed = 0.02, tip = "skew y" },
-	{ k = "z", speed = 1, fmt = "%.0f", tip = "render order" },
-	{ k = "opacity", speed = 2, min = 0, max = 255, fmt = "%.0f", tip = "opacity 0 to 255" },
-	{ k = "ax", speed = 0.01, min = 0, max = 1, tip = "anchor x" },
-	{ k = "ay", speed = 0.01, min = 0, max = 1, tip = "anchor y" },
+State.RED = { x = 0.9, y = 0.25, z = 0.25, w = 1 }
+
+-- Channel keys are canonical in leditb_DocCore, this table adds UI metadata.
+local CHANNEL_META: { any } = {
+	{ speed = 1, tip = "position x" },
+	{ speed = 1, tip = "position y" },
+	{ speed = 0.5, tip = "rotation in degrees" },
+	{ speed = 0.02, tip = "scale x" },
+	{ speed = 0.02, tip = "scale y" },
+	{ speed = 0.02, tip = "skew x" },
+	{ speed = 0.02, tip = "skew y" },
+	{ fmt = "%.0f", tip = "render order" },
+	{ speed = 2, min = 0, max = 255, fmt = "%.0f", tip = "opacity 0 to 255" },
+	{ speed = 0.01, min = 0, max = 1, tip = "anchor x" },
+	{ speed = 0.01, min = 0, max = 1, tip = "anchor y" },
 }
+
+State.CHANNELS = {}
+for i, key in ipairs(require("./leditb_DocCore").CHANNEL_KEYS) do
+	local meta = CHANNEL_META[i]
+	meta.k = key
+	State.CHANNELS[i] = meta
+end
 
 State.FALLBACK = { x = 0, y = 0, rot = 0, sx = 1, sy = 1, skx = 0, sky = 0, z = 0, opacity = 255, ax = 0.5, ay = 0.5 }
 
@@ -45,7 +55,45 @@ function State.new(): any
 		trees = {},
 		buffers = {},
 		combos = {},
+		caches = {},
 	}, { __index = State })
+end
+
+function State.tip(t: string)
+	if imgui.isItemHovered() then
+		imgui.setTooltip(t)
+	end
+end
+
+function State.cached(self: any, key: string, doc: any, build: any): any
+	local c = self.caches[key]
+	if c ~= nil and c.doc == doc and c.rev == doc.rev then
+		return c.value
+	end
+	local value = build()
+	self.caches[key] = { doc = doc, rev = doc.rev, value = value }
+	return value
+end
+
+function State.channelDrags(self: any, winId: string, source: any, onChannel: any)
+	for _, ch in ipairs(self.CHANNELS) do
+		local cur = source[ch.k]
+		if cur == nil then
+			cur = self.FALLBACK[ch.k]
+		end
+		local v, changed = self:drag(ch.k, cur, {
+			speed = ch.speed,
+			min = ch.min,
+			max = ch.max,
+			fmt = ch.fmt,
+		})
+		if changed then
+			self:act(winId, function()
+				return onChannel(ch, v)
+			end)
+		end
+		State.tip(ch.tip)
+	end
 end
 
 function State.fps(self: any): number

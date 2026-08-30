@@ -35,20 +35,6 @@ namespace luax::lunar {
 
     static_assert(static_cast<int>(Prop::ZOrder) == 6);
 
-    inline constexpr std::array<Prop, 11> kProps{
-        Prop::PosX,
-        Prop::PosY,
-        Prop::Rotation,
-        Prop::ScaleX,
-        Prop::ScaleY,
-        Prop::Opacity,
-        Prop::ZOrder,
-        Prop::AnchorX,
-        Prop::AnchorY,
-        Prop::SkewX,
-        Prop::SkewY,
-    };
-
     enum class EasingKind : std::uint8_t {
         Linear,
         PowIn,
@@ -146,6 +132,33 @@ namespace luax::lunar {
         Easing easing{};
     };
 
+    struct PropField {
+        char const* key;
+        Prop prop;
+        std::optional<float> NodePose::* pose;
+    };
+
+    inline constexpr std::array<PropField, 11> kPropFields{{
+        {"x", Prop::PosX, &NodePose::x},
+        {"y", Prop::PosY, &NodePose::y},
+        {"rot", Prop::Rotation, &NodePose::rot},
+        {"sx", Prop::ScaleX, &NodePose::sx},
+        {"sy", Prop::ScaleY, &NodePose::sy},
+        {"opacity", Prop::Opacity, &NodePose::opacity},
+        {"z", Prop::ZOrder, &NodePose::z},
+        {"ax", Prop::AnchorX, &NodePose::ax},
+        {"ay", Prop::AnchorY, &NodePose::ay},
+        {"skx", Prop::SkewX, &NodePose::skx},
+        {"sky", Prop::SkewY, &NodePose::sky},
+    }};
+
+    inline constexpr auto kProps = [] {
+        std::array<Prop, kPropFields.size()> props{};
+        for (std::size_t i = 0; i < kPropFields.size(); ++i)
+            props[i] = kPropFields[i].prop;
+        return props;
+    }();
+
     struct Keyframe {
         double frame = 0.0;
         std::vector<std::pair<std::string, NodePose>> targets;
@@ -188,6 +201,12 @@ namespace luax::lunar {
     std::unordered_map<std::string, NodePose> samplePose(CompiledAnimation const& anim, double time);
 
     Keyframe& keyframeFor(std::vector<Keyframe>& keyframes, double frame);
+
+    std::vector<Keyframe>::const_iterator matchKeyframe(
+        std::vector<Keyframe> const& keyframes, double frame
+    );
+
+    std::vector<Keyframe>::iterator matchKeyframe(std::vector<Keyframe>& keyframes, double frame);
 
     void setPoseTarget(Keyframe& kf, std::string_view nodeId, NodePose pose);
 

@@ -9,51 +9,52 @@
 - `29/7/2026`: [LuauAPI has an example/template mod now](https://github.com/ItMe12s/luauapi-example-mod).
 - `11/7/2026`: Bindings that are automatically picked up likely won't be included in the changelog.
 
-## 0.1.0-beta.26
+## v0.1.0-beta.26
 
-- Added skewing support to lunar.
-- Added pose sampling, seek, and current time to lunar animation tracks.
+- Added skewing support to Lunar.
+- Added pose sampling, seek, and current time to Lunar animation tracks.
 - Added keyframe CRUD to `LunarAnimationDef` and node listing plus pose readback to `LunarRig`.
 - Added built-in sprite rig and animation editor `Lunar Animator` (developer mode only).
 - Added Node IDs to dependencies.
 - Fixed `geode.Mod.getSettingValue` returning nil for untouched settings (now returns the default value).
+- Updated Lunar `*_out`/`*_in_out` pow easing to the standard `1 - (1-p)^rate` curve.
 - Updated Luau VM and codegen to compile without exceptions.
 
-## 0.1.0-beta.25
+## v0.1.0-beta.25
 
 - Added `lunar` global for sprite rigging and keyframe animation with easing tweens.
 - Added `.rig.luau` and `.anim.luau` module conventions.
 - Added size opts for imgui popup modal.
 - Updated mod metadata and description.
 
-## 0.1.0-beta.24
+## v0.1.0-beta.24
 
 - Added Geode event dispatch for native C++ function and value registration.
 - Removed the old DLL export surface for native registration.
 
-## 0.1.0-beta.23
+## v0.1.0-beta.23
 
 - Updated to Geode SDK 5.9.0.
 - Updated internal dependencies and bindings.
 
-## 0.1.0-beta.22
+## v0.1.0-beta.22
 
 - Added `task.wait(seconds?)`, which yields the current coroutine and returns elapsed seconds.
 - Updated `task.spawn`, `task.delay`, `task.every`, `task.defer` to run callbacks on coroutines so `task.wait` works in them.
 
-## 0.1.0-beta.21
+## v0.1.0-beta.21
 
 - Added `geode.MouseInputEvent`, `geode.MouseMoveEvent`, and `geode.ScrollWheelEvent` listeners.
 - Fixed `gd3d.Transform.fromAxisAngle` to normalize axes and return identity for near-zero axes.
 - Updated core, scheduler, listener, web, ImGui, and `gd3d` internals for simpler ownership and less hot-path work.
 - Updated Luau codegen for better parsing, consistent cross-platform output, and correct value-struct pointer handling.
 
-## 0.1.0-beta.20
+## v0.1.0-beta.20
 
 - Added typed direct C++ registration so mods can expose native functions and values to their own Luau scripts or other mods.
 - Removed unused legacy developer APIs and trimmed runtime, codegen, build, and test code.
 
-## 0.1.0-beta.19
+## v0.1.0-beta.19
 
 - Added recursive Luau bindings for by-value containers across fields, methods,
   and free functions, including `gd::map<int, gd::vector<int>>`.
@@ -62,14 +63,14 @@
   and one audited adapter for existing `GJBaseGameLayer` pointer grids.
 - Updated runtime C++ error handling to keep exceptions limited to Arc task polling.
 
-## 0.1.0-beta.18
+## v0.1.0-beta.18
 
 - Fixed shutdown crash when closing Geode's platform console.
 - Fixed rare crashes when using borrowed objects after they were deleted.
 - Fixed a Windows crash when hooks called `geode.fields` on a dead node.
 - Updated `geode.fields` to return an empty table instead of raising an error when called on a dead or non-node value.
 
-## 0.1.0-beta.17
+## v0.1.0-beta.17
 
 - Added `geode.PopupManager` and `ManagedPopup` for queued popups.
 - Added the `geode.Color` facade for parsing, conversion, HSV adjustment, and alpha checks.
@@ -77,19 +78,19 @@
 - Added `load-demo` button in the executor.
 - Updated to Geode SDK 5.8.1.
 
-## 0.1.0-beta.16
+## v0.1.0-beta.16
 
 - Added generated Luau support for Geode `arc::TaskHandle<T>` returns.
 - Added `GeodeTaskHandle<T>` with `onComplete`, `cancel`, `detach`, and status checks for native Geode async tasks.
 - Added async `geode.openInfoPopup(modID)` support and updated task-handle limits, docs, stubs, and tests.
 
-## 0.1.0-beta.15
+## v0.1.0-beta.15
 
 - Moved bundled demo scripts to `mod/demo/` and runtime scripts to `mod/luauapi/`.
 - Updated getting-started, examples, and reference documentation.
 - Updated runtime internals, Geode utils, `geode::Result` in render3d asset paths, and cross-platform move-only callbacks.
 
-## 0.1.0-beta.14
+## v0.1.0-beta.14
 
 - Added Luau bindings for more game state: effect and trigger value structs
   (dynamic object actions, game object editor state, enter effects, replay checkpoint and button records, song triggers),
@@ -99,16 +100,16 @@
 - Updated generated stubs and out-ref method returns. Example: `registerSpawnRemap` returns `(number, { ChanceObject })`.
 - **Breaking:** Renamed opaque FMOD sound handle stub `FMODSound` to `FMODSoundHandle`. `FMODSound` is now a value struct table type.
 
-## 0.1.0-beta.13
+## v0.1.0-beta.13
 
 - Fixed ImGui and `gd3d` initializing before game textures load (`TexturesLoaded` defer).
 - Removed custom loading layer (**Enable Custom Loading Layer**) due to Geode loading incompatibility.
 
-## 0.1.0-beta.12
+## v0.1.0-beta.12
 
 - Fixed borrowed game object userdata crashing natively when scripts kept a reference after the object was freed.
 
-## 0.1.0-beta.11
+## v0.1.0-beta.11
 
 - Added custom loading menu (**Enable Custom Loading Layer**, default on).
 - Added `geode.Loader.getAllMods()` for mod metadata from scripts.

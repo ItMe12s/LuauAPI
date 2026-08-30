@@ -116,11 +116,11 @@ return {
 }
 ```
 
-| Field       | Type    | Default  | Notes                                                                                    |
-| ----------- | ------- | -------- | ---------------------------------------------------------------------------------------- |
-| `fps`       | number  | 30       | Frames per second. Must be above 0.                                                      |
-| `looped`    | boolean | false    | Wrap back to the start when finished.                                                    |
-| `keyframes` | table   | required | Keyed by frame number. Each value maps node ids to poses and may carry an `events` list. |
+| Field       | Type    | Default  | Notes                                                                                                    |
+| ----------- | ------- | -------- | -------------------------------------------------------------------------------------------------------- |
+| `fps`       | number  | 30       | Frames per second. Must be above 0.                                                                      |
+| `looped`    | boolean | false    | Wrap back to the start when finished.                                                                    |
+| `keyframes` | table   | required | Keyed by frame number. Each value is `LunarKeyframeEntry`, node ids to poses and optional `events` list. |
 
 Frame 12 at fps 24 is half a second.
 
@@ -152,7 +152,7 @@ Unknown ids are skipped with a warning at play time.
 ```lua
 lunar.rig.new() -> LunarRig
 lunar.animation.new() -> LunarAnimationDef
-lunar.animation.load(def: LunarAnimationDefTable) -> LunarAnimationDef?
+lunar.animation.load(def: LunarAnimationDefTable) -> (LunarAnimationDef?, string?)
 ```
 
 `animation.load` parses and validates a def table right away.
@@ -171,13 +171,13 @@ end
 `LunarRig` extends `CCNode`, so all node methods work on it.
 
 ```lua
-rig:load(spec: LunarRigSpec) -> LunarRig?
+rig:load(spec: LunarRigSpec) -> (LunarRig?, string?)
 rig:add(node: CCNode, id: string?) -> ()
 rig:addTo(parentId: string, node: CCNode, id: string?) -> ()
 rig:getNode(id: string) -> CCNode?
 rig:listNodes() -> { string }
 rig:getPose(id: string) -> LunarNodePose?
-rig:loadAnimation(anim: LunarAnimationDef | LunarAnimationDefTable) -> LunarAnimationTrack?
+rig:loadAnimation(anim: LunarAnimationDef | LunarAnimationDefTable) -> (LunarAnimationTrack?, string?)
 ```
 
 `load` applies a spec table and can be called again to add more nodes.
@@ -230,6 +230,20 @@ Build defs by hand with `addKeyframe` or load whole tables with `lunar.animation
 `removeKeyframe` deletes the keyframe at a frame and returns whether one was removed.
 `moveKeyframe` moves a keyframe to another frame and returns whether one was moved.
 Moving onto an occupied frame merges poses, with the moved targets winning, and appends its events.
+
+```lua
+local def = lunar.animation.new()
+def:setFps(24)
+def:addKeyframe(0, "arm", { rot = -25 })
+def:addKeyframe(12, "arm", { rot = 25, easing = "sine_in_out" })
+def:addEvent(12, "wave_done")
+
+for _, kf in ipairs(def:listKeyframes()) do
+    print(kf.frame, kf.events)
+end
+
+local track = rig:loadAnimation(def)
+```
 
 ## LunarAnimationTrack
 
@@ -304,6 +318,15 @@ Easing is per pose. Every tweened channel in one pose shares the same curve.
 
 An unknown easing string fails the load with the offending name in the message.
 
+## Lunar Animator
+
+The mod has a built-in sprite rig and animation editor, the **Lunar Animator**.
+It is developer mode only and opens from the bottom menu button.
+
+It edits the same rig and animation files documented here.
+Files it writes load back through `rig:load` and `lunar.animation.load`.
+You can add the same files to your own mod (kinda like exporting).
+
 ## Example
 
 Full round trip with separate files:
@@ -332,6 +355,13 @@ track:setSpeed(2) -- Twice as fast, even mid-play.
 track:play()
 _G.robotDemo = { rig = rig, track = track }
 ```
+
+## Limits
+
+`fps` and track `speed` must be above 0.
+A bad `fps` fails the load and `setSpeed` errors on zero or negative.
+Anchor values are not capped.
+Other caps live in [Limits and errors](../cpp/limits-and-errors.md).
 
 ## Related
 

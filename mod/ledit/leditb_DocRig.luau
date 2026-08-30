@@ -7,12 +7,12 @@ local swapRig = Core.swapRig
 local validName = Core.validName
 local BASE_CHANNELS = Core.BASE_CHANNELS
 
-local M = {}
+local RigOps = {}
 
 local snapshot = Core.snapshot
 local finishOp = Core.finishOp
 
-function M.addNode(d: any, entry: any, ukey: any?): (boolean, string?)
+function RigOps.addNode(d: any, entry: any, ukey: any?): (boolean, string?)
 	if type(entry) ~= "table" then
 		return false, "node table required"
 	end
@@ -32,7 +32,7 @@ function M.addNode(d: any, entry: any, ukey: any?): (boolean, string?)
 	return finishOp(d, ukey, before, swapRig(d))
 end
 
-function M.deleteNode(d: any, id: any, ukey: any?): (boolean, string?)
+function RigOps.deleteNode(d: any, id: any, ukey: any?): (boolean, string?)
 	local node, index = findNode(d, id)
 	if index == nil then
 		return false, "no such node: " .. tostring(id)
@@ -57,7 +57,7 @@ function M.deleteNode(d: any, id: any, ukey: any?): (boolean, string?)
 	return finishOp(d, ukey, before, swapRig(d))
 end
 
-function M.renameNode(d: any, old: any, new: any, ukey: any?): (boolean, string?)
+function RigOps.renameNode(d: any, old: any, new: any, ukey: any?): (boolean, string?)
 	if not validName(new) then
 		return false, "invalid node id"
 	end
@@ -90,7 +90,7 @@ function M.renameNode(d: any, old: any, new: any, ukey: any?): (boolean, string?
 	return finishOp(d, ukey, before, swapRig(d))
 end
 
-function M.reparent(d: any, id: any, parent: any?, ukey: any?): (boolean, string?)
+function RigOps.reparent(d: any, id: any, parent: any?, ukey: any?): (boolean, string?)
 	local node = findNode(d, id)
 	if node == nil then
 		return false, "no such node: " .. tostring(id)
@@ -121,7 +121,7 @@ function M.reparent(d: any, id: any, parent: any?, ukey: any?): (boolean, string
 	return finishOp(d, ukey, before, swapRig(d))
 end
 
-function M.setSprite(d: any, id: any, sprite: any?, ukey: any?): (boolean, string?)
+function RigOps.setSprite(d: any, id: any, sprite: any?, ukey: any?): (boolean, string?)
 	local node = findNode(d, id)
 	if node == nil then
 		return false, "no such node: " .. tostring(id)
@@ -134,7 +134,7 @@ function M.setSprite(d: any, id: any, sprite: any?, ukey: any?): (boolean, strin
 	return finishOp(d, ukey, before, swapRig(d))
 end
 
-function M.setBase(d: any, id: any, channels: any, ukey: any?): (boolean, string?)
+function RigOps.setBase(d: any, id: any, channels: any, ukey: any?): (boolean, string?)
 	local node = findNode(d, id)
 	if node == nil then
 		return false, "no such node: " .. tostring(id)
@@ -157,4 +157,4 @@ function M.setBase(d: any, id: any, channels: any, ukey: any?): (boolean, string
 	return finishOp(d, ukey, before, swapRig(d))
 end
 
-return M
+return RigOps

@@ -220,6 +220,14 @@ namespace luax::lunar {
         return ret;
     }
 
+    namespace {
+        void applyNodeID(cocos2d::CCNode* node, std::string const& rigId) {
+            if (auto* mod = currentMod()) {
+                node->setID(fmt::format("{}/{}", mod->getID(), rigId));
+            }
+        }
+    } // namespace
+
     void LunarRig::removeChild(cocos2d::CCNode* child, bool cleanup) {
         forgetNode(child);
         CCNode::removeChild(child, cleanup);
@@ -249,6 +257,7 @@ namespace luax::lunar {
                 node->removeFromParent();
                 return reg;
             }
+            applyNodeID(node, *id);
         }
         return geode::Ok();
     }
@@ -272,6 +281,7 @@ namespace luax::lunar {
                 child->removeFromParent();
                 return geode::Err(reg.unwrapErr());
             }
+            applyNodeID(child, *id);
         }
         return geode::Ok(parent.data());
     }
@@ -353,9 +363,7 @@ namespace luax::lunar {
                     "rig node '{}': node type does not support opacity, ignored", nodeSpec.id
                 );
             }
-            if (auto* mod = currentMod()) {
-                node->setID(fmt::format("{}/{}", mod->getID(), nodeSpec.id));
-            }
+            applyNodeID(node, nodeSpec.id);
             parent->addChild(node);
             created.push_back(node);
             auto reg = registerId(nodeSpec.id, node);

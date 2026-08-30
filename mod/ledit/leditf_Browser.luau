@@ -1,15 +1,12 @@
 local Project = require("./leditb_Project")
+local State = require("./leditf_State")
 
-local M = {}
+local Browser = {}
 
 local GREEN = { x = 0.4, y = 0.85, z = 0.4, w = 1 }
-local RED = { x = 0.9, y = 0.25, z = 0.25, w = 1 }
+local RED = State.RED
 
-local function tip(t: string)
-	if imgui.isItemHovered() then
-		imgui.setTooltip(t)
-	end
-end
+local tip = State.tip
 
 local function resetDocUi(state: any)
 	state.selNode = nil
@@ -53,7 +50,7 @@ local function requestConfirm(state: any, kind: string, name: string)
 	imgui.openPopup("Confirm##ledit")
 end
 
-function M.draw(state: any)
+function Browser.draw(state: any)
 	local doc = state.doc
 	if doc == nil then return end
 	if state.proj == nil then
@@ -202,4 +199,4 @@ function M.draw(state: any)
 	end
 end
 
-return M
+return Browser

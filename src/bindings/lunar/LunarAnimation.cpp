@@ -43,18 +43,15 @@ namespace luax::lunar {
                             fmt::format("property '{}' must be finite (node '{}')", name, nodeId)
                         );
                     }
-                    if (name == "x") pose.x = value;
-                    else if (name == "y") pose.y = value;
-                    else if (name == "rot") pose.rot = value;
-                    else if (name == "sx") pose.sx = value;
-                    else if (name == "sy") pose.sy = value;
-                    else if (name == "opacity") pose.opacity = value;
-                    else if (name == "z") pose.z = value;
-                    else if (name == "ax") pose.ax = value;
-                    else if (name == "ay") pose.ay = value;
-                    else if (name == "skx") pose.skx = value;
-                    else if (name == "sky") pose.sky = value;
-                    else {
+                    bool matched = false;
+                    for (auto const& field : kPropFields) {
+                        if (name == field.key) {
+                            pose.*(field.pose) = value;
+                            matched = true;
+                            break;
+                        }
+                    }
+                    if (!matched) {
                         geode::log::warn("ignoring unknown animation property '{}'", name);
                     }
                 }
@@ -169,6 +166,19 @@ namespace luax::lunar {
             }
         }
 
+        void applyPose(LunarRig* rig, std::unordered_map<std::string, NodePose> const& poses) {
+            if (!rig) return;
+            for (auto const& [id, pose] : poses) {
+                auto* node = rig->getNode(id);
+                if (!node) continue;
+                for (auto const& field : kPropFields) {
+                    if (auto const& value = pose.*(field.pose)) {
+                        applyInstant(node, field.prop, *value);
+                    }
+                }
+            }
+        }
+
         std::vector<LunarTrack*>& liveTracks() {
             static std::vector<LunarTrack*> value;
             return value;
@@ -177,8 +187,9 @@ namespace luax::lunar {
         class LunarTickNode final : public cocos2d::CCNode {
         public:
             void update(float dt) override {
-                for (auto* track : liveTracks()) {
-                    if (track) track->tick(dt);
+                auto& tracks = liveTracks();
+                for (std::size_t i = 0; i < tracks.size(); ++i) {
+                    if (auto* track = tracks[i]) track->tick(dt);
                 }
             }
         };
@@ -275,17 +286,9 @@ namespace luax::lunar {
                 lua_pushnumber(L, static_cast<lua_Number>(*value));
                 lua_setfield(L, -2, key);
             };
-            set("x", pose.x);
-            set("y", pose.y);
-            set("rot", pose.rot);
-            set("sx", pose.sx);
-            set("sy", pose.sy);
-            set("opacity", pose.opacity);
-            set("z", pose.z);
-            set("ax", pose.ax);
-            set("ay", pose.ay);
-            set("skx", pose.skx);
-            set("sky", pose.sky);
+            for (auto const& field : kPropFields) {
+                set(field.key, pose.*(field.pose));
+            }
             if (pose.easing.kind != EasingKind::Linear) {
                 push(L, std::string(easingName(pose.easing)));
                 lua_setfield(L, -2, "easing");
@@ -337,9 +340,12 @@ namespace luax::lunar {
         int animGetKeyAt(lua_State* L) {
             auto* self = Usertype<LunarAnimationDef>::check(L, 1, "LunarAnimationDef:getKeyAt");
             double const frame = check<double>(L, 2, "LunarAnimationDef:getKeyAt");
+            if (!(frame >= 0.0)) {
+                luaL_error(L, "LunarAnimationDef:getKeyAt expected frame >= 0");
+            }
             auto const& keyframes = self->keyframes();
-            auto it = std::ranges::lower_bound(keyframes, frame, {}, &Keyframe::frame);
-            if (it == keyframes.end() || !(std::fabs(it->frame - frame) < kTimeEps)) {
+            auto it = matchKeyframe(keyframes, frame);
+            if (it == keyframes.end()) {
                 lua_pushnil(L);
                 return 1;
             }
@@ -666,6 +672,7 @@ namespace luax::lunar {
             ++m_eventCursor;
         }
         // Handlers can bind more fns while a fire is in progress btw.
+        if (due.empty()) return;
         auto binds = m_eventBinds;
         for (auto const& name : due) {
             for (auto const& bind : binds) {
@@ -768,8 +775,6 @@ namespace luax::lunar {
             launch(target);
             return;
         }
-        // Idle (paused/stopped/never started): no actions, direct pose write.
-        // Events stay unarmed, the next launch() re-slices strictly past target.
         stopActions();
         m_sliced = sliceAnimation(m_anim, target);
         m_active = &m_sliced;
@@ -779,6 +784,7 @@ namespace luax::lunar {
     }
 
     void LunarTrack::detachForShutdown() {
+        stopActions();
         m_launched.clear();
         m_tweens.clear();
         m_instants.clear();
@@ -791,28 +797,6 @@ namespace luax::lunar {
         auto poses = samplePose(m_anim, time);
         applyPose(m_rig, poses);
         return poses;
-    }
-
-    void applyPose(LunarRig* rig, std::unordered_map<std::string, NodePose> const& poses) {
-        if (!rig) return;
-        for (auto const& [id, pose] : poses) {
-            auto* node = rig->getNode(id);
-            if (!node) continue;
-            auto apply = [&](std::optional<float> const& value, Prop prop) {
-                if (value) applyInstant(node, prop, *value);
-            };
-            apply(pose.x, Prop::PosX);
-            apply(pose.y, Prop::PosY);
-            apply(pose.rot, Prop::Rotation);
-            apply(pose.sx, Prop::ScaleX);
-            apply(pose.sy, Prop::ScaleY);
-            apply(pose.opacity, Prop::Opacity);
-            apply(pose.z, Prop::ZOrder);
-            apply(pose.ax, Prop::AnchorX);
-            apply(pose.ay, Prop::AnchorY);
-            apply(pose.skx, Prop::SkewX);
-            apply(pose.sky, Prop::SkewY);
-        }
     }
 
     void shutdownLunarTracks() {

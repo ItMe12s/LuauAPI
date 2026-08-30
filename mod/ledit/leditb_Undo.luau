@@ -36,24 +36,33 @@ function Undo:canRedo(): boolean
 	return #self.redoStack > 0
 end
 
-function Undo:undo(): boolean
+function Undo:undo(): (boolean, string?)
 	local cmd = table.remove(self.undoStack)
 	if cmd == nil then
-		return false
+		return false, "nothing to undo"
 	end
-	cmd.undo()
+	local ok, err = pcall(cmd.undo)
+	if not ok then
+		-- Restore the command so a throw does not lose it from both stacks.
+		self.undoStack[#self.undoStack + 1] = cmd
+		return false, tostring(err)
+	end
 	self.redoStack[#self.redoStack + 1] = cmd
-	return true
+	return true, nil
 end
 
-function Undo:redo(): boolean
+function Undo:redo(): (boolean, string?)
 	local cmd = table.remove(self.redoStack)
 	if cmd == nil then
-		return false
+		return false, "nothing to redo"
 	end
-	cmd.redo()
+	local ok, err = pcall(cmd.redo)
+	if not ok then
+		self.redoStack[#self.redoStack + 1] = cmd
+		return false, tostring(err)
+	end
 	self.undoStack[#self.undoStack + 1] = cmd
-	return true
+	return true, nil
 end
 
 function Undo:clear()

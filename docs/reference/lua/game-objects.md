@@ -51,6 +51,8 @@ When creating a node, always call `:setID()` and pass an id string:
 
 Example: `mod-id/my-node-id`.
 
+This relies on the `geode.node-ids` dependency, already declared in LuauAPI's `mod.json`.
+
 String IDs let you find nodes with `getChildByID` and layouts instead of fragile child indexes, which is how Geode mods stay compatible.
 
 ```lua

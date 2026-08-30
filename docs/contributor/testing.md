@@ -42,6 +42,10 @@ Host-only suites that compile real subsystems without cocos2d:
 The host stub clusters under `tests/host/` (`Geode/`, `arc/`, `framework/`, `cocos2d.h`, `matjson.hpp`) stand in for SDK headers.
 `cocos2d.h` retains on `WeakRef` construction like the real pool.
 
+The editor suites in `tests/host/lunar/` run the real `mod/ledit/*.luau` modules against fake `lunar`, `geode.fs`, and `imgui` bindings.
+CMake defines `LEDIT_SOURCE_DIR` pointing at `mod/ledit` so `LunarEditorLuauTests.cpp` can read the module sources.
+`kFakes` in that file is a fake-Lunar/fake-FS Lua preamble prepended by `EditorEnv::run` before every test body.
+
 Web tests use the in-memory stub in `tests/host/Geode/utils/web.hpp` (no network egress).
 `send()` resolves through `geode::utils::web::test::responseFactory`.
 WebSocket runtime tests drain `queueInMainThread` on the test main thread between polls.

@@ -10,9 +10,9 @@ local snapshot = Core.snapshot
 local validFrame = Core.validFrame
 local validName = Core.validName
 
-local M = {}
+local DefOps = {}
 
-function M.addAnim(d: any, name: any, def: any?, ukey: any?): (boolean, string?)
+function DefOps.addAnim(d: any, name: any, def: any?, ukey: any?): (boolean, string?)
 	if not validName(name) then
 		return false, "invalid animation name"
 	end
@@ -31,7 +31,7 @@ function M.addAnim(d: any, name: any, def: any?, ukey: any?): (boolean, string?)
 	return finishOp(d, ukey, before, true, nil)
 end
 
-function M.deleteAnim(d: any, name: any, ukey: any?): (boolean, string?)
+function DefOps.deleteAnim(d: any, name: any, ukey: any?): (boolean, string?)
 	if d.animations[name] == nil then
 		return false, "no such animation: " .. tostring(name)
 	end
@@ -48,7 +48,7 @@ function M.deleteAnim(d: any, name: any, ukey: any?): (boolean, string?)
 	return finishOp(d, ukey, before, true, nil)
 end
 
-function M.renameAnim(d: any, old: any, new: any, ukey: any?): (boolean, string?)
+function DefOps.renameAnim(d: any, old: any, new: any, ukey: any?): (boolean, string?)
 	if d.animations[old] == nil then
 		return false, "no such animation: " .. tostring(old)
 	end
@@ -70,7 +70,7 @@ function M.renameAnim(d: any, old: any, new: any, ukey: any?): (boolean, string?
 	return finishOp(d, ukey, before, true, nil)
 end
 
-function M.duplicateAnim(d: any, src: any, dst: any, ukey: any?): (boolean, string?)
+function DefOps.duplicateAnim(d: any, src: any, dst: any, ukey: any?): (boolean, string?)
 	local origin = d.animations[src]
 	if origin == nil then
 		return false, "no such animation: " .. tostring(src)
@@ -86,7 +86,7 @@ function M.duplicateAnim(d: any, src: any, dst: any, ukey: any?): (boolean, stri
 	return finishOp(d, ukey, before, true, nil)
 end
 
-function M.setActive(d: any, name: any, ukey: any?): (boolean, string?)
+function DefOps.setActive(d: any, name: any, ukey: any?): (boolean, string?)
 	if d.animations[name] == nil then
 		return false, "no such animation: " .. tostring(name)
 	end
@@ -96,7 +96,7 @@ function M.setActive(d: any, name: any, ukey: any?): (boolean, string?)
 	return finishOp(d, ukey, before, recompile(d))
 end
 
-function M.setFps(d: any, n: any, ukey: any?): (boolean, string?)
+function DefOps.setFps(d: any, n: any, ukey: any?): (boolean, string?)
 	local anim, err = activeDef(d)
 	if not anim then
 		return false, err
@@ -109,7 +109,7 @@ function M.setFps(d: any, n: any, ukey: any?): (boolean, string?)
 	return finishOp(d, ukey, before, recompile(d))
 end
 
-function M.setLooped(d: any, b: any, ukey: any?): (boolean, string?)
+function DefOps.setLooped(d: any, b: any, ukey: any?): (boolean, string?)
 	local anim, err = activeDef(d)
 	if not anim then
 		return false, err
@@ -152,7 +152,7 @@ local function mergeEvents(dst: any, incoming: {any})
 	dst.events = events
 end
 
-function M.putPose(d: any, frame: any, id: any, pose: any, ukey: any?): (boolean, string?)
+function DefOps.putPose(d: any, frame: any, id: any, pose: any, ukey: any?): (boolean, string?)
 	local anim, err = activeDef(d)
 	if not anim then
 		return false, err
@@ -167,7 +167,8 @@ function M.putPose(d: any, frame: any, id: any, pose: any, ukey: any?): (boolean
 	if next(pose) == nil then
 		return true, nil
 	end
-	local before = snapshot(d)
+	-- Hot path (drag frames): scope the undo snapshot to the active animation only.
+	local before = Core.snapshotAnim(d, d.activeAnim)
 	local kf = anim.keyframes[frame]
 	if kf == nil then
 		kf = {}
@@ -184,7 +185,7 @@ function M.putPose(d: any, frame: any, id: any, pose: any, ukey: any?): (boolean
 	return finishOp(d, ukey, before, recompile(d))
 end
 
-function M.clearPose(d: any, frame: any, id: any, ukey: any?): (boolean, string?)
+function DefOps.clearPose(d: any, frame: any, id: any, ukey: any?): (boolean, string?)
 	local anim, err = activeDef(d)
 	if not anim then
 		return false, err
@@ -204,7 +205,7 @@ function M.clearPose(d: any, frame: any, id: any, ukey: any?): (boolean, string?
 	return true, nil
 end
 
-function M.removeFrame(d: any, frame: any, ukey: any?): (boolean, string?)
+function DefOps.removeFrame(d: any, frame: any, ukey: any?): (boolean, string?)
 	local anim, err = activeDef(d)
 	if not anim then
 		return false, err
@@ -220,7 +221,7 @@ function M.removeFrame(d: any, frame: any, ukey: any?): (boolean, string?)
 	return finishOp(d, ukey, before, recompile(d))
 end
 
-function M.moveFrame(d: any, from: any, to: any, ukey: any?): (boolean, string?)
+function DefOps.moveFrame(d: any, from: any, to: any, ukey: any?): (boolean, string?)
 	local anim, err = activeDef(d)
 	if not anim then
 		return false, err
@@ -252,7 +253,7 @@ function M.moveFrame(d: any, from: any, to: any, ukey: any?): (boolean, string?)
 	return finishOp(d, ukey, before, recompile(d))
 end
 
-function M.addEvent(d: any, frame: any, name: any, ukey: any?): (boolean, string?)
+function DefOps.addEvent(d: any, frame: any, name: any, ukey: any?): (boolean, string?)
 	local anim, err = activeDef(d)
 	if not anim then
 		return false, err
@@ -273,7 +274,7 @@ function M.addEvent(d: any, frame: any, name: any, ukey: any?): (boolean, string
 	return finishOp(d, ukey, before, recompile(d))
 end
 
-function M.removeEvent(d: any, frame: any, name: any, ukey: any?): (boolean, string?)
+function DefOps.removeEvent(d: any, frame: any, name: any, ukey: any?): (boolean, string?)
 	local anim, err = activeDef(d)
 	if not anim then
 		return false, err
@@ -306,7 +307,7 @@ function M.removeEvent(d: any, frame: any, name: any, ukey: any?): (boolean, str
 	return true, nil
 end
 
-function M.renameEvent(d: any, old: any, new: any, ukey: any?): (boolean, string?)
+function DefOps.renameEvent(d: any, old: any, new: any, ukey: any?): (boolean, string?)
 	local anim, err = activeDef(d)
 	if not anim then
 		return false, err
@@ -357,7 +358,7 @@ function M.renameEvent(d: any, old: any, new: any, ukey: any?): (boolean, string
 	return true, nil
 end
 
-function M.length(d: any): number
+function DefOps.length(d: any): number
 	local anim = d.animations[d.activeAnim]
 	if anim == nil or anim.keyframes == nil then
 		return 0
@@ -375,4 +376,4 @@ function M.length(d: any): number
 	return maxFrame / fps
 end
 
-return M
+return DefOps

@@ -3,6 +3,8 @@ local CELL = { x = 15, y = 15 }
 local HDR_DUMMY = { x = 8, y = 8 }
 local PAGE = 30
 local Ser = require("./leditb_Ser")
+local State = require("./leditf_State")
+local tip = State.tip
 
 local function isTick(f: number): boolean
 	return f == 0 or f == 1 or f == 5 or (f >= 10 and f % 5 == 0)
@@ -12,13 +14,7 @@ local function colLabel(f: number): string
 	return "c" .. tostring(f)
 end
 
-local M = {}
-
-local function tip(t: string)
-	if imgui.isItemHovered() then
-		imgui.setTooltip(t)
-	end
-end
+local Timeline = {}
 
 local function numBuf(state: any, key: string, label: string, initial: number): (number, boolean)
 	local cur = state.buffers[key]
@@ -56,7 +52,7 @@ local function hasChannels(def: any): boolean
 	return false
 end
 
-function M.draw(state: any)
+function Timeline.draw(state: any)
 	local doc = state.doc
 	if doc == nil then return end
 	local def = if doc.activeAnim ~= nil then doc.animations[doc.activeAnim] else nil
@@ -73,7 +69,7 @@ function M.draw(state: any)
 			end)
 		end
 	end
-	tip("play from playhead")
+	tip("play from start")
 	imgui.sameLine()
 	if imgui.button("Pause") then
 		state:act("Timeline", function()
@@ -122,13 +118,16 @@ function M.draw(state: any)
 	if def == nil then return end
 	imgui.separatorText("Markers")
 	local sawMarker = false
-	local evs = {}
-	for f, kf in pairs(def.keyframes) do
-		if kf.events ~= nil then
-			evs[#evs + 1] = { f = f, events = kf.events }
+	local evs = state:cached("tlevs", doc, function()
+		local out = {}
+		for f, kf in pairs(def.keyframes) do
+			if kf.events ~= nil then
+				out[#out + 1] = { f = f, events = kf.events }
+			end
 		end
-	end
-	table.sort(evs, function(a, b) return a.f < b.f end)
+		table.sort(out, function(a, b) return a.f < b.f end)
+		return out
+	end)
 	for _, ev in ipairs(evs) do
 		for _, name in ipairs(Ser.eventArray(ev.events)) do
 			sawMarker = true
@@ -174,12 +173,15 @@ function M.draw(state: any)
 	imgui.separator()
 
 	-- Selected cell controls
-	local inSpec = {}
-	for _, n in ipairs(doc.rigSpec.nodes) do
-		inSpec[n.id] = true
-	end
+	local inSpec = state:cached("tlinspec", doc, function()
+		local out = {}
+		for _, n in ipairs(doc.rigSpec.nodes) do
+			out[n.id] = true
+		end
+		return out
+	end)
 	local gsId, gsF = state.gridSelId, state.gridSelF
-	local gk = if gsId ~= nil and doc:findNode(gsId) ~= nil and def.keyframes[gsF] ~= nil then def.keyframes[gsF][gsId] else nil
+	local gk = if gsId ~= nil and inSpec[gsId] and def.keyframes[gsF] ~= nil then def.keyframes[gsF][gsId] else nil
 	if gk ~= nil then
 		imgui.text(("key %s @ %d"):format(gsId, gsF))
 		if gsF > 0 and imgui.button("<##mvprev") then
@@ -242,32 +244,31 @@ function M.draw(state: any)
 	imgui.separator()
 
 	-- Grid
-	local fps = state:fps()
-	local lenF = math.floor(doc:length() * fps + 0.5)
 	if state.tlPage < 0 then
 		state.tlPage = 0
 	end
-	local totalPages = math.max(math.floor((lenF - 1) / PAGE) + 1, state.tlPage + 1, 1)
 	if state.playing then
 		local cur = state:frameOf()
 		if cur < state.tlPage * PAGE or cur >= (state.tlPage + 1) * PAGE then
 			state.tlPage = math.max(math.floor(cur / PAGE), 0)
-			totalPages = math.max(totalPages, state.tlPage + 1)
 		end
 	end
 	local start = state.tlPage * PAGE
 
-	local rows = {}
-	local seenRows = {}
-	for _, kf in pairs(def.keyframes) do
-		for id in pairs(kf) do
-			if id ~= "events" and inSpec[id] and not seenRows[id] then
-				seenRows[id] = true
-				rows[#rows + 1] = id
+	local rows = state:cached("tlrows", doc, function()
+		local out = {}
+		local seen = {}
+		for _, kf in pairs(def.keyframes) do
+			for id in pairs(kf) do
+				if id ~= "events" and inSpec[id] and not seen[id] then
+					seen[id] = true
+					out[#out + 1] = id
+				end
 			end
 		end
-	end
-	table.sort(rows)
+		table.sort(out)
+		return out
+	end)
 	if #rows == 0 then
 		imgui.text("No keys yet")
 		return
@@ -313,11 +314,12 @@ function M.draw(state: any)
 					end
 					tip("select node")
 				end
+				local cellPrefix = "##" .. id .. ":"
 				for i = 0, PAGE - 1 do
 					if not imgui.tableSetColumnIndex(i + 1) then break end
 					local f = start + i
 					local occ = def.keyframes[f] ~= nil and def.keyframes[f][id] ~= nil
-					local cellId = "##" .. id .. ":" .. f
+					local cellId = cellPrefix .. f
 					local pressed
 					if occ then
 						imgui.style.with({ colors = { [imgui.Col.Button] = KEY_COLOR } }, function()
@@ -351,4 +353,4 @@ function M.draw(state: any)
 	end)
 end
 
-return M
+return Timeline

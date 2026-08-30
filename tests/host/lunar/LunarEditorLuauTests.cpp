@@ -50,11 +50,6 @@ function require(path)
     if mod == nil then error("module not loaded: " .. path) end
     return mod
 end
-if loadstring == nil and load ~= nil then
-    function loadstring(src, chunk)
-        return load(src, chunk or "=loadstring")
-    end
-end
 )X"));
             for (char const* name :
                  {"leditb_DocCore",
@@ -244,7 +239,7 @@ end
 
 TEST_CASE("Ser emits deterministic, loadstring-round-trippable animations") {
     EditorEnv env;
-    REQUIRE(env.run(std::string(kFakes) + R"X(
+    REQUIRE(env.run(R"X(
 local Ser = require("./leditb_Ser")
 local def = {
     looped = true,
@@ -270,7 +265,7 @@ return true
 
 TEST_CASE("Ser escapes strings, formats numbers, rejects non-finite values") {
     EditorEnv env;
-    REQUIRE(env.run(std::string(kFakes) + R"X(
+    REQUIRE(env.run(R"X(
 local Ser = require("./leditb_Ser")
 local tricky = 'he said "hi"\nback\\slash\ttab'
 local escSrc = Ser.spec({ nodes = { { id = tricky, sprite = tricky } } })
@@ -297,7 +292,7 @@ return true
 
 TEST_CASE("Undo coalesces drags and caps depth") {
     EditorEnv env;
-    REQUIRE(env.run(std::string(kFakes) + R"X(
+    REQUIRE(env.run(R"X(
 local Undo = require("./leditb_Undo")
 local u = Undo.new()
 local v = 0
@@ -337,7 +332,7 @@ return true
 
 TEST_CASE("Doc node ops: uniqueness, rename cross-update, cycles, orphans") {
     EditorEnv env;
-    REQUIRE(env.run(std::string(kFakes) + R"X(
+    REQUIRE(env.run(R"X(
 local Doc = require("./leditb_Doc")
 local fl = makeFakeLunar()
 local d = Doc.new({ lunar = fl })
@@ -374,7 +369,7 @@ return true
 
 TEST_CASE("Doc rigWarn flags nodes skipped by rig load") {
     EditorEnv env;
-    REQUIRE(env.run(std::string(kFakes) + R"X(
+    REQUIRE(env.run(R"X(
 local Doc = require("./leditb_Doc")
 local d = Doc.new({ lunar = makeFakeLunar() })
 assert(d:addNode({ id = "body" }))
@@ -389,7 +384,7 @@ return true
 
 TEST_CASE("Doc rebuild tolerates out-of-order parents and parent deletion") {
     EditorEnv env;
-    REQUIRE(env.run(std::string(kFakes) + R"X(
+    REQUIRE(env.run(R"X(
 local Doc = require("./leditb_Doc")
 local d = Doc.new({ lunar = makeFakeLunar() })
 d:addAnim("w")
@@ -414,7 +409,7 @@ return true
 
 TEST_CASE("Doc def ops: merge, event-only frames, move semantics, rename") {
     EditorEnv env;
-    REQUIRE(env.run(std::string(kFakes) + R"X(
+    REQUIRE(env.run(R"X(
 local Doc = require("./leditb_Doc")
 local d = Doc.new({ lunar = makeFakeLunar() })
 d:addNode({ id = "arm" })
@@ -470,7 +465,7 @@ return true
 
 TEST_CASE("Doc putPose keeps multi-frame keys distinct") {
     EditorEnv env;
-    REQUIRE(env.run(std::string(kFakes) + R"X(
+    REQUIRE(env.run(R"X(
 local Doc = require("./leditb_Doc")
 local d = Doc.new({ lunar = makeFakeLunar() })
 d:addNode({ id = "arm" })
@@ -492,7 +487,7 @@ return true
 
 TEST_CASE("Doc playback: recompile preserves playhead, failures keep old track") {
     EditorEnv env;
-    REQUIRE(env.run(std::string(kFakes) + R"X(
+    REQUIRE(env.run(R"X(
 local Doc = require("./leditb_Doc")
 local fl, state = makeFakeLunar()
 local d = Doc.new({ lunar = fl })
@@ -541,7 +536,7 @@ return true
 
 TEST_CASE("Doc records undo commands automatically") {
     EditorEnv env;
-    REQUIRE(env.run(std::string(kFakes) + R"X(
+    REQUIRE(env.run(R"X(
 local Doc = require("./leditb_Doc")
 local d = Doc.new({ lunar = makeFakeLunar() })
 
@@ -591,7 +586,7 @@ return true
 
 TEST_CASE("Project IO: create, save, reload byte-stable, stale sweep") {
     EditorEnv env;
-    REQUIRE(env.run(std::string(kFakes) + R"X(
+    REQUIRE(env.run(R"X(
 local Project = require("./leditb_Project")
 local fs = makeFakeFs()
 local pj = Project.new({ fs = fs, lunar = makeFakeLunar() })
@@ -648,7 +643,7 @@ assert(doc3.rigSpec.nodes[1].id == "root")
 
 TEST_CASE("Doc editor regressions: orderedSpec, failed ops, playing swaps, no-ops") {
     EditorEnv env;
-    REQUIRE(env.run(std::string(kFakes) + R"X(
+    REQUIRE(env.run(R"X(
 local Doc = require("./leditb_Doc")
 
 -- reparent to a node later in the spec must not corrupt orderedSpec
@@ -732,7 +727,7 @@ return true
 
 TEST_CASE("Project load validates files, save never partial") {
     EditorEnv env;
-    REQUIRE(env.run(std::string(kFakes) + R"X(
+    REQUIRE(env.run(R"X(
 local Project = require("./leditb_Project")
 local fs = makeFakeFs()
 local pj = Project.new({ fs = fs, lunar = makeFakeLunar() })

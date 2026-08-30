@@ -123,7 +123,7 @@ namespace luax::lunar {
         switch (easing.kind) {
             case K::Linear: return p;
             case K::PowIn: return std::pow(p, easing.rate);
-            case K::PowOut: return std::pow(p, 1.F / easing.rate);
+            case K::PowOut: return 1.F - std::pow(1.F - p, easing.rate);
             case K::PowInOut: {
                 float t = p * 2.F;
                 if (t < 1.F) return 0.5F * std::pow(t, easing.rate);
@@ -215,13 +215,12 @@ namespace luax::lunar {
 
         for (auto const& kf : keyframes) {
             for (auto const& [nodeId, pose] : kf.targets) {
-                auto finite = [](std::optional<float> const& v) {
-                    return !v || std::isfinite(*v);
-                };
-                if (!finite(pose.x) || !finite(pose.y) || !finite(pose.rot) || !finite(pose.sx) ||
-                    !finite(pose.sy) || !finite(pose.opacity) || !finite(pose.z) ||
-                    !finite(pose.ax) || !finite(pose.ay) || !finite(pose.skx) || !finite(pose.sky)) {
-                    return geode::Err(fmt::format("pose values for node '{}' must be finite", nodeId));
+                for (auto const& field : kPropFields) {
+                    if (auto const& v = pose.*(field.pose); v && !std::isfinite(*v)) {
+                        return geode::Err(
+                            fmt::format("pose values for node '{}' must be finite", nodeId)
+                        );
+                    }
                 }
             }
         }
@@ -231,21 +230,13 @@ namespace luax::lunar {
             double const time = kf.frame / fps;
             for (auto const& [nodeId, pose] : kf.targets) {
                 auto& channels = store[nodeId];
-                auto push = [&](std::optional<float> const& value, Prop prop) {
-                    if (!value) return;
-                    channels[static_cast<std::size_t>(prop)].push_back({time, *value, pose.easing});
-                };
-                push(pose.x, Prop::PosX);
-                push(pose.y, Prop::PosY);
-                push(pose.rot, Prop::Rotation);
-                push(pose.sx, Prop::ScaleX);
-                push(pose.sy, Prop::ScaleY);
-                push(pose.opacity, Prop::Opacity);
-                push(pose.z, Prop::ZOrder);
-                push(pose.ax, Prop::AnchorX);
-                push(pose.ay, Prop::AnchorY);
-                push(pose.skx, Prop::SkewX);
-                push(pose.sky, Prop::SkewY);
+                for (auto const& field : kPropFields) {
+                    if (auto const& value = pose.*(field.pose)) {
+                        channels[static_cast<std::size_t>(field.prop)].push_back(
+                            {time, *value, pose.easing}
+                        );
+                    }
+                }
             }
         }
 
@@ -348,17 +339,9 @@ namespace luax::lunar {
         out.reserve(anim.nodes.size());
         for (auto const& track : anim.nodes) {
             NodePose pose;
-            pose.x = sampleChannel(track.segs, Prop::PosX, time);
-            pose.y = sampleChannel(track.segs, Prop::PosY, time);
-            pose.rot = sampleChannel(track.segs, Prop::Rotation, time);
-            pose.sx = sampleChannel(track.segs, Prop::ScaleX, time);
-            pose.sy = sampleChannel(track.segs, Prop::ScaleY, time);
-            pose.opacity = sampleChannel(track.segs, Prop::Opacity, time);
-            pose.z = sampleChannel(track.segs, Prop::ZOrder, time);
-            pose.ax = sampleChannel(track.segs, Prop::AnchorX, time);
-            pose.ay = sampleChannel(track.segs, Prop::AnchorY, time);
-            pose.skx = sampleChannel(track.segs, Prop::SkewX, time);
-            pose.sky = sampleChannel(track.segs, Prop::SkewY, time);
+            for (auto const& field : kPropFields) {
+                pose.*(field.pose) = sampleChannel(track.segs, field.prop, time);
+            }
             if (pose.opacity) {
                 pose.opacity = static_cast<float>(opacityByte(*pose.opacity));
             }
@@ -367,7 +350,9 @@ namespace luax::lunar {
         return out;
     }
 
-    std::vector<Keyframe>::iterator matchKeyframe(std::vector<Keyframe>& keyframes, double frame) {
+    std::vector<Keyframe>::const_iterator matchKeyframe(
+        std::vector<Keyframe> const& keyframes, double frame
+    ) {
         auto it = std::ranges::lower_bound(keyframes, frame, {}, &Keyframe::frame);
         if (it != keyframes.end() && std::fabs(it->frame - frame) < kTimeEps) return it;
         if (it != keyframes.begin()) {
@@ -375,6 +360,11 @@ namespace luax::lunar {
             if (std::fabs(prev->frame - frame) < kTimeEps) return prev;
         }
         return keyframes.end();
+    }
+
+    std::vector<Keyframe>::iterator matchKeyframe(std::vector<Keyframe>& keyframes, double frame) {
+        auto const it = matchKeyframe(std::as_const(keyframes), frame);
+        return keyframes.begin() + (it - keyframes.begin());
     }
 
     Keyframe& keyframeFor(std::vector<Keyframe>& keyframes, double frame) {

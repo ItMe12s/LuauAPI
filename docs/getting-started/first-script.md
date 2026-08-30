@@ -61,6 +61,7 @@ Path and size rules live in [modules](../reference/lua/modules.md) and [Limits a
 LuauAPI includes a built-in script executor. It is an ImGui window where you write Luau and run it live in the game.
 Turn on **Enable Developer Mode** under Developer Settings in LuauAPI mod settings, restart the game, then turn on **Enable Script Executor**.
 The executor toggle appears only after developer mode is on.
+Developer mode also unlocks the **Lunar Animator** (see [lunar](../reference/lua/lunar.md)).
 
 ## Next
 

@@ -165,6 +165,7 @@ end
 
 function Core.snapshot(d: any): any
 	return {
+		full = true,
 		spec = Core.clone(d.rigSpec),
 		anims = Core.clone(d.animations),
 		active = d.activeAnim,
@@ -172,38 +173,68 @@ function Core.snapshot(d: any): any
 	}
 end
 
-local function restoreSnap(d: any, s: any)
-	d.rigSpec = Core.clone(s.spec)
-	d.animations = Core.clone(s.anims)
+function Core.snapshotAnim(d: any, name: any): any
+	return {
+		anims = { [name] = Core.clone(d.animations[name]) or false },
+		active = d.activeAnim,
+		head = d.playhead,
+	}
+end
+
+local function restoreState(d: any, s: any)
+	if s.spec ~= nil then
+		d.rigSpec = Core.clone(s.spec)
+	end
+	if s.anims ~= nil then
+		if s.full then
+			d.animations = Core.clone(s.anims)
+		else
+			for name, anim in pairs(s.anims) do
+				d.animations[name] = if anim == false then nil else Core.clone(anim)
+			end
+		end
+	end
 	d.activeAnim = s.active
 	d.playhead = s.head
-	Core.swapRig(d)
+	d.rev += 1
 end
 
 function Core.replay(d: any, s: any)
 	d.replaying = true
-	restoreSnap(d, s)
+	restoreState(d, s)
+	local ok, err
+	if s.spec ~= nil then
+		ok, err = Core.swapRig(d)
+	else
+		ok, err = Core.recompile(d)
+	end
 	d.replaying = nil
+	if not ok then
+		error(err or "undo replay failed", 0)
+	end
 end
 
 function Core.pushUndo(d: any, ukey: any, before: any)
 	if d.replaying then
 		return
 	end
-	local after = Core.snapshot(d)
+	local after
+	if not before.full then
+		after = Core.snapshotAnim(d, (next(before.anims)))
+	else
+		after = Core.snapshot(d)
+	end
 	d.undoStack:push(ukey, function()
 		Core.replay(d, before)
 	end, function()
 		Core.replay(d, after)
 	end)
+	d.rev += 1
 end
 
 function Core.finishOp(d: any, ukey: any, before: any, ok: any, err: any): (boolean, string?)
 	if not ok then
-		d.rigSpec = before.spec
-		d.animations = before.anims
-		d.activeAnim = before.active
-		d.playhead = before.head
+		restoreState(d, before)
 		return false, err
 	end
 	Core.pushUndo(d, ukey, before)

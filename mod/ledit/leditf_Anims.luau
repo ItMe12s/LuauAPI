@@ -1,21 +1,9 @@
-local M = {}
+local Anims = {}
 
-local function tip(t: string)
-	if imgui.isItemHovered() then
-		imgui.setTooltip(t)
-	end
-end
+local State = require("./leditf_State")
+local tip = State.tip
 
-local function sortedNames(doc: any): { string }
-	local names = {}
-	for name in pairs(doc.animations) do
-		table.insert(names, name)
-	end
-	table.sort(names)
-	return names
-end
-
-function M.draw(state: any)
+function Anims.draw(state: any)
 	local doc = state.doc
 	if doc == nil then return end
 
@@ -24,7 +12,15 @@ function M.draw(state: any)
 		state:resetAnimSel()
 	end
 
-	for _, name in ipairs(sortedNames(doc)) do
+	local names = state:cached("animnames", doc, function()
+		local out = {}
+		for name in pairs(doc.animations) do
+			table.insert(out, name)
+		end
+		table.sort(out)
+		return out
+	end)
+	for _, name in ipairs(names) do
 		if imgui.selectable(name, doc.activeAnim == name) and doc.activeAnim ~= name then
 			state:act("Anims", function()
 				return doc:setActive(name)
@@ -104,4 +100,4 @@ function M.draw(state: any)
 	tip("delete this animation")
 end
 
-return M
+return Anims

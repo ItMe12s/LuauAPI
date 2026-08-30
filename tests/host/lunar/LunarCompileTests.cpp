@@ -84,10 +84,10 @@ TEST_CASE("easeProgress preserves shapes") {
     REQUIRE(easeProgress(quadIn, 0.25F) == Approx(0.0625F));
 
     auto quadOut = *easingFromString("quad_out");
-    REQUIRE(easeProgress(quadOut, 0.25F) == Approx(0.5F));
+    REQUIRE(easeProgress(quadOut, 0.25F) == Approx(0.4375F));
 
     auto cubicOut = *easingFromString("cubic_out");
-    REQUIRE(easeProgress(cubicOut, 0.5F) == Approx(0.7937005F));
+    REQUIRE(easeProgress(cubicOut, 0.5F) == Approx(0.875F));
 
     auto backOut = *easingFromString("back_out");
     REQUIRE(easeProgress(backOut, 0.8F) > 1.F);
