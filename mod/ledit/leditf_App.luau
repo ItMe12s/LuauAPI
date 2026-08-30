@@ -141,7 +141,7 @@ local App = {}
 
 function App.open()
 	if state.active then return end
-	local layer = cc2d.CCLayerColor.create({ r = 26, g = 26, b = 30, a = 255 })
+	local layer = cc2d.CCLayerColor.create({ r = 30, g = 30, b = 40, a = 255 })
 	if not layer then return end
 	layer:setID(modId .. "/animator-stage")
 
@@ -151,6 +151,7 @@ function App.open()
 	local winSize = director:getWinSize()
 
 	local menu = cc2d.CCMenu.create(); if not menu then return end
+	menu:setID(modId .. "/animator-menu")
 	menu:setPosition({ x = 0, y = 0 })
 
 	local backLabel = cc2d.CCLabelBMFont.create("Back", "chatFont.fnt")
@@ -160,7 +161,9 @@ function App.open()
 			App.close()
 		end)
 		if back then
-			back:setPosition({ x = 28, y = winSize.height - 24 })
+			back:setID(modId .. "/back")
+			back:setAnchorPoint({ x = 0, y = 1 })
+			back:setPosition({ x = 5, y = winSize.height - 5 })
 			menu:addChild(back)
 		end
 	end

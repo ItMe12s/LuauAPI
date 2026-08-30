@@ -4,6 +4,7 @@
 
 ## Announcements
 
+- `30/8/2026`: Lunar Animator is now in preview. Contact me for bug reports and feedback.
 - `12/8/2026`: LuauAPI can now be an optional dependency for mods that only want to support Luau bindings.
 - `29/7/2026`: [LuauAPI has an example/template mod now](https://github.com/ItMe12s/luauapi-example-mod).
 - `11/7/2026`: Bindings that are automatically picked up likely won't be included in the changelog.
@@ -13,7 +14,9 @@
 - Added skewing support to lunar.
 - Added pose sampling, seek, and current time to lunar animation tracks.
 - Added keyframe CRUD to `LunarAnimationDef` and node listing plus pose readback to `LunarRig`.
+- Added built-in sprite rig and animation editor `Lunar Animator` (developer mode only).
 - Added Node IDs to dependencies.
+- Fixed `geode.Mod.getSettingValue` returning nil for untouched settings (now returns the default value).
 - Updated Luau VM and codegen to compile without exceptions.
 
 ## 0.1.0-beta.25

@@ -7,7 +7,9 @@ local modId = geode.Mod.getID()
 function MenuBtn.addButton(self: MenuLayer)
 	local bottomMenu = self:getChildByID("bottom-menu"); if not bottomMenu then return end
 
-	local sprite = cc2d.CCSprite.createWithSpriteFrameName("edit_eAnimateBtn_001.png"); if not sprite then return end
+	local icon = cc2d.CCSprite.create(modId .. "/LunarIcon.png"); if not icon then return end
+	local sprite = geode.CircleButtonSprite.create(icon, geode.CircleBaseColor.Green, geode.CircleBaseSize.MediumAlt)
+	if not sprite then return end
 
 	local btn = cc2d.CCMenuItemSpriteExtra.create(sprite, function()
 		App.open()

@@ -36,7 +36,7 @@ Host-only suites that compile real subsystems without cocos2d:
 
 | Directory              | Covers                                                                        |
 | ---------------------- | ----------------------------------------------------------------------------- |
-| `tests/host/lunar/`    | Lunar rig spec and animation compilation                                      |
+| `tests/host/lunar/`    | Lunar rig spec, animation compilation, and the built-in editor Luau modules   |
 | `tests/host/render3d/` | glTF parse, image decode, transform math, frustum, procedural mesh, draw list |
 
 The host stub clusters under `tests/host/` (`Geode/`, `arc/`, `framework/`, `cocos2d.h`, `matjson.hpp`) stand in for SDK headers.

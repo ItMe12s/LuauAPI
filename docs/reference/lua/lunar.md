@@ -281,6 +281,7 @@ Tracks stop cleanly when the runtime shuts down.
 `seek` jumps the playhead to a time.
 On a playing track it relaunches from that time, so seeked events fire.
 On a paused or stopped track it writes the sampled pose directly.
+Events at or before the seek target are skipped.
 `currentTime` is the playhead in seconds, independent of speed.
 Seeking past the end lands on the last frame.
 

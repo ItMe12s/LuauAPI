@@ -70,6 +70,7 @@ build-*/
 /types/
 /dummy-mods/
 imgui.ini
+logo.pdn
 
 # Lmao this guy is vibecoding
 .cursor/
