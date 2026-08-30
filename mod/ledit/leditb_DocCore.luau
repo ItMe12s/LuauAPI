@@ -2,10 +2,14 @@ local Core = {}
 
 local NAME_PATTERN = "^[%w%-_ ]+$"
 
-Core.BASE_CHANNELS = {
-	x = true, y = true, rot = true, sx = true, sy = true,
-	skx = true, sky = true, z = true, opacity = true, ax = true, ay = true,
+Core.CHANNEL_KEYS = {
+	"x", "y", "rot", "sx", "sy", "skx", "sky", "z", "opacity", "ax", "ay",
 }
+
+Core.BASE_CHANNELS = {}
+for _, k in ipairs(Core.CHANNEL_KEYS) do
+	Core.BASE_CHANNELS[k] = true
+end
 
 function Core.clone(value: any): any
 	if type(value) ~= "table" then
@@ -19,7 +23,7 @@ function Core.clone(value: any): any
 end
 
 function Core.finite(v: any): boolean
-	return type(v) == "number" and v == v and v ~= math.huge and v ~= -math.huge
+	return type(v) == "number" and math.isfinite(v)
 end
 
 function Core.validName(name: any): boolean
@@ -63,7 +67,10 @@ function Core.orderedSpec(spec: any): any
 			visit(node, 0)
 		end
 	end
-	local ordered = Core.clone(spec)
+	local ordered = {}
+	for k, v in pairs(spec) do
+		ordered[k] = v
+	end
 	ordered.nodes = out
 	return ordered
 end

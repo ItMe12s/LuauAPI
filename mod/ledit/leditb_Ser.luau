@@ -1,18 +1,22 @@
 local Ser = {}
 
-local NODE_KEYS = {
-	"id", "sprite", "parent",
-	"x", "y", "rot", "sx", "sy", "skx", "sky", "z", "opacity", "ax", "ay",
-}
-local POSE_KEYS = {
-	"x", "y", "rot", "sx", "sy", "skx", "sky", "z", "opacity", "ax", "ay", "easing",
-}
+local Core = require("./leditb_DocCore")
+
+local NODE_KEYS = { "id", "sprite", "parent" }
+for _, k in ipairs(Core.CHANNEL_KEYS) do
+	NODE_KEYS[#NODE_KEYS + 1] = k
+end
+local POSE_KEYS = {}
+for _, k in ipairs(Core.CHANNEL_KEYS) do
+	POSE_KEYS[#POSE_KEYS + 1] = k
+end
+POSE_KEYS[#POSE_KEYS + 1] = "easing"
 
 local function num(v: any): string
 	if type(v) ~= "number" then
 		error("expected number", 0)
 	end
-	if v ~= v or v == math.huge or v == -math.huge then
+	if not math.isfinite(v) then
 		error("non-finite number", 0)
 	end
 	return string.format("%.14g", v)
@@ -42,20 +46,6 @@ local function str(v: any): string
 	end
 	out[#out + 1] = '"'
 	return table.concat(out)
-end
-
-function Ser.value(v: any): string
-	local t = type(v)
-	if v == nil then
-		return "nil"
-	elseif t == "boolean" then
-		return tostring(v)
-	elseif t == "number" then
-		return num(v)
-	elseif t == "string" then
-		return str(v)
-	end
-	error("unsupported type: " .. t, 0)
 end
 
 local function inlinePose(pose: any): string

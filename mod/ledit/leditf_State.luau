@@ -60,10 +60,6 @@ function State.frameOf(self: any): number
 	return math.floor(doc.playhead * self:fps())
 end
 
-function State.timeOf(self: any, frame: number): number
-	return frame / self:fps()
-end
-
 function State.toast(self: any, id: any, msg: any)
 	self.toasts[id] = { msg = msg, at = os.clock() }
 end
@@ -113,7 +109,19 @@ function State.drag(self: any, label: string, value: number, opts: any): (number
 	return v, v ~= value
 end
 
-function State.combo(self: any, key: any, label: string, items: { string }, onChanged: any?): (number, string?)
+function State.combo(self: any, key: any, label: string, items: { string }, current: string?, onChanged: any?): (number, string?)
+	if current ~= nil then
+		local found = nil
+		for i, item in ipairs(items) do
+			if item == current then
+				found = i - 1
+				break
+			end
+		end
+		if found ~= nil and self.combos[key] ~= found then
+			self.combos[key] = found
+		end
+	end
 	local idx = self.combos[key]
 	if idx == nil or idx >= #items then
 		idx = 0

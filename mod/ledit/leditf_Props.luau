@@ -59,22 +59,8 @@ function M.draw(state: any)
 	end
 
 	local ease = target.easing
-	local easedIdx = 0
-	for i, name in ipairs(state.EASINGS) do
-		if name == ease then
-			easedIdx = i - 1
-			break
-		end
-	end
-	local comboKey = "e:" .. sel .. ":" .. frame
-	if state.combos.lastEaseKey ~= comboKey then
-		state.combos.lastEaseKey = comboKey
-		state.combos.easing = easedIdx
-	elseif state.combos.easing ~= easedIdx and state.EASINGS[state.combos.easing + 1] ~= ease then
-		state.combos.easing = easedIdx
-	end
 
-	state:combo("easing", "##ease", state.EASINGS, function(_, picked)
+	state:combo("easing", "##ease", state.EASINGS, ease or "linear", function(_, picked)
 		state:act("Props", function()
 			return doc:putPose(frame, sel, { easing = picked },
 				("ease:%d:%s"):format(frame, sel))

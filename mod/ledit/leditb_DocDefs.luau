@@ -55,7 +55,10 @@ function M.renameAnim(d: any, old: any, new: any, ukey: any?): (boolean, string?
 	if not validName(new) then
 		return false, "invalid animation name"
 	end
-	if old ~= new and d.animations[new] ~= nil then
+	if old == new then
+		return true, nil
+	end
+	if d.animations[new] ~= nil then
 		return false, "animation exists: " .. new
 	end
 	local before = snapshot(d)

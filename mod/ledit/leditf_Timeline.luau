@@ -2,6 +2,7 @@ local KEY_COLOR = { x = 0.95, y = 0.75, z = 0.2, w = 1 }
 local CELL = { x = 15, y = 15 }
 local HDR_DUMMY = { x = 8, y = 8 }
 local PAGE = 30
+local Ser = require("./leditb_Ser")
 
 local function isTick(f: number): boolean
 	return f == 0 or f == 1 or f == 5 or (f >= 10 and f % 5 == 0)
@@ -116,12 +117,11 @@ function M.draw(state: any)
 	end
 	table.sort(evs, function(a, b) return a.f < b.f end)
 	for _, ev in ipairs(evs) do
-		local names = if type(ev.events) == "table" then ev.events else { ev.events }
-		for _, name in ipairs(names) do
+		for _, name in ipairs(Ser.eventArray(ev.events)) do
 			sawMarker = true
 			if imgui.selectable(name .. " @ " .. ev.f, state.selFrame == ev.f) and state.selFrame ~= ev.f then
 				state.selFrame = ev.f
-				state.tlPage = math.floor(ev.f / PAGE)
+				jumpTo(state, ev.f)
 				seek(state, ev.f)
 			end
 			imgui.sameLine()

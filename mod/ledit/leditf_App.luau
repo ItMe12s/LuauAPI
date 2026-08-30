@@ -1,5 +1,6 @@
 local State = require("./leditf_State")
 local Doc = require("./leditb_Doc")
+local Ser = require("./leditb_Ser")
 
 local cc2d = geode.cocos2d
 local modId = geode.Mod.getID()
@@ -79,8 +80,7 @@ local function bindMarkers(doc: any)
 	for _, kf in pairs(def.keyframes) do
 		local evs = kf.events
 		if evs ~= nil then
-			local names = if type(evs) == "table" then evs else { evs }
-			for _, name in ipairs(names) do
+			for _, name in ipairs(Ser.eventArray(evs)) do
 				if seen[name] == nil then
 					seen[name] = true
 					doc.track:bindEvent(name, function(n)

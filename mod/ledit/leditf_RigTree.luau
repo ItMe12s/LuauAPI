@@ -99,16 +99,7 @@ function M.draw(state: any)
 		imgui.separatorText("Reparent")
 		local pItems = parentItems()
 		local curParent = node.parent or "(root)"
-		if state.combos.reparent == nil or pItems[state.combos.reparent + 1] ~= curParent then
-			state.combos.reparent = 0
-			for i, item in ipairs(pItems) do
-				if item == curParent then
-					state.combos.reparent = i - 1
-					break
-				end
-			end
-		end
-		state:combo("reparent", "##reparent", pItems, function(_, item)
+		state:combo("reparent", "##reparent", pItems, curParent, function(_, item)
 			local parent = if item == "(root)" then nil else item
 			state:act("RigTree", function()
 				return doc:reparent(sel, parent)

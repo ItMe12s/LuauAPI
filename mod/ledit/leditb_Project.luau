@@ -69,6 +69,52 @@ local function evalSource(src: any, chunk: any): (any, string?)
 	return result, nil
 end
 
+local function readAnimFiles(fs: any, lunar: any, dir: string): ({string:any}?, {string}?)
+	local animations = {}
+	local errors = {}
+	local entries, lerr = fs.list("save", dir)
+	if entries == nil then
+		return nil, { lerr }
+	end
+	table.sort(entries)
+	for _, file in ipairs(entries) do
+		if file:sub(-#ANIM_SUFFIX) == ANIM_SUFFIX then
+			local animName = file:sub(1, -(#ANIM_SUFFIX + 1))
+			if not Core.validName(animName) then
+				errors[#errors + 1] = "invalid anim file name: " .. file
+			else
+				local asrc, aerr = fs.read("save", dir .. "/" .. file)
+				if asrc == nil then
+					errors[#errors + 1] = tostring(aerr)
+				else
+					local def, derr = evalSource(asrc, "=project/" .. dir .. "/" .. animName)
+					if type(def) ~= "table" then
+						errors[#errors + 1] = "invalid anim file " .. animName .. ": " .. tostring(derr)
+					elseif type(def.keyframes) ~= "table" and def.keyframes ~= nil then
+						errors[#errors + 1] = "invalid anim file " .. animName .. ": keyframes must be a table"
+					else
+						if def.keyframes == nil then
+							def.keyframes = {}
+						end
+						local loaded, verr = lunar.animation.load(def)
+						if loaded == nil then
+							errors[#errors + 1] = animName .. ": " .. tostring(verr)
+						elseif not pcall(Ser.anim, def) then
+							errors[#errors + 1] = "invalid anim file " .. animName .. ": serialization failed"
+						else
+							animations[animName] = def
+						end
+					end
+				end
+			end
+		end
+	end
+	if #errors > 0 then
+		return animations, errors
+	end
+	return animations, nil
+end
+
 function Project:load(name: any): (any, string?)
 	if not Core.validName(name) then
 		return nil, "invalid project name"
@@ -86,41 +132,9 @@ function Project:load(name: any): (any, string?)
 	if not rigOk then
 		return nil, "invalid rig file: " .. tostring(rigErr)
 	end
-	local entries, lerr = self.fs.list("save", dir)
-	if entries == nil then
-		return nil, lerr
-	end
-	table.sort(entries)
-	local animations = {}
-	for _, file in ipairs(entries) do
-		if file:sub(-#ANIM_SUFFIX) == ANIM_SUFFIX then
-			local animName = file:sub(1, -(#ANIM_SUFFIX + 1))
-			if not Core.validName(animName) then
-				return nil, "invalid anim file name: " .. file
-			end
-			local asrc, aerr = self.fs.read("save", dir .. "/" .. file)
-			if asrc == nil then
-				return nil, aerr
-			end
-			local def, derr = evalSource(asrc, "=project/" .. name .. "/" .. animName)
-			if type(def) ~= "table" then
-				return nil, "invalid anim file " .. animName .. ": " .. tostring(derr)
-			end
-			if def.keyframes == nil then
-				def.keyframes = {}
-			elseif type(def.keyframes) ~= "table" then
-				return nil, "invalid anim file " .. animName .. ": keyframes must be a table"
-			end
-			local loaded, verr = self.lunar.animation.load(def)
-			if loaded == nil then
-				return nil, animName .. ": " .. tostring(verr)
-			end
-			local animOk, aerr2 = pcall(Ser.anim, def)
-			if not animOk then
-				return nil, "invalid anim file " .. animName .. ": " .. tostring(aerr2)
-			end
-			animations[animName] = def
-		end
+	local animations, errors = readAnimFiles(self.fs, self.lunar, dir)
+	if errors ~= nil then
+		return nil, errors[1]
 	end
 	return DocModule.restore({ lunar = self.lunar }, name, spec, animations)
 end
@@ -148,35 +162,10 @@ function Project:validate(name: any): (boolean, {string}?)
 		errors[#errors + 1] = "project folder unreadable"
 		return false, errors
 	end
-	table.sort(entries)
-	for _, file in ipairs(entries) do
-		if file:sub(-#ANIM_SUFFIX) == ANIM_SUFFIX then
-			local animName = file:sub(1, -(#ANIM_SUFFIX + 1))
-			if not Core.validName(animName) then
-				errors[#errors + 1] = file .. ": invalid anim file name"
-			else
-				local asrc = self.fs.read("save", dir .. "/" .. file)
-				if asrc == nil then
-					errors[#errors + 1] = file .. ": unreadable"
-				else
-					local def, derr = evalSource(asrc, "=check/" .. name .. "/" .. animName)
-					if type(def) ~= "table" then
-						errors[#errors + 1] = file .. ": " .. tostring(derr)
-					elseif type(def.keyframes) ~= "table" and def.keyframes ~= nil then
-						errors[#errors + 1] = file .. ": keyframes must be a table"
-					else
-						if def.keyframes == nil then
-							def.keyframes = {}
-						end
-						local loaded, verr = self.lunar.animation.load(def)
-						if loaded == nil then
-							errors[#errors + 1] = file .. ": " .. tostring(verr)
-						elseif not pcall(Ser.anim, def) then
-							errors[#errors + 1] = file .. ": serialization failed"
-						end
-					end
-				end
-			end
+	local _, animErrs = readAnimFiles(self.fs, self.lunar, dir)
+	if animErrs ~= nil then
+		for _, e in ipairs(animErrs) do
+			errors[#errors + 1] = e
 		end
 	end
 	if #errors > 0 then

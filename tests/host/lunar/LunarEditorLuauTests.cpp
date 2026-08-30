@@ -57,9 +57,9 @@ if loadstring == nil and load ~= nil then
 end
 )X"));
             for (char const* name :
-                 {"leditb_Ser",
+                 {"leditb_DocCore",
+                  "leditb_Ser",
                   "leditb_Undo",
-                  "leditb_DocCore",
                   "leditb_DocRig",
                   "leditb_DocDefs",
                   "leditb_Doc",
@@ -273,14 +273,12 @@ TEST_CASE("Ser escapes strings, formats numbers, rejects non-finite values") {
     REQUIRE(env.run(std::string(kFakes) + R"X(
 local Ser = require("./leditb_Ser")
 local tricky = 'he said "hi"\nback\\slash\ttab'
-local back = assert(loadstring("return " .. Ser.value(tricky)))()
-assert(back == tricky)
-assert(Ser.value(0.1) == "0.1")
-assert(Ser.value(-0) == "-0" or Ser.value(-0) == "0")
-assert(Ser.value(1e300) == "1e+300")
-assert(Ser.value(true) == "true" and Ser.value(nil) == "nil")
-assert(not pcall(Ser.value, 0 / 0))
-assert(not pcall(Ser.value, math.huge))
+local escSrc = Ser.spec({ nodes = { { id = tricky, sprite = tricky } } })
+local esc = assert(loadstring(escSrc))()
+assert(esc.nodes[1].id == tricky and esc.nodes[1].sprite == tricky, "string escaping round-trips")
+local numSrc = Ser.anim({ fps = 0.1, keyframes = { [0] = { a = { x = 1e300, y = -0 } } } })
+local num = assert(loadstring(numSrc))()
+assert(num.fps == 0.1 and num.keyframes[0].a.x == 1e300, "number formatting round-trips")
 assert(not pcall(Ser.anim, { fps = 0 / 0 }))
 assert(not pcall(Ser.anim, { keyframes = { [-1] = {} } }))
 local specSrc = Ser.spec({
