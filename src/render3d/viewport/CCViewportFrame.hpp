@@ -79,6 +79,7 @@ namespace luax::render3d {
         cocos2d::CCTexture2D* m_framebufferTexture = nullptr;
         int m_fboPixelWidth = 0;
         int m_fboPixelHeight = 0;
+        int m_fboFailureCooldown = 0;
         unsigned m_glContextGeneration = 0;
 
         bool m_compositeEnabled = true;

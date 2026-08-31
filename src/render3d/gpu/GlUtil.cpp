@@ -2,6 +2,10 @@
 
 #include <Geode/Geode.hpp>
 
+#if !defined(GL_VERTEX_ARRAY_BINDING) && defined(GL_OES_vertex_array_object)
+    #define GL_VERTEX_ARRAY_BINDING GL_VERTEX_ARRAY_BINDING_OES
+#endif
+
 namespace {
     static unsigned s_glContextGeneration = 0;
     static bool s_gameTexturesLoaded = false;

@@ -59,9 +59,9 @@ namespace luax::render3d {
     }
 
     void Renderer3D::renderToFramebuffer(
-        unsigned int fbo, int pixelWidth, int pixelHeight, Camera3D const& camera,
-        std::map<int, ViewportInstance> const& instances, RenderSettings const& settings,
-        std::map<int, DebugLine> const& debugLines, bool debugBounds
+        unsigned int fbo, unsigned int viewportColorTexture, int pixelWidth, int pixelHeight,
+        Camera3D const& camera, std::map<int, ViewportInstance> const& instances,
+        RenderSettings const& settings, std::map<int, DebugLine> const& debugLines, bool debugBounds
     ) {
         if (!gpuSessionReady() || fbo == 0 || pixelWidth <= 0 || pixelHeight <= 0) {
             return;
@@ -89,13 +89,15 @@ namespace luax::render3d {
         );
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        int selfColorTexture = 0;
-        glGetFramebufferAttachmentParameteriv(
-            GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_FRAMEBUFFER_ATTACHMENT_OBJECT_NAME, &selfColorTexture
-        );
-
         runRenderer3DScenePass(
-            m_programs, m_meshCache, pixelWidth, pixelHeight, camera, instances, settings, selfColorTexture
+            m_programs,
+            m_meshCache,
+            pixelWidth,
+            pixelHeight,
+            camera,
+            instances,
+            settings,
+            static_cast<int>(viewportColorTexture)
         );
 
         if (useVao) {
@@ -113,6 +115,11 @@ namespace luax::render3d {
             glDisableVertexAttribArray(1);
             glDisableVertexAttribArray(2);
         }
+
+#if defined(GL_DISCARD_FRAMEBUFFER_EXT)
+        GLenum const discardAttachments[] = {GL_DEPTH_ATTACHMENT};
+        glDiscardFramebufferEXT(GL_FRAMEBUFFER, 1, discardAttachments);
+#endif
 
         prevState.restore();
     }
