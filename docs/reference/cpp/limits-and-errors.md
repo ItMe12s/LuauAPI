@@ -295,51 +295,52 @@ Lifecycle error strings are defined in `src/bindings/websocket/WebSocketInternal
 
 ## gd3d and glTF
 
-| Constant                     | Value    | Meaning                                                                    |
-| ---------------------------- | -------- | -------------------------------------------------------------------------- |
-| `kMaxFsReadBytes`            | `32 MiB` | Max glTF file and buffer read size. Same as the filesystem read cap above. |
-| `kMaxProceduralMeshVertices` | `200000` | Max vertices in `gd3d.mesh.new`                                            |
-| Max texture dimension        | `8192`   | Max decoded PNG or JPEG side (`STBI_MAX_DIMENSIONS` in `ImageDecode.cpp`)  |
+| Constant             | Value    | Meaning                                                                    |
+| -------------------- | -------- | -------------------------------------------------------------------------- |
+| `kMaxFsReadBytes`    | `32 MiB` | Max glTF file and buffer read size. Same as the filesystem read cap above. |
+| `kMaxMeshVertices`   | `65535`  | Max vertices per `gd3d.mesh.new` and per glTF primitive                    |
+| `kMaxImageDimension` | `4096`   | Max decoded image side in `ImageDecode.cpp`                                |
 
 ### gd3d and glTF errors
 
-| Message                                                | When                                                           | Return shape                             |
-| ------------------------------------------------------ | -------------------------------------------------------------- | ---------------------------------------- |
-| `path is not a regular file`                           | `loadMesh` target is not a file                                | `nil, err`                               |
-| `glTF file exceeds maximum read size`                  | File over read cap                                             | `nil, err`                               |
-| `glTF file cannot be read: ...`                        | Open or read failure                                           | `nil, err`                               |
-| `glTF data is empty`                                   | Empty buffer                                                   | `nil, err`                               |
-| `glTF data exceeds maximum read size`                  | In-memory data over cap                                        | `nil, err`                               |
-| `failed to parse glTF: ...`                            | cgltf parse failure                                            | `nil, err`                               |
-| `failed to load glTF buffers: ...`                     | Buffer load failure (often wraps a nested sandbox error below) | `nil, err`                               |
-| `buffer path cannot be resolved: ...`                  | External buffer URI path invalid                               | `nil, err` (via buffer load)             |
-| `buffer path escapes sandbox root`                     | Buffer URI outside sandbox root                                | `nil, err` (via buffer load)             |
-| `buffer file not found: ...`                           | External buffer file missing                                   | `nil, err` (via buffer load)             |
-| `buffer file cannot be read: ...`                      | Buffer open or read failure                                    | `nil, err` (via buffer load)             |
-| `buffer file exceeds maximum read size`                | External buffer over read cap                                  | `nil, err` (via buffer load)             |
-| `glTF file contains no mesh primitives`                | No geometry                                                    | `nil, err`                               |
-| `only triangle primitives are supported`               | Non-triangle primitive                                         | `nil, err`                               |
-| `Draco compressed primitives are not supported`        | Draco extension                                                | `nil, err`                               |
-| `sparse accessors are not supported`                   | Sparse accessor                                                | `nil, err`                               |
-| `meshopt-compressed accessors are not supported`       | meshopt compression                                            | `nil, err`                               |
-| `meshopt-compressed index accessors are not supported` | meshopt compression on indices                                 | `nil, err`                               |
-| `textures require TEXCOORD_0`                          | Textured material without UVs                                  | `nil, err`                               |
-| `KHR texture extensions are not supported`             | BasisU, WebP, and similar                                      | `nil, err`                               |
-| `failed to create ViewportFrame`                       | Viewport node creation failed                                  | `nil, err`                               |
-| `%s: mesh handle is invalid`                           | Stale or bad mesh userdata                                     | Lua error                                |
-| `ViewportFrame:addMesh: mesh handle is invalid`        | Mesh released before add                                       | Lua error                                |
-| `%s: material handle is invalid`                       | Stale or bad material userdata                                 | Lua error                                |
-| `gd3d.Material.new: expected color field`              | Missing color in constructor table                             | Lua error                                |
-| `positions exceed maximum vertex count`                | Procedural mesh over vertex cap                                | `nil, err` on `gd3d.mesh.new`            |
-| `base64 image data is empty`                           | Empty embedded glTF image buffer                               | `nil, err`                               |
-| `base64 image data exceeds maximum read size`          | Embedded base64 image over read cap                            | `nil, err`                               |
-| `embedded image exceeds maximum read size`             | Embedded glTF image over read cap                              | `nil, err`                               |
-| `sandbox root cannot be resolved: ...`                 | Texture or buffer sandbox root invalid                         | `nil, err`                               |
-| `image data is empty`                                  | Empty image input                                              | `nil, err` on texture load               |
-| `encoded image exceeds maximum read size`              | Image file over read cap                                       | `nil, err` on texture or glTF image load |
-| `failed to decode image: ...`                          | stb decode failure                                             | `nil, err`                               |
-| `decoded image has invalid dimensions`                 | Zero or negative width or height after decode                  | `nil, err`                               |
-| `decoded image exceeds maximum size`                   | Decoded pixel buffer over cap                                  | `nil, err`                               |
+| Message                                                 | When                                                           | Return shape                             |
+| ------------------------------------------------------- | -------------------------------------------------------------- | ---------------------------------------- |
+| `path is not a regular file`                            | `loadMesh` target is not a file                                | `nil, err`                               |
+| `glTF file exceeds maximum read size`                   | File over read cap                                             | `nil, err`                               |
+| `glTF file cannot be read: ...`                         | Open or read failure                                           | `nil, err`                               |
+| `glTF data is empty`                                    | Empty buffer                                                   | `nil, err`                               |
+| `glTF data exceeds maximum read size`                   | In-memory data over cap                                        | `nil, err`                               |
+| `failed to parse glTF: ...`                             | cgltf parse failure                                            | `nil, err`                               |
+| `failed to load glTF buffers: ...`                      | Buffer load failure (often wraps a nested sandbox error below) | `nil, err`                               |
+| `buffer path cannot be resolved: ...`                   | External buffer URI path invalid                               | `nil, err` (via buffer load)             |
+| `buffer path escapes sandbox root`                      | Buffer URI outside sandbox root                                | `nil, err` (via buffer load)             |
+| `buffer file not found: ...`                            | External buffer file missing                                   | `nil, err` (via buffer load)             |
+| `buffer file cannot be read: ...`                       | Buffer open or read failure                                    | `nil, err` (via buffer load)             |
+| `buffer file exceeds maximum read size`                 | External buffer over read cap                                  | `nil, err` (via buffer load)             |
+| `glTF file contains no mesh primitives`                 | No geometry                                                    | `nil, err`                               |
+| `only triangle primitives are supported`                | Non-triangle primitive                                         | `nil, err`                               |
+| `Draco compressed primitives are not supported`         | Draco extension                                                | `nil, err`                               |
+| `sparse accessors are not supported`                    | Sparse accessor                                                | `nil, err`                               |
+| `meshopt-compressed accessors are not supported`        | meshopt compression                                            | `nil, err`                               |
+| `meshopt-compressed index accessors are not supported`  | meshopt compression on indices                                 | `nil, err`                               |
+| `textures require TEXCOORD_0`                           | Textured material without UVs                                  | `nil, err`                               |
+| `KHR basisu/ktx2 textures are not supported`            | BasisU or KTX2 texture                                         | `nil, err`                               |
+| `failed to create ViewportFrame`                        | Viewport node creation failed                                  | `nil, err`                               |
+| `%s: mesh handle is invalid`                            | Stale or bad mesh userdata                                     | Lua error                                |
+| `ViewportFrame:addMesh: mesh handle is invalid`         | Mesh released before add                                       | Lua error                                |
+| `%s: material handle is invalid`                        | Stale or bad material userdata                                 | Lua error                                |
+| `gd3d.Material.new: expected color field`               | Missing color in constructor table                             | Lua error                                |
+| `positions exceed maximum vertex count`                 | Procedural mesh over vertex cap                                | `nil, err` on `gd3d.mesh.new`            |
+| `base64 image data is empty`                            | Empty embedded glTF image buffer                               | `nil, err`                               |
+| `base64 image data exceeds maximum read size`           | Embedded base64 image over read cap                            | `nil, err`                               |
+| `embedded image exceeds maximum read size`              | Embedded glTF image over read cap                              | `nil, err`                               |
+| `sandbox root cannot be resolved: ...`                  | Texture or buffer sandbox root invalid                         | `nil, err`                               |
+| `image data is empty`                                   | Empty image input                                              | `nil, err` on texture load               |
+| `encoded image exceeds maximum read size`               | Image file over read cap                                       | `nil, err` on texture or glTF image load |
+| `failed to decode image: ...`                           | cocos JPEG or ImagePlus decode failure                         | `nil, err`                               |
+| `animated images are not supported, use a static image` | Animated WebP, GIF, or JXL input                               | `nil, err`                               |
+| `decoded image has invalid dimensions`                  | Zero or negative width or height after decode                  | `nil, err`                               |
+| `decoded image exceeds maximum size`                    | Decoded pixel buffer over cap                                  | `nil, err`                               |
 
 Sandbox path errors from [fs](../lua/fs.md) also apply to `loadMesh` roots and paths.
 

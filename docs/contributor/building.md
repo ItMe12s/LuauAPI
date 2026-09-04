@@ -38,7 +38,6 @@ These live in the repository.
 Vendored headers in `vendor/` are not fetched by CMake:
 
 - `cgltf.h` for glTF parsing. Define `CGLTF_IMPLEMENTATION` in one translation unit only (`GltfIo.cpp`).
-- `stb_image.h` for PNG and JPEG decode. Define `STB_IMAGE_IMPLEMENTATION` in one translation unit only (`ImageDecode.cpp`).
 
 The `gd3d` stack is always built into the mod. There is no CMake option to disable it.
 OpenGL comes from Geode and cocos2d, not from a standalone `find_package(OpenGL)` call.

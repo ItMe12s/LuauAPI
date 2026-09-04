@@ -34,10 +34,10 @@ Catch2 `v3.15.1`, built into the `luauapi_tests` executable.
 
 Host-only suites that compile real subsystems without cocos2d:
 
-| Directory              | Covers                                                                        |
-| ---------------------- | ----------------------------------------------------------------------------- |
-| `tests/host/lunar/`    | Lunar rig spec, animation compilation, and the built-in editor Luau modules   |
-| `tests/host/render3d/` | glTF parse, image decode, transform math, frustum, procedural mesh, draw list |
+| Directory              | Covers                                                                            |
+| ---------------------- | --------------------------------------------------------------------------------- |
+| `tests/host/lunar/`    | Lunar rig spec, animation compilation, and the built-in editor Luau modules       |
+| `tests/host/render3d/` | glTF parse, JPEG magic check, transform math, frustum, procedural mesh, draw list |
 
 The host stub clusters under `tests/host/` (`Geode/`, `arc/`, `framework/`, `cocos2d.h`, `matjson.hpp`) stand in for SDK headers.
 `cocos2d.h` retains on `WeakRef` construction like the real pool.

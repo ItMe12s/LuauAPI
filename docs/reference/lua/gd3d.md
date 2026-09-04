@@ -49,7 +49,8 @@ Supported content:
 - Node world transforms baked into vertex positions and normals
 - glTF materials: `pbr_metallic_roughness.base_color_factor`
 - glTF material flags: `alphaMode` (`OPAQUE`, `MASK`, `BLEND`), `alphaCutoff`, `doubleSided`
-- Base color textures (static JPG, PNG, TIFF, WebP, GIF, QOI, JXL), embedded in GLB or referenced inside the sandbox root
+- Base color textures (static JPG, PNG, WebP, GIF, QOI, JXL), embedded in GLB or referenced inside the sandbox root. JPEG decodes through cocos2d.
+- TIFF falls back to ImagePlus autodetect and may fail.
 - `TEXCOORD_0` on primitives that use a base color texture
 
 Animated images fail load with `animated images are not supported, use a static image`.
@@ -84,10 +85,10 @@ Materials from a mesh keep the mesh data alive and may include a base color text
 Returns the same `Mesh` handle type as `gd3d.gltf.loadMesh`, so it works with `viewport:addMesh`, materials, and the rest of the gd3d pipeline.
 
 `positions` is required and must contain at least one vertex.
-See [Limits and errors](../cpp/limits-and-errors.md) for the vertex cap.
+See [Limits and errors](../cpp/limits-and-errors.md) for the vertex and texture caps.
 `indices` is required. Use 1-based vertex indices (Luau convention).
 Each group of three entries is one triangle. The count must be a multiple of three.
-Index values must fit U16. Any primitive above 65535 verts fails load.
+Index values must fit U16.
 
 If `normals` is omitted, normals are computed from face normals and averaged per vertex.
 `normals` and `uvs`, when provided, must match `positions` length.
@@ -186,7 +187,7 @@ Draw order:
 - `doubleSided` disables culling. Off-screen instances are frustum culled.
 - Strict GLES2 path. No VAO, no instancing, no wireframe.
 - Textures use clamp to edge with linear filtering. No mipmap, no repeat.
-- U16 indices only. Prims above 65k verts fail load.
+- U16 indices only. See [Limits and errors](../cpp/limits-and-errors.md) for the vertex cap.
 
 Reloading a mesh uploads fresh GPU data.
 
