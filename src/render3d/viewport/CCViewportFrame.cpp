@@ -258,15 +258,7 @@ namespace luax::render3d {
         }
 
         Renderer3D::instance().renderToFramebuffer(
-            m_fbo,
-            m_colorTexture,
-            m_fboPixelWidth,
-            m_fboPixelHeight,
-            m_camera,
-            m_instances,
-            m_settings,
-            m_debugLines,
-            m_debugBounds
+            m_fbo, m_fboPixelWidth, m_fboPixelHeight, m_camera, m_instances, m_settings, m_debugLines, m_debugBounds
         );
 
         if (m_compositeEnabled) {
@@ -281,13 +273,7 @@ namespace luax::render3d {
             }
 
             GLuint const spProg = live->getProgram();
-            static GLuint cachedProg = 0;
-            static GLint cachedMvpLoc = -1;
-            if (spProg != cachedProg) {
-                cachedProg = spProg;
-                cachedMvpLoc = glGetUniformLocation(spProg, "CC_MVPMatrix");
-            }
-            GLint const mvpLoc = cachedMvpLoc;
+            GLint const mvpLoc = spProg != 0 ? glGetUniformLocation(spProg, "CC_MVPMatrix") : -1;
             if (spProg == 0 || glIsProgram(spProg) != GL_TRUE || mvpLoc < 0) {
                 return;
             }
@@ -354,7 +340,6 @@ namespace luax::render3d {
             m_depthRenderbuffer = 0;
             m_fboPixelWidth = 0;
             m_fboPixelHeight = 0;
-            m_fboFailureCooldown = 0;
             m_glContextGeneration = glContextGeneration();
         }
 
@@ -363,14 +348,9 @@ namespace luax::render3d {
         if (m_fbo != 0 && width == m_fboPixelWidth && height == m_fboPixelHeight) {
             return;
         }
-        if (m_fboFailureCooldown > 0) {
-            --m_fboFailureCooldown;
-            return;
-        }
 
         CCTexture2D* tex = buildFramebufferTexture(width, height);
         if (tex == nullptr) {
-            m_fboFailureCooldown = 60;
             return;
         }
         setTexture(tex);

@@ -17,9 +17,9 @@ namespace luax::render3d {
         static Renderer3D& instance();
 
         void renderToFramebuffer(
-            unsigned int fbo, unsigned int viewportColorTexture, int pixelWidth, int pixelHeight,
-            Camera3D const& camera, std::map<int, ViewportInstance> const& instances,
-            RenderSettings const& settings, std::map<int, DebugLine> const& debugLines, bool debugBounds
+            unsigned int fbo, int pixelWidth, int pixelHeight, Camera3D const& camera,
+            std::map<int, ViewportInstance> const& instances, RenderSettings const& settings,
+            std::map<int, DebugLine> const& debugLines, bool debugBounds
         );
 
         void releaseMeshGpu(std::uint64_t meshId);
