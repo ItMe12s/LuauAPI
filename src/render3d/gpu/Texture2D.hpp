@@ -1,23 +1,16 @@
 #pragma once
 
 #include <cstdint>
+#include <span>
 
 namespace luax::render3d {
 
     struct ImageData;
 
-    enum class TextureWrapMode {
-        Repeat,
-        ClampToEdge,
-    };
+    unsigned int uploadRgbaTexture2D(std::span<std::uint8_t const> rgba, int width, int height);
 
-    unsigned int uploadRgbaTexture2D(
-        int width, int height, std::uint8_t const* rgba,
-        TextureWrapMode wrap = TextureWrapMode::Repeat, bool leaveBound = false
-    );
+    unsigned int uploadRgbaTexture2D(ImageData const& image);
 
-    unsigned int uploadRgbaTexture2D(
-        ImageData const& image, TextureWrapMode wrap = TextureWrapMode::Repeat, bool leaveBound = false
-    );
+    unsigned int allocFramebufferTexture(int width, int height);
 
 } // namespace luax::render3d

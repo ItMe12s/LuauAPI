@@ -1,19 +1,41 @@
 #include "render3d/gpu/Texture2D.hpp"
 
-#include "render3d/assets/MeshAsset.hpp"
+#include "render3d/assets/ImageDecode.hpp"
 #include "render3d/gpu/GlUtil.hpp"
 
 namespace luax::render3d {
 
-    namespace {
-        GLenum wrapModeGl(TextureWrapMode wrap) {
-            return wrap == TextureWrapMode::ClampToEdge ? GL_CLAMP_TO_EDGE : GL_REPEAT;
+    unsigned int uploadRgbaTexture2D(std::span<std::uint8_t const> rgba, int width, int height) {
+        if (!glContextAvailable() || width <= 0 || height <= 0) {
+            return 0;
         }
-    } // namespace
+        if (rgba.size() != static_cast<std::size_t>(width) * static_cast<std::size_t>(height) * 4) {
+            return 0;
+        }
 
-    unsigned int uploadRgbaTexture2D(
-        int width, int height, std::uint8_t const* rgba, TextureWrapMode wrap, bool leaveBound
-    ) {
+        unsigned int texture = 0;
+        glGenTextures(1, &texture);
+        glBindTexture(GL_TEXTURE_2D, texture);
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glTexImage2D(
+            GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, rgba.data()
+        );
+        glBindTexture(GL_TEXTURE_2D, 0);
+        return texture;
+    }
+
+    unsigned int uploadRgbaTexture2D(ImageData const& image) {
+        if (image.width <= 0 || image.height <= 0 || image.rgba.empty()) {
+            return 0;
+        }
+        return uploadRgbaTexture2D(image.rgba, image.width, image.height);
+    }
+
+    unsigned int allocFramebufferTexture(int width, int height) {
         if (!glContextAvailable() || width <= 0 || height <= 0) {
             return 0;
         }
@@ -23,21 +45,10 @@ namespace luax::render3d {
         glBindTexture(GL_TEXTURE_2D, texture);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        GLenum const wrapGl = wrapModeGl(wrap);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, wrapGl);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, wrapGl);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, rgba);
-        if (!leaveBound) {
-            glBindTexture(GL_TEXTURE_2D, 0);
-        }
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
         return texture;
-    }
-
-    unsigned int uploadRgbaTexture2D(ImageData const& image, TextureWrapMode wrap, bool leaveBound) {
-        if (image.width <= 0 || image.height <= 0 || image.rgba.empty()) {
-            return 0;
-        }
-        return uploadRgbaTexture2D(image.width, image.height, image.rgba.data(), wrap, leaveBound);
     }
 
 } // namespace luax::render3d

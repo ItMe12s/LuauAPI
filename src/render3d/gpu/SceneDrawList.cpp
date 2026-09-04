@@ -4,6 +4,7 @@
 #include "render3d/types/Frustum.hpp"
 
 #include <algorithm>
+#include <ranges>
 
 namespace luax::render3d {
     namespace {
@@ -14,16 +15,14 @@ namespace luax::render3d {
             item.alphaMode = overrideMat.alphaMode;
             item.alphaCutoff = overrideMat.alphaCutoff;
             item.doubleSided = overrideMat.doubleSided;
-            item.textureId = 0;
             item.textureAsset = nullptr;
             item.imageIndex = overrideMat.imageIndex;
-            if (overrideMat.textureId != 0 && overrideMat.texture != nullptr) {
-                item.textureId = overrideMat.textureId;
+            if (overrideMat.texture != nullptr) {
                 item.textureAsset = overrideMat.texture.get();
                 item.imageIndex = -1;
             }
             else if (item.imageIndex >= 0 && overrideMat.sourceMesh != nullptr) {
-                item.texSource = resolveGpuMesh(overrideMat.sourceMeshId, *overrideMat.sourceMesh);
+                item.texSource = resolveGpuMesh(*overrideMat.sourceMesh);
                 if (item.texSource == nullptr) {
                     item.imageIndex = -1;
                 }
@@ -31,19 +30,12 @@ namespace luax::render3d {
         }
     } // namespace
 
-    float shaderAlphaCutoff(int alphaMode, float alphaCutoff) {
-        return alphaMode == 1 ? alphaCutoff : 0.0f;
-    }
-
-    bool sameInstancedBatch(SceneDrawItem const& a, SceneDrawItem const& b) {
-        return a.prim == b.prim && a.boundTexture == b.boundTexture && a.baseColor == b.baseColor &&
-            shaderAlphaCutoff(a.alphaMode, a.alphaCutoff) ==
-            shaderAlphaCutoff(b.alphaMode, b.alphaCutoff) &&
-            a.doubleSided == b.doubleSided;
+    float shaderAlphaCutoff(AlphaMode alphaMode, float alphaCutoff) {
+        return alphaMode == AlphaMode::Mask ? alphaCutoff : 0.0f;
     }
 
     void sortOpaqueDrawItems(std::vector<SceneDrawItem>& items) {
-        std::sort(items.begin(), items.end(), [](SceneDrawItem const& a, SceneDrawItem const& b) {
+        std::ranges::sort(items, [](SceneDrawItem const& a, SceneDrawItem const& b) {
             if (a.boundTexture != b.boundTexture) {
                 return a.boundTexture < b.boundTexture;
             }
@@ -52,7 +44,7 @@ namespace luax::render3d {
     }
 
     void sortBlendDrawItems(std::vector<SceneDrawItem>& items) {
-        std::sort(items.begin(), items.end(), [](SceneDrawItem const& a, SceneDrawItem const& b) {
+        std::ranges::sort(items, [](SceneDrawItem const& a, SceneDrawItem const& b) {
             return a.viewDepth < b.viewDepth;
         });
     }
@@ -61,8 +53,8 @@ namespace luax::render3d {
         SceneDrawItem const& item, TextureResolver& resolveTexture, int selfColorTexture
     ) {
         unsigned int resolved = 0;
-        if (item.textureId != 0 && item.textureAsset != nullptr) {
-            resolved = resolveTexture(item.textureId, *item.textureAsset);
+        if (item.textureAsset != nullptr) {
+            resolved = resolveTexture(*item.textureAsset);
         }
         else if (
             item.imageIndex >= 0 && item.texSource != nullptr &&
@@ -77,7 +69,7 @@ namespace luax::render3d {
     }
 
     SceneDrawLists buildSceneDrawLists(
-        std::map<int, ViewportInstance> const& instances, glm::mat4 const& view,
+        std::unordered_map<int, ViewportInstance> const& instances, glm::mat4 const& view,
         Frustum const& frustum, GpuMeshResolver& resolveGpuMesh
     ) {
         SceneDrawLists lists{};
@@ -89,7 +81,7 @@ namespace luax::render3d {
             if (instance.mesh == nullptr) {
                 continue;
             }
-            GpuMesh* gpuMesh = resolveGpuMesh(instance.meshId, *instance.mesh);
+            GpuMesh* gpuMesh = resolveGpuMesh(*instance.mesh);
             if (gpuMesh == nullptr) {
                 continue;
             }
@@ -145,7 +137,7 @@ namespace luax::render3d {
                     item.doubleSided = material.doubleSided;
                 }
 
-                if (item.alphaMode == 2) {
+                if (item.alphaMode == AlphaMode::Blend) {
                     lists.blend.push_back(item);
                 }
                 else {

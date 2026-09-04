@@ -131,7 +131,7 @@ namespace {
             }
 
             double const raw = lua_tonumber(L, -1);
-            if (raw < 1.0 || raw > static_cast<double>(kMaxProceduralMeshVertices) ||
+            if (raw < 1.0 || raw > static_cast<double>(kMaxMeshVertices) ||
                 static_cast<double>(static_cast<std::uint32_t>(raw)) != raw) {
                 err =
                     std::string(method) + ": " + field + " entries must be 1-based integer indices";
@@ -161,7 +161,7 @@ namespace {
             return pushNilErr(L, err);
         }
 
-        if (positions.size() > kMaxProceduralMeshVertices) {
+        if (positions.size() > kMaxMeshVertices) {
             return pushNilErr(L, "positions exceed maximum vertex count");
         }
 
@@ -183,8 +183,7 @@ namespace {
         if (auto resultError = returnIfErr(L, result)) {
             return *resultError;
         }
-        auto const id = MeshRegistry::instance().registerAsset(std::move(result.unwrap()));
-        pushMeshHandle(L, id);
+        pushMeshHandle(L, std::move(result.unwrap()));
         return 1;
     }
 } // namespace

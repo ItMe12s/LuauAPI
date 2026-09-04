@@ -34,50 +34,21 @@ namespace luax::render3d {
         return director != nullptr && director->getOpenGLView() != nullptr;
     }
 
-    bool vaoSupported() {
-#if !defined(GL_VERTEX_ARRAY_BINDING)
-        return false;
-#elif defined(GLEW_VERSION)
-        return glGenVertexArrays != nullptr && glBindVertexArray != nullptr;
-#else
-        return true;
-#endif
-    }
-
-    bool instancingSupported() {
-#if defined(GLEW_VERSION)
-        return glDrawElementsInstanced != nullptr && glVertexAttribDivisor != nullptr;
-#else
-        return false;
-#endif
-    }
-
-    int captureAndUnbindVao() {
+    namespace {
+        bool vaoExtensionPresent() {
 #if defined(GL_VERTEX_ARRAY_BINDING)
-        GLint prevVao = 0;
-        glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &prevVao);
-        if (prevVao != 0) {
-            glBindVertexArray(0);
-        }
-        return prevVao;
+            return true;
 #else
-        return 0;
+            return false;
 #endif
-    }
-
-    void restoreVao([[maybe_unused]] int prevVao) {
-#if defined(GL_VERTEX_ARRAY_BINDING)
-        if (prevVao != 0) {
-            glBindVertexArray(static_cast<GLuint>(prevVao));
         }
-#endif
-    }
+    } // namespace
 
     unsigned int genVao() {
-#if defined(GL_VERTEX_ARRAY_BINDING)
-        if (!vaoSupported()) {
+        if (!vaoExtensionPresent()) {
             return 0;
         }
+#if defined(GL_VERTEX_ARRAY_BINDING)
         GLuint vao = 0;
         glGenVertexArrays(1, &vao);
         return vao;
@@ -86,19 +57,24 @@ namespace luax::render3d {
 #endif
     }
 
-    void bindVao([[maybe_unused]] unsigned int vao) {
+    void bindVao(unsigned int vao) {
 #if defined(GL_VERTEX_ARRAY_BINDING)
-        if (vaoSupported()) {
+        if (vaoExtensionPresent()) {
             glBindVertexArray(vao);
         }
+#else
+        (void)vao;
 #endif
     }
 
-    void deleteVao([[maybe_unused]] unsigned int vao) {
+    void deleteVao(unsigned int vao) {
 #if defined(GL_VERTEX_ARRAY_BINDING)
-        if (vao != 0 && glContextAvailable() && vaoSupported()) {
-            glDeleteVertexArrays(1, &vao);
+        if (vao != 0 && glContextAvailable() && vaoExtensionPresent()) {
+            GLuint doomed = vao;
+            glDeleteVertexArrays(1, &doomed);
         }
+#else
+        (void)vao;
 #endif
     }
 
@@ -117,12 +93,9 @@ namespace luax::render3d {
         glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &arrayBuffer);
         glGetIntegerv(GL_ELEMENT_ARRAY_BUFFER_BINDING, &elementArrayBuffer);
         glGetIntegerv(GL_FRAMEBUFFER_BINDING, &framebufferBinding);
-#if defined(GL_VERTEX_ARRAY_BINDING)
-        glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &vao);
-#endif
-        glGetIntegerv(GL_VIEWPORT, viewport);
-        glGetIntegerv(GL_SCISSOR_BOX, scissorBox);
-        glGetFloatv(GL_COLOR_CLEAR_VALUE, clearColor);
+        glGetIntegerv(GL_VIEWPORT, viewport.data());
+        glGetIntegerv(GL_SCISSOR_BOX, scissorBox.data());
+        glGetFloatv(GL_COLOR_CLEAR_VALUE, clearColor.data());
         glActiveTexture(static_cast<GLenum>(activeTexture));
     }
 
@@ -162,17 +135,7 @@ namespace luax::render3d {
         glActiveTexture(GL_TEXTURE0);
         cocos2d::ccGLBindTexture2D(static_cast<GLuint>(boundTexture));
         glBindTexture(GL_TEXTURE_2D, static_cast<GLuint>(boundTexture));
-#if defined(GL_VERTEX_ARRAY_BINDING)
-        if (vaoSupported()) {
-            glBindVertexArray(0);
-        }
-#endif
         cocos2d::ccGLEnableVertexAttribs(cocos2d::kCCVertexAttribFlag_None);
-#if defined(GL_VERTEX_ARRAY_BINDING)
-        if (vaoSupported()) {
-            glBindVertexArray(static_cast<GLuint>(vao));
-        }
-#endif
         glBindBuffer(GL_ARRAY_BUFFER, static_cast<GLuint>(arrayBuffer));
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, static_cast<GLuint>(elementArrayBuffer));
         glClearColor(clearColor[0], clearColor[1], clearColor[2], clearColor[3]);

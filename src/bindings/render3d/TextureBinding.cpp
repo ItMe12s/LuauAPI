@@ -19,54 +19,45 @@ namespace {
     using namespace luax::gd3d;
     using namespace luax::render3d;
 
-    void releaseTextureHandle(TextureHandle* handle) {
-        if (handle == nullptr || handle->id == 0) {
-            return;
+    void releaseTextureBox(TextureBox* box) {
+#if !defined(LUAUAPI_HOST_TESTS)
+        if (box != nullptr && box->texture) {
+            Renderer3D::instance().releaseTextureGpu(box->texture.get());
         }
-        std::uint64_t const id = handle->id;
-        TextureRegistry::instance().release(id);
-        Renderer3D::instance().releaseTextureGpu(id);
-        handle->id = 0;
+#endif
+        if (box != nullptr) {
+            box->texture.reset();
+        }
+    }
+
+    int textureSizeAxis(lua_State* L, char const* method, bool wantWidth) {
+        auto& texture = requireTexture(L, checkTextureHandle(L, 1, method), method);
+        auto* viewport = texture->viewportSource();
+        if (viewport != nullptr) {
+            push(L, wantWidth ? viewport->framebufferPixelWidth() : viewport->framebufferPixelHeight());
+            return 1;
+        }
+        push(L, wantWidth ? texture->cpu.width : texture->cpu.height);
+        return 1;
     }
 
     int textureWidth(lua_State* L) {
-        auto* handle = checkTextureHandle(L, 1, "Texture:width");
-        auto texture = TextureRegistry::instance().get(requireTextureId(L, handle, "Texture:width"));
-        if (!texture) {
-            luaL_error(L, "Texture:width: texture handle is invalid");
-        }
-        auto* viewport = texture->viewportSource();
-        if (viewport != nullptr) {
-            push(L, viewport->framebufferPixelWidth());
-            return 1;
-        }
-        push(L, texture->cpu.width);
-        return 1;
+        return textureSizeAxis(L, "Texture:width", true);
     }
 
     int textureHeight(lua_State* L) {
-        auto* handle = checkTextureHandle(L, 1, "Texture:height");
-        auto texture = TextureRegistry::instance().get(requireTextureId(L, handle, "Texture:height"));
-        if (!texture) {
-            luaL_error(L, "Texture:height: texture handle is invalid");
-        }
-        auto* viewport = texture->viewportSource();
-        if (viewport != nullptr) {
-            push(L, viewport->framebufferPixelHeight());
-            return 1;
-        }
-        push(L, texture->cpu.height);
-        return 1;
+        return textureSizeAxis(L, "Texture:height", false);
     }
 
     int textureGc(lua_State* L) {
-        releaseTextureHandle(checkTextureHandle(L, 1, "Texture.__gc"));
+        releaseTextureBox(checkTextureHandle(L, 1, "Texture.__gc"));
         return 0;
     }
 
-    void textureHandleDtor(lua_State* L, void* ud) {
+    void textureBoxDtor(lua_State* L, void* ud) {
         (void)L;
-        releaseTextureHandle(static_cast<TextureHandle*>(ud));
+        releaseTextureBox(static_cast<TextureBox*>(ud));
+        static_cast<TextureBox*>(ud)->~TextureBox();
     }
 
     void registerTextureHandleMetatable(lua_State* L) {
@@ -78,7 +69,7 @@ namespace {
         };
 
         registerTaggedMetatable(
-            L, kTextureMeta, luax::detail::textureTag(), methods, std::nullopt, &textureHandleDtor, kTextureTypeName
+            L, kTextureMeta, luax::detail::textureTag(), methods, std::nullopt, &textureBoxDtor, kTextureTypeName
         );
     }
 
@@ -101,8 +92,7 @@ namespace {
 
         auto asset = std::make_shared<TextureAsset>();
         asset->cpu = std::move(result.unwrap());
-        auto const id = TextureRegistry::instance().registerAsset(asset);
-        pushTextureHandle(L, id);
+        pushTextureHandle(L, std::move(asset));
         return 1;
     }
 } // namespace

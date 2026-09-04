@@ -83,7 +83,8 @@ namespace luax::render3d {
 
     CCViewportFrame::~CCViewportFrame() {
         liveViewports().erase(this);
-        releaseViewportTexture();
+        Renderer3D::instance().releaseTextureGpu(m_viewportTexture.get());
+        m_viewportTexture.reset();
         if (!glContextAvailable() || m_glContextGeneration != glContextGeneration()) {
             detachSpriteTexture();
         }
@@ -127,11 +128,21 @@ namespace luax::render3d {
     }
 
     int CCViewportFrame::addInstance(
-        std::uint64_t meshId, std::shared_ptr<MeshAsset> mesh, Transform const& transform,
-        glm::vec3 color
+        std::shared_ptr<MeshAsset> mesh, Transform const& transform, glm::vec3 color
     ) {
-        int const id = m_nextInstanceId++;
-        m_instances.emplace(id, ViewportInstance{meshId, std::move(mesh), transform, color});
+        int id = 0;
+        if (!m_instanceFreeList.empty()) {
+            id = m_instanceFreeList.back();
+            m_instanceFreeList.pop_back();
+        }
+        else {
+            id = m_nextInstanceId++;
+        }
+        ViewportInstance instance{};
+        instance.mesh = std::move(mesh);
+        instance.transform = transform;
+        instance.color = color;
+        m_instances.emplace(id, std::move(instance));
         return id;
     }
 
@@ -179,14 +190,19 @@ namespace luax::render3d {
     }
 
     bool CCViewportFrame::removeInstance(int instanceId) {
-        return m_instances.erase(instanceId) > 0;
+        if (m_instances.erase(instanceId) == 0) {
+            return false;
+        }
+        m_instanceFreeList.push_back(instanceId);
+        return true;
     }
 
     void CCViewportFrame::clearInstances() {
         m_instances.clear();
+        m_instanceFreeList.clear();
     }
 
-    std::map<int, ViewportInstance> const& CCViewportFrame::instances() const {
+    std::unordered_map<int, ViewportInstance> const& CCViewportFrame::instances() const {
         return m_instances;
     }
 
@@ -207,38 +223,45 @@ namespace luax::render3d {
     }
 
     int CCViewportFrame::addDebugLine(glm::vec3 from, glm::vec3 to, glm::vec3 color) {
-        int const id = m_nextDebugLineId++;
+        int id = 0;
+        if (!m_debugLineFreeList.empty()) {
+            id = m_debugLineFreeList.back();
+            m_debugLineFreeList.pop_back();
+        }
+        else {
+            id = m_nextDebugLineId++;
+        }
         m_debugLines.emplace(id, DebugLine{from, to, color});
         return id;
     }
 
     bool CCViewportFrame::removeDebugLine(int lineId) {
-        return m_debugLines.erase(lineId) > 0;
+        if (m_debugLines.erase(lineId) == 0) {
+            return false;
+        }
+        m_debugLineFreeList.push_back(lineId);
+        return true;
     }
 
     void CCViewportFrame::clearDebugLines() {
         m_debugLines.clear();
+        m_debugLineFreeList.clear();
     }
 
     void CCViewportFrame::setDebugBounds(bool enabled) {
         m_debugBounds = enabled;
     }
 
-    std::uint64_t CCViewportFrame::ensureViewportTextureId() {
+    std::shared_ptr<TextureAsset> CCViewportFrame::viewportTextureAsset() {
         if (!gpuSessionReady()) {
-            return 0;
+            return nullptr;
         }
-        if (m_viewportTextureId != 0) {
-            if (TextureRegistry::instance().get(m_viewportTextureId) != nullptr) {
-                return m_viewportTextureId;
-            }
-            m_viewportTextureId = 0;
+        if (m_viewportTexture == nullptr) {
+            auto asset = std::make_shared<TextureAsset>();
+            asset->setViewportSourceNode(this);
+            m_viewportTexture = std::move(asset);
         }
-
-        auto asset = std::make_shared<TextureAsset>();
-        asset->setViewportSourceNode(this);
-        m_viewportTextureId = TextureRegistry::instance().registerAsset(asset);
-        return m_viewportTextureId;
+        return m_viewportTexture;
     }
 
     void CCViewportFrame::draw() {
@@ -344,7 +367,9 @@ namespace luax::render3d {
         }
 
         CCSize const points = getContentSize();
-        auto const [width, height] = pixelSize(points);
+        auto [width, height] = pixelSize(points);
+        width = std::clamp(width, 1, kMaxFramebufferDimension);
+        height = std::clamp(height, 1, kMaxFramebufferDimension);
         if (m_fbo != 0 && width == m_fboPixelWidth && height == m_fboPixelHeight) {
             return;
         }
@@ -359,6 +384,8 @@ namespace luax::render3d {
     }
 
     bool CCViewportFrame::createFramebuffer(int width, int height) {
+        width = std::clamp(width, 1, kMaxFramebufferDimension);
+        height = std::clamp(height, 1, kMaxFramebufferDimension);
         if (!glContextAvailable() || width <= 0 || height <= 0) {
             return false;
         }
@@ -366,6 +393,7 @@ namespace luax::render3d {
         GLint prevFbo = 0;
         glGetIntegerv(GL_FRAMEBUFFER_BINDING, &prevFbo);
 
+        deleteColorTexture();
         if (m_fbo != 0) {
             glDeleteFramebuffers(1, &m_fbo);
         }
@@ -378,8 +406,7 @@ namespace luax::render3d {
         glGenFramebuffers(1, &m_fbo);
         glBindFramebuffer(GL_FRAMEBUFFER, m_fbo);
 
-        unsigned int const color =
-            uploadRgbaTexture2D(width, height, nullptr, TextureWrapMode::ClampToEdge, true);
+        unsigned int const color = allocFramebufferTexture(width, height);
         if (color == 0) {
             glBindFramebuffer(GL_FRAMEBUFFER, static_cast<GLuint>(prevFbo));
             glBindTexture(GL_TEXTURE_2D, 0);
@@ -420,17 +447,15 @@ namespace luax::render3d {
         return true;
     }
 
-    void CCViewportFrame::releaseViewportTexture() {
-        if (m_viewportTextureId == 0) {
-            return;
+    void CCViewportFrame::deleteColorTexture() {
+        if (m_colorTexture != 0 && gpuHandlesValid() && glContextAvailable()) {
+            glDeleteTextures(1, &m_colorTexture);
         }
-        std::uint64_t const id = m_viewportTextureId;
-        m_viewportTextureId = 0;
-        TextureRegistry::instance().release(id);
-        Renderer3D::instance().releaseTextureGpu(id);
+        m_colorTexture = 0;
     }
 
     void CCViewportFrame::destroyFramebuffer() {
+        deleteColorTexture();
         bool const canDelete = gpuHandlesValid() && glContextAvailable();
         if (canDelete) {
             if (m_fbo != 0) {
@@ -447,7 +472,8 @@ namespace luax::render3d {
     }
 
     void CCViewportFrame::abandonGpuResources() {
-        releaseViewportTexture();
+        Renderer3D::instance().releaseTextureGpu(m_viewportTexture.get());
+        m_viewportTexture.reset();
         detachSpriteTexture();
         m_fbo = 0;
         m_colorTexture = 0;

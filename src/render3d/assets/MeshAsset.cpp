@@ -2,7 +2,6 @@
 
 #include "core/Config.hpp"
 #include "render3d/assets/GltfIo.hpp"
-#include "render3d/assets/ImageDecode.hpp"
 #include "require/PathSandbox.hpp"
 
 #include <Geode/utils/file.hpp>
@@ -11,7 +10,6 @@
 #include <glm/mat4x4.hpp>
 #include <glm/vec2.hpp>
 #include <glm/vec3.hpp>
-#include <optional>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -158,6 +156,14 @@ namespace {
         }
 
         GEODE_UNWRAP_INTO(auto indices, unpackIndices(primitive));
+        if (positions.size() > kMaxMeshVertices) {
+            return geode::Err("primitive exceeds maximum vertex count");
+        }
+        for (auto const index : indices) {
+            if (index > kMaxMeshIndexValue || index >= positions.size()) {
+                return geode::Err("index out of range");
+            }
+        }
 
         std::vector<glm::vec2> texcoords;
         auto const* texcoordAccessor =
@@ -246,7 +252,7 @@ namespace {
 
 namespace luax::render3d {
 
-    std::optional<std::string> MeshAsset::extractMaterials(
+    geode::Result<void> MeshAsset::extractMaterials(
         ::cgltf_data const* data, MeshAsset& asset, std::filesystem::path const& assetPath,
         std::filesystem::path const& sandboxRoot
     ) {
@@ -271,30 +277,30 @@ namespace luax::render3d {
                 cgltf_texture_view const& baseColorTexture = pbr.base_color_texture;
                 if (baseColorTexture.texture != nullptr) {
                     cgltf_texture const* texture = baseColorTexture.texture;
-                    if (texture->has_basisu || texture->has_webp) {
-                        return "KHR texture extensions are not supported";
+                    if (texture->has_basisu) {
+                        return geode::Err("KHR basisu/ktx2 textures are not supported");
                     }
 
                     if (texture->image == nullptr) {
-                        return "base color texture has no image";
+                        return geode::Err("base color texture has no image");
                     }
 
-                    auto imageIndexResult = resolveImageIndex(
-                        texture->image, assetPath, sandboxRoot, asset.m_images, imageIndices
+                    GEODE_UNWRAP_INTO(
+                        auto imageIndex,
+                        resolveImageIndex(
+                            texture->image, assetPath, sandboxRoot, asset.m_images, imageIndices
+                        )
                     );
-                    if (imageIndexResult.isErr()) {
-                        return imageIndexResult.unwrapErr();
-                    }
 
-                    materialData.imageIndex = imageIndexResult.unwrap();
+                    materialData.imageIndex = imageIndex;
                 }
             }
 
             switch (material.alpha_mode) {
-                case cgltf_alpha_mode_opaque: materialData.alphaMode = 0; break;
-                case cgltf_alpha_mode_mask: materialData.alphaMode = 1; break;
-                case cgltf_alpha_mode_blend: materialData.alphaMode = 2; break;
-                default: materialData.alphaMode = 0; break;
+                case cgltf_alpha_mode_opaque: materialData.alphaMode = AlphaMode::Opaque; break;
+                case cgltf_alpha_mode_mask: materialData.alphaMode = AlphaMode::Mask; break;
+                case cgltf_alpha_mode_blend: materialData.alphaMode = AlphaMode::Blend; break;
+                default: materialData.alphaMode = AlphaMode::Opaque; break;
             }
             materialData.alphaCutoff = material.alpha_cutoff;
             materialData.doubleSided = material.double_sided != 0;
@@ -302,10 +308,10 @@ namespace luax::render3d {
             asset.m_materials.push_back(materialData);
         }
 
-        return std::nullopt;
+        return geode::Ok();
     }
 
-    std::optional<std::string> MeshAsset::extractSceneMeshes(::cgltf_data const* data, MeshAsset& asset) {
+    geode::Result<void> MeshAsset::extractSceneMeshes(::cgltf_data const* data, MeshAsset& asset) {
         bool foundMesh = false;
 
         for (cgltf_size nodeIndex = 0; nodeIndex < data->nodes_count; ++nodeIndex) {
@@ -321,18 +327,13 @@ namespace luax::render3d {
             for (cgltf_size primitiveIndex = 0; primitiveIndex < node->mesh->primitives_count;
                  ++primitiveIndex) {
                 auto const& primitive = node->mesh->primitives[primitiveIndex];
-                auto primitiveResult = extractPrimitive(data, primitive, worldMatrix);
-                if (primitiveResult.isErr()) {
-                    return primitiveResult.unwrapErr();
-                }
-
-                auto meshPrimitive = std::move(primitiveResult).unwrap();
+                GEODE_UNWRAP_INTO(auto meshPrimitive, extractPrimitive(data, primitive, worldMatrix));
                 if (meshPrimitive.materialIndex >= 0 &&
                     static_cast<std::size_t>(meshPrimitive.materialIndex) < asset.m_materials.size()) {
                     auto const& material =
                         asset.m_materials[static_cast<std::size_t>(meshPrimitive.materialIndex)];
                     if (material.imageIndex >= 0 && meshPrimitive.texcoords.empty()) {
-                        return "textures require TEXCOORD_0";
+                        return geode::Err("textures require TEXCOORD_0");
                     }
                 }
 
@@ -342,10 +343,10 @@ namespace luax::render3d {
         }
 
         if (!foundMesh) {
-            return "glTF file contains no mesh primitives";
+            return geode::Err("glTF file contains no mesh primitives");
         }
 
-        return std::nullopt;
+        return geode::Ok();
     }
 
     geode::Result<std::shared_ptr<MeshAsset>> MeshAsset::loadFromFile(std::filesystem::path const& path) {
@@ -405,18 +406,19 @@ namespace luax::render3d {
         }
 
         auto mesh = std::shared_ptr<MeshAsset>(new MeshAsset());
-        auto materialError = MeshAsset::extractMaterials(data, *mesh, assetPath, canonicalRoot);
-        if (materialError.has_value()) {
+        if (auto err = MeshAsset::extractMaterials(data, *mesh, assetPath, canonicalRoot);
+            err.isErr()) {
+            auto message = std::move(err).unwrapErr();
             cgltf_free(data);
-            return geode::Err(*materialError);
+            return geode::Err(std::move(message));
         }
 
-        auto extractError = MeshAsset::extractSceneMeshes(data, *mesh);
+        if (auto err = MeshAsset::extractSceneMeshes(data, *mesh); err.isErr()) {
+            auto message = std::move(err).unwrapErr();
+            cgltf_free(data);
+            return geode::Err(std::move(message));
+        }
         cgltf_free(data);
-
-        if (extractError.has_value()) {
-            return geode::Err(*extractError);
-        }
 
         return geode::Ok(mesh);
     }
@@ -429,7 +431,7 @@ namespace luax::render3d {
             return geode::Err("positions are empty");
         }
 
-        if (positions.size() > kMaxProceduralMeshVertices) {
+        if (positions.size() > kMaxMeshVertices) {
             return geode::Err("positions exceed maximum vertex count");
         }
 
@@ -446,7 +448,7 @@ namespace luax::render3d {
         }
 
         for (auto const index : indices) {
-            if (index >= positions.size()) {
+            if (index > kMaxMeshIndexValue || index >= positions.size()) {
                 return geode::Err("index out of range");
             }
         }

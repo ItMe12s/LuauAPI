@@ -19,6 +19,18 @@ namespace {
     using namespace luax::gd3d;
     using namespace luax::render3d;
 
+    ViewportInstance const* findViewportInstance(CCViewportFrame const* self, int instanceId) {
+        auto const it = self->instances().find(instanceId);
+        return it == self->instances().end() ? nullptr : &it->second;
+    }
+
+    std::shared_ptr<Material> optMaterialArg(lua_State* L, int idx, char const* method) {
+        if (lua_isnoneornil(L, idx)) {
+            return nullptr;
+        }
+        return requireMaterial(L, idx, method);
+    }
+
     int viewportNew(lua_State* L) {
         float const width = check<float>(L, 1, "gd3d.ViewportFrame.new");
         float const height = check<float>(L, 2, "gd3d.ViewportFrame.new");
@@ -128,19 +140,12 @@ namespace {
 
     int viewportAddMesh(lua_State* L) {
         auto* self = Usertype<CCViewportFrame>::check(L, 1, "ViewportFrame:addMesh");
-        auto const meshId =
-            requireMeshId(L, checkMeshHandle(L, 2, "ViewportFrame:addMesh"), "ViewportFrame:addMesh");
+        auto& mesh =
+            requireMesh(L, checkMeshHandle(L, 2, "ViewportFrame:addMesh"), "ViewportFrame:addMesh");
         auto const* transform = checkTransform(L, 3, "ViewportFrame:addMesh");
 
-        auto mesh = MeshRegistry::instance().get(meshId);
-        if (mesh == nullptr) {
-            luaL_error(L, "ViewportFrame:addMesh: mesh handle is invalid");
-        }
-
-        int const instanceId = self->addInstance(meshId, std::move(mesh), *transform);
-        if (!lua_isnoneornil(L, 4)) {
-            self->setInstanceMaterial(instanceId, requireMaterial(L, 4, "ViewportFrame:addMesh"));
-        }
+        int const instanceId = self->addInstance(mesh, *transform);
+        self->setInstanceMaterial(instanceId, optMaterialArg(L, 4, "ViewportFrame:addMesh"));
         push(L, instanceId);
         return 1;
     }
@@ -149,12 +154,12 @@ namespace {
         auto* self = Usertype<CCViewportFrame>::check(L, 1, "ViewportFrame:setInstanceMaterial");
         int const instanceId = check<int>(L, 2, "ViewportFrame:setInstanceMaterial");
 
-        std::shared_ptr<Material> material{};
-        if (!lua_isnoneornil(L, 3)) {
-            material = requireMaterial(L, 3, "ViewportFrame:setInstanceMaterial");
-        }
-
-        push(L, self->setInstanceMaterial(instanceId, std::move(material)));
+        push(
+            L,
+            self->setInstanceMaterial(
+                instanceId, optMaterialArg(L, 3, "ViewportFrame:setInstanceMaterial")
+            )
+        );
         return 1;
     }
 
@@ -164,12 +169,14 @@ namespace {
         int const instanceId = check<int>(L, 2, "ViewportFrame:setInstancePrimitiveMaterial");
         int const primitiveIndex = check<int>(L, 3, "ViewportFrame:setInstancePrimitiveMaterial");
 
-        std::shared_ptr<Material> material{};
-        if (!lua_isnoneornil(L, 4)) {
-            material = requireMaterial(L, 4, "ViewportFrame:setInstancePrimitiveMaterial");
-        }
-
-        push(L, self->setInstancePrimitiveMaterial(instanceId, primitiveIndex, std::move(material)));
+        push(
+            L,
+            self->setInstancePrimitiveMaterial(
+                instanceId,
+                primitiveIndex,
+                optMaterialArg(L, 4, "ViewportFrame:setInstancePrimitiveMaterial")
+            )
+        );
         return 1;
     }
 
@@ -203,11 +210,6 @@ namespace {
         auto* self = Usertype<CCViewportFrame>::check(L, 1, "ViewportFrame:clearInstances");
         self->clearInstances();
         return 0;
-    }
-
-    ViewportInstance const* findViewportInstance(CCViewportFrame const* self, int instanceId) {
-        auto const it = self->instances().find(instanceId);
-        return it == self->instances().end() ? nullptr : &it->second;
     }
 
     int viewportGetInstanceTransform(lua_State* L) {
@@ -303,7 +305,7 @@ namespace {
 
     int viewportTexture(lua_State* L) {
         auto* self = Usertype<CCViewportFrame>::check(L, 1, "ViewportFrame:texture");
-        pushTextureHandle(L, self->ensureViewportTextureId());
+        pushTextureHandle(L, self->viewportTextureAsset());
         return 1;
     }
 

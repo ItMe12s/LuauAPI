@@ -1,8 +1,7 @@
 #pragma once
 
+#include <array>
 #include <cocos2d.h>
-#include <initializer_list>
-#include <utility>
 
 namespace luax::render3d {
 
@@ -22,13 +21,6 @@ namespace luax::render3d {
         return !gpuFeaturesDisabled() && gameTexturesLoaded();
     }
 
-    bool vaoSupported();
-
-    bool instancingSupported();
-
-    int captureAndUnbindVao();
-    void restoreVao(int prevVao);
-
     unsigned int genVao();
     void bindVao(unsigned int vao);
     void deleteVao(unsigned int vao);
@@ -47,10 +39,9 @@ namespace luax::render3d {
         int arrayBuffer = 0;
         int elementArrayBuffer = 0;
         int framebufferBinding = 0;
-        int vao = 0;
-        int viewport[4]{0, 0, 0, 0};
-        int scissorBox[4]{0, 0, 0, 0};
-        float clearColor[4]{0.0f, 0.0f, 0.0f, 0.0f};
+        std::array<int, 4> viewport{0, 0, 0, 0};
+        std::array<int, 4> scissorBox{0, 0, 0, 0};
+        std::array<float, 4> clearColor{0.0f, 0.0f, 0.0f, 0.0f};
 
         void capture();
         void restore() const;

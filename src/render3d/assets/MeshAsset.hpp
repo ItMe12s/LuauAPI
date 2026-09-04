@@ -1,6 +1,7 @@
 #pragma once
 
-#include "render3d/assets/AssetRegistry.hpp"
+#include "render3d/assets/ImageDecode.hpp"
+#include "render3d/types/Material.hpp"
 
 #include <Geode/Result.hpp>
 #include <cstdint>
@@ -9,26 +10,17 @@
 #include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
 #include <memory>
-#include <optional>
 #include <span>
-#include <string>
-#include <unordered_map>
 #include <vector>
 
 struct cgltf_data;
 
 namespace luax::render3d {
 
-    struct ImageData {
-        int width = 0;
-        int height = 0;
-        std::vector<std::uint8_t> rgba;
-    };
-
     struct MaterialData {
         glm::vec4 baseColorFactor{1.0f, 1.0f, 1.0f, 1.0f};
         int imageIndex = -1;
-        int alphaMode = 0;
+        AlphaMode alphaMode = AlphaMode::Opaque;
         float alphaCutoff = 0.5f;
         bool doubleSided = false;
     };
@@ -47,7 +39,8 @@ namespace luax::render3d {
         bool empty = true;
     };
 
-    constexpr std::size_t kMaxProceduralMeshVertices = 200'000;
+    constexpr std::size_t kMaxMeshVertices = 65535;
+    constexpr std::uint32_t kMaxMeshIndexValue = 65535;
 
     class MeshAsset {
     public:
@@ -75,11 +68,11 @@ namespace luax::render3d {
         MeshAsset() = default;
 
         void addPrimitive(MeshPrimitive primitive);
-        static std::optional<std::string> extractMaterials(
+        static geode::Result<void> extractMaterials(
             ::cgltf_data const* data, MeshAsset& asset, std::filesystem::path const& assetPath,
             std::filesystem::path const& sandboxRoot
         );
-        static std::optional<std::string> extractSceneMeshes(::cgltf_data const* data, MeshAsset& asset);
+        static geode::Result<void> extractSceneMeshes(::cgltf_data const* data, MeshAsset& asset);
 
         std::vector<MeshPrimitive> m_primitives;
         std::vector<MaterialData> m_materials;
@@ -87,7 +80,5 @@ namespace luax::render3d {
         BoundingBox m_bounds;
         std::size_t m_vertexCount = 0;
     };
-
-    using MeshRegistry = AssetRegistry<MeshAsset>;
 
 } // namespace luax::render3d

@@ -3,11 +3,11 @@
 #include "render3d/types/Material.hpp"
 #include "render3d/types/Transform3D.hpp"
 
-#include <cstdint>
 #include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
-#include <map>
 #include <memory>
+#include <unordered_map>
+#include <vector>
 
 namespace luax::render3d {
 
@@ -31,12 +31,11 @@ namespace luax::render3d {
     };
 
     struct ViewportInstance {
-        std::uint64_t meshId = 0;
         std::shared_ptr<MeshAsset> mesh{};
         Transform transform{};
         glm::vec3 color{1.0f, 1.0f, 1.0f};
         std::shared_ptr<Material> materialOverride{};
-        std::map<int, std::shared_ptr<Material>> primitiveOverrides{};
+        std::unordered_map<int, std::shared_ptr<Material>> primitiveOverrides{};
     };
 
     struct DebugLine {

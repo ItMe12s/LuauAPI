@@ -1,27 +1,26 @@
 #include "render3d/gpu/Renderer3D.hpp"
 
 #include "render3d/gpu/GlUtil.hpp"
-#include "render3d/gpu/Renderer3DMeshCache.hpp"
 #include "render3d/gpu/Renderer3DPrograms.hpp"
 #include "render3d/types/SceneTypes.hpp"
 
 #include <Geode/Geode.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/mat4x4.hpp>
-#include <map>
+#include <unordered_map>
 
 namespace luax::render3d {
     void destroyRenderer3DGlResources(Renderer3DPrograms& programs, Renderer3DMeshCache& meshCache);
     void ensureRenderer3DShutdownHook();
     void runRenderer3DScenePass(
-        Renderer3DPrograms& programs, Renderer3DMeshCache& meshCache, int pixelWidth,
-        int pixelHeight, Camera3D const& camera, std::map<int, ViewportInstance> const& instances,
+        Renderer3DPrograms& programs, Renderer3DMeshCache& meshCache, int pixelWidth, int pixelHeight,
+        Camera3D const& camera, std::unordered_map<int, ViewportInstance> const& instances,
         RenderSettings const& settings, int selfColorTexture
     );
     void drawDebugOverlay(
         Renderer3DPrograms& programs, glm::mat4 const& projection, glm::mat4 const& view,
-        std::map<int, DebugLine> const& debugLines, bool debugBounds,
-        std::map<int, ViewportInstance> const& instances
+        std::unordered_map<int, DebugLine> const& debugLines, bool debugBounds,
+        std::unordered_map<int, ViewportInstance> const& instances
     );
 
     Renderer3D& Renderer3D::instance() {
@@ -35,7 +34,7 @@ namespace luax::render3d {
 
     void Renderer3D::syncContextGen() {
         if (m_glContextGeneration != glContextGeneration()) {
-            m_programs.reset();
+            destroyRenderer3DGlResources(m_programs, m_meshCache);
             m_meshCache.clear();
             m_glContextGeneration = glContextGeneration();
         }
@@ -46,22 +45,22 @@ namespace luax::render3d {
         destroyRenderer3DGlResources(m_programs, m_meshCache);
     }
 
-    void Renderer3D::releaseMeshGpu(std::uint64_t meshId) {
+    void Renderer3D::releaseMeshGpu(MeshAsset const* mesh) {
         ensureRenderer3DShutdownHook();
         syncContextGen();
-        m_meshCache.releaseMeshGpu(meshId);
+        m_meshCache.releaseMeshGpu(mesh);
     }
 
-    void Renderer3D::releaseTextureGpu(std::uint64_t textureId) {
+    void Renderer3D::releaseTextureGpu(TextureAsset const* texture) {
         ensureRenderer3DShutdownHook();
         syncContextGen();
-        m_meshCache.releaseTextureGpu(textureId);
+        m_meshCache.releaseTextureGpu(texture);
     }
 
     void Renderer3D::renderToFramebuffer(
         unsigned int fbo, int pixelWidth, int pixelHeight, Camera3D const& camera,
-        std::map<int, ViewportInstance> const& instances, RenderSettings const& settings,
-        std::map<int, DebugLine> const& debugLines, bool debugBounds
+        std::unordered_map<int, ViewportInstance> const& instances, RenderSettings const& settings,
+        std::unordered_map<int, DebugLine> const& debugLines, bool debugBounds
     ) {
         if (!gpuSessionReady() || fbo == 0 || pixelWidth <= 0 || pixelHeight <= 0) {
             return;
@@ -74,8 +73,6 @@ namespace luax::render3d {
 
         DrawStateSnapshot prevState{};
         prevState.capture();
-
-        bool const useVao = vaoSupported();
 
         glBindFramebuffer(GL_FRAMEBUFFER, fbo);
         glViewport(0, 0, pixelWidth, pixelHeight);
@@ -98,9 +95,6 @@ namespace luax::render3d {
             m_programs, m_meshCache, pixelWidth, pixelHeight, camera, instances, settings, selfColorTexture
         );
 
-        if (useVao) {
-            bindVao(0);
-        }
         if (!debugLines.empty() || debugBounds) {
             float const aspect = static_cast<float>(pixelWidth) / static_cast<float>(pixelHeight);
             glm::mat4 const projection =
@@ -108,11 +102,9 @@ namespace luax::render3d {
             glm::mat4 const view = camera.transform.inverse().toMat4();
             drawDebugOverlay(m_programs, projection, view, debugLines, debugBounds, instances);
         }
-        if (!useVao) {
-            glDisableVertexAttribArray(0);
-            glDisableVertexAttribArray(1);
-            glDisableVertexAttribArray(2);
-        }
+        glDisableVertexAttribArray(0);
+        glDisableVertexAttribArray(1);
+        glDisableVertexAttribArray(2);
 
         prevState.restore();
     }

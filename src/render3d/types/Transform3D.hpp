@@ -4,6 +4,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
 #include <glm/gtx/euler_angles.hpp>
+#include <limits>
 
 namespace luax::render3d {
     struct Transform {
@@ -25,7 +26,7 @@ namespace luax::render3d {
             glm::vec3 direction = target - position;
             float const len = glm::length(direction);
             glm::quat rot{1.0f, 0.0f, 0.0f, 0.0f};
-            if (len > 1e-6f) {
+            if (len > std::numeric_limits<float>::epsilon()) {
                 direction /= len;
                 rot = glm::quatLookAtRH(direction, up);
             }
@@ -34,7 +35,7 @@ namespace luax::render3d {
 
         static Transform fromAxisAngle(glm::vec3 const& axis, float angleRadians) {
             float const lengthSquared = glm::dot(axis, axis);
-            if (lengthSquared <= 1e-12f) {
+            if (lengthSquared <= std::numeric_limits<float>::epsilon()) {
                 return identity();
             }
             return Transform{
@@ -57,19 +58,19 @@ namespace luax::render3d {
             };
         }
 
-        Transform inverse() const {
+        [[nodiscard]] Transform inverse() const {
             glm::quat const invRot = glm::conjugate(rotation);
             return Transform{invRot * -position, invRot};
         }
 
-        Transform lerp(Transform const& goal, float alpha) const {
+        [[nodiscard]] Transform lerp(Transform const& goal, float alpha) const {
             return Transform{
                 glm::mix(position, goal.position, alpha),
                 glm::slerp(rotation, goal.rotation, alpha),
             };
         }
 
-        glm::mat4 toMat4() const {
+        [[nodiscard]] glm::mat4 toMat4() const {
             return glm::translate(glm::mat4(1.0f), position) * glm::mat4_cast(rotation);
         }
 

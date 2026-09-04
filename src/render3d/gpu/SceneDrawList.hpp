@@ -1,12 +1,13 @@
 #pragma once
 
 #include "render3d/gpu/GpuTypes.hpp"
+#include "render3d/types/Material.hpp"
 #include "render3d/types/SceneTypes.hpp"
 
-#include <Geode/utils/function.hpp>
 #include <cstdint>
+#include <functional>
 #include <glm/mat4x4.hpp>
-#include <map>
+#include <unordered_map>
 #include <vector>
 
 namespace luax::render3d {
@@ -19,14 +20,13 @@ namespace luax::render3d {
         GpuPrimitive const* prim = nullptr;
         GpuMesh const* texSource = nullptr;
         TextureAsset const* textureAsset = nullptr;
-        std::uint64_t textureId = 0;
         int imageIndex = -1;
         unsigned int boundTexture = 0;
         glm::vec4 baseColor{1.0f, 1.0f, 1.0f, 1.0f};
         glm::vec3 tint{1.0f, 1.0f, 1.0f};
         glm::mat4 model{1.0f};
         float viewDepth = 0.0f;
-        int alphaMode = 0;
+        AlphaMode alphaMode = AlphaMode::Opaque;
         float alphaCutoff = 0.5f;
         bool doubleSided = false;
     };
@@ -36,14 +36,11 @@ namespace luax::render3d {
         std::vector<SceneDrawItem> blend;
     };
 
-    using GpuMeshResolver = geode::Function<GpuMesh*(std::uint64_t meshId, MeshAsset const& mesh)>;
+    using GpuMeshResolver = std::function<GpuMesh*(MeshAsset const& mesh)>;
 
-    using TextureResolver =
-        geode::Function<unsigned int(std::uint64_t textureId, TextureAsset const& texture)>;
+    using TextureResolver = std::function<unsigned int(TextureAsset const& texture)>;
 
-    float shaderAlphaCutoff(int alphaMode, float alphaCutoff);
-
-    bool sameInstancedBatch(SceneDrawItem const& a, SceneDrawItem const& b);
+    float shaderAlphaCutoff(AlphaMode alphaMode, float alphaCutoff);
 
     void sortOpaqueDrawItems(std::vector<SceneDrawItem>& items);
 
@@ -54,7 +51,7 @@ namespace luax::render3d {
     );
 
     SceneDrawLists buildSceneDrawLists(
-        std::map<int, ViewportInstance> const& instances, glm::mat4 const& view,
+        std::unordered_map<int, ViewportInstance> const& instances, glm::mat4 const& view,
         Frustum const& frustum, GpuMeshResolver& resolveGpuMesh
     );
 

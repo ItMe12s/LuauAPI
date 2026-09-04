@@ -1,6 +1,7 @@
 #pragma once
 
-#include <glm/glm.hpp>
+#include <cstddef>
+#include <cstdint>
 
 namespace luax::render3d {
 
@@ -15,14 +16,10 @@ namespace luax::render3d {
         float v;
     };
 
-    struct GpuInstanceData {
-        glm::mat4 model{1.0f};
-        glm::vec4 tint{1.0f, 1.0f, 1.0f, 0.0f};
-    };
+    static_assert(sizeof(InterleavedVertex) == 32, "InterleavedVertex must be 32 bytes");
 
     void setupInterleavedVertexAttribs();
-    void resetInstanceAttribs();
-    void setupInstanceAttribs(unsigned int instanceVbo);
-    void uploadGpuPrimitiveVertexLayout(unsigned int& vao, unsigned int vbo, unsigned int ibo);
+
+    void bindInterleavedBuffers(std::uint32_t vbo, std::uint32_t ibo);
 
 } // namespace luax::render3d

@@ -1,4 +1,5 @@
 #include "bindings/geode/ModSandbox.hpp"
+#include "bindings/render3d/internal/Marshaling.hpp"
 #include "bindings/render3d/internal/MeshHandleBinding.hpp"
 #include "core/Config.hpp"
 #include "framework/stack/Stack.hpp"
@@ -19,37 +20,6 @@ namespace {
     using namespace luax::gd3d;
     using namespace luax::render3d;
 
-    geode::Result<std::span<std::uint8_t const>> readGltfBytesArg(lua_State* L, int idx) {
-        if (lua_isbuffer(L, idx)) {
-            size_t len = 0;
-            void* data = lua_tobuffer(L, idx, &len);
-            if (data == nullptr || len == 0) {
-                return geode::Err("glTF data is empty");
-            }
-            if (len > kMaxFsReadBytes) {
-                return geode::Err("glTF data exceeds maximum read size");
-            }
-            return geode::Ok(
-                std::span<std::uint8_t const>(static_cast<std::uint8_t const*>(data), len)
-            );
-        }
-
-        size_t len = 0;
-        char const* text = lua_tolstring(L, idx, &len);
-        if (text == nullptr) {
-            luaL_error(L, "gd3d.gltf.loadMeshFromBytes expected buffer or string at arg %d", idx);
-        }
-        if (len == 0) {
-            return geode::Err("glTF data is empty");
-        }
-        if (len > kMaxFsReadBytes) {
-            return geode::Err("glTF data exceeds maximum read size");
-        }
-        return geode::Ok(
-            std::span<std::uint8_t const>(reinterpret_cast<std::uint8_t const*>(text), len)
-        );
-    }
-
     int gltfLoadMesh(lua_State* L) {
         auto target = resolveSandboxTarget(L, 1, 2, "gd3d.gltf.loadMesh");
         if (!target) {
@@ -66,13 +36,19 @@ namespace {
             return *err;
         }
 
-        auto const id = MeshRegistry::instance().registerAsset(std::move(result.unwrap()));
-        pushMeshHandle(L, id);
+        pushMeshHandle(L, std::move(result.unwrap()));
         return 1;
     }
 
     int gltfLoadMeshFromBytes(lua_State* L) {
-        auto bytesResult = readGltfBytesArg(L, 1);
+        auto bytesResult = checkBufferOrString(
+            L,
+            1,
+            "gd3d.gltf.loadMeshFromBytes",
+            kMaxFsReadBytes,
+            "glTF data is empty",
+            "glTF data exceeds maximum read size"
+        );
         if (auto err = returnIfErr(L, bytesResult)) {
             return *err;
         }
@@ -84,8 +60,7 @@ namespace {
             return *err;
         }
 
-        auto const id = MeshRegistry::instance().registerAsset(std::move(result.unwrap()));
-        pushMeshHandle(L, id);
+        pushMeshHandle(L, std::move(result.unwrap()));
         return 1;
     }
 } // namespace

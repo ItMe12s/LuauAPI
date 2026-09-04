@@ -1,14 +1,16 @@
 #pragma once
 
+#include <array>
 #include <glm/glm.hpp>
 #include <glm/mat4x4.hpp>
+#include <limits>
 
 namespace luax::render3d {
 
     struct Frustum {
-        glm::vec4 planes[6]{};
+        std::array<glm::vec4, 6> planes{};
 
-        static Frustum fromViewProj(glm::mat4 const& viewProj) {
+        [[nodiscard]] static Frustum fromViewProj(glm::mat4 const& viewProj) {
             Frustum frustum{};
 
             auto const row = [&](int index) {
@@ -26,7 +28,7 @@ namespace luax::render3d {
 
             for (glm::vec4& plane : frustum.planes) {
                 float const length = glm::length(glm::vec3(plane));
-                if (length > 1e-6f) {
+                if (length > std::numeric_limits<float>::epsilon()) {
                     plane /= length;
                 }
             }
@@ -34,7 +36,7 @@ namespace luax::render3d {
             return frustum;
         }
 
-        bool intersectsSphere(glm::vec3 center, float radius) const {
+        [[nodiscard]] bool intersectsSphere(glm::vec3 center, float radius) const {
             for (glm::vec4 const& plane : planes) {
                 float const distance = glm::dot(glm::vec3(plane), center) + plane.w;
                 if (distance < -radius) {

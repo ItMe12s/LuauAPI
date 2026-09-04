@@ -15,7 +15,6 @@ namespace luax::render3d {
     void destroyRenderer3DGlResources(Renderer3DPrograms& programs, Renderer3DMeshCache& meshCache) {
         meshCache.destroyAllGpuResources();
         programs.destroyGlPrograms();
-        programs.reset();
     }
 
     void clearRenderer3DGlState() {

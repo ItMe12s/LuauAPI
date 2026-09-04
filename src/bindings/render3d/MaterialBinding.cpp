@@ -24,9 +24,11 @@ namespace {
 
     int materialHasTexture(lua_State* L) {
         auto const& material = requireMaterial(L, 1, "Material:hasTexture");
-        bool const hasStandaloneTexture = material->textureId != 0 && material->texture != nullptr;
-        bool const hasGltfTexture = material->imageIndex >= 0 && material->sourceMesh != nullptr;
-        push(L, hasStandaloneTexture || hasGltfTexture);
+        push(
+            L,
+            material->texture != nullptr ||
+                (material->imageIndex >= 0 && material->sourceMesh != nullptr)
+        );
         return 1;
     }
 
@@ -45,12 +47,7 @@ namespace {
         lua_getfield(L, 1, "texture");
         if (!lua_isnil(L, -1)) {
             auto* texHandle = checkTextureHandle(L, lua_gettop(L), "gd3d.Material.new");
-            std::uint64_t const texId = requireTextureId(L, texHandle, "gd3d.Material.new");
-            auto texAsset = render3d::TextureRegistry::instance().get(texId);
-            if (!texAsset) {
-                luaL_error(L, "gd3d.Material.new: texture handle is invalid");
-            }
-            material->textureId = texId;
+            auto texAsset = requireTexture(L, texHandle, "gd3d.Material.new");
             material->texture = texAsset;
         }
         lua_pop(L, 1);

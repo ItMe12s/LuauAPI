@@ -4,8 +4,7 @@
 #include "render3d/gpu/Renderer3DPrograms.hpp"
 #include "render3d/types/SceneTypes.hpp"
 
-#include <cstdint>
-#include <map>
+#include <unordered_map>
 #include <vector>
 
 namespace luax::render3d {
@@ -18,12 +17,13 @@ namespace luax::render3d {
 
         void renderToFramebuffer(
             unsigned int fbo, int pixelWidth, int pixelHeight, Camera3D const& camera,
-            std::map<int, ViewportInstance> const& instances, RenderSettings const& settings,
-            std::map<int, DebugLine> const& debugLines, bool debugBounds
+            std::unordered_map<int, ViewportInstance> const& instances,
+            RenderSettings const& settings, std::unordered_map<int, DebugLine> const& debugLines,
+            bool debugBounds
         );
 
-        void releaseMeshGpu(std::uint64_t meshId);
-        void releaseTextureGpu(std::uint64_t textureId);
+        void releaseMeshGpu(MeshAsset const* mesh);
+        void releaseTextureGpu(TextureAsset const* texture);
         void destroyGlResources();
 
     private:

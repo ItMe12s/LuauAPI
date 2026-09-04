@@ -25,51 +25,10 @@ namespace luax::render3d {
         );
     }
 
-    void resetInstanceAttribs() {
-#if defined(GLEW_VERSION)
-        for (unsigned int location = 3; location <= 7; ++location) {
-            glVertexAttribDivisor(location, 0);
-            glDisableVertexAttribArray(location);
-        }
-#endif
-    }
-
-    void setupInstanceAttribs(unsigned int instanceVbo) {
-#if defined(GLEW_VERSION)
-        int const stride = static_cast<int>(sizeof(GpuInstanceData));
-        glBindBuffer(GL_ARRAY_BUFFER, instanceVbo);
-        for (unsigned int column = 0; column < 4; ++column) {
-            unsigned int const location = 3 + column;
-            glEnableVertexAttribArray(location);
-            glVertexAttribPointer(
-                location,
-                4,
-                GL_FLOAT,
-                GL_FALSE,
-                stride,
-                reinterpret_cast<void*>(column * sizeof(glm::vec4))
-            );
-            glVertexAttribDivisor(location, 1);
-        }
-        glEnableVertexAttribArray(7);
-        glVertexAttribPointer(
-            7, 3, GL_FLOAT, GL_FALSE, stride, reinterpret_cast<void*>(offsetof(GpuInstanceData, tint))
-        );
-        glVertexAttribDivisor(7, 1);
-#endif
-    }
-
-    void uploadGpuPrimitiveVertexLayout(unsigned int& vao, unsigned int vbo, unsigned int ibo) {
-        vao = genVao();
-        if (vao == 0) {
-            return;
-        }
-
-        bindVao(vao);
+    void bindInterleavedBuffers(std::uint32_t vbo, std::uint32_t ibo) {
         glBindBuffer(GL_ARRAY_BUFFER, vbo);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
         setupInterleavedVertexAttribs();
-        bindVao(0);
     }
 
 } // namespace luax::render3d

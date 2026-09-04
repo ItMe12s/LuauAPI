@@ -3,10 +3,13 @@
 #include "render3d/types/SceneTypes.hpp"
 
 #include <cocos2d.h>
-#include <map>
 #include <memory>
+#include <unordered_map>
+#include <vector>
 
 namespace luax::render3d {
+
+    struct TextureAsset;
 
     void abandonLiveViewports();
 
@@ -21,7 +24,7 @@ namespace luax::render3d {
         RenderSettings const& renderSettings() const;
 
         int addInstance(
-            std::uint64_t meshId, std::shared_ptr<MeshAsset> mesh, Transform const& transform,
+            std::shared_ptr<MeshAsset> mesh, Transform const& transform,
             glm::vec3 color = glm::vec3(1.0f, 1.0f, 1.0f)
         );
         bool setInstanceTransform(int instanceId, Transform const& transform);
@@ -33,7 +36,7 @@ namespace luax::render3d {
         bool removeInstance(int instanceId);
         void clearInstances();
 
-        std::map<int, ViewportInstance> const& instances() const;
+        std::unordered_map<int, ViewportInstance> const& instances() const;
 
         unsigned int colorTexture() const;
         int framebufferPixelWidth() const;
@@ -46,7 +49,7 @@ namespace luax::render3d {
         void clearDebugLines();
         void setDebugBounds(bool enabled);
 
-        std::uint64_t ensureViewportTextureId();
+        std::shared_ptr<TextureAsset> viewportTextureAsset();
 
         void draw() override;
         void abandonGpuResources();
@@ -58,6 +61,8 @@ namespace luax::render3d {
         bool initWithSize(float width, float height);
 
     private:
+        static constexpr int kMaxFramebufferDimension = 4096;
+
         bool gpuHandlesValid() const;
 
         void ensureFramebuffer();
@@ -66,12 +71,13 @@ namespace luax::render3d {
         void destroyFramebuffer();
         void refreshSpriteTexture(cocos2d::CCSize const& points);
         void detachSpriteTexture();
-        void releaseViewportTexture();
+        void deleteColorTexture();
 
         Camera3D m_camera{};
         RenderSettings m_settings{};
-        std::map<int, ViewportInstance> m_instances{};
+        std::unordered_map<int, ViewportInstance> m_instances{};
         int m_nextInstanceId = 1;
+        std::vector<int> m_instanceFreeList{};
 
         unsigned int m_fbo = 0;
         unsigned int m_colorTexture = 0;
@@ -82,10 +88,11 @@ namespace luax::render3d {
         unsigned m_glContextGeneration = 0;
 
         bool m_compositeEnabled = true;
-        std::uint64_t m_viewportTextureId = 0;
+        std::shared_ptr<TextureAsset> m_viewportTexture{};
 
-        std::map<int, DebugLine> m_debugLines{};
+        std::unordered_map<int, DebugLine> m_debugLines{};
         int m_nextDebugLineId = 1;
+        std::vector<int> m_debugLineFreeList{};
         bool m_debugBounds = false;
     };
 

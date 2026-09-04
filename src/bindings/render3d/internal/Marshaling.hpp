@@ -4,11 +4,15 @@
 #include "framework/stack/UserdataTags.hpp"
 #include "render3d/types/Transform3D.hpp"
 
+#include <Geode/Result.hpp>
+#include <cstddef>
+#include <cstdint>
 #include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
 #include <lua.h>
 #include <lualib.h>
 #include <new>
+#include <span>
 
 namespace luax::gd3d {
     inline constexpr char const* kTransformMeta = "luax.gd3d.Transform";
@@ -65,6 +69,36 @@ namespace luax::gd3d {
             fieldNumber(L, idx, "z", method),
             1.0f
         );
+    }
+
+    inline geode::Result<std::span<std::uint8_t const>> checkBufferOrString(
+        lua_State* L, int idx, char const* method, std::size_t maxBytes, char const* emptyErr,
+        char const* sizeErr
+    ) {
+        std::span<std::uint8_t const> bytes{};
+        if (lua_isbuffer(L, idx)) {
+            size_t len = 0;
+            void* data = lua_tobuffer(L, idx, &len);
+            if (data == nullptr || len == 0) {
+                return geode::Err(emptyErr);
+            }
+            bytes = std::span<std::uint8_t const>(static_cast<std::uint8_t const*>(data), len);
+        }
+        else {
+            size_t len = 0;
+            char const* text = lua_tolstring(L, idx, &len);
+            if (text == nullptr) {
+                luaL_error(L, "%s expected buffer or string at arg %d", method, idx);
+            }
+            if (len == 0) {
+                return geode::Err(emptyErr);
+            }
+            bytes = std::span<std::uint8_t const>(reinterpret_cast<std::uint8_t const*>(text), len);
+        }
+        if (bytes.size() > maxBytes) {
+            return geode::Err(sizeErr);
+        }
+        return geode::Ok(bytes);
     }
 
     inline void pushTransform(lua_State* L, render3d::Transform const& transform) {

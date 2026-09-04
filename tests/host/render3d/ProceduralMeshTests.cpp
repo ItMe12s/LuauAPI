@@ -201,7 +201,7 @@ TEST_CASE("MeshAsset fromBuffers preserves supplied UVs") {
 }
 
 TEST_CASE("MeshAsset fromBuffers rejects vertex count above limit") {
-    std::vector<glm::vec3> positions(kMaxProceduralMeshVertices + 1, glm::vec3(0.0f));
+    std::vector<glm::vec3> positions(kMaxMeshVertices + 1, glm::vec3(0.0f));
     std::vector<std::uint32_t> indices{0, 1, 2};
 
     auto result = MeshAsset::fromBuffers(positions, {}, {}, indices);
@@ -209,43 +209,15 @@ TEST_CASE("MeshAsset fromBuffers rejects vertex count above limit") {
     REQUIRE(result.unwrapErr() == "positions exceed maximum vertex count");
 }
 
-TEST_CASE("MeshRegistry register get release round trip") {
+TEST_CASE("MeshAsset fromBuffers rejects index value above U16") {
     std::vector<glm::vec3> positions{
         glm::vec3(0.0f, 0.0f, 0.0f),
         glm::vec3(1.0f, 0.0f, 0.0f),
         glm::vec3(0.0f, 1.0f, 0.0f),
     };
-    std::vector<std::uint32_t> indices{0, 1, 2};
-    auto mesh = requireMesh(MeshAsset::fromBuffers(positions, {}, {}, indices));
+    std::vector<std::uint32_t> indices{0, 1, 70000};
 
-    auto& registry = MeshRegistry::instance();
-    auto const id = registry.registerAsset(mesh);
-    REQUIRE(registry.get(id) == mesh);
-
-    registry.release(id);
-    REQUIRE(registry.get(id) == nullptr);
-}
-
-TEST_CASE("MeshRegistry get returns null for unknown id") {
-    auto& registry = MeshRegistry::instance();
-    REQUIRE(registry.get(0xFFFF'FFFF'FFFF'FFFFULL) == nullptr);
-}
-
-TEST_CASE("MeshRegistry ids are monotonic") {
-    std::vector<glm::vec3> positions{
-        glm::vec3(0.0f, 0.0f, 0.0f),
-        glm::vec3(1.0f, 0.0f, 0.0f),
-        glm::vec3(0.0f, 1.0f, 0.0f),
-    };
-    std::vector<std::uint32_t> indices{0, 1, 2};
-    auto meshA = requireMesh(MeshAsset::fromBuffers(positions, {}, {}, indices));
-    auto meshB = requireMesh(MeshAsset::fromBuffers(positions, {}, {}, indices));
-
-    auto& registry = MeshRegistry::instance();
-    auto const idA = registry.registerAsset(meshA);
-    auto const idB = registry.registerAsset(meshB);
-    REQUIRE(idB > idA);
-
-    registry.release(idA);
-    registry.release(idB);
+    auto result = MeshAsset::fromBuffers(positions, {}, {}, indices);
+    REQUIRE(result.isErr());
+    REQUIRE(result.unwrapErr() == "index out of range");
 }

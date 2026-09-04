@@ -2,7 +2,10 @@
 
 namespace luax::render3d::shader_sources {
 
-    char const kLambertVert[] = R"(attribute vec3 aPos;
+    char const kLambertVert[] = R"(#ifdef GL_ES
+precision mediump float;
+#endif
+attribute vec3 aPos;
 attribute vec3 aNormal;
 attribute vec2 aTexCoord;
 uniform mat4 uMVP;
@@ -18,28 +21,6 @@ void main() {
     vTexCoord = aTexCoord;
     vTint = uTint;
     gl_Position = uMVP * vec4(aPos, 1.0);
-}
-)";
-
-    char const kLambertInstVert[] = R"(attribute vec3 aPos;
-attribute vec3 aNormal;
-attribute vec2 aTexCoord;
-attribute vec4 aModel0;
-attribute vec4 aModel1;
-attribute vec4 aModel2;
-attribute vec4 aModel3;
-attribute vec3 aTint;
-uniform mat4 uViewProj;
-varying vec3 vNormal;
-varying vec2 vTexCoord;
-varying vec3 vTint;
-
-void main() {
-    mat4 model = mat4(aModel0, aModel1, aModel2, aModel3);
-    vNormal = mat3(model[0].xyz, model[1].xyz, model[2].xyz) * aNormal;
-    vTexCoord = aTexCoord;
-    vTint = aTint;
-    gl_Position = uViewProj * model * vec4(aPos, 1.0);
 }
 )";
 
@@ -72,7 +53,10 @@ void main() {
 }
 )";
 
-    char const kDebugLineVert[] = R"(attribute vec3 aPos;
+    char const kDebugLineVert[] = R"(#ifdef GL_ES
+precision mediump float;
+#endif
+attribute vec3 aPos;
 uniform mat4 uMVP;
 void main() {
     gl_Position = uMVP * vec4(aPos, 1.0);

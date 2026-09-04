@@ -12,47 +12,24 @@ namespace luax {
     geode::Result<void> registerViewportFrame(lua_State* L);
 
     geode::Result<void> registerGd3d(lua_State* L) {
-        auto result = registerTransform(L);
-        if (result.isErr()) {
-            return result;
-        }
-
-#if defined(LUAUAPI_HOST_TESTS)
-        result = registerGltf(L);
-        if (result.isErr()) {
-            return result;
-        }
-
-        result = registerProceduralMesh(L);
-        if (result.isErr()) {
-            return result;
-        }
-#else
-        result = registerMaterial(L);
-        if (result.isErr()) {
-            return result;
-        }
-
-        result = registerTexture(L);
-        if (result.isErr()) {
-            return result;
-        }
-
-        result = registerGltf(L);
-        if (result.isErr()) {
-            return result;
-        }
-
-        result = registerProceduralMesh(L);
-        if (result.isErr()) {
-            return result;
-        }
-
-        result = registerViewportFrame(L);
-        if (result.isErr()) {
-            return result;
-        }
+        geode::Result<void> (*const registrars[])(lua_State*) = {
+            &registerTransform,
+#if !defined(LUAUAPI_HOST_TESTS)
+            &registerMaterial,
+            &registerTexture,
 #endif
+            &registerGltf,
+            &registerProceduralMesh,
+#if !defined(LUAUAPI_HOST_TESTS)
+            &registerViewportFrame,
+#endif
+        };
+
+        for (auto* registrar : registrars) {
+            if (auto result = registrar(L); result.isErr()) {
+                return result;
+            }
+        }
 
         return geode::Ok();
     }

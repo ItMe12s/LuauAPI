@@ -13,6 +13,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/mat4x4.hpp>
+#include <unordered_map>
 #include <vector>
 
 namespace luax::render3d {
@@ -27,7 +28,6 @@ namespace luax::render3d {
         struct DrawPassState {
             bool cullEnabled = true;
             unsigned int lastBoundTexture = ~0u;
-            unsigned int lastVao = ~0u;
             unsigned int lastVbo = ~0u;
             unsigned int lastIbo = ~0u;
             glm::vec4 lastBaseColor{-1.0f, -1.0f, -1.0f, -1.0f};
@@ -43,11 +43,39 @@ namespace luax::render3d {
                 textureUnitSet = false;
             }
         };
+
+        void bindMaterial(SceneDrawItem const& item, DrawPassState& state, LambertLocs const& locs) {
+            unsigned int const boundTexture = item.boundTexture;
+            float const useTextureUniform = boundTexture != 0 ? 1.0f : 0.0f;
+            float const shaderCutoff = shaderAlphaCutoff(item.alphaMode, item.alphaCutoff);
+
+            if (item.baseColor != state.lastBaseColor) {
+                glUniform4fv(locs.baseColor, 1, glm::value_ptr(item.baseColor));
+                state.lastBaseColor = item.baseColor;
+            }
+            if (useTextureUniform != state.lastUseTexture) {
+                glUniform1f(locs.useTexture, useTextureUniform);
+                state.lastUseTexture = useTextureUniform;
+            }
+            if (shaderCutoff != state.lastAlphaCutoff) {
+                glUniform1f(locs.alphaCutoff, shaderCutoff);
+                state.lastAlphaCutoff = shaderCutoff;
+            }
+            if (boundTexture != 0 && boundTexture != state.lastBoundTexture) {
+                glActiveTexture(GL_TEXTURE0);
+                glBindTexture(GL_TEXTURE_2D, boundTexture);
+                if (!state.textureUnitSet) {
+                    glUniform1i(locs.texture, 0);
+                    state.textureUnitSet = true;
+                }
+                state.lastBoundTexture = boundTexture;
+            }
+        }
     } // namespace
 
     void runRenderer3DScenePass(
-        Renderer3DPrograms& programs, Renderer3DMeshCache& meshCache, int pixelWidth,
-        int pixelHeight, Camera3D const& camera, std::map<int, ViewportInstance> const& instances,
+        Renderer3DPrograms& programs, Renderer3DMeshCache& meshCache, int pixelWidth, int pixelHeight,
+        Camera3D const& camera, std::unordered_map<int, ViewportInstance> const& instances,
         RenderSettings const& settings, int selfColorTexture
     ) {
         float const aspect = static_cast<float>(pixelWidth) / static_cast<float>(pixelHeight);
@@ -59,25 +87,22 @@ namespace luax::render3d {
         glm::vec3 const lightDir = normalizedLightDirection(settings.lightDirection);
         glm::vec3 const lightColor = settings.lightColor * settings.lightIntensity;
 
-        GpuMeshResolver resolveGpuMesh = [&](std::uint64_t meshId, MeshAsset const& mesh) -> GpuMesh* {
-            return meshCache.ensureGpuMesh(meshId, mesh);
+        GpuMeshResolver resolveGpuMesh = [&](MeshAsset const& mesh) -> GpuMesh* {
+            return meshCache.ensureGpuMesh(mesh);
         };
-        TextureResolver resolveTexture = [&](std::uint64_t textureId,
-                                             TextureAsset const& texture) -> unsigned int {
-            return meshCache.ensureGpuTexture(textureId, texture);
+        TextureResolver resolveTexture = [&](TextureAsset const& texture) -> unsigned int {
+            return meshCache.ensureGpuTexture(texture);
         };
 
         SceneDrawLists lists = buildSceneDrawLists(instances, view, frustum, resolveGpuMesh);
 
-        bool const useVao = vaoSupported();
-
         auto drawSingleItem = [&](SceneDrawItem const& item, DrawPassState& state) {
-            if (state.activeProgram != programs.lambertProgram) {
-                glUseProgram(programs.lambertProgram);
-                state.activeProgram = programs.lambertProgram;
-                glUniform3fv(programs.lambertLocLightDir, 1, glm::value_ptr(lightDir));
-                glUniform3fv(programs.lambertLocLightColor, 1, glm::value_ptr(lightColor));
-                glUniform1f(programs.lambertLocAmbient, settings.ambient);
+            if (state.activeProgram != programs.lambert.id) {
+                glUseProgram(programs.lambert.id);
+                state.activeProgram = programs.lambert.id;
+                glUniform3fv(programs.lambertLocs.lightDir, 1, glm::value_ptr(lightDir));
+                glUniform3fv(programs.lambertLocs.lightColor, 1, glm::value_ptr(lightColor));
+                glUniform1f(programs.lambertLocs.ambient, settings.ambient);
                 state.invalidateUniformCache();
             }
 
@@ -93,191 +118,27 @@ namespace luax::render3d {
             }
 
             glm::mat4 const mvp = viewProj * item.model;
-            glUniformMatrix4fv(programs.lambertLocMvp, 1, GL_FALSE, glm::value_ptr(mvp));
-            glUniformMatrix4fv(programs.lambertLocNormalMat, 1, GL_FALSE, glm::value_ptr(item.model));
-            glUniform3fv(programs.lambertLocTint, 1, glm::value_ptr(item.tint));
+            glUniformMatrix4fv(programs.lambertLocs.mvp, 1, GL_FALSE, glm::value_ptr(mvp));
+            glUniformMatrix4fv(programs.lambertLocs.normalMat, 1, GL_FALSE, glm::value_ptr(item.model));
+            glUniform3fv(programs.lambertLocs.tint, 1, glm::value_ptr(item.tint));
 
-            unsigned int const boundTexture = item.boundTexture;
-            bool const useTexture = boundTexture != 0;
-            float const useTextureUniform = useTexture ? 1.0f : 0.0f;
-            float const shaderCutoff = shaderAlphaCutoff(item.alphaMode, item.alphaCutoff);
+            bindMaterial(item, state, programs.lambertLocs);
 
-            if (item.baseColor != state.lastBaseColor) {
-                glUniform4fv(programs.lambertLocBaseColor, 1, glm::value_ptr(item.baseColor));
-                state.lastBaseColor = item.baseColor;
+            bool const vboChanged = item.prim->vbo != state.lastVbo;
+            if (vboChanged) {
+                glBindBuffer(GL_ARRAY_BUFFER, item.prim->vbo);
+                state.lastVbo = item.prim->vbo;
             }
-            if (useTextureUniform != state.lastUseTexture) {
-                glUniform1f(programs.lambertLocUseTexture, useTextureUniform);
-                state.lastUseTexture = useTextureUniform;
+            if (item.prim->ibo != state.lastIbo) {
+                glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, item.prim->ibo);
+                state.lastIbo = item.prim->ibo;
             }
-            if (shaderCutoff != state.lastAlphaCutoff) {
-                glUniform1f(programs.lambertLocAlphaCutoff, shaderCutoff);
-                state.lastAlphaCutoff = shaderCutoff;
-            }
-            if (useTexture && boundTexture != state.lastBoundTexture) {
-                glActiveTexture(GL_TEXTURE0);
-                glBindTexture(GL_TEXTURE_2D, boundTexture);
-                if (!state.textureUnitSet) {
-                    glUniform1i(programs.lambertLocTexture, 0);
-                    state.textureUnitSet = true;
-                }
-                state.lastBoundTexture = boundTexture;
-            }
-
-            if (useVao && item.prim->vao != 0) {
-                if (item.prim->vao != state.lastVao) {
-                    bindVao(item.prim->vao);
-                    state.lastVao = item.prim->vao;
-                    state.lastVbo = ~0u;
-                    state.lastIbo = ~0u;
-                }
-            }
-            else {
-                if (useVao && state.lastVao != 0) {
-                    bindVao(0);
-                    state.lastVao = 0;
-                    state.lastVbo = ~0u;
-                    state.lastIbo = ~0u;
-                }
-                bool const vboChanged = item.prim->vbo != state.lastVbo;
-                if (vboChanged) {
-                    glBindBuffer(GL_ARRAY_BUFFER, item.prim->vbo);
-                    state.lastVbo = item.prim->vbo;
-                }
-                if (item.prim->ibo != state.lastIbo) {
-                    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, item.prim->ibo);
-                    state.lastIbo = item.prim->ibo;
-                }
-                if (vboChanged) {
-                    setupInterleavedVertexAttribs();
-                }
+            if (vboChanged) {
+                setupInterleavedVertexAttribs();
             }
             glDrawElements(
-                GL_TRIANGLES, static_cast<GLsizei>(item.prim->indexCount), GL_UNSIGNED_INT, nullptr
+                GL_TRIANGLES, static_cast<GLsizei>(item.prim->indexCount), GL_UNSIGNED_SHORT, nullptr
             );
-        };
-
-        std::vector<GpuInstanceData> instanceData;
-        auto drawInstancedRun = [&](SceneDrawItem const* begin,
-                                    SceneDrawItem const* end,
-                                    DrawPassState& state) {
-            SceneDrawItem const& first = *begin;
-            std::size_t const count = static_cast<std::size_t>(end - begin);
-
-            if (state.activeProgram != programs.lambertInstProgram) {
-                glUseProgram(programs.lambertInstProgram);
-                state.activeProgram = programs.lambertInstProgram;
-                glUniform3fv(programs.lambertInstLocLightDir, 1, glm::value_ptr(lightDir));
-                glUniform3fv(programs.lambertInstLocLightColor, 1, glm::value_ptr(lightColor));
-                glUniform1f(programs.lambertInstLocAmbient, settings.ambient);
-                state.invalidateUniformCache();
-            }
-
-            bool const wantCull = !first.doubleSided;
-            if (wantCull != state.cullEnabled) {
-                if (wantCull) {
-                    glEnable(GL_CULL_FACE);
-                }
-                else {
-                    glDisable(GL_CULL_FACE);
-                }
-                state.cullEnabled = wantCull;
-            }
-
-            glUniformMatrix4fv(programs.lambertInstLocViewProj, 1, GL_FALSE, glm::value_ptr(viewProj));
-
-            unsigned int const boundTexture = first.boundTexture;
-            bool const useTexture = boundTexture != 0;
-            float const useTextureUniform = useTexture ? 1.0f : 0.0f;
-            float const shaderCutoff = shaderAlphaCutoff(first.alphaMode, first.alphaCutoff);
-
-            if (first.baseColor != state.lastBaseColor) {
-                glUniform4fv(programs.lambertInstLocBaseColor, 1, glm::value_ptr(first.baseColor));
-                state.lastBaseColor = first.baseColor;
-            }
-            if (useTextureUniform != state.lastUseTexture) {
-                glUniform1f(programs.lambertInstLocUseTexture, useTextureUniform);
-                state.lastUseTexture = useTextureUniform;
-            }
-            if (shaderCutoff != state.lastAlphaCutoff) {
-                glUniform1f(programs.lambertInstLocAlphaCutoff, shaderCutoff);
-                state.lastAlphaCutoff = shaderCutoff;
-            }
-            if (useTexture && boundTexture != state.lastBoundTexture) {
-                glActiveTexture(GL_TEXTURE0);
-                glBindTexture(GL_TEXTURE_2D, boundTexture);
-                if (!state.textureUnitSet) {
-                    glUniform1i(programs.lambertInstLocTexture, 0);
-                    state.textureUnitSet = true;
-                }
-                state.lastBoundTexture = boundTexture;
-            }
-
-            instanceData.clear();
-            instanceData.reserve(count);
-            for (SceneDrawItem const* it = begin; it != end; ++it) {
-                instanceData.push_back(GpuInstanceData{it->model, glm::vec4(it->tint, 0.0f)});
-            }
-
-            glBindBuffer(GL_ARRAY_BUFFER, programs.instanceVbo);
-            glBufferData(
-                GL_ARRAY_BUFFER,
-                static_cast<GLsizeiptr>(instanceData.size() * sizeof(GpuInstanceData)),
-                instanceData.data(),
-                GL_DYNAMIC_DRAW
-            );
-
-            if (first.prim->vao != state.lastVao) {
-                bindVao(first.prim->vao);
-                state.lastVao = first.prim->vao;
-                state.lastVbo = ~0u;
-                state.lastIbo = ~0u;
-            }
-            setupInstanceAttribs(programs.instanceVbo);
-#if defined(GLEW_VERSION)
-            glDrawElementsInstanced(
-                GL_TRIANGLES,
-                static_cast<GLsizei>(first.prim->indexCount),
-                GL_UNSIGNED_INT,
-                nullptr,
-                static_cast<GLsizei>(count)
-            );
-#endif
-            resetInstanceAttribs();
-        };
-
-        auto drawOpaqueItems = [&](std::vector<SceneDrawItem> const& items, DrawPassState& state) {
-            bool const canInstance = useVao && instancingSupported() &&
-                programs.ensureLambertInstProgram() && programs.ensureInstanceVbo();
-
-            if (!canInstance) {
-                for (auto const& item : items) {
-                    drawSingleItem(item, state);
-                }
-                return;
-            }
-
-            for (std::size_t i = 0; i < items.size();) {
-                std::size_t j = i + 1;
-                while (j < items.size() && sameInstancedBatch(items[i], items[j])) {
-                    ++j;
-                }
-                if (j - i >= 2 && items[i].prim->vao != 0) {
-                    drawInstancedRun(&items[i], &items[j], state);
-                }
-                else {
-                    for (std::size_t k = i; k < j; ++k) {
-                        drawSingleItem(items[k], state);
-                    }
-                }
-                i = j;
-            }
-        };
-
-        auto drawBlendItems = [&](std::vector<SceneDrawItem> const& items, DrawPassState& state) {
-            for (auto const& item : items) {
-                drawSingleItem(item, state);
-            }
         };
 
         for (auto& item : lists.opaque) {
@@ -286,7 +147,9 @@ namespace luax::render3d {
         sortOpaqueDrawItems(lists.opaque);
 
         DrawPassState passState{};
-        drawOpaqueItems(lists.opaque, passState);
+        for (auto const& item : lists.opaque) {
+            drawSingleItem(item, passState);
+        }
 
         if (!lists.blend.empty()) {
             sortBlendDrawItems(lists.blend);
@@ -297,7 +160,9 @@ namespace luax::render3d {
             glEnable(GL_BLEND);
             glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
             glDepthMask(GL_FALSE);
-            drawBlendItems(lists.blend, passState);
+            for (auto const& item : lists.blend) {
+                drawSingleItem(item, passState);
+            }
             glDepthMask(GL_TRUE);
         }
     }

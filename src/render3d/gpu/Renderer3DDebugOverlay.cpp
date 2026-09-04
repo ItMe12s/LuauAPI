@@ -6,14 +6,14 @@
 #include <algorithm>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/mat4x4.hpp>
-#include <map>
+#include <unordered_map>
 #include <vector>
 
 namespace luax::render3d {
     void drawDebugOverlay(
         Renderer3DPrograms& programs, glm::mat4 const& projection, glm::mat4 const& view,
-        std::map<int, DebugLine> const& debugLines, bool debugBounds,
-        std::map<int, ViewportInstance> const& instances
+        std::unordered_map<int, DebugLine> const& debugLines, bool debugBounds,
+        std::unordered_map<int, ViewportInstance> const& instances
     ) {
         if (!programs.ensureDebugLineProgram() || !programs.ensureDebugLineVbo()) {
             return;
@@ -90,15 +90,13 @@ namespace luax::render3d {
             return a.color.z < b.color.z;
         });
 
-        bindVao(0);
-
         glm::mat4 const viewProj = projection * view;
-        glUseProgram(programs.debugLineProgram);
-        glUniformMatrix4fv(programs.debugLineLocMvp, 1, GL_FALSE, glm::value_ptr(viewProj));
+        glUseProgram(programs.debugLine.id);
+        glUniformMatrix4fv(programs.debugLineLocs.mvp, 1, GL_FALSE, glm::value_ptr(viewProj));
         glDisable(GL_CULL_FACE);
         glDepthMask(GL_FALSE);
 
-        glBindBuffer(GL_ARRAY_BUFFER, programs.debugLineVbo);
+        glBindBuffer(GL_ARRAY_BUFFER, programs.debugLineVbo.id);
         glEnableVertexAttribArray(0);
         glVertexAttribPointer(
             0, 3, GL_FLOAT, GL_FALSE, static_cast<GLsizei>(sizeof(glm::vec3)), nullptr
@@ -125,7 +123,7 @@ namespace luax::render3d {
                 vertices.data(),
                 GL_DYNAMIC_DRAW
             );
-            glUniform3fv(programs.debugLineLocColor, 1, glm::value_ptr(runColor));
+            glUniform3fv(programs.debugLineLocs.color, 1, glm::value_ptr(runColor));
             glDrawArrays(GL_LINES, 0, static_cast<GLsizei>(vertices.size()));
 
             runStart = runEnd;

@@ -20,35 +20,33 @@ namespace {
     using namespace luax::gd3d;
     using namespace luax::render3d;
 
-    void releaseMeshHandle(MeshHandle* handle) {
-        if (handle == nullptr || handle->id == 0) {
-            return;
-        }
-        std::uint64_t const id = handle->id;
-        MeshRegistry::instance().release(id);
+    void releaseMeshBox(MeshBox* box) {
 #if !defined(LUAUAPI_HOST_TESTS)
-        Renderer3D::instance().releaseMeshGpu(id);
+        if (box != nullptr && box->mesh) {
+            Renderer3D::instance().releaseMeshGpu(box->mesh.get());
+        }
 #endif
-        handle->id = 0;
+        if (box != nullptr) {
+            box->mesh.reset();
+        }
+    }
+
+    int meshCountAxis(lua_State* L, char const* method, bool wantVertices) {
+        auto& mesh = requireMesh(L, checkMeshHandle(L, 1, method), method);
+        push(L, static_cast<long long>(wantVertices ? mesh->vertexCount() : mesh->primitiveCount()));
+        return 1;
     }
 
     int meshVertexCount(lua_State* L) {
-        auto* handle = checkMeshHandle(L, 1, "Mesh:vertexCount");
-        auto mesh = requireMesh(L, handle, "Mesh:vertexCount");
-        push(L, static_cast<long long>(mesh->vertexCount()));
-        return 1;
+        return meshCountAxis(L, "Mesh:vertexCount", true);
     }
 
     int meshPrimitiveCount(lua_State* L) {
-        auto* handle = checkMeshHandle(L, 1, "Mesh:primitiveCount");
-        auto mesh = requireMesh(L, handle, "Mesh:primitiveCount");
-        push(L, static_cast<long long>(mesh->primitiveCount()));
-        return 1;
+        return meshCountAxis(L, "Mesh:primitiveCount", false);
     }
 
     int meshBoundingBox(lua_State* L) {
-        auto* handle = checkMeshHandle(L, 1, "Mesh:boundingBox");
-        auto mesh = requireMesh(L, handle, "Mesh:boundingBox");
+        auto& mesh = requireMesh(L, checkMeshHandle(L, 1, "Mesh:boundingBox"), "Mesh:boundingBox");
         auto const& bounds = mesh->boundingBox();
 
         lua_createtable(L, 0, 3);
@@ -62,15 +60,14 @@ namespace {
     }
 
     int meshMaterialCount(lua_State* L) {
-        auto* handle = checkMeshHandle(L, 1, "Mesh:materialCount");
-        auto mesh = requireMesh(L, handle, "Mesh:materialCount");
+        auto& mesh =
+            requireMesh(L, checkMeshHandle(L, 1, "Mesh:materialCount"), "Mesh:materialCount");
         push(L, static_cast<long long>(mesh->materialCount()));
         return 1;
     }
 
     int meshGetMaterial(lua_State* L) {
-        auto* handle = checkMeshHandle(L, 1, "Mesh:getMaterial");
-        auto mesh = requireMesh(L, handle, "Mesh:getMaterial");
+        auto& mesh = requireMesh(L, checkMeshHandle(L, 1, "Mesh:getMaterial"), "Mesh:getMaterial");
         int const index = check<int>(L, 2, "Mesh:getMaterial");
         if (index < 0 || static_cast<std::size_t>(index) >= mesh->materialCount()) {
             lua_pushnil(L);
@@ -85,38 +82,23 @@ namespace {
         material->alphaCutoff = data.alphaCutoff;
         material->doubleSided = data.doubleSided;
         material->sourceMesh = mesh;
-        material->sourceMeshId = requireMeshId(L, handle, "Mesh:getMaterial");
         pushMaterial(L, std::move(material));
         return 1;
     }
 
     int meshGc(lua_State* L) {
-        releaseMeshHandle(checkMeshHandle(L, 1, "Mesh.__gc"));
+        releaseMeshBox(checkMeshHandle(L, 1, "Mesh.__gc"));
         return 0;
     }
 
-    void meshHandleDtor(lua_State* L, void* ud) {
+    void meshBoxDtor(lua_State* L, void* ud) {
         (void)L;
-        releaseMeshHandle(static_cast<MeshHandle*>(ud));
+        releaseMeshBox(static_cast<MeshBox*>(ud));
+        static_cast<MeshBox*>(ud)->~MeshBox();
     }
 } // namespace
 
 namespace luax::gd3d {
-    void pushMeshHandle(lua_State* L, std::uint64_t id) {
-        auto* handle = static_cast<MeshHandle*>(
-            lua_newuserdatataggedwithmetatable(L, sizeof(MeshHandle), luax::detail::meshAssetTag())
-        );
-        handle->id = id;
-    }
-
-    std::shared_ptr<render3d::MeshAsset> requireMesh(lua_State* L, MeshHandle* handle, char const* method) {
-        auto mesh = render3d::MeshRegistry::instance().get(requireMeshId(L, handle, method));
-        if (!mesh) {
-            luaL_error(L, "%s: mesh handle is invalid", method);
-        }
-        return mesh;
-    }
-
     void registerMeshHandleMetatable(lua_State* L) {
         luaL_Reg const methods[] = {
             {"vertexCount", meshVertexCount},
@@ -129,7 +111,7 @@ namespace luax::gd3d {
         };
 
         registerTaggedMetatable(
-            L, kMeshMeta, luax::detail::meshAssetTag(), methods, std::nullopt, &meshHandleDtor, kMeshTypeName
+            L, kMeshMeta, luax::detail::meshAssetTag(), methods, std::nullopt, &meshBoxDtor, kMeshTypeName
         );
     }
 } // namespace luax::gd3d

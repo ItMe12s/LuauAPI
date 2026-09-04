@@ -7,6 +7,7 @@
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <unordered_map>
 
 namespace {
     using namespace luax::render3d;
@@ -28,7 +29,7 @@ namespace {
     }
 
     GpuMeshResolver fixedGpuMesh(GpuMesh* mesh) {
-        return [mesh](std::uint64_t, MeshAsset const&) -> GpuMesh* {
+        return [mesh](MeshAsset const&) -> GpuMesh* {
             return mesh;
         };
     }
@@ -47,41 +48,9 @@ TEST_CASE("hasDrawableGpuPrimitive distinguishes failed and partial mesh uploads
 }
 
 TEST_CASE("shaderAlphaCutoff returns cutoff only for mask mode") {
-    REQUIRE(shaderAlphaCutoff(0, 0.5f) == Approx(0.0f));
-    REQUIRE(shaderAlphaCutoff(1, 0.35f) == Approx(0.35f));
-    REQUIRE(shaderAlphaCutoff(2, 0.35f) == Approx(0.0f));
-}
-
-TEST_CASE("sameInstancedBatch matches primitive texture material and sidedness") {
-    GpuPrimitive primA{.vbo = 1, .ibo = 2, .indexCount = 3};
-    GpuPrimitive primB{.vbo = 9, .ibo = 2, .indexCount = 3};
-
-    SceneDrawItem base{};
-    base.prim = &primA;
-    base.boundTexture = 10;
-    base.baseColor = glm::vec4(1.0f, 0.5f, 0.25f, 1.0f);
-    base.alphaMode = 1;
-    base.alphaCutoff = 0.4f;
-    base.doubleSided = false;
-
-    SceneDrawItem match = base;
-    REQUIRE(sameInstancedBatch(base, match));
-
-    SceneDrawItem differentPrim = base;
-    differentPrim.prim = &primB;
-    REQUIRE_FALSE(sameInstancedBatch(base, differentPrim));
-
-    SceneDrawItem differentTexture = base;
-    differentTexture.boundTexture = 11;
-    REQUIRE_FALSE(sameInstancedBatch(base, differentTexture));
-
-    SceneDrawItem differentCutoff = base;
-    differentCutoff.alphaCutoff = 0.2f;
-    REQUIRE_FALSE(sameInstancedBatch(base, differentCutoff));
-
-    SceneDrawItem differentSided = base;
-    differentSided.doubleSided = true;
-    REQUIRE_FALSE(sameInstancedBatch(base, differentSided));
+    REQUIRE(shaderAlphaCutoff(AlphaMode::Opaque, 0.5f) == Approx(0.0f));
+    REQUIRE(shaderAlphaCutoff(AlphaMode::Mask, 0.35f) == Approx(0.35f));
+    REQUIRE(shaderAlphaCutoff(AlphaMode::Blend, 0.35f) == Approx(0.0f));
 }
 
 TEST_CASE("sortOpaqueDrawItems orders by bound texture then vbo") {
@@ -127,7 +96,7 @@ TEST_CASE("resolveSceneDrawTexture returns mesh image texture when not self atta
     item.texSource = &mesh;
     item.imageIndex = 0;
 
-    TextureResolver resolveTexture = [](std::uint64_t, TextureAsset const&) -> unsigned int {
+    TextureResolver resolveTexture = [](TextureAsset const&) -> unsigned int {
         return 0u;
     };
     REQUIRE(resolveSceneDrawTexture(item, resolveTexture, 42) == 77u);
@@ -141,7 +110,7 @@ TEST_CASE("resolveSceneDrawTexture suppresses self FBO feedback texture") {
     item.texSource = &mesh;
     item.imageIndex = 0;
 
-    TextureResolver resolveTexture = [](std::uint64_t, TextureAsset const&) -> unsigned int {
+    TextureResolver resolveTexture = [](TextureAsset const&) -> unsigned int {
         return 0u;
     };
     REQUIRE(resolveSceneDrawTexture(item, resolveTexture, 42) == 0u);
@@ -166,16 +135,14 @@ TEST_CASE("buildSceneDrawLists skips instances outside frustum") {
     Frustum const frustum = Frustum::fromViewProj(glm::ortho(-1.0f, 1.0f, -1.0f, 1.0f, 1.0f, 10.0f));
 
     ViewportInstance inside{};
-    inside.meshId = 1;
     inside.mesh = mesh;
     inside.transform.position = glm::vec3(0.0f, 0.0f, -5.0f);
 
     ViewportInstance outside{};
-    outside.meshId = 2;
     outside.mesh = mesh;
     outside.transform.position = glm::vec3(50.0f, 0.0f, -5.0f);
 
-    std::map<int, ViewportInstance> instances{
+    std::unordered_map<int, ViewportInstance> instances{
         {1, inside},
         {2, outside},
     };
@@ -207,22 +174,21 @@ TEST_CASE("buildSceneDrawLists routes alpha blend materials to blend list") {
     Frustum const frustum = Frustum::fromViewProj(glm::mat4(1.0f));
 
     auto blendMaterial = std::make_shared<Material>();
-    blendMaterial->alphaMode = 2;
+    blendMaterial->alphaMode = AlphaMode::Blend;
     blendMaterial->baseColorFactor = glm::vec4(1.0f, 0.0f, 0.0f, 0.5f);
 
     ViewportInstance instance{};
-    instance.meshId = 1;
     instance.mesh = mesh;
     instance.materialOverride = blendMaterial;
 
-    std::map<int, ViewportInstance> instances{{1, instance}};
+    std::unordered_map<int, ViewportInstance> instances{{1, instance}};
 
     auto resolveGpuMesh = fixedGpuMesh(&gpuMesh);
     SceneDrawLists const lists = buildSceneDrawLists(instances, view, frustum, resolveGpuMesh);
 
     REQUIRE(lists.opaque.empty());
     REQUIRE(lists.blend.size() == 1);
-    REQUIRE(lists.blend.front().alphaMode == 2);
+    REQUIRE(lists.blend.front().alphaMode == AlphaMode::Blend);
     REQUIRE(lists.blend.front().baseColor.a == Approx(0.5f));
 }
 
@@ -252,12 +218,11 @@ TEST_CASE("buildSceneDrawLists applies primitive override over material override
     primitiveMaterial->doubleSided = true;
 
     ViewportInstance instance{};
-    instance.meshId = 1;
     instance.mesh = mesh;
     instance.materialOverride = instanceMaterial;
     instance.primitiveOverrides[0] = primitiveMaterial;
 
-    std::map<int, ViewportInstance> instances{{1, instance}};
+    std::unordered_map<int, ViewportInstance> instances{{1, instance}};
 
     auto resolveGpuMesh = fixedGpuMesh(&gpuMesh);
     SceneDrawLists const lists = buildSceneDrawLists(instances, view, frustum, resolveGpuMesh);
@@ -286,10 +251,9 @@ TEST_CASE("buildSceneDrawLists skips invalid gpu primitives") {
     Frustum const frustum = Frustum::fromViewProj(glm::mat4(1.0f));
 
     ViewportInstance instance{};
-    instance.meshId = 1;
     instance.mesh = mesh;
 
-    std::map<int, ViewportInstance> instances{{1, instance}};
+    std::unordered_map<int, ViewportInstance> instances{{1, instance}};
 
     auto resolveGpuMesh = fixedGpuMesh(&gpuMesh);
     SceneDrawLists const lists = buildSceneDrawLists(instances, view, frustum, resolveGpuMesh);
