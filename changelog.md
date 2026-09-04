@@ -17,10 +17,8 @@
 - Added built-in sprite rig and animation editor `Lunar Animator` (developer mode only).
 - Added Node IDs to dependencies.
 - Fixed `geode.Mod.getSettingValue` returning nil for untouched settings (now returns the default value).
-- Fixed ImGui content getting blurry towards one side of the screen (now snapped to exact device pixels).
 - Updated Lunar `*_out`/`*_in_out` pow easing to the standard `1 - (1-p)^rate` curve.
 - Updated Luau VM and codegen to compile without exceptions.
-- Updated ImGui fonts to bake at native device resolution.
 
 ## v0.1.0-beta.25
 

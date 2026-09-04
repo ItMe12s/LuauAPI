@@ -5,7 +5,6 @@
 #include <Geode/utils/string.hpp>
 #include <cctype>
 #include <charconv>
-#include <cmath>
 #include <imgui-cocos.hpp>
 #include <imgui.h>
 #include <imgui_internal.h>
@@ -347,14 +346,6 @@ void ImGuiCocos::newFrame() {
     // opengl2 new frame
     auto* director = CCDirector::sharedDirector();
     io.DisplaySize = displaySize();
-
-    // device px per display unit, so fonts bake at native device resolution
-    GLint vp[4];
-    glGetIntegerv(GL_VIEWPORT, vp);
-    if (vp[2] > 0 && vp[3] > 0 && io.DisplaySize.x > 0.f && io.DisplaySize.y > 0.f) {
-        io.DisplayFramebufferScale = {vp[2] / io.DisplaySize.x, vp[3] / io.DisplaySize.y};
-    }
-
     if (director->getDeltaTime() > 0.f) {
         io.DeltaTime = director->getDeltaTime();
     }
@@ -399,45 +390,6 @@ static bool hasExtension(std::string_view const ext) {
     return geode::utils::string::contains(std::string_view(exts), ext);
 }
 
-// Snaps imgui display-space coords to the device pixel grid of the live GL viewport.
-// Without it, GL_LINEAR smears quad edges that land on fractional pixels (positional blur).
-struct PixelSnap {
-    float dispToDevX = 1.f;
-    float dispToDevY = 1.f;
-    float devOffX = 0.f;
-    float devOffY = 0.f;
-    float devBaseY = 0.f;
-    float devToPtX = 1.f;
-    float devToPtY = 1.f;
-
-    static PixelSnap make(GLint const* vp, CCSize const& winSize, ImVec2 const& frameSize) {
-        return {
-            .dispToDevX = vp[2] / frameSize.x,
-            .dispToDevY = vp[3] / frameSize.y,
-            .devOffX = static_cast<float>(vp[0]),
-            .devOffY = static_cast<float>(vp[1]),
-            .devBaseY = static_cast<float>(vp[3] + vp[1]),
-            .devToPtX = winSize.width / vp[2],
-            .devToPtY = winSize.height / vp[3],
-        };
-    }
-
-    ImVec2 point(ImVec2 const& pos) const {
-        return {
-            (std::round(pos.x * dispToDevX + devOffX) - devOffX) * devToPtX,
-            (std::round(devBaseY - pos.y * dispToDevY) - devOffY) * devToPtY,
-        };
-    }
-
-    void scissor(ImVec2 const& low, ImVec2 const& high) const {
-        GLint const x0 = static_cast<GLint>(std::lround(low.x / devToPtX + devOffX));
-        GLint const y0 = static_cast<GLint>(std::lround(low.y / devToPtY + devOffY));
-        GLint const x1 = static_cast<GLint>(std::lround(high.x / devToPtX + devOffX));
-        GLint const y1 = static_cast<GLint>(std::lround(high.y / devToPtY + devOffY));
-        glScissor(x0, y0, x1 - x0, y1 - y0);
-    }
-};
-
 static void drawTriangle(
     std::array<CCPoint, 3> const& poly, std::array<ccColor4F, 3> const& colors,
     std::array<CCPoint, 3> const& uvs
@@ -460,11 +412,6 @@ static void drawTriangle(
 void ImGuiCocos::legacyRenderFrame() const {
     glEnable(GL_SCISSOR_TEST);
 
-    GLint vp[4];
-    glGetIntegerv(GL_VIEWPORT, vp);
-    if (vp[2] <= 0 || vp[3] <= 0) return;
-    auto const snap = PixelSnap::make(vp, CCDirector::sharedDirector()->getWinSize(), displaySize());
-
     auto* drawData = ImGui::GetDrawData();
 
     if (drawData->Textures != nullptr) {
@@ -484,22 +431,21 @@ void ImGuiCocos::legacyRenderFrame() const {
             ccGLBindTexture2D(cmdTexture);
 
             auto const rect = cmd.ClipRect;
-            auto const orig = snap.point({rect.x, rect.y});
-            auto const end = snap.point({rect.z, rect.w});
+            auto const orig = frameToCocos(ImVec2(rect.x, rect.y));
+            auto const end = frameToCocos(ImVec2(rect.z, rect.w));
             if (end.x <= orig.x || end.y >= orig.y) continue;
-            snap.scissor({orig.x, end.y}, {end.x, orig.y});
+            CCDirector::sharedDirector()->getOpenGLView()->setScissorInPoints(
+                orig.x, end.y, end.x - orig.x, orig.y - end.y
+            );
 
             for (unsigned int j = 0; j < cmd.ElemCount; j += 3) {
                 auto const a = vtxBuffer[idxBuffer[cmd.IdxOffset + j + 0]];
                 auto const b = vtxBuffer[idxBuffer[cmd.IdxOffset + j + 1]];
                 auto const c = vtxBuffer[idxBuffer[cmd.IdxOffset + j + 2]];
-                auto const pa = snap.point(a.pos);
-                auto const pb = snap.point(b.pos);
-                auto const pc = snap.point(c.pos);
                 std::array<CCPoint, 3> points = {
-                    CCPoint{pa.x, pa.y},
-                    CCPoint{pb.x, pb.y},
-                    CCPoint{pc.x, pc.y},
+                    frameToCocos(a.pos),
+                    frameToCocos(b.pos),
+                    frameToCocos(c.pos),
                 };
                 static constexpr auto ccc4FromImColor = [](ImColor const color) {
                     // beautiful
@@ -547,11 +493,6 @@ void ImGuiCocos::renderFrame() const {
     }
 
     glEnable(GL_SCISSOR_TEST);
-
-    GLint vp[4];
-    glGetIntegerv(GL_VIEWPORT, vp);
-    if (vp[2] <= 0 || vp[3] <= 0) return;
-    auto const snap = PixelSnap::make(vp, CCDirector::sharedDirector()->getWinSize(), displaySize());
 
     unsigned int const vao = luax::render3d::genVao();
     if (vao == 0) return legacyRenderFrame();
@@ -602,9 +543,10 @@ void ImGuiCocos::renderFrame() const {
     for (int i = 0; i < drawData->CmdLists.Size; ++i) {
         auto* list = drawData->CmdLists[i];
 
-        // convert to design points snapped to the device pixel grid
+        // convert vertex coords to cocos space
         for (auto& j : list->VtxBuffer) {
-            j.pos = snap.point(j.pos);
+            auto const point = frameToCocos(j.pos);
+            j.pos = ImVec2(point.x, point.y);
         }
 
         glBufferData(
@@ -627,12 +569,14 @@ void ImGuiCocos::renderFrame() const {
             ccGLBindTexture2D(cmdTexture);
 
             auto const rect = cmd.ClipRect;
-            auto const orig = snap.point({rect.x, rect.y});
-            auto const end = snap.point({rect.z, rect.w});
+            auto const orig = frameToCocos(ImVec2(rect.x, rect.y));
+            auto const end = frameToCocos(ImVec2(rect.z, rect.w));
 
             if (end.x <= orig.x || end.y >= orig.y) continue;
 
-            snap.scissor({orig.x, end.y}, {end.x, orig.y});
+            CCDirector::sharedDirector()->getOpenGLView()->setScissorInPoints(
+                orig.x, end.y, end.x - orig.x, orig.y - end.y
+            );
 
             if (hasVtxOffset) {
 #if !defined(GEODE_IS_MOBILE)
