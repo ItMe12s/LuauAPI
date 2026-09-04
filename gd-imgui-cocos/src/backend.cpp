@@ -348,6 +348,13 @@ void ImGuiCocos::newFrame() {
     auto* director = CCDirector::sharedDirector();
     io.DisplaySize = displaySize();
 
+    // device px per display unit, so fonts bake at native device resolution
+    GLint vp[4];
+    glGetIntegerv(GL_VIEWPORT, vp);
+    if (vp[2] > 0 && vp[3] > 0 && io.DisplaySize.x > 0.f && io.DisplaySize.y > 0.f) {
+        io.DisplayFramebufferScale = {vp[2] / io.DisplaySize.x, vp[3] / io.DisplaySize.y};
+    }
+
     if (director->getDeltaTime() > 0.f) {
         io.DeltaTime = director->getDeltaTime();
     }
