@@ -77,6 +77,7 @@ if (NOT LUAUAPI_HOST_ONLY)
         src
         vendor
         ${LUAUAPI_GEN_DIR}/src
+        "${CMAKE_CURRENT_BINARY_DIR}/geode-deps"
         $<TARGET_PROPERTY:imgui-cocos,INTERFACE_INCLUDE_DIRECTORIES>
     )
     add_dependencies(LuauAPI_Runtime luauapi_codegen)

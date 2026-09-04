@@ -14,7 +14,8 @@
 	"load-priority": "first",
 	"description": "Luau development toolkit for Geode :3",
 	"dependencies": {
-		"geode.node-ids": ">=1.23.3"
+		"geode.node-ids": ">=1.23.3",
+		"prevter.imageplus": ">=1.1.1"
 	},
 	"tags": [
 		"universal",

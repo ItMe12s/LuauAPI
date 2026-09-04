@@ -49,8 +49,11 @@ Supported content:
 - Node world transforms baked into vertex positions and normals
 - glTF materials: `pbr_metallic_roughness.base_color_factor`
 - glTF material flags: `alphaMode` (`OPAQUE`, `MASK`, `BLEND`), `alphaCutoff`, `doubleSided`
-- Base color textures (PNG or JPEG), embedded in GLB or referenced inside the sandbox root
+- Base color textures (static JPG, PNG, TIFF, WebP, GIF, QOI, JXL), embedded in GLB or referenced inside the sandbox root
 - `TEXCOORD_0` on primitives that use a base color texture
+
+Animated images fail load with `animated images are not supported, use a static image`.
+Opaque images expand to RGBA with alpha 255.
 
 Not supported:
 
@@ -58,7 +61,7 @@ Not supported:
 - meshopt compression
 - Sparse accessors
 - Metallic/roughness maps, normal maps, emissive textures
-- KHR texture extensions (BasisU, WebP, and similar)
+- KHR basisu and KTX2 textures
 - Multisample anti-aliasing (MSAA)
 
 Primitives with a textured material must include `TEXCOORD_0`, loading fails otherwise.
@@ -84,6 +87,7 @@ Returns the same `Mesh` handle type as `gd3d.gltf.loadMesh`, so it works with `v
 See [Limits and errors](../cpp/limits-and-errors.md) for the vertex cap.
 `indices` is required. Use 1-based vertex indices (Luau convention).
 Each group of three entries is one triangle. The count must be a multiple of three.
+Index values must fit U16. Any primitive above 65535 verts fails load.
 
 If `normals` is omitted, normals are computed from face normals and averaged per vertex.
 `normals` and `uvs`, when provided, must match `positions` length.
@@ -108,7 +112,7 @@ local id = vp:addMesh(tri, gd3d.Transform.new({ x = -1.2, y = 0, z = 0 }), mat)
 
 ## Texture loading
 
-`gd3d.texture.load(root, path)` loads a PNG or JPEG image from a mod sandbox root.
+`gd3d.texture.load(root, path)` loads a static image from a mod sandbox root.
 The first argument uses the same roots as [fs](fs.md).
 Returns a texture handle, or `nil` and an error message. See [globals](globals.md) Error shapes.
 Texture data is released when the handle is collected and no material references it anymore.
@@ -180,7 +184,9 @@ Draw order:
 - Opaque and mask draws run first, sorted by texture and mesh.
 - Blend draws run second, sorted back to front.
 - `doubleSided` disables culling. Off-screen instances are frustum culled.
-- VAOs and GPU instancing are used when supported.
+- Strict GLES2 path. No VAO, no instancing, no wireframe.
+- Textures use clamp to edge with linear filtering. No mipmap, no repeat.
+- U16 indices only. Prims above 65k verts fail load.
 
 Reloading a mesh uploads fresh GPU data.
 

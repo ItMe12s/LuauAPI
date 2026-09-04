@@ -51,7 +51,6 @@ set(LUAUAPI_HOST_TEST_RUNTIME_SOURCES
 set(LUAUAPI_HOST_TEST_FIXTURE_SOURCES
     tests/host/render3d/Render3DMathTests.cpp
     tests/host/render3d/GltfParseTests.cpp
-    tests/host/render3d/ImageDecodeTests.cpp
     tests/host/render3d/ProceduralMeshTests.cpp
     tests/host/render3d/Gd3dTransformBindingTests.cpp
     tests/host/render3d/Gd3dMeshBindingTests.cpp
