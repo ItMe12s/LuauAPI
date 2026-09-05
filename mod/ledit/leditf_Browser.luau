@@ -17,7 +17,7 @@ local function resetDocUi(state: any)
 	state.tlPage = 0
 end
 
-local function refreshList(state: any)
+local function refreshList(state: any, deep: boolean?)
 	local names, err = state.proj:list()
 	state.projects = names or {}
 	state.corrupt = {}
@@ -25,10 +25,12 @@ local function refreshList(state: any)
 		state:toast("Browser", err)
 		return
 	end
-	for _, name in ipairs(state.projects) do
-		local ok, errors = state.proj:validate(name)
-		if not ok then
-			state.corrupt[name] = errors
+	if deep then
+		for _, name in ipairs(state.projects) do
+			local ok, errors = state.proj:validate(name)
+			if not ok then
+				state.corrupt[name] = errors
+			end
 		end
 	end
 end
@@ -87,9 +89,9 @@ function Browser.draw(state: any)
 		imgui.text("(no projects)")
 	end
 	if imgui.button("Refresh") then
-		refreshList(state)
+		refreshList(state, true)
 	end
-	tip("reload project list")
+	tip("deep-scan project files")
 
 	imgui.separatorText("New Project")
 	local nn = state:text("newproj", "##newproj", "")

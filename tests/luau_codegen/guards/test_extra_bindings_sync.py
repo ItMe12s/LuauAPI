@@ -182,6 +182,15 @@ _DECLARED_FN_FIELD = re.compile(r"^\s*(\w+)\s*:\s*(?:<[^>]+>\s*)?\(", re.MULTILI
 _SET_CFUNCTION = re.compile(r'setTableCFunction\(L,\s*[^,]+,\s*"([^"]+)"')
 _LUA_REG_CFUNCTION = re.compile(r'\{\s*"([^"]+)"\s*,\s*&\w+\s*\}')
 
+_LUNAR_CLASS_METHOD = re.compile(
+    r'Usertype<(?:LunarAnimationDef|LunarTrack|LunarRig)>::method\(L,\s*"([^"]+)"'
+)
+_LUNAR_DECLARED_CLASS = re.compile(
+    r"declare class (LunarAnimationDef|LunarAnimationTrack|LunarRig)(?: extends \w+)?\s*(.*?)\nend",
+    re.DOTALL,
+)
+_LUNAR_DECLARED_FN = re.compile(r"function (\w+)\(self")
+
 
 def _read_repo_file(rel_path: str) -> str:
     path = os.path.join(_REPO_ROOT, rel_path)
@@ -270,6 +279,37 @@ class ExtraBindingsSyncTests(unittest.TestCase):
                     f"{binding}: declared in dluau but not registered in C++: "
                     f"{sorted(missing_from_cpp)}",
                 )
+
+    def test_lunar_dluau_class_methods_match_registration(self) -> None:
+        dluau = _read_repo_file("tools/luau_codegen/extra_bindings/lunar.dluau")
+        registered: set[str] = set()
+        for source in ("src/bindings/lunar/LunarAnimation.cpp", "src/bindings/lunar/LunarRig.cpp"):
+            registered.update(_LUNAR_CLASS_METHOD.findall(_read_repo_file(source)))
+
+        declared: set[str] = set()
+        for match in _LUNAR_DECLARED_CLASS.finditer(dluau):
+            declared.update(_LUNAR_DECLARED_FN.findall(match.group(2)))
+
+        self.assertFalse(
+            registered - declared,
+            f"lunar: registered in C++ but missing from lunar.dluau: "
+            f"{sorted(registered - declared)}",
+        )
+        self.assertFalse(
+            declared - registered,
+            f"lunar: declared in lunar.dluau but not registered in C++: "
+            f"{sorted(declared - registered)}",
+        )
+
+    def test_lunar_animator_button_is_developer_mode_gated(self) -> None:
+        menu = _read_repo_file("mod/luauapi/luauapi_MenuLayer.luau")
+        add_btn = menu.index("addButton")
+        prefix = menu[:add_btn]
+        self.assertIn(
+            "isDeveloperModeEnabled",
+            prefix,
+            "Animator button must be dev-mode gated",
+        )
 
     def test_keyboard_input_event_stub_single_source(self) -> None:
         root = Root(classes=[Class(name="CCObject", namespace="cocos2d")])

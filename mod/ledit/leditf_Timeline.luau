@@ -39,13 +39,15 @@ local function jumpTo(state: any, f: number)
 	state.tlPage = math.floor(f / PAGE)
 end
 
-local function hasChannels(def: any): boolean
-	for _, kf in pairs(def.keyframes) do
-		for id, pose in pairs(kf) do
-			if id ~= "events" then
-				for k in pairs(pose) do
-					if k ~= "easing" then return true end
+local function hasContent(def: any): boolean
+	for _, kf in pairs(def.keyframes or {}) do
+		for k, v in pairs(kf) do
+			if k ~= "events" then
+				for pk in pairs(v) do
+					if pk ~= "easing" then return true end
 				end
+			elseif #Ser.eventArray(v) > 0 then
+				return true
 			end
 		end
 	end
@@ -61,8 +63,8 @@ function Timeline.draw(state: any)
 		tostring(doc.activeAnim or "-"), state:frameOf(), doc.playhead, doc:length()))
 	imgui.spacing()
 	if imgui.button("Play") then
-		if def == nil or not hasChannels(def) then
-			state:toast("Timeline", "No channel keys yet, drag a property field.")
+		if def == nil or not hasContent(def) then
+			state:toast("Timeline", "No keys yet, drag a property field or add an event.")
 		else
 			state:act("Timeline", function()
 				return doc:play()

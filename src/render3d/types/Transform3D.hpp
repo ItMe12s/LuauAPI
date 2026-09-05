@@ -15,11 +15,11 @@ namespace luax::render3d {
 
         Transform(glm::vec3 pos, glm::quat rot) : position(pos), rotation(rot) {}
 
-        static Transform identity() {
+        [[nodiscard]] static Transform identity() {
             return Transform{};
         }
 
-        static Transform fromLookAt(
+        [[nodiscard]] static Transform fromLookAt(
             glm::vec3 const& position, glm::vec3 const& target,
             glm::vec3 const& up = glm::vec3(0.0f, 1.0f, 0.0f)
         ) {
@@ -33,7 +33,7 @@ namespace luax::render3d {
             return Transform{position, rot};
         }
 
-        static Transform fromAxisAngle(glm::vec3 const& axis, float angleRadians) {
+        [[nodiscard]] static Transform fromAxisAngle(glm::vec3 const& axis, float angleRadians) {
             float const lengthSquared = glm::dot(axis, axis);
             if (lengthSquared <= std::numeric_limits<float>::epsilon()) {
                 return identity();
@@ -44,14 +44,14 @@ namespace luax::render3d {
             };
         }
 
-        static Transform fromEuler(float pitchRadians, float yawRadians, float rollRadians) {
+        [[nodiscard]] static Transform fromEuler(float pitchRadians, float yawRadians, float rollRadians) {
             return Transform{
                 glm::vec3(0.0f),
                 glm::quat(glm::vec3(pitchRadians, yawRadians, rollRadians)),
             };
         }
 
-        Transform operator*(Transform const& other) const {
+        [[nodiscard]] Transform operator*(Transform const& other) const {
             return Transform{
                 position + rotation * other.position,
                 glm::normalize(rotation * other.rotation),
@@ -74,27 +74,27 @@ namespace luax::render3d {
             return glm::translate(glm::mat4(1.0f), position) * glm::mat4_cast(rotation);
         }
 
-        glm::vec3 rightVector() const {
+        [[nodiscard]] glm::vec3 rightVector() const {
             return rotation * glm::vec3(1.0f, 0.0f, 0.0f);
         }
 
-        glm::vec3 upVector() const {
+        [[nodiscard]] glm::vec3 upVector() const {
             return rotation * glm::vec3(0.0f, 1.0f, 0.0f);
         }
 
-        glm::vec3 lookVector() const {
+        [[nodiscard]] glm::vec3 lookVector() const {
             return rotation * glm::vec3(0.0f, 0.0f, -1.0f);
         }
 
-        Transform withPosition(glm::vec3 const& pos) const {
+        [[nodiscard]] Transform withPosition(glm::vec3 const& pos) const {
             return Transform{pos, rotation};
         }
 
-        Transform withRotationOf(Transform const& other) const {
+        [[nodiscard]] Transform withRotationOf(Transform const& other) const {
             return Transform{position, other.rotation};
         }
 
-        glm::vec3 eulerAngles() const {
+        [[nodiscard]] glm::vec3 eulerAngles() const {
             return glm::eulerAngles(rotation);
         }
     };

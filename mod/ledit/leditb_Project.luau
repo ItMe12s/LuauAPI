@@ -195,7 +195,10 @@ function Project:save(doc: any): (boolean, string?)
 		animSrcs[animName] = src
 	end
 	local dir = dirFor(name)
-	self.fs.mkdir("save", dir)
+	local ok, err = self.fs.mkdir("save", dir)
+	if not ok then
+		return false, err
+	end
 
 	local files = { [name .. ".rig.luau"] = rigSrc }
 	for animName, src in pairs(animSrcs) do

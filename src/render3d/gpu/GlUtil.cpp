@@ -34,6 +34,10 @@ namespace luax::render3d {
         return director != nullptr && director->getOpenGLView() != nullptr;
     }
 
+    void drainGlErrors() {
+        while (glGetError() != GL_NO_ERROR) {}
+    }
+
     namespace {
         bool vaoExtensionPresent() {
 #if defined(GL_VERTEX_ARRAY_BINDING)
@@ -93,6 +97,7 @@ namespace luax::render3d {
         glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &arrayBuffer);
         glGetIntegerv(GL_ELEMENT_ARRAY_BUFFER_BINDING, &elementArrayBuffer);
         glGetIntegerv(GL_FRAMEBUFFER_BINDING, &framebufferBinding);
+        glGetIntegerv(GL_UNPACK_ALIGNMENT, &unpackAlignment);
         glGetIntegerv(GL_VIEWPORT, viewport.data());
         glGetIntegerv(GL_SCISSOR_BOX, scissorBox.data());
         glGetFloatv(GL_COLOR_CLEAR_VALUE, clearColor.data());
@@ -122,7 +127,6 @@ namespace luax::render3d {
         else {
             glDisable(GL_CULL_FACE);
         }
-        cocos2d::ccGLBlendFunc(static_cast<GLenum>(blendSrc), static_cast<GLenum>(blendDst));
         glBlendFunc(static_cast<GLenum>(blendSrc), static_cast<GLenum>(blendDst));
         if (blendEnabled == GL_TRUE) {
             glEnable(GL_BLEND);
@@ -130,11 +134,10 @@ namespace luax::render3d {
         else {
             glDisable(GL_BLEND);
         }
-        cocos2d::ccGLUseProgram(static_cast<GLuint>(program));
         glUseProgram(static_cast<GLuint>(program));
         glActiveTexture(GL_TEXTURE0);
-        cocos2d::ccGLBindTexture2D(static_cast<GLuint>(boundTexture));
         glBindTexture(GL_TEXTURE_2D, static_cast<GLuint>(boundTexture));
+        glPixelStorei(GL_UNPACK_ALIGNMENT, unpackAlignment);
         cocos2d::ccGLEnableVertexAttribs(cocos2d::kCCVertexAttribFlag_None);
         glBindBuffer(GL_ARRAY_BUFFER, static_cast<GLuint>(arrayBuffer));
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, static_cast<GLuint>(elementArrayBuffer));

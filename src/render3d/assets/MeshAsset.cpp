@@ -131,6 +131,9 @@ namespace {
 
         auto const* positionAccessor =
             cgltf_find_accessor(&primitive, cgltf_attribute_type_position, 0);
+        if (positionAccessor != nullptr && positionAccessor->count > kMaxMeshVertices) {
+            return geode::Err("primitive exceeds maximum vertex count");
+        }
         GEODE_UNWRAP_INTO(auto positions, unpackVecAttribute<glm::vec3>(positionAccessor, "position"));
         glm::mat3 const normalMatrix = glm::transpose(glm::inverse(glm::mat3(worldMatrix)));
 
@@ -160,7 +163,7 @@ namespace {
             return geode::Err("primitive exceeds maximum vertex count");
         }
         for (auto const index : indices) {
-            if (index > kMaxMeshIndexValue || index >= positions.size()) {
+            if (index >= positions.size()) {
                 return geode::Err("index out of range");
             }
         }
@@ -381,7 +384,14 @@ namespace luax::render3d {
             return geode::Err("glTF data exceeds maximum read size");
         }
 
-        GEODE_UNWRAP_INTO(auto canonicalRoot, canonicalSandboxRoot(sandboxRoot));
+        std::filesystem::path canonicalRoot = sandboxRoot;
+        if (!canonicalRoot.empty()) {
+            auto canon = luax::canonicalRoot(sandboxRoot);
+            if (canon.isErr()) {
+                return geode::Err(canon.unwrapErr());
+            }
+            canonicalRoot = canon.unwrap();
+        }
 
         SandboxFileContext fileContext{canonicalRoot, {}};
 
@@ -448,7 +458,7 @@ namespace luax::render3d {
         }
 
         for (auto const index : indices) {
-            if (index > kMaxMeshIndexValue || index >= positions.size()) {
+            if (index >= positions.size()) {
                 return geode::Err("index out of range");
             }
         }

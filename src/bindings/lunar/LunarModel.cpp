@@ -198,14 +198,20 @@ namespace luax::lunar {
     }
 
     geode::Result<CompiledAnimation> compileAnimation(
-        std::vector<Keyframe> keyframes, double fps, bool looped
+        std::span<Keyframe const> keyframes, double fps, bool looped
     ) {
         if (!(fps > 0.0) || !std::isfinite(fps)) {
             return geode::Err(std::string("fps must be a positive finite number"));
         }
 
-        std::ranges::stable_sort(keyframes, {}, &Keyframe::frame);
-        for (auto const& kf : keyframes) {
+        std::vector<Keyframe> owned;
+        std::span<Keyframe const> keys = keyframes;
+        if (!std::ranges::is_sorted(keyframes, {}, &Keyframe::frame)) {
+            owned.assign(keyframes.begin(), keyframes.end());
+            std::ranges::stable_sort(owned, {}, &Keyframe::frame);
+            keys = owned;
+        }
+        for (auto const& kf : keys) {
             if (kf.frame < 0.0 || !std::isfinite(kf.frame)) {
                 return geode::Err(
                     fmt::format("keyframe frame numbers must be >= 0 (got {})", kf.frame)
@@ -213,7 +219,7 @@ namespace luax::lunar {
             }
         }
 
-        for (auto const& kf : keyframes) {
+        for (auto const& kf : keys) {
             for (auto const& [nodeId, pose] : kf.targets) {
                 for (auto const& field : kPropFields) {
                     if (auto const& v = pose.*(field.pose); v && !std::isfinite(*v)) {
@@ -226,7 +232,7 @@ namespace luax::lunar {
         }
 
         std::unordered_map<std::string, ChannelMap> store;
-        for (auto const& kf : keyframes) {
+        for (auto const& kf : keys) {
             double const time = kf.frame / fps;
             for (auto const& [nodeId, pose] : kf.targets) {
                 auto& channels = store[nodeId];
@@ -270,7 +276,7 @@ namespace luax::lunar {
         }
 
         std::vector<AnimEvent> events;
-        for (auto const& kf : keyframes) {
+        for (auto const& kf : keys) {
             double const time = kf.frame / fps;
             for (auto const& name : kf.events) {
                 duration = std::max(duration, time);
@@ -403,7 +409,11 @@ namespace luax::lunar {
         for (auto& [id, pose] : source.targets) {
             setPoseTarget(dest, id, std::move(pose));
         }
-        dest.events.insert(dest.events.end(), source.events.begin(), source.events.end());
+        for (auto const& name : source.events) {
+            if (std::ranges::find(dest.events, name) == dest.events.end()) {
+                dest.events.push_back(name);
+            }
+        }
         return true;
     }
 

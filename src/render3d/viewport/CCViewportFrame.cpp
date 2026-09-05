@@ -85,9 +85,7 @@ namespace luax::render3d {
         liveViewports().erase(this);
         Renderer3D::instance().releaseTextureGpu(m_viewportTexture.get());
         m_viewportTexture.reset();
-        if (!glContextAvailable() || m_glContextGeneration != glContextGeneration()) {
-            detachSpriteTexture();
-        }
+        detachSpriteTexture();
         destroyFramebuffer();
     }
 

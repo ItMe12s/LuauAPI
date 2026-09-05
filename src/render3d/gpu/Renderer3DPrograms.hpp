@@ -4,20 +4,24 @@ namespace luax::render3d {
 
     struct GlProgram {
         unsigned int id = 0;
+        unsigned int gen = 0;
 
         GlProgram() = default;
         GlProgram(GlProgram const&) = delete;
         GlProgram& operator=(GlProgram const&) = delete;
 
-        GlProgram(GlProgram&& other) noexcept : id(other.id) {
+        GlProgram(GlProgram&& other) noexcept : id(other.id), gen(other.gen) {
             other.id = 0;
+            other.gen = 0;
         }
 
         GlProgram& operator=(GlProgram&& other) noexcept {
             if (this != &other) {
                 reset();
                 id = other.id;
+                gen = other.gen;
                 other.id = 0;
+                other.gen = 0;
             }
             return *this;
         }
@@ -29,20 +33,24 @@ namespace luax::render3d {
 
     struct GlBuffer {
         unsigned int id = 0;
+        unsigned int gen = 0;
 
         GlBuffer() = default;
         GlBuffer(GlBuffer const&) = delete;
         GlBuffer& operator=(GlBuffer const&) = delete;
 
-        GlBuffer(GlBuffer&& other) noexcept : id(other.id) {
+        GlBuffer(GlBuffer&& other) noexcept : id(other.id), gen(other.gen) {
             other.id = 0;
+            other.gen = 0;
         }
 
         GlBuffer& operator=(GlBuffer&& other) noexcept {
             if (this != &other) {
                 reset();
                 id = other.id;
+                gen = other.gen;
                 other.id = 0;
+                other.gen = 0;
             }
             return *this;
         }

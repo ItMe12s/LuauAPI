@@ -7,6 +7,7 @@
 #include "render3d/gpu/Texture2D.hpp"
 #include "render3d/gpu/VertexLayout.hpp"
 
+#include <Geode/Geode.hpp>
 #include <glm/glm.hpp>
 
 namespace luax::render3d {
@@ -176,6 +177,7 @@ namespace luax::render3d {
                 indices.push_back(static_cast<std::uint16_t>(index));
             }
 
+            drainGlErrors();
             glGenBuffers(1, &gpu.vbo);
             glGenBuffers(1, &gpu.ibo);
 
@@ -194,6 +196,20 @@ namespace luax::render3d {
                 indices.data(),
                 GL_STATIC_DRAW
             );
+
+            if (glGetError() != GL_NO_ERROR) {
+                geode::log::error("Renderer3D: mesh VBO upload failed for primitive {}", i);
+                if (gpu.vbo != 0) {
+                    glDeleteBuffers(1, &gpu.vbo);
+                }
+                if (gpu.ibo != 0) {
+                    glDeleteBuffers(1, &gpu.ibo);
+                }
+                gpu.vbo = 0;
+                gpu.ibo = 0;
+                gpu.indexCount = 0;
+                continue;
+            }
 
             gpu.indexCount = static_cast<unsigned int>(indices.size());
             gpu.materialIndex = src.materialIndex;

@@ -158,6 +158,7 @@ function State.drag(self: any, label: string, value: number, opts: any): (number
 end
 
 function State.combo(self: any, key: any, label: string, items: { string }, current: string?, onChanged: any?): (number, string?)
+	local shown = items
 	if current ~= nil then
 		local found = nil
 		for i, item in ipairs(items) do
@@ -166,21 +167,26 @@ function State.combo(self: any, key: any, label: string, items: { string }, curr
 				break
 			end
 		end
-		if found ~= nil and self.combos[key] ~= found then
+		if found == nil then
+			shown = { unpack(items) }
+			table.insert(shown, 1, current)
+			found = 0
+		end
+		if self.combos[key] ~= found then
 			self.combos[key] = found
 		end
 	end
 	local idx = self.combos[key]
-	if idx == nil or idx >= #items then
+	if idx == nil or idx >= #shown then
 		idx = 0
 	end
 	local prev = idx
-	idx = imgui.combo(label, idx, items)
+	idx = imgui.combo(label, idx, shown)
 	self.combos[key] = idx
 	if idx ~= prev and onChanged then
-		onChanged(idx, items[idx + 1])
+		onChanged(idx, shown[idx + 1])
 	end
-	return idx, items[idx + 1]
+	return idx, shown[idx + 1]
 end
 
 return State

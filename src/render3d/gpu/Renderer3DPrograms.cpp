@@ -12,10 +12,11 @@ namespace luax::render3d {
     }
 
     void GlProgram::reset() {
-        if (id != 0 && glContextAvailable()) {
+        if (id != 0 && glContextAvailable() && gen == glContextGeneration()) {
             glDeleteProgram(id);
         }
         id = 0;
+        gen = 0;
     }
 
     GlBuffer::~GlBuffer() {
@@ -23,10 +24,11 @@ namespace luax::render3d {
     }
 
     void GlBuffer::reset() {
-        if (id != 0 && glContextAvailable()) {
+        if (id != 0 && glContextAvailable() && gen == glContextGeneration()) {
             glDeleteBuffers(1, &id);
         }
         id = 0;
+        gen = 0;
     }
 
     void Renderer3DPrograms::destroyGlPrograms() {
@@ -51,6 +53,7 @@ namespace luax::render3d {
         if (lambert.id == 0) {
             return false;
         }
+        lambert.gen = glContextGeneration();
 
         lambertLocs.mvp = glGetUniformLocation(lambert.id, "uMVP");
         lambertLocs.normalMat = glGetUniformLocation(lambert.id, "uNormalMat");
@@ -76,6 +79,7 @@ namespace luax::render3d {
         if (debugLine.id == 0) {
             return false;
         }
+        debugLine.gen = glContextGeneration();
 
         debugLineLocs.mvp = glGetUniformLocation(debugLine.id, "uMVP");
         debugLineLocs.color = glGetUniformLocation(debugLine.id, "uColor");
@@ -86,7 +90,14 @@ namespace luax::render3d {
         if (debugLineVbo.id != 0) {
             return true;
         }
+        drainGlErrors();
         glGenBuffers(1, &debugLineVbo.id);
+        if (debugLineVbo.id != 0 && glGetError() == GL_NO_ERROR) {
+            debugLineVbo.gen = glContextGeneration();
+        }
+        else {
+            debugLineVbo.id = 0;
+        }
         return debugLineVbo.id != 0;
     }
 

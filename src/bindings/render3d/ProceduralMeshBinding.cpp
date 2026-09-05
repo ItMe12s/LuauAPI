@@ -22,6 +22,32 @@ namespace {
         Optional
     };
 
+    bool fieldNumberValue(lua_State* L, int tableIdx, char const* key, double* out) {
+        lua_getfield(L, tableIdx, key);
+        if (!lua_isnumber(L, -1)) {
+            lua_pop(L, 1);
+            return false;
+        }
+        *out = lua_tonumber(L, -1);
+        lua_pop(L, 1);
+        return true;
+    }
+
+    bool readVec3Value(
+        lua_State* L, int idx, char const* field, char const* method, glm::vec3* out, std::string& err
+    ) {
+        double x = 0.0;
+        double y = 0.0;
+        double z = 0.0;
+        if (!fieldNumberValue(L, idx, "x", &x) || !fieldNumberValue(L, idx, "y", &y) ||
+            !fieldNumberValue(L, idx, "z", &z)) {
+            err = std::string(method) + ": " + field + " entries must be Vec3 tables";
+            return false;
+        }
+        *out = glm::vec3(static_cast<float>(x), static_cast<float>(y), static_cast<float>(z));
+        return true;
+    }
+
     bool readVec3Array(
         lua_State* L, int tableIdx, char const* field, char const* method, Vec3ArrayMode mode,
         std::vector<glm::vec3>& out, std::string& err
@@ -58,7 +84,12 @@ namespace {
                 return false;
             }
 
-            out.push_back(checkVec3(L, -1, method));
+            glm::vec3 value{};
+            if (!readVec3Value(L, -1, field, method, &value, err)) {
+                lua_pop(L, 2);
+                return false;
+            }
+            out.push_back(value);
             lua_pop(L, 1);
         }
 
@@ -94,7 +125,14 @@ namespace {
                 return false;
             }
 
-            out.emplace_back(fieldNumber(L, -1, "x", method), fieldNumber(L, -1, "y", method));
+            double x = 0.0;
+            double y = 0.0;
+            if (!fieldNumberValue(L, -1, "x", &x) || !fieldNumberValue(L, -1, "y", &y)) {
+                err = std::string(method) + ": " + field + " entries must be { x, y } tables";
+                lua_pop(L, 2);
+                return false;
+            }
+            out.emplace_back(static_cast<float>(x), static_cast<float>(y));
             lua_pop(L, 1);
         }
 

@@ -7,6 +7,8 @@ namespace luax::render3d {
 
     bool glContextAvailable();
 
+    void drainGlErrors();
+
     unsigned glContextGeneration();
     void bumpGlContextGeneration();
 
@@ -21,6 +23,8 @@ namespace luax::render3d {
         return !gpuFeaturesDisabled() && gameTexturesLoaded();
     }
 
+    // Used by the gd-imgui-cocos backend render path.
+    // Not used by the gd3d draw paths anymore.
     unsigned int genVao();
     void bindVao(unsigned int vao);
     void deleteVao(unsigned int vao);
@@ -35,6 +39,7 @@ namespace luax::render3d {
         GLint blendDst = GL_ZERO;
         GLint program = 0;
         GLint activeTexture = GL_TEXTURE0;
+        GLint unpackAlignment = 4;
         int boundTexture = 0;
         int arrayBuffer = 0;
         int elementArrayBuffer = 0;

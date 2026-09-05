@@ -31,14 +31,14 @@ namespace luax::gd3d {
         std::shared_ptr<render3d::Material> material;
     };
 
-    inline MeshBox* checkMeshHandle(lua_State* L, int idx, [[maybe_unused]] char const* method) {
+    inline MeshBox* checkMeshHandle(lua_State* L, int idx, char const*) {
         return static_cast<MeshBox*>(luaL_checkudata(L, idx, kMeshMeta));
     }
 
     inline std::shared_ptr<render3d::MeshAsset> const& requireMesh(
         lua_State* L, MeshBox* box, char const* method
     ) {
-        if (box == nullptr || !box->mesh) {
+        if (!box->mesh) {
             luaL_error(L, "%s: mesh handle is invalid", method);
         }
         return box->mesh;
@@ -58,7 +58,7 @@ namespace luax::gd3d {
         new (box) MaterialBox{std::move(material)};
     }
 
-    inline MaterialBox* checkMaterialBox(lua_State* L, int idx, [[maybe_unused]] char const* method) {
+    inline MaterialBox* checkMaterialBox(lua_State* L, int idx, char const*) {
         return static_cast<MaterialBox*>(luaL_checkudata(L, idx, kMaterialMeta));
     }
 
@@ -79,14 +79,14 @@ namespace luax::gd3d {
         new (box) TextureBox{std::move(texture)};
     }
 
-    inline TextureBox* checkTextureHandle(lua_State* L, int idx, [[maybe_unused]] char const* method) {
+    inline TextureBox* checkTextureHandle(lua_State* L, int idx, char const*) {
         return static_cast<TextureBox*>(luaL_checkudata(L, idx, kTextureMeta));
     }
 
     inline std::shared_ptr<render3d::TextureAsset> const& requireTexture(
         lua_State* L, TextureBox* box, char const* method
     ) {
-        if (box == nullptr || !box->texture) {
+        if (!box->texture) {
             luaL_error(L, "%s: texture handle is invalid", method);
         }
         return box->texture;

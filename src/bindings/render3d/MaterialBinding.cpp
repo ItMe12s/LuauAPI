@@ -41,16 +41,17 @@ namespace {
         auto const color = parseColor(L, lua_gettop(L), "gd3d.Material.new");
         lua_pop(L, 1);
 
-        auto material = std::make_shared<render3d::Material>();
-        material->baseColorFactor = color;
-
+        std::shared_ptr<render3d::TextureAsset> texture;
         lua_getfield(L, 1, "texture");
         if (!lua_isnil(L, -1)) {
             auto* texHandle = checkTextureHandle(L, lua_gettop(L), "gd3d.Material.new");
-            auto texAsset = requireTexture(L, texHandle, "gd3d.Material.new");
-            material->texture = texAsset;
+            texture = requireTexture(L, texHandle, "gd3d.Material.new");
         }
         lua_pop(L, 1);
+
+        auto material = std::make_shared<render3d::Material>();
+        material->baseColorFactor = color;
+        material->texture = std::move(texture);
 
         pushMaterial(L, std::move(material));
         return 1;

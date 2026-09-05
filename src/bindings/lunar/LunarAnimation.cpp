@@ -184,13 +184,21 @@ namespace luax::lunar {
             return value;
         }
 
+        bool& tickingTracks() {
+            static bool value = false;
+            return value;
+        }
+
         class LunarTickNode final : public cocos2d::CCNode {
         public:
             void update(float dt) override {
                 auto& tracks = liveTracks();
+                tickingTracks() = true;
                 for (std::size_t i = 0; i < tracks.size(); ++i) {
                     if (auto* track = tracks[i]) track->tick(dt);
                 }
+                tickingTracks() = false;
+                std::erase(tracks, nullptr);
             }
         };
 
@@ -443,6 +451,9 @@ namespace luax::lunar {
         int trackSample(lua_State* L) {
             auto* self = Usertype<LunarTrack>::check(L, 1, "LunarAnimationTrack:sample");
             double const time = check<double>(L, 2, "LunarAnimationTrack:sample");
+            if (!std::isfinite(time)) {
+                luaL_error(L, "LunarAnimationTrack:sample expected finite time");
+            }
             auto poses = self->sample(time);
             lua_createtable(L, 0, static_cast<int>(poses.size()));
             for (auto const& [id, pose] : poses) {
@@ -455,6 +466,9 @@ namespace luax::lunar {
         int trackSeek(lua_State* L) {
             auto* self = Usertype<LunarTrack>::check(L, 1, "LunarAnimationTrack:seek");
             double const time = check<double>(L, 2, "LunarAnimationTrack:seek");
+            if (!std::isfinite(time)) {
+                luaL_error(L, "LunarAnimationTrack:seek expected finite time");
+            }
             self->seek(time);
             return 0;
         }
@@ -572,7 +586,15 @@ namespace luax::lunar {
     LunarTrack::~LunarTrack() {
         if (Runtime::isShuttingDown()) return;
         stopActions();
-        std::erase(liveTracks(), this);
+        auto& tracks = liveTracks();
+        auto it = std::find(tracks.begin(), tracks.end(), this);
+        if (it == tracks.end()) return;
+        if (tickingTracks()) {
+            *it = nullptr;
+        }
+        else {
+            tracks.erase(it);
+        }
     }
 
     void LunarTrack::launch(double fromTime) {
@@ -756,7 +778,7 @@ namespace luax::lunar {
         applyDueInstants();
         applyDueEvents();
         if (!m_active || m_elapsed + kTimeEps < m_active->duration) return;
-        if (m_active->looped) {
+        if (m_active->looped && m_active->duration > kTimeEps) {
             m_elapsed = std::fmod(m_elapsed, m_active->duration);
             launch(0.0);
         }
@@ -770,7 +792,8 @@ namespace luax::lunar {
     }
 
     void LunarTrack::seek(double time) {
-        double const target = std::clamp(time, 0.0, std::max(0.0, m_anim.duration));
+        double const target =
+            std::isfinite(time) ? std::clamp(time, 0.0, std::max(0.0, m_anim.duration)) : 0.0;
         if (m_playing && !m_paused && m_rig) {
             launch(target);
             return;
@@ -794,6 +817,9 @@ namespace luax::lunar {
     }
 
     std::unordered_map<std::string, NodePose> LunarTrack::sample(double time) {
+        if (!std::isfinite(time)) {
+            return {};
+        }
         auto poses = samplePose(m_anim, time);
         applyPose(m_rig, poses);
         return poses;

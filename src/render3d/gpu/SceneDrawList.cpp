@@ -21,9 +21,14 @@ namespace luax::render3d {
                 item.textureAsset = overrideMat.texture.get();
                 item.imageIndex = -1;
             }
-            else if (item.imageIndex >= 0 && overrideMat.sourceMesh != nullptr) {
-                item.texSource = resolveGpuMesh(*overrideMat.sourceMesh);
-                if (item.texSource == nullptr) {
+            else if (item.imageIndex >= 0) {
+                if (overrideMat.sourceMesh != nullptr) {
+                    item.texSource = resolveGpuMesh(*overrideMat.sourceMesh);
+                    if (item.texSource == nullptr) {
+                        item.imageIndex = -1;
+                    }
+                }
+                else {
                     item.imageIndex = -1;
                 }
             }

@@ -5,10 +5,10 @@
 #include <Geode/Result.hpp>
 #include <Geode/utils/cocos.hpp>
 #include <cocos2d.h>
+#include <map>
 #include <optional>
 #include <string>
 #include <string_view>
-#include <unordered_map>
 #include <vector>
 
 struct lua_State;
@@ -40,19 +40,19 @@ namespace luax::lunar {
     public:
         static LunarRig* create();
 
-        geode::Result<void> addMember(cocos2d::CCNode* node, std::optional<std::string> id);
+        [[nodiscard]] geode::Result<void> addMember(cocos2d::CCNode* node, std::optional<std::string> id);
 
-        geode::Result<cocos2d::CCNode*> addToParent(
+        [[nodiscard]] geode::Result<cocos2d::CCNode*> addToParent(
             std::string_view parentId, cocos2d::CCNode* child, std::optional<std::string> id
         );
 
-        cocos2d::CCNode* getNode(std::string_view id) const;
+        [[nodiscard]] cocos2d::CCNode* getNode(std::string_view id) const;
 
-        std::unordered_map<std::string, geode::WeakRef<cocos2d::CCNode>> const& nodes() const noexcept {
+        std::map<std::string, geode::WeakRef<cocos2d::CCNode>, std::less<>> const& nodes() const noexcept {
             return m_nodes;
         }
 
-        geode::Result<void> applySpec(RigSpec const& spec);
+        [[nodiscard]] geode::Result<void> applySpec(RigSpec const& spec);
 
     protected:
         ~LunarRig() override = default;
@@ -60,10 +60,10 @@ namespace luax::lunar {
         void removeChild(cocos2d::CCNode* child, bool cleanup) override;
 
     private:
-        geode::Result<void> registerId(std::string const& id, cocos2d::CCNode* node);
+        [[nodiscard]] geode::Result<void> registerId(std::string const& id, cocos2d::CCNode* node);
         void forgetNode(cocos2d::CCNode* node);
 
-        std::unordered_map<std::string, geode::WeakRef<cocos2d::CCNode>> m_nodes;
+        std::map<std::string, geode::WeakRef<cocos2d::CCNode>, std::less<>> m_nodes;
     };
 
     geode::Result<void> registerLunarRig(lua_State* L);

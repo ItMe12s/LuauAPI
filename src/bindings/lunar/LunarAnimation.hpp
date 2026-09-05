@@ -148,8 +148,10 @@ namespace luax::lunar {
 
     void shutdownLunarTracks();
 
-    geode::Result<LunarAnimationDef*> parseAnimTable(lua_State* L, int idx, char const* method);
+    [[nodiscard]] geode::Result<LunarAnimationDef*> parseAnimTable(
+        lua_State* L, int idx, char const* method
+    );
 
-    bool setNodeOpacity(cocos2d::CCNode* node, float value);
+    [[nodiscard]] bool setNodeOpacity(cocos2d::CCNode* node, float value);
 
 } // namespace luax::lunar

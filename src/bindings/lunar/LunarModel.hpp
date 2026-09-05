@@ -5,6 +5,7 @@
 #include <array>
 #include <cstdint>
 #include <optional>
+#include <span>
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -192,8 +193,8 @@ namespace luax::lunar {
         std::vector<AnimEvent> events;
     };
 
-    geode::Result<CompiledAnimation> compileAnimation(
-        std::vector<Keyframe> keyframes, double fps, bool looped
+    [[nodiscard]] geode::Result<CompiledAnimation> compileAnimation(
+        std::span<Keyframe const> keyframes, double fps, bool looped
     );
 
     CompiledAnimation sliceAnimation(CompiledAnimation const& src, double fromTime);
@@ -202,7 +203,7 @@ namespace luax::lunar {
 
     Keyframe& keyframeFor(std::vector<Keyframe>& keyframes, double frame);
 
-    std::vector<Keyframe>::const_iterator matchKeyframe(
+    [[nodiscard]] std::vector<Keyframe>::const_iterator matchKeyframe(
         std::vector<Keyframe> const& keyframes, double frame
     );
 
@@ -210,8 +211,8 @@ namespace luax::lunar {
 
     void setPoseTarget(Keyframe& kf, std::string_view nodeId, NodePose pose);
 
-    bool removeKeyframe(std::vector<Keyframe>& keyframes, double frame);
+    [[nodiscard]] bool removeKeyframe(std::vector<Keyframe>& keyframes, double frame);
 
-    bool moveKeyframe(std::vector<Keyframe>& keyframes, double from, double to);
+    [[nodiscard]] bool moveKeyframe(std::vector<Keyframe>& keyframes, double from, double to);
 
 } // namespace luax::lunar

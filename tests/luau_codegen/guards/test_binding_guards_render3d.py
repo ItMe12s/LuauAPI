@@ -77,3 +77,23 @@ class Render3DGuardTests(unittest.TestCase):
             "viewport destruction must release GPU texture",
         )
         self.assertIn("m_viewportTexture.reset()", dtor_body)
+        self.assertIn(
+            "detachSpriteTexture()",
+            dtor_body,
+            "viewport destruction must detach the sprite texture before the "
+            "framebuffer deletes the color name",
+        )
+
+    def test_strict_gles2_contract_has_no_instancing_and_uses_u16(self) -> None:
+        util = read_repo_file(RENDERER3D_GL_UTIL)
+        self.assertNotIn("glVertexAttribDivisor", util)
+        self.assertNotIn("glDrawElementsInstanced", util)
+
+        scene_pass = read_repo_file("src/render3d/gpu/Renderer3DScenePass.cpp")
+        self.assertNotIn("glDrawElementsInstanced", scene_pass)
+        self.assertNotIn("glVertexAttribDivisor", scene_pass)
+        self.assertIn("GL_UNSIGNED_SHORT", scene_pass)
+
+        mesh_cache = read_repo_file(RENDERER3D_MESH_CACHE)
+        self.assertNotIn("glVertexAttribDivisor", mesh_cache)
+        self.assertIn("std::uint16_t", mesh_cache)

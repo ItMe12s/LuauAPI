@@ -266,7 +266,7 @@ namespace luax::lunar {
         std::string_view parentId, cocos2d::CCNode* child, std::optional<std::string> id
     ) {
         if (!child) return geode::Err(std::string("expected a node"));
-        auto const it = m_nodes.find(std::string(parentId));
+        auto const it = m_nodes.find(parentId);
         if (it == m_nodes.end()) {
             return geode::Err(fmt::format("parent node '{}' not found in rig", parentId));
         }
@@ -287,12 +287,28 @@ namespace luax::lunar {
     }
 
     cocos2d::CCNode* LunarRig::getNode(std::string_view id) const {
-        auto const it = m_nodes.find(std::string(id));
+        auto const it = m_nodes.find(id);
         if (it == m_nodes.end()) return nullptr;
         return it->second.lock();
     }
 
     geode::Result<void> LunarRig::applySpec(RigSpec const& spec) {
+        std::vector<geode::Ref<cocos2d::CCNode>> previous;
+        for (auto const& [id, ref] : m_nodes) {
+            (void)id;
+            if (auto node = ref.lock()) previous.push_back(node);
+        }
+        m_nodes.clear();
+        for (auto const& node : previous) {
+            node->removeFromParent();
+        }
+
+        struct PendingNode {
+            cocos2d::CCNode* node = nullptr;
+            std::string id;
+            std::optional<std::string> parent;
+        };
+
         std::vector<cocos2d::CCNode*> created;
         std::vector<std::string> registeredIds;
         auto fail = [&](std::string&& msg) -> geode::Result<void> {
@@ -302,18 +318,13 @@ namespace luax::lunar {
                 m_nodes.erase(id);
             return geode::Err(std::move(msg));
         };
+
+        std::vector<PendingNode> pending;
+        pending.reserve(spec.nodes.size());
+
         for (auto const& nodeSpec : spec.nodes) {
             if (nodeSpec.id.empty()) {
                 return fail("rig node id must not be empty");
-            }
-            cocos2d::CCNode* parent = this;
-            if (nodeSpec.parent) {
-                parent = getNode(*nodeSpec.parent);
-                if (!parent) {
-                    return fail(
-                        fmt::format("rig node '{}' parent '{}' not found", nodeSpec.id, *nodeSpec.parent)
-                    );
-                }
             }
 
             cocos2d::CCNode* node = nullptr;
@@ -364,13 +375,26 @@ namespace luax::lunar {
                 );
             }
             applyNodeID(node, nodeSpec.id);
-            parent->addChild(node);
-            created.push_back(node);
             auto reg = registerId(nodeSpec.id, node);
             if (reg.isErr()) {
                 return fail(std::move(reg).unwrapErr());
             }
             registeredIds.push_back(nodeSpec.id);
+            created.push_back(node);
+            pending.push_back(PendingNode{node, nodeSpec.id, nodeSpec.parent});
+        }
+
+        for (auto const& entry : pending) {
+            cocos2d::CCNode* parent = this;
+            if (entry.parent) {
+                parent = getNode(*entry.parent);
+                if (!parent) {
+                    return fail(
+                        fmt::format("rig node '{}' parent '{}' not found", entry.id, *entry.parent)
+                    );
+                }
+            }
+            parent->addChild(entry.node);
         }
         return geode::Ok();
     }

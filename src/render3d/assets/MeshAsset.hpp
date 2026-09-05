@@ -40,7 +40,6 @@ namespace luax::render3d {
     };
 
     constexpr std::size_t kMaxMeshVertices = 65535;
-    constexpr std::uint32_t kMaxMeshIndexValue = 65535;
 
     class MeshAsset {
     public:

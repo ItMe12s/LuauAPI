@@ -20,82 +20,48 @@ namespace {
         MaximumSize,
     };
 
-    struct SandboxReadResult {
-        cgltf_result result = cgltf_result_success;
-        std::string error;
-        std::vector<std::uint8_t> bytes;
-    };
-
-    SandboxReadResult readSandboxFile(
+    geode::Result<std::vector<std::uint8_t>> readSandboxFile(
         std::filesystem::path const& path, std::filesystem::path const& sandboxRoot,
         std::string_view label, PostReadValidation validation
     ) {
         std::string const prefix(label);
         std::error_code ec;
-        auto resolved = std::filesystem::weakly_canonical(path, ec);
+        auto const rel = std::filesystem::relative(path, sandboxRoot, ec);
         if (ec) {
-            return {
-                cgltf_result_io_error,
-                prefix + " path cannot be resolved: " + ec.message(),
-                {},
-            };
+            return geode::Err(prefix + " path cannot be resolved: " + ec.message());
         }
-
-        if (!pathInsideRootValue(resolved, sandboxRoot)) {
-            return {cgltf_result_io_error, prefix + " path escapes sandbox root", {}};
+        if (escapedRelativePathValue(rel)) {
+            return geode::Err(prefix + " path escapes sandbox root");
         }
+        GEODE_UNWRAP_INTO(auto resolved, resolveInsideRoot(sandboxRoot, rel.generic_string()));
 
         if (!std::filesystem::is_regular_file(resolved, ec)) {
-            return {
-                cgltf_result_file_not_found,
-                prefix + " file not found: " + filesystemPathString(resolved),
-                {},
-            };
+            return geode::Err(prefix + " file not found: " + filesystemPathString(resolved));
         }
 
         auto const fileSize = std::filesystem::file_size(resolved, ec);
         if (ec) {
-            return {
-                cgltf_result_io_error,
-                prefix + " file cannot be read: " + filesystemPathString(resolved),
-                {},
-            };
+            return geode::Err(prefix + " file cannot be read: " + filesystemPathString(resolved));
         }
 
         if (fileSize > kMaxFsReadBytes) {
-            return {
-                cgltf_result_io_error,
-                prefix + " file exceeds maximum read size",
-                {},
-            };
+            return geode::Err(prefix + " file exceeds maximum read size");
         }
 
         auto bytesResult = geode::utils::file::readBinary(resolved);
         if (bytesResult.isErr()) {
-            return {
-                cgltf_result_io_error,
-                prefix + " file cannot be read: " + filesystemPathString(resolved),
-                {},
-            };
+            return geode::Err(prefix + " file cannot be read: " + filesystemPathString(resolved));
         }
 
         auto bytes = std::move(bytesResult).unwrap();
         if (validation == PostReadValidation::ExactFileSize && bytes.size() != fileSize) {
-            return {
-                cgltf_result_io_error,
-                prefix + " file cannot be read: " + filesystemPathString(resolved),
-                {},
-            };
+            return geode::Err(prefix + " file cannot be read: " + filesystemPathString(resolved));
         }
         if (validation == PostReadValidation::MaximumSize && bytes.size() > kMaxFsReadBytes) {
-            return {
-                cgltf_result_io_error,
-                prefix + " file exceeds maximum read size",
-                {},
-            };
+            return geode::Err(prefix + " file exceeds maximum read size");
         }
 
-        return {cgltf_result_success, {}, std::move(bytes)};
+        return geode::Ok(std::move(bytes));
     }
 
     cgltf_result sandboxFileRead(
@@ -113,19 +79,20 @@ namespace {
         auto read = readSandboxFile(
             std::filesystem::path(path), context->sandboxRoot, "buffer", PostReadValidation::ExactFileSize
         );
-        if (read.result != cgltf_result_success) {
-            context->lastError = std::move(read.error);
-            return read.result;
+        if (read.isErr()) {
+            context->lastError = std::move(read).unwrapErr();
+            return cgltf_result_io_error;
         }
 
-        auto* buffer = static_cast<std::uint8_t*>(memoryAlloc(memory->user_data, read.bytes.size()));
+        auto bytes = std::move(read).unwrap();
+        auto* buffer = static_cast<std::uint8_t*>(memoryAlloc(memory->user_data, bytes.size()));
         if (buffer == nullptr) {
             return cgltf_result_out_of_memory;
         }
 
-        std::memcpy(buffer, read.bytes.data(), read.bytes.size());
+        std::memcpy(buffer, bytes.data(), bytes.size());
 
-        *size = read.bytes.size();
+        *size = bytes.size();
         *data = buffer;
         return cgltf_result_success;
     }
@@ -166,20 +133,6 @@ namespace {
 } // namespace
 
 namespace luax::render3d {
-
-    geode::Result<std::filesystem::path> canonicalSandboxRoot(std::filesystem::path const& root) {
-        if (root.empty()) {
-            return geode::Ok(std::filesystem::path{});
-        }
-
-        std::error_code ec;
-        auto canonical = std::filesystem::weakly_canonical(root, ec);
-        if (ec) {
-            return geode::Err("sandbox root cannot be resolved: " + ec.message());
-        }
-
-        return geode::Ok(canonical);
-    }
 
     void configureSandboxFileIo(::cgltf_options& options, SandboxFileContext& context) {
         options.file.read = sandboxFileRead;
@@ -229,13 +182,9 @@ namespace luax::render3d {
             return decodeBase64ToBytes(comma + 1);
         }
 
-        auto read = readSandboxFile(
+        return readSandboxFile(
             assetPath.parent_path() / image->uri, sandboxRoot, "image", PostReadValidation::MaximumSize
         );
-        if (read.result != cgltf_result_success) {
-            return geode::Err(std::move(read.error));
-        }
-        return geode::Ok(std::move(read.bytes));
     }
 
 } // namespace luax::render3d
