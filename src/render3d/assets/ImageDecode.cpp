@@ -67,7 +67,12 @@ namespace luax::render3d {
             out.width = width;
             out.height = height;
             out.rgba.resize(byteCount);
-            // cocos JPEG path emits RGB, premult flag stays false.
+            if (image.hasAlpha()) {
+                // iOS UIImage path emits RGBA8888.
+                std::copy_n(pixels, byteCount, out.rgba.data());
+                return geode::Ok(std::move(out));
+            }
+            // libjpeg path emits RGB, premult flag stays false.
             for (std::size_t i = 0; i < pixels64; ++i) {
                 out.rgba[i * 4 + 0] = pixels[i * 3 + 0];
                 out.rgba[i * 4 + 1] = pixels[i * 3 + 1];
