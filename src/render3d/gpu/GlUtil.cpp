@@ -97,7 +97,6 @@ namespace luax::render3d {
         glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &arrayBuffer);
         glGetIntegerv(GL_ELEMENT_ARRAY_BUFFER_BINDING, &elementArrayBuffer);
         glGetIntegerv(GL_FRAMEBUFFER_BINDING, &framebufferBinding);
-        glGetIntegerv(GL_UNPACK_ALIGNMENT, &unpackAlignment);
         glGetIntegerv(GL_VIEWPORT, viewport.data());
         glGetIntegerv(GL_SCISSOR_BOX, scissorBox.data());
         glGetFloatv(GL_COLOR_CLEAR_VALUE, clearColor.data());
@@ -137,7 +136,6 @@ namespace luax::render3d {
         glUseProgram(static_cast<GLuint>(program));
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, static_cast<GLuint>(boundTexture));
-        glPixelStorei(GL_UNPACK_ALIGNMENT, unpackAlignment);
         cocos2d::ccGLEnableVertexAttribs(cocos2d::kCCVertexAttribFlag_None);
         glBindBuffer(GL_ARRAY_BUFFER, static_cast<GLuint>(arrayBuffer));
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, static_cast<GLuint>(elementArrayBuffer));
