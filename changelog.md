@@ -11,6 +11,7 @@
 
 ## v0.1.0-beta.26
 
+- Redesigned `gd3d` internals for code quality, performance and iOS support.
 - Added skewing support to Lunar.
 - Added pose sampling, seek, and current time to Lunar animation tracks.
 - Added keyframe CRUD to `LunarAnimationDef` and node listing plus pose readback to `LunarRig`.
@@ -35,6 +36,7 @@
 ## v0.1.0-beta.23
 
 - Updated to Geode SDK 5.9.0.
+- Added `geode.web` `WebRequest:getBodyRef`.
 - Updated internal dependencies and bindings.
 
 ## v0.1.0-beta.22
