@@ -127,6 +127,7 @@ namespace luax::render3d {
         else {
             glDisable(GL_CULL_FACE);
         }
+        cocos2d::ccGLBlendFunc(static_cast<GLenum>(blendSrc), static_cast<GLenum>(blendDst));
         glBlendFunc(static_cast<GLenum>(blendSrc), static_cast<GLenum>(blendDst));
         if (blendEnabled == GL_TRUE) {
             glEnable(GL_BLEND);
@@ -135,8 +136,10 @@ namespace luax::render3d {
             glDisable(GL_BLEND);
         }
         cocos2d::ccGLUseProgram(static_cast<GLuint>(program));
+        glUseProgram(static_cast<GLuint>(program));
         glActiveTexture(GL_TEXTURE0);
         cocos2d::ccGLBindTexture2D(static_cast<GLuint>(boundTexture));
+        glBindTexture(GL_TEXTURE_2D, static_cast<GLuint>(boundTexture));
         glPixelStorei(GL_UNPACK_ALIGNMENT, unpackAlignment);
         cocos2d::ccGLEnableVertexAttribs(cocos2d::kCCVertexAttribFlag_None);
         glBindBuffer(GL_ARRAY_BUFFER, static_cast<GLuint>(arrayBuffer));
