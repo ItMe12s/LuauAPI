@@ -167,7 +167,7 @@ function DefOps.putPose(d: any, frame: any, id: any, pose: any, ukey: any?): (bo
 	if next(pose) == nil then
 		return true, nil
 	end
-	-- Hot path (drag frames): scope the undo snapshot to the active animation only.
+	-- Hot path (drag frames), scope the undo snapshot to the active animation only.
 	local before = Core.snapshotAnim(d, d.activeAnim)
 	local kf = anim.keyframes[frame]
 	if kf == nil then
