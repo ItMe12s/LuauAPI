@@ -17,6 +17,10 @@ This page names the main parts and traces how a script gets from a file to runni
 - ImGui draw scheduler. Drives `imgui.onDraw` callbacks each frame. See [ImGui draw scheduler](internals/imgui-draw-scheduler.md).
 - WebSocket. Client and local server bindings backed by IXWebSocket. See [websocket](../reference/lua/websocket.md).
 - Lunar bindings. Sprite rigging and keyframe animation. See [lunar](../reference/lua/lunar.md).
+- Lunar Animator. Dev-mode-only rig and animation editor on the `lunar` bindings and ImGui.
+  Backend in `mod/ledit/leditb_*.luau`.
+  UI in `mod/ledit/leditf_*.luau`.
+  Tests in `tests/host/lunar/LunarEditorLuauTests.cpp`.
 - 3D rendering. Loads glTF meshes and draws them through `gd3d.ViewportFrame` sprites. See [gd3d](../reference/lua/gd3d.md).
 - Codegen. Generates the game bindings and the type stubs. See [Codegen](codegen/codegen.md).
 - Diagnostics. Crash sidecar for Luau context at native faults. See [Crash sidecar](internals/crash-sidecar.md).

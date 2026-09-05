@@ -38,10 +38,13 @@ Returns `nil` and an error message when the value cannot be converted or stored.
 ## getSettingValue
 
 ```lua
-geode.Mod.getSettingValue(key: string) -> (any?, string?)
+geode.Mod.getSettingValue(key: string) -> any?
 ```
 
-Reads a mod setting from `mod.json`. Returns `nil` when the key is missing or the read fails.
+Reads a mod setting from `mod.json`.
+Returns the set value, or the `mod.json` default when the key has not been touched,
+and `nil` when the key is missing or the read fails.
+This always returns exactly one value.
 
 ## hasSetting
 

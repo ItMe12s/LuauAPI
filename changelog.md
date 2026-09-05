@@ -16,7 +16,7 @@
 - Added pose sampling, seek, and current time to Lunar animation tracks.
 - Added keyframe CRUD to `LunarAnimationDef` and node listing plus pose readback to `LunarRig`.
 - Added built-in sprite rig and animation editor `Lunar Animator` (developer mode only).
-- Added Node IDs to dependencies.
+- Added Node IDs and ImagePlus to dependencies.
 - Fixed `geode.Mod.getSettingValue` returning nil for untouched settings (now returns the default value).
 - Updated Lunar `*_out`/`*_in_out` pow easing to the standard `1 - (1-p)^rate` curve.
 - Updated Luau VM and codegen to compile without exceptions.

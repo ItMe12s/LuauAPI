@@ -301,6 +301,9 @@ Lifecycle error strings are defined in `src/bindings/websocket/WebSocketInternal
 | `kMaxMeshVertices`   | `65535`  | Max vertices per `gd3d.mesh.new` and per glTF primitive                    |
 | `kMaxImageDimension` | `4096`   | Max decoded image side in `ImageDecode.cpp`                                |
 
+The effective image dimension limit is about 2896 px.
+A 4096x4096 RGBA image is 64 MiB, over the 32 MiB decoded pixel-buffer cap (`decoded image exceeds maximum size`).
+
 ### gd3d and glTF errors
 
 | Message                                                 | When                                                           | Return shape                             |
@@ -331,10 +334,12 @@ Lifecycle error strings are defined in `src/bindings/websocket/WebSocketInternal
 | `%s: material handle is invalid`                        | Stale or bad material userdata                                 | Lua error                                |
 | `gd3d.Material.new: expected color field`               | Missing color in constructor table                             | Lua error                                |
 | `positions exceed maximum vertex count`                 | Procedural mesh over vertex cap                                | `nil, err` on `gd3d.mesh.new`            |
+| `primitive exceeds maximum vertex count`                | glTF primitive accessor count over vertex cap                  | `nil, err` on glTF load                  |
 | `base64 image data is empty`                            | Empty embedded glTF image buffer                               | `nil, err`                               |
 | `base64 image data exceeds maximum read size`           | Embedded base64 image over read cap                            | `nil, err`                               |
 | `embedded image exceeds maximum read size`              | Embedded glTF image over read cap                              | `nil, err`                               |
-| `sandbox root cannot be resolved: ...`                  | Texture or buffer sandbox root invalid                         | `nil, err`                               |
+| `image path escapes sandbox root`                       | Image URI outside sandbox root                                 | `nil, err` on glTF image load            |
+| `resources root is not a directory: ...`                | Sandbox root missing or not a directory                        | `nil, err`                               |
 | `image data is empty`                                   | Empty image input                                              | `nil, err` on texture load               |
 | `encoded image exceeds maximum read size`               | Image file over read cap                                       | `nil, err` on texture or glTF image load |
 | `failed to decode image: ...`                           | cocos JPEG or ImagePlus decode failure                         | `nil, err`                               |
