@@ -170,8 +170,7 @@ function App.open()
 		end)
 		if back then
 			back:setID(modId .. "/back")
-			back:setAnchorPoint({ x = 0, y = 1 })
-			back:setPosition({ x = 5, y = winSize.height - 5 })
+			back:setPosition({ x = 20, y = winSize.height - 15 })
 			menu:addChild(back)
 		end
 	end

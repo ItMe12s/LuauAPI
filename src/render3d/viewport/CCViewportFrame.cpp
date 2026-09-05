@@ -374,6 +374,7 @@ namespace luax::render3d {
             return;
         }
 
+        detachSpriteTexture();
         CCTexture2D* tex = buildFramebufferTexture(width, height);
         if (tex == nullptr) {
             return;
@@ -391,7 +392,11 @@ namespace luax::render3d {
         }
 
         GLint prevFbo = 0;
+        GLint prevRenderbuffer = 0;
+        GLint prevTexture = 0;
         glGetIntegerv(GL_FRAMEBUFFER_BINDING, &prevFbo);
+        glGetIntegerv(GL_RENDERBUFFER_BINDING, &prevRenderbuffer);
+        glGetIntegerv(GL_TEXTURE_BINDING_2D, &prevTexture);
 
         deleteColorTexture();
         if (m_fbo != 0) {
@@ -409,7 +414,8 @@ namespace luax::render3d {
         unsigned int const color = allocFramebufferTexture(width, height);
         if (color == 0) {
             glBindFramebuffer(GL_FRAMEBUFFER, static_cast<GLuint>(prevFbo));
-            glBindTexture(GL_TEXTURE_2D, 0);
+            glBindTexture(GL_TEXTURE_2D, static_cast<GLuint>(prevTexture));
+            glBindRenderbuffer(GL_RENDERBUFFER, static_cast<GLuint>(prevRenderbuffer));
             glDeleteFramebuffers(1, &m_fbo);
             m_fbo = 0;
             return false;
@@ -425,8 +431,8 @@ namespace luax::render3d {
 
         GLenum const status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
         glBindFramebuffer(GL_FRAMEBUFFER, static_cast<GLuint>(prevFbo));
-        glBindTexture(GL_TEXTURE_2D, 0);
-        glBindRenderbuffer(GL_RENDERBUFFER, 0);
+        glBindTexture(GL_TEXTURE_2D, static_cast<GLuint>(prevTexture));
+        glBindRenderbuffer(GL_RENDERBUFFER, static_cast<GLuint>(prevRenderbuffer));
 
         if (status != GL_FRAMEBUFFER_COMPLETE) {
             geode::log::error(
