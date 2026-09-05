@@ -10,6 +10,7 @@
 # LuauAPI
 
 **Heads up: LuauAPI is still in beta, so expect things to change.**
+
 **LuauAPI development will NOT support older versions of GD, Geode SDK, bindings, and dependencies.**
 
 Mods can use Luau alone, combine C++ and Luau, or share APIs with other mods.
@@ -65,9 +66,11 @@ git submodule update --init --recursive
 
 Special thanks to:
 
-- [Juniper](https://github.com/TreehouseFalcon) (Testing, Debugging)
-- [Erymanthus](https://github.com/RayDeeUx) (Testing, Debugging)
-- [YellowCat98](https://github.com/YellowCat98) (Testing)
+- [Erymanthus](https://github.com/RayDeeUx) (Testing, Debugging, Review)
+- [Juniper](https://github.com/TreehouseFalcon) (Testing, Debugging, User)
+- [YellowCat98](https://github.com/YellowCat98) (Early Testing)
+
+And many more people who helped along the way!
 
 In-game:
 

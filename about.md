@@ -54,6 +54,7 @@ Need help? Join the [Discord](https://discord.gg/E8f6D6XqbW).
 ### Making a crash report
 
 First turn on **Enable Crash Context File** in LuauAPI's mod settings under User Settings.
+
 Debugging only!!! it can cause lag, so leave it off after you are done.
 
 Then crash the game. In the `Geode Crash Handler` window click `Open crashlog folder`.
