@@ -22,6 +22,8 @@ namespace luax::render3d {
             return 0;
         }
         glBindTexture(GL_TEXTURE_2D, texture);
+        GLint prevAlignment = 4;
+        glGetIntegerv(GL_UNPACK_ALIGNMENT, &prevAlignment);
         glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -30,6 +32,7 @@ namespace luax::render3d {
         glTexImage2D(
             GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, rgba.data()
         );
+        glPixelStorei(GL_UNPACK_ALIGNMENT, prevAlignment);
         if (glGetError() != GL_NO_ERROR) {
             geode::log::error("Renderer3D: texture upload failed ({}x{})", width, height);
             glDeleteTextures(1, &texture);
@@ -59,11 +62,14 @@ namespace luax::render3d {
             return 0;
         }
         glBindTexture(GL_TEXTURE_2D, texture);
+        GLint prevAlignment = 4;
+        glGetIntegerv(GL_UNPACK_ALIGNMENT, &prevAlignment);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+        glPixelStorei(GL_UNPACK_ALIGNMENT, prevAlignment);
         if (glGetError() != GL_NO_ERROR) {
             geode::log::error("Renderer3D: framebuffer texture alloc failed ({}x{})", width, height);
             glDeleteTextures(1, &texture);
