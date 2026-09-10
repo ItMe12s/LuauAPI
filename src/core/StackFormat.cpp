@@ -87,9 +87,7 @@ namespace luax {
             std::string& out, lua_Debug const& ar, std::filesystem::path const& resourcesRoot
         ) {
             out.append("\n    ");
-            if (ar.source) {
-                out.append(formatDebugSource(ar.short_src, resourcesRoot));
-            }
+            out.append(formatDebugSource(ar.source, resourcesRoot));
             if (ar.currentline > 0) {
                 out.append(":");
                 out.append(geode::utils::numToString(ar.currentline));

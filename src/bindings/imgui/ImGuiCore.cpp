@@ -292,11 +292,17 @@ namespace luax {
         if (!render3d::gpuSessionReady()) {
             return;
         }
+        if (!imguiHostIsInitialized()) {
+            return;
+        }
         ImGuiCocos::get().setVisible(visible);
     }
 
     void imguiHostToggle() {
         if (!render3d::gpuSessionReady()) {
+            return;
+        }
+        if (!imguiHostIsInitialized()) {
             return;
         }
         ImGuiCocos::get().toggle();

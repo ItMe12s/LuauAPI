@@ -1,4 +1,5 @@
 #include "bindings/geode/EnumKeyCodes.manifest.hpp"
+#include "bindings/geode/GeodeBindingSupport.hpp"
 #include "framework/Binding.hpp"
 #include "framework/stack/Stack.hpp"
 #include "framework/stack/TableUtil.hpp"
@@ -56,7 +57,7 @@ namespace {
         auto color = check<cocos2d::ccColor3B>(L, 1, "geode.cocos.to4B");
         int alpha = 255;
         if (lua_gettop(L) >= 2 && !lua_isnil(L, 2)) {
-            alpha = check<int>(L, 2, "geode.cocos.to4B");
+            alpha = geode_detail::checkByte(L, 2, "geode.cocos.to4B");
         }
         push(L, geode::cocos::to4B(color, static_cast<GLubyte>(alpha)));
         return 1;

@@ -402,6 +402,17 @@ namespace {
         );
     }
 
+    bool hasSfntMagic(std::vector<std::uint8_t> const& data) {
+        if (data.size() < 4) {
+            return false;
+        }
+        auto const magic = (static_cast<std::uint32_t>(data[0]) << 24) |
+            (static_cast<std::uint32_t>(data[1]) << 16) |
+            (static_cast<std::uint32_t>(data[2]) << 8) | static_cast<std::uint32_t>(data[3]);
+        return magic == 0x00010000u || magic == 0x4F54544Fu || magic == 0x74727565u ||
+            magic == 0x74746366u;
+    }
+
     void pushFontHandle(lua_State* L, std::uint64_t id) {
         auto* handle = static_cast<ImGuiFontHandle*>(lua_newuserdatataggedwithmetatable(
             L, sizeof(ImGuiFontHandle), detail::imguiFontHandleTag()
@@ -446,13 +457,13 @@ namespace {
             return pushNilErr(L, contents.unwrapErr());
         }
 
-        auto const id = imguiFontAdd(size, std::move(contents.unwrap()));
-        imguiFontAfterRegistryChange();
-        if (ImGui::GetCurrentContext() != nullptr && imguiFontResolve(id) == nullptr) {
-            imguiFontRemove(id);
-            imguiFontAfterRegistryChange();
+        auto bytes = std::move(contents.unwrap());
+        if (!hasSfntMagic(bytes)) {
             return pushNilErr(L, "font file could not be loaded");
         }
+
+        auto const id = imguiFontAdd(size, std::move(bytes));
+        imguiFontAfterRegistryChange();
 
         pushFontHandle(L, id);
         return 1;
@@ -546,9 +557,6 @@ namespace luax {
         }
 
         float const density = geode::utils::getDisplayFactor();
-        if (s_entries.empty() && density <= 1.f) {
-            return;
-        }
 
         ImFontConfig cfg;
         if (density > 1.f) {

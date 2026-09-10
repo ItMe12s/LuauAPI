@@ -83,15 +83,15 @@ The input text caps live in `src/bindings/imgui/ImGuiBindingInternal.hpp`.
 
 ### ImGui errors
 
-| Message                                                       | When                  | Return shape |
-| ------------------------------------------------------------- | --------------------- | ------------ |
-| `imgui.onDraw: too many draw callbacks (limit 256)`           | Draw callback cap hit | Lua error    |
-| `imgui.font.add must not run inside an imgui.onDraw callback` | `add` inside draw     | Lua error    |
-| `imgui.font.add must run on the main thread`                  | `add` off main thread | Lua error    |
-| `imgui.font.add: size must be greater than 0`                 | Non-positive size     | Lua error    |
-| `font path must use a .ttf extension`                         | Non-`.ttf` path       | `nil, err`   |
-| `font file could not be loaded`                               | Invalid TTF data      | `nil, err`   |
-| `imgui.font.with: font handle is invalid`                     | Bad or stale handle   | Lua error    |
+| Message                                                       | When                        | Return shape |
+| ------------------------------------------------------------- | --------------------------- | ------------ |
+| `imgui.onDraw: too many draw callbacks (limit 256)`           | Draw callback cap hit       | Lua error    |
+| `imgui.font.add must not run inside an imgui.onDraw callback` | `add` inside draw           | Lua error    |
+| `imgui.font.add must run on the main thread`                  | `add` off main thread       | Lua error    |
+| `imgui.font.add: size must be greater than 0`                 | Non-positive size           | Lua error    |
+| `font path must use a .ttf extension`                         | Non-`.ttf` path             | `nil, err`   |
+| `font file could not be loaded`                               | Missing/invalid SFNT header | `nil, err`   |
+| `imgui.font.with: font handle is invalid`                     | Bad or stale handle         | Lua error    |
 
 ## GPU session disable
 
