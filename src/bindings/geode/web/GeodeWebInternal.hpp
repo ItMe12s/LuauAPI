@@ -27,6 +27,8 @@ namespace luax::webdetail {
     void pushProgress(lua_State* L, web::WebProgress const& progress);
     std::uint64_t checkNonNegativeInteger(lua_State* L, int idx, char const* method);
 
+    std::optional<std::size_t> currentInterceptedRequestID();
+
     std::shared_ptr<WebTask> startRequest(
         lua_State* L, web::WebRequest& req, std::string method, std::string url, int callbackIdx
     );

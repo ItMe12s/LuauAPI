@@ -23,6 +23,24 @@ namespace luax::webdetail {
     using namespace luax;
 
     namespace {
+        thread_local std::optional<std::size_t> t_interceptedRequestID;
+    } // namespace
+
+    std::optional<std::size_t> currentInterceptedRequestID() {
+        return t_interceptedRequestID;
+    }
+
+    namespace {
+        struct InterceptScope {
+            explicit InterceptScope(web::WebRequest const& request) {
+                t_interceptedRequestID = request.getID();
+            }
+
+            ~InterceptScope() {
+                t_interceptedRequestID.reset();
+            }
+        };
+
         bool invokeRequestEvent(
             std::shared_ptr<LuaCallback> const& cb, char const* context,
             std::optional<std::string_view> modID, web::WebRequest& request
@@ -38,12 +56,15 @@ namespace luax::webdetail {
                 return true;
             }
 
+            if (t_interceptedRequestID) return false;
+
             struct Ctx {
                 std::optional<std::string_view> modID;
                 web::WebRequest* request;
                 bool stop = false;
             } ctx{modID, &request, false};
 
+            InterceptScope scope{request};
             bool ok = cb->invoke(
                 modID ? 2 : 1,
                 1,

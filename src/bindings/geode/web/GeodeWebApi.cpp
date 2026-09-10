@@ -212,6 +212,9 @@ namespace luax::webdetail {
         lua_State* L, web::WebRequest& req, std::string method, std::string url, int callbackIdx
     ) {
         luaL_checktype(L, callbackIdx, LUA_TFUNCTION);
+        if (currentInterceptedRequestID() == req.getID()) {
+            luaL_error(L, "%s", kWebSendInsideInterceptMsg);
+        }
         if (countInflightWebRequests() >= kMaxWebConcurrentRequests) {
             luaL_error(L, "%s", kWebTooManyConcurrentRequestsMsg);
         }

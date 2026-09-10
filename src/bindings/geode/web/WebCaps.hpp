@@ -12,6 +12,8 @@ namespace luax {
     inline constexpr char kWebResponseSizeExceededMsg[] = "response exceeds maximum size";
     inline constexpr char kWebRequestBodyExceededMsg[] = "request body exceeds maximum size";
     inline constexpr char kWebTooManyConcurrentRequestsMsg[] = "too many concurrent web requests";
+    inline constexpr char kWebSendInsideInterceptMsg[] =
+        "cannot send a request inside its own intercept callback";
 
     inline bool responseDataWithinLimit(std::size_t size) {
         return size <= kMaxWebResponseBytes;

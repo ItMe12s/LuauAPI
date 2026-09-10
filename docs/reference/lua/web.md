@@ -104,6 +104,7 @@ form:fileFrom("config", "config", "data.json", "application/json")
 Register intercept and response listeners with `onRequestIntercept`, `onResponse`, and the `For` / `ById` variants.
 Each registrar takes an optional `priority` (higher runs first).
 Return `true` to stop other listeners on the main thread.
+Returning `true` never blocks the request. Geode sends it regardless.
 See Threading below for off-thread behavior.
 
 `onResponse*` callbacks receive `(response?, err?)`, or `(modID, response?, err?)` for the global listener.
@@ -134,8 +135,9 @@ Use [tasks and time](tasks.md) to schedule work around callbacks.
 Request intercept:
 
 - `onRequestIntercept*` runs on the main thread so Lua can change the request before send.
-- Off the main thread, a registered intercept cannot run and the request is blocked. Geode logs a one-time warning.
-- If an intercept callback errors, the request is blocked.
+- Off the main thread, a registered intercept cannot run and the request proceeds. LuauAPI logs a one-time warning.
+- If an intercept callback errors, LuauAPI logs it and the request proceeds.
+- Sending the intercepted request again inside its callback raises an error. Sending a different request is allowed. Luau intercept listeners do not run again for it.
 
 Response listeners:
 
