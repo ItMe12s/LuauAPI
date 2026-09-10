@@ -119,7 +119,7 @@ Usertypes use two layers:
 `checkCandidate` and `tryCandidate` check the shared Luau tag first, then read `typeTag` to find the registered type.
 `liveObject` decides whether a borrowed target is still alive.
 
-On push, `pushUserdataOwned` and `pushUserdataBorrowed` create userdata with the shared Luau tag, set `block->typeTag`, and call `lua_setmetatable`.
+On push, `pushImpl` creates userdata with the shared Luau tag, sets `block->typeTag`, and calls `lua_setmetatable`.
 One destructor is registered on the shared Luau tag.
 
 Reserved userdata still get their own Luau tags through `registerTaggedMetatable` and `lua_setuserdatametatable`.

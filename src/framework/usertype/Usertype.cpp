@@ -183,10 +183,6 @@ namespace luax::detail {
     void destructorDispatch(lua_State*, void* ud) {
         auto* block = static_cast<UserdataBlock*>(ud);
         if (!block) return;
-        if (block->flags & kUserdataEphemeralFlag) {
-            block->~UserdataBlock();
-            return;
-        }
         if (block->flags & kUserdataOwnedFlag) {
             if (block->ptr && !Runtime::isShuttingDown()) {
                 Fields::evict(block->ptr);
@@ -338,56 +334,29 @@ namespace luax::detail {
         return nullptr;
     }
 
-    bool assignUsertypeMetatable(lua_State* L, TypeInfo const& info) {
+    bool pushImpl(lua_State* L, cocos2d::CCObject* obj, TypeInfo const& info, std::uint32_t flags) {
         luaL_getmetatable(L, info.mtName.c_str());
-        if (lua_istable(L, -1)) {
-            lua_setmetatable(L, -2);
-            return true;
+        if (!lua_istable(L, -1)) {
+            lua_pop(L, 1);
+            geode::log::error("pushImpl: missing metatable '{}' for type '{}'", info.mtName, info.name);
+            lua_pushnil(L);
+            return false;
         }
-        lua_pop(L, 1);
-        geode::log::error(
-            "assignUsertypeMetatable: missing metatable '{}' for type '{}'", info.mtName, info.name
-        );
-        return false;
-    }
-
-    void initUserdataBlock(lua_State* L, cocos2d::CCObject* obj, TypeInfo const& info, bool owned) {
         auto* storage =
             lua_newuserdatatagged(L, sizeof(UserdataBlock), static_cast<int>(kSharedUsertypeTag));
         auto* block = new (storage) UserdataBlock();
         block->ptr = obj;
-        if (owned) {
-            block->flags = kUserdataOwnedFlag;
-        }
-        else {
+        block->flags = flags;
+        block->typeTag = info.tag;
+        if (!(flags & kUserdataOwnedFlag)) {
             block->weak = geode::WeakRef<cocos2d::CCObject>(obj);
             if (obj) {
                 borrowedTargets().insert(obj);
             }
-            block->flags = 0u;
         }
-        block->typeTag = info.tag;
-        if (!assignUsertypeMetatable(L, info)) {
-            block->~UserdataBlock();
-            lua_pop(L, 1);
-            lua_pushnil(L);
-        }
-    }
-
-    void pushUserdataOwned(lua_State* L, cocos2d::CCObject* obj, TypeInfo const& info) {
-        if (!isValidUserdataTag(info.tag)) {
-            lua_pushnil(L);
-            return;
-        }
-        initUserdataBlock(L, obj, info, true);
-    }
-
-    void pushUserdataBorrowed(lua_State* L, cocos2d::CCObject* obj, TypeInfo const& info) {
-        if (!isValidUserdataTag(info.tag)) {
-            lua_pushnil(L);
-            return;
-        }
-        initUserdataBlock(L, obj, info, false);
+        lua_insert(L, -2);
+        lua_setmetatable(L, -2);
+        return true;
     }
 
     void pushCallbackArg(lua_State* L, cocos2d::CCObject* obj) {
@@ -400,17 +369,7 @@ namespace luax::detail {
             lua_pushnil(L);
             return;
         }
-        auto* storage =
-            lua_newuserdatatagged(L, sizeof(UserdataBlock), static_cast<int>(kSharedUsertypeTag));
-        auto* block = new (storage) UserdataBlock();
-        block->ptr = obj;
-        block->flags = kUserdataOwnedFlag | kUserdataEphemeralFlag;
-        block->typeTag = info->tag;
-        if (!assignUsertypeMetatable(L, *info)) {
-            block->~UserdataBlock();
-            lua_pop(L, 1);
-            lua_pushnil(L);
-        }
+        pushImpl(L, obj, *info, 0);
     }
 
     TypeInfo const* findPushTypeInfo(cocos2d::CCObject* obj, std::type_index staticLowerBound) {

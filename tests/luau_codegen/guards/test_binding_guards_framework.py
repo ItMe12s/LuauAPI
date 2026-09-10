@@ -221,13 +221,14 @@ class CallbackFailureLoggingGuardTests(unittest.TestCase):
         dtor_body = source[dtor_start:dtor_end]
         self.assertNotIn("WeakRef", dtor_body)
 
-    def test_menu_callback_arg_uses_ephemeral_push(self) -> None:
+    def test_menu_callback_arg_uses_borrowed_push(self) -> None:
         usertype_source = read_repo_file(USERTYPE)
         dtor_body = function_body(usertype_source, "destructorDispatch", ret="void")
-        self.assertIn("kUserdataEphemeralFlag", dtor_body)
+        self.assertNotIn("kUserdataEphemeralFlag", usertype_source)
         self.assertNotIn("evictTrampolinesForAnchor", dtor_body)
         self.assertIn("pushCallbackArg", usertype_source)
-        self.assertIn("kUserdataEphemeralFlag", usertype_source)
+        push_body = function_body(usertype_source, "pushCallbackArg", ret="void")
+        self.assertIn("pushImpl", push_body)
 
     def test_delegate_table_invoke_logs_failures(self) -> None:
         source = read_repo_file(LUA_DELEGATE)

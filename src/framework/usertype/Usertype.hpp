@@ -28,7 +28,6 @@ namespace luax {
 #endif
 
     constexpr std::uint32_t kUserdataOwnedFlag = 1u;
-    constexpr std::uint32_t kUserdataEphemeralFlag = 2u;
 
     struct UserdataBlock {
         cocos2d::CCObject* ptr = nullptr;
@@ -96,8 +95,7 @@ namespace luax {
         UserdataCandidate tryCandidate(lua_State* L, int idx);
         cocos2d::CCNode* tryNodeCandidate(lua_State* L, int idx);
         bool hasBase(TypeInfo const& info, std::uint32_t targetTag);
-        void pushUserdataOwned(lua_State* L, cocos2d::CCObject* obj, TypeInfo const& info);
-        void pushUserdataBorrowed(lua_State* L, cocos2d::CCObject* obj, TypeInfo const& info);
+        bool pushImpl(lua_State* L, cocos2d::CCObject* obj, TypeInfo const& info, std::uint32_t flags);
         void pushCallbackArg(lua_State* L, cocos2d::CCObject* obj);
         TypeInfo const* findPushTypeInfo(cocos2d::CCObject* obj, std::type_index staticLowerBound);
     } // namespace detail
@@ -219,7 +217,9 @@ namespace luax {
                 lua_pushnil(L);
                 return;
             }
-            detail::pushUserdataOwned(L, static_cast<cocos2d::CCObject*>(obj), *info);
+            if (!detail::pushImpl(L, static_cast<cocos2d::CCObject*>(obj), *info, kUserdataOwnedFlag)) {
+                return;
+            }
             if (!retainLuaRef(static_cast<cocos2d::CCObject*>(obj), info->name.c_str())) {
                 lua_pop(L, 1);
                 lua_pushnil(L);
@@ -236,7 +236,7 @@ namespace luax {
                 lua_pushnil(L);
                 return;
             }
-            detail::pushUserdataBorrowed(L, static_cast<cocos2d::CCObject*>(obj), *info);
+            detail::pushImpl(L, static_cast<cocos2d::CCObject*>(obj), *info, 0);
         }
 
         static void pushBorrowedDynamic(lua_State* L, T* obj)
@@ -253,7 +253,7 @@ namespace luax {
                 lua_pushnil(L);
                 return;
             }
-            detail::pushUserdataBorrowed(L, static_cast<cocos2d::CCObject*>(obj), *info);
+            detail::pushImpl(L, static_cast<cocos2d::CCObject*>(obj), *info, 0);
         }
 
         static void pushOwnedDynamic(lua_State* L, T* obj)
@@ -270,7 +270,9 @@ namespace luax {
                 lua_pushnil(L);
                 return;
             }
-            detail::pushUserdataOwned(L, static_cast<cocos2d::CCObject*>(obj), *info);
+            if (!detail::pushImpl(L, static_cast<cocos2d::CCObject*>(obj), *info, kUserdataOwnedFlag)) {
+                return;
+            }
             if (!retainLuaRef(static_cast<cocos2d::CCObject*>(obj), info->name.c_str())) {
                 lua_pop(L, 1);
                 lua_pushnil(L);
