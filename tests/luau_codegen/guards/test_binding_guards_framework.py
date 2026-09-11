@@ -297,7 +297,7 @@ class HandleGcGuardTests(unittest.TestCase):
         self.assertIn("compactCancelledSlots", slots_source)
         self.assertIn("IndexedSlotMap", slots_source)
 
-        task_scheduler = read_repo_file(TASK_SCHEDULER)
+        task_scheduler = read_repo_file("src/bindings/task/TaskScheduler.hpp")
         self.assertIn("IndexedSlotMap", task_scheduler)
 
         imgui_scheduler = read_repo_file("src/bindings/imgui/ImGuiDrawScheduler.hpp")
@@ -378,15 +378,14 @@ class RuntimeExceptionPolicyGuardTests(unittest.TestCase):
         return sources
 
     def test_exception_flow_matches_arc_poll_allowlist(self) -> None:
-        task_rel = "src/bindings/geode/GeodeTaskHandleBinding.hpp"
+        task_rel = "src/bindings/geode/GeodeTaskHandleBinding.cpp"
         poll_pattern = re.compile(
-            r"        void poll\(arc::Context& cx\) override \{.*?\n        \}"
-            r"(?=\n\n        void abortNative\(\) override \{)",
+            r"    void GeodeTaskHandleStateBase::poll\(arc::Context& cx\) \{.*?\n    \}",
             re.DOTALL,
         )
         task_source = read_repo_file(task_rel)
         pollers = poll_pattern.findall(task_source)
-        self.assertEqual(len(pollers), 2, "expected generic and void Arc poll boundaries")
+        self.assertEqual(len(pollers), 1, "expected single Arc poll boundary")
 
         allowed_per_poller = {
             "try {": 1,
@@ -411,7 +410,7 @@ class RuntimeExceptionPolicyGuardTests(unittest.TestCase):
                     offenders.append(f"{rel}:{line_no}: {line.strip()}")
         self.assertFalse(
             offenders,
-            "runtime exception flow is limited to the two Arc TaskHandle poll boundaries: "
+            "runtime exception flow is limited to the Arc TaskHandle poll boundary: "
             + ", ".join(offenders),
         )
 
