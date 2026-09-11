@@ -99,7 +99,9 @@ namespace luax::render3d {
         glGetIntegerv(GL_FRAMEBUFFER_BINDING, &framebufferBinding);
         glGetIntegerv(GL_UNPACK_ALIGNMENT, &unpackAlignment);
         glGetIntegerv(GL_VIEWPORT, viewport.data());
-        glGetIntegerv(GL_SCISSOR_BOX, scissorBox.data());
+        if (scissorEnabled == GL_TRUE) {
+            glGetIntegerv(GL_SCISSOR_BOX, scissorBox.data());
+        }
         glGetFloatv(GL_COLOR_CLEAR_VALUE, clearColor.data());
         glActiveTexture(static_cast<GLenum>(activeTexture));
     }
@@ -127,6 +129,8 @@ namespace luax::render3d {
         else {
             glDisable(GL_CULL_FACE);
         }
+        // DO NOT REMOVE the raw gl* calls below.
+        // The cocos wrappers no-op when their cached state already matches.
         cocos2d::ccGLBlendFunc(static_cast<GLenum>(blendSrc), static_cast<GLenum>(blendDst));
         glBlendFunc(static_cast<GLenum>(blendSrc), static_cast<GLenum>(blendDst));
         if (blendEnabled == GL_TRUE) {

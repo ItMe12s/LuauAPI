@@ -100,9 +100,11 @@ namespace luax {
     void Requirer::clearPendingLoad() {
         m_pendingLoadPath.clear();
         m_pendingLoadContents.clear();
+        m_pendingLoadKey.clear();
     }
 
     void Requirer::cachePendingLoad(std::filesystem::path const& path, std::string contents) {
+        m_pendingLoadKey = fileCacheKey(path, contents);
         m_pendingLoadPath = path;
         m_pendingLoadContents = std::move(contents);
     }
@@ -255,7 +257,7 @@ namespace luax {
 
         auto const& contents = contentsResult.unwrap();
         cachePendingLoad(filePath, contents);
-        return writeString(fileCacheKey(filePath, contents), buffer, bufferSize, sizeOut);
+        return writeString(m_pendingLoadKey, buffer, bufferSize, sizeOut);
     }
 
     int Requirer::loadModule(lua_State* L, char const* chunkname, char const* loadname) {
@@ -293,8 +295,11 @@ namespace luax {
             contentsResult = geode::Ok(std::cref(fallbackContents));
         }
         auto const& contents = contentsResult.unwrap();
-        auto bytecodeResult =
-            m_runtime.getOrCompileBytecode(fileCacheKey(filePath, contents), contents);
+        std::optional<std::string> fallbackKey;
+        std::string const& key = filePath == m_pendingLoadPath ?
+            m_pendingLoadKey :
+            fallbackKey.emplace(fileCacheKey(filePath, contents));
+        auto bytecodeResult = m_runtime.getOrCompileBytecode(key, contents);
         if (bytecodeResult.isErr()) {
             luaL_error(
                 L, "module '%s' compile failed: %s", chunkname, bytecodeResult.unwrapErr().c_str()

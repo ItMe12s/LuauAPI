@@ -53,5 +53,6 @@ namespace luax {
         std::filesystem::path m_current;
         std::filesystem::path m_pendingLoadPath;
         std::string m_pendingLoadContents;
+        std::string m_pendingLoadKey;
     };
 } // namespace luax

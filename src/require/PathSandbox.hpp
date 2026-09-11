@@ -7,6 +7,7 @@
 #include <Geode/utils/string.hpp>
 #include <array>
 #include <filesystem>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <system_error>
@@ -206,6 +207,13 @@ namespace luax {
     }
 
     inline ScriptResult<std::filesystem::path> canonicalRoot(std::filesystem::path const& resourcesRoot) {
+        static thread_local std::optional<
+            std::pair<std::filesystem::path, ScriptResult<std::filesystem::path>>>
+            cache;
+        if (cache && cache->first == resourcesRoot) {
+            return cache->second;
+        }
+
         if (resourcesRoot.empty()) {
             return scriptErr<std::filesystem::path>("resources root is empty");
         }
@@ -224,6 +232,7 @@ namespace luax {
             );
         }
 
+        cache.emplace(resourcesRoot, scriptOk(root));
         return scriptOk(root);
     }
 
