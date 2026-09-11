@@ -18,6 +18,16 @@ namespace {
     using namespace luax;
     using namespace luax::render3d;
 
+    struct CgltfGuard {
+        ::cgltf_data* data = nullptr;
+
+        ~CgltfGuard() {
+            if (data != nullptr) {
+                cgltf_free(data);
+            }
+        }
+    };
+
     char const* cgltfResultMessage(cgltf_result result) {
         switch (result) {
             case cgltf_result_success: return "success";
@@ -202,6 +212,7 @@ namespace {
     geode::Result<int> resolveImageIndex(
         cgltf_image const* image, std::filesystem::path const& assetPath,
         std::filesystem::path const& sandboxRoot, std::vector<ImageData>& images,
+        std::vector<std::vector<std::uint8_t>>& encodedImages,
         std::unordered_map<cgltf_image const*, int>& imageIndices
     ) {
         auto const existing = imageIndices.find(image);
@@ -210,10 +221,10 @@ namespace {
         }
 
         GEODE_UNWRAP_INTO(auto encoded, readImageEncodedBytes(image, assetPath, sandboxRoot));
-        GEODE_UNWRAP_INTO(auto decoded, decodeImageRgba8(encoded));
 
         int const index = static_cast<int>(images.size());
-        images.push_back(std::move(decoded));
+        images.push_back(ImageData{});
+        encodedImages.push_back(std::move(encoded));
         imageIndices.emplace(image, index);
         return geode::Ok(index);
     }
@@ -257,7 +268,7 @@ namespace luax::render3d {
 
     geode::Result<void> MeshAsset::extractMaterials(
         ::cgltf_data const* data, MeshAsset& asset, std::filesystem::path const& assetPath,
-        std::filesystem::path const& sandboxRoot
+        std::filesystem::path const& sandboxRoot, std::vector<std::vector<std::uint8_t>>& encodedImages
     ) {
         std::unordered_map<cgltf_image const*, int> imageIndices;
         asset.m_materials.clear();
@@ -291,7 +302,7 @@ namespace luax::render3d {
                     GEODE_UNWRAP_INTO(
                         auto imageIndex,
                         resolveImageIndex(
-                            texture->image, assetPath, sandboxRoot, asset.m_images, imageIndices
+                            texture->image, assetPath, sandboxRoot, asset.m_images, encodedImages, imageIndices
                         )
                     );
 
@@ -352,6 +363,37 @@ namespace luax::render3d {
         return geode::Ok();
     }
 
+    geode::Result<void> MeshAsset::decodeUsedImages(
+        MeshAsset& asset, std::vector<std::vector<std::uint8_t>> const& encodedImages
+    ) {
+        std::vector<bool> usedMaterial(asset.m_materials.size(), false);
+        for (auto const& primitive : asset.m_primitives) {
+            if (primitive.materialIndex >= 0) {
+                usedMaterial[static_cast<std::size_t>(primitive.materialIndex)] = true;
+            }
+        }
+
+        std::vector<bool> decoded(encodedImages.size(), false);
+        for (std::size_t i = 0; i < asset.m_materials.size(); ++i) {
+            if (!usedMaterial[i]) {
+                continue;
+            }
+
+            int const imageIndex = asset.m_materials[i].imageIndex;
+            if (imageIndex < 0 || decoded[static_cast<std::size_t>(imageIndex)]) {
+                continue;
+            }
+
+            decoded[static_cast<std::size_t>(imageIndex)] = true;
+            GEODE_UNWRAP_INTO(
+                auto image, decodeImageRgba8(encodedImages[static_cast<std::size_t>(imageIndex)])
+            );
+            asset.m_images[static_cast<std::size_t>(imageIndex)] = std::move(image);
+        }
+
+        return geode::Ok();
+    }
+
     geode::Result<std::shared_ptr<MeshAsset>> MeshAsset::loadFromFile(std::filesystem::path const& path) {
         std::error_code ec;
         auto const fileSize = std::filesystem::file_size(path, ec);
@@ -398,37 +440,37 @@ namespace luax::render3d {
         cgltf_options options{};
         configureSandboxFileIo(options, fileContext);
 
-        ::cgltf_data* data = nullptr;
+        CgltfGuard guard;
         cgltf_result parseResult =
-            cgltf_parse(&options, bytes.data(), static_cast<cgltf_size>(bytes.size()), &data);
+            cgltf_parse(&options, bytes.data(), static_cast<cgltf_size>(bytes.size()), &guard.data);
         if (parseResult != cgltf_result_success) {
             return geode::Err(std::string("failed to parse glTF: ") + cgltfResultMessage(parseResult));
         }
 
         std::string const assetPathText = filesystemPathString(assetPath);
-        cgltf_result bufferResult = cgltf_load_buffers(&options, data, assetPathText.c_str());
+        cgltf_result bufferResult = cgltf_load_buffers(&options, guard.data, assetPathText.c_str());
         if (bufferResult != cgltf_result_success) {
             std::string message = "failed to load glTF buffers: ";
             message += fileContext.lastError.empty() ? cgltfResultMessage(bufferResult) :
                                                        fileContext.lastError;
-            cgltf_free(data);
             return geode::Err(std::move(message));
         }
 
+        std::vector<std::vector<std::uint8_t>> encodedImages;
         auto mesh = std::shared_ptr<MeshAsset>(new MeshAsset());
-        if (auto err = MeshAsset::extractMaterials(data, *mesh, assetPath, canonicalRoot);
+        if (auto err =
+                MeshAsset::extractMaterials(guard.data, *mesh, assetPath, canonicalRoot, encodedImages);
             err.isErr()) {
-            auto message = std::move(err).unwrapErr();
-            cgltf_free(data);
-            return geode::Err(std::move(message));
+            return geode::Err(std::move(err).unwrapErr());
         }
 
-        if (auto err = MeshAsset::extractSceneMeshes(data, *mesh); err.isErr()) {
-            auto message = std::move(err).unwrapErr();
-            cgltf_free(data);
-            return geode::Err(std::move(message));
+        if (auto err = MeshAsset::extractSceneMeshes(guard.data, *mesh); err.isErr()) {
+            return geode::Err(std::move(err).unwrapErr());
         }
-        cgltf_free(data);
+
+        if (auto err = MeshAsset::decodeUsedImages(*mesh, encodedImages); err.isErr()) {
+            return geode::Err(std::move(err).unwrapErr());
+        }
 
         return geode::Ok(mesh);
     }

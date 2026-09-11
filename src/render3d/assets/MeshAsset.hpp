@@ -69,9 +69,13 @@ namespace luax::render3d {
         void addPrimitive(MeshPrimitive primitive);
         static geode::Result<void> extractMaterials(
             ::cgltf_data const* data, MeshAsset& asset, std::filesystem::path const& assetPath,
-            std::filesystem::path const& sandboxRoot
+            std::filesystem::path const& sandboxRoot,
+            std::vector<std::vector<std::uint8_t>>& encodedImages
         );
         static geode::Result<void> extractSceneMeshes(::cgltf_data const* data, MeshAsset& asset);
+        static geode::Result<void> decodeUsedImages(
+            MeshAsset& asset, std::vector<std::vector<std::uint8_t>> const& encodedImages
+        );
 
         std::vector<MeshPrimitive> m_primitives;
         std::vector<MaterialData> m_materials;
