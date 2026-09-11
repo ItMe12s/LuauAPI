@@ -18,62 +18,194 @@
 namespace {
     using namespace luax;
 
-    struct FloatStyleField {
+    enum class StyleTag : std::uint8_t {
+        Float,
+        Vec2
+    };
+
+    struct StyleField {
         char const* key;
         ImGuiStyleVar var;
+        float ImGuiStyle::* floatMember;
+        ImVec2 ImGuiStyle::* vec2Member;
+        StyleTag tag;
     };
 
-    struct Vec2StyleField {
-        char const* key;
-        ImGuiStyleVar var;
-    };
-
-    constexpr FloatStyleField kFloatStyleFields[] = {
-        {"alpha", ImGuiStyleVar_Alpha},
-        {"disabledAlpha", ImGuiStyleVar_DisabledAlpha},
-        {"windowRounding", ImGuiStyleVar_WindowRounding},
-        {"windowBorderSize", ImGuiStyleVar_WindowBorderSize},
-        {"childRounding", ImGuiStyleVar_ChildRounding},
-        {"childBorderSize", ImGuiStyleVar_ChildBorderSize},
-        {"popupRounding", ImGuiStyleVar_PopupRounding},
-        {"popupBorderSize", ImGuiStyleVar_PopupBorderSize},
-        {"frameRounding", ImGuiStyleVar_FrameRounding},
-        {"frameBorderSize", ImGuiStyleVar_FrameBorderSize},
-        {"indentSpacing", ImGuiStyleVar_IndentSpacing},
-        {"scrollbarSize", ImGuiStyleVar_ScrollbarSize},
-        {"scrollbarRounding", ImGuiStyleVar_ScrollbarRounding},
-        {"scrollbarPadding", ImGuiStyleVar_ScrollbarPadding},
-        {"grabMinSize", ImGuiStyleVar_GrabMinSize},
-        {"grabRounding", ImGuiStyleVar_GrabRounding},
-        {"imageRounding", ImGuiStyleVar_ImageRounding},
-        {"imageBorderSize", ImGuiStyleVar_ImageBorderSize},
-        {"tabRounding", ImGuiStyleVar_TabRounding},
-        {"tabBorderSize", ImGuiStyleVar_TabBorderSize},
-        {"tabMinWidthBase", ImGuiStyleVar_TabMinWidthBase},
-        {"tabMinWidthShrink", ImGuiStyleVar_TabMinWidthShrink},
-        {"tabBarBorderSize", ImGuiStyleVar_TabBarBorderSize},
-        {"tabBarOverlineSize", ImGuiStyleVar_TabBarOverlineSize},
-        {"tableAngledHeadersAngle", ImGuiStyleVar_TableAngledHeadersAngle},
-        {"treeLinesSize", ImGuiStyleVar_TreeLinesSize},
-        {"treeLinesRounding", ImGuiStyleVar_TreeLinesRounding},
-        {"dragDropTargetRounding", ImGuiStyleVar_DragDropTargetRounding},
-        {"separatorSize", ImGuiStyleVar_SeparatorSize},
-        {"separatorTextBorderSize", ImGuiStyleVar_SeparatorTextBorderSize},
-    };
-
-    constexpr Vec2StyleField kVec2StyleFields[] = {
-        {"windowPadding", ImGuiStyleVar_WindowPadding},
-        {"windowMinSize", ImGuiStyleVar_WindowMinSize},
-        {"windowTitleAlign", ImGuiStyleVar_WindowTitleAlign},
-        {"framePadding", ImGuiStyleVar_FramePadding},
-        {"itemSpacing", ImGuiStyleVar_ItemSpacing},
-        {"itemInnerSpacing", ImGuiStyleVar_ItemInnerSpacing},
-        {"cellPadding", ImGuiStyleVar_CellPadding},
-        {"buttonTextAlign", ImGuiStyleVar_ButtonTextAlign},
-        {"selectableTextAlign", ImGuiStyleVar_SelectableTextAlign},
-        {"separatorTextAlign", ImGuiStyleVar_SeparatorTextAlign},
-        {"separatorTextPadding", ImGuiStyleVar_SeparatorTextPadding},
-        {"tableAngledHeadersTextAlign", ImGuiStyleVar_TableAngledHeadersTextAlign},
+    constexpr StyleField kStyleFields[] = {
+        {"alpha", ImGuiStyleVar_Alpha, &ImGuiStyle::Alpha, nullptr, StyleTag::Float},
+        {"disabledAlpha",
+         ImGuiStyleVar_DisabledAlpha,
+         &ImGuiStyle::DisabledAlpha,
+         nullptr,
+         StyleTag::Float},
+        {"windowRounding",
+         ImGuiStyleVar_WindowRounding,
+         &ImGuiStyle::WindowRounding,
+         nullptr,
+         StyleTag::Float},
+        {"windowBorderSize",
+         ImGuiStyleVar_WindowBorderSize,
+         &ImGuiStyle::WindowBorderSize,
+         nullptr,
+         StyleTag::Float},
+        {"childRounding",
+         ImGuiStyleVar_ChildRounding,
+         &ImGuiStyle::ChildRounding,
+         nullptr,
+         StyleTag::Float},
+        {"childBorderSize",
+         ImGuiStyleVar_ChildBorderSize,
+         &ImGuiStyle::ChildBorderSize,
+         nullptr,
+         StyleTag::Float},
+        {"popupRounding",
+         ImGuiStyleVar_PopupRounding,
+         &ImGuiStyle::PopupRounding,
+         nullptr,
+         StyleTag::Float},
+        {"popupBorderSize",
+         ImGuiStyleVar_PopupBorderSize,
+         &ImGuiStyle::PopupBorderSize,
+         nullptr,
+         StyleTag::Float},
+        {"frameRounding",
+         ImGuiStyleVar_FrameRounding,
+         &ImGuiStyle::FrameRounding,
+         nullptr,
+         StyleTag::Float},
+        {"frameBorderSize",
+         ImGuiStyleVar_FrameBorderSize,
+         &ImGuiStyle::FrameBorderSize,
+         nullptr,
+         StyleTag::Float},
+        {"indentSpacing",
+         ImGuiStyleVar_IndentSpacing,
+         &ImGuiStyle::IndentSpacing,
+         nullptr,
+         StyleTag::Float},
+        {"scrollbarSize",
+         ImGuiStyleVar_ScrollbarSize,
+         &ImGuiStyle::ScrollbarSize,
+         nullptr,
+         StyleTag::Float},
+        {"scrollbarRounding",
+         ImGuiStyleVar_ScrollbarRounding,
+         &ImGuiStyle::ScrollbarRounding,
+         nullptr,
+         StyleTag::Float},
+        {"scrollbarPadding",
+         ImGuiStyleVar_ScrollbarPadding,
+         &ImGuiStyle::ScrollbarPadding,
+         nullptr,
+         StyleTag::Float},
+        {"grabMinSize", ImGuiStyleVar_GrabMinSize, &ImGuiStyle::GrabMinSize, nullptr, StyleTag::Float},
+        {"grabRounding", ImGuiStyleVar_GrabRounding, &ImGuiStyle::GrabRounding, nullptr, StyleTag::Float},
+        {"imageRounding",
+         ImGuiStyleVar_ImageRounding,
+         &ImGuiStyle::ImageRounding,
+         nullptr,
+         StyleTag::Float},
+        {"imageBorderSize",
+         ImGuiStyleVar_ImageBorderSize,
+         &ImGuiStyle::ImageBorderSize,
+         nullptr,
+         StyleTag::Float},
+        {"tabRounding", ImGuiStyleVar_TabRounding, &ImGuiStyle::TabRounding, nullptr, StyleTag::Float},
+        {"tabBorderSize",
+         ImGuiStyleVar_TabBorderSize,
+         &ImGuiStyle::TabBorderSize,
+         nullptr,
+         StyleTag::Float},
+        {"tabMinWidthBase",
+         ImGuiStyleVar_TabMinWidthBase,
+         &ImGuiStyle::TabMinWidthBase,
+         nullptr,
+         StyleTag::Float},
+        {"tabMinWidthShrink",
+         ImGuiStyleVar_TabMinWidthShrink,
+         &ImGuiStyle::TabMinWidthShrink,
+         nullptr,
+         StyleTag::Float},
+        {"tabBarBorderSize",
+         ImGuiStyleVar_TabBarBorderSize,
+         &ImGuiStyle::TabBarBorderSize,
+         nullptr,
+         StyleTag::Float},
+        {"tabBarOverlineSize",
+         ImGuiStyleVar_TabBarOverlineSize,
+         &ImGuiStyle::TabBarOverlineSize,
+         nullptr,
+         StyleTag::Float},
+        {"tableAngledHeadersAngle",
+         ImGuiStyleVar_TableAngledHeadersAngle,
+         &ImGuiStyle::TableAngledHeadersAngle,
+         nullptr,
+         StyleTag::Float},
+        {"treeLinesSize",
+         ImGuiStyleVar_TreeLinesSize,
+         &ImGuiStyle::TreeLinesSize,
+         nullptr,
+         StyleTag::Float},
+        {"treeLinesRounding",
+         ImGuiStyleVar_TreeLinesRounding,
+         &ImGuiStyle::TreeLinesRounding,
+         nullptr,
+         StyleTag::Float},
+        {"dragDropTargetRounding",
+         ImGuiStyleVar_DragDropTargetRounding,
+         &ImGuiStyle::DragDropTargetRounding,
+         nullptr,
+         StyleTag::Float},
+        {"separatorSize",
+         ImGuiStyleVar_SeparatorSize,
+         &ImGuiStyle::SeparatorSize,
+         nullptr,
+         StyleTag::Float},
+        {"separatorTextBorderSize",
+         ImGuiStyleVar_SeparatorTextBorderSize,
+         &ImGuiStyle::SeparatorTextBorderSize,
+         nullptr,
+         StyleTag::Float},
+        {"windowPadding", ImGuiStyleVar_WindowPadding, nullptr, &ImGuiStyle::WindowPadding, StyleTag::Vec2},
+        {"windowMinSize", ImGuiStyleVar_WindowMinSize, nullptr, &ImGuiStyle::WindowMinSize, StyleTag::Vec2},
+        {"windowTitleAlign",
+         ImGuiStyleVar_WindowTitleAlign,
+         nullptr,
+         &ImGuiStyle::WindowTitleAlign,
+         StyleTag::Vec2},
+        {"framePadding", ImGuiStyleVar_FramePadding, nullptr, &ImGuiStyle::FramePadding, StyleTag::Vec2},
+        {"itemSpacing", ImGuiStyleVar_ItemSpacing, nullptr, &ImGuiStyle::ItemSpacing, StyleTag::Vec2},
+        {"itemInnerSpacing",
+         ImGuiStyleVar_ItemInnerSpacing,
+         nullptr,
+         &ImGuiStyle::ItemInnerSpacing,
+         StyleTag::Vec2},
+        {"cellPadding", ImGuiStyleVar_CellPadding, nullptr, &ImGuiStyle::CellPadding, StyleTag::Vec2},
+        {"buttonTextAlign",
+         ImGuiStyleVar_ButtonTextAlign,
+         nullptr,
+         &ImGuiStyle::ButtonTextAlign,
+         StyleTag::Vec2},
+        {"selectableTextAlign",
+         ImGuiStyleVar_SelectableTextAlign,
+         nullptr,
+         &ImGuiStyle::SelectableTextAlign,
+         StyleTag::Vec2},
+        {"separatorTextAlign",
+         ImGuiStyleVar_SeparatorTextAlign,
+         nullptr,
+         &ImGuiStyle::SeparatorTextAlign,
+         StyleTag::Vec2},
+        {"separatorTextPadding",
+         ImGuiStyleVar_SeparatorTextPadding,
+         nullptr,
+         &ImGuiStyle::SeparatorTextPadding,
+         StyleTag::Vec2},
+        {"tableAngledHeadersTextAlign",
+         ImGuiStyleVar_TableAngledHeadersTextAlign,
+         nullptr,
+         &ImGuiStyle::TableAngledHeadersTextAlign,
+         StyleTag::Vec2},
     };
 
     ImGuiCol resolveColorKey(lua_State* L, int keyIdx, char const* method) {
@@ -95,21 +227,22 @@ namespace {
     void pushStyleVarsFromOpts(
         lua_State* L, int optsIdx, char const* method, ImGuiStyleVarPopGuard& guard
     ) {
-        for (auto const& field : kFloatStyleFields) {
-            lua_getfield(L, optsIdx, field.key);
-            if (lua_isnumber(L, -1)) {
-                float value = static_cast<float>(lua_tonumber(L, -1));
-                ImGui::PushStyleVar(field.var, value);
-                guard.push();
+        for (auto const& field : kStyleFields) {
+            if (field.tag == StyleTag::Float) {
+                lua_getfield(L, optsIdx, field.key);
+                if (lua_isnumber(L, -1)) {
+                    float value = static_cast<float>(lua_tonumber(L, -1));
+                    ImGui::PushStyleVar(field.var, value);
+                    guard.push();
+                }
+                lua_pop(L, 1);
             }
-            lua_pop(L, 1);
-        }
-
-        for (auto const& field : kVec2StyleFields) {
-            ImVec2 vec;
-            if (optFieldVec2(L, optsIdx, field.key, vec, method)) {
-                ImGui::PushStyleVar(field.var, vec);
-                guard.push();
+            else {
+                ImVec2 vec;
+                if (optFieldVec2(L, optsIdx, field.key, vec, method)) {
+                    ImGui::PushStyleVar(field.var, vec);
+                    guard.push();
+                }
             }
         }
     }
@@ -152,51 +285,14 @@ namespace {
     }
 
     void applyStyleVarsGlobal(lua_State* L, int optsIdx, char const* method, ImGuiStyle& style) {
-        applyFloatStyleField(L, optsIdx, "alpha", style.Alpha);
-        applyFloatStyleField(L, optsIdx, "disabledAlpha", style.DisabledAlpha);
-        applyFloatStyleField(L, optsIdx, "windowRounding", style.WindowRounding);
-        applyFloatStyleField(L, optsIdx, "windowBorderSize", style.WindowBorderSize);
-        applyFloatStyleField(L, optsIdx, "childRounding", style.ChildRounding);
-        applyFloatStyleField(L, optsIdx, "childBorderSize", style.ChildBorderSize);
-        applyFloatStyleField(L, optsIdx, "popupRounding", style.PopupRounding);
-        applyFloatStyleField(L, optsIdx, "popupBorderSize", style.PopupBorderSize);
-        applyFloatStyleField(L, optsIdx, "frameRounding", style.FrameRounding);
-        applyFloatStyleField(L, optsIdx, "frameBorderSize", style.FrameBorderSize);
-        applyFloatStyleField(L, optsIdx, "indentSpacing", style.IndentSpacing);
-        applyFloatStyleField(L, optsIdx, "scrollbarSize", style.ScrollbarSize);
-        applyFloatStyleField(L, optsIdx, "scrollbarRounding", style.ScrollbarRounding);
-        applyFloatStyleField(L, optsIdx, "scrollbarPadding", style.ScrollbarPadding);
-        applyFloatStyleField(L, optsIdx, "grabMinSize", style.GrabMinSize);
-        applyFloatStyleField(L, optsIdx, "grabRounding", style.GrabRounding);
-        applyFloatStyleField(L, optsIdx, "imageRounding", style.ImageRounding);
-        applyFloatStyleField(L, optsIdx, "imageBorderSize", style.ImageBorderSize);
-        applyFloatStyleField(L, optsIdx, "tabRounding", style.TabRounding);
-        applyFloatStyleField(L, optsIdx, "tabBorderSize", style.TabBorderSize);
-        applyFloatStyleField(L, optsIdx, "tabMinWidthBase", style.TabMinWidthBase);
-        applyFloatStyleField(L, optsIdx, "tabMinWidthShrink", style.TabMinWidthShrink);
-        applyFloatStyleField(L, optsIdx, "tabBarBorderSize", style.TabBarBorderSize);
-        applyFloatStyleField(L, optsIdx, "tabBarOverlineSize", style.TabBarOverlineSize);
-        applyFloatStyleField(L, optsIdx, "tableAngledHeadersAngle", style.TableAngledHeadersAngle);
-        applyFloatStyleField(L, optsIdx, "treeLinesSize", style.TreeLinesSize);
-        applyFloatStyleField(L, optsIdx, "treeLinesRounding", style.TreeLinesRounding);
-        applyFloatStyleField(L, optsIdx, "dragDropTargetRounding", style.DragDropTargetRounding);
-        applyFloatStyleField(L, optsIdx, "separatorSize", style.SeparatorSize);
-        applyFloatStyleField(L, optsIdx, "separatorTextBorderSize", style.SeparatorTextBorderSize);
-
-        applyVec2StyleField(L, optsIdx, "windowPadding", style.WindowPadding, method);
-        applyVec2StyleField(L, optsIdx, "windowMinSize", style.WindowMinSize, method);
-        applyVec2StyleField(L, optsIdx, "windowTitleAlign", style.WindowTitleAlign, method);
-        applyVec2StyleField(L, optsIdx, "framePadding", style.FramePadding, method);
-        applyVec2StyleField(L, optsIdx, "itemSpacing", style.ItemSpacing, method);
-        applyVec2StyleField(L, optsIdx, "itemInnerSpacing", style.ItemInnerSpacing, method);
-        applyVec2StyleField(L, optsIdx, "cellPadding", style.CellPadding, method);
-        applyVec2StyleField(L, optsIdx, "buttonTextAlign", style.ButtonTextAlign, method);
-        applyVec2StyleField(L, optsIdx, "selectableTextAlign", style.SelectableTextAlign, method);
-        applyVec2StyleField(L, optsIdx, "separatorTextAlign", style.SeparatorTextAlign, method);
-        applyVec2StyleField(L, optsIdx, "separatorTextPadding", style.SeparatorTextPadding, method);
-        applyVec2StyleField(
-            L, optsIdx, "tableAngledHeadersTextAlign", style.TableAngledHeadersTextAlign, method
-        );
+        for (auto const& field : kStyleFields) {
+            if (field.tag == StyleTag::Float) {
+                applyFloatStyleField(L, optsIdx, field.key, style.*(field.floatMember));
+            }
+            else {
+                applyVec2StyleField(L, optsIdx, field.key, style.*(field.vec2Member), method);
+            }
+        }
     }
 
     void applyStyleColorsGlobal(lua_State* L, int optsIdx, char const* method, ImGuiStyle& style) {
@@ -259,12 +355,20 @@ namespace {
 namespace luax {
     void registerImGuiStyleAndTheme(lua_State* L) {
         ensureNestedTable(L, "style");
-        setTableCFunction(L, -1, "with", &imguiStyleWith);
+        luaL_Reg const styleMethods[] = {
+            {"with", &imguiStyleWith},
+            {nullptr, nullptr},
+        };
+        applyLuaLReg(L, -1, styleMethods);
         lua_pop(L, 1);
 
         ensureNestedTable(L, "theme");
-        setTableCFunction(L, -1, "apply", &imguiThemeApply);
-        setTableCFunction(L, -1, "applyCustom", &imguiThemeApplyCustom);
+        luaL_Reg const themeMethods[] = {
+            {"apply", &imguiThemeApply},
+            {"applyCustom", &imguiThemeApplyCustom},
+            {nullptr, nullptr},
+        };
+        applyLuaLReg(L, -1, themeMethods);
         lua_pop(L, 1);
     }
 } // namespace luax
@@ -499,8 +603,12 @@ namespace luax {
         registerFontHandleMetatable(L);
 
         ensureNestedTable(L, "font");
-        setTableCFunction(L, -1, "add", &luaImGuiFontAdd);
-        setTableCFunction(L, -1, "with", &luaImGuiFontWith);
+        luaL_Reg const fontMethods[] = {
+            {"add", &luaImGuiFontAdd},
+            {"with", &luaImGuiFontWith},
+            {nullptr, nullptr},
+        };
+        applyLuaLReg(L, -1, fontMethods);
         lua_pop(L, 1);
     }
 } // namespace luax

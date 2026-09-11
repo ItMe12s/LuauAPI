@@ -57,7 +57,7 @@ class ImGuiGuardTests(unittest.TestCase):
             with self.subTest(source=source_path):
                 source = read_repo_file(source_path)
                 self.assertTrue(
-                    "ImGuiEndGuard" in source or "ImGuiConditionalEndGuard" in source,
+                    "ImGuiEndGuard" in source,
                     f"{source_path} must use scoped end guards",
                 )
 

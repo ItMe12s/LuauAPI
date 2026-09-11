@@ -179,6 +179,7 @@ namespace luax::webdetail {
         };
 
         struct ListenerDescriptor {
+            char const* name;
             char const* context;
             ListenerFilterKind filter;
             ListenerEventKind event;
@@ -249,27 +250,30 @@ namespace luax::webdetail {
         }
 
         ListenerDescriptor const kListenerDescriptors[] = {
-            {"geode.utils.web.onRequestIntercept",
+            {"onRequestIntercept",
+             "geode.utils.web.onRequestIntercept",
              ListenerFilterKind::Global,
              ListenerEventKind::RequestIntercept},
-            {"geode.utils.web.onRequestInterceptFor",
+            {"onRequestInterceptFor",
+             "geode.utils.web.onRequestInterceptFor",
              ListenerFilterKind::ModId,
              ListenerEventKind::RequestIntercept},
-            {"geode.utils.web.onRequestInterceptById",
+            {"onRequestInterceptById",
+             "geode.utils.web.onRequestInterceptById",
              ListenerFilterKind::ById,
              ListenerEventKind::RequestIntercept},
-            {"geode.utils.web.onResponse", ListenerFilterKind::Global, ListenerEventKind::Response},
-            {"geode.utils.web.onResponseFor", ListenerFilterKind::ModId, ListenerEventKind::Response},
-            {"geode.utils.web.onResponseById", ListenerFilterKind::ById, ListenerEventKind::Response},
-        };
-
-        enum class ListenerId : std::size_t {
-            RequestIntercept = 0,
-            RequestInterceptFor,
-            RequestInterceptById,
-            Response,
-            ResponseFor,
-            ResponseById,
+            {"onResponse",
+             "geode.utils.web.onResponse",
+             ListenerFilterKind::Global,
+             ListenerEventKind::Response},
+            {"onResponseFor",
+             "geode.utils.web.onResponseFor",
+             ListenerFilterKind::ModId,
+             ListenerEventKind::Response},
+            {"onResponseById",
+             "geode.utils.web.onResponseById",
+             ListenerFilterKind::ById,
+             ListenerEventKind::Response},
         };
 
         int registerListenerFromDescriptor(lua_State* L, ListenerDescriptor const& desc) {
@@ -307,10 +311,9 @@ namespace luax::webdetail {
             return registerWebListener(L, callbackIdx, priorityIdx, connect);
         }
 
-        int listenerDispatch(lua_State* L, ListenerId id) {
-            return registerListenerFromDescriptor(
-                L, kListenerDescriptors[static_cast<std::size_t>(id)]
-            );
+        int webListenerThunk(lua_State* L) {
+            auto index = static_cast<std::size_t>(lua_tointeger(L, lua_upvalueindex(1)));
+            return registerListenerFromDescriptor(L, kListenerDescriptors[index]);
         }
 
         struct LongEnumEntry {
@@ -362,28 +365,12 @@ namespace luax::webdetail {
         return 0;
     }
 
-    int webOnRequestIntercept(lua_State* L) {
-        return listenerDispatch(L, ListenerId::RequestIntercept);
-    }
-
-    int webOnRequestInterceptFor(lua_State* L) {
-        return listenerDispatch(L, ListenerId::RequestInterceptFor);
-    }
-
-    int webOnRequestInterceptById(lua_State* L) {
-        return listenerDispatch(L, ListenerId::RequestInterceptById);
-    }
-
-    int webOnResponse(lua_State* L) {
-        return listenerDispatch(L, ListenerId::Response);
-    }
-
-    int webOnResponseFor(lua_State* L) {
-        return listenerDispatch(L, ListenerId::ResponseFor);
-    }
-
-    int webOnResponseById(lua_State* L) {
-        return listenerDispatch(L, ListenerId::ResponseById);
+    void registerWebListenerFunctions(lua_State* L) {
+        for (std::size_t i = 0; i < std::size(kListenerDescriptors); ++i) {
+            lua_pushinteger(L, static_cast<lua_Integer>(i));
+            lua_pushcclosurek(L, &webListenerThunk, "webListenerThunk", 1, nullptr);
+            lua_setfield(L, -2, kListenerDescriptors[i].name);
+        }
     }
 
     void registerConstants(lua_State* L) {

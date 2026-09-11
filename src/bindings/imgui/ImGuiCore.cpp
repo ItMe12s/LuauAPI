@@ -451,24 +451,28 @@ namespace luax {
         registerImGuiDrawHandleMetatable(L);
 
         lua_newtable(L);
-        setTableCFunction(L, -1, "onDraw", &imguiOnDraw);
-        setTableCFunction(L, -1, "cancel", &imguiCancel);
-        setTableCFunction(L, -1, "setVisible", &imguiSetVisible);
-        setTableCFunction(L, -1, "toggle", &imguiToggle);
-        setTableCFunction(L, -1, "isVisible", &imguiIsVisible);
-        setTableCFunction(L, -1, "window", &imguiWindow);
-        setTableCFunction(L, -1, "child", &imguiChild);
-        setTableCFunction(L, -1, "text", &imguiText);
-        setTableCFunction(L, -1, "button", &imguiButton);
-        setTableCFunction(L, -1, "checkbox", &imguiCheckbox);
-        setTableCFunction(L, -1, "sliderFloat", &imguiSliderFloat);
-        setTableCFunction(L, -1, "sliderInt", &imguiSliderInt);
-        setTableCFunction(L, -1, "inputText", &imguiInputText);
-        setTableCFunction(L, -1, "inputTextMultiline", &imguiInputTextMultiline);
-        setTableCFunction(L, -1, "sameLine", &imguiSameLine);
-        setTableCFunction(L, -1, "separator", &imguiSeparator);
-        setTableCFunction(L, -1, "spacing", &imguiSpacing);
-        setTableCFunction(L, -1, "getContentRegionAvail", &imguiGetContentRegionAvail);
+        luaL_Reg const coreMethods[] = {
+            {"onDraw", &imguiOnDraw},
+            {"cancel", &imguiCancel},
+            {"setVisible", &imguiSetVisible},
+            {"toggle", &imguiToggle},
+            {"isVisible", &imguiIsVisible},
+            {"window", &imguiWindow},
+            {"child", &imguiChild},
+            {"text", &imguiText},
+            {"button", &imguiButton},
+            {"checkbox", &imguiCheckbox},
+            {"sliderFloat", &imguiSliderFloat},
+            {"sliderInt", &imguiSliderInt},
+            {"inputText", &imguiInputText},
+            {"inputTextMultiline", &imguiInputTextMultiline},
+            {"sameLine", &imguiSameLine},
+            {"separator", &imguiSeparator},
+            {"spacing", &imguiSpacing},
+            {"getContentRegionAvail", &imguiGetContentRegionAvail},
+            {nullptr, nullptr},
+        };
+        applyLuaLReg(L, -1, coreMethods);
         registerImGuiWidgets(L);
         registerImGuiLayout(L);
         registerImGuiPopups(L);

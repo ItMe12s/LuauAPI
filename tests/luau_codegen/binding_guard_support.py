@@ -52,15 +52,6 @@ COCOS_GENERATED_OWNERS = frozenset(
     }
 )
 
-WEB_LISTENER_REGISTRARS = (
-    "webOnRequestIntercept",
-    "webOnRequestInterceptFor",
-    "webOnRequestInterceptById",
-    "webOnResponse",
-    "webOnResponseFor",
-    "webOnResponseById",
-)
-
 REQUEST_BODY_APPLY_HELPERS = (
     "applyBody",
     "applyBodyString",

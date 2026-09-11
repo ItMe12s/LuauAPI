@@ -18,7 +18,7 @@ namespace {
         }
 
         bool visible = ImGui::BeginTabBar(id, flags);
-        ImGuiConditionalEndGuard endGuard{ImGuiConditionalEndGuard::Kind::TabBar, visible};
+        ImGuiEndGuard endGuard{ImGuiEndGuard::Kind::TabBar, visible};
         if (visible) callDrawClosure(L, 2, "imgui.tabBar");
         return 0;
     }
@@ -37,7 +37,7 @@ namespace {
         }
 
         bool visible = ImGui::BeginTabItem(label, closable ? &open : nullptr, flags);
-        ImGuiConditionalEndGuard endGuard{ImGuiConditionalEndGuard::Kind::TabItem, visible};
+        ImGuiEndGuard endGuard{ImGuiEndGuard::Kind::TabItem, visible};
         if (visible) callDrawClosure(L, 2, "imgui.tabItem");
 
         if (closable) {
@@ -75,7 +75,7 @@ namespace {
         }
 
         bool visible = ImGui::BeginPopup(id, flags);
-        ImGuiConditionalEndGuard endGuard{ImGuiConditionalEndGuard::Kind::Popup, visible};
+        ImGuiEndGuard endGuard{ImGuiEndGuard::Kind::Popup, visible};
         if (visible) callDrawClosure(L, 2, "imgui.popup");
         lua_pushboolean(L, visible);
         return 1;
@@ -102,7 +102,7 @@ namespace {
         }
 
         bool visible = ImGui::BeginPopupModal(title, closable ? &open : nullptr, flags);
-        ImGuiConditionalEndGuard endGuard{ImGuiConditionalEndGuard::Kind::Popup, visible};
+        ImGuiEndGuard endGuard{ImGuiEndGuard::Kind::Popup, visible};
         if (visible) callDrawClosure(L, 2, "imgui.popupModal");
 
         if (closable) {
@@ -134,14 +134,18 @@ namespace {
 
 namespace luax {
     void registerImGuiPopups(lua_State* L) {
-        setTableCFunction(L, -1, "tabBar", &imguiTabBar);
-        setTableCFunction(L, -1, "tabItem", &imguiTabItem);
-        setTableCFunction(L, -1, "openPopup", &imguiOpenPopup);
-        setTableCFunction(L, -1, "closeCurrentPopup", &imguiCloseCurrentPopup);
-        setTableCFunction(L, -1, "popup", &imguiPopup);
-        setTableCFunction(L, -1, "popupModal", &imguiPopupModal);
-        setTableCFunction(L, -1, "setTooltip", &imguiSetTooltip);
-        setTableCFunction(L, -1, "tooltip", &imguiTooltip);
+        luaL_Reg const methods[] = {
+            {"tabBar", &imguiTabBar},
+            {"tabItem", &imguiTabItem},
+            {"openPopup", &imguiOpenPopup},
+            {"closeCurrentPopup", &imguiCloseCurrentPopup},
+            {"popup", &imguiPopup},
+            {"popupModal", &imguiPopupModal},
+            {"setTooltip", &imguiSetTooltip},
+            {"tooltip", &imguiTooltip},
+            {nullptr, nullptr},
+        };
+        applyLuaLReg(L, -1, methods);
     }
 } // namespace luax
 
@@ -168,7 +172,7 @@ namespace {
         }
 
         bool visible = ImGui::BeginTable(id, columns, flags, outerSize, innerWidth);
-        ImGuiConditionalEndGuard endGuard{ImGuiConditionalEndGuard::Kind::Table, visible};
+        ImGuiEndGuard endGuard{ImGuiEndGuard::Kind::Table, visible};
         if (visible) callDrawClosure(L, 3, "imgui.table");
         return 0;
     }
@@ -222,12 +226,16 @@ namespace {
 
 namespace luax {
     void registerImGuiTables(lua_State* L) {
-        setTableCFunction(L, -1, "table", &imguiTable);
-        setTableCFunction(L, -1, "tableNextRow", &imguiTableNextRow);
-        setTableCFunction(L, -1, "tableNextColumn", &imguiTableNextColumn);
-        setTableCFunction(L, -1, "tableSetColumnIndex", &imguiTableSetColumnIndex);
-        setTableCFunction(L, -1, "tableSetupColumn", &imguiTableSetupColumn);
-        setTableCFunction(L, -1, "tableHeadersRow", &imguiTableHeadersRow);
+        luaL_Reg const methods[] = {
+            {"table", &imguiTable},
+            {"tableNextRow", &imguiTableNextRow},
+            {"tableNextColumn", &imguiTableNextColumn},
+            {"tableSetColumnIndex", &imguiTableSetColumnIndex},
+            {"tableSetupColumn", &imguiTableSetupColumn},
+            {"tableHeadersRow", &imguiTableHeadersRow},
+            {nullptr, nullptr},
+        };
+        applyLuaLReg(L, -1, methods);
     }
 } // namespace luax
 
@@ -243,7 +251,7 @@ namespace {
         luaL_checktype(L, 1, LUA_TFUNCTION);
 
         bool visible = ImGui::BeginMenuBar();
-        ImGuiConditionalEndGuard endGuard{ImGuiConditionalEndGuard::Kind::MenuBar, visible};
+        ImGuiEndGuard endGuard{ImGuiEndGuard::Kind::MenuBar, visible};
         if (visible) callDrawClosure(L, 1, "imgui.menuBar");
         return 0;
     }
@@ -259,7 +267,7 @@ namespace {
         }
 
         bool visible = ImGui::BeginMenu(label, enabled);
-        ImGuiConditionalEndGuard endGuard{ImGuiConditionalEndGuard::Kind::Menu, visible};
+        ImGuiEndGuard endGuard{ImGuiEndGuard::Kind::Menu, visible};
         if (visible) callDrawClosure(L, 2, "imgui.menu");
         return 0;
     }
@@ -297,8 +305,12 @@ namespace {
 
 namespace luax {
     void registerImGuiMenus(lua_State* L) {
-        setTableCFunction(L, -1, "menuBar", &imguiMenuBar);
-        setTableCFunction(L, -1, "menu", &imguiMenu);
-        setTableCFunction(L, -1, "menuItem", &imguiMenuItem);
+        luaL_Reg const methods[] = {
+            {"menuBar", &imguiMenuBar},
+            {"menu", &imguiMenu},
+            {"menuItem", &imguiMenuItem},
+            {nullptr, nullptr},
+        };
+        applyLuaLReg(L, -1, methods);
     }
 } // namespace luax

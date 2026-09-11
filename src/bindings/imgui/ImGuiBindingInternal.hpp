@@ -79,6 +79,12 @@ namespace luax {
         (void)runtime->protectedCall(L, 0, 0, context, kImGuiScriptDeadlineMs, {.record = false});
     }
 
+    inline void applyLuaLReg(lua_State* L, int tableIdx, luaL_Reg const* regs) {
+        for (luaL_Reg const* reg = regs; reg->name != nullptr; ++reg) {
+            setTableCFunction(L, tableIdx, reg->name, reg->func);
+        }
+    }
+
     struct ImGuiEndGuard {
         enum class Kind : std::uint8_t {
             Window,
@@ -86,24 +92,27 @@ namespace luax {
             TabBar,
             TabItem,
             Popup,
+            Combo,
             MenuBar,
             Menu,
             Group,
             Table,
         };
 
-        explicit ImGuiEndGuard(Kind kind) : kind_(kind) {}
+        explicit ImGuiEndGuard(Kind kind, bool active = true) : kind_(kind), active_(active) {}
 
         ImGuiEndGuard(ImGuiEndGuard const&) = delete;
         ImGuiEndGuard& operator=(ImGuiEndGuard const&) = delete;
 
         ~ImGuiEndGuard() {
+            if (!active_) return;
             switch (kind_) {
                 case Kind::Window: ImGui::End(); break;
                 case Kind::Child: ImGui::EndChild(); break;
                 case Kind::TabBar: ImGui::EndTabBar(); break;
                 case Kind::TabItem: ImGui::EndTabItem(); break;
                 case Kind::Popup: ImGui::EndPopup(); break;
+                case Kind::Combo: ImGui::EndCombo(); break;
                 case Kind::MenuBar: ImGui::EndMenuBar(); break;
                 case Kind::Menu: ImGui::EndMenu(); break;
                 case Kind::Group: ImGui::EndGroup(); break;
@@ -113,6 +122,7 @@ namespace luax {
 
     private:
         Kind kind_;
+        bool active_;
     };
 
     struct ImGuiStyleColorPopGuard {
@@ -176,40 +186,6 @@ namespace luax {
         ~ImGuiTooltipGuard() {
             ImGui::EndTooltip();
         }
-    };
-
-    struct ImGuiConditionalEndGuard {
-        enum class Kind : std::uint8_t {
-            TabBar,
-            TabItem,
-            Popup,
-            Combo,
-            MenuBar,
-            Menu,
-            Table,
-        };
-
-        ImGuiConditionalEndGuard(Kind kind, bool active) : kind_(kind), active_(active) {}
-
-        ImGuiConditionalEndGuard(ImGuiConditionalEndGuard const&) = delete;
-        ImGuiConditionalEndGuard& operator=(ImGuiConditionalEndGuard const&) = delete;
-
-        ~ImGuiConditionalEndGuard() {
-            if (!active_) return;
-            switch (kind_) {
-                case Kind::TabBar: ImGui::EndTabBar(); break;
-                case Kind::TabItem: ImGui::EndTabItem(); break;
-                case Kind::Popup: ImGui::EndPopup(); break;
-                case Kind::Combo: ImGui::EndCombo(); break;
-                case Kind::MenuBar: ImGui::EndMenuBar(); break;
-                case Kind::Menu: ImGui::EndMenu(); break;
-                case Kind::Table: ImGui::EndTable(); break;
-            }
-        }
-
-    private:
-        Kind kind_;
-        bool active_;
     };
 
     inline std::vector<std::string> readStringArray(lua_State* L, int idx, char const* method) {

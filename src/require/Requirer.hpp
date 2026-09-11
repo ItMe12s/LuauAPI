@@ -43,6 +43,18 @@ namespace luax {
         int loadModule(lua_State* L, char const* chunkname, char const* loadname);
 
     private:
+        struct ResolvedModule {
+            std::filesystem::path filePath;
+            std::string fallback;
+            std::string const* contents = nullptr;
+        };
+
+        void resolveAndRead(lua_State* L, char const* loadname, ResolvedModule& out);
+        void compileModule(
+            lua_State* L, char const* chunkname, ResolvedModule& resolved, std::string const*& bytecode
+        );
+        void execLoadedModule(lua_State* L, char const* chunkname, std::string const& bytecode);
+
         void clearPendingLoad();
         void cachePendingLoad(std::filesystem::path const& path, std::string contents);
         geode::Result<std::string const&> pendingLoadContents(std::filesystem::path const& path) const;

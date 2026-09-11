@@ -33,7 +33,7 @@ namespace {
                 lua_pushinteger(L, index);
                 return 1;
             }
-            ImGuiConditionalEndGuard endGuard{ImGuiConditionalEndGuard::Kind::Combo, true};
+            ImGuiEndGuard endGuard{ImGuiEndGuard::Kind::Combo, true};
             for (int i = 0; i < static_cast<int>(ptrs.size()); ++i) {
                 bool selected = i == index;
                 if (ImGui::Selectable(ptrs[static_cast<std::size_t>(i)], selected)) {
@@ -63,7 +63,7 @@ namespace {
         }
 
         bool open = ImGui::BeginCombo(label, preview, flags);
-        ImGuiConditionalEndGuard endGuard{ImGuiConditionalEndGuard::Kind::Combo, open};
+        ImGuiEndGuard endGuard{ImGuiEndGuard::Kind::Combo, open};
         if (open) callDrawClosure(L, 3, "imgui.comboPopup");
         lua_pushboolean(L, open);
         return 1;
@@ -364,28 +364,32 @@ namespace {
 
 namespace luax {
     void registerImGuiWidgets(lua_State* L) {
-        setTableCFunction(L, -1, "combo", &imguiCombo);
-        setTableCFunction(L, -1, "comboPopup", &imguiComboPopup);
-        setTableCFunction(L, -1, "selectable", &imguiSelectable);
-        setTableCFunction(L, -1, "listBox", &imguiListBox);
-        setTableCFunction(L, -1, "radioButton", &imguiRadioButton);
-        setTableCFunction(L, -1, "dragFloat", &imguiDragFloat);
-        setTableCFunction(L, -1, "dragInt", &imguiDragInt);
-        setTableCFunction(L, -1, "colorEdit3", &imguiColorEdit3);
-        setTableCFunction(L, -1, "colorEdit4", &imguiColorEdit4);
-        setTableCFunction(L, -1, "colorButton", &imguiColorButton);
-        setTableCFunction(L, -1, "isItemHovered", &imguiIsItemHovered);
-        setTableCFunction(L, -1, "isItemClicked", &imguiIsItemClicked);
-        setTableCFunction(L, -1, "isWindowHovered", &imguiIsWindowHovered);
-        setTableCFunction(L, -1, "setNextWindowFocus", &imguiSetNextWindowFocus);
-        setTableCFunction(L, -1, "setWindowFocus", &imguiSetWindowFocus);
-        setTableCFunction(L, -1, "progressBar", &imguiProgressBar);
-        setTableCFunction(L, -1, "bulletText", &imguiBulletText);
-        setTableCFunction(L, -1, "textWrapped", &imguiTextWrapped);
-        setTableCFunction(L, -1, "inputFloat", &imguiInputFloat);
-        setTableCFunction(L, -1, "inputInt", &imguiInputInt);
-        setTableCFunction(L, -1, "inputDouble", &imguiInputDouble);
-        setTableCFunction(L, -1, "checkboxFlags", &imguiCheckboxFlags);
+        luaL_Reg const methods[] = {
+            {"combo", &imguiCombo},
+            {"comboPopup", &imguiComboPopup},
+            {"selectable", &imguiSelectable},
+            {"listBox", &imguiListBox},
+            {"radioButton", &imguiRadioButton},
+            {"dragFloat", &imguiDragFloat},
+            {"dragInt", &imguiDragInt},
+            {"colorEdit3", &imguiColorEdit3},
+            {"colorEdit4", &imguiColorEdit4},
+            {"colorButton", &imguiColorButton},
+            {"isItemHovered", &imguiIsItemHovered},
+            {"isItemClicked", &imguiIsItemClicked},
+            {"isWindowHovered", &imguiIsWindowHovered},
+            {"setNextWindowFocus", &imguiSetNextWindowFocus},
+            {"setWindowFocus", &imguiSetWindowFocus},
+            {"progressBar", &imguiProgressBar},
+            {"bulletText", &imguiBulletText},
+            {"textWrapped", &imguiTextWrapped},
+            {"inputFloat", &imguiInputFloat},
+            {"inputInt", &imguiInputInt},
+            {"inputDouble", &imguiInputDouble},
+            {"checkboxFlags", &imguiCheckboxFlags},
+            {nullptr, nullptr},
+        };
+        applyLuaLReg(L, -1, methods);
     }
 } // namespace luax
 
@@ -528,15 +532,19 @@ namespace {
 
 namespace luax {
     void registerImGuiLayout(lua_State* L) {
-        setTableCFunction(L, -1, "separatorText", &imguiSeparatorText);
-        setTableCFunction(L, -1, "indent", &imguiIndent);
-        setTableCFunction(L, -1, "unindent", &imguiUnindent);
-        setTableCFunction(L, -1, "dummy", &imguiDummy);
-        setTableCFunction(L, -1, "newLine", &imguiNewLine);
-        setTableCFunction(L, -1, "collapsingHeader", &imguiCollapsingHeader);
-        setTableCFunction(L, -1, "treeNode", &imguiTreeNode);
-        setTableCFunction(L, -1, "group", &imguiGroup);
-        setTableCFunction(L, -1, "columns", &imguiColumns);
-        setTableCFunction(L, -1, "nextColumn", &imguiNextColumn);
+        luaL_Reg const methods[] = {
+            {"separatorText", &imguiSeparatorText},
+            {"indent", &imguiIndent},
+            {"unindent", &imguiUnindent},
+            {"dummy", &imguiDummy},
+            {"newLine", &imguiNewLine},
+            {"collapsingHeader", &imguiCollapsingHeader},
+            {"treeNode", &imguiTreeNode},
+            {"group", &imguiGroup},
+            {"columns", &imguiColumns},
+            {"nextColumn", &imguiNextColumn},
+            {nullptr, nullptr},
+        };
+        applyLuaLReg(L, -1, methods);
     }
 } // namespace luax

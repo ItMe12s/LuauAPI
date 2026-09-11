@@ -5,7 +5,6 @@
 #include "require/PathSandbox.hpp"
 
 #include <Luau/CodeGen.h>
-#include <Luau/Compiler.h>
 #include <cstring>
 #include <functional>
 #include <lualib.h>
@@ -260,54 +259,61 @@ namespace luax {
         return writeString(m_pendingLoadKey, buffer, bufferSize, sizeOut);
     }
 
-    int Requirer::loadModule(lua_State* L, char const* chunkname, char const* loadname) {
+    void Requirer::resolveAndRead(lua_State* L, char const* loadname, ResolvedModule& out) {
         auto pathResult = resolvedModulePath();
         if (pathResult.isErr()) {
             luaL_error(
                 L, "module '%s' cannot be resolved: %s", loadname, pathResult.unwrapErr().c_str()
             );
         }
-        auto filePath = pathResult.unwrap();
+        out.filePath = pathResult.unwrap();
 
         std::error_code ec;
-        auto fileSize = std::filesystem::file_size(filePath, ec);
+        auto fileSize = std::filesystem::file_size(out.filePath, ec);
         if (ec || fileSize > kMaxScriptBytes) {
             luaL_error(
                 L,
                 "module '%s' exceeds maximum size or cannot be read",
-                filesystemPathString(filePath).c_str()
+                filesystemPathString(out.filePath).c_str()
             );
         }
 
-        geode::Result<std::string const&> contentsResult = pendingLoadContents(filePath);
-        std::string fallbackContents;
-        if (contentsResult.isErr()) {
-            auto readResult = readScriptFile(filePath);
-            if (readResult.isErr()) {
-                luaL_error(
-                    L,
-                    "could not read module '%s': %s",
-                    filesystemPathString(filePath).c_str(),
-                    readResult.unwrapErr().c_str()
-                );
-            }
-            fallbackContents = readResult.unwrap();
-            contentsResult = geode::Ok(std::cref(fallbackContents));
+        geode::Result<std::string const&> contentsResult = pendingLoadContents(out.filePath);
+        if (contentsResult.isOk()) {
+            out.contents = &contentsResult.unwrap();
+            return;
         }
-        auto const& contents = contentsResult.unwrap();
+        auto readResult = readScriptFile(out.filePath);
+        if (readResult.isErr()) {
+            luaL_error(
+                L,
+                "could not read module '%s': %s",
+                filesystemPathString(out.filePath).c_str(),
+                readResult.unwrapErr().c_str()
+            );
+        }
+        out.fallback = readResult.unwrap();
+        out.contents = &out.fallback;
+    }
+
+    void Requirer::compileModule(
+        lua_State* L, char const* chunkname, ResolvedModule& resolved, std::string const*& bytecode
+    ) {
         std::optional<std::string> fallbackKey;
-        std::string const& key = filePath == m_pendingLoadPath ?
+        std::string const& key = resolved.filePath == m_pendingLoadPath ?
             m_pendingLoadKey :
-            fallbackKey.emplace(fileCacheKey(filePath, contents));
-        auto bytecodeResult = m_runtime.getOrCompileBytecode(key, contents);
+            fallbackKey.emplace(fileCacheKey(resolved.filePath, *resolved.contents));
+        auto bytecodeResult = m_runtime.getOrCompileBytecode(key, *resolved.contents);
         if (bytecodeResult.isErr()) {
             luaL_error(
                 L, "module '%s' compile failed: %s", chunkname, bytecodeResult.unwrapErr().c_str()
             );
         }
-        auto const& bytecode = bytecodeResult.unwrap().get();
+        bytecode = &bytecodeResult.unwrap().get();
         clearPendingLoad();
+    }
 
+    void Requirer::execLoadedModule(lua_State* L, char const* chunkname, std::string const& bytecode) {
         lua_State* GL = lua_mainthread(L);
         lua_State* ML = lua_newthread(GL);
         lua_xmove(GL, L, 1);
@@ -350,6 +356,16 @@ namespace luax {
 
         lua_xmove(ML, L, 1);
         lua_remove(L, -2);
+    }
+
+    int Requirer::loadModule(lua_State* L, char const* chunkname, char const* loadname) {
+        ResolvedModule resolved;
+        resolveAndRead(L, loadname, resolved);
+
+        std::string const* bytecode = nullptr;
+        compileModule(L, chunkname, resolved, bytecode);
+
+        execLoadedModule(L, chunkname, *bytecode);
         return 1;
     }
 } // namespace luax

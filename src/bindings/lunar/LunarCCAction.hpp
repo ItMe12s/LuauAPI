@@ -2,13 +2,118 @@
 
 #include "bindings/lunar/LunarModel.hpp"
 
+#include <Geode/utils/casts.hpp>
+#include <array>
 #include <cmath>
 #include <cocos2d.h>
+#include <optional>
 
 // CCSpeed is not on iOS because of tree shaking so here's one for lunar.
 // https://github.com/cocos2d/cocos2d-x/blob/cocos2d-x-2.2.3/cocos2dx/actions/CCAction.cpp
 
 namespace luax::lunar {
+
+    struct PropNodeAccess {
+        std::optional<float> (*getter)(cocos2d::CCNode*);
+        bool (*setter)(cocos2d::CCNode*, float);
+    };
+
+    // Aligned with kPropFields (LunarModel.hpp) in exact Prop order.
+    inline constexpr std::array<PropNodeAccess, 11> kPropNodeAccess{{
+        {[](cocos2d::CCNode* n) -> std::optional<float> {
+             return n->getPositionX();
+         },
+         [](cocos2d::CCNode* n, float v) {
+             n->setPositionX(v);
+             return true;
+         }},
+        {[](cocos2d::CCNode* n) -> std::optional<float> {
+             return n->getPositionY();
+         },
+         [](cocos2d::CCNode* n, float v) {
+             n->setPositionY(v);
+             return true;
+         }},
+        {[](cocos2d::CCNode* n) -> std::optional<float> {
+             return n->getRotation();
+         },
+         [](cocos2d::CCNode* n, float v) {
+             n->setRotation(v);
+             return true;
+         }},
+        {[](cocos2d::CCNode* n) -> std::optional<float> {
+             return n->getScaleX();
+         },
+         [](cocos2d::CCNode* n, float v) {
+             n->setScaleX(v);
+             return true;
+         }},
+        {[](cocos2d::CCNode* n) -> std::optional<float> {
+             return n->getScaleY();
+         },
+         [](cocos2d::CCNode* n, float v) {
+             n->setScaleY(v);
+             return true;
+         }},
+        {[](cocos2d::CCNode* n) -> std::optional<float> {
+             if (auto* rgba = geode::cast::typeinfo_cast<cocos2d::CCRGBAProtocol*>(n)) {
+                 return static_cast<float>(rgba->getOpacity());
+             }
+             return std::nullopt;
+         },
+         [](cocos2d::CCNode* n, float v) -> bool {
+             if (auto* rgba = geode::cast::typeinfo_cast<cocos2d::CCRGBAProtocol*>(n)) {
+                 rgba->setOpacity(opacityByte(v));
+                 return true;
+             }
+             return false;
+         }},
+        {[](cocos2d::CCNode* n) -> std::optional<float> {
+             return static_cast<float>(n->getZOrder());
+         },
+         [](cocos2d::CCNode* n, float v) {
+             n->setZOrder(static_cast<int>(v));
+             return true;
+         }},
+        {[](cocos2d::CCNode* n) -> std::optional<float> {
+             return n->getAnchorPoint().x;
+         },
+         [](cocos2d::CCNode* n, float v) {
+             n->setAnchorPoint({v, n->getAnchorPoint().y});
+             return true;
+         }},
+        {[](cocos2d::CCNode* n) -> std::optional<float> {
+             return n->getAnchorPoint().y;
+         },
+         [](cocos2d::CCNode* n, float v) {
+             n->setAnchorPoint({n->getAnchorPoint().x, v});
+             return true;
+         }},
+        {[](cocos2d::CCNode* n) -> std::optional<float> {
+             return n->getSkewX();
+         },
+         [](cocos2d::CCNode* n, float v) {
+             n->setSkewX(v);
+             return true;
+         }},
+        {[](cocos2d::CCNode* n) -> std::optional<float> {
+             return n->getSkewY();
+         },
+         [](cocos2d::CCNode* n, float v) {
+             n->setSkewY(v);
+             return true;
+         }},
+    }};
+
+    constexpr auto kPropNodeAccessAligned = [] {
+        for (std::size_t i = 0; i < kPropFields.size(); ++i)
+            if (kPropFields[i].prop != static_cast<Prop>(i)) return false;
+        return true;
+    }();
+    static_assert(
+        kPropNodeAccess.size() == kPropFields.size() && kPropNodeAccessAligned,
+        "kPropNodeAccess must stay aligned with kPropFields"
+    );
 
     class LunarCCSpeed final : public cocos2d::CCActionInterval {
     public:
@@ -94,38 +199,11 @@ namespace luax::lunar {
 
     private:
         float read(cocos2d::CCNode* target) const {
-            using P = Prop;
-            switch (m_prop) {
-                case P::PosX: return target->getPositionX();
-                case P::PosY: return target->getPositionY();
-                case P::ScaleX: return target->getScaleX();
-                case P::ScaleY: return target->getScaleY();
-                case P::AnchorX: return target->getAnchorPoint().x;
-                case P::AnchorY: return target->getAnchorPoint().y;
-                case P::SkewX: return target->getSkewX();
-                case P::SkewY: return target->getSkewY();
-                case P::Rotation: break;
-                case P::Opacity: break;
-                case P::ZOrder: break;
-            }
-            return 0.F;
+            return kPropNodeAccess[static_cast<std::size_t>(m_prop)].getter(target).value_or(0.F);
         }
 
         void write(cocos2d::CCNode* target, float value) const {
-            using P = Prop;
-            switch (m_prop) {
-                case P::PosX: target->setPositionX(value); break;
-                case P::PosY: target->setPositionY(value); break;
-                case P::ScaleX: target->setScaleX(value); break;
-                case P::ScaleY: target->setScaleY(value); break;
-                case P::AnchorX: target->setAnchorPoint({value, target->getAnchorPoint().y}); break;
-                case P::AnchorY: target->setAnchorPoint({target->getAnchorPoint().x, value}); break;
-                case P::SkewX: target->setSkewX(value); break;
-                case P::SkewY: target->setSkewY(value); break;
-                case P::Rotation: break;
-                case P::Opacity: break;
-                case P::ZOrder: break;
-            }
+            kPropNodeAccess[static_cast<std::size_t>(m_prop)].setter(target, value);
         }
 
         Prop m_prop = Prop::PosX;

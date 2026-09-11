@@ -397,39 +397,38 @@ namespace luax {
         lua_setglobal(m_state, "loadstring");
     }
 
-    int Runtime::luaPrint(lua_State* L) {
-        LuaStackGuard stack(L);
-        int argc = lua_gettop(L);
-        std::string out;
+    namespace {
+        template <bool Warn>
+        void logFromLua(lua_State* L) {
+            LuaStackGuard stack(L);
+            int argc = lua_gettop(L);
+            std::string out;
 
-        auto* self = static_cast<Runtime*>(lua_callbacks(L)->userdata);
-        std::filesystem::path const& resourcesRoot =
-            self ? self->resourcesRoot() : std::filesystem::path{};
+            auto* self = static_cast<Runtime*>(lua_callbacks(L)->userdata);
+            std::filesystem::path const& resourcesRoot =
+                self ? self->resourcesRoot() : std::filesystem::path{};
 
-        for (int i = 1; i <= argc; ++i) {
-            if (i > 1) out.push_back('\t');
-            out.append(redactHostPaths(stackValueToString(L, i), resourcesRoot));
+            for (int i = 1; i <= argc; ++i) {
+                if (i > 1) out.push_back('\t');
+                out.append(redactHostPaths(stackValueToString(L, i), resourcesRoot));
+            }
+
+            if constexpr (Warn) {
+                geode::log::warn("[{}] {}", modLogPrefix(), out);
+            }
+            else {
+                geode::log::info("[{}] {}", modLogPrefix(), out);
+            }
         }
+    } // namespace
 
-        geode::log::info("[{}] {}", modLogPrefix(), out);
+    int Runtime::luaPrint(lua_State* L) {
+        logFromLua<false>(L);
         return 0;
     }
 
     int Runtime::luaWarn(lua_State* L) {
-        LuaStackGuard stack(L);
-        int argc = lua_gettop(L);
-        std::string out;
-
-        auto* self = static_cast<Runtime*>(lua_callbacks(L)->userdata);
-        std::filesystem::path const& resourcesRoot =
-            self ? self->resourcesRoot() : std::filesystem::path{};
-
-        for (int i = 1; i <= argc; ++i) {
-            if (i > 1) out.push_back('\t');
-            out.append(redactHostPaths(stackValueToString(L, i), resourcesRoot));
-        }
-
-        geode::log::warn("[{}] {}", modLogPrefix(), out);
+        logFromLua<true>(L);
         return 0;
     }
 
@@ -721,23 +720,16 @@ namespace luax {
         int const mainSavedTop = lua_gettop(m_state);
         bool const crossState = invokeL != m_state;
 
-        if (crossState) {
-            int const invokeTop = lua_gettop(invokeL);
-            int const funcIdx = invokeTop - nargs;
-            if (nargs < 0 || funcIdx < 1 || !lua_isfunction(invokeL, funcIdx)) {
-                auto err = fmt::format("[{}] luau protectedCall missing function", context);
-                geode::log::error("{}", err);
-                return failWith(std::move(err));
-            }
-            lua_xmove(invokeL, m_state, nargs + 1);
+        int const invokeTop = lua_gettop(invokeL);
+        int const funcIdx = invokeTop - nargs;
+        if (nargs < 0 || funcIdx < 1 || !lua_isfunction(invokeL, funcIdx)) {
+            auto err = fmt::format("[{}] luau protectedCall missing function", context);
+            geode::log::error("{}", err);
+            return failWith(std::move(err));
         }
-        else {
-            int baseTop = lua_gettop(m_state) - nargs;
-            if (nargs < 0 || baseTop < 1 || !lua_isfunction(m_state, baseTop)) {
-                auto err = fmt::format("[{}] luau protectedCall missing function", context);
-                geode::log::error("{}", err);
-                return failWith(std::move(err));
-            }
+
+        if (crossState) {
+            lua_xmove(invokeL, m_state, nargs + 1);
         }
 
         lua_getref(m_state, m_tracebackRef);

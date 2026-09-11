@@ -161,25 +161,14 @@ namespace luax::lunar {
                 lua_pushnil(L);
                 return 1;
             }
-            lua_createtable(L, 0, 11);
-            auto set = [&](char const* key, float value) {
-                lua_pushnumber(L, static_cast<lua_Number>(value));
-                lua_setfield(L, -2, key);
-            };
-            set("x", node->getPositionX());
-            set("y", node->getPositionY());
-            set("rot", node->getRotation());
-            set("sx", node->getScaleX());
-            set("sy", node->getScaleY());
-            if (auto* rgba = geode::cast::typeinfo_cast<cocos2d::CCRGBAProtocol*>(node)) {
-                set("opacity", static_cast<float>(rgba->getOpacity()));
+            lua_createtable(L, 0, static_cast<int>(kPropNodeAccess.size()));
+            for (auto const& field : kPropFields) {
+                auto const& access = kPropNodeAccess[static_cast<std::size_t>(field.prop)];
+                if (auto value = access.getter(node)) {
+                    lua_pushnumber(L, static_cast<lua_Number>(*value));
+                    lua_setfield(L, -2, field.key);
+                }
             }
-            set("z", static_cast<float>(node->getZOrder()));
-            auto const anchor = node->getAnchorPoint();
-            set("ax", anchor.x);
-            set("ay", anchor.y);
-            set("skx", node->getSkewX());
-            set("sky", node->getSkewY());
             return 1;
         }
 

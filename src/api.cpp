@@ -350,19 +350,6 @@ namespace {
         return geode::Ok();
     }
 
-    geode::Result<luax::Runtime*> nativeRegistrationRuntime() {
-        if (!luax::Runtime::isMainThread()) {
-            return geode::Err("luau api must be called on the main thread");
-        }
-        if (luax::Runtime::isShuttingDown()) {
-            return geode::Err("luau runtime shutting down");
-        }
-
-        auto* runtime = luax::Runtime::getIfInitialized();
-        if (!runtime || !runtime->ready()) return geode::Err("luau runtime not ready");
-        return geode::Ok(runtime);
-    }
-
     void pushNativeValue(lua_State* L, native_detail::NativeValue const& value) {
         switch (value.kind) {
             case native_detail::NativeValueKind::Nil: lua_pushnil(L); break;
@@ -509,29 +496,21 @@ namespace {
         std::string chunk;
     };
 
-    geode::Result<void> requireMainThread() {
-        if (!luax::Runtime::isMainThread()) {
+    geode::Result<luax::Runtime*> requireRuntime(bool needMainThread, bool needReady) {
+        if (needMainThread && !luax::Runtime::isMainThread()) {
             return geode::Err("luau api must be called on the main thread");
         }
-        return geode::Ok();
-    }
-
-    geode::Result<void> requireSyncRunReady() {
-        auto threadResult = requireMainThread();
-        if (threadResult.isErr()) {
-            return geode::Err(threadResult.unwrapErr());
-        }
         if (luax::Runtime::isShuttingDown()) {
             return geode::Err("luau runtime shutting down");
         }
-        return geode::Ok();
-    }
-
-    geode::Result<void> requireAsyncRunReady() {
-        if (luax::Runtime::isShuttingDown()) {
-            return geode::Err("luau runtime shutting down");
+        if (needReady) {
+            auto* runtime = luax::Runtime::getIfInitialized();
+            if (!runtime || !runtime->ready()) {
+                return geode::Err("luau runtime not ready");
+            }
+            return geode::Ok(runtime);
         }
-        return geode::Ok();
+        return geode::Ok(nullptr);
     }
 
     geode::Result<std::string> prepareChunkName(std::string_view chunkName) {
@@ -657,7 +636,7 @@ namespace imes::luauapi {
             geode::Mod* provider, char const* pathData, std::uint64_t pathSize,
             NativeInvoker invoker, void const* functionBytes, std::uint64_t functionSize
         ) {
-            auto runtimeResult = nativeRegistrationRuntime();
+            auto runtimeResult = requireRuntime(true, true);
             if (runtimeResult.isErr()) return geode::Err(runtimeResult.unwrapErr());
             if ((!pathData && pathSize != 0) || pathSize > (std::numeric_limits<std::size_t>::max)()) {
                 return geode::Err("native registration path is invalid");
@@ -693,7 +672,7 @@ namespace imes::luauapi {
             geode::Mod* provider, char const* pathData, std::uint64_t pathSize,
             NativeValue const* valueData
         ) {
-            auto runtimeResult = nativeRegistrationRuntime();
+            auto runtimeResult = requireRuntime(true, true);
             if (runtimeResult.isErr()) return geode::Err(runtimeResult.unwrapErr());
             if ((!pathData && pathSize != 0) || pathSize > (std::numeric_limits<std::size_t>::max)()) {
                 return geode::Err("native registration path is invalid");
@@ -745,7 +724,7 @@ namespace imes::luauapi {
         std::filesystem::path const& resourcesRoot, std::filesystem::path const& relativePath,
         int deadlineMs
     ) {
-        auto readyResult = requireSyncRunReady();
+        auto readyResult = requireRuntime(true, false);
         if (readyResult.isErr()) {
             return geode::Err(readyResult.unwrapErr());
         }
@@ -763,7 +742,7 @@ namespace imes::luauapi {
         std::filesystem::path const& resourcesRoot, std::string_view source,
         std::string_view chunkName, int deadlineMs
     ) {
-        auto readyResult = requireSyncRunReady();
+        auto readyResult = requireRuntime(true, false);
         if (readyResult.isErr()) {
             return geode::Err(readyResult.unwrapErr());
         }
@@ -793,7 +772,7 @@ namespace imes::luauapi {
     arc::Future<geode::Result<void>> runFileAsync(
         std::filesystem::path resourcesRoot, std::filesystem::path relativePath, int deadlineMs
     ) {
-        auto readyResult = requireAsyncRunReady();
+        auto readyResult = requireRuntime(false, false);
         if (readyResult.isErr()) {
             co_return geode::Err(readyResult.unwrapErr());
         }
@@ -809,7 +788,7 @@ namespace imes::luauapi {
     arc::Future<geode::Result<void>> runScriptAsync(
         std::filesystem::path resourcesRoot, std::string source, std::string chunkName, int deadlineMs
     ) {
-        auto readyResult = requireAsyncRunReady();
+        auto readyResult = requireRuntime(false, false);
         if (readyResult.isErr()) {
             co_return geode::Err(readyResult.unwrapErr());
         }
@@ -823,6 +802,9 @@ namespace imes::luauapi {
     }
 #endif
 
+    // isInitialized() delegates to ready() (Runtime.cpp),
+    // so this is the same check as requireRuntime/ready() under a second name,
+    // keep the two in sync (I know it's a mess).
     bool isReady() {
         if (luax::Runtime::isShuttingDown()) return false;
         if (!luax::Runtime::isMainThread()) return false;

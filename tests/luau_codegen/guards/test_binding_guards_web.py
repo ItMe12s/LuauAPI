@@ -13,7 +13,6 @@ from binding_guard_support import (
     TASK_BINDING,
     TASK_SCHEDULER,
     WEB_INTERNAL,
-    WEB_LISTENER_REGISTRARS,
     function_body,
     inline_function_body,
     read_repo_file,
@@ -263,19 +262,17 @@ class BindingGuardTests(unittest.TestCase):
             body,
             "registerListenerFromDescriptor must not duplicate listener bookkeeping",
         )
-        for fn in WEB_LISTENER_REGISTRARS:
-            with self.subTest(fn=fn):
-                wrapper = function_body(source, fn)
-                self.assertIn(
-                    "listenerDispatch(",
-                    wrapper,
-                    f"{fn} must delegate to listenerDispatch",
-                )
-                self.assertNotIn(
-                    "rememberListener(state)",
-                    wrapper,
-                    f"{fn} must not duplicate listener bookkeeping",
-                )
+        thunk = function_body(source, "webListenerThunk")
+        self.assertIn(
+            "lua_upvalueindex",
+            thunk,
+            "listener registration must use one thunk with a descriptor-index upvalue",
+        )
+        self.assertIn(
+            "registerListenerFromDescriptor(",
+            thunk,
+            "webListenerThunk must delegate to registerListenerFromDescriptor",
+        )
 
     def test_fs_write_enforces_size_cap(self) -> None:
         config = read_repo_file(CONFIG_HEADER)

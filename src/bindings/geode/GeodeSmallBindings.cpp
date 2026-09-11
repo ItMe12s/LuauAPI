@@ -374,19 +374,12 @@ namespace {
     // geode.Keybind
 
     int intField(lua_State* L, int tableIdx, char const* key, int def, bool required, char const* method) {
-        lua_getfield(L, tableIdx, key);
-        if (lua_isnil(L, -1)) {
-            lua_pop(L, 1);
+        auto value = optNumberField(L, tableIdx, key, method);
+        if (!value) {
             if (required) luaL_error(L, "%s expected number field '%s'", method, key);
             return def;
         }
-        if (!lua_isnumber(L, -1)) {
-            lua_pop(L, 1);
-            luaL_error(L, "%s expected number field '%s'", method, key);
-        }
-        int value = static_cast<int>(lua_tointeger(L, -1));
-        lua_pop(L, 1);
-        return value;
+        return static_cast<int>(*value);
     }
 
     geode::Keybind buildKeybind(lua_State* L, int idx, char const* method) {

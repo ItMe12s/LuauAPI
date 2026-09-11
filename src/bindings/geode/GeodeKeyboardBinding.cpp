@@ -1,11 +1,9 @@
+#include "EventHandleBinding.hpp"
 #include "core/Config.hpp"
-#include "core/Runtime.hpp"
 #include "framework/Binding.hpp"
 #include "framework/callback/LuaCallback.hpp"
-#include "framework/lifecycle/Lifecycle.hpp"
 #include "framework/stack/Stack.hpp"
 #include "framework/stack/TableUtil.hpp"
-#include "framework/stack/TaggedMetatable.hpp"
 
 #include <Geode/loader/Priority.hpp>
 #include <Geode/utils/Keyboard.hpp>
@@ -13,57 +11,12 @@
 #include <lua.h>
 #include <lualib.h>
 #include <memory>
-#include <new>
-#include <optional>
 #include <utility>
 
 namespace {
     using namespace luax;
 
-    inline constexpr char const* kKeyboardListenerMeta = "luax.KeyboardInputListenerHandle";
-
-    using KeyboardListenerState = geode::ListenerHandle;
-
-    struct KeyboardListenerBox {
-        std::shared_ptr<KeyboardListenerState> state;
-    };
-
-    WeakHandlePool<KeyboardListenerState>& activeKeyboardListeners() {
-        static WeakHandlePool<KeyboardListenerState> listeners;
-        return listeners;
-    }
-
-    bool& keyboardShutdownHookRegistered() {
-        static bool registered = false;
-        return registered;
-    }
-
-    void clearKeyboardState() {
-        activeKeyboardListeners().clearAll([](KeyboardListenerState& listener) {
-            listener = {};
-        });
-        keyboardShutdownHookRegistered() = false;
-    }
-
-    void ensureKeyboardShutdownHook() {
-        ensureShutdownHook(keyboardShutdownHookRegistered(), &clearKeyboardState);
-    }
-
-    int optPriority(lua_State* L, int idx) {
-        if (lua_gettop(L) < idx || lua_isnil(L, idx)) return geode::Priority::Normal;
-        return check<int>(L, idx, "geode.KeyboardInputEvent listener");
-    }
-
-    bool readNumberField(lua_State* L, int tableIdx, char const* key, double& out) {
-        lua_getfield(L, tableIdx, key);
-        if (!lua_isnumber(L, -1)) {
-            lua_pop(L, 1);
-            return false;
-        }
-        out = lua_tonumber(L, -1);
-        lua_pop(L, 1);
-        return true;
-    }
+    constexpr char kKeyboardListenerMeta[] = "luax.KeyboardInputListenerHandle";
 
     void pushKeyboardInputData(lua_State* L, geode::KeyboardInputData const& data) {
         lua_createtable(L, 0, 5);
@@ -84,125 +37,57 @@ namespace {
         lua_setfield(L, -2, "native");
     }
 
-    void readKeyboardInputData(lua_State* L, int idx, geode::KeyboardInputData& data) {
+    void readKeyboardInputData(lua_State* L, int idx, char const* context, geode::KeyboardInputData& data) {
         idx = lua_absindex(L, idx);
         if (!lua_istable(L, idx)) return;
 
-        double value = 0.0;
-        if (readNumberField(L, idx, "key", value)) {
-            data.key = static_cast<cocos2d::enumKeyCodes>(static_cast<int>(value));
+        if (auto value = optNumberField(L, idx, "key", context)) {
+            data.key = static_cast<cocos2d::enumKeyCodes>(static_cast<int>(*value));
         }
-        if (readNumberField(L, idx, "action", value)) {
+        if (auto value = optNumberField(L, idx, "action", context)) {
             data.action =
-                static_cast<geode::KeyboardInputData::Action>(static_cast<std::uint8_t>(value));
+                static_cast<geode::KeyboardInputData::Action>(static_cast<std::uint8_t>(*value));
         }
-        if (readNumberField(L, idx, "modifiers", value)) {
-            data.modifiers = geode::KeyboardModifier(static_cast<std::uint8_t>(value));
+        if (auto value = optNumberField(L, idx, "modifiers", context)) {
+            data.modifiers = geode::KeyboardModifier(static_cast<std::uint8_t>(*value));
         }
-        if (readNumberField(L, idx, "timestamp", value)) {
-            data.timestamp = value;
+        if (auto value = optNumberField(L, idx, "timestamp", context)) {
+            data.timestamp = *value;
         }
 
         lua_getfield(L, idx, "native");
         if (lua_istable(L, -1)) {
             int nativeIdx = lua_absindex(L, -1);
-            if (readNumberField(L, nativeIdx, "code", value)) {
-                data.native.code = static_cast<std::uint64_t>(value);
+            if (auto value = optNumberField(L, nativeIdx, "code", context)) {
+                data.native.code = static_cast<std::uint64_t>(*value);
             }
-            if (readNumberField(L, nativeIdx, "extra", value)) {
-                data.native.extra = static_cast<std::uint64_t>(value);
+            if (auto value = optNumberField(L, nativeIdx, "extra", context)) {
+                data.native.extra = static_cast<std::uint64_t>(*value);
             }
         }
         lua_pop(L, 1);
     }
 
-    bool invokeKeyboardEvent(
-        std::shared_ptr<LuaCallback> const& cb, char const* context, geode::KeyboardInputData& data
-    ) {
-        if (!cb || !cb->valid()) return false;
+    using KeyboardBinding = events::EventHandleBinding<
+        kKeyboardListenerMeta, geode::KeyboardInputData, &pushKeyboardInputData, &readKeyboardInputData>;
 
-        struct Ctx {
-            geode::KeyboardInputData* data;
-            int dataRef = LUA_NOREF;
-            bool stop = false;
-        } ctx{&data, LUA_NOREF, false};
-
-        bool ok = cb->invoke(
-            1,
-            1,
-            context,
-            kHookScriptDeadlineMs,
-            +[](lua_State* L, void* raw) {
-                auto* c = static_cast<Ctx*>(raw);
-                pushKeyboardInputData(L, *c->data);
-                lua_pushvalue(L, -1);
-                c->dataRef = lua_ref(L, -1);
-                lua_pop(L, 1);
-            },
-            &ctx,
-            +[](lua_State* L, void* raw) {
-                auto* c = static_cast<Ctx*>(raw);
-                c->stop = lua_toboolean(L, -1) != 0;
-                if (c->dataRef == LUA_NOREF || c->dataRef == LUA_REFNIL) return;
-                lua_getref(L, c->dataRef);
-                readKeyboardInputData(L, -1, *c->data);
-                lua_pop(L, 1);
-            },
-            &ctx
-        );
-
-        auto* runtime = Runtime::getIfInitialized();
-        if (ctx.dataRef != LUA_NOREF && ctx.dataRef != LUA_REFNIL && runtime && runtime->state()) {
-            lua_unref(runtime->state(), ctx.dataRef);
-        }
-        if (!ok) {
-            logCallbackFailure(context);
-        }
-        return ok && ctx.stop;
-    }
-
-    void rememberListener(std::shared_ptr<KeyboardListenerState> const& state) {
-        activeKeyboardListeners().track(state);
-        activeKeyboardListeners().compactAndCountLive();
-        ensureKeyboardShutdownHook();
-    }
-
-    void pushListener(lua_State* L, std::shared_ptr<KeyboardListenerState> state) {
-        auto* box =
-            static_cast<KeyboardListenerBox*>(lua_newuserdata(L, sizeof(KeyboardListenerBox)));
-        new (box) KeyboardListenerBox{std::move(state)};
-        luaL_getmetatable(L, kKeyboardListenerMeta);
-        lua_setmetatable(L, -2);
-    }
-
-    KeyboardListenerBox* checkListener(lua_State* L, int idx, char const* method) {
-        return static_cast<KeyboardListenerBox*>(luaL_checkudata(L, idx, method));
-    }
-
-    int listenerGc(lua_State* L) {
-        auto* box = static_cast<KeyboardListenerBox*>(luaL_checkudata(L, 1, kKeyboardListenerMeta));
-        box->~KeyboardListenerBox();
-        return 0;
-    }
-
-    int listenerDisconnect(lua_State* L) {
-        auto* box = checkListener(L, 1, kKeyboardListenerMeta);
-        if (box->state) *box->state = {};
-        return 0;
+    int optPriority(lua_State* L, int idx) {
+        if (lua_gettop(L) < idx || lua_isnil(L, idx)) return geode::Priority::Normal;
+        return check<int>(L, idx, "geode.KeyboardInputEvent listener");
     }
 
     int keyboardListen(lua_State* L) {
         luaL_checktype(L, 1, LUA_TFUNCTION);
         auto cb = std::make_shared<LuaCallback>(L, 1);
         int priority = optPriority(L, 2);
-        auto state = std::make_shared<KeyboardListenerState>(geode::KeyboardInputEvent().listen(
+        auto state = std::make_shared<KeyboardBinding::State>(geode::KeyboardInputEvent().listen(
             [cb](geode::KeyboardInputData& data) {
-                return invokeKeyboardEvent(cb, "geode.KeyboardInputEvent.listen", data);
+                return KeyboardBinding::invoke(cb, "geode.KeyboardInputEvent.listen", data);
             },
             priority
         ));
-        rememberListener(state);
-        pushListener(L, std::move(state));
+        KeyboardBinding::rememberListener(state);
+        KeyboardBinding::pushListener(L, std::move(state));
         return 1;
     }
 
@@ -211,26 +96,18 @@ namespace {
         luaL_checktype(L, 2, LUA_TFUNCTION);
         auto cb = std::make_shared<LuaCallback>(L, 2);
         int priority = optPriority(L, 3);
-        auto state = std::make_shared<KeyboardListenerState>(
+        auto state = std::make_shared<KeyboardBinding::State>(
             geode::KeyboardInputEvent(static_cast<cocos2d::enumKeyCodes>(key))
                 .listen(
                     [cb](geode::KeyboardInputData& data) {
-                        return invokeKeyboardEvent(cb, "geode.KeyboardInputEvent.listenFor", data);
+                        return KeyboardBinding::invoke(cb, "geode.KeyboardInputEvent.listenFor", data);
                     },
                     priority
                 )
         );
-        rememberListener(state);
-        pushListener(L, std::move(state));
+        KeyboardBinding::rememberListener(state);
+        KeyboardBinding::pushListener(L, std::move(state));
         return 1;
-    }
-
-    void registerListenerMetatable(lua_State* L) {
-        luaL_Reg methods[] = {
-            {"disconnect", listenerDisconnect},
-            {nullptr, nullptr},
-        };
-        registerTaggedMetatable(L, kKeyboardListenerMeta, std::nullopt, methods, &listenerGc);
     }
 
     geode::Result<void> registerKeyboardModifier(lua_State* L) {
@@ -271,7 +148,7 @@ namespace {
 
 namespace luax {
     geode::Result<void> registerGeodeKeyboardInput(lua_State* L) {
-        registerListenerMetatable(L);
+        KeyboardBinding::registerListenerMetatable(L);
         if (auto result = registerKeyboardModifier(L); result.isErr()) {
             return result;
         }

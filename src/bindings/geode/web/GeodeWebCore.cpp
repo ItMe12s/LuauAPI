@@ -395,23 +395,6 @@ namespace luax::webdetail {
 
     void registerMetatables(lua_State* L) {
         luaL_Reg requestMethods[] = {
-            {"header", requestHeader},
-            {"removeHeader", requestRemoveHeader},
-            {"param", requestParam},
-            {"removeParam", requestRemoveParam},
-            {"method", requestMethod},
-            {"url", requestUrl},
-            {"userAgent", requestUserAgent},
-            {"acceptEncoding", requestAcceptEncoding},
-            {"timeout", requestTimeout},
-            {"downloadRange", requestDownloadRange},
-            {"certVerification", requestCertVerification},
-            {"transferBody", requestTransferBody},
-            {"followRedirects", requestFollowRedirects},
-            {"ignoreContentLength", requestIgnoreContentLength},
-            {"caBundle", requestCaBundle},
-            {"proxy", requestProxy},
-            {"version", requestVersion},
             {"body", requestBody},
             {"bodyString", requestBodyString},
             {"bodyJson", requestBodyJson},
@@ -435,6 +418,7 @@ namespace luax::webdetail {
             {nullptr, nullptr},
         };
         registerTaggedMetatable(L, kRequestMeta, std::nullopt, requestMethods, &requestGc);
+        registerRequestChainMethods(L);
 
         luaL_Reg responseMethods[] = {
             {"info", responseInfo},
@@ -498,12 +482,7 @@ namespace luax {
         setTableCFunction(L, -1, "put", &webdetail::webPut);
         setTableCFunction(L, -1, "patch", &webdetail::webPatch);
         setTableCFunction(L, -1, "fetch", &webdetail::webFetch);
-        setTableCFunction(L, -1, "onRequestIntercept", &webdetail::webOnRequestIntercept);
-        setTableCFunction(L, -1, "onRequestInterceptFor", &webdetail::webOnRequestInterceptFor);
-        setTableCFunction(L, -1, "onRequestInterceptById", &webdetail::webOnRequestInterceptById);
-        setTableCFunction(L, -1, "onResponse", &webdetail::webOnResponse);
-        setTableCFunction(L, -1, "onResponseFor", &webdetail::webOnResponseFor);
-        setTableCFunction(L, -1, "onResponseById", &webdetail::webOnResponseById);
+        webdetail::registerWebListenerFunctions(L);
         webdetail::registerConstants(L);
         lua_pop(L, 1);
         return geode::Ok();

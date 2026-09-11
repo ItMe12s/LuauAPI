@@ -4,7 +4,6 @@
 #include "framework/callback/LuaCallback.hpp"
 
 #include <cstdint>
-#include <functional>
 #include <lua.h>
 #include <matjson.hpp>
 #include <memory>
@@ -46,23 +45,9 @@ namespace luax::webdetail {
     int webPatch(lua_State* L);
     int webFetch(lua_State* L);
 
-    int requestHeader(lua_State* L);
-    int requestRemoveHeader(lua_State* L);
-    int requestParam(lua_State* L);
-    int requestRemoveParam(lua_State* L);
-    int requestMethod(lua_State* L);
-    int requestUrl(lua_State* L);
-    int requestUserAgent(lua_State* L);
-    int requestAcceptEncoding(lua_State* L);
-    int requestTimeout(lua_State* L);
-    int requestDownloadRange(lua_State* L);
-    int requestCertVerification(lua_State* L);
-    int requestTransferBody(lua_State* L);
-    int requestFollowRedirects(lua_State* L);
-    int requestIgnoreContentLength(lua_State* L);
-    int requestCaBundle(lua_State* L);
-    int requestProxy(lua_State* L);
-    int requestVersion(lua_State* L);
+    void registerRequestChainMethods(lua_State* L);
+    void registerWebListenerFunctions(lua_State* L);
+
     int requestBody(lua_State* L);
     int requestBodyString(lua_State* L);
     int requestBodyJson(lua_State* L);
@@ -113,13 +98,6 @@ namespace luax::webdetail {
     int handleCancel(lua_State* L);
     int handleId(lua_State* L);
     int listenerDisconnect(lua_State* L);
-
-    int webOnRequestIntercept(lua_State* L);
-    int webOnRequestInterceptFor(lua_State* L);
-    int webOnRequestInterceptById(lua_State* L);
-    int webOnResponse(lua_State* L);
-    int webOnResponseFor(lua_State* L);
-    int webOnResponseById(lua_State* L);
 
     void registerConstants(lua_State* L);
     void registerMetatables(lua_State* L);

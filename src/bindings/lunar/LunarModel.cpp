@@ -108,6 +108,102 @@ namespace luax::lunar {
             return value;
         }
 
+        using EaseMath = float (*)(Easing const&, float);
+
+        constexpr std::array<EaseMath, 19> kEaseMath{{
+            [](Easing const&, float p) {
+                return p;
+            },
+            [](Easing const& e, float p) {
+                return std::pow(p, e.rate);
+            },
+            [](Easing const& e, float p) {
+                return 1.F - std::pow(1.F - p, e.rate);
+            },
+            [](Easing const& e, float p) {
+                float t = p * 2.F;
+                if (t < 1.F) return 0.5F * std::pow(t, e.rate);
+                return 1.F - 0.5F * std::pow(2.F - t, e.rate);
+            },
+            [](Easing const&, float p) {
+                return 1.F - std::cos(p * kPi * 0.5F);
+            },
+            [](Easing const&, float p) {
+                return std::sin(p * kPi * 0.5F);
+            },
+            [](Easing const&, float p) {
+                return -0.5F * (std::cos(kPi * p) - 1.F);
+            },
+            [](Easing const&, float p) {
+                if (p <= 0.F) return 0.F;
+                return std::pow(2.F, 10.F * p - 10.F);
+            },
+            [](Easing const&, float p) {
+                if (p >= 1.F) return 1.F;
+                return 1.F - std::pow(2.F, -10.F * p);
+            },
+            [](Easing const&, float p) {
+                if (p <= 0.F) return 0.F;
+                if (p >= 1.F) return 1.F;
+                if (p < 0.5F) return 0.5F * std::pow(2.F, 20.F * p - 10.F);
+                return (2.F - std::pow(2.F, -20.F * p + 10.F)) * 0.5F;
+            },
+            [](Easing const&, float p) {
+                constexpr float c1 = 1.70158F;
+                constexpr float c3 = c1 + 1.F;
+                return c3 * p * p * p - c1 * p * p;
+            },
+            [](Easing const&, float p) {
+                constexpr float c1 = 1.70158F;
+                constexpr float c3 = c1 + 1.F;
+                float t = p - 1.F;
+                return 1.F + c3 * t * t * t + c1 * t * t;
+            },
+            [](Easing const&, float p) {
+                constexpr float c2 = 1.70158F * 1.525F;
+                if (p < 0.5F) {
+                    float t = 2.F * p;
+                    return (c2 + 1.F) * t * t * t - c2 * t * t;
+                }
+                float t = 2.F * p - 2.F;
+                return 1.F + (c2 + 1.F) * t * t * t + c2 * t * t;
+            },
+            [](Easing const&, float p) {
+                if (p <= 0.F) return 0.F;
+                if (p >= 1.F) return 1.F;
+                constexpr float c4 = kTwoPi / 3.F;
+                return -std::pow(2.F, 10.F * p - 10.F) * std::sin((p * 10.F - 10.75F) * c4);
+            },
+            [](Easing const&, float p) {
+                if (p <= 0.F) return 0.F;
+                if (p >= 1.F) return 1.F;
+                constexpr float c4 = kTwoPi / 3.F;
+                return std::pow(2.F, -10.F * p) * std::sin((p * 10.F - 0.75F) * c4) + 1.F;
+            },
+            [](Easing const&, float p) {
+                if (p <= 0.F) return 0.F;
+                if (p >= 1.F) return 1.F;
+                constexpr float c4 = kTwoPi / 4.5F;
+                if (p < 0.5F) {
+                    return -0.5F * std::pow(2.F, 20.F * p - 10.F) *
+                        std::sin((20.F * p - 11.125F) * c4);
+                }
+                return std::pow(2.F, -20.F * p + 10.F) * std::sin((20.F * p - 11.125F) * c4) * 0.5F +
+                    1.F;
+            },
+            [](Easing const&, float p) {
+                return 1.F - bounceOut(1.F - p);
+            },
+            [](Easing const&, float p) {
+                return bounceOut(p);
+            },
+            [](Easing const&, float p) {
+                if (p < 0.5F) return (1.F - bounceOut(1.F - 2.F * p)) * 0.5F;
+                return (1.F + bounceOut(2.F * p - 1.F)) * 0.5F;
+            },
+        }};
+        static_assert(kEaseMath.size() == static_cast<std::size_t>(EasingKind::BounceInOut) + 1);
+
     } // namespace
 
     std::optional<Easing> easingFromString(std::string_view name) {
@@ -118,83 +214,8 @@ namespace luax::lunar {
     }
 
     float easeProgress(Easing const& easing, float p) {
-        using K = EasingKind;
         p = std::clamp(p, 0.F, 1.F);
-        switch (easing.kind) {
-            case K::Linear: return p;
-            case K::PowIn: return std::pow(p, easing.rate);
-            case K::PowOut: return 1.F - std::pow(1.F - p, easing.rate);
-            case K::PowInOut: {
-                float t = p * 2.F;
-                if (t < 1.F) return 0.5F * std::pow(t, easing.rate);
-                return 1.F - 0.5F * std::pow(2.F - t, easing.rate);
-            }
-            case K::SineIn: return 1.F - std::cos(p * kPi * 0.5F);
-            case K::SineOut: return std::sin(p * kPi * 0.5F);
-            case K::SineInOut: return -0.5F * (std::cos(kPi * p) - 1.F);
-            case K::ExpoIn:
-                if (p <= 0.F) return 0.F;
-                return std::pow(2.F, 10.F * p - 10.F);
-            case K::ExpoOut:
-                if (p >= 1.F) return 1.F;
-                return 1.F - std::pow(2.F, -10.F * p);
-            case K::ExpoInOut: {
-                if (p <= 0.F) return 0.F;
-                if (p >= 1.F) return 1.F;
-                if (p < 0.5F) return 0.5F * std::pow(2.F, 20.F * p - 10.F);
-                return (2.F - std::pow(2.F, -20.F * p + 10.F)) * 0.5F;
-            }
-            case K::BackIn: {
-                constexpr float c1 = 1.70158F;
-                constexpr float c3 = c1 + 1.F;
-                return c3 * p * p * p - c1 * p * p;
-            }
-            case K::BackOut: {
-                constexpr float c1 = 1.70158F;
-                constexpr float c3 = c1 + 1.F;
-                float t = p - 1.F;
-                return 1.F + c3 * t * t * t + c1 * t * t;
-            }
-            case K::BackInOut: {
-                constexpr float c2 = 1.70158F * 1.525F;
-                if (p < 0.5F) {
-                    float t = 2.F * p;
-                    return (c2 + 1.F) * t * t * t - c2 * t * t;
-                }
-                float t = 2.F * p - 2.F;
-                return 1.F + (c2 + 1.F) * t * t * t + c2 * t * t;
-            }
-            case K::ElasticIn: {
-                if (p <= 0.F) return 0.F;
-                if (p >= 1.F) return 1.F;
-                constexpr float c4 = kTwoPi / 3.F;
-                return -std::pow(2.F, 10.F * p - 10.F) * std::sin((p * 10.F - 10.75F) * c4);
-            }
-            case K::ElasticOut: {
-                if (p <= 0.F) return 0.F;
-                if (p >= 1.F) return 1.F;
-                constexpr float c4 = kTwoPi / 3.F;
-                return std::pow(2.F, -10.F * p) * std::sin((p * 10.F - 0.75F) * c4) + 1.F;
-            }
-            case K::ElasticInOut: {
-                if (p <= 0.F) return 0.F;
-                if (p >= 1.F) return 1.F;
-                constexpr float c4 = kTwoPi / 4.5F;
-                if (p < 0.5F) {
-                    return -0.5F * std::pow(2.F, 20.F * p - 10.F) *
-                        std::sin((20.F * p - 11.125F) * c4);
-                }
-                return std::pow(2.F, -20.F * p + 10.F) * std::sin((20.F * p - 11.125F) * c4) * 0.5F +
-                    1.F;
-            }
-            case K::BounceIn: return 1.F - bounceOut(1.F - p);
-            case K::BounceOut: return bounceOut(p);
-            case K::BounceInOut: {
-                if (p < 0.5F) return (1.F - bounceOut(1.F - 2.F * p)) * 0.5F;
-                return (1.F + bounceOut(2.F * p - 1.F)) * 0.5F;
-            }
-        }
-        return p;
+        return kEaseMath[static_cast<std::size_t>(easing.kind)](easing, p);
     }
 
     geode::Result<CompiledAnimation> compileAnimation(

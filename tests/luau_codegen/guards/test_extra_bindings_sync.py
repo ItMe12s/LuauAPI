@@ -73,6 +73,11 @@ _EXTRA_BINDING_SOURCES = {
         "type_name": "WebNamespace",
         "start_marker": "registerGeodeWeb(lua_State* L)",
         "end_marker": "registerConstants(L)",
+        "descriptor": {
+            "cpp": "src/bindings/geode/web/GeodeWebListeners.cpp",
+            "start_marker": "kListenerDescriptors[] = {",
+            "end_marker": "};",
+        },
     },
     "keyboard": {
         "dluau": "tools/luau_codegen/extra_bindings/keyboard.dluau",
@@ -181,6 +186,7 @@ _EXTRA_BINDING_SOURCES = {
 _DECLARED_FN_FIELD = re.compile(r"^\s*(\w+)\s*:\s*(?:<[^>]+>\s*)?\(", re.MULTILINE)
 _SET_CFUNCTION = re.compile(r'setTableCFunction\(L,\s*[^,]+,\s*"([^"]+)"')
 _LUA_REG_CFUNCTION = re.compile(r'\{\s*"([^"]+)"\s*,\s*&\w+\s*\}')
+_DESCRIPTOR_NAME = re.compile(r'\{\s*"(\w+)"')
 
 _LUNAR_CLASS_METHOD = re.compile(
     r'Usertype<(?:LunarAnimationDef|LunarTrack|LunarRig)>::method\(L,\s*"([^"]+)"'
@@ -218,7 +224,7 @@ def _declared_namespace_fields(dluau_source: str, type_name: str) -> set[str]:
 
 
 def _registered_namespace_fields(
-    cpp_source: str | list[str], start_marker: str, end_marker: str
+    cpp_source: str | list[str], start_marker: str, end_marker: str, descriptor: dict | None = None
 ) -> set[str]:
     sources = [cpp_source] if isinstance(cpp_source, str) else cpp_source
     registered: set[str] = set()
@@ -228,6 +234,7 @@ def _registered_namespace_fields(
         start = body.find(start_marker)
         if start == -1:
             registered.update(_SET_CFUNCTION.findall(body))
+            registered.update(_LUA_REG_CFUNCTION.findall(body))
             continue
         found_marker = True
         end = body.find(end_marker, start)
@@ -236,6 +243,13 @@ def _registered_namespace_fields(
         registered.update(_SET_CFUNCTION.findall(section))
         registered.update(_LUA_REG_CFUNCTION.findall(section))
     assert found_marker, f"missing start marker {start_marker}"
+    if descriptor is not None:
+        body = _read_repo_file(descriptor["cpp"])
+        start = body.find(descriptor["start_marker"])
+        assert start != -1, f"missing descriptor start marker {descriptor['start_marker']}"
+        end = body.find(descriptor["end_marker"], start)
+        assert end != -1, f"missing descriptor end marker {descriptor['end_marker']}"
+        registered.update(_DESCRIPTOR_NAME.findall(body[start:end]))
     return registered
 
 
@@ -265,7 +279,7 @@ class ExtraBindingsSyncTests(unittest.TestCase):
                 dluau_source = _read_repo_file(spec["dluau"])
                 declared = _declared_namespace_fields(dluau_source, spec["type_name"])
                 registered = _registered_namespace_fields(
-                    spec["cpp"], spec["start_marker"], spec["end_marker"]
+                    spec["cpp"], spec["start_marker"], spec["end_marker"], spec.get("descriptor")
                 )
                 missing_from_stub = registered - declared
                 missing_from_cpp = declared - registered

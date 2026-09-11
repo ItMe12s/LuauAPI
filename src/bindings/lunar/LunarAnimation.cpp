@@ -10,6 +10,7 @@
 
 #include <Geode/Geode.hpp>
 #include <algorithm>
+#include <array>
 #include <atomic>
 #include <cmath>
 #include <fmt/format.h>
@@ -109,6 +110,67 @@ namespace luax::lunar {
             return geode::Ok();
         }
 
+        using EaseFactory = cocos2d::CCActionInterval* (*)(cocos2d::CCActionInterval*, float rate);
+
+        constexpr std::array<EaseFactory, 19> kEaseFactories{{
+            nullptr,
+            [](cocos2d::CCActionInterval* to, float rate) -> cocos2d::CCActionInterval* {
+                return cocos2d::CCEaseIn::create(to, rate);
+            },
+            [](cocos2d::CCActionInterval* to, float rate) -> cocos2d::CCActionInterval* {
+                return cocos2d::CCEaseOut::create(to, rate);
+            },
+            [](cocos2d::CCActionInterval* to, float rate) -> cocos2d::CCActionInterval* {
+                return cocos2d::CCEaseInOut::create(to, rate);
+            },
+            [](cocos2d::CCActionInterval* to, float) -> cocos2d::CCActionInterval* {
+                return cocos2d::CCEaseSineIn::create(to);
+            },
+            [](cocos2d::CCActionInterval* to, float) -> cocos2d::CCActionInterval* {
+                return cocos2d::CCEaseSineOut::create(to);
+            },
+            [](cocos2d::CCActionInterval* to, float) -> cocos2d::CCActionInterval* {
+                return cocos2d::CCEaseSineInOut::create(to);
+            },
+            [](cocos2d::CCActionInterval* to, float) -> cocos2d::CCActionInterval* {
+                return cocos2d::CCEaseExponentialIn::create(to);
+            },
+            [](cocos2d::CCActionInterval* to, float) -> cocos2d::CCActionInterval* {
+                return cocos2d::CCEaseExponentialOut::create(to);
+            },
+            [](cocos2d::CCActionInterval* to, float) -> cocos2d::CCActionInterval* {
+                return cocos2d::CCEaseExponentialInOut::create(to);
+            },
+            [](cocos2d::CCActionInterval* to, float) -> cocos2d::CCActionInterval* {
+                return cocos2d::CCEaseBackIn::create(to);
+            },
+            [](cocos2d::CCActionInterval* to, float) -> cocos2d::CCActionInterval* {
+                return cocos2d::CCEaseBackOut::create(to);
+            },
+            [](cocos2d::CCActionInterval* to, float) -> cocos2d::CCActionInterval* {
+                return cocos2d::CCEaseBackInOut::create(to);
+            },
+            [](cocos2d::CCActionInterval* to, float) -> cocos2d::CCActionInterval* {
+                return cocos2d::CCEaseElasticIn::create(to);
+            },
+            [](cocos2d::CCActionInterval* to, float) -> cocos2d::CCActionInterval* {
+                return cocos2d::CCEaseElasticOut::create(to);
+            },
+            [](cocos2d::CCActionInterval* to, float) -> cocos2d::CCActionInterval* {
+                return cocos2d::CCEaseElasticInOut::create(to);
+            },
+            [](cocos2d::CCActionInterval* to, float) -> cocos2d::CCActionInterval* {
+                return cocos2d::CCEaseBounceIn::create(to);
+            },
+            [](cocos2d::CCActionInterval* to, float) -> cocos2d::CCActionInterval* {
+                return cocos2d::CCEaseBounceOut::create(to);
+            },
+            [](cocos2d::CCActionInterval* to, float) -> cocos2d::CCActionInterval* {
+                return cocos2d::CCEaseBounceInOut::create(to);
+            },
+        }};
+        static_assert(kEaseFactories.size() == static_cast<std::size_t>(EasingKind::BounceInOut) + 1);
+
         cocos2d::CCFiniteTimeAction* makeTween(TweenSeg const& seg) {
             float const dur = static_cast<float>(std::max(0.0, seg.end - seg.start));
             using P = Prop;
@@ -121,49 +183,12 @@ namespace luax::lunar {
             }
             if (!to) return nullptr;
 
-            using K = EasingKind;
-            cocos2d::CCActionInterval* wrapped = nullptr;
-            switch (seg.easing.kind) {
-                case K::Linear: wrapped = to; break;
-                case K::PowIn: wrapped = cocos2d::CCEaseIn::create(to, seg.easing.rate); break;
-                case K::PowOut: wrapped = cocos2d::CCEaseOut::create(to, seg.easing.rate); break;
-                case K::PowInOut:
-                    wrapped = cocos2d::CCEaseInOut::create(to, seg.easing.rate);
-                    break;
-                case K::SineIn: wrapped = cocos2d::CCEaseSineIn::create(to); break;
-                case K::SineOut: wrapped = cocos2d::CCEaseSineOut::create(to); break;
-                case K::SineInOut: wrapped = cocos2d::CCEaseSineInOut::create(to); break;
-                case K::ExpoIn: wrapped = cocos2d::CCEaseExponentialIn::create(to); break;
-                case K::ExpoOut: wrapped = cocos2d::CCEaseExponentialOut::create(to); break;
-                case K::ExpoInOut: wrapped = cocos2d::CCEaseExponentialInOut::create(to); break;
-                case K::BackIn: wrapped = cocos2d::CCEaseBackIn::create(to); break;
-                case K::BackOut: wrapped = cocos2d::CCEaseBackOut::create(to); break;
-                case K::BackInOut: wrapped = cocos2d::CCEaseBackInOut::create(to); break;
-                case K::ElasticIn: wrapped = cocos2d::CCEaseElasticIn::create(to); break;
-                case K::ElasticOut: wrapped = cocos2d::CCEaseElasticOut::create(to); break;
-                case K::ElasticInOut: wrapped = cocos2d::CCEaseElasticInOut::create(to); break;
-                case K::BounceIn: wrapped = cocos2d::CCEaseBounceIn::create(to); break;
-                case K::BounceOut: wrapped = cocos2d::CCEaseBounceOut::create(to); break;
-                case K::BounceInOut: wrapped = cocos2d::CCEaseBounceInOut::create(to); break;
-            }
-            return wrapped;
+            auto* factory = kEaseFactories[static_cast<std::size_t>(seg.easing.kind)];
+            return factory ? factory(to, seg.easing.rate) : to;
         }
 
         void applyInstant(cocos2d::CCNode* node, Prop prop, float value) {
-            using P = Prop;
-            switch (prop) {
-                case P::PosX: node->setPositionX(value); break;
-                case P::PosY: node->setPositionY(value); break;
-                case P::Rotation: node->setRotation(value); break;
-                case P::ScaleX: node->setScaleX(value); break;
-                case P::ScaleY: node->setScaleY(value); break;
-                case P::Opacity: setNodeOpacity(node, value); break;
-                case P::ZOrder: node->setZOrder(static_cast<int>(value)); break;
-                case P::AnchorX: node->setAnchorPoint({value, node->getAnchorPoint().y}); break;
-                case P::AnchorY: node->setAnchorPoint({node->getAnchorPoint().x, value}); break;
-                case P::SkewX: node->setSkewX(value); break;
-                case P::SkewY: node->setSkewY(value); break;
-            }
+            kPropNodeAccess[static_cast<std::size_t>(prop)].setter(node, value);
         }
 
         void applyPose(LunarRig* rig, std::unordered_map<std::string, NodePose> const& poses) {
@@ -479,40 +504,9 @@ namespace luax::lunar {
             return 1;
         }
 
-    } // namespace
-
-    geode::Result<LunarAnimationDef*> parseAnimTable(lua_State* L, int idx, char const* method) {
-        luaL_checktype(L, idx, LUA_TTABLE);
-        LuaStackGuard const guard(L);
-        auto* out = LunarAnimationDef::create();
-
-        if (auto fps = optNumberField(L, idx, "fps", method)) {
-            if (!(fps > 0.0)) return geode::Err(std::string("'fps' must be > 0"));
-            out->setFps(*fps);
-        }
-        if (auto looped = optBoolField(L, idx, "looped", method)) out->setLooped(*looped);
-
-        lua_getfield(L, idx, "keyframes");
-        if (!lua_istable(L, -1)) {
-            return geode::Err(std::string("'keyframes' table is required"));
-        }
-        int const kfsIdx = lua_gettop(L);
-        lua_pushnil(L);
-        while (lua_next(L, kfsIdx) != 0) {
-            if (!lua_isnumber(L, -2)) {
-                return geode::Err(std::string("'keyframes' must be keyed by frame number"));
-            }
-            double const keyedFrame = lua_tonumber(L, -2);
-            if (keyedFrame < 0.0 || !std::isfinite(keyedFrame)) {
-                return geode::Err(
-                    fmt::format("keyframe frame numbers must be >= 0 (got {})", keyedFrame)
-                );
-            }
-            if (!lua_istable(L, -1)) {
-                return geode::Err(fmt::format("keyframes[{}] must be a table", keyedFrame));
-            }
-            int const entry = lua_gettop(L);
-
+        geode::Result<void> parseKeyframeEntry(
+            lua_State* L, int entry, double keyedFrame, LunarAnimationDef* out
+        ) {
             lua_pushnil(L);
             while (lua_next(L, entry) != 0) {
                 if (lua_type(L, -2) == LUA_TSTRING &&
@@ -545,6 +539,42 @@ namespace luax::lunar {
                 out->addKeyframe(keyedFrame, nodeId ? nodeId : "", std::move(poseResult).unwrap());
                 lua_pop(L, 1);
             }
+            return geode::Ok();
+        }
+    } // namespace
+
+    geode::Result<LunarAnimationDef*> parseAnimTable(lua_State* L, int idx, char const* method) {
+        luaL_checktype(L, idx, LUA_TTABLE);
+        LuaStackGuard const guard(L);
+        auto* out = LunarAnimationDef::create();
+
+        if (auto fps = optNumberField(L, idx, "fps", method)) {
+            if (!(fps > 0.0)) return geode::Err(std::string("'fps' must be > 0"));
+            out->setFps(*fps);
+        }
+        if (auto looped = optBoolField(L, idx, "looped", method)) out->setLooped(*looped);
+
+        lua_getfield(L, idx, "keyframes");
+        if (!lua_istable(L, -1)) {
+            return geode::Err(std::string("'keyframes' table is required"));
+        }
+        int const kfsIdx = lua_gettop(L);
+        lua_pushnil(L);
+        while (lua_next(L, kfsIdx) != 0) {
+            if (!lua_isnumber(L, -2)) {
+                return geode::Err(std::string("'keyframes' must be keyed by frame number"));
+            }
+            double const keyedFrame = lua_tonumber(L, -2);
+            if (keyedFrame < 0.0 || !std::isfinite(keyedFrame)) {
+                return geode::Err(
+                    fmt::format("keyframe frame numbers must be >= 0 (got {})", keyedFrame)
+                );
+            }
+            if (!lua_istable(L, -1)) {
+                return geode::Err(fmt::format("keyframes[{}] must be a table", keyedFrame));
+            }
+            auto entry = parseKeyframeEntry(L, lua_gettop(L), keyedFrame, out);
+            if (entry.isErr()) return geode::Err(entry.unwrapErr());
             lua_pop(L, 1);
         }
         return geode::Ok(out);
@@ -557,11 +587,7 @@ namespace luax::lunar {
     }
 
     bool setNodeOpacity(cocos2d::CCNode* node, float value) {
-        if (auto* rgba = geode::cast::typeinfo_cast<cocos2d::CCRGBAProtocol*>(node)) {
-            rgba->setOpacity(opacityByte(value));
-            return true;
-        }
-        return false;
+        return kPropNodeAccess[static_cast<std::size_t>(Prop::Opacity)].setter(node, value);
     }
 
     void LunarAnimationDef::addKeyframe(double frame, std::string_view nodeId, NodePose pose) {

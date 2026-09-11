@@ -44,6 +44,7 @@ namespace luax::webdetail {
         };
 
         struct RequestChainDescriptor {
+            char const* name;
             char const* context;
             ChainOp op;
         };
@@ -78,24 +79,19 @@ namespace luax::webdetail {
                     return;
                 case ChainOp::Timeout: {
                     auto seconds = check<int>(L, 2, desc.context);
-                    if (seconds < 0) luaL_error(L, "WebRequest:timeout expected seconds >= 0");
+                    if (seconds < 0) luaL_error(L, "%s expected seconds >= 0", desc.context);
                     req.timeout(std::chrono::seconds(static_cast<std::int64_t>(seconds)));
                     return;
                 }
                 case ChainOp::DownloadRange:
                     if (!lua_isnumber(L, 2) || lua_tointeger(L, 2) < 0)
-                        luaL_error(
-                            L, "WebRequest:downloadRange expected non-negative integer at arg 2"
-                        );
+                        luaL_error(L, "%s expected non-negative integer at arg 2", desc.context);
                     if (!lua_isnumber(L, 3) || lua_tointeger(L, 3) < 0)
-                        luaL_error(
-                            L, "WebRequest:downloadRange expected non-negative integer at arg 3"
-                        );
+                        luaL_error(L, "%s expected non-negative integer at arg 3", desc.context);
                     {
                         auto start = static_cast<std::uint64_t>(lua_tointeger(L, 2));
                         auto stop = static_cast<std::uint64_t>(lua_tointeger(L, 3));
-                        if (start > stop)
-                            luaL_error(L, "WebRequest:downloadRange expected start <= stop");
+                        if (start > stop) luaL_error(L, "%s expected start <= stop", desc.context);
                         req.downloadRange({start, stop});
                     }
                     return;
@@ -127,47 +123,28 @@ namespace luax::webdetail {
         }
 
         RequestChainDescriptor const kRequestChainDescriptors[] = {
-            {"WebRequest:header", ChainOp::Header},
-            {"WebRequest:removeHeader", ChainOp::RemoveHeader},
-            {"WebRequest:param", ChainOp::Param},
-            {"WebRequest:removeParam", ChainOp::RemoveParam},
-            {"WebRequest:method", ChainOp::Method},
-            {"WebRequest:url", ChainOp::Url},
-            {"WebRequest:userAgent", ChainOp::UserAgent},
-            {"WebRequest:acceptEncoding", ChainOp::AcceptEncoding},
-            {"WebRequest:timeout", ChainOp::Timeout},
-            {"WebRequest:downloadRange", ChainOp::DownloadRange},
-            {"WebRequest:certVerification", ChainOp::CertVerification},
-            {"WebRequest:transferBody", ChainOp::TransferBody},
-            {"WebRequest:followRedirects", ChainOp::FollowRedirects},
-            {"WebRequest:ignoreContentLength", ChainOp::IgnoreContentLength},
-            {"WebRequest:caBundle", ChainOp::CaBundle},
-            {"WebRequest:proxy", ChainOp::Proxy},
-            {"WebRequest:version", ChainOp::Version},
+            {"header", "WebRequest:header", ChainOp::Header},
+            {"removeHeader", "WebRequest:removeHeader", ChainOp::RemoveHeader},
+            {"param", "WebRequest:param", ChainOp::Param},
+            {"removeParam", "WebRequest:removeParam", ChainOp::RemoveParam},
+            {"method", "WebRequest:method", ChainOp::Method},
+            {"url", "WebRequest:url", ChainOp::Url},
+            {"userAgent", "WebRequest:userAgent", ChainOp::UserAgent},
+            {"acceptEncoding", "WebRequest:acceptEncoding", ChainOp::AcceptEncoding},
+            {"timeout", "WebRequest:timeout", ChainOp::Timeout},
+            {"downloadRange", "WebRequest:downloadRange", ChainOp::DownloadRange},
+            {"certVerification", "WebRequest:certVerification", ChainOp::CertVerification},
+            {"transferBody", "WebRequest:transferBody", ChainOp::TransferBody},
+            {"followRedirects", "WebRequest:followRedirects", ChainOp::FollowRedirects},
+            {"ignoreContentLength", "WebRequest:ignoreContentLength", ChainOp::IgnoreContentLength},
+            {"caBundle", "WebRequest:caBundle", ChainOp::CaBundle},
+            {"proxy", "WebRequest:proxy", ChainOp::Proxy},
+            {"version", "WebRequest:version", ChainOp::Version},
         };
 
-        enum class RequestChainId : std::size_t {
-            Header = 0,
-            RemoveHeader,
-            Param,
-            RemoveParam,
-            Method,
-            Url,
-            UserAgent,
-            AcceptEncoding,
-            Timeout,
-            DownloadRange,
-            CertVerification,
-            TransferBody,
-            FollowRedirects,
-            IgnoreContentLength,
-            CaBundle,
-            Proxy,
-            Version,
-        };
-
-        int requestChainDispatch(lua_State* L, RequestChainId id) {
-            return requestMethodFromTable(L, kRequestChainDescriptors[static_cast<std::size_t>(id)]);
+        int requestChainThunk(lua_State* L) {
+            auto op = static_cast<ChainOp>(lua_tointeger(L, lua_upvalueindex(1)));
+            return requestMethodFromTable(L, kRequestChainDescriptors[static_cast<std::size_t>(op)]);
         }
 
         int requestSendWithMethod(lua_State* L, std::string method, char const* context) {
@@ -319,72 +296,14 @@ namespace luax::webdetail {
         return 1;
     }
 
-    int requestHeader(lua_State* L) {
-        return requestChainDispatch(L, RequestChainId::Header);
-    }
-
-    int requestRemoveHeader(lua_State* L) {
-        return requestChainDispatch(L, RequestChainId::RemoveHeader);
-    }
-
-    int requestParam(lua_State* L) {
-        return requestChainDispatch(L, RequestChainId::Param);
-    }
-
-    int requestRemoveParam(lua_State* L) {
-        return requestChainDispatch(L, RequestChainId::RemoveParam);
-    }
-
-    int requestMethod(lua_State* L) {
-        return requestChainDispatch(L, RequestChainId::Method);
-    }
-
-    int requestUrl(lua_State* L) {
-        return requestChainDispatch(L, RequestChainId::Url);
-    }
-
-    int requestUserAgent(lua_State* L) {
-        return requestChainDispatch(L, RequestChainId::UserAgent);
-    }
-
-    int requestAcceptEncoding(lua_State* L) {
-        return requestChainDispatch(L, RequestChainId::AcceptEncoding);
-    }
-
-    int requestTimeout(lua_State* L) {
-        return requestChainDispatch(L, RequestChainId::Timeout);
-    }
-
-    int requestDownloadRange(lua_State* L) {
-        return requestChainDispatch(L, RequestChainId::DownloadRange);
-    }
-
-    int requestCertVerification(lua_State* L) {
-        return requestChainDispatch(L, RequestChainId::CertVerification);
-    }
-
-    int requestTransferBody(lua_State* L) {
-        return requestChainDispatch(L, RequestChainId::TransferBody);
-    }
-
-    int requestFollowRedirects(lua_State* L) {
-        return requestChainDispatch(L, RequestChainId::FollowRedirects);
-    }
-
-    int requestIgnoreContentLength(lua_State* L) {
-        return requestChainDispatch(L, RequestChainId::IgnoreContentLength);
-    }
-
-    int requestCaBundle(lua_State* L) {
-        return requestChainDispatch(L, RequestChainId::CaBundle);
-    }
-
-    int requestProxy(lua_State* L) {
-        return requestChainDispatch(L, RequestChainId::Proxy);
-    }
-
-    int requestVersion(lua_State* L) {
-        return requestChainDispatch(L, RequestChainId::Version);
+    void registerRequestChainMethods(lua_State* L) {
+        luaL_getmetatable(L, kRequestMeta);
+        for (std::size_t i = 0; i < std::size(kRequestChainDescriptors); ++i) {
+            lua_pushinteger(L, static_cast<lua_Integer>(i));
+            lua_pushcclosurek(L, &requestChainThunk, "requestChainThunk", 1, nullptr);
+            lua_setfield(L, -2, kRequestChainDescriptors[i].name);
+        }
+        lua_pop(L, 1);
     }
 
     int requestBody(lua_State* L) {

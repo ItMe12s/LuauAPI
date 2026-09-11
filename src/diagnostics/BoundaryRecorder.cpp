@@ -360,14 +360,23 @@ namespace luax::diag {
         return out;
     }
 
+    namespace {
+        void recordFlushAttempt(std::chrono::steady_clock::time_point now) {
+            auto& s = state();
+            s.dirty = false;
+            s.lastFlush = now;
+            s.lastFlushValid = true;
+            s.lastFlushKey = flushKey(s.stack.back());
+        }
+    } // namespace
+
     void flushIfNeeded(imes::luauapi::RuntimeStatus status, bool force) {
         auto& s = state();
         if (!s.dirty) return;
         if (s.stack.empty()) return;
 
         auto now = std::chrono::steady_clock::now();
-        bool const activeChanged = !s.lastFlushValid ||
-            (s.stack.empty() ? !s.lastFlushKey.empty() : flushKey(s.stack.back()) != s.lastFlushKey);
+        bool const activeChanged = !s.lastFlushValid || flushKey(s.stack.back()) != s.lastFlushKey;
         bool const intervalElapsed = !s.lastFlushValid ||
             std::chrono::duration_cast<std::chrono::milliseconds>(now - s.lastFlush).count() >=
                 kSidecarFlushIntervalMs;
@@ -390,10 +399,7 @@ namespace luax::diag {
         std::string payload = serialize(status);
         std::string semantic = semanticPayload(payload);
         if (!s.lastWrittenSemantic.empty() && semantic == s.lastWrittenSemantic) {
-            s.dirty = false;
-            s.lastFlush = now;
-            s.lastFlushValid = true;
-            s.lastFlushKey = s.stack.empty() ? std::string{} : flushKey(s.stack.back());
+            recordFlushAttempt(now);
             return;
         }
 
@@ -401,10 +407,7 @@ namespace luax::diag {
             return;
         }
 
-        s.dirty = false;
-        s.lastFlush = now;
-        s.lastFlushValid = true;
-        s.lastFlushKey = s.stack.empty() ? std::string{} : flushKey(s.stack.back());
+        recordFlushAttempt(now);
         s.lastWrittenSemantic = std::move(semantic);
         s.flushEpoch += 1;
     }
