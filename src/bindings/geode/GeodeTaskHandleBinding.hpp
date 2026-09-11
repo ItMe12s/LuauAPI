@@ -34,9 +34,10 @@ namespace luax {
         void addCallback(std::shared_ptr<LuaCallback> cb);
         void cancel();
         void detach();
+        void cancelOrDetach(bool abort);
         void fireCallbacks();
 
-        virtual void poll(arc::Context& cx) = 0;
+        void poll(arc::Context& cx);
         virtual void abortNative() = 0;
         virtual void detachNative() noexcept = 0;
 
@@ -44,6 +45,7 @@ namespace luax {
         void completeSuccess();
         void completeError(std::string error);
         GeodeTaskHandlePushValueFn pushValueFn() const;
+        virtual bool pollNative(arc::Context& cx) = 0;
         virtual void dropStoredResult() = 0;
         virtual void pushSuccessArgs(lua_State* L) const = 0;
 
@@ -65,23 +67,13 @@ namespace luax {
         GeodeTaskHandleState(arc::TaskHandle<T> handle, GeodeTaskHandlePushValueFn pushValue) :
             GeodeTaskHandleStateBase(pushValue), m_handle(std::move(handle)) {}
 
-        void poll(arc::Context& cx) override {
-            if (!isPending()) return;
-            try {
-                auto result = m_handle.poll(cx);
-                if (result) {
-                    m_value.emplace(std::move(*result));
-                    completeSuccess();
-                }
+        bool pollNative(arc::Context& cx) override {
+            auto result = m_handle.poll(cx);
+            if (result) {
+                m_value.emplace(std::move(*result));
+                return true;
             }
-            catch (std::exception const& e) {
-                detachNative();
-                completeError(e.what());
-            }
-            catch (...) {
-                detachNative();
-                completeError("Task failed with an unknown exception");
-            }
+            return false;
         }
 
         void abortNative() override {
@@ -130,21 +122,8 @@ namespace luax {
         GeodeTaskHandleState(arc::TaskHandle<void> handle, GeodeTaskHandlePushValueFn pushValue) :
             GeodeTaskHandleStateBase(pushValue), m_handle(std::move(handle)) {}
 
-        void poll(arc::Context& cx) override {
-            if (!isPending()) return;
-            try {
-                if (m_handle.poll(cx)) {
-                    completeSuccess();
-                }
-            }
-            catch (std::exception const& e) {
-                detachNative();
-                completeError(e.what());
-            }
-            catch (...) {
-                detachNative();
-                completeError("Task failed with an unknown exception");
-            }
+        bool pollNative(arc::Context& cx) override {
+            return m_handle.poll(cx);
         }
 
         void abortNative() override {

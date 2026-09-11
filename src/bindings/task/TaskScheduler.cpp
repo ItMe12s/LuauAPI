@@ -57,13 +57,15 @@ namespace luax {
     }
 
     void TaskScheduler::fireDeferred() {
-        m_deferred.forEachIndexSnapshot([&](std::size_t, Task& task) {
+        m_deferred.forEachIndexSnapshot([&](std::size_t i, Task&) {
+            if (i >= m_deferred.size()) return;
+            Task& task = m_deferred[i];
             if (task.cancelled) {
                 return;
             }
 
             (void)fire(task);
-            task.cancelled = true;
+            m_deferred[i].cancelled = true;
         });
     }
 
@@ -87,17 +89,6 @@ namespace luax {
         }
     }
 
-    void TaskScheduler::compact(IndexedSlotMap<Task>& store) {
-        for (std::size_t i = 0; i < store.size();) {
-            if (!store[i].cancelled) {
-                ++i;
-                continue;
-            }
-            store[i].callback.reset();
-            store.eraseAt(i);
-        }
-    }
-
     void TaskScheduler::advance(double dt, lua_State* L) {
         (void)L;
         auto* runtime = Runtime::getIfInitialized();
@@ -105,7 +96,7 @@ namespace luax {
 
         if (!m_deferred.empty()) {
             fireDeferred();
-            compact(m_deferred);
+            compactCancelledSlots(m_deferred);
         }
 
         if (m_timed.empty()) return;
@@ -124,7 +115,7 @@ namespace luax {
 
         if (!due.empty()) {
             fireTimedDue(due);
-            compact(m_timed);
+            compactCancelledSlots(m_timed);
         }
     }
 

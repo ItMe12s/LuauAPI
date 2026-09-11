@@ -259,11 +259,12 @@ Execution errors update both `Result` and `lastError()`.
 
 ### Web limits errors
 
-| Message                             | When                      | Return shape                                               |
-| ----------------------------------- | ------------------------- | ---------------------------------------------------------- |
-| `response exceeds maximum size`     | Response body over cap    | `nil, err` on accessors and async callbacks                |
-| `request body exceeds maximum size` | Request body over cap     | `nil, err` or Lua error while parsing options              |
-| `too many concurrent web requests`  | In-flight request cap hit | Lua error on `get`, `post`, `fetch`, and `WebRequest:send` |
+| Message                                                   | When                                          | Return shape                                               |
+| --------------------------------------------------------- | --------------------------------------------- | ---------------------------------------------------------- |
+| `response exceeds maximum size`                           | Response body over cap                        | `nil, err` on accessors and async callbacks                |
+| `request body exceeds maximum size`                       | Request body over cap                         | `nil, err` or Lua error while parsing options              |
+| `too many concurrent web requests`                        | In-flight request cap hit                     | Lua error on `get`, `post`, `fetch`, and `WebRequest:send` |
+| `cannot send a request inside its own intercept callback` | Request re-sent inside its intercept callback | Lua error on `WebRequest:send`                             |
 
 ## WebSocket
 

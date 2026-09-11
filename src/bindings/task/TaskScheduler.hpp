@@ -49,7 +49,6 @@ namespace luax {
         bool fire(Task& task);
         void fireDeferred();
         void fireTimedDue(std::vector<std::size_t> const& due);
-        void compact(IndexedSlotMap<Task>& store);
 
         IndexedSlotMap<Task> m_timed;
         IndexedSlotMap<Task> m_deferred;

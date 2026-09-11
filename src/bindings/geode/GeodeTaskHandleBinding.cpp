@@ -129,6 +129,23 @@ namespace luax {
         return m_pushValue;
     }
 
+    void GeodeTaskHandleStateBase::poll(arc::Context& cx) {
+        if (!isPending()) return;
+        try {
+            if (pollNative(cx)) {
+                completeSuccess();
+            }
+        }
+        catch (std::exception const& e) {
+            detachNative();
+            completeError(e.what());
+        }
+        catch (...) {
+            detachNative();
+            completeError("Task failed with an unknown exception");
+        }
+    }
+
     void GeodeTaskHandleStateBase::addCallback(std::shared_ptr<LuaCallback> cb) {
         if (!cb) return;
         if (m_status == Status::Pending) {
@@ -143,9 +160,14 @@ namespace luax {
         }
     }
 
-    void GeodeTaskHandleStateBase::cancel() {
+    void GeodeTaskHandleStateBase::cancelOrDetach(bool abort) {
         if (m_status == Status::Pending) {
-            abortNative();
+            if (abort) {
+                abortNative();
+            }
+            else {
+                detachNative();
+            }
             m_callbacks.clear();
             dropStoredResult();
             m_status = Status::Detached;
@@ -160,21 +182,12 @@ namespace luax {
         m_status = Status::Detached;
     }
 
+    void GeodeTaskHandleStateBase::cancel() {
+        cancelOrDetach(true);
+    }
+
     void GeodeTaskHandleStateBase::detach() {
-        if (m_status == Status::Pending) {
-            detachNative();
-            m_callbacks.clear();
-            dropStoredResult();
-            m_status = Status::Detached;
-            return;
-        }
-        m_callbacks.clear();
-        if (m_firingCallbacks) {
-            m_detachAfterCallbacks = true;
-            return;
-        }
-        dropStoredResult();
-        m_status = Status::Detached;
+        cancelOrDetach(false);
     }
 
     void GeodeTaskHandleStateBase::completeSuccess() {
