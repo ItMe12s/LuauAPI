@@ -6,6 +6,7 @@
 #include "framework/usertype/WeakRefShutdown.hpp"
 
 #include <deque>
+#include <mutex>
 #include <thread>
 #include <utility>
 #include <vector>
@@ -19,6 +20,12 @@ namespace luax {
             geode::WeakRef<cocos2d::CCObject> weak;
         };
 
+        struct LuaRefDefer {
+            lua_State* state;
+            int ref;
+            std::uint32_t generation;
+        };
+
         std::deque<geode::WeakRef<cocos2d::CCObject>>& deferredBorrowedReleases() {
             static std::deque<geode::WeakRef<cocos2d::CCObject>> queue;
             return queue;
@@ -27,6 +34,16 @@ namespace luax {
         std::vector<OwnedDefer>& deferredOwnedReleases() {
             static std::vector<OwnedDefer> queue;
             return queue;
+        }
+
+        std::vector<LuaRefDefer>& deferredLuaRefUnrefs() {
+            static std::vector<LuaRefDefer> queue;
+            return queue;
+        }
+
+        std::mutex& deferredLuaRefMutex() {
+            static std::mutex mutex;
+            return mutex;
         }
 
         void disposeBorrowedEntry(geode::WeakRef<cocos2d::CCObject>&& weak) {
@@ -84,6 +101,9 @@ namespace luax {
         detail::drainOwnedBatch(owned, false);
         owned.clear();
 
+        std::lock_guard<std::mutex> lock(detail::deferredLuaRefMutex());
+        detail::deferredLuaRefUnrefs().clear();
+
         detail::deferredReleaseHookRegistered() = false;
     }
 
@@ -105,11 +125,17 @@ namespace luax {
         queue.push_back({obj, std::move(weak)});
     }
 
+    void deferLuaRefUnref(lua_State* state, int ref, std::uint32_t generation) {
+        std::lock_guard<std::mutex> lock(detail::deferredLuaRefMutex());
+        detail::deferredLuaRefUnrefs().push_back({state, ref, generation});
+    }
+
     void drainDeferredReleases() {
         if (Runtime::isShuttingDown()) {
             clearDeferredReleases();
             return;
         }
+        detail::ensureDeferredReleaseShutdownHook();
         auto& borrowedQueue = detail::deferredBorrowedReleases();
         auto& ownedQueue = detail::deferredOwnedReleases();
 
@@ -122,6 +148,19 @@ namespace luax {
             borrowed.swap(borrowedQueue);
             detail::drainBorrowedBatch(borrowed);
         }
+
+        std::vector<detail::LuaRefDefer> unrefs;
+        {
+            std::lock_guard<std::mutex> lock(detail::deferredLuaRefMutex());
+            unrefs.swap(detail::deferredLuaRefUnrefs());
+        }
+        for (auto const& entry : unrefs) {
+            auto* runtime = Runtime::getIfInitialized();
+            if (runtime && entry.generation == runtime->generation()) {
+                lua_unref(entry.state, entry.ref);
+            }
+        }
+
         drainDeferredTrampolineReleases();
     }
 } // namespace luax

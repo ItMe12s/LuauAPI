@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core/Runtime.hpp"
+#include "framework/usertype/DeferredRelease.hpp"
 
 #include <cstdint>
 #include <filesystem>
@@ -38,9 +39,16 @@ namespace luax {
         void reset() {
             if (m_state && m_ref != LUA_NOREF && m_ref != LUA_REFNIL) {
                 auto* runtime = Runtime::getIfInitialized();
-                // Off-thread reset skips lua_unref defer unref to owner thread if needed but I'm not doing allat rn.
-                if (runtime && m_generation == runtime->generation() && Runtime::isMainThread()) {
-                    lua_unref(m_state, m_ref);
+                // Runtime-null and generation-mismatch drops are not leaks,
+                // the owning state is gone or about to be closed.
+                // Thank you for reading.
+                if (runtime && m_generation == runtime->generation()) {
+                    if (Runtime::isMainThread()) {
+                        lua_unref(m_state, m_ref);
+                    }
+                    else {
+                        deferLuaRefUnref(m_state, m_ref, m_generation);
+                    }
                 }
             }
             m_state = nullptr;
@@ -52,7 +60,7 @@ namespace luax {
         void reset(lua_State* L, int index) {
             reset();
             if (!L) return;
-            auto* runtime = Runtime::getOrCreate();
+            auto* runtime = Runtime::getIfInitialized();
             if (!runtime) return;
             m_state = lua_mainthread(L);
             m_generation = runtime->generation();

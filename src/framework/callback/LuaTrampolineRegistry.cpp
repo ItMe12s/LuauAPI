@@ -30,7 +30,7 @@ namespace luax {
         bool s_orphanCapWarned = false;
 
         void clearOrphanTrampolinesImpl() {
-            deferredTrampolineReleases().clear();
+            drainDeferredTrampolineReleases();
             if (Runtime::isShuttingDown()) {
                 orphanTrampolines().clear();
                 anchorMap().clear();

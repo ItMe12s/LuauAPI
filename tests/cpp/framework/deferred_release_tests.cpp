@@ -140,3 +140,34 @@ TEST_CASE("borrowed and owned same object with pool-like WeakRef") {
     obj->release();
     REQUIRE_FALSE(geode::detail::isLiveCocosObject(obj));
 }
+
+TEST_CASE("deferred LuaRef unref drains same generation and skips stale") {
+    DeferGuard guard;
+
+    auto* runtime = luax::Runtime::getOrCreate();
+    auto* L = runtime->state();
+
+    lua_pushinteger(L, 42);
+    int staleRef = lua_ref(L, -1);
+    lua_pop(L, 1);
+    luax::deferLuaRefUnref(L, staleRef, runtime->generation() + 1);
+
+    lua_pushinteger(L, 7);
+    int liveRef = lua_ref(L, -1);
+    lua_pop(L, 1);
+    luax::deferLuaRefUnref(L, liveRef, runtime->generation());
+
+    luax::drainDeferredReleases();
+
+    lua_rawgeti(L, LUA_REGISTRYINDEX, staleRef);
+    REQUIRE(lua_tointeger(L, -1) == 42);
+    lua_pop(L, 1);
+
+    lua_pushinteger(L, 9);
+    int reused = lua_ref(L, -1);
+    lua_pop(L, 1);
+    REQUIRE(reused == liveRef);
+    lua_unref(L, reused);
+
+    lua_unref(L, staleRef);
+}
