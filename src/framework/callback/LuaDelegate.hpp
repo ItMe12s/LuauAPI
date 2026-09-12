@@ -85,6 +85,6 @@ namespace luax {
         );
     };
 
-    bool tryPushBoundDelegateTable(lua_State* L, void* delegatePtr);
+    [[nodiscard]] bool tryPushBoundDelegateTable(lua_State* L, void* delegatePtr);
     void anchorDelegate(cocos2d::CCObject* anchor, cocos2d::CCObject* trampoline);
 } // namespace luax

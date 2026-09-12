@@ -77,7 +77,7 @@ namespace luax {
             std::uint32_t m_next = kFirstDynamicUsertypeTag;
         };
 
-        cocos2d::CCObject* liveObject(UserdataBlock* block);
+        [[nodiscard]] cocos2d::CCObject* liveObject(UserdataBlock* block);
         void destructorDispatch(lua_State* L, void* ud);
         void getOrCreateMetatable(lua_State* L, TypeInfo& info);
         void chainMethodTable(lua_State* L, TypeInfo const& info, std::uint32_t baseTag);
@@ -92,8 +92,8 @@ namespace luax {
         UserdataCandidate checkCandidate(
             lua_State* L, int idx, char const* targetName, char const* method
         );
-        UserdataCandidate tryCandidate(lua_State* L, int idx);
-        cocos2d::CCNode* tryNodeCandidate(lua_State* L, int idx);
+        [[nodiscard]] UserdataCandidate tryCandidate(lua_State* L, int idx);
+        [[nodiscard]] cocos2d::CCNode* tryNodeCandidate(lua_State* L, int idx);
         bool hasBase(TypeInfo const& info, std::uint32_t targetTag);
         bool pushImpl(lua_State* L, cocos2d::CCObject* obj, TypeInfo const& info, std::uint32_t flags);
         void pushCallbackArg(lua_State* L, cocos2d::CCObject* obj);

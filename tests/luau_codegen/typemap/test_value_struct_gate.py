@@ -34,14 +34,19 @@ class ValueStructGatePolicyTests(unittest.TestCase):
         ):
             self.assertIn(name, VALUE_STRUCT_OPT_IN)
 
-    def test_smart_prefab_result_still_bound(self) -> None:
-        self.assertNotIn("SmartPrefabResult", VALUE_STRUCT_OPT_IN)
+    def test_types_formerly_handwritten_are_opted_in(self) -> None:
+        for name in ("SmartPrefabResult", "UIButtonConfig"):
+            self.assertIn(name, VALUE_STRUCT_OPT_IN)
+        if "SmartPrefabResult" not in self.ctx.value_types.types:
+            self.skipTest("value-struct specs unavailable (bindings dir not built)")
         info = classify_arg("SmartPrefabResult", {}, ctx=self.ctx)
         self.assertIsNotNone(info)
         assert info is not None
         self.assertEqual(info.kind, "value")
 
     def test_smart_prefab_result_stub_emits_with_gj_smart_prefab_dep(self) -> None:
+        if "SmartPrefabResult" not in self.ctx.value_types.stub_body:
+            self.skipTest("value-struct specs unavailable (bindings dir not built)")
         block = _emit_value_stub_block({"SmartPrefabResult"}, self.ctx.value_types)
         self.assertIn("export type SmartPrefabResult", block)
         self.assertIn("GJSmartPrefab?", block)

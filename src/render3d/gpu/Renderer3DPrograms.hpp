@@ -2,20 +2,25 @@
 
 namespace luax::render3d {
 
-    struct GlProgram {
+    struct GlProgramTag {};
+
+    struct GlBufferTag {};
+
+    template <class Tag>
+    struct GlHandle {
         unsigned int id = 0;
         unsigned int gen = 0;
 
-        GlProgram() = default;
-        GlProgram(GlProgram const&) = delete;
-        GlProgram& operator=(GlProgram const&) = delete;
+        GlHandle() = default;
+        GlHandle(GlHandle const&) = delete;
+        GlHandle& operator=(GlHandle const&) = delete;
 
-        GlProgram(GlProgram&& other) noexcept : id(other.id), gen(other.gen) {
+        GlHandle(GlHandle&& other) noexcept : id(other.id), gen(other.gen) {
             other.id = 0;
             other.gen = 0;
         }
 
-        GlProgram& operator=(GlProgram&& other) noexcept {
+        GlHandle& operator=(GlHandle&& other) noexcept {
             if (this != &other) {
                 reset();
                 id = other.id;
@@ -26,39 +31,13 @@ namespace luax::render3d {
             return *this;
         }
 
-        ~GlProgram();
+        ~GlHandle();
 
         void reset();
     };
 
-    struct GlBuffer {
-        unsigned int id = 0;
-        unsigned int gen = 0;
-
-        GlBuffer() = default;
-        GlBuffer(GlBuffer const&) = delete;
-        GlBuffer& operator=(GlBuffer const&) = delete;
-
-        GlBuffer(GlBuffer&& other) noexcept : id(other.id), gen(other.gen) {
-            other.id = 0;
-            other.gen = 0;
-        }
-
-        GlBuffer& operator=(GlBuffer&& other) noexcept {
-            if (this != &other) {
-                reset();
-                id = other.id;
-                gen = other.gen;
-                other.id = 0;
-                other.gen = 0;
-            }
-            return *this;
-        }
-
-        ~GlBuffer();
-
-        void reset();
-    };
+    using GlProgram = GlHandle<GlProgramTag>;
+    using GlBuffer = GlHandle<GlBufferTag>;
 
     struct LambertLocs {
         int mvp = -1;

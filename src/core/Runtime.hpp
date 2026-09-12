@@ -52,14 +52,14 @@ namespace luax {
         imes::luauapi::RuntimeStatus status() const;
         bool assertMainThread() const;
 
-        geode::Result<void> runScript(
+        [[nodiscard]] geode::Result<void> runScript(
             std::string_view src, std::string_view chunkName, int deadlineMs = kDefaultScriptDeadlineMs
         );
-        geode::Result<void> protectedCall(
+        [[nodiscard]] geode::Result<void> protectedCall(
             lua_State* L, int nargs, int nresults, std::string_view context,
             int deadlineMs = kDefaultScriptDeadlineMs, diag::ProtectedCallBoundary boundary = {}
         );
-        geode::Result<void> protectedCallWithTraceback(
+        [[nodiscard]] geode::Result<void> protectedCallWithTraceback(
             lua_State* L, int nargs, int nresults, std::string_view context,
             diag::ProtectedCallBoundary boundary = {}
         );
@@ -112,7 +112,7 @@ namespace luax {
 
         void registerShutdownHook(geode::Function<void()> fn);
 
-        geode::Result<std::reference_wrapper<std::string const>> getOrCompileBytecode(
+        [[nodiscard]] geode::Result<std::reference_wrapper<std::string const>> getOrCompileBytecode(
             std::string const& key, std::string_view source
         );
 
@@ -162,11 +162,11 @@ namespace luax {
 
         std::string formatLuaError(char const* chunk);
         void setLastError(std::string error);
-        geode::Result<void> failWith(std::string error);
-        geode::Result<void> cachedError() const;
-        geode::Result<void> ensureCallable(bool requireReady = true);
+        [[nodiscard]] geode::Result<void> failWith(std::string error);
+        [[nodiscard]] geode::Result<void> cachedError() const;
+        [[nodiscard]] geode::Result<void> ensureCallable(bool requireReady = true);
         void tryCompileLoadedChunk(lua_State* L, std::string_view chunkName);
-        geode::Result<void> protectedCallImpl(
+        [[nodiscard]] geode::Result<void> protectedCallImpl(
             lua_State* invokeL, int nargs, int nresults, std::string_view context,
             ProtectedCallPolicy policy, int deadlineMs, diag::ProtectedCallBoundary boundary
         );

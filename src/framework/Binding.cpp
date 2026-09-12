@@ -19,9 +19,7 @@ namespace luax {
 
     std::optional<std::string> applyAllBindings(lua_State* L) {
         auto ordered = bindings();
-        std::stable_sort(ordered.begin(), ordered.end(), [](auto const& left, auto const& right) {
-            return left.priority < right.priority;
-        });
+        std::ranges::stable_sort(ordered, {}, &Binding::priority);
 
         for (auto const& binding : ordered) {
             auto result = binding.fn(L);

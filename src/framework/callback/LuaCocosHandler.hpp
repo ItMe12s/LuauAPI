@@ -19,7 +19,7 @@ namespace luax {
     class LuaCocosHandlerBase : public cocos2d::CCObject {
     public:
         void bindAnchor(cocos2d::CCObject* anchor);
-        bool anchorAlive() const;
+        [[nodiscard]] bool anchorAlive() const;
 
     protected:
         std::shared_ptr<LuaCallback> m_callback;

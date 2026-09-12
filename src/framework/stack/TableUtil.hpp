@@ -64,43 +64,40 @@ namespace luax {
         return present;
     }
 
-    inline std::optional<std::string> optStringField(
-        lua_State* L, int tableIdx, char const* key, char const* method
-    ) {
+    template <class T>
+    inline std::optional<T> optField(lua_State* L, int tableIdx, char const* key, char const* method) {
         lua_getfield(L, tableIdx, key);
         if (lua_isnil(L, -1)) {
             lua_pop(L, 1);
             return std::nullopt;
         }
-        auto value = check<std::string>(L, -1, method);
+        std::optional<T> value;
+        if constexpr (std::is_same_v<T, double>) {
+            if (!lua_isnumber(L, -1)) luaL_error(L, "%s expected number field '%s'", method, key);
+            value = lua_tonumber(L, -1);
+        }
+        else {
+            value = check<T>(L, -1, method);
+        }
         lua_pop(L, 1);
         return value;
+    }
+
+    inline std::optional<std::string> optStringField(
+        lua_State* L, int tableIdx, char const* key, char const* method
+    ) {
+        return optField<std::string>(L, tableIdx, key, method);
     }
 
     inline std::optional<bool> optBoolField(
         lua_State* L, int tableIdx, char const* key, char const* method
     ) {
-        lua_getfield(L, tableIdx, key);
-        if (lua_isnil(L, -1)) {
-            lua_pop(L, 1);
-            return std::nullopt;
-        }
-        auto value = check<bool>(L, -1, method);
-        lua_pop(L, 1);
-        return value;
+        return optField<bool>(L, tableIdx, key, method);
     }
 
     inline std::optional<double> optNumberField(
         lua_State* L, int tableIdx, char const* key, char const* method
     ) {
-        lua_getfield(L, tableIdx, key);
-        if (lua_isnil(L, -1)) {
-            lua_pop(L, 1);
-            return std::nullopt;
-        }
-        if (!lua_isnumber(L, -1)) luaL_error(L, "%s expected number field '%s'", method, key);
-        auto value = lua_tonumber(L, -1);
-        lua_pop(L, 1);
-        return value;
+        return optField<double>(L, tableIdx, key, method);
     }
 } // namespace luax

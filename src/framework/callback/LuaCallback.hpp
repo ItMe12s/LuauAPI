@@ -31,11 +31,11 @@ namespace luax {
             m_ref.reset();
         }
 
-        bool valid() const {
+        [[nodiscard]] bool valid() const {
             return m_ref && m_ref->valid();
         }
 
-        static bool fire(LuaRef& callback, std::string_view context, int deadlineMs) {
+        [[nodiscard]] static bool fire(LuaRef& callback, std::string_view context, int deadlineMs) {
             auto* runtime = Runtime::getIfInitialized();
             if (!runtime) return false;
             auto* L = callback.luaState();
@@ -49,7 +49,7 @@ namespace luax {
         }
 
         // L top must be fn + nargs args. Restores L to the stack below those values.
-        static bool fireStackOnThread(
+        [[nodiscard]] static bool fireStackOnThread(
             lua_State* L, int nargs, std::string_view context, int deadlineMs,
             std::filesystem::path const& resourcesRoot
         ) {
@@ -76,13 +76,13 @@ namespace luax {
             return ok;
         }
 
-        static bool fireOnThread(LuaRef& callback, std::string_view context, int deadlineMs) {
+        [[nodiscard]] static bool fireOnThread(LuaRef& callback, std::string_view context, int deadlineMs) {
             auto* L = callback.luaState();
             if (!L || !callback.push()) return false;
             return fireStackOnThread(L, 0, context, deadlineMs, callback.resourcesRoot());
         }
 
-        static bool resumeThread(
+        [[nodiscard]] static bool resumeThread(
             LuaRef& threadRef, double resumeValue, std::string_view context, int deadlineMs
         ) {
             if (Runtime::isShuttingDown()) return false;
@@ -100,7 +100,7 @@ namespace luax {
             return ok;
         }
 
-        bool invoke(
+        [[nodiscard]] bool invoke(
             int nargs, int nresults, std::string_view context, int deadlineMs,
             PushArgsFn pushArgs = nullptr, void* pushCtx = nullptr,
             PopResultsFn popResults = nullptr, void* popCtx = nullptr

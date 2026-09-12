@@ -959,14 +959,18 @@ class ValueStructGateTests(unittest.TestCase):
     ctx = fixture_codegen_context()
 
     def test_classify_smart_prefab_result_value(self) -> None:
-        info = classify_arg("SmartPrefabResult const&", {})
+        if "SmartPrefabResult" not in self.ctx.value_types.types:
+            self.skipTest("value-struct specs unavailable (bindings dir not built)")
+        info = classify_arg("SmartPrefabResult const&", {}, ctx=self.ctx)
         self.assertIsNotNone(info)
         assert info is not None
         self.assertEqual(info.kind, "value")
         self.assertEqual(info.lua_type, "SmartPrefabResult")
 
     def test_classify_map_string_smart_prefab_result(self) -> None:
-        info = classify_arg("gd::map<gd::string, SmartPrefabResult>", {})
+        if "SmartPrefabResult" not in self.ctx.value_types.types:
+            self.skipTest("value-struct specs unavailable (bindings dir not built)")
+        info = classify_arg("gd::map<gd::string, SmartPrefabResult>", {}, ctx=self.ctx)
         self.assertIsNotNone(info)
         assert info is not None
         self.assertEqual(info.kind, "map")

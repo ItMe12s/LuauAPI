@@ -273,13 +273,14 @@ Production include order:
 Host tests define `LUAUAPI_HOST_TESTS` and skip both generated headers.
 Production builds require both generated headers.
 
-Handwritten check/push for `UIButtonConfig` and `SmartPrefabResult` stay in `Types.hpp` (not generated).
+`UIButtonConfig` and `SmartPrefabResult` are derived from Broma via `VALUE_STRUCT_OPT_IN` like every other opt-in struct.
+Their Lua keys are the Broma member names, such as `m_width` and `m_smartPrefab`.
+`SmartPrefabResult` defers to `Types.generated.containers.hpp` because of its nullable `GJSmartPrefab*` member.
 
 ### Two sources of specs
 
 1. **Builtin specs**: hand-authored `ValueTypeSpec` entries in `model/value_types.py` for types not present in Broma
-   (cocos types such as `CCPoint`, `RGBColor`, `BlendFunc`, plus `UIButtonConfig` and `SmartPrefabResult`,
-   whose check/push are handwritten in `src/framework/stack/Types.hpp`).
+   (cocos types such as `CCPoint`, `RGBColor`, and `BlendFunc`).
    The `FieldKind` set covers primitives, enums, nullable objects/opaques, nested value structs, strings, and containers.
    The generic auto-C++ path emits a statement body for any member expressible as a `FieldDescriptor`/`PushFieldDescriptor`.
 

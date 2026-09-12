@@ -5,7 +5,6 @@
 #include <Geode/Result.hpp>
 #include <Geode/utils/file.hpp>
 #include <Geode/utils/string.hpp>
-#include <array>
 #include <filesystem>
 #include <optional>
 #include <string>
@@ -14,7 +13,7 @@
 #include <utility>
 
 namespace luax {
-    inline geode::Result<std::filesystem::path> validateResourcePath(
+    [[nodiscard]] inline geode::Result<std::filesystem::path> validateResourcePath(
         std::filesystem::path path, bool addLuauExtension = true
     );
 
@@ -60,7 +59,7 @@ namespace luax {
         if (name.empty() || name == "..") {
             return false;
         }
-        if (geode::utils::string::containsAny(name, std::array<std::string, 2>{"/", "\\"})) {
+        if (name.find_first_of("/\\") != std::string_view::npos) {
             return false;
         }
         return isValidResourcePathValue(std::filesystem::path(name), false);
@@ -83,7 +82,7 @@ namespace luax {
         return geode::utils::string::pathToString(path);
     }
 
-    inline geode::Result<std::string> readScriptFile(std::filesystem::path const& path) {
+    [[nodiscard]] inline geode::Result<std::string> readScriptFile(std::filesystem::path const& path) {
         std::error_code ec;
         auto size = std::filesystem::file_size(path, ec);
         if (!ec && size > kMaxScriptBytes) {
@@ -101,7 +100,7 @@ namespace luax {
         return geode::Ok(std::move(data));
     }
 
-    inline geode::Result<std::filesystem::path> resolveScriptFileInsideRoot(
+    [[nodiscard]] inline geode::Result<std::filesystem::path> resolveScriptFileInsideRoot(
         std::filesystem::path const& root, std::filesystem::path const& candidate
     ) {
         if (root.empty()) {
@@ -125,7 +124,7 @@ namespace luax {
         return geode::Ok(path);
     }
 
-    inline geode::Result<std::filesystem::path> validateResourcePath(
+    [[nodiscard]] inline geode::Result<std::filesystem::path> validateResourcePath(
         std::filesystem::path path, bool addLuauExtension
     ) {
         if (path.empty()) {
@@ -156,7 +155,9 @@ namespace luax {
         return geode::Ok(std::move(path));
     }
 
-    inline geode::Result<std::filesystem::path> normalizeVirtualPath(std::string_view rawChunkName) {
+    [[nodiscard]] inline geode::Result<std::filesystem::path> normalizeVirtualPath(
+        std::string_view rawChunkName
+    ) {
         if (rawChunkName.empty()) {
             return geode::Err("chunk name is empty");
         }
@@ -191,7 +192,9 @@ namespace luax {
         return validated;
     }
 
-    inline geode::Result<std::filesystem::path> canonicalRoot(std::filesystem::path const& resourcesRoot) {
+    [[nodiscard]] inline geode::Result<std::filesystem::path> canonicalRoot(
+        std::filesystem::path const& resourcesRoot
+    ) {
         static thread_local std::optional<
             std::pair<std::filesystem::path, geode::Result<std::filesystem::path>>>
             cache;
@@ -217,7 +220,7 @@ namespace luax {
         return geode::Ok(root);
     }
 
-    inline geode::Result<std::filesystem::path> resolveInsideRoot(
+    [[nodiscard]] inline geode::Result<std::filesystem::path> resolveInsideRoot(
         std::filesystem::path const& root, std::string_view relative
     ) {
         if (relative.empty()) {

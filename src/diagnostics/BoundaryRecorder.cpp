@@ -13,6 +13,7 @@
 #include <chrono>
 #include <ctime>
 #include <filesystem>
+#include <fmt/chrono.h>
 #include <fmt/format.h>
 #include <lua.h>
 #include <string>
@@ -46,21 +47,7 @@ namespace luax::diag {
         std::string isoTimestampUtc() {
             auto now = std::chrono::system_clock::now();
             std::time_t t = std::chrono::system_clock::to_time_t(now);
-            std::tm tm{};
-#if defined(_WIN32)
-            gmtime_s(&tm, &t);
-#else
-            gmtime_r(&t, &tm);
-#endif
-            return fmt::format(
-                "{:04d}-{:02d}-{:02d}T{:02d}:{:02d}:{:02d}Z",
-                tm.tm_year + 1900,
-                tm.tm_mon + 1,
-                tm.tm_mday,
-                tm.tm_hour,
-                tm.tm_min,
-                tm.tm_sec
-            );
+            return fmt::format("{:%Y-%m-%dT%H:%M:%SZ}", fmt::gmtime(t));
         }
 
         char const* kindLabel(BoundaryKind kind) {

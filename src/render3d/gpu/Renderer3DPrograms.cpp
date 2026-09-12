@@ -4,32 +4,31 @@
 #include "render3d/gpu/ShaderSources.hpp"
 
 #include <Geode/Geode.hpp>
+#include <type_traits>
 
 namespace luax::render3d {
 
-    GlProgram::~GlProgram() {
+    template <class Tag>
+    GlHandle<Tag>::~GlHandle() {
         reset();
     }
 
-    void GlProgram::reset() {
+    template <class Tag>
+    void GlHandle<Tag>::reset() {
         if (id != 0 && glContextAvailable() && gen == glContextGeneration()) {
-            glDeleteProgram(id);
+            if constexpr (std::is_same_v<Tag, GlProgramTag>) {
+                glDeleteProgram(id);
+            }
+            else {
+                glDeleteBuffers(1, &id);
+            }
         }
         id = 0;
         gen = 0;
     }
 
-    GlBuffer::~GlBuffer() {
-        reset();
-    }
-
-    void GlBuffer::reset() {
-        if (id != 0 && glContextAvailable() && gen == glContextGeneration()) {
-            glDeleteBuffers(1, &id);
-        }
-        id = 0;
-        gen = 0;
-    }
+    template struct GlHandle<GlProgramTag>;
+    template struct GlHandle<GlBufferTag>;
 
     void Renderer3DPrograms::destroyGlPrograms() {
         lambert = GlProgram{};

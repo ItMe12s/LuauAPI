@@ -49,4 +49,7 @@ VALUE_STRUCT_OPT_IN: tuple[str, ...] = (
     "RecordCheckpoint",  # ints + uint64 + gd::string
     "RecordButtonCommand",  # PlayerButton enum + bools + int
     "PlayerButtonCommand",  # PlayerButton enum + bools + int + double
+    # Formerly handwritten in Types.hpp (m_ member names are the Lua keys).
+    "SmartPrefabResult",  # object-nullable member -> deferred containers header
+    "UIButtonConfig",  # CCPoint + primitives
 )

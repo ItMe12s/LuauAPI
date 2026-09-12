@@ -307,9 +307,9 @@ namespace {
         return result;
     }
 
-    geode::Result<std::vector<std::string>> parseNativePath(std::string_view path) {
+    [[nodiscard]] geode::Result<std::vector<std::string>> parseNativePath(std::string_view path) {
         if (path.empty()) return geode::Err("native registration path is empty");
-        if (path.find('\0') != std::string_view::npos) {
+        if (path.contains('\0')) {
             return geode::Err("native registration path contains NUL");
         }
 
@@ -321,7 +321,7 @@ namespace {
         return geode::Ok(std::move(segments));
     }
 
-    geode::Result<void> prepareNativeRegistration(
+    [[nodiscard]] geode::Result<void> prepareNativeRegistration(
         geode::Mod* provider, std::string_view path, NativeRegistrationRequest& request
     ) {
         if (!provider) return geode::Err("native registration has no provider mod");
@@ -329,7 +329,7 @@ namespace {
         request.providerId = std::string(provider->getID());
         if (request.providerId.empty())
             return geode::Err("native registration provider ID is empty");
-        if (request.providerId.find('\0') != std::string::npos) {
+        if (request.providerId.contains('\0')) {
             return geode::Err("native registration provider ID contains NUL");
         }
 
@@ -464,7 +464,9 @@ namespace {
         return 0;
     }
 
-    geode::Result<void> runNativeRegistration(luax::Runtime& runtime, NativeRegistrationRequest& request) {
+    [[nodiscard]] geode::Result<void> runNativeRegistration(
+        luax::Runtime& runtime, NativeRegistrationRequest& request
+    ) {
         auto* L = runtime.state();
         if (!L) return geode::Err("luau runtime not ready");
 
@@ -486,7 +488,7 @@ namespace {
         std::string chunk;
     };
 
-    geode::Result<luax::Runtime*> requireRuntime(bool needMainThread, bool needReady) {
+    [[nodiscard]] geode::Result<luax::Runtime*> requireRuntime(bool needMainThread, bool needReady) {
         if (needMainThread && !luax::Runtime::isMainThread()) {
             return geode::Err("luau api must be called on the main thread");
         }
@@ -503,7 +505,7 @@ namespace {
         return geode::Ok(nullptr);
     }
 
-    geode::Result<std::string> prepareChunkName(std::string_view chunkName) {
+    [[nodiscard]] geode::Result<std::string> prepareChunkName(std::string_view chunkName) {
         auto chunkResult = luax::normalizeVirtualPath(chunkName);
         if (chunkResult.isErr()) {
             return geode::Err(chunkResult.unwrapErr());
@@ -511,7 +513,7 @@ namespace {
         return geode::Ok("@" + luax::normalizedPathString(chunkResult.unwrap()));
     }
 
-    geode::Result<void> executeScriptOnMain(
+    [[nodiscard]] geode::Result<void> executeScriptOnMain(
         std::filesystem::path const& root, std::string source, std::string chunk, int deadlineMs
     ) {
         if (luax::Runtime::isShuttingDown()) {
@@ -537,7 +539,7 @@ namespace {
         return geode::Ok();
     }
 
-    geode::Result<PreparedRun> prepareRunFile(
+    [[nodiscard]] geode::Result<PreparedRun> prepareRunFile(
         std::filesystem::path const& resourcesRoot, std::filesystem::path const& relativePath
     ) {
         auto rootResult = luax::canonicalRoot(resourcesRoot);
@@ -572,11 +574,15 @@ namespace {
         }
 
         return geode::Ok(
-            PreparedRun{std::move(root), std::move(sourceResult.unwrap()), chunkResult.unwrap()}
+            PreparedRun{
+                .root = std::move(root),
+                .source = std::move(sourceResult.unwrap()),
+                .chunk = chunkResult.unwrap(),
+            }
         );
     }
 
-    geode::Result<PreparedRun> prepareRunScript(
+    [[nodiscard]] geode::Result<PreparedRun> prepareRunScript(
         std::filesystem::path const& resourcesRoot, std::string_view chunkName,
         std::string_view sourceBytes
     ) {
@@ -595,7 +601,11 @@ namespace {
         }
 
         return geode::Ok(
-            PreparedRun{rootResult.unwrap(), std::string(sourceBytes), chunkResult.unwrap()}
+            PreparedRun{
+                .root = rootResult.unwrap(),
+                .source = std::string(sourceBytes),
+                .chunk = chunkResult.unwrap(),
+            }
         );
     }
 
@@ -606,7 +616,7 @@ namespace {
              chunk = std::move(run.chunk),
              source = std::move(run.source),
              deadlineMs]() mutable {
-                return executeScriptOnMain(root, std::move(source), chunk, deadlineMs);
+                return executeScriptOnMain(root, std::move(source), std::move(chunk), deadlineMs);
             }
         );
         co_return imes::luauapi::resolveAsyncMainThreadResult(result);

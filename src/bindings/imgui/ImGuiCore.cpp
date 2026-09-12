@@ -211,14 +211,12 @@ namespace {
     #include "render3d/gpu/GlUtil.hpp"
 
     #include <Geode/Geode.hpp>
-    #include <Geode/loader/SettingV3.hpp>
     #include <imgui-cocos.hpp>
 
 namespace luax {
     namespace {
         bool s_initialized = false;
-        geode::ListenerHandle s_scaleListener;
-        bool s_scaleListenerRegistered = false;
+        geode::ListenerHandle* s_scaleListener = nullptr;
     } // namespace
 
     bool imguiHostIsInitialized() {
@@ -251,16 +249,14 @@ namespace luax {
             static_cast<float>(geode::Mod::get()->getSettingValue<double>("imgui-scale"))
         );
 
-        if (!s_scaleListenerRegistered) {
-            s_scaleListener =
-                geode::SettingChangedEventV3(geode::Mod::get(), "imgui-scale")
-                    .listen([](std::shared_ptr<geode::SettingV3> setting) {
-                        if (auto fs =
-                                geode::cast::typeinfo_pointer_cast<geode::FloatSettingV3>(setting)) {
-                            ImGuiCocos::get().setDisplayScale(static_cast<float>(fs->getValue()));
-                        }
-                    });
-            s_scaleListenerRegistered = true;
+        if (!s_scaleListener) {
+            s_scaleListener = geode::listenForSettingChanges<double>(
+                "imgui-scale",
+                [](double value) {
+                    ImGuiCocos::get().setDisplayScale(static_cast<float>(value));
+                },
+                geode::Mod::get()
+            );
         }
 
         if (s_initialized && ImGuiCocos::get().isInitialized()) {
@@ -284,8 +280,10 @@ namespace luax {
             ImGuiCocos::get().destroy();
         }
         s_initialized = false;
-        s_scaleListener = geode::ListenerHandle();
-        s_scaleListenerRegistered = false;
+        if (s_scaleListener) {
+            s_scaleListener->destroy();
+            s_scaleListener = nullptr;
+        }
     }
 
     void imguiHostSetVisible(bool visible) {

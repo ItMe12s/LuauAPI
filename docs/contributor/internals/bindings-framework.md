@@ -214,7 +214,9 @@ A shutdown hook drains the remainder.
 `Stack.hpp` provides overloaded `push` and `check` helpers for primitives and strings,
 plus helpers for reading numeric and boolean table fields and writing integers as strings to avoid float precision loss.
 
-`Types.hpp` holds handwritten check/push for `UIButtonConfig` and `SmartPrefabResult`.
+`Types.hpp` is an umbrella over the generated value-struct marshaling.
+`UIButtonConfig` and `SmartPrefabResult` are codegen-derived via `VALUE_STRUCT_OPT_IN`.
+Their Lua keys are the Broma member names, such as `m_width` and `m_smartPrefab`.
 Point, size, rect, and color conversions come from the generated `Types.generated.hpp`.
 
 - `check<T>` and `push(T)` functions for cocos value types:

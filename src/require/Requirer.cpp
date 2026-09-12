@@ -238,8 +238,7 @@ namespace luax {
         std::error_code ec;
         auto rel = std::filesystem::relative(m_current, m_root, ec);
         std::string name = normalizedPathString(ec ? m_current : rel);
-        auto path = std::filesystem::path(name);
-        if (!hasLuauExtensionValue(path)) {
+        if (!name.ends_with(".luau")) {
             name += ".luau";
         }
         return "@" + name;

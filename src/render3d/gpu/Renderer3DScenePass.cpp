@@ -1,6 +1,7 @@
 #include "render3d/assets/MeshAsset.hpp"
 #include "render3d/assets/TextureAsset.hpp"
 #include "render3d/gpu/GlUtil.hpp"
+#include "render3d/gpu/Renderer3DInternal.hpp"
 #include "render3d/gpu/Renderer3DMeshCache.hpp"
 #include "render3d/gpu/Renderer3DPrograms.hpp"
 #include "render3d/gpu/SceneDrawList.hpp"

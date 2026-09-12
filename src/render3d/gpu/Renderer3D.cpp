@@ -1,6 +1,8 @@
 #include "render3d/gpu/Renderer3D.hpp"
 
+#include "framework/lifecycle/Lifecycle.hpp"
 #include "render3d/gpu/GlUtil.hpp"
+#include "render3d/gpu/Renderer3DInternal.hpp"
 #include "render3d/gpu/Renderer3DPrograms.hpp"
 #include "render3d/types/SceneTypes.hpp"
 
@@ -10,19 +12,6 @@
 #include <unordered_map>
 
 namespace luax::render3d {
-    void destroyRenderer3DGlResources(Renderer3DPrograms& programs, Renderer3DMeshCache& meshCache);
-    void ensureRenderer3DShutdownHook();
-    void runRenderer3DScenePass(
-        Renderer3DPrograms& programs, Renderer3DMeshCache& meshCache, int pixelWidth, int pixelHeight,
-        Camera3D const& camera, std::unordered_map<int, ViewportInstance> const& instances,
-        RenderSettings const& settings, int selfColorTexture
-    );
-    void drawDebugOverlay(
-        Renderer3DPrograms& programs, glm::mat4 const& projection, glm::mat4 const& view,
-        std::unordered_map<int, DebugLine> const& debugLines, bool debugBounds,
-        std::unordered_map<int, ViewportInstance> const& instances
-    );
-
     Renderer3D& Renderer3D::instance() {
         static Renderer3D s_renderer;
         return s_renderer;
@@ -107,6 +96,27 @@ namespace luax::render3d {
         glDisableVertexAttribArray(2);
 
         prevState.restore();
+    }
+
+    namespace {
+        bool& renderer3DShutdownHookRegistered() {
+            static bool registered = false;
+            return registered;
+        }
+    } // namespace
+
+    void destroyRenderer3DGlResources(Renderer3DPrograms& programs, Renderer3DMeshCache& meshCache) {
+        meshCache.destroyAllGpuResources();
+        programs.destroyGlPrograms();
+    }
+
+    void clearRenderer3DGlState() {
+        Renderer3D::instance().destroyGlResources();
+        renderer3DShutdownHookRegistered() = false;
+    }
+
+    void ensureRenderer3DShutdownHook() {
+        luax::ensureShutdownHook(renderer3DShutdownHookRegistered(), &clearRenderer3DGlState);
     }
 
 } // namespace luax::render3d

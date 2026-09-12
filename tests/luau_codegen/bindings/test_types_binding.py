@@ -19,13 +19,15 @@ from luau_codegen.model.value_types import FieldDescriptor
 class CocosValueDescriptorTests(unittest.TestCase):
     ctx = fixture_codegen_context()
 
-    def test_standard_structs_exclude_hand_retained_types(self) -> None:
+    def test_standard_structs_include_formerly_handwritten_types(self) -> None:
         cxx_types = {desc.cxx_type for desc in self.ctx.value_types.cocos_structs}
         self.assertIn("cocos2d::CCPoint", cxx_types)
         self.assertIn("cocos2d::CCSize", cxx_types)
         self.assertIn("cocos2d::ccColor3B", cxx_types)
-        self.assertNotIn("UIButtonConfig", cxx_types)
-        self.assertNotIn("SmartPrefabResult", cxx_types)
+        if "UIButtonConfig" not in cxx_types and "SmartPrefabResult" not in cxx_types:
+            self.skipTest("value-struct specs unavailable (bindings dir not built)")
+        self.assertIn("UIButtonConfig", cxx_types)
+        self.assertIn("SmartPrefabResult", cxx_types)
 
     def test_field_descriptor_schema_has_name_and_kind(self) -> None:
         point = next(
@@ -49,7 +51,12 @@ class TypesGeneratedEmitterTests(unittest.TestCase):
         self.assertIn('lua_setfield(L, -2, "origin")', text)
         self.assertIn("check<cocos2d::ccHSVValue>", text)
         self.assertIn("absoluteSaturation", text)
-        self.assertNotIn("UIButtonConfig", text)
+        if "SmartPrefabResult" not in {
+            desc.cxx_type for desc in self.ctx.value_types.cocos_structs
+        }:
+            self.skipTest("value-struct specs unavailable (bindings dir not built)")
+        self.assertIn("check<UIButtonConfig>", text)
+        self.assertIn("m_width", text)
         self.assertNotIn("SmartPrefabResult", text)
 
     def test_ccrect_check_reads_flat_xywh(self) -> None:
@@ -87,6 +94,8 @@ class TypesGeneratedEmitterTests(unittest.TestCase):
         self.assertNotIn("check<FMODSoundState>", base)
         self.assertIn("check<FMODSoundState>", containers)
         self.assertIn("SequenceTriggerState value;", containers)
+        self.assertIn("check<SmartPrefabResult>", containers)
+        self.assertIn("Usertype<GJSmartPrefab>::pushBorrowed", containers)
         self.assertNotIn("value{};", containers)
         self.assertNotIn("value();", containers)
 

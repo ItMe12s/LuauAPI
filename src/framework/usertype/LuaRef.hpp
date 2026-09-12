@@ -70,13 +70,13 @@ namespace luax {
             lua_pop(L, 1);
         }
 
-        bool valid() const {
+        [[nodiscard]] bool valid() const {
             if (!m_state || m_ref == LUA_NOREF || m_ref == LUA_REFNIL) return false;
             auto* runtime = Runtime::getIfInitialized();
             return runtime && m_generation == runtime->generation();
         }
 
-        bool push() const {
+        [[nodiscard]] bool push() const {
             if (!valid()) return false;
             lua_getref(m_state, m_ref);
             return true;

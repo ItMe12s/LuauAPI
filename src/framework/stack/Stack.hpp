@@ -13,7 +13,7 @@
 #include <type_traits>
 
 namespace luax {
-    class LuaStackGuard {
+    class [[nodiscard]] LuaStackGuard {
     public:
         explicit LuaStackGuard(lua_State* L) : m_state(L), m_top(lua_gettop(L)) {}
 
@@ -85,7 +85,7 @@ namespace luax {
     }
 
     template <class T>
-    inline bool tryIntegerString(lua_State* L, int idx, T* out) {
+    [[nodiscard]] inline bool tryIntegerString(lua_State* L, int idx, T* out) {
         if (lua_type(L, idx) != LUA_TSTRING) return false;
         size_t len = 0;
         char const* text = lua_tolstring(L, idx, &len);
@@ -100,7 +100,7 @@ namespace luax {
     }
 
     template <class T>
-    inline T checkIntegerString(lua_State* L, int idx, char const* method) {
+    [[nodiscard]] inline T checkIntegerString(lua_State* L, int idx, char const* method) {
         T value{};
         if (!tryIntegerString<T>(L, idx, &value)) {
             luaL_error(L, "%s expected integer string at arg %d", method, idx);
@@ -114,7 +114,7 @@ namespace luax {
         return 2;
     }
 
-    inline std::string stackValueToString(lua_State* L, int idx) {
+    [[nodiscard]] inline std::string stackValueToString(lua_State* L, int idx) {
         size_t len = 0;
         char const* text = luaL_tolstring(L, idx, &len);
         std::string out = text ? std::string(text, len) : std::string();
@@ -131,36 +131,27 @@ namespace luax {
     }
 
     template <class T>
-    T check(lua_State* L, int idx, char const* method);
-
-    template <>
-    inline float check<float>(lua_State* L, int idx, char const* method) {
-        if (!lua_isnumber(L, idx)) luaL_error(L, "%s expected number at arg %d", method, idx);
-        return static_cast<float>(lua_tonumber(L, idx));
-    }
-
-    template <>
-    inline double check<double>(lua_State* L, int idx, char const* method) {
-        if (!lua_isnumber(L, idx)) luaL_error(L, "%s expected number at arg %d", method, idx);
-        return lua_tonumber(L, idx);
-    }
-
-    template <>
-    inline int check<int>(lua_State* L, int idx, char const* method) {
-        if (!lua_isnumber(L, idx)) luaL_error(L, "%s expected integer at arg %d", method, idx);
-        return static_cast<int>(lua_tointeger(L, idx));
-    }
-
-    template <>
-    inline unsigned check<unsigned>(lua_State* L, int idx, char const* method) {
-        if (!lua_isnumber(L, idx)) luaL_error(L, "%s expected integer at arg %d", method, idx);
-        return static_cast<unsigned>(lua_tointeger(L, idx));
-    }
-
-    template <>
-    inline bool check<bool>(lua_State* L, int idx, char const* method) {
-        if (!lua_isboolean(L, idx)) luaL_error(L, "%s expected boolean at arg %d", method, idx);
-        return lua_toboolean(L, idx) != 0;
+    [[nodiscard]] inline T check(lua_State* L, int idx, char const* method) {
+        if constexpr (std::is_same_v<T, bool>) {
+            if (!lua_isboolean(L, idx)) luaL_error(L, "%s expected boolean at arg %d", method, idx);
+            return lua_toboolean(L, idx) != 0;
+        }
+        else if constexpr (std::is_floating_point_v<T>) {
+            if (!lua_isnumber(L, idx)) luaL_error(L, "%s expected number at arg %d", method, idx);
+            return static_cast<T>(lua_tonumber(L, idx));
+        }
+        else if constexpr (std::is_integral_v<T>) {
+            if (!lua_isnumber(L, idx)) luaL_error(L, "%s expected integer at arg %d", method, idx);
+            return static_cast<T>(lua_tointeger(L, idx));
+        }
+        else {
+            static_assert(
+                [] {
+                    return false;
+                }(),
+                "unsupported type for luax::check"
+            );
+        }
     }
 
     template <>
@@ -178,7 +169,9 @@ namespace luax {
         return s;
     }
 
-    inline float fieldNumber(lua_State* L, int tableIdx, char const* key, char const* method) {
+    [[nodiscard]] inline float fieldNumber(
+        lua_State* L, int tableIdx, char const* key, char const* method
+    ) {
         lua_getfield(L, tableIdx, key);
         if (!lua_isnumber(L, -1)) {
             lua_pop(L, 1);
@@ -189,7 +182,7 @@ namespace luax {
         return v;
     }
 
-    inline bool fieldBool(lua_State* L, int tableIdx, char const* key, char const* method) {
+    [[nodiscard]] inline bool fieldBool(lua_State* L, int tableIdx, char const* key, char const* method) {
         lua_getfield(L, tableIdx, key);
         if (!lua_isboolean(L, -1)) {
             lua_pop(L, 1);
@@ -200,7 +193,9 @@ namespace luax {
         return v;
     }
 
-    inline std::string fieldString(lua_State* L, int tableIdx, char const* key, char const* method) {
+    [[nodiscard]] inline std::string fieldString(
+        lua_State* L, int tableIdx, char const* key, char const* method
+    ) {
         lua_getfield(L, tableIdx, key);
         auto value = check<std::string>(L, -1, method);
         lua_pop(L, 1);

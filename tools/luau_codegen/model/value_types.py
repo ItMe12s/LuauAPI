@@ -335,45 +335,6 @@ _VALUE_TYPE_SPECS: tuple[ValueTypeSpec, ...] = (
         stub_deps=("CCPoint", "CCSize"),
         cocos_emit="ccrect",
     ),
-    ValueTypeSpec(
-        lua_name="UIButtonConfig",
-        cxx_type="UIButtonConfig",
-        luau_stub=(
-            "export type UIButtonConfig = {\n"
-            "    width: number,\n"
-            "    height: number,\n"
-            "    deadzone: number,\n"
-            "    scale: number,\n"
-            "    opacity: number,\n"
-            "    radius: number,\n"
-            "    modeB: boolean,\n"
-            "    snap: boolean,\n"
-            "    position: CCPoint,\n"
-            "    oneButton: boolean,\n"
-            "    player2: boolean,\n"
-            "    split: boolean,\n"
-            "}\n"
-        ),
-        stub_deps=("CCPoint",),
-    ),
-    ValueTypeSpec(
-        lua_name="SmartPrefabResult",
-        cxx_type="SmartPrefabResult",
-        luau_stub=(
-            "export type SmartPrefabResult = {\n"
-            "    smartPrefab: GJSmartPrefab?,\n"
-            "    binaryKey: string,\n"
-            "    prefabKey: string,\n"
-            "    prefabCount: number,\n"
-            "    unrequired: boolean,\n"
-            "    rotation: number,\n"
-            "    flipX: boolean,\n"
-            "    flipY: boolean,\n"
-            "    ignoreCorners: boolean,\n"
-            "}\n"
-        ),
-        stub_deps=("GJSmartPrefab",),
-    ),
 )
 
 
