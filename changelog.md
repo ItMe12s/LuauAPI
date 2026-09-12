@@ -11,6 +11,7 @@
 
 ## v0.1.0-beta.27
 
+- Added in-game hook test demos.
 - Fixed `geode.cocos.to4B` alpha wrapping outside 0-255. It now errors.
 - Fixed rare `imgui.setVisible` and `imgui.toggle` crashing before ImGui initializes.
 - Fixed rare `imgui.font.add` failing after the first frame. Font files now check their SFNT header.
@@ -19,12 +20,15 @@
 - Fixed a crash when a deferred task callback changes the task queue while it runs.
 - Fixed Lua ref and trampoline leaks on runtime restart and off-thread release.
 - Fixed stack trace paths not being redacted for chunk names over 255 chars.
+- Fixed rare `geode.hook` not firing on Windows because of wrong tulip hook convention.
 - Updated web request intercepts. Off-thread or errored intercepts no longer block the request and returning `true` now stops all later listeners, native included.
 - Updated web request intercepts. Re-sending a request inside its own intercept now raises an error.
 - Updated mouse and keyboard event field reads. A wrong-type field now logs an error.
 - Updated glTF loading to decode only images used by a primitive. A broken unused image no longer fails the load.
 - Updated codegen so `UIButtonConfig` and `SmartPrefabResult` derive from Broma like other opt-in value structs.
 - Updated core, scheduler, listener, web, ImGui, usertype, container, and render3d internals for simpler ownership and less hot-path work.
+- Updated hook codegen to use shared templates and a single target id.
+- Updated mod metadata and description.
 - Removed dead code and unused symbols across the runtime, bindings, and codegen.
 
 ## v0.1.0-beta.26
