@@ -10,6 +10,16 @@ Easy to start, fast to compile, with clear error logging when something breaks.
 
 ---
 
+## Learn more
+
+[>>> Read the LuauAPI Documentation <<<](https://github.com/ItMe12s/LuauAPI/blob/master/docs/README.md)
+
+Starting a new project? Use the [example mod template](https://github.com/ItMe12s/luauapi-example-mod).
+
+Need help? Join the [Discord](https://discord.gg/E8f6D6XqbW).
+
+---
+
 ## Currently implemented
 
 - Fully cross-platform on Windows, Android, iOS and macOS
@@ -29,23 +39,13 @@ Easy to start, fast to compile, with clear error logging when something breaks.
 ## Coming next
 
 - Custom UI builder, framework, pre-made assets
-- More advanced 3D functionality and support
+- More advanced animation, 3D functionalites and mesh systems
 - The remaining 0.1% of bindings and m_Fields
-- Argon support
-- Box2D support
-- SQLite support
+- Built-in Argon bindings
+- Built-in Box2D bindings
+- Built-in SQLite bindings
 - In-game IDE
 - Other QoL features
-
----
-
-## Learn more
-
-[>>> Read the LuauAPI Documentation <<<](https://github.com/ItMe12s/LuauAPI/blob/master/docs/README.md)
-
-Starting a new project? Use the [example mod template](https://github.com/ItMe12s/luauapi-example-mod).
-
-Need help? Join the [Discord](https://discord.gg/E8f6D6XqbW).
 
 ---
 

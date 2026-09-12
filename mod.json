@@ -7,12 +7,12 @@
 		"ios": "2.2081"
 	},
 	"id": "imes.luauapi",
-	"name": "LuauAPI",
+	"name": "LuauAPI (Lua Framework)",
 	"version": "v0.1.0-beta.27",
 	"developer": "imes",
 	"early-load": true,
 	"load-priority": "first",
-	"description": "Luau development toolkit for Geode :3",
+	"description": "Luau/Lua development toolkit for Geode :3",
 	"dependencies": {
 		"geode.node-ids": ">=1.23.3",
 		"prevter.imageplus": ">=1.1.1"
