@@ -346,7 +346,7 @@ class GeneratedSafetyTests(unittest.TestCase):
 
         self.assertRegex(
             post_hooks,
-            r"if \(!lua_isnil\(L, -1\)\) \{[\s\S]*if \(!applyReturn\(L, -1\)\) \{[\s\S]*lua_settop\(L, top\);[\s\S]*continue;",
+            r"if \(!lua_isnil\(L, -1\)\) \{[\s\S]*if \(!applyHookOverride\(L, -1, applyReturn\.fn, applyReturn\.ctx, targetId\)\) \{[\s\S]*lua_settop\(L, top\);[\s\S]*continue;",
         )
         self.assertNotIn('returned invalid return override", targetId', post_hooks)
 
@@ -386,9 +386,9 @@ class GeneratedSafetyTests(unittest.TestCase):
 
         self.assertIn("runLuaPreHooks", text)
         self.assertIn("skipOriginal", text)
-        self.assertIn("ApplyArgsCtx_CCNode_setTag_1", text)
+        self.assertIn("HookCtx_CCNode_setTag_1", text)
         self.assertIn("luaapi_apply_args_CCNode_setTag_1", text)
-        self.assertIn("applyHookOverride", text)
+        self.assertIn("luauapi_gen::luaapi_apply_noop", text)
         self.assertIn('lua_getfield(L, idx, "tag")', text)
         self.assertIn("luax::check<int>", text)
         self.assertIn("*ctx->arg0 = arg0Override", text)

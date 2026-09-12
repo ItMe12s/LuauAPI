@@ -265,11 +265,13 @@ class HookApplyFnTests(unittest.TestCase):
         self.assertIn("luaapi_apply_args_CCNode_init_0", text)
         self.assertIn("hook args expected empty table", text)
         self.assertIn(
-            "applyHookOverride(L, idx, &luaapi_apply_args_CCNode_init_0, nullptr",
+            'static char const* const kTargetId_CCNode_init_0 = "geode.cocos2d.CCNode:init/0";',
             text,
         )
+        self.assertIn("runLuaPreHooks(kTargetId_CCNode_init_0", text)
+        self.assertIn("{&luaapi_apply_args_CCNode_init_0, &hookCtx}", text)
         self.assertNotIn("ApplyArgsCtx_CCNode_init_0", text)
-        self.assertIn("ApplyReturnCtx_CCNode_init_0", text)
+        self.assertIn("HookCtx_CCNode_init_0", text)
 
     def test_apply_args_fn_strict_table_shape(self) -> None:
         ccobject = Class(name="CCObject", namespace="cocos2d")
@@ -365,7 +367,11 @@ class HookApplyFnTests(unittest.TestCase):
         self.assertIn("luaapi_create_hook_CCNode_init_0", text)
         self.assertIn("void* const address =", text)
         self.assertIn("if (!address)", text)
-        self.assertIn("hook address unresolved for geode.cocos2d.CCNode:init/0", text)
+        self.assertIn(
+            'static char const* const kTargetId_CCNode_init_0 = "geode.cocos2d.CCNode:init/0";',
+            text,
+        )
+        self.assertIn('hook address unresolved for " + std::string(kTargetId_CCNode_init_0)', text)
         self.assertIn("geode::Mod::get()->hook(address, &luaapi_hook_CCNode_init_0", text)
 
     def test_apply_hook_override_uses_protected_call_with_traceback(self) -> None:
@@ -405,7 +411,7 @@ class HookApplyFnTests(unittest.TestCase):
         self.assertIn("luaapi_create_hook_CCNode_init_0", text)
         self.assertIn("dlsym(luaapi_android_libcocos()", text)
         self.assertIn("if (!address)", text)
-        self.assertIn("hook address unresolved for geode.cocos2d.CCNode:init/0", text)
+        self.assertIn('hook address unresolved for " + std::string(kTargetId_CCNode_init_0)', text)
 
 
 class HookableSelCallbackTests(unittest.TestCase):

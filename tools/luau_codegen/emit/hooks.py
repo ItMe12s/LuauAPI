@@ -28,24 +28,45 @@ def hook_suffix(cls: Class, m: Method) -> str:
     return f"{cxx_id(cls.name)}_{cxx_id(m.name)}_{len(m.args)}"
 
 
-def _emit_apply_args_ctx(suffix: str, args: list[tuple]) -> str:
-    if not args:
-        return ""
-    fields = []
+def _emit_hook_ctx(suffix: str, cxx_cls: str, args: list[tuple], ret: TypeInfo) -> str:
+    fields = [f"        {cxx_cls}** self;"]
     for _, info, name in args:
         if info.kind == "string" and info.cxx_type.endswith("*"):
             fields.append(f"        std::string* {name}Storage;")
             fields.append(f"        char const** {name};")
         else:
             fields.append(f"        {info.cxx_type}* {name};")
+    if ret.kind != "void":
+        fields.append(f"        {ret.cxx_type}* result;")
     body = "\n".join(fields)
-    return f"    struct ApplyArgsCtx_{suffix} {{\n{body}\n    }};\n\n"
+    return f"    struct HookCtx_{suffix} {{\n{body}\n    }};\n\n"
 
 
-def _emit_apply_return_ctx(suffix: str, ret: TypeInfo) -> str:
-    if ret.kind == "void":
-        return ""
-    return f"    struct ApplyReturnCtx_{suffix} {{\n        {ret.cxx_type}* result;\n    }};\n\n"
+def _emit_push_fn(
+    suffix: str,
+    cxx_cls: str,
+    cls: Class,
+    args: list[tuple],
+    ret: TypeInfo,
+    with_result: bool,
+) -> str:
+    fn_name = f"luaapi_push_result_{suffix}" if with_result else f"luaapi_push_args_{suffix}"
+    lines = [
+        f"    static void {fn_name}(lua_State* L, void* ctx) {{\n",
+        f"        auto* hookCtx = static_cast<HookCtx_{suffix}*>(ctx);\n",
+    ]
+    lines.extend(
+        f"        {line}"
+        for line in push_value(
+            TypeInfo("object", f"{cxx_cls}*", cls.name, cls.name), "*hookCtx->self"
+        )
+    )
+    for _, info, name in args:
+        lines.extend(f"        {line}" for line in push_value(info, f"*hookCtx->{name}"))
+    if with_result:
+        lines.extend(f"        {line}" for line in push_value(ret, "*hookCtx->result"))
+    lines.append("    }\n\n")
+    return "".join(lines)
 
 
 def _emit_apply_args_fn(
@@ -64,7 +85,7 @@ def _emit_apply_args_fn(
 
     lines = [
         f"    int luaapi_apply_args_{suffix}(lua_State* L) {{\n",
-        f"        auto* ctx = static_cast<ApplyArgsCtx_{suffix}*>(lua_tolightuserdata(L, lua_upvalueindex(1)));\n",
+        f"        auto* ctx = static_cast<HookCtx_{suffix}*>(lua_tolightuserdata(L, lua_upvalueindex(1)));\n",
         '        if (!lua_istable(L, 1)) luaL_error(L, "hook args expected table");\n',
         "        int idx = 1;\n",
         f"        bool useArrayArgs = lua_objlen(L, idx) == {len(args)};\n",
@@ -106,7 +127,7 @@ def _emit_apply_return_fn(suffix: str, ret: TypeInfo, label: str, fn_name: str) 
     tmp = "valueOverride"
     lines = [
         f"    int {fn_name}(lua_State* L) {{\n",
-        f"        auto* ctx = static_cast<ApplyReturnCtx_{suffix}*>(lua_tolightuserdata(L, lua_upvalueindex(1)));\n",
+        f"        auto* ctx = static_cast<HookCtx_{suffix}*>(lua_tolightuserdata(L, lua_upvalueindex(1)));\n",
     ]
     lines.extend(emit_stack_check(ret, "1", tmp, label, declare=True))
     lines.append(f"        *ctx->result = {tmp};\n")
@@ -156,17 +177,18 @@ def emit_hook_target(
     call = f"reinterpret_cast<{fn_type}>({original_var})({original_args})"
     arg_names = [arg.name for arg, _, _ in args]
     named_args = bool(arg_names) and len(set(arg_names)) == len(arg_names)
-    apply_args_ctx = "&applyArgsCtx" if args else "nullptr"
 
     out: list[str] = []
-    out.append(_emit_apply_args_ctx(suffix, args))
-    out.append(_emit_apply_return_ctx(suffix, ret))
+    out.append(f'    static char const* const kTargetId_{suffix} = "{_cstr(target_id)}";\n\n')
+    out.append(_emit_hook_ctx(suffix, cxx_cls, args, ret))
     out.append(_emit_apply_args_fn(suffix, args, named_args))
+    out.append(_emit_push_fn(suffix, cxx_cls, cls, args, ret, with_result=False))
     if ret.kind != "void":
         out.append(
             _emit_apply_return_fn(suffix, ret, "hook return", f"luaapi_apply_return_{suffix}")
         )
         out.append(_emit_apply_return_fn(suffix, ret, "hook skip", f"luaapi_apply_skip_{suffix}"))
+        out.append(_emit_push_fn(suffix, cxx_cls, cls, args, ret, with_result=True))
 
     out.append(f"    static void* {original_var} = nullptr;\n\n")
     out.append(f"    {ret_type} {hook_fn}({params_text}) {{\n")
@@ -179,38 +201,19 @@ def emit_hook_target(
         if info.kind == "string" and info.cxx_type.endswith("*"):
             out.append(f"        std::string {name}Storage;\n")
     out.append("        bool skipOriginal = false;\n")
-    if args:
-        ctx_fields = []
-        for _, info, name in args:
-            if info.kind == "string" and info.cxx_type.endswith("*"):
-                ctx_fields.append(f"&{name}Storage")
-                ctx_fields.append(f"&{name}")
-            else:
-                ctx_fields.append(f"&{name}")
-        out.append(f"        ApplyArgsCtx_{suffix} applyArgsCtx{{ {', '.join(ctx_fields)} }};\n")
-    if ret.kind != "void":
-        out.append(f"        ApplyReturnCtx_{suffix} applyReturnCtx{{ &result }};\n")
-    out.append(
-        f'        skipOriginal = luauapi_gen::runLuaPreHooks("{target_id}", {1 + len(args)}, [&](lua_State* L) {{\n'
-    )
-    out.extend(
-        f"    {line}"
-        for line in push_value(TypeInfo("object", f"{cxx_cls}*", cls.name, cls.name), "self")
-    )
+    ctx_fields = ["&self"]
     for _, info, name in args:
-        out.extend(f"    {line}" for line in push_value(info, name))
-    out.append("        }, [&](lua_State* L, int idx) -> bool {\n")
+        if info.kind == "string" and info.cxx_type.endswith("*"):
+            ctx_fields.append(f"&{name}Storage")
+            ctx_fields.append(f"&{name}")
+        else:
+            ctx_fields.append(f"&{name}")
+    if ret.kind != "void":
+        ctx_fields.append("&result")
+    out.append(f"        HookCtx_{suffix} hookCtx{{ {', '.join(ctx_fields)} }};\n")
     out.append(
-        f'            return luauapi_gen::applyHookOverride(L, idx, &luaapi_apply_args_{suffix}, {apply_args_ctx}, "{target_id}");\n'
+        f"        skipOriginal = luauapi_gen::runLuaPreHooks(kTargetId_{suffix}, {1 + len(args)}, &luaapi_push_args_{suffix}, &hookCtx, {{&luaapi_apply_args_{suffix}, &hookCtx}}, {{&{'luauapi_gen::luaapi_apply_noop' if ret.kind == 'void' else f'luaapi_apply_skip_{suffix}'}, {'nullptr' if ret.kind == 'void' else '&hookCtx'}}});\n"
     )
-    out.append("        }, [&](lua_State* L, int idx) -> bool {\n")
-    if ret.kind == "void":
-        out.append("            return true;\n")
-    else:
-        out.append(
-            f'            return luauapi_gen::applyHookOverride(L, idx, &luaapi_apply_skip_{suffix}, &applyReturnCtx, "{target_id}");\n'
-        )
-    out.append("        });\n")
     out.append("        if (!skipOriginal) {\n")
     out.append(f"            if ({original_var}) {{\n")
     if ret.kind == "void":
@@ -220,24 +223,8 @@ def emit_hook_target(
     out.append("            }\n")
     nargs = 1 + len(args) + (1 if ret.kind != "void" else 0)
     out.append(
-        f'            luauapi_gen::runLuaPostHooks("{target_id}", {nargs}, [&](lua_State* L) {{\n'
+        f"            luauapi_gen::runLuaPostHooks(kTargetId_{suffix}, {nargs}, &{'luaapi_push_result_' + suffix if ret.kind != 'void' else 'luaapi_push_args_' + suffix}, &hookCtx, {{&{'luauapi_gen::luaapi_apply_noop' if ret.kind == 'void' else f'luaapi_apply_return_{suffix}'}, {'nullptr' if ret.kind == 'void' else '&hookCtx'}}});\n"
     )
-    out.extend(
-        f"        {line}"
-        for line in push_value(TypeInfo("object", f"{cxx_cls}*", cls.name, cls.name), "self")
-    )
-    for _, info, name in args:
-        out.extend(f"        {line}" for line in push_value(info, name))
-    if ret.kind != "void":
-        out.extend(f"        {line}" for line in push_value(ret, "result"))
-    out.append("            }, [&](lua_State* L, int idx) -> bool {\n")
-    if ret.kind == "void":
-        out.append("                return true;\n")
-    else:
-        out.append(
-            f'                return luauapi_gen::applyHookOverride(L, idx, &luaapi_apply_return_{suffix}, &applyReturnCtx, "{target_id}");\n'
-        )
-    out.append("            });\n")
     out.append("        }\n")
     if ret.kind != "void":
         out.append("        return result;\n")
@@ -249,7 +236,7 @@ def emit_hook_target(
     out.append(f"        void* const address = {address};\n")
     out.append("        if (!address) {\n")
     out.append(
-        f'            return geode::Err("hook address unresolved for {_cstr(target_id)}");\n'
+        f'            return geode::Err("hook address unresolved for " + std::string(kTargetId_{suffix}));\n'
     )
     out.append("        }\n")
     out.append(
@@ -271,7 +258,7 @@ def emit_hook_target(
     )
     out.append("            if (wrapperResult.isErr()) {\n")
     out.append(
-        f'                return geode::Err("hook original wrapper failed for {_cstr(target_id)}: " + wrapperResult.unwrapErr());\n'
+        f'                return geode::Err("hook original wrapper failed for " + std::string(kTargetId_{suffix}) + ": " + wrapperResult.unwrapErr());\n'
     )
     out.append("            }\n")
     out.append(f"            {original_var} = wrapperResult.unwrap();\n")
