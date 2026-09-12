@@ -89,8 +89,7 @@ namespace luax {
         }
     }
 
-    void TaskScheduler::advance(double dt, lua_State* L) {
-        (void)L;
+    void TaskScheduler::advance(double dt) {
         auto* runtime = Runtime::getIfInitialized();
         if (!runtime) return;
 
@@ -150,8 +149,8 @@ namespace luax {
                 if (!runtime) return;
                 auto* L = runtime->state();
                 if (!L) return;
-                TaskScheduler::get().advance(static_cast<double>(dt), L);
-                pollGeodeTaskHandles(L);
+                TaskScheduler::get().advance(static_cast<double>(dt));
+                pollGeodeTaskHandles();
                 diag::flushIfNeeded(runtime->status());
             }
         };

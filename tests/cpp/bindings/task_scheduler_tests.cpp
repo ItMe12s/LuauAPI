@@ -46,10 +46,10 @@ TEST_CASE("TaskScheduler fires one-shot tasks after delay") {
     REQUIRE(id != 0);
     REQUIRE(scheduler.activeCount() == 1);
 
-    scheduler.advance(0.05, L);
+    scheduler.advance(0.05);
     REQUIRE(scheduler.activeCount() == 1);
 
-    scheduler.advance(0.1, L);
+    scheduler.advance(0.1);
     REQUIRE(scheduler.activeCount() == 0);
 
     lua_getglobal(L, "hits");
@@ -68,12 +68,12 @@ TEST_CASE("TaskScheduler repeats interval tasks until cancelled") {
     auto id = scheduler.add(std::move(ref), 0.0, 0.5);
     REQUIRE(id != 0);
 
-    scheduler.advance(0.5, L);
-    scheduler.advance(0.5, L);
+    scheduler.advance(0.5);
+    scheduler.advance(0.5);
     REQUIRE(scheduler.activeCount() == 1);
 
     scheduler.cancel(id);
-    scheduler.advance(0.5, L);
+    scheduler.advance(0.5);
     REQUIRE(scheduler.activeCount() == 0);
 
     lua_getglobal(L, "intervalHits");
@@ -94,7 +94,7 @@ TEST_CASE("TaskScheduler advance restores stack when protectedCall fails early")
     REQUIRE(id != 0);
 
     runtime->setStatusForTests(imes::luauapi::RuntimeStatus::NotReady);
-    scheduler.advance(0.0, L);
+    scheduler.advance(0.0);
     REQUIRE(lua_gettop(L) == topBefore);
 }
 
@@ -115,7 +115,7 @@ TEST_CASE(
     auto id = scheduler.add(std::move(ref), 0.0, 0.5);
     REQUIRE(id != 0);
 
-    scheduler.advance(2.0, L);
+    scheduler.advance(2.0);
     REQUIRE(scheduler.activeCount() == 1);
 
     lua_getglobal(L, "bigDtHits");
@@ -135,7 +135,7 @@ TEST_CASE("TaskScheduler defer fires on the next advance") {
     REQUIRE(id != 0);
     REQUIRE(scheduler.activeCount() == 1);
 
-    scheduler.advance(0.0, L);
+    scheduler.advance(0.0);
     REQUIRE(scheduler.activeCount() == 0);
 
     lua_getglobal(L, "deferHits");
@@ -154,7 +154,7 @@ TEST_CASE("TaskScheduler cancels tasks that error") {
     auto id = scheduler.add(std::move(ref), 0.0, 0.0);
     REQUIRE(id != 0);
 
-    scheduler.advance(0.0, L);
+    scheduler.advance(0.0);
     REQUIRE(scheduler.activeCount() == 0);
 }
 
@@ -175,7 +175,7 @@ TEST_CASE("TaskScheduler m_index stays valid after timed swap-and-pop compaction
     REQUIRE(midId != 0);
     REQUIRE(tailId != 0);
 
-    scheduler.advance(0.0, L);
+    scheduler.advance(0.0);
     REQUIRE_FALSE(scheduler.isScheduled(headId));
     REQUIRE(scheduler.isScheduled(midId));
     REQUIRE(scheduler.isScheduled(tailId));
@@ -184,7 +184,7 @@ TEST_CASE("TaskScheduler m_index stays valid after timed swap-and-pop compaction
     REQUIRE_FALSE(scheduler.isScheduled(midId));
     REQUIRE(scheduler.isScheduled(tailId));
 
-    scheduler.advance(1.0, L);
+    scheduler.advance(1.0);
     REQUIRE_FALSE(scheduler.isScheduled(tailId));
 
     lua_getglobal(L, "headHit");
@@ -212,7 +212,7 @@ TEST_CASE("TaskScheduler m_index stays valid after deferred compaction") {
     REQUIRE(firstId != 0);
     REQUIRE(secondId != 0);
 
-    scheduler.advance(0.0, L);
+    scheduler.advance(0.0);
     REQUIRE_FALSE(scheduler.isScheduled(firstId));
     REQUIRE_FALSE(scheduler.isScheduled(secondId));
 
@@ -223,7 +223,7 @@ TEST_CASE("TaskScheduler m_index stays valid after deferred compaction") {
 
     scheduler.cancel(thirdId);
     REQUIRE_FALSE(scheduler.isScheduled(thirdId));
-    scheduler.advance(0.0, L);
+    scheduler.advance(0.0);
     REQUIRE(scheduler.activeCount() == 0);
 
     lua_getglobal(L, "deferFirst");
@@ -284,13 +284,13 @@ TEST_CASE(
     REQUIRE(deferId != 0);
     REQUIRE(timedId != 0);
 
-    scheduler.advance(0.0, L);
+    scheduler.advance(0.0);
     REQUIRE_FALSE(scheduler.isScheduled(deferId));
     REQUIRE(scheduler.isScheduled(timedId));
 
     scheduler.cancel(timedId);
     REQUIRE_FALSE(scheduler.isScheduled(timedId));
-    scheduler.advance(1.0, L);
+    scheduler.advance(1.0);
     REQUIRE(scheduler.activeCount() == 0);
 
     lua_getglobal(L, "mixDefer");
@@ -321,14 +321,14 @@ TEST_CASE("task.wait works inside task.delay callbacks") {
     );
 
     auto& scheduler = luax::TaskScheduler::get();
-    scheduler.advance(0.0, L);
+    scheduler.advance(0.0);
     REQUIRE(scheduler.activeCount() == 1);
 
     lua_getglobal(L, "delayWaitDone");
     REQUIRE(lua_isnil(L, -1));
     lua_pop(L, 1);
 
-    scheduler.advance(0.15, L);
+    scheduler.advance(0.15);
     REQUIRE(scheduler.activeCount() == 0);
 
     lua_getglobal(L, "delayWaitDone");

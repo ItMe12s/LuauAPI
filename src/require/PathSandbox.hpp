@@ -72,7 +72,7 @@ namespace luax {
         return current;
     }
 
-    // If anyone misuses theses I swear to god.
+    // If anyone misuses these I swear to god.
     // POSIX-style path text for virtual chunk names and sandbox-relative checks.
     inline std::string normalizedPathString(std::filesystem::path const& path) {
         return path.generic_string();

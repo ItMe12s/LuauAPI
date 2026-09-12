@@ -12,8 +12,6 @@
 #include <vector>
 
 namespace luax {
-    void clearDeferredReleases();
-
     namespace detail {
         struct OwnedDefer {
             cocos2d::CCObject* ptr;

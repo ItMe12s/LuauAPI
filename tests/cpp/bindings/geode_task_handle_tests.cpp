@@ -89,12 +89,12 @@ TEST_CASE("GeodeTaskHandle completes bool callbacks and late callbacks") {
         )
     );
 
-    luax::pollGeodeTaskHandles(L);
+    luax::pollGeodeTaskHandles();
     REQUIRE(globalNumber(L, "hits") == 0.0);
 
     state->value = true;
     state->ready = true;
-    luax::pollGeodeTaskHandles(L);
+    luax::pollGeodeTaskHandles();
 
     REQUIRE(globalNumber(L, "hits") == 1.0);
     REQUIRE(globalBool(L, "doneValue"));
@@ -134,7 +134,7 @@ TEST_CASE("GeodeTaskHandle preserves callback order") {
 
     state->value = true;
     state->ready = true;
-    luax::pollGeodeTaskHandles(L);
+    luax::pollGeodeTaskHandles();
     REQUIRE(globalString(L, "order") == "ab");
 }
 
@@ -164,7 +164,7 @@ TEST_CASE("GeodeTaskHandle detach inside callback does not skip queued callbacks
 
     state->value = true;
     state->ready = true;
-    luax::pollGeodeTaskHandles(L);
+    luax::pollGeodeTaskHandles();
     REQUIRE(globalString(L, "order") == "ab");
     REQUIRE(globalBool(L, "detachedInside"));
     REQUIRE(globalBool(L, "secondValue"));
@@ -188,7 +188,7 @@ TEST_CASE("GeodeTaskHandle completes void callbacks with nil pair") {
     );
 
     state->ready = true;
-    luax::pollGeodeTaskHandles(L);
+    luax::pollGeodeTaskHandles();
     REQUIRE(globalBool(L, "voidOk"));
 }
 
@@ -213,7 +213,7 @@ TEST_CASE("GeodeTaskHandle cancel aborts and clears callbacks") {
     REQUIRE(globalBool(L, "detachedAfterCancel"));
     state->value = true;
     state->ready = true;
-    luax::pollGeodeTaskHandles(L);
+    luax::pollGeodeTaskHandles();
     REQUIRE(globalNumber(L, "cancelHits") == 0.0);
 }
 
@@ -257,7 +257,7 @@ TEST_CASE("GeodeTaskHandle detach drops observation without aborting") {
     REQUIRE(globalBool(L, "detached"));
     state->value = true;
     state->ready = true;
-    luax::pollGeodeTaskHandles(L);
+    luax::pollGeodeTaskHandles();
     REQUIRE(globalNumber(L, "detachHits") == 0.0);
 }
 
@@ -281,7 +281,7 @@ TEST_CASE("GeodeTaskHandle reports std poll exception as nil err") {
     );
 
     state->error = "boom";
-    luax::pollGeodeTaskHandles(L);
+    luax::pollGeodeTaskHandles();
     REQUIRE(globalBool(L, "errValueWasNil"));
     REQUIRE(globalString(L, "errText") == "boom");
 }
@@ -311,7 +311,7 @@ TEST_CASE("GeodeTaskHandle reports unknown poll exception as nil err") {
     );
 
     state->ready = true;
-    luax::pollGeodeTaskHandles(L);
+    luax::pollGeodeTaskHandles();
     REQUIRE(globalBool(L, "errValueWasNil"));
     REQUIRE(globalString(L, "errText") == "Task failed with an unknown exception");
 }

@@ -265,10 +265,10 @@ class HandleGcGuardTests(unittest.TestCase):
     def test_geode_task_handles_poll_from_task_tick(self) -> None:
         source = read_repo_file(TASK_SCHEDULER)
         self.assertIn('#include "bindings/geode/GeodeTaskHandleBinding.hpp"', source)
-        self.assertIn("pollGeodeTaskHandles(L)", source)
+        self.assertIn("pollGeodeTaskHandles()", source)
         self.assertLess(
             source.find("TaskScheduler::get().advance"),
-            source.find("pollGeodeTaskHandles(L)"),
+            source.find("pollGeodeTaskHandles()"),
         )
 
     def test_geode_task_handle_bridge_in_host_test_sources(self) -> None:

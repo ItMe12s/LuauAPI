@@ -9,7 +9,6 @@
 #include <Geode/loader/Mod.hpp>
 #include <Geode/utils/file.hpp>
 #include <Geode/utils/string.hpp>
-#include <algorithm>
 #include <chrono>
 #include <ctime>
 #include <filesystem>

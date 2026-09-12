@@ -279,8 +279,7 @@ namespace luax {
         lua_setmetatable(L, -2);
     }
 
-    void pollGeodeTaskHandles(lua_State* L) {
-        (void)L;
+    void pollGeodeTaskHandles() {
         auto snapshot = activeHandles();
         auto waker = arc::Waker::noop();
         arc::Context cx(&waker);

@@ -10,7 +10,6 @@
 #include <Geode/Geode.hpp>
 #include <cstring>
 #include <lua.h>
-#include <luaconf.h>
 #include <lualib.h>
 #include <new>
 #include <unordered_set>

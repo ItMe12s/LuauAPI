@@ -66,7 +66,7 @@ TEST_CASE("Task handle __gc cancels scheduled deferred task") {
     REQUIRE_FALSE(scheduler.isScheduled(id));
     REQUIRE(scheduler.activeCount() == 0);
 
-    scheduler.advance(0.0, L);
+    scheduler.advance(0.0);
     lua_getglobal(L, "gcHits");
     REQUIRE(lua_isnil(L, -1));
     lua_pop(L, 1);
@@ -95,7 +95,7 @@ TEST_CASE("Task handle __gc cancels scheduled interval task") {
     REQUIRE_FALSE(scheduler.isScheduled(id));
     REQUIRE(scheduler.activeCount() == 0);
 
-    scheduler.advance(1.0, L);
+    scheduler.advance(1.0);
     lua_getglobal(L, "intervalGcHits");
     REQUIRE(lua_isnil(L, -1));
     lua_pop(L, 1);

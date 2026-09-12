@@ -25,7 +25,7 @@ namespace luax {
         }
 
         void cancel(std::uint64_t id);
-        void advance(double dt, lua_State* L);
+        void advance(double dt);
         void clear();
 
         std::size_t activeCount() const;

@@ -150,7 +150,7 @@ namespace luax {
 
     void registerGeodeTaskHandleMetatable(lua_State* L);
     void pushGeodeTaskHandleState(lua_State* L, std::shared_ptr<GeodeTaskHandleStateBase> state);
-    void pollGeodeTaskHandles(lua_State* L);
+    void pollGeodeTaskHandles();
     void clearGeodeTaskHandles();
     void compactGeodeTaskHandles();
 

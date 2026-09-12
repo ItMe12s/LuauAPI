@@ -8,7 +8,6 @@
 #include <optional>
 #include <string>
 #include <string_view>
-#include <vector>
 
 namespace luax {
     inline void getOrCreateTable(lua_State* L, std::string_view path) {
