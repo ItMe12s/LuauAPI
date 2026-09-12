@@ -32,7 +32,7 @@ Need help? Join the [Discord](https://discord.gg/E8f6D6XqbW).
 - Sandboxed with deadlines, memory caps and file access. Errors get logged instead of crashing the game
 - In-game developer tools including a live script executor
 - Luau LSP autocompletion and strict mode type checking for VSCode (3)
-- JIT and JIT-less support
+- Full JIT support. JIT-less iOS is not supported
 
 ---
 

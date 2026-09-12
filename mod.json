@@ -12,6 +12,7 @@
 	"developer": "imes",
 	"early-load": true,
 	"load-priority": "first",
+	"requires-patching": true,
 	"description": "Luau/Lua framework and toolkit for Geode :3",
 	"dependencies": {
 		"geode.node-ids": ">=1.23.3",

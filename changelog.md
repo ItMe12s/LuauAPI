@@ -29,6 +29,7 @@
 - Updated core, scheduler, listener, web, ImGui, usertype, container, and render3d internals for simpler ownership and less hot-path work.
 - Updated hook codegen to use shared templates and a single target id.
 - Updated mod metadata and description.
+- Removed JIT-less iOS support.
 - Removed dead code and unused symbols across the runtime, bindings, and codegen.
 
 ## v0.1.0-beta.26
