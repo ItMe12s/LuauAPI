@@ -180,7 +180,6 @@ namespace luax {
         lua_State* m_state = nullptr;
         std::thread::id m_ownerThread;
         std::atomic<imes::luauapi::RuntimeStatus> m_status{imes::luauapi::RuntimeStatus::NotReady};
-        bool m_destroyed = false;
         std::uint32_t m_generation = 0;
 
         std::chrono::steady_clock::time_point m_scriptDeadline{};

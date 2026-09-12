@@ -13,7 +13,7 @@
 
 namespace luax {
     namespace {
-        std::string stableContentHashToken(std::string_view source) {
+        std::string contentHashToken(std::string_view source) {
             constexpr std::uint64_t kOffset = 14695981039346656037ull;
             constexpr std::uint64_t kPrime = 1099511628211ull;
 
@@ -23,10 +23,6 @@ namespace luax {
                 hash *= kPrime;
             }
             return std::to_string(hash);
-        }
-
-        std::string contentHashToken(std::string_view source) {
-            return stableContentHashToken(source);
         }
 
         template <class Num>

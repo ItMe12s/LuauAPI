@@ -9,16 +9,11 @@
 
 namespace luax {
     namespace {
-        std::size_t findRootPrefix(std::string const& text, std::string_view rootText, std::size_t pos) {
-            if (rootText.empty() || pos >= text.size()) return std::string::npos;
-            return text.find(rootText, pos);
-        }
-
         void replaceRootPrefix(std::string& text, std::string_view rootText) {
             if (rootText.empty()) return;
             std::size_t pos = 0;
             while (pos < text.size()) {
-                std::size_t const found = findRootPrefix(text, rootText, pos);
+                std::size_t const found = text.find(rootText, pos);
                 if (found == std::string::npos) break;
 
                 std::size_t tail = found + rootText.size();

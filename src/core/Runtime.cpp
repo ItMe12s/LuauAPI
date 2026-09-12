@@ -25,9 +25,7 @@
 #if !defined(LUAUAPI_HOST_TESTS)
     #include <Luau/Require.h>
 #endif
-#include <cctype>
 #include <cstdlib>
-#include <cstring>
 #include <fmt/format.h>
 #include <lua.h>
 #include <lualib.h>
@@ -60,18 +58,6 @@ namespace luax {
         std::thread::id& mainThreadIdStorage() {
             static std::thread::id id;
             return id;
-        }
-
-        std::size_t bytecodeEntryBytes(std::string const& bytecode) {
-            return bytecode.size();
-        }
-
-        std::size_t bytecodeCacheUsageAfterInsert(std::size_t usage, std::size_t entryBytes) {
-            return usage + entryBytes;
-        }
-
-        std::size_t bytecodeCacheUsageAfterRemove(std::size_t usage, std::size_t entryBytes) {
-            return entryBytes <= usage ? usage - entryBytes : 0;
         }
 
         bool bytecodeCacheNeedsEviction(
@@ -119,17 +105,6 @@ namespace luax {
             }
             auto delta = nsize - osize;
             return usage <= limit && delta <= limit - usage;
-        }
-
-        std::size_t allocatorUsageAfterReallocate(std::size_t usage, std::size_t osize, std::size_t nsize) {
-            if (osize <= usage) {
-                return usage - osize + nsize;
-            }
-            return nsize;
-        }
-
-        std::size_t allocatorUsageAfterFree(std::size_t usage, std::size_t osize) {
-            return osize <= usage ? usage - osize : 0;
         }
     } // namespace
 
@@ -197,8 +172,6 @@ namespace luax {
     }
 
     Runtime::~Runtime() {
-        if (m_destroyed) return;
-        m_destroyed = true;
         ++m_generation;
         m_status.store(imes::luauapi::RuntimeStatus::NotReady, std::memory_order_release);
 
@@ -538,7 +511,7 @@ namespace luax {
     }
 
     void Runtime::releaseExternalMemory(std::size_t bytes) {
-        m_memoryUsage = allocatorUsageAfterFree(m_memoryUsage, bytes);
+        m_memoryUsage = bytes <= m_memoryUsage ? m_memoryUsage - bytes : 0;
     }
 
     bool Runtime::tryCacheCompiledBytecode(
@@ -552,7 +525,7 @@ namespace luax {
             return false;
         }
 
-        std::size_t const entryBytes = bytecodeEntryBytes(compiled);
+        std::size_t const entryBytes = compiled.size();
         if (entryBytes > kMaxBytecodeCacheBytes) {
             m_bytecodeScratch = std::move(compiled);
             geode::log::debug("luau compile [{}] {}ms (not cached)", key, compileMs);
@@ -568,7 +541,7 @@ namespace luax {
 
         m_bytecodeLru.push_front({key, std::move(compiled)});
         m_bytecodeIndex[key] = m_bytecodeLru.begin();
-        m_bytecodeCacheBytes = bytecodeCacheUsageAfterInsert(m_bytecodeCacheBytes, entryBytes);
+        m_bytecodeCacheBytes += entryBytes;
         geode::log::debug("luau compile [{}] {}ms", key, compileMs);
         return true;
     }
@@ -601,9 +574,10 @@ namespace luax {
     }
 
     void Runtime::removeBytecodeCacheEntry(std::list<BytecodeCacheEntry>::iterator it) {
-        std::size_t const entryBytes = bytecodeEntryBytes(it->bytecode);
+        std::size_t const entryBytes = it->bytecode.size();
         releaseExternalMemory(entryBytes);
-        m_bytecodeCacheBytes = bytecodeCacheUsageAfterRemove(m_bytecodeCacheBytes, entryBytes);
+        m_bytecodeCacheBytes =
+            entryBytes <= m_bytecodeCacheBytes ? m_bytecodeCacheBytes - entryBytes : 0;
         m_bytecodeIndex.erase(it->key);
         m_bytecodeLru.erase(it);
     }
@@ -812,7 +786,8 @@ namespace luax {
         if (nsize == 0) {
             if (ptr) {
                 if (self) {
-                    self->m_memoryUsage = allocatorUsageAfterFree(self->m_memoryUsage, osize);
+                    self->m_memoryUsage =
+                        osize <= self->m_memoryUsage ? self->m_memoryUsage - osize : 0;
                 }
                 std::free(ptr);
             }
@@ -827,7 +802,8 @@ namespace luax {
         void* out = std::realloc(ptr, nsize);
         if (!out) return nullptr;
         if (self) {
-            self->m_memoryUsage = allocatorUsageAfterReallocate(self->m_memoryUsage, osize, nsize);
+            self->m_memoryUsage =
+                osize <= self->m_memoryUsage ? self->m_memoryUsage - osize + nsize : nsize;
         }
         return out;
     }

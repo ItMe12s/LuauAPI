@@ -10,7 +10,6 @@
 #include <lua.h>
 #include <lualib.h>
 #include <string>
-#include <vector>
 
 namespace {
     using namespace luax;

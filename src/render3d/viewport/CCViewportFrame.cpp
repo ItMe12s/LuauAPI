@@ -294,19 +294,13 @@ namespace luax::render3d {
             }
 
             GLuint const spProg = live->getProgram();
-            GLint const mvpLoc = spProg != 0 ? glGetUniformLocation(spProg, "CC_MVPMatrix") : -1;
-            if (spProg == 0 || glIsProgram(spProg) != GL_TRUE || mvpLoc < 0) {
+            if (spProg == 0 || glIsProgram(spProg) != GL_TRUE) {
                 return;
             }
 
             DrawStateSnapshot compositeState{};
             compositeState.capture();
             glUseProgram(spProg);
-            kmMat4 kmP, kmMV, kmMVP;
-            kmGLGetMatrix(KM_GL_PROJECTION, &kmP);
-            kmGLGetMatrix(KM_GL_MODELVIEW, &kmMV);
-            kmMat4Multiply(&kmMVP, &kmP, &kmMV);
-            glUniformMatrix4fv(mvpLoc, 1, GL_FALSE, kmMVP.mat);
             CCSprite::draw();
             compositeState.restore();
         }

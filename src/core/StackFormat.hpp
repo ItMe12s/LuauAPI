@@ -2,7 +2,6 @@
 
 #include "require/PathSandbox.hpp"
 
-#include <Geode/utils/general.hpp>
 #include <filesystem>
 #include <lua.h>
 #include <string>

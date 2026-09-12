@@ -88,10 +88,6 @@ namespace luax {
             return m_values[index].value;
         }
 
-        std::uint64_t idAt(std::size_t index) const {
-            return m_values[index].id;
-        }
-
         template <typename Fn>
         void forEachIndexSnapshot(Fn&& fn) {
             if (m_values.empty()) {

@@ -12,12 +12,10 @@
     #include <Geode/utils/async.hpp>
 #endif
 #include <Geode/utils/string.hpp>
-#include <algorithm>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
-#include <limits>
 #include <lua.h>
 #include <lualib.h>
 #include <optional>
@@ -191,20 +189,12 @@ namespace {
 
     void nativePushString(void* state, char const* data, std::uint64_t size) {
         auto& call = nativeCallState(state);
-        if (size > (std::numeric_limits<std::size_t>::max)()) {
-            call.error = "native callback string is too large";
-            return;
-        }
         lua_pushlstring(call.state, data ? data : "", static_cast<std::size_t>(size));
         ++call.pushed;
     }
 
     void nativeSetError(void* state, char const* data, std::uint64_t size) {
         auto& call = nativeCallState(state);
-        if (size > (std::numeric_limits<std::size_t>::max)()) {
-            call.error = "native callback error is too large";
-            return;
-        }
         call.error.assign(data ? data : "", static_cast<std::size_t>(size));
     }
 
@@ -568,12 +558,6 @@ namespace {
         }
         auto path = pathResult.unwrap();
 
-        std::error_code sizeEc;
-        auto fileSize = std::filesystem::file_size(path, sizeEc);
-        if (!sizeEc && fileSize > luax::kMaxScriptBytes) {
-            return geode::Err("script file exceeds maximum size");
-        }
-
         auto sourceResult = luax::readScriptFile(path);
         if (sourceResult.isErr()) {
             return geode::Err(sourceResult.unwrapErr());
@@ -638,7 +622,7 @@ namespace imes::luauapi {
         ) {
             auto runtimeResult = requireRuntime(true, true);
             if (runtimeResult.isErr()) return geode::Err(runtimeResult.unwrapErr());
-            if ((!pathData && pathSize != 0) || pathSize > (std::numeric_limits<std::size_t>::max)()) {
+            if (!pathData && pathSize != 0) {
                 return geode::Err("native registration path is invalid");
             }
             if (!invoker || !functionBytes || functionSize == 0) {
@@ -661,10 +645,6 @@ namespace imes::luauapi {
                 std::string_view{};
             auto prepared = prepareNativeRegistration(provider, path, request);
             if (prepared.isErr()) return geode::Err(prepared.unwrapErr());
-            if (request.qualifiedName.size() > std::numeric_limits<std::size_t>::max() -
-                    sizeof(NativeClosureHeader) - request.functionBytes.size() - 1) {
-                return geode::Err("native registration target is too large");
-            }
             return runNativeRegistration(*runtimeResult.unwrap(), request);
         }
 
@@ -674,7 +654,7 @@ namespace imes::luauapi {
         ) {
             auto runtimeResult = requireRuntime(true, true);
             if (runtimeResult.isErr()) return geode::Err(runtimeResult.unwrapErr());
-            if ((!pathData && pathSize != 0) || pathSize > (std::numeric_limits<std::size_t>::max)()) {
+            if (!pathData && pathSize != 0) {
                 return geode::Err("native registration path is invalid");
             }
             if (!valueData) return geode::Err("registered value descriptor is invalid");
@@ -694,9 +674,6 @@ namespace imes::luauapi {
                 case NativeValueKind::String:
                     if (!value.stringData && value.stringSize != 0) {
                         return geode::Err("registered string data is null");
-                    }
-                    if (value.stringSize > (std::numeric_limits<std::size_t>::max)()) {
-                        return geode::Err("registered string is too large");
                     }
                     request.valueString.assign(
                         value.stringData ? value.stringData : "",

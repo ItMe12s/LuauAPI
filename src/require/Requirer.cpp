@@ -6,7 +6,6 @@
 
 #include <Luau/CodeGen.h>
 #include <cstring>
-#include <functional>
 #include <lualib.h>
 #include <string>
 #include <string_view>

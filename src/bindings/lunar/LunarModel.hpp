@@ -34,8 +34,6 @@ namespace luax::lunar {
         SkewY,
     };
 
-    static_assert(static_cast<int>(Prop::ZOrder) == 6);
-
     enum class EasingKind : std::uint8_t {
         Linear,
         PowIn,

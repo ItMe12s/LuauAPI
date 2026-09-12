@@ -130,9 +130,6 @@ namespace luax {
             }
             luaL_checktype(L, idx, LUA_TTABLE);
             auto len = static_cast<lua_Integer>(lua_objlen(L, idx));
-            if (len < 0) {
-                luaL_error(L, "%s: invalid vector length", label);
-            }
             out.reserve(static_cast<std::size_t>(len));
             for (lua_Integer i = 1; i <= len; ++i) {
                 lua_rawgeti(L, idx, i);

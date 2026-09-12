@@ -20,8 +20,6 @@
 #include <vector>
 
 namespace luax::diag {
-    void flushIfNeeded(imes::luauapi::RuntimeStatus status, bool force);
-
     namespace {
         struct RecorderState {
             std::vector<BoundaryFrame> stack;
@@ -75,7 +73,6 @@ namespace luax::diag {
                 case BoundaryKind::NativeFunction: return "native-function";
                 case BoundaryKind::Task: return "task";
                 case BoundaryKind::ImGui: return "imgui";
-                case BoundaryKind::Delegate: return "delegate";
             }
             return "unknown";
         }

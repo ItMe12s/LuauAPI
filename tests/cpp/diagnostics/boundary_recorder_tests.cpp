@@ -215,7 +215,8 @@ TEST_CASE("BoundaryRecorder flush is atomic: no .tmp left behind", "[diagnostics
     luax::diag::flushIfNeeded(imes::luauapi::RuntimeStatus::Ready);
 
     CHECK(std::filesystem::exists(guard.dir.path / luax::kSidecarFileName));
-    CHECK_FALSE(std::filesystem::exists(guard.dir.path / luax::kSidecarTempName));
+    constexpr char const kSidecarTempName[] = "luauapi-last-context.tmp";
+    CHECK_FALSE(std::filesystem::exists(guard.dir.path / kSidecarTempName));
 }
 
 TEST_CASE("BoundaryRecorder pop does not flush to disk", "[diagnostics][sidecar]") {

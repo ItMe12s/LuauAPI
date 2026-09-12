@@ -67,14 +67,6 @@ namespace luax::detail {
         return static_cast<lua_Integer>(lua_objlen(L, absIdx));
     }
 
-    inline void requireNonNegativeIndexedLength(
-        lua_State* L, lua_Integer len, char const* label, char const* kind
-    ) {
-        if (len < 0) {
-            luaL_error(L, "%s: invalid %s length", label, kind);
-        }
-    }
-
     inline void requireExactIndexedLength(
         lua_State* L, lua_Integer len, std::size_t expected, char const* label
     ) {
@@ -249,7 +241,6 @@ namespace luax::detail {
 
         idx = absCheckIndexedTable(L, idx);
         auto const len = indexedTableLength(L, idx);
-        requireNonNegativeIndexedLength(L, len, label, "vector");
         out.clear();
         out.reserve(static_cast<std::size_t>(len));
         for (lua_Integer i = 1; i <= len; ++i) {
@@ -276,7 +267,6 @@ namespace luax::detail {
         if constexpr (is_std_pair_v<Key>) {
             idx = absCheckIndexedTable(L, idx);
             auto const len = indexedTableLength(L, idx);
-            requireNonNegativeIndexedLength(L, len, label, "map");
             for (lua_Integer i = 1; i <= len; ++i) {
                 lua_rawgeti(L, idx, i);
                 int const entry = absCheckIndexedTable(L, -1);
@@ -291,9 +281,7 @@ namespace luax::detail {
                 Value candidate;
                 checkContainerValueInto(L, -1, label, candidate);
                 lua_pop(L, 1);
-                if (out.find(key) == out.end()) {
-                    out.emplace(std::move(key), std::move(candidate));
-                }
+                out.emplace(std::move(key), std::move(candidate));
                 lua_pop(L, 1);
             }
         }
@@ -315,16 +303,13 @@ namespace luax::detail {
         using Element = typename U::value_type;
         idx = absCheckIndexedTable(L, idx);
         auto const len = indexedTableLength(L, idx);
-        requireNonNegativeIndexedLength(L, len, label, "set");
         out.clear();
         for (lua_Integer i = 1; i <= len; ++i) {
             lua_rawgeti(L, idx, i);
             Element candidate;
             checkContainerValueInto(L, -1, label, candidate);
             lua_pop(L, 1);
-            if (out.find(candidate) == out.end()) {
-                out.emplace(std::move(candidate));
-            }
+            out.emplace(std::move(candidate));
         }
     }
 

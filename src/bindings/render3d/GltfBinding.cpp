@@ -26,11 +26,6 @@ namespace {
             return 2;
         }
 
-        std::error_code ec;
-        if (!std::filesystem::is_regular_file(target->path, ec)) {
-            return pushNilErr(L, "path is not a regular file");
-        }
-
         auto result = MeshAsset::loadFromFile(target->path);
         if (auto err = returnIfErr(L, result)) {
             return *err;

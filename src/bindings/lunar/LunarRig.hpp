@@ -48,11 +48,9 @@ namespace luax::lunar {
 
         [[nodiscard]] cocos2d::CCNode* getNode(std::string_view id) const;
 
-        std::map<std::string, geode::WeakRef<cocos2d::CCNode>, std::less<>> const& nodes() const noexcept {
-            return m_nodes;
-        }
-
         [[nodiscard]] geode::Result<void> applySpec(RigSpec const& spec);
+
+        static int listNodes(lua_State* L);
 
     protected:
         ~LunarRig() override = default;
@@ -62,7 +60,6 @@ namespace luax::lunar {
     private:
         [[nodiscard]] geode::Result<void> registerId(std::string const& id, cocos2d::CCNode* node);
         void forgetNode(cocos2d::CCNode* node);
-
         std::map<std::string, geode::WeakRef<cocos2d::CCNode>, std::less<>> m_nodes;
     };
 

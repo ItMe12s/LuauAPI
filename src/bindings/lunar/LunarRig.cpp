@@ -138,21 +138,6 @@ namespace luax::lunar {
             return 1;
         }
 
-        int rigListNodes(lua_State* L) {
-            auto* self = Usertype<LunarRig>::check(L, 1, "LunarRig:listNodes");
-            std::vector<std::string> ids;
-            for (auto const& [id, ref] : self->nodes()) {
-                if (ref.lock()) ids.push_back(id);
-            }
-            std::sort(ids.begin(), ids.end());
-            lua_createtable(L, static_cast<int>(ids.size()), 0);
-            for (std::size_t i = 0; i < ids.size(); ++i) {
-                push(L, ids[i]);
-                lua_rawseti(L, -2, static_cast<int>(i) + 1);
-            }
-            return 1;
-        }
-
         int rigGetPose(lua_State* L) {
             auto* self = Usertype<LunarRig>::check(L, 1, "LunarRig:getPose");
             auto const id = check<std::string>(L, 2, "LunarRig:getPose");
@@ -281,6 +266,21 @@ namespace luax::lunar {
         return it->second.lock();
     }
 
+    int LunarRig::listNodes(lua_State* L) {
+        auto* self = Usertype<LunarRig>::check(L, 1, "LunarRig:listNodes");
+        std::vector<std::string> ids;
+        for (auto const& [id, ref] : self->m_nodes) {
+            if (ref.lock()) ids.push_back(id);
+        }
+        std::sort(ids.begin(), ids.end());
+        lua_createtable(L, static_cast<int>(ids.size()), 0);
+        for (std::size_t i = 0; i < ids.size(); ++i) {
+            push(L, ids[i]);
+            lua_rawseti(L, -2, static_cast<int>(i) + 1);
+        }
+        return 1;
+    }
+
     geode::Result<void> LunarRig::applySpec(RigSpec const& spec) {
         std::vector<geode::Ref<cocos2d::CCNode>> previous;
         for (auto const& [id, ref] : m_nodes) {
@@ -396,7 +396,7 @@ namespace luax::lunar {
         Usertype<LunarRig>::method(L, "add", &rigAdd);
         Usertype<LunarRig>::method(L, "addTo", &rigAddTo);
         Usertype<LunarRig>::method(L, "getNode", &rigGetNode);
-        Usertype<LunarRig>::method(L, "listNodes", &rigListNodes);
+        Usertype<LunarRig>::method(L, "listNodes", &LunarRig::listNodes);
         Usertype<LunarRig>::method(L, "getPose", &rigGetPose);
         Usertype<LunarRig>::method(L, "load", &rigLoad);
         Usertype<LunarRig>::method(L, "loadAnimation", &rigLoadAnimation);

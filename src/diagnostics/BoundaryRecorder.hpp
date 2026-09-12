@@ -25,7 +25,6 @@ namespace luax::diag {
         NativeFunction,
         Task,
         ImGui,
-        Delegate,
     };
 
     struct BoundaryFrame {

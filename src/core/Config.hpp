@@ -57,5 +57,4 @@ namespace luax {
     constexpr std::size_t kSidecarStackDepth = 64;
     constexpr int kSidecarFlushIntervalMs = 100;
     inline char const kSidecarFileName[] = "luauapi-last-context.txt";
-    inline char const kSidecarTempName[] = "luauapi-last-context.tmp";
 } // namespace luax
