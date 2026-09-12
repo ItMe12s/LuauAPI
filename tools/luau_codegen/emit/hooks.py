@@ -179,6 +179,7 @@ def emit_hook_target(
     named_args = bool(arg_names) and len(set(arg_names)) == len(arg_names)
 
     out: list[str] = []
+    convention = "Thiscall" if target_platform == "win" else "Default"
     out.append(f'    static char const* const kTargetId_{suffix} = "{_cstr(target_id)}";\n\n')
     out.append(_emit_hook_ctx(suffix, cxx_cls, args, ret))
     out.append(_emit_apply_args_fn(suffix, args, named_args))
@@ -241,7 +242,7 @@ def emit_hook_target(
     out.append("        }\n")
     out.append(
         f"        auto hookResult = geode::Mod::get()->hook(address, "
-        f"&{hook_fn}, displayName, tulip::hook::TulipConvention::Default);\n"
+        f"&{hook_fn}, displayName, tulip::hook::TulipConvention::{convention});\n"
     )
     out.append("        if (hookResult.isErr()) {\n")
     out.append("            return geode::Err(hookResult.unwrapErr());\n")
@@ -249,7 +250,9 @@ def emit_hook_target(
     out.append(f"        if (!{original_var}) {{\n")
     out.append("            tulip::hook::WrapperMetadata wrapperMetadata {\n")
     out.append(
-        "                .m_convention = geode::hook::createConvention(tulip::hook::TulipConvention::Default),\n"
+        "                .m_convention = geode::hook::createConvention(tulip::hook::TulipConvention::"
+        + convention
+        + "),\n"
     )
     out.append(f"                .m_abstract = tulip::hook::AbstractFunction::from(&{hook_fn}),\n")
     out.append("            };\n")

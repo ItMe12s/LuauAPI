@@ -180,7 +180,7 @@ local function drawWindow()
     end
 
     imgui.popupModal("load-demo", drawDemoPopup, {
-        size = { x = 250, y = 300 },
+        size = { x = 300, y = 400 },
         sizeCond = imgui.Cond.Always
     })
 
