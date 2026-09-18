@@ -112,6 +112,9 @@ jobs:
     steps:
       - uses: geode-sdk/build-geode-mod/combine@main
         id: build
+        with:
+          zstd: true
+          optimize-pngs: true
 
       - uses: actions/upload-artifact@v4
         with:

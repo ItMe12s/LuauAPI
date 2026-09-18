@@ -206,6 +206,7 @@ GEODE_UI_PREFERRED_OVERLOAD_CLASSES = frozenset(
     {
         "Border",
         "ColorPickPopup",
+        "Label",
         "Notification",
         "ScrollLayer",
     }
@@ -279,6 +280,7 @@ PREFERRED_OVERLOADS: dict[tuple[str, str], set[tuple[str, ...]]] = {
     ("ScrollLayer", "create"): {("cocos2d::CCSize const&", "bool", "bool")},
     ("Notification", "create"): {("ZStringView", "NotificationIcon", "float")},
     ("Notification", "setIcon"): {("NotificationIcon",)},
+    ("Label", "removeFont"): {("ZStringView",)},
     ("ColorPickPopup", "create"): {("bool",)},
     ("ColorSelectPopup", "create"): {("cocos2d::ccColor3B",)},
     ("CCMenuItemSprite", "create"): {
