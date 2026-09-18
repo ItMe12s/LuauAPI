@@ -34,7 +34,7 @@ _OPAQUE_STUB_BODY: dict[str, str] = {
     "DelayedSpawnNode": (
         "--- @type-only: non-CCObject GD type\ndeclare class DelayedSpawnNode end\n\n"
     ),
-    "DS_Dictionary": ("--- @type-only: non-CCObject GD type\ndeclare class DS_Dictionary end\n\n"),
+    "DS_Dictionary": ("--- @type-only: non-CCObject GD type\ndeclare class DS_Dictionary end\n"),
 }
 
 _OPAQUE_STUB_ORDER = (
@@ -258,7 +258,11 @@ def _refs_from_classes(
             for method in methods:
                 refs.update(
                     _refs_from_method(
-                        method, objects, ctx=ctx, analysis=analysis, owner_class=cls.name
+                        method,
+                        objects,
+                        ctx=ctx,
+                        analysis=analysis,
+                        owner_class=cls.name,
                     )
                 )
     return refs
