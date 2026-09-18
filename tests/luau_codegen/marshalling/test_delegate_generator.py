@@ -150,6 +150,108 @@ class DelegateGeneratorTests(unittest.TestCase):
         self.assertIn(f"unregisterInterface({cast}", hpp)
         self.assertIn(f"registerInterface({cast}", cpp)
 
+    def test_enum_arg_emits_to_underlying_push(self) -> None:
+        spec = CppDelegateSpec(
+            cxx_type="FriendRequestDelegate",
+            lua_name="FriendRequestDelegate",
+            cpp_class="LuaFriendRequestDelegate",
+            methods=[
+                CppDelegateMethod(
+                    "loadFRequestsFailed",
+                    "void",
+                    [("char const*", "key"), ("GJErrorCode", "errorType")],
+                )
+            ],
+        )
+        text = emit_override(spec, spec.methods[0], self.ctx)
+        self.assertIn("GJErrorCode p1", text)
+        self.assertIn(
+            "lua_pushnumber(L, static_cast<double>(std::to_underlying(c->p1)));",
+            text,
+        )
+
+    def test_generic_scalar_enum_args_are_bound(self) -> None:
+        specs = collect_delegate_specs(DELEGATE_FIXTURE_DIR, self.ctx)
+        for spec_name, method_name in [
+            ("FriendRequestDelegate", "loadFRequestsFailed"),
+            ("GJDailyLevelDelegate", "dailyStatusFailed"),
+            ("GJMPDelegate", "joinLobbyFailed"),
+            ("LevelUpdateDelegate", "levelUpdateFinished"),
+            ("UserListDelegate", "getUserListFailed"),
+        ]:
+            spec = specs[spec_name]
+            method = next(m for m in spec.methods if m.name == method_name)
+            self.assertTrue(
+                cpp_emit_supported(spec, method, self.ctx),
+                msg=f"{spec_name}.{method_name} should be bindable",
+            )
+
+    def test_catalog_enum_and_vector_arg_types(self) -> None:
+        specs = DELEGATE_SPECS
+        load_failed = next(
+            m for m in specs["FriendRequestDelegate"].methods if m.name == "loadFRequestsFailed"
+        )
+        self.assertEqual(load_failed.args_lua, ("string", "number"))
+        spawn_group = next(
+            m for m in specs["TriggerEffectDelegate"].methods if m.name == "spawnGroup"
+        )
+        self.assertEqual(
+            spawn_group.args_lua,
+            ("number", "boolean", "number", "{ number }", "number", "number"),
+        )
+
+    def test_vector_reference_arg_emits_push_container(self) -> None:
+        spec = CppDelegateSpec(
+            cxx_type="TriggerEffectDelegate",
+            lua_name="TriggerEffectDelegate",
+            cpp_class="LuaTriggerEffectDelegate",
+            methods=[
+                CppDelegateMethod(
+                    "spawnGroup",
+                    "void",
+                    [
+                        ("int", "group"),
+                        ("bool", "ordered"),
+                        ("double", "delay"),
+                        ("gd::vector<int> const&", "remapKeys"),
+                        ("int", "triggerID"),
+                        ("int", "controlID"),
+                    ],
+                )
+            ],
+        )
+        text = emit_override(spec, spec.methods[0], self.ctx)
+        self.assertIn(
+            "void spawnGroup(int group, bool ordered, double delay, gd::vector<int> const& remapKeys, int triggerID, int controlID) override",
+            text,
+        )
+        self.assertIn("gd::vector<int> p3", text)
+        self.assertIn("luax::pushContainerValue<gd::vector<int>>(L, c->p3);", text)
+
+    def test_resolution_policy_arg_emits_to_underlying_push(self) -> None:
+        spec = CppDelegateSpec(
+            cxx_type="cocos2d::CCEGLViewProtocol",
+            lua_name="CCEGLViewProtocol",
+            cpp_class="LuaCCEGLViewProtocol",
+            methods=[
+                CppDelegateMethod(
+                    "setDesignResolutionSize",
+                    "void",
+                    [
+                        ("float", "width"),
+                        ("float", "height"),
+                        ("ResolutionPolicy", "resolutionPolicy"),
+                    ],
+                )
+            ],
+        )
+        text = emit_override(spec, spec.methods[0], self.ctx)
+        self.assertIn("ResolutionPolicy resolutionPolicy", text)
+        self.assertIn(
+            "lua_pushnumber(L, static_cast<double>(std::to_underlying(c->p2)));",
+            text,
+        )
+
     def test_float_return_emits_invoke_table_value(self) -> None:
         spec = CppDelegateSpec(
             cxx_type="TableViewDelegate",

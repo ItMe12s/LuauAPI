@@ -7,7 +7,11 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from luau_codegen.cli.io import _write_if_changed
-from luau_codegen.convert.type_primitives import is_reference_type, strip_ref
+from luau_codegen.convert.type_primitives import (
+    is_reference_type,
+    strip_ref,
+    template_inner,
+)
 from luau_codegen.model.codegen_context import CodegenContext
 from luau_codegen.model.delegate_specs import (
     DelegateCatalog,
@@ -235,6 +239,10 @@ LUA_TYPES: dict[str, str] = {
     "GJMusicAction": "number",
     "GJActionCommand": "number",
     "GJSongError": "number",
+    "GJErrorCode": "number",
+    "GJMPErrorCode": "number",
+    "UpdateResponse": "number",
+    "ResolutionPolicy": "number",
     "ColorSelectType": "number",
     "BoomListType": "number",
     "AudioGuidelinesType": "number",
@@ -244,6 +252,9 @@ LUA_TYPES: dict[str, str] = {
 }
 
 ENUM_SUFFIXES = ("Type", "Error", "Action", "Command", "Mode")
+DELEGATE_ENUM_ARGS = frozenset(
+    {"GJErrorCode", "GJMPErrorCode", "UpdateResponse", "ResolutionPolicy"}
+)
 PRIMITIVE_POINTER_BASES = frozenset(
     {
         "bool",
@@ -282,6 +293,9 @@ def lua_for(cxx: str, ctx: CodegenContext) -> str | None:
         return LUA_TYPES[n]
     if n in ctx.value_types.types:
         return ctx.value_types.types[n]
+    if n.startswith("gd::vector<") and n.endswith(">"):
+        elem = template_inner(n, "gd::vector") or ""
+        return f"{{ {LUA_TYPES.get(elem, 'number')} }}"
     if n.endswith("*"):
         base = n[:-1].strip()
         short = base.split("::")[-1]
@@ -410,6 +424,8 @@ def cxx_emit_param(param_type: str, name: str) -> str:
         return f"CCIndexPath {name}"
     if "gd::string" in param_type and param_type.strip().endswith("&"):
         return f"gd::string const& {name}"
+    if n.startswith("gd::vector<") and is_reference_type(param_type):
+        return f"{n} const& {name}"
     return f"{cxx_ctx_type(param_type)} {name}"
 
 
@@ -431,6 +447,8 @@ def push_stmt(t: str, expr: str) -> str:
         return f"luax::push(L, {expr} ? std::string({expr}) : std::string())"
     if n == "gd::string":
         return f"luax::push(L, std::string({expr}.c_str()))"
+    if n.startswith("gd::vector<") and n.endswith(">"):
+        return f"luax::pushContainerValue<{n}>(L, {expr})"
     if n == "DS_Dictionary*":
         return f"luax::pushOpaqueHandle(L, {expr})"
     if "CCIndexPath" in n and not n.endswith("*"):
@@ -444,7 +462,11 @@ def push_stmt(t: str, expr: str) -> str:
     if n.endswith("*"):
         obj = n[:-1].strip()
         return f"luax::Usertype<{obj}>::pushBorrowed(L, {expr})"
-    if n in ("enumKeyCodes", "cocos2d::enumKeyCodes") or any(n.endswith(s) for s in ENUM_SUFFIXES):
+    if (
+        n in DELEGATE_ENUM_ARGS
+        or n in ("enumKeyCodes", "cocos2d::enumKeyCodes")
+        or any(n.endswith(s) for s in ENUM_SUFFIXES)
+    ):
         return f"lua_pushnumber(L, static_cast<double>(std::to_underlying({expr})))"
     return f"luax::push(L, {expr})"
 
@@ -486,6 +508,7 @@ def emit_delegate_hpp(specs: dict[str, CppDelegateSpec], ctx: CodegenContext) ->
     return (
         "#pragma once\n\n"
         '#include "framework/callback/LuaDelegate.hpp"\n'
+        '#include "framework/stack/ContainerTables.hpp"\n'
         '#include "framework/stack/Stack.hpp"\n'
         '#include "framework/stack/Types.hpp"\n'
         '#include "framework/usertype/OpaqueHandle.hpp"\n'

@@ -90,6 +90,7 @@ class FLAlertLayerProtocol {
 
 class FriendRequestDelegate {
     virtual void loadFRequestsFinished(cocos2d::CCArray* scores, char const* key) = inline;
+    virtual void loadFRequestsFailed(char const* key, GJErrorCode errorType) = inline;
     virtual void setupPageInfo(gd::string info, char const* key) = inline;
     virtual void forceReloadRequests(bool sent) = inline;
 };
@@ -130,6 +131,7 @@ class GJChallengeDelegate {
 
 class GJDailyLevelDelegate {
     virtual void dailyStatusFinished(GJTimedLevelType type) = inline;
+    virtual void dailyStatusFailed(GJTimedLevelType type, GJErrorCode errorType) = inline;
 };
 
 class GJDropDownLayerDelegate {
@@ -138,6 +140,7 @@ class GJDropDownLayerDelegate {
 
 class GJMPDelegate {
     virtual void joinLobbyFinished(int id) = inline;
+    virtual void joinLobbyFailed(int id, GJMPErrorCode errorType) = inline;
     virtual void didUploadMPComment(int id) = inline;
     virtual void updateComments() = inline;
 };
@@ -256,6 +259,7 @@ class LevelSettingsDelegate {
 
 class LevelUpdateDelegate {
     virtual void levelUpdateFailed(int response) = inline;
+    virtual void levelUpdateFinished(int response, UpdateResponse updateResponse) = inline;
 };
 
 class LevelUploadDelegate {
@@ -278,6 +282,7 @@ class ListUploadDelegate {
 
 class MessageListDelegate {
     virtual void loadMessagesFinished(cocos2d::CCArray* messages, char const* key) = inline;
+    virtual void loadMessagesFailed(char const* key, GJErrorCode errorType) = inline;
     virtual void forceReloadMessages(bool sent) = inline;
     virtual void setupPageInfo(gd::string info, char const* key) = inline;
 };
@@ -404,6 +409,9 @@ class TextInputDelegate {
 
 class TriggerEffectDelegate {
     virtual bool checkSpawnAbuse() = inline;
+    virtual void toggleGroupTriggered(int group, bool activate, gd::vector<int> const& remapKeys, int triggerID, int controlID) = inline;
+    virtual void spawnGroup(int group, bool ordered, double delay, gd::vector<int> const& remapKeys, int triggerID, int controlID) = inline;
+    virtual void spawnObject(GameObject* object, double delay, gd::vector<int> const& remapKeys) = inline;
 };
 
 class UploadActionDelegate {
@@ -428,6 +436,7 @@ class UserInfoDelegate {
 
 class UserListDelegate {
     virtual void getUserListFinished(cocos2d::CCArray* scores, UserListType type) = inline;
+    virtual void getUserListFailed(cocos2d::CCArray* scores, GJErrorCode errorType) = inline;
     virtual void userListChanged(cocos2d::CCArray* scores, UserListType type) = inline;
     virtual void forceReloadList(UserListType type) = inline;
 };
@@ -440,6 +449,10 @@ class CCIMEDelegate {
 class CCTouchDelegate {
     virtual void setPreviousPriority(int arg) = inline;
     virtual int getPreviousPriority() = inline;
+};
+
+class cocos2d::CCEGLViewProtocol {
+    virtual void setDesignResolutionSize(float width, float height, ResolutionPolicy resolutionPolicy) = inline;
 };
 
 class DelegatePtrHost {

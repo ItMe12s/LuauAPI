@@ -11,6 +11,7 @@
 
 ## v0.1.0-beta.28
 
+- Added delegate callback support for game enum args (`GJErrorCode`, `GJMPErrorCode`, `UpdateResponse`, `ResolutionPolicy`) and `gd::vector<int>` containers.
 - Updated to Geode SDK 5.10.1.
 
 ## v0.1.0-beta.27
@@ -62,8 +63,8 @@
 
 ## v0.1.0-beta.23
 
-- Updated to Geode SDK 5.9.0.
 - Added `geode.web` `WebRequest:getBodyRef`.
+- Updated to Geode SDK 5.9.0.
 - Updated internal dependencies and bindings.
 
 ## v0.1.0-beta.22
@@ -115,7 +116,7 @@
 
 ## v0.1.0-beta.15
 
-- Moved bundled demo scripts to `mod/demo/` and runtime scripts to `mod/luauapi/`.
+- Updated bundled demo scripts location to `mod/demo/` and runtime scripts location to `mod/luauapi/`.
 - Updated getting-started, examples, and reference documentation.
 - Updated runtime internals, Geode utils, `geode::Result` in render3d asset paths, and cross-platform move-only callbacks.
 
@@ -127,7 +128,7 @@
 - Added writable assign for opaque handle vector fields. Example: `CCMoveCNode.m_groupObjects = { ... }`.
 - Updated ImGui and `gd3d` to use shared `gpuSessionReady()` checks.
 - Updated generated stubs and out-ref method returns. Example: `registerSpawnRemap` returns `(number, { ChanceObject })`.
-- **Breaking:** Renamed opaque FMOD sound handle stub `FMODSound` to `FMODSoundHandle`. `FMODSound` is now a value struct table type.
+- Updated opaque FMOD sound handle stub `FMODSound` to `FMODSoundHandle`. `FMODSound` is now a value struct table type.
 
 ## v0.1.0-beta.13
 
@@ -142,9 +143,9 @@
 
 - Added custom loading menu (**Enable Custom Loading Layer**, default on).
 - Added `geode.Loader.getAllMods()` for mod metadata from scripts.
-- Updated codegen and type stubs so Luau keyword C++ methods export as `{name}ToLua` (example: `endToLua`).
 - Fixed 3D scene lighting on stretched (non-uniformly scaled) meshes.
 - Fixed minor cleanup gaps when the Lua runtime is restarted (mostly affects testing).
+- Updated codegen and type stubs so Luau keyword C++ methods export as `{name}ToLua` (example: `endToLua`).
 
 ## v0.1.0-beta.10
 
@@ -157,14 +158,14 @@
 
 - Added crash sidecar that writes `luauapi-last-context.txt` with Luau context before native faults.
   Opt-in via **Enable Crash Context File** in User Settings (default off).
-- Updated `print`, `warn`, and panic to log with the owning mod id instead of `[lua]`.
 - Fixed crash in the global `CCObject::release` hook when releasing untracked objects during teardown.
+- Updated `print`, `warn`, and panic to log with the owning mod id instead of `[lua]`.
 
 ## v0.1.0-beta.8
 
-- Switched `geode.fields` cleanup to Geode type casts instead of pointer reinterpretation.
-- Switched viewport and ccCArray view element casting to Geode type casts.
 - Fixed CCObject casting for callback trampoline anchor binding.
+- Updated `geode.fields` cleanup to Geode type casts instead of pointer reinterpretation.
+- Updated viewport and ccCArray view element casting to Geode type casts.
 
 ## v0.1.0-beta.7
 
@@ -184,34 +185,34 @@
 ## v0.1.0-beta.5
 
 - Added Luau read/write for encrypted stat fields (SeedValue) as plain numbers.
-- Improved cleanup when the mod unloads for `geode.utils.web`, keyboard listeners, `websocket`, and `imgui.onDraw`.
-- Updated runtime internals for bindings, memory limits, and module loading.
 - Fixed crash in deferred CCObject release drain when an owned object is freed before the next tick.
+- Updated the cleanup when the mod unloads for `geode.utils.web`, keyboard listeners, `websocket`, and `imgui.onDraw`.
+- Updated runtime internals for bindings, memory limits, and module loading.
 
 ## v0.1.0-beta.4
 
 - Added user settings for ImGui scaling.
 - Added ImGui font API (`imgui.font`).
 - Added disabling all GPU features/APIs when changing Fullscreen/Windowed mode (temporary *"fix"*).
-- Switched 3D viewport backend from CCNode to CCSprite.
-- Updated default executor font.
 - Fixed crashes when garbage-collecting node/object userdata.
 - Fixed tiny ImGui on macOS Retina with improved scaling and fonts (forked matcool/gd-imgui-cocos).
 - Fixed crash in deferred CCObject release drain when GC queues the same object as both borrowed and owned userdata.
+- Updated 3D viewport backend from CCNode to CCSprite.
+- Updated default executor font.
 
 ## v0.1.0-beta.3
 
-- Switched to MIT license.
-- Updated default executor theme.
 - Fixed dynamic userdata typing for `CCNode*` and `CCObject*` returns.
+- Updated to MIT license.
+- Updated default executor theme.
 
 ## v0.1.0-beta.2
 
-- Updated demo scripts (`_viewportdemo.luau`, `_helloworlddemo.luau`) and examples with proper Z order.
 - Fixed crash when `imgui.onDraw` runs before OpenGL is ready on macOS and other non-Windows platforms.
 - Fixed Luau hooks on Intel macOS (`imac`) builds.
 - Fixed "luau runtime accessed off main thread" errors on macOS.
 - Fixed "GLSL 110 does not allow sub- or super-matrix constructors" errors on macOS.
+- Updated demo scripts (`_viewportdemo.luau`, `_helloworlddemo.luau`) and examples with proper Z order.
 
 ## v0.1.0-beta.1
 
