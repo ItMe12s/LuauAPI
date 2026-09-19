@@ -1,0 +1,9 @@
+export type ScriptEventListenerHandle = {
+    disconnect: (self: ScriptEventListenerHandle) -> (),
+}
+
+export type ScriptEventNamespace = {
+    post: (topic: string, payload: string?) -> (),
+    listen: (callback: (topic: string, payload: string) -> boolean?, priority: number?) -> ScriptEventListenerHandle,
+    listenFor: (topic: string, callback: (topic: string, payload: string) -> boolean?, priority: number?) -> ScriptEventListenerHandle,
+}

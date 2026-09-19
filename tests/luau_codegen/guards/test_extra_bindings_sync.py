@@ -107,6 +107,13 @@ _EXTRA_BINDING_SOURCES = {
         "start_marker": "registerScrollWheelEvent(lua_State* L)",
         "end_marker": "return geode::Ok();",
     },
+    "script_event": {
+        "dluau": "tools/luau_codegen/extra_bindings/scriptevent.dluau",
+        "cpp": "src/bindings/geode/GeodeScriptEventBinding.cpp",
+        "type_name": "ScriptEventNamespace",
+        "start_marker": "registerScriptEvent(lua_State* L)",
+        "end_marker": "return geode::Ok();",
+    },
     "websocket": {
         "dluau": "tools/luau_codegen/extra_bindings/websocket.dluau",
         "cpp": "src/bindings/websocket/WebSocketBinding.cpp",
@@ -344,6 +351,25 @@ class ExtraBindingsSyncTests(unittest.TestCase):
         )
         self.assertEqual(text.count(listen_sig), 1)
         self.assertEqual(text.count(listen_for_sig), 1)
+
+    def test_script_event_stub_single_source(self) -> None:
+        root = Root(classes=[Class(name="CCObject", namespace="cocos2d")])
+        text = emit_luau_types(root, manual_fields=MANUAL_FREE_FN_FIELDS)["geode.d.luau"]
+        geode = text[text.index("export type GeodeNamespace") : text.index("declare geode:")]
+        self.assertIn("ScriptEvent: ScriptEventNamespace", geode)
+        self.assertNotRegex(geode, r"ScriptEvent:\s*\{[^}]*listen:")
+
+        post_sig = "post: (topic: string, payload: string?) -> ()"
+        listen_sig = (
+            "listen: (callback: (topic: string, payload: string) -> boolean?, priority: number?) "
+            "-> ScriptEventListenerHandle"
+        )
+        listen_for_sig = (
+            "listenFor: (topic: string, callback: (topic: string, payload: string) -> boolean?, "
+            "priority: number?) -> ScriptEventListenerHandle"
+        )
+        for signature in (post_sig, listen_sig, listen_for_sig):
+            self.assertEqual(text.count(signature), 1)
 
     def test_mouse_event_stubs_single_source(self) -> None:
         root = Root(classes=[Class(name="CCObject", namespace="cocos2d")])

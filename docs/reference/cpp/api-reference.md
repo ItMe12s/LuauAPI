@@ -50,6 +50,35 @@ Other mods can use the same functions and values through the registering mod's f
 See [Native C++ registration](native-registration.md) for signatures, supported types,
 publication rules, callback behavior, and examples.
 
+## Script events
+
+```cpp
+void postScriptEvent(std::string_view topic, std::string_view payload = {});
+```
+
+Posts a string event that Lua `geode.ScriptEvent.listen` and `.listenFor` listeners receive.
+See [Script events](../lua/script-events.md).
+
+```cpp
+using LuaScriptEvent = geode::Event<LuaScriptEventTag, bool(std::string_view, std::string_view)>;
+
+LuaScriptEvent().listen([](std::string_view topic, std::string_view payload) {
+    // topic and payload arrive as string views, valid for the call
+    return false; // false -> keep propagating, true -> stop
+});
+```
+
+| Rule                       | Detail                                                                                       |
+| -------------------------- | -------------------------------------------------------------------------------------------- |
+| Caller thread              | Any. Off-main posts are queued and delivered on the main thread                              |
+| Delivery                   | Synchronous on the main thread to every matching listener, oldest to newest per priority     |
+| `LuaScriptEvent` listeners | C++ listeners registered on `LuaScriptEvent().listen(...)`, for both Lua posts and C++ posts |
+| `payload` default          | Empty string                                                                                 |
+| Listener result            | Returning `true` stops later listeners                                                       |
+| Before runtime ready       | Posts are dropped silently                                                                   |
+
+Declarations live in `include/ScriptEvents.hpp`.
+
 ## Threading
 
 | API                                            | Caller thread            | Notes                                                                                                              |
@@ -57,6 +86,7 @@ publication rules, callback behavior, and examples.
 | `runFile`, `runScript`                         | Main only                | Full path validation, read, compile, and run                                                                       |
 | `runFileAsync`, `runScriptAsync`               | Any (not shutting down)  | Work starts when the future first runs. The script executes on the main thread                                     |
 | `registerFunction`, `registerValue`            | Main only, runtime ready | Publish under the caller mod's exact `_G` key. Returns `Err` when LuauAPI is an optional dependency and not loaded |
+| `postScriptEvent`                              | Any (not shutting down)  | Queued and delivered on the main thread. Dropped before runtime ready                                              |
 | `isReady`, `status`, `lastError`               | Main only                | Off main thread or during shutdown return safe defaults                                                            |
 | `memoryUsage`, `memoryLimit`, `codegenEnabled` | Main only                | Return zeros or false off main thread                                                                              |
 
@@ -163,6 +193,7 @@ See [Limits and errors](limits-and-errors.md).
 ## Related
 
 - [Native C++ registration](native-registration.md)
+- [Script events](../lua/script-events.md)
 - [Getting started](../../getting-started/overview.md)
 - [Your first script](../../getting-started/first-script.md)
 - [Limits and errors](limits-and-errors.md)
@@ -173,5 +204,6 @@ See [Limits and errors](limits-and-errors.md).
 - `include/LuauAPI.hpp`
 - `include/NativeRegistration.hpp`
 - `include/RuntimeTypes.hpp`
+- `include/ScriptEvents.hpp`
 - `src/api.cpp`
 - `mod.json`

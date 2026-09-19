@@ -11,6 +11,8 @@
 
 ## v0.1.0-beta.28
 
+- Added `geode.ScriptEvent` with `post` / `listen` / `listenFor`
+  and C++ `imes::luauapi::postScriptEvent` / `LuaScriptEvent` for string events between scripts and C++.
 - Added delegate callback support for game enum args (`GJErrorCode`, `GJMPErrorCode`, `UpdateResponse`, `ResolutionPolicy`) and `gd::vector<int>` containers.
 - Updated to Geode SDK 5.10.1.
 
@@ -46,7 +48,7 @@
 - Added built-in sprite rig and animation editor `Lunar Animator` (developer mode only).
 - Added Node IDs and ImagePlus to dependencies.
 - Fixed `geode.Mod.getSettingValue` returning nil for untouched settings (now returns the default value).
-- Updated Lunar `*_out`/`*_in_out` pow easing to the standard `1 - (1-p)^rate` curve.
+- Updated Lunar `*_out` / `*_in_out` pow easing to the standard `1 - (1-p)^rate` curve.
 - Updated Luau VM and codegen to compile without exceptions.
 
 ## v0.1.0-beta.25

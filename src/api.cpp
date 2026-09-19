@@ -1,3 +1,4 @@
+#include "bindings/geode/ScriptEventInternal.hpp"
 #include "core/Runtime.hpp"
 #include "diagnostics/BoundaryRecorder.hpp"
 #include "framework/stack/Stack.hpp"
@@ -7,10 +8,12 @@
     #define GEODE_DEFINE_EVENT_EXPORTS
 #endif
 #include <LuauAPI.hpp>
+#include <ScriptEvents.hpp>
 
 #if !defined(LUAUAPI_HOST_TESTS)
     #include <Geode/utils/async.hpp>
 #endif
+#include <Geode/Geode.hpp>
 #include <Geode/utils/string.hpp>
 #include <cmath>
 #include <cstddef>
@@ -789,9 +792,25 @@ namespace imes::luauapi {
     }
 #endif
 
-    // isInitialized() delegates to ready() (Runtime.cpp),
-    // so this is the same check as requireRuntime/ready() under a second name,
-    // keep the two in sync (I know it's a mess).
+    void postScriptEventNow(std::string_view topic, std::string_view payload) {
+        LuaScriptEvent().send(topic, payload);
+        luax::postScriptEventToLua(topic, payload);
+    }
+
+    void postScriptEvent(std::string_view topic, std::string_view payload) {
+        if (!luax::Runtime::isMainThread()) {
+            auto topicCopy = std::string(topic);
+            auto payloadCopy = std::string(payload);
+            geode::queueInMainThread([topicCopy = std::move(topicCopy),
+                                      payloadCopy = std::move(payloadCopy)]() {
+                postScriptEventNow(topicCopy, payloadCopy);
+            });
+            return;
+        }
+        postScriptEventNow(topic, payload);
+    }
+
+    // isInitialized() delegates to ready() (Runtime.cpp), keep the two in sync.
     bool isReady() {
         if (luax::Runtime::isShuttingDown()) return false;
         if (!luax::Runtime::isMainThread()) return false;

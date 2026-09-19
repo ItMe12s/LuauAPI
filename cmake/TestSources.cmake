@@ -19,6 +19,7 @@ set(LUAUAPI_HOST_TEST_RUNTIME_SOURCES
     src/bindings/websocket/WebSocketConnection.cpp
     src/bindings/websocket/WebSocketServer.cpp
     src/bindings/geode/CurrentMod.cpp
+    src/bindings/geode/GeodeScriptEventBinding.cpp
     src/bindings/geode/ModSandbox.cpp
     src/bindings/geode/GeodeFsBinding.cpp
     src/bindings/geode/GeodeSmallBindings.cpp

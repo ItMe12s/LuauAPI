@@ -30,23 +30,24 @@ print(info.id) -- Typed as string by LoaderModInfo.
 
 Every file in `tools/luau_codegen/extra_bindings/` is appended to the same output at build time:
 
-| Stub file                                                                       | Adds                                                                                    | Doc page                                          |
-| ------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- | ------------------------------------------------- |
-| [`task.dluau`](../../../tools/luau_codegen/extra_bindings/task.dluau)           | `task`, `time`, `loadstring`, `warn`                                                    | [tasks and time](tasks.md), [globals](globals.md) |
-| [`imgui.dluau`](../../../tools/luau_codegen/extra_bindings/imgui.dluau)         | `imgui`                                                                                 | [imgui](imgui.md)                                 |
-| [`web.dluau`](../../../tools/luau_codegen/extra_bindings/web.dluau)             | `WebNamespace` and request and response types                                           | [web](web.md)                                     |
-| [`hook.dluau`](../../../tools/luau_codegen/extra_bindings/hook.dluau)           | `HookHandle`, `HookCallbackTable`                                                       | [hooks](hooks.md)                                 |
-| [`mod.dluau`](../../../tools/luau_codegen/extra_bindings/mod.dluau)             | `ModNamespace`                                                                          | [mod](mod.md)                                     |
-| [`loader.dluau`](../../../tools/luau_codegen/extra_bindings/loader.dluau)       | `LoaderModInfo`, `LoaderNamespace`                                                      | [loader](loader.md)                               |
-| [`json.dluau`](../../../tools/luau_codegen/extra_bindings/json.dluau)           | `JsonNamespace`                                                                         | [json](json.md)                                   |
-| [`keyboard.dluau`](../../../tools/luau_codegen/extra_bindings/keyboard.dluau)   | keyboard input support types                                                            | [Keyboard input](keyboard-input.md)               |
-| [`mouse.dluau`](../../../tools/luau_codegen/extra_bindings/mouse.dluau)         | mouse input support types                                                               | [Mouse input](mouse-input.md)                     |
-| [`fs.dluau`](../../../tools/luau_codegen/extra_bindings/fs.dluau)               | `FsRoot`, `FsNamespace`                                                                 | [fs](fs.md)                                       |
-| [`gd3d.dluau`](../../../tools/luau_codegen/extra_bindings/gd3d.dluau)           | `gd3d`, `Gd3dTransform`, `Gd3dMesh`, `Gd3dMaterial`, `Gd3dTexture`, `Gd3dViewportFrame` | [gd3d](gd3d.md)                                   |
-| [`websocket.dluau`](../../../tools/luau_codegen/extra_bindings/websocket.dluau) | `websocket` and connection and server types                                             | [websocket](websocket.md)                         |
-| [`color.dluau`](../../../tools/luau_codegen/extra_bindings/color.dluau)         | Geode color support types                                                               | [cocos](cocos.md)                                 |
-| [`popup.dluau`](../../../tools/luau_codegen/extra_bindings/popup.dluau)         | managed popup support types                                                             | [UI and layouts](ui.md)                           |
-| [`lunar.dluau`](../../../tools/luau_codegen/extra_bindings/lunar.dluau)         | `lunar`, `LunarRig`, `LunarAnimationDef`, `LunarAnimationTrack`                         | [lunar](lunar.md)                                 |
+| Stub file                                                                           | Adds                                                                                    | Doc page                                          |
+| ----------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- | ------------------------------------------------- |
+| [`task.dluau`](../../../tools/luau_codegen/extra_bindings/task.dluau)               | `task`, `time`, `loadstring`, `warn`                                                    | [tasks and time](tasks.md), [globals](globals.md) |
+| [`imgui.dluau`](../../../tools/luau_codegen/extra_bindings/imgui.dluau)             | `imgui`                                                                                 | [imgui](imgui.md)                                 |
+| [`web.dluau`](../../../tools/luau_codegen/extra_bindings/web.dluau)                 | `WebNamespace` and request and response types                                           | [web](web.md)                                     |
+| [`hook.dluau`](../../../tools/luau_codegen/extra_bindings/hook.dluau)               | `HookHandle`, `HookCallbackTable`                                                       | [hooks](hooks.md)                                 |
+| [`mod.dluau`](../../../tools/luau_codegen/extra_bindings/mod.dluau)                 | `ModNamespace`                                                                          | [mod](mod.md)                                     |
+| [`loader.dluau`](../../../tools/luau_codegen/extra_bindings/loader.dluau)           | `LoaderModInfo`, `LoaderNamespace`                                                      | [loader](loader.md)                               |
+| [`json.dluau`](../../../tools/luau_codegen/extra_bindings/json.dluau)               | `JsonNamespace`                                                                         | [json](json.md)                                   |
+| [`keyboard.dluau`](../../../tools/luau_codegen/extra_bindings/keyboard.dluau)       | keyboard input support types                                                            | [Keyboard input](keyboard-input.md)               |
+| [`mouse.dluau`](../../../tools/luau_codegen/extra_bindings/mouse.dluau)             | mouse input support types                                                               | [Mouse input](mouse-input.md)                     |
+| [`scriptevent.dluau`](../../../tools/luau_codegen/extra_bindings/scriptevent.dluau) | `ScriptEventNamespace`, `ScriptEventListenerHandle`                                     | [Script events](script-events.md)                 |
+| [`fs.dluau`](../../../tools/luau_codegen/extra_bindings/fs.dluau)                   | `FsRoot`, `FsNamespace`                                                                 | [fs](fs.md)                                       |
+| [`gd3d.dluau`](../../../tools/luau_codegen/extra_bindings/gd3d.dluau)               | `gd3d`, `Gd3dTransform`, `Gd3dMesh`, `Gd3dMaterial`, `Gd3dTexture`, `Gd3dViewportFrame` | [gd3d](gd3d.md)                                   |
+| [`websocket.dluau`](../../../tools/luau_codegen/extra_bindings/websocket.dluau)     | `websocket` and connection and server types                                             | [websocket](websocket.md)                         |
+| [`color.dluau`](../../../tools/luau_codegen/extra_bindings/color.dluau)             | Geode color support types                                                               | [cocos](cocos.md)                                 |
+| [`popup.dluau`](../../../tools/luau_codegen/extra_bindings/popup.dluau)             | managed popup support types                                                             | [UI and layouts](ui.md)                           |
+| [`lunar.dluau`](../../../tools/luau_codegen/extra_bindings/lunar.dluau)             | `lunar`, `LunarRig`, `LunarAnimationDef`, `LunarAnimationTrack`                         | [lunar](lunar.md)                                 |
 
 Files for a global like `task` use `declare`. Files that only add support types use `export type`.
 
