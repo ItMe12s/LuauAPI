@@ -60,7 +60,16 @@ jobs:
         if: runner.os == 'macOS'
         continue-on-error: true
         run: |
-          lldb --batch -o run -o bt -o "thread backtrace all" -- ./build/luauapi_tests || true
+          ./build/luauapi_tests --list-tests | while IFS= read -r spec; do
+            [ -z "$spec" ] && continue
+            case "$spec" in
+              *"test cases"*) continue ;;
+            esac
+            if ! ./build/luauapi_tests "$spec" >/dev/null 2>&1; then
+              echo "=== FAILED: $spec ==="
+              lldb --batch -o run -o bt -o "thread backtrace all" -- ./build/luauapi_tests "$spec" || true
+            fi
+          done
 
       - name: Run tests
         run: ctest --test-dir build -C Debug --output-on-failure
