@@ -11,6 +11,10 @@
 #include <string_view>
 #include <thread>
 
+namespace luax {
+    geode::Result<void> registerGeodeScriptEvent(lua_State* L);
+} // namespace luax
+
 namespace {
     using imes::luauapi::LuaScriptEvent;
     using imes::luauapi::postScriptEvent;
@@ -23,6 +27,7 @@ namespace {
             luax::Runtime::setMainThreadId(std::this_thread::get_id());
             geode::test::bindMainThreadToCurrent();
             luax::resetBindingsForTests();
+            luax::registerBinding({"geode_script_event", &luax::registerGeodeScriptEvent, 0});
         }
 
         ~ScriptEventTestGuard() {
@@ -257,15 +262,14 @@ TEST_CASE("listener returning true stops later listeners") {
     auto* L = guard.makeState();
 
     REQUIRE(runScriptPcall(L, R"(
-        local calls = 0
+        stop_calls = 0
         geode.ScriptEvent.listen(function()
-            calls = calls + 1
+            stop_calls = stop_calls + 1
             return true
         end)
         geode.ScriptEvent.listen(function()
-            calls = calls + 1
+            stop_calls = stop_calls + 1
         end)
-        stop_calls = calls
     )"));
 
     postScriptEvent("stopped", "");

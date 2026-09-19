@@ -6,6 +6,7 @@
 #include "framework/stack/Stack.hpp"
 #include "framework/stack/TableUtil.hpp"
 #include "framework/stack/TaggedMetatable.hpp"
+#include "framework/stack/UserdataTags.hpp"
 
 #include <Geode/loader/Priority.hpp>
 #include <ScriptEvents.hpp>
@@ -94,7 +95,9 @@ namespace {
     }
 
     void pushScriptListener(lua_State* L, std::shared_ptr<ScriptListenerState> state) {
-        auto* box = static_cast<ScriptListenerBox*>(lua_newuserdata(L, sizeof(ScriptListenerBox)));
+        auto* box = static_cast<ScriptListenerBox*>(lua_newuserdatataggedwithmetatable(
+            L, sizeof(ScriptListenerBox), detail::scriptListenerTag()
+        ));
         new (box) ScriptListenerBox{std::move(state)};
         luaL_getmetatable(L, kScriptListenerMeta);
         lua_setmetatable(L, -2);
@@ -104,6 +107,11 @@ namespace {
         auto* box = static_cast<ScriptListenerBox*>(luaL_checkudata(L, 1, kScriptListenerMeta));
         box->~ScriptListenerBox();
         return 0;
+    }
+
+    void scriptListenerDtor(lua_State* L, void* ud) {
+        (void)L;
+        static_cast<ScriptListenerBox*>(ud)->~ScriptListenerBox();
     }
 
     int scriptListenerDisconnect(lua_State* L) {
@@ -119,7 +127,9 @@ namespace {
             {"disconnect", scriptListenerDisconnect},
             {nullptr, nullptr},
         };
-        registerTaggedMetatable(L, kScriptListenerMeta, std::nullopt, methods, &scriptListenerGc);
+        registerTaggedMetatable(
+            L, kScriptListenerMeta, detail::scriptListenerTag(), methods, &scriptListenerGc, &scriptListenerDtor
+        );
     }
 
     int scriptEventPost(lua_State* L) {
