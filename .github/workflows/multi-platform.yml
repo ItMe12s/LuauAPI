@@ -56,14 +56,14 @@ jobs:
         env:
           CMAKE_BUILD_PARALLEL_LEVEL: ${{ runner.os == 'macOS' && '3' || '2' }}
 
-      - name: Run tests
-        run: ctest --test-dir build -C Debug --output-on-failure
-
       - name: Backtrace macOS segfault (temporary)
         if: runner.os == 'macOS'
         continue-on-error: true
         run: |
-          lldb --batch -o run -o bt -- ./build/luauapi_tests "postScriptEvent also delivers to C++ listeners" || true
+          lldb --batch -o run -o bt -o "thread backtrace all" -- ./build/luauapi_tests || true
+
+      - name: Run tests
+        run: ctest --test-dir build -C Debug --output-on-failure
 
   build:
     strategy:
