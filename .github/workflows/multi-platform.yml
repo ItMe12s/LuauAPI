@@ -59,6 +59,12 @@ jobs:
       - name: Run tests
         run: ctest --test-dir build -C Debug --output-on-failure
 
+      - name: Backtrace macOS segfault (temporary)
+        if: runner.os == 'macOS'
+        continue-on-error: true
+        run: |
+          lldb --batch -o run -o bt -- ./build/luauapi_tests "postScriptEvent also delivers to C++ listeners" || true
+
   build:
     strategy:
       fail-fast: false
