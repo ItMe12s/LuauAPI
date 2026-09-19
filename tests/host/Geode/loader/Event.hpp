@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Geode/utils/web.hpp>
+#include <cstddef>
 #include <functional>
 #include <map>
 #include <optional>
@@ -29,8 +30,8 @@ namespace geode {
         };
 
         static std::map<FilterKey, std::vector<Entry>>& storage() {
-            static std::map<FilterKey, std::vector<Entry>> entries;
-            static bool registered = [] {
+            static thread_local std::map<FilterKey, std::vector<Entry>> entries;
+            static thread_local bool registered = [] {
                 geode::detail::eventResetters().emplace_back([] {
                     entries.clear();
                 });
@@ -42,9 +43,8 @@ namespace geode {
 
         Event() = default;
 
-        template <
-            class... FArgs,
-            std::enable_if_t<(sizeof...(FArgs) == sizeof...(Filter)) && (sizeof...(FArgs) != 0), int> = 0>
+        template <class... FArgs>
+            requires(sizeof...(FArgs) == sizeof...(Filter) && sizeof...(FArgs) != 0)
         explicit Event(FArgs... value) : m_filter(std::make_tuple(std::move(value)...)) {}
 
         template <class Callable>
@@ -64,14 +64,22 @@ namespace geode {
                 }
             );
             storage()[m_filter].push_back({priority, callback, true});
-            return ListenerHandle([callback, filter = m_filter]() {
-                auto& entries = storage()[filter];
-                for (auto& entry : entries) {
-                    if (entry.callback == callback) {
-                        entry.active = false;
+            return ListenerHandle([callback, port = &storage()[m_filter]]() {
+                auto& entries = *port;
+                for (auto it = entries.begin(); it != entries.end();) {
+                    if (it->callback == callback) {
+                        it = entries.erase(it);
+                    }
+                    else {
+                        ++it;
                     }
                 }
             });
+        }
+
+        std::size_t getReceiverCount() const {
+            auto const it = storage().find(m_filter);
+            return it == storage().end() ? 0 : it->second.size();
         }
 
         template <class... Args>

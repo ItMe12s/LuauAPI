@@ -70,7 +70,7 @@ Registering on a node that is not running yet does not error.
 The task waits for the first run and cancels itself there if the node never starts.
 The node is held weakly, so the task alone never keeps a freed node alive.
 
-Passing a non-node raises `task.everyNode expected a CCNode at arg 1`.
+Passing a non-node raises `task.everyNode: expected a CCNode at arg 1`.
 
 ```lua
 local node = cocos2d.CCNode.create()

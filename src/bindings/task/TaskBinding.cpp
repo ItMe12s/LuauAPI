@@ -86,16 +86,26 @@ namespace {
         return 1;
     }
 
-    int taskEvery(lua_State* L) {
-        double seconds = luaL_checknumber(L, 1);
-        luaL_checktype(L, 2, LUA_TFUNCTION);
+    std::uint64_t taskEveryCommon(
+        lua_State* L, double seconds, int callbackIdx, cocos2d::CCNode* nodeOrNull, char const* method
+    ) {
         if (seconds <= 0.0) {
-            luaL_error(L, "task.every: interval must be > 0");
+            luaL_error(L, "%s: interval must be > 0", method);
         }
         ensureCapacity(L);
         ensureTaskTickArmed();
-        LuaRef ref(L, 2);
-        std::uint64_t id = TaskScheduler::get().add(std::move(ref), seconds, seconds);
+        luaL_checktype(L, callbackIdx, LUA_TFUNCTION);
+        LuaRef ref(L, callbackIdx);
+        if (nodeOrNull) {
+            return TaskScheduler::get().addForNode(std::move(ref), nodeOrNull, seconds, seconds);
+        }
+        return TaskScheduler::get().add(std::move(ref), seconds, seconds);
+    }
+
+    int taskEvery(lua_State* L) {
+        double seconds = luaL_checknumber(L, 1);
+        luaL_checktype(L, 2, LUA_TFUNCTION);
+        std::uint64_t id = taskEveryCommon(L, seconds, 2, nullptr, "task.every");
         pushHandle(L, id);
         return 1;
     }
@@ -103,17 +113,11 @@ namespace {
     int taskEveryNode(lua_State* L) {
         auto* node = Usertype<cocos2d::CCNode>::tryCheck(L, 1);
         if (!node) {
-            luaL_error(L, "task.everyNode expected a CCNode at arg 1");
+            luaL_error(L, "task.everyNode: expected a CCNode at arg 1");
         }
         double seconds = luaL_checknumber(L, 2);
         luaL_checktype(L, 3, LUA_TFUNCTION);
-        if (seconds <= 0.0) {
-            luaL_error(L, "task.everyNode: interval must be > 0");
-        }
-        ensureCapacity(L);
-        ensureTaskTickArmed();
-        LuaRef ref(L, 3);
-        std::uint64_t id = TaskScheduler::get().addForNode(std::move(ref), node, seconds, seconds);
+        std::uint64_t id = taskEveryCommon(L, seconds, 3, node, "task.everyNode");
         pushHandle(L, id);
         return 1;
     }

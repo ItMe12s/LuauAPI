@@ -6,7 +6,6 @@
 #include "host/lua_test_helpers.hpp"
 
 #include <RuntimeTypes.hpp>
-#include <atomic>
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <lua.h>
@@ -21,10 +20,28 @@ namespace luax {
 
 namespace {
     using RuntimeGuard = luauapi_test::TaskSchedulerRuntimeGuard;
+    using luauapi_test::globalInteger;
+    using luauapi_test::globalIsNil;
 
     void registerTaskBinding(lua_State* L) {
         luax::registerBinding({"task_lib", &luax::registerTask, 10});
         REQUIRE(luax::applyAllBindings(L) == std::nullopt);
+    }
+
+    void registerNodeType(lua_State* L) {
+        REQUIRE(luax::Usertype<cocos2d::CCNode>::registerType(L, "CCNode").isOk());
+    }
+
+    void pushNodeGlobal(lua_State* L, cocos2d::CCNode* node, char const* name) {
+        luax::Usertype<cocos2d::CCNode>::pushBorrowed(L, node);
+        lua_setglobal(L, name);
+    }
+
+    void clearNodeGlobal(lua_State* L, char const* name, cocos2d::CCNode* node) {
+        lua_pushnil(L);
+        lua_setglobal(L, name);
+        node->release();
+        lua_gc(L, LUA_GCCOLLECT, 0);
     }
 } // namespace
 
@@ -33,8 +50,7 @@ TEST_CASE("TaskScheduler fires one-shot tasks after delay") {
     auto* runtime = luax::Runtime::getOrCreate();
     auto* L = runtime->state();
 
-    std::atomic<int> hits{0};
-    lua_pushinteger(L, hits.load());
+    lua_pushinteger(L, 0);
     lua_setglobal(L, "hits");
 
     auto ref = luauapi_test::makeCallback(L, R"(
@@ -52,10 +68,7 @@ TEST_CASE("TaskScheduler fires one-shot tasks after delay") {
 
     scheduler.advance(0.1);
     REQUIRE(scheduler.activeCount() == 0);
-
-    lua_getglobal(L, "hits");
-    REQUIRE(lua_tointeger(L, -1) == 1);
-    lua_pop(L, 1);
+    REQUIRE(globalInteger(L, "hits") == 1);
 }
 
 TEST_CASE("TaskScheduler repeats interval tasks until cancelled") {
@@ -76,10 +89,7 @@ TEST_CASE("TaskScheduler repeats interval tasks until cancelled") {
     scheduler.cancel(id);
     scheduler.advance(0.5);
     REQUIRE(scheduler.activeCount() == 0);
-
-    lua_getglobal(L, "intervalHits");
-    REQUIRE(lua_tointeger(L, -1) == 2);
-    lua_pop(L, 1);
+    REQUIRE(globalInteger(L, "intervalHits") == 2);
 }
 
 TEST_CASE("TaskScheduler advance restores stack when protectedCall fails early") {
@@ -118,10 +128,7 @@ TEST_CASE(
 
     scheduler.advance(2.0);
     REQUIRE(scheduler.activeCount() == 1);
-
-    lua_getglobal(L, "bigDtHits");
-    REQUIRE(lua_tointeger(L, -1) == 1);
-    lua_pop(L, 1);
+    REQUIRE(globalInteger(L, "bigDtHits") == 1);
 }
 
 TEST_CASE("TaskScheduler defer fires on the next advance") {
@@ -138,10 +145,7 @@ TEST_CASE("TaskScheduler defer fires on the next advance") {
 
     scheduler.advance(0.0);
     REQUIRE(scheduler.activeCount() == 0);
-
-    lua_getglobal(L, "deferHits");
-    REQUIRE(lua_tointeger(L, -1) == 1);
-    lua_pop(L, 1);
+    REQUIRE(globalInteger(L, "deferHits") == 1);
 }
 
 TEST_CASE("TaskScheduler cancels tasks that error") {
@@ -188,15 +192,9 @@ TEST_CASE("TaskScheduler m_index stays valid after timed swap-and-pop compaction
     scheduler.advance(1.0);
     REQUIRE_FALSE(scheduler.isScheduled(tailId));
 
-    lua_getglobal(L, "headHit");
-    REQUIRE(lua_tointeger(L, -1) == 1);
-    lua_pop(L, 1);
-    lua_getglobal(L, "midHit");
-    REQUIRE(lua_isnil(L, -1));
-    lua_pop(L, 1);
-    lua_getglobal(L, "tailHit");
-    REQUIRE(lua_tointeger(L, -1) == 1);
-    lua_pop(L, 1);
+    REQUIRE(globalInteger(L, "headHit") == 1);
+    REQUIRE(globalIsNil(L, "midHit"));
+    REQUIRE(globalInteger(L, "tailHit") == 1);
 }
 
 TEST_CASE("TaskScheduler m_index stays valid after deferred compaction") {
@@ -227,15 +225,9 @@ TEST_CASE("TaskScheduler m_index stays valid after deferred compaction") {
     scheduler.advance(0.0);
     REQUIRE(scheduler.activeCount() == 0);
 
-    lua_getglobal(L, "deferFirst");
-    REQUIRE(lua_tointeger(L, -1) == 1);
-    lua_pop(L, 1);
-    lua_getglobal(L, "deferSecond");
-    REQUIRE(lua_tointeger(L, -1) == 1);
-    lua_pop(L, 1);
-    lua_getglobal(L, "deferThird");
-    REQUIRE(lua_isnil(L, -1));
-    lua_pop(L, 1);
+    REQUIRE(globalInteger(L, "deferFirst") == 1);
+    REQUIRE(globalInteger(L, "deferSecond") == 1);
+    REQUIRE(globalIsNil(L, "deferThird"));
 }
 
 TEST_CASE("TaskScheduler allows add after cancel without compaction") {
@@ -294,12 +286,8 @@ TEST_CASE(
     scheduler.advance(1.0);
     REQUIRE(scheduler.activeCount() == 0);
 
-    lua_getglobal(L, "mixDefer");
-    REQUIRE(lua_tointeger(L, -1) == 1);
-    lua_pop(L, 1);
-    lua_getglobal(L, "mixTimed");
-    REQUIRE(lua_isnil(L, -1));
-    lua_pop(L, 1);
+    REQUIRE(globalInteger(L, "mixDefer") == 1);
+    REQUIRE(globalIsNil(L, "mixTimed"));
 }
 
 TEST_CASE("task.wait works inside task.delay callbacks") {
@@ -324,21 +312,13 @@ TEST_CASE("task.wait works inside task.delay callbacks") {
     auto& scheduler = luax::TaskScheduler::get();
     scheduler.advance(0.0);
     REQUIRE(scheduler.activeCount() == 1);
-
-    lua_getglobal(L, "delayWaitDone");
-    REQUIRE(lua_isnil(L, -1));
-    lua_pop(L, 1);
+    REQUIRE(globalIsNil(L, "delayWaitDone"));
 
     scheduler.advance(0.15);
     REQUIRE(scheduler.activeCount() == 0);
 
-    lua_getglobal(L, "delayWaitDone");
-    REQUIRE(lua_toboolean(L, -1));
-    lua_pop(L, 1);
-    lua_getglobal(L, "delayWaitElapsed");
-    REQUIRE(lua_isnumber(L, -1));
-    REQUIRE(lua_tonumber(L, -1) == Catch::Approx(0.15));
-    lua_pop(L, 1);
+    REQUIRE(luauapi_test::globalBool(L, "delayWaitDone"));
+    REQUIRE(luauapi_test::globalNumber(L, "delayWaitElapsed") == Catch::Approx(0.15));
 }
 
 TEST_CASE("task.wait errors when called outside a yieldable thread") {
@@ -352,8 +332,7 @@ TEST_CASE("task.wait errors when called outside a yieldable thread") {
     char const* err = lua_tostring(L, -1);
     REQUIRE(err != nullptr);
     REQUIRE(
-        std::string_view(err).find("task.wait must be called from a coroutine or task callback") !=
-        std::string_view::npos
+        std::string_view(err).contains("task.wait must be called from a coroutine or task callback")
     );
     lua_pop(L, 1);
 }
@@ -366,6 +345,7 @@ TEST_CASE("TaskScheduler everyNode fires while the node is running") {
     auto ref = luauapi_test::makeCallback(L, "_G.everyNodeHits = (_G.everyNodeHits or 0) + 1");
 
     auto* node = new cocos2d::CCNode();
+    node->retain();
     auto& scheduler = luax::TaskScheduler::get();
     auto id = scheduler.addForNode(std::move(ref), node, 0.0, 0.5);
     REQUIRE(id != 0);
@@ -375,10 +355,9 @@ TEST_CASE("TaskScheduler everyNode fires while the node is running") {
     scheduler.advance(0.5);
     scheduler.advance(0.5);
     REQUIRE(scheduler.activeCount() == 1);
+    REQUIRE(globalInteger(L, "everyNodeHits") == 2);
 
-    lua_getglobal(L, "everyNodeHits");
-    REQUIRE(lua_tointeger(L, -1) == 2);
-    lua_pop(L, 1);
+    node->release();
 }
 
 TEST_CASE("TaskScheduler everyNode cancels when the node stops running") {
@@ -390,6 +369,7 @@ TEST_CASE("TaskScheduler everyNode cancels when the node stops running") {
         luauapi_test::makeCallback(L, "_G.everyNodeStopsHits = (_G.everyNodeStopsHits or 0) + 1");
 
     auto* node = new cocos2d::CCNode();
+    node->retain();
     auto& scheduler = luax::TaskScheduler::get();
     auto id = scheduler.addForNode(std::move(ref), node, 0.0, 0.5);
     REQUIRE(id != 0);
@@ -397,26 +377,17 @@ TEST_CASE("TaskScheduler everyNode cancels when the node stops running") {
 
     scheduler.advance(0.5);
     REQUIRE(scheduler.isScheduled(id));
+    REQUIRE(globalInteger(L, "everyNodeStopsHits") == 1);
 
     node->setRunningForTests(false);
     scheduler.advance(0.5);
     REQUIRE_FALSE(scheduler.isScheduled(id));
 
-    lua_getglobal(L, "everyNodeStopsHits");
-    REQUIRE(lua_tointeger(L, -1) == 1);
-    lua_pop(L, 1);
+    node->release();
 }
 
 TEST_CASE("TaskScheduler everyNode cancels when the node is freed") {
-    struct PoolSimGuard {
-        PoolSimGuard() {
-            geode::detail::weakRefSimulatePoolForTests() = true;
-        }
-
-        ~PoolSimGuard() {
-            geode::detail::weakRefSimulatePoolForTests() = false;
-        }
-    } poolGuard;
+    luauapi_test::WeakRefPoolSimGuard poolGuard;
 
     RuntimeGuard guard;
     auto* runtime = luax::Runtime::getOrCreate();
@@ -433,10 +404,7 @@ TEST_CASE("TaskScheduler everyNode cancels when the node is freed") {
 
     scheduler.advance(0.5);
     REQUIRE_FALSE(scheduler.isScheduled(id));
-
-    lua_getglobal(L, "everyNodeFreedHits");
-    REQUIRE(lua_isnil(L, -1));
-    lua_pop(L, 1);
+    REQUIRE(globalIsNil(L, "everyNodeFreedHits"));
 }
 
 TEST_CASE("task.everyNode fires from Lua and cancels on handle cancel") {
@@ -444,12 +412,11 @@ TEST_CASE("task.everyNode fires from Lua and cancels on handle cancel") {
     auto* runtime = luax::Runtime::getOrCreate();
     auto* L = runtime->state();
     registerTaskBinding(L);
-    REQUIRE(luax::Usertype<cocos2d::CCNode>::registerType(L, "CCNode").isOk());
+    registerNodeType(L);
 
     auto* node = new cocos2d::CCNode();
     node->retain();
-    luax::Usertype<cocos2d::CCNode>::pushBorrowed(L, node);
-    lua_setglobal(L, "everyNodeTarget");
+    pushNodeGlobal(L, node, "everyNodeTarget");
 
     REQUIRE(
         luauapi_test::runScriptVoid(
@@ -470,14 +437,9 @@ TEST_CASE("task.everyNode fires from Lua and cancels on handle cancel") {
     REQUIRE(luauapi_test::runScriptVoid(L, "_G.everyNodeHandle:cancel()"));
     scheduler.advance(0.1);
 
-    lua_getglobal(L, "everyNodeHits");
-    REQUIRE(lua_tointeger(L, -1) == 1);
-    lua_pop(L, 1);
+    REQUIRE(globalInteger(L, "everyNodeHits") == 1);
 
-    lua_pushnil(L);
-    lua_setglobal(L, "everyNodeTarget");
-    node->release();
-    lua_gc(L, LUA_GCCOLLECT, 0);
+    clearNodeGlobal(L, "everyNodeTarget", node);
 }
 
 TEST_CASE("task.everyNode rejects a non-node argument") {
@@ -490,9 +452,7 @@ TEST_CASE("task.everyNode rejects a non-node argument") {
     REQUIRE(lua_pcall(L, 0, 0, 0) != 0);
     char const* err = lua_tostring(L, -1);
     REQUIRE(err != nullptr);
-    REQUIRE(
-        std::string_view(err).find("task.everyNode expected a CCNode at arg 1") != std::string_view::npos
-    );
+    REQUIRE(std::string_view(err).contains("task.everyNode: expected a CCNode at arg 1"));
     lua_pop(L, 1);
 }
 
@@ -501,12 +461,11 @@ TEST_CASE("task.everyNode cancels on first tick when the node is not running") {
     auto* runtime = luax::Runtime::getOrCreate();
     auto* L = runtime->state();
     registerTaskBinding(L);
-    REQUIRE(luax::Usertype<cocos2d::CCNode>::registerType(L, "CCNode").isOk());
+    registerNodeType(L);
 
     auto* node = new cocos2d::CCNode();
     node->setRunningForTests(false);
-    luax::Usertype<cocos2d::CCNode>::pushBorrowed(L, node);
-    lua_setglobal(L, "everyNodeTarget");
+    pushNodeGlobal(L, node, "everyNodeTarget");
 
     REQUIRE(
         luauapi_test::runScriptVoid(
@@ -525,15 +484,10 @@ TEST_CASE("task.everyNode cancels on first tick when the node is not running") {
 
     scheduler.advance(0.1);
 
-    lua_getglobal(L, "everyNodeHits");
-    REQUIRE(lua_tointeger(L, -1) == 0);
-    lua_pop(L, 1);
+    REQUIRE(globalInteger(L, "everyNodeHits") == 0);
     REQUIRE(scheduler.activeCount() == 0);
 
-    lua_pushnil(L);
-    lua_setglobal(L, "everyNodeTarget");
-    node->release();
-    lua_gc(L, LUA_GCCOLLECT, 0);
+    clearNodeGlobal(L, "everyNodeTarget", node);
 }
 
 TEST_CASE("task.everyNode rejects a non-positive interval") {
@@ -541,24 +495,17 @@ TEST_CASE("task.everyNode rejects a non-positive interval") {
     auto* runtime = luax::Runtime::getOrCreate();
     auto* L = runtime->state();
     registerTaskBinding(L);
-    REQUIRE(luax::Usertype<cocos2d::CCNode>::registerType(L, "CCNode").isOk());
+    registerNodeType(L);
 
     auto* node = new cocos2d::CCNode();
-    node->retain();
-    luax::Usertype<cocos2d::CCNode>::pushBorrowed(L, node);
-    lua_setglobal(L, "everyNodeTarget");
+    pushNodeGlobal(L, node, "everyNodeTarget");
 
     luauapi_test::loadFunction(L, "task.everyNode(everyNodeTarget, 0, function() end)");
     REQUIRE(lua_pcall(L, 0, 0, 0) != 0);
     char const* err = lua_tostring(L, -1);
     REQUIRE(err != nullptr);
-    REQUIRE(
-        std::string_view(err).find("task.everyNode: interval must be > 0") != std::string_view::npos
-    );
+    REQUIRE(std::string_view(err).contains("task.everyNode: interval must be > 0"));
     lua_pop(L, 1);
 
-    lua_pushnil(L);
-    lua_setglobal(L, "everyNodeTarget");
-    node->release();
-    lua_gc(L, LUA_GCCOLLECT, 0);
+    clearNodeGlobal(L, "everyNodeTarget", node);
 }

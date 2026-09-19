@@ -227,6 +227,10 @@ class DelegateGeneratorTests(unittest.TestCase):
         )
         self.assertIn("gd::vector<int> p3", text)
         self.assertIn("luax::pushContainerValue<gd::vector<int>>(L, c->p3);", text)
+        self.assertIn(
+            '#include "framework/stack/ContainerTables.hpp"',
+            emit_delegate_hpp({spec.cxx_type: spec}, self.ctx),
+        )
 
     def test_resolution_policy_arg_emits_to_underlying_push(self) -> None:
         spec = CppDelegateSpec(

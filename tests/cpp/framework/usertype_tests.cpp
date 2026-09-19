@@ -584,15 +584,7 @@ TEST_CASE("dropBorrowedTargetIfFinalRelease defers drop while retainCount is abo
 TEST_CASE("liveObject skips WeakRef lock when only pool retain remains") {
     RuntimeGuard guard;
 
-    struct PoolSimGuard {
-        PoolSimGuard() {
-            geode::detail::weakRefSimulatePoolForTests() = true;
-        }
-
-        ~PoolSimGuard() {
-            geode::detail::weakRefSimulatePoolForTests() = false;
-        }
-    } poolGuard;
+    luauapi_test::WeakRefPoolSimGuard poolGuard;
 
     auto* runtime = luax::Runtime::getOrCreate();
     auto* L = runtime->state();

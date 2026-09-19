@@ -19,6 +19,8 @@ namespace {
     using imes::luauapi::LuaScriptEvent;
     using imes::luauapi::postScriptEvent;
     using luauapi_test::collectGarbage;
+    using luauapi_test::globalInteger;
+    using luauapi_test::globalIsNil;
     using luauapi_test::runScriptPcall;
     using luauapi_test::runScriptReturnsBool;
 
@@ -27,7 +29,7 @@ namespace {
             luax::Runtime::setMainThreadId(std::this_thread::get_id());
             geode::test::bindMainThreadToCurrent();
             luax::resetBindingsForTests();
-            luax::registerBinding({"geode_script_event", &luax::registerGeodeScriptEvent, 0});
+            luax::registerBinding({"geode_script_event_lib", &luax::registerGeodeScriptEvent, 10});
         }
 
         ~ScriptEventTestGuard() {
@@ -68,8 +70,6 @@ TEST_CASE("geode.ScriptEvent.post delivers topic and payload to C++ listeners") 
     REQUIRE(calls == 1);
     REQUIRE(gotTopic == "sample.topic");
     REQUIRE(gotPayload == "extra data");
-
-    handle = {};
 }
 
 TEST_CASE("geode.ScriptEvent.post defaults payload to empty string") {
@@ -89,8 +89,6 @@ TEST_CASE("geode.ScriptEvent.post defaults payload to empty string") {
     )"));
     REQUIRE(calls == 1);
     REQUIRE(gotPayload.empty());
-
-    handle = {};
 }
 
 TEST_CASE("geode.ScriptEvent.post does not echo into Lua listeners") {
@@ -112,8 +110,6 @@ TEST_CASE("geode.ScriptEvent.post does not echo into Lua listeners") {
         return echoCalls == 0
     )"));
     REQUIRE(cppCalls == 1);
-
-    handle = {};
 }
 
 TEST_CASE("postScriptEvent delivers to Lua listeners on the main thread") {
@@ -122,15 +118,15 @@ TEST_CASE("postScriptEvent delivers to Lua listeners on the main thread") {
 
     REQUIRE(runScriptPcall(L, R"(
         geode.ScriptEvent.listen(function(topic, payload)
-            seen_topic = topic
-            seen_payload = payload
+            _G.seen_topic = topic
+            _G.seen_payload = payload
         end)
     )"));
 
     postScriptEvent("cxx.topic", "cxx.payload");
 
     REQUIRE(runScriptReturnsBool(L, R"(
-        return seen_topic == "cxx.topic" and seen_payload == "cxx.payload"
+        return _G.seen_topic == "cxx.topic" and _G.seen_payload == "cxx.payload"
     )"));
 }
 
@@ -144,18 +140,16 @@ TEST_CASE("postScriptEvent also delivers to C++ listeners") {
         return false;
     });
     REQUIRE(runScriptPcall(L, R"(
-        lua_seen = nil
+        _G.lua_seen = nil
         geode.ScriptEvent.listen(function()
-            lua_seen = true
+            _G.lua_seen = true
         end)
     )"));
 
     postScriptEvent("both.directions", "");
 
     REQUIRE(cppCalls == 1);
-    REQUIRE(runScriptReturnsBool(L, "return lua_seen == true"));
-
-    handle = {};
+    REQUIRE(runScriptReturnsBool(L, "return _G.lua_seen == true"));
 }
 
 TEST_CASE("geode.ScriptEvent.listenFor filters by topic") {
@@ -163,24 +157,22 @@ TEST_CASE("geode.ScriptEvent.listenFor filters by topic") {
     auto* L = guard.makeState();
 
     REQUIRE(runScriptPcall(L, R"(
-        alpha_seen = nil
-        beta_seen = nil
         geode.ScriptEvent.listenFor("alpha", function(topic, payload)
-            alpha_seen = payload
+            _G.alpha_seen = payload
         end)
         geode.ScriptEvent.listenFor("beta", function(topic, payload)
-            beta_seen = payload
+            _G.beta_seen = payload
         end)
     )"));
 
     postScriptEvent("beta", "b1");
     REQUIRE(runScriptReturnsBool(L, R"(
-        return alpha_seen == nil and beta_seen == "b1"
+        return _G.alpha_seen == nil and _G.beta_seen == "b1"
     )"));
 
     postScriptEvent("alpha", "a1");
     REQUIRE(runScriptReturnsBool(L, R"(
-        return alpha_seen == "a1" and beta_seen == "b1"
+        return _G.alpha_seen == "a1" and _G.beta_seen == "b1"
     )"));
 }
 
@@ -194,11 +186,11 @@ TEST_CASE("geode.ScriptEvent.listenFor ignores non-matching C++ posts") {
             calls = calls + 1
         end)
         geode.ScriptEvent.post("only.this", "from lua")
-        only_this_calls = calls
+        _G.only_this_calls = calls
     )"));
 
     postScriptEvent("other.topic", "");
-    REQUIRE(runScriptReturnsBool(L, "return only_this_calls == 0"));
+    REQUIRE(runScriptReturnsBool(L, "return _G.only_this_calls == 0"));
 }
 
 TEST_CASE("listener handle disconnect stops delivery") {
@@ -206,15 +198,14 @@ TEST_CASE("listener handle disconnect stops delivery") {
     auto* L = guard.makeState();
 
     REQUIRE(runScriptPcall(L, R"(
-        disconnect_seen = nil
         local handle = geode.ScriptEvent.listen(function()
-            disconnect_seen = (disconnect_seen or 0) + 1
+            _G.disconnect_seen = (_G.disconnect_seen or 0) + 1
         end)
         handle:disconnect()
     )"));
 
     postScriptEvent("gone.listener", "");
-    REQUIRE(runScriptReturnsBool(L, "return disconnect_seen == nil"));
+    REQUIRE(runScriptReturnsBool(L, "return _G.disconnect_seen == nil"));
 }
 
 TEST_CASE("listener handle garbage collection disconnects") {
@@ -222,10 +213,9 @@ TEST_CASE("listener handle garbage collection disconnects") {
     auto* L = guard.makeState();
 
     REQUIRE(runScriptPcall(L, R"(
-        gc_seen = nil
         local function makeListener()
             geode.ScriptEvent.listen(function()
-                gc_seen = (gc_seen or 0) + 1
+                _G.gc_seen = (_G.gc_seen or 0) + 1
             end)
         end
         makeListener()
@@ -233,7 +223,7 @@ TEST_CASE("listener handle garbage collection disconnects") {
     collectGarbage(L);
 
     postScriptEvent("gc.listener", "");
-    REQUIRE(runScriptReturnsBool(L, "return gc_seen == nil"));
+    REQUIRE(runScriptReturnsBool(L, "return _G.gc_seen == nil"));
 }
 
 TEST_CASE("listener priority orders callbacks") {
@@ -248,12 +238,12 @@ TEST_CASE("listener priority orders callbacks") {
         geode.ScriptEvent.listen(function()
             order[#order + 1] = "early"
         end, -100)
-        seen_order = order
+        _G.seen_order = order
     )"));
 
     postScriptEvent("ordered", "");
     REQUIRE(runScriptReturnsBool(L, R"(
-        return seen_order[1] == "early" and seen_order[2] == "late"
+        return _G.seen_order[1] == "early" and _G.seen_order[2] == "late"
     )"));
 }
 
@@ -262,18 +252,77 @@ TEST_CASE("listener returning true stops later listeners") {
     auto* L = guard.makeState();
 
     REQUIRE(runScriptPcall(L, R"(
-        stop_calls = 0
         geode.ScriptEvent.listen(function()
-            stop_calls = stop_calls + 1
+            _G.stop_calls = (_G.stop_calls or 0) + 1
             return true
         end)
         geode.ScriptEvent.listen(function()
-            stop_calls = stop_calls + 1
+            _G.stop_calls = (_G.stop_calls or 0) + 1
         end)
     )"));
 
     postScriptEvent("stopped", "");
-    REQUIRE(runScriptReturnsBool(L, "return stop_calls == 1"));
+    REQUIRE(runScriptReturnsBool(L, "return _G.stop_calls == 1"));
+}
+
+TEST_CASE("listener returning true stops listenFor callbacks for the same topic") {
+    ScriptEventTestGuard guard;
+    auto* L = guard.makeState();
+
+    REQUIRE(runScriptPcall(L, R"(
+        geode.ScriptEvent.listen(function()
+            return true
+        end)
+        geode.ScriptEvent.listenFor("topic.x", function()
+            _G.stopForSeen = true
+        end)
+    )"));
+
+    postScriptEvent("topic.x", "");
+    REQUIRE(globalIsNil(L, "stopForSeen"));
+}
+
+TEST_CASE("C++ listener returning true stops Lua listeners") {
+    ScriptEventTestGuard guard;
+    auto* L = guard.makeState();
+
+    auto handle = LuaScriptEvent().listen([](std::string_view, std::string_view) {
+        return true;
+    });
+    REQUIRE(runScriptPcall(L, R"(
+        geode.ScriptEvent.listen(function()
+            _G.cppStopSeen = true
+        end)
+    )"));
+
+    postScriptEvent("cpp.stop", "");
+    REQUIRE(globalIsNil(L, "cppStopSeen"));
+}
+
+TEST_CASE("listener error does not stop later listeners") {
+    ScriptEventTestGuard guard;
+    auto* L = guard.makeState();
+
+    REQUIRE(runScriptPcall(L, R"(
+        geode.ScriptEvent.listen(function()
+            error("boom")
+        end)
+        geode.ScriptEvent.listen(function()
+            _G.errorResilient = (_G.errorResilient or 0) + 1
+        end)
+    )"));
+
+    postScriptEvent("err", "");
+    REQUIRE(globalInteger(L, "errorResilient") == 1);
+}
+
+TEST_CASE("geode.ScriptEvent rejects invalid arguments") {
+    ScriptEventTestGuard guard;
+    auto* L = guard.makeState();
+
+    REQUIRE_FALSE(runScriptPcall(L, "geode.ScriptEvent.post(123)"));
+    REQUIRE_FALSE(runScriptPcall(L, "geode.ScriptEvent.listen('not a function')"));
+    REQUIRE_FALSE(runScriptPcall(L, "geode.ScriptEvent.listenFor(123, function() end)"));
 }
 
 TEST_CASE("off-main postScriptEvent hops to the main thread") {
@@ -281,11 +330,9 @@ TEST_CASE("off-main postScriptEvent hops to the main thread") {
     auto* L = guard.makeState();
 
     REQUIRE(runScriptPcall(L, R"(
-        threaded_topic = nil
-        threaded_payload = nil
         geode.ScriptEvent.listen(function(topic, payload)
-            threaded_topic = topic
-            threaded_payload = payload
+            _G.threaded_topic = topic
+            _G.threaded_payload = payload
         end)
     )"));
 
@@ -294,12 +341,12 @@ TEST_CASE("off-main postScriptEvent hops to the main thread") {
     });
     worker.join();
 
-    REQUIRE(runScriptReturnsBool(L, "return threaded_topic == nil"));
+    REQUIRE(runScriptReturnsBool(L, "return _G.threaded_topic == nil"));
 
     geode::test::drainMainThreadQueue();
 
     REQUIRE(runScriptReturnsBool(L, R"(
-        return threaded_topic == "thread.topic" and threaded_payload == "thread.payload"
+        return _G.threaded_topic == "thread.topic" and _G.threaded_payload == "thread.payload"
     )"));
 }
 

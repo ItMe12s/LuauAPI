@@ -154,6 +154,53 @@ namespace luauapi_test {
         }
     };
 
+    struct WeakRefPoolSimGuard {
+        WeakRefPoolSimGuard() {
+            geode::detail::weakRefSimulatePoolForTests() = true;
+        }
+
+        ~WeakRefPoolSimGuard() {
+            geode::detail::weakRefSimulatePoolForTests() = false;
+        }
+    };
+
+    inline bool globalBool(lua_State* L, char const* name) {
+        lua_getglobal(L, name);
+        bool value = lua_toboolean(L, -1) != 0;
+        lua_pop(L, 1);
+        return value;
+    }
+
+    inline std::string globalString(lua_State* L, char const* name) {
+        lua_getglobal(L, name);
+        size_t len = 0;
+        char const* value = lua_tolstring(L, -1, &len);
+        std::string out = value ? std::string(value, len) : std::string();
+        lua_pop(L, 1);
+        return out;
+    }
+
+    inline double globalNumber(lua_State* L, char const* name) {
+        lua_getglobal(L, name);
+        double value = lua_tonumber(L, -1);
+        lua_pop(L, 1);
+        return value;
+    }
+
+    inline lua_Integer globalInteger(lua_State* L, char const* name) {
+        lua_getglobal(L, name);
+        lua_Integer value = lua_tointeger(L, -1);
+        lua_pop(L, 1);
+        return value;
+    }
+
+    inline bool globalIsNil(lua_State* L, char const* name) {
+        lua_getglobal(L, name);
+        bool nil = lua_isnil(L, -1) != 0;
+        lua_pop(L, 1);
+        return nil;
+    }
+
     struct MiscCorrectnessRuntimeGuard {
         BindingRuntimeGuard binding;
 

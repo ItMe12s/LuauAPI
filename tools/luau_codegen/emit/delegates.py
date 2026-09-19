@@ -8,6 +8,7 @@ from pathlib import Path
 
 from luau_codegen.cli.io import _write_if_changed
 from luau_codegen.convert.type_primitives import (
+    is_const_reference,
     is_reference_type,
     strip_ref,
     template_inner,
@@ -252,7 +253,7 @@ LUA_TYPES: dict[str, str] = {
 }
 
 ENUM_SUFFIXES = ("Type", "Error", "Action", "Command", "Mode")
-DELEGATE_ENUM_ARGS = frozenset(
+UNSUFFIXED_ENUM_TYPES = frozenset(
     {"GJErrorCode", "GJMPErrorCode", "UpdateResponse", "ResolutionPolicy"}
 )
 PRIMITIVE_POINTER_BASES = frozenset(
@@ -287,15 +288,21 @@ class CppDelegateSpec:
     methods: list[CppDelegateMethod] = field(default_factory=list)
 
 
+def _vector_elem(n: str) -> str | None:
+    return template_inner(n, "gd::vector")
+
+
 def lua_for(cxx: str, ctx: CodegenContext) -> str | None:
     n = strip_ref(cxx)
     if n in LUA_TYPES:
         return LUA_TYPES[n]
     if n in ctx.value_types.types:
         return ctx.value_types.types[n]
-    if n.startswith("gd::vector<") and n.endswith(">"):
-        elem = template_inner(n, "gd::vector") or ""
-        return f"{{ {LUA_TYPES.get(elem, 'number')} }}"
+    if (elem := _vector_elem(n)) is not None:
+        elemLua = lua_for(elem, ctx)
+        if elemLua is None:
+            return None
+        return f"{{ {elemLua} }}"
     if n.endswith("*"):
         base = n[:-1].strip()
         short = base.split("::")[-1]
@@ -422,9 +429,9 @@ def cxx_emit_param(param_type: str, name: str) -> str:
         if is_reference_type(param_type):
             return f"CCIndexPath& {name}"
         return f"CCIndexPath {name}"
-    if "gd::string" in param_type and param_type.strip().endswith("&"):
+    if n == "gd::string" and is_const_reference(param_type):
         return f"gd::string const& {name}"
-    if n.startswith("gd::vector<") and is_reference_type(param_type):
+    if _vector_elem(n) is not None and is_const_reference(param_type):
         return f"{n} const& {name}"
     return f"{cxx_ctx_type(param_type)} {name}"
 
@@ -447,7 +454,7 @@ def push_stmt(t: str, expr: str) -> str:
         return f"luax::push(L, {expr} ? std::string({expr}) : std::string())"
     if n == "gd::string":
         return f"luax::push(L, std::string({expr}.c_str()))"
-    if n.startswith("gd::vector<") and n.endswith(">"):
+    if _vector_elem(n) is not None:
         return f"luax::pushContainerValue<{n}>(L, {expr})"
     if n == "DS_Dictionary*":
         return f"luax::pushOpaqueHandle(L, {expr})"
@@ -463,7 +470,7 @@ def push_stmt(t: str, expr: str) -> str:
         obj = n[:-1].strip()
         return f"luax::Usertype<{obj}>::pushBorrowed(L, {expr})"
     if (
-        n in DELEGATE_ENUM_ARGS
+        n in UNSUFFIXED_ENUM_TYPES
         or n in ("enumKeyCodes", "cocos2d::enumKeyCodes")
         or any(n.endswith(s) for s in ENUM_SUFFIXES)
     ):
@@ -485,11 +492,14 @@ def push_lambda_body(args: list[tuple[str, str]]) -> str:
 
 def emit_delegate_hpp(specs: dict[str, CppDelegateSpec], ctx: CodegenContext) -> str:
     classes = []
+    uses_container_values = False
     for spec in specs.values():
         methods = []
         for m in spec.methods:
             if not cpp_emit_supported(spec, m, ctx):
                 continue
+            if any(_vector_elem(strip_ref(t)) is not None for t, _ in method_args(spec, m)):
+                uses_container_values = True
             o = emit_override(spec, m, ctx)
             if o:
                 methods.append(textwrap.indent(o, "        "))
@@ -505,15 +515,17 @@ def emit_delegate_hpp(specs: dict[str, CppDelegateSpec], ctx: CodegenContext) ->
             "        std::shared_ptr<LuaRef> m_table;\n"
             "    };"
         )
+    includes = [
+        '#include "framework/callback/LuaDelegate.hpp"',
+        '#include "framework/stack/Stack.hpp"',
+        '#include "framework/stack/Types.hpp"',
+        '#include "framework/usertype/OpaqueHandle.hpp"',
+        '#include "framework/usertype/Usertype.hpp"',
+    ]
+    if uses_container_values:
+        includes.insert(1, '#include "framework/stack/ContainerTables.hpp"')
     return (
-        "#pragma once\n\n"
-        '#include "framework/callback/LuaDelegate.hpp"\n'
-        '#include "framework/stack/ContainerTables.hpp"\n'
-        '#include "framework/stack/Stack.hpp"\n'
-        '#include "framework/stack/Types.hpp"\n'
-        '#include "framework/usertype/OpaqueHandle.hpp"\n'
-        '#include "framework/usertype/Usertype.hpp"\n\n'
-        "#include <utility>\n\n"
+        "#pragma once\n\n" + "\n".join(includes) + "\n\n" + "#include <utility>\n\n"
         "namespace luax {\n" + "\n\n".join(classes) + "\n}\n"
     )
 

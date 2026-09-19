@@ -30,28 +30,9 @@ namespace {
         luax::push(L, *static_cast<bool const*>(raw));
     }
 
-    bool globalBool(lua_State* L, char const* name) {
-        lua_getglobal(L, name);
-        bool value = lua_toboolean(L, -1) != 0;
-        lua_pop(L, 1);
-        return value;
-    }
-
-    std::string globalString(lua_State* L, char const* name) {
-        lua_getglobal(L, name);
-        size_t len = 0;
-        char const* value = lua_tolstring(L, -1, &len);
-        std::string out = value ? std::string(value, len) : std::string();
-        lua_pop(L, 1);
-        return out;
-    }
-
-    double globalNumber(lua_State* L, char const* name) {
-        lua_getglobal(L, name);
-        double value = lua_tonumber(L, -1);
-        lua_pop(L, 1);
-        return value;
-    }
+    using luauapi_test::globalBool;
+    using luauapi_test::globalNumber;
+    using luauapi_test::globalString;
 
     template <class T>
     std::shared_ptr<arc::TaskState<T>> pushHandle(lua_State* L, char const* name) {

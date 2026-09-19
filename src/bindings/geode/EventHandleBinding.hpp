@@ -4,6 +4,7 @@
 #include "core/Runtime.hpp"
 #include "framework/callback/LuaCallback.hpp"
 #include "framework/lifecycle/Lifecycle.hpp"
+#include "framework/stack/Stack.hpp"
 #include "framework/stack/TaggedMetatable.hpp"
 
 #include <Geode/loader/Event.hpp>
@@ -15,10 +16,8 @@
 #include <utility>
 
 namespace luax::events {
-    template <
-        char const* MetaName, typename Data, void (*PushFn)(lua_State*, Data const&),
-        void (*ReadFn)(lua_State*, int, char const*, Data&)>
-    struct EventHandleBinding {
+    template <char const* MetaName, int Tag>
+    struct ListenerHandleBase {
         using State = geode::ListenerHandle;
 
         struct Box {
@@ -53,14 +52,25 @@ namespace luax::events {
         }
 
         static void pushListener(lua_State* L, std::shared_ptr<State> state) {
-            auto* box = static_cast<Box*>(lua_newuserdata(L, sizeof(Box)));
+            auto* box = static_cast<Box*>(lua_newuserdatataggedwithmetatable(L, sizeof(Box), Tag));
             new (box) Box{std::move(state)};
-            luaL_getmetatable(L, MetaName);
-            lua_setmetatable(L, -2);
         }
 
         static Box* checkListener(lua_State* L, int idx) {
             return static_cast<Box*>(luaL_checkudata(L, idx, MetaName));
+        }
+
+        template <class Connect>
+        static int registerListener(
+            lua_State* L, int callbackIdx, int priorityIdx, char const* method, Connect&& connect
+        ) {
+            luaL_checktype(L, callbackIdx, LUA_TFUNCTION);
+            auto cb = std::make_shared<LuaCallback>(L, callbackIdx);
+            int priority = luax::optPriority(L, priorityIdx, method);
+            auto state = std::make_shared<State>(connect(cb, priority));
+            rememberListener(state);
+            pushListener(L, std::move(state));
+            return 1;
         }
 
         static void registerListenerMetatable(lua_State* L) {
@@ -68,9 +78,26 @@ namespace luax::events {
                 {"disconnect", listenerDisconnect},
                 {nullptr, nullptr},
             };
-            registerTaggedMetatable(L, MetaName, std::nullopt, methods, &listenerGc);
+            registerTaggedMetatable(L, MetaName, Tag, methods, std::nullopt, &listenerDtor);
         }
 
+    private:
+        static void listenerDtor(lua_State* L, void* ud) {
+            (void)L;
+            static_cast<Box*>(ud)->~Box();
+        }
+
+        static int listenerDisconnect(lua_State* L) {
+            auto* box = checkListener(L, 1);
+            if (box->state) *box->state = {};
+            return 0;
+        }
+    };
+
+    template <
+        char const* MetaName, int Tag, typename Data, void (*PushFn)(lua_State*, Data const&),
+        void (*ReadFn)(lua_State*, int, char const*, Data&)>
+    struct EventHandleBinding : ListenerHandleBase<MetaName, Tag> {
         static bool invoke(std::shared_ptr<LuaCallback> const& cb, char const* context, Data& data) {
             if (!cb || !cb->valid()) return false;
 
@@ -130,18 +157,6 @@ namespace luax::events {
             auto* context = static_cast<char const*>(lua_touserdata(L, lua_upvalueindex(1)));
             auto* data = static_cast<Data*>(lua_touserdata(L, lua_upvalueindex(2)));
             ReadFn(L, 1, context, *data);
-            return 0;
-        }
-
-        static int listenerGc(lua_State* L) {
-            auto* box = checkListener(L, 1);
-            box->~Box();
-            return 0;
-        }
-
-        static int listenerDisconnect(lua_State* L) {
-            auto* box = checkListener(L, 1);
-            if (box->state) *box->state = {};
             return 0;
         }
     };

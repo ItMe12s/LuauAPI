@@ -105,6 +105,8 @@ C++ posters use the same prefix with `geode::Mod::get()->getID()`.
 
 Return `true` from the callback to stop propagation to later listeners.
 Return `false` or nothing to let the event continue.
+Stopping also prevents `listenFor` callbacks for the same topic from running.
+For C++ posts (`postScriptEvent`), a C++ `LuaScriptEvent` listener returning `true` stops Lua listeners too.
 If a callback errors or times out, LuauAPI logs it and lets propagation continue.
 
 ## Example
@@ -117,12 +119,13 @@ imes::luauapi::postScriptEvent(modId + "/game.paused", "auto");
 ```
 
 The optional priority argument works like other Geode event listeners.
-Higher priority runs first.
+Smaller priority values run first (e.g. `-1000` before `0`).
 
 ## Limits
 
-Posts before the runtime is ready are dropped. Topics and payloads are strings only,
-with no history or wildcard matching.
+Topics and payloads are strings only, with no history or wildcard matching.
+Posts during shutdown are dropped.
+C++ `LuaScriptEvent` listeners still receive posts before the runtime is ready.
 
 Caps, deadlines, and error strings live in [Limits and errors](../cpp/limits-and-errors.md).
 

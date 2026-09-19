@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Geode/Result.hpp>
+#include <Geode/loader/Priority.hpp>
 #include <array>
 #include <charconv>
 #include <cstdint>
@@ -167,6 +168,11 @@ namespace luax {
         char const* s = lua_tostring(L, idx);
         if (!s) luaL_error(L, "%s expected string at arg %d", method, idx);
         return s;
+    }
+
+    [[nodiscard]] inline int optPriority(lua_State* L, int idx, char const* method) {
+        if (lua_gettop(L) < idx || lua_isnil(L, idx)) return geode::Priority::Normal;
+        return check<int>(L, idx, method);
     }
 
     [[nodiscard]] inline float fieldNumber(

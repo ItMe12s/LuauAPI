@@ -18,12 +18,7 @@ namespace luax {
     std::uint64_t TaskScheduler::add(
         LuaRef callback, double delaySeconds, double intervalSeconds, bool isThread
     ) {
-        if (full()) {
-            return 0;
-        }
-        std::uint64_t const id = m_nextId++;
-        m_timed.insertWithId(
-            id,
+        return insertTimed(
             Task{
                 .callback = std::move(callback),
                 .remaining = delaySeconds,
@@ -31,18 +26,12 @@ namespace luax {
                 .isThread = isThread,
             }
         );
-        return id;
     }
 
     std::uint64_t TaskScheduler::addForNode(
         LuaRef callback, cocos2d::CCNode* node, double delaySeconds, double intervalSeconds
     ) {
-        if (full()) {
-            return 0;
-        }
-        std::uint64_t const id = m_nextId++;
-        m_timed.insertWithId(
-            id,
+        return insertTimed(
             Task{
                 .callback = std::move(callback),
                 .remaining = delaySeconds,
@@ -50,15 +39,27 @@ namespace luax {
                 .node = geode::WeakRef<cocos2d::CCNode>(node),
             }
         );
-        return id;
     }
 
     std::uint64_t TaskScheduler::addDeferred(LuaRef callback) {
+        return insertDeferred(Task{.callback = std::move(callback)});
+    }
+
+    std::uint64_t TaskScheduler::insertTimed(Task task) {
         if (full()) {
             return 0;
         }
         std::uint64_t const id = m_nextId++;
-        m_deferred.insertWithId(id, Task{.callback = std::move(callback)});
+        m_timed.insertWithId(id, std::move(task));
+        return id;
+    }
+
+    std::uint64_t TaskScheduler::insertDeferred(Task task) {
+        if (full()) {
+            return 0;
+        }
+        std::uint64_t const id = m_nextId++;
+        m_deferred.insertWithId(id, std::move(task));
         return id;
     }
 
@@ -78,7 +79,6 @@ namespace luax {
 
     void TaskScheduler::fireDeferred() {
         m_deferred.forEachIndexSnapshot([&](std::size_t i, Task&) {
-            if (i >= m_deferred.size()) return;
             Task& task = m_deferred[i];
             if (task.cancelled) {
                 return;
@@ -89,31 +89,37 @@ namespace luax {
         });
     }
 
+    void TaskScheduler::fireDueSlot(std::size_t index) {
+        Task& task = m_timed[index];
+        if (task.cancelled) {
+            return;
+        }
+
+        if (task.node) {
+            auto lock = task.node->lock();
+            if (!lock || !lock.data()->isRunning()) {
+                task.cancelled = true;
+                return;
+            }
+        }
+
+        bool ok = fire(task);
+        Task& current = m_timed[index];
+        if (!current.cancelled) {
+            if (!ok) current.cancelled = true;
+            else if (current.interval > 0.0) {
+                current.remaining = current.interval;
+            }
+            else {
+                current.cancelled = true;
+            }
+        }
+    }
+
     void TaskScheduler::fireTimedDue(std::vector<std::size_t> const& due) {
         for (std::size_t i : due) {
             if (i >= m_timed.size()) continue;
-            Task& task = m_timed[i];
-            if (task.cancelled) continue;
-
-            if (task.node) {
-                auto lock = task.node->lock();
-                if (!lock || !lock.data()->isRunning()) {
-                    task.cancelled = true;
-                    continue;
-                }
-            }
-
-            bool ok = fire(task);
-            Task& current = m_timed[i];
-            if (!current.cancelled) {
-                if (!ok) current.cancelled = true;
-                else if (current.interval > 0.0) {
-                    current.remaining = current.interval;
-                }
-                else {
-                    current.cancelled = true;
-                }
-            }
+            fireDueSlot(i);
         }
     }
 

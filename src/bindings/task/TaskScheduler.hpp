@@ -52,7 +52,10 @@ namespace luax {
             std::optional<geode::WeakRef<cocos2d::CCNode>> node;
         };
 
+        std::uint64_t insertTimed(Task task);
+        std::uint64_t insertDeferred(Task task);
         bool fire(Task& task);
+        void fireDueSlot(std::size_t index);
         void fireDeferred();
         void fireTimedDue(std::vector<std::size_t> const& due);
 

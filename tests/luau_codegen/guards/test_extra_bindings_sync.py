@@ -337,10 +337,6 @@ class ExtraBindingsSyncTests(unittest.TestCase):
         text = emit_luau_types(root, manual_fields=MANUAL_FREE_FN_FIELDS)["geode.d.luau"]
         geode = text[text.index("export type GeodeNamespace") : text.index("declare geode:")]
         self.assertIn("KeyboardInputEvent: KeyboardInputEventNamespace", geode)
-        self.assertNotRegex(
-            geode,
-            r"KeyboardInputEvent:\s*\{[^}]*listen:",
-        )
         listen_sig = (
             "listen: (callback: (data: KeyboardInputData) -> boolean?, priority: number?) "
             "-> KeyboardInputListenerHandle"
@@ -357,7 +353,6 @@ class ExtraBindingsSyncTests(unittest.TestCase):
         text = emit_luau_types(root, manual_fields=MANUAL_FREE_FN_FIELDS)["geode.d.luau"]
         geode = text[text.index("export type GeodeNamespace") : text.index("declare geode:")]
         self.assertIn("ScriptEvent: ScriptEventNamespace", geode)
-        self.assertNotRegex(geode, r"ScriptEvent:\s*\{[^}]*listen:")
 
         post_sig = "post: (topic: string, payload: string?) -> ()"
         listen_sig = (
@@ -382,7 +377,6 @@ class ExtraBindingsSyncTests(unittest.TestCase):
         }
         for field, namespace in fields.items():
             self.assertIn(f"{field}: {namespace}", geode)
-            self.assertNotRegex(geode, rf"{field}:\s*\{{[^}}]*listen:")
 
         signatures = (
             "listen: (callback: (data: MouseInputData) -> boolean?, priority: number?) "

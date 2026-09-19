@@ -12,6 +12,14 @@ namespace luax {
         geode::log::warn("[lua:{}] callback failed", context);
     }
 
+    struct CallbackStopFlag {
+        bool stop = false;
+    };
+
+    inline void readCallbackStopFlag(lua_State* L, void* raw) {
+        static_cast<CallbackStopFlag*>(raw)->stop = lua_toboolean(L, -1) != 0;
+    }
+
     class LuaCallback {
     public:
         using PushArgsFn = void (*)(lua_State* L, void* ctx);
@@ -160,4 +168,18 @@ namespace luax {
 
         std::shared_ptr<LuaRef> m_ref;
     };
+
+    [[nodiscard]] inline bool invoke2ArgCallback(
+        std::shared_ptr<LuaCallback> const& cb, char const* context, CallbackStopFlag& stopFlag,
+        LuaCallback::PushArgsFn pushFn, void* pushCtx
+    ) {
+        if (!cb || !cb->valid()) return false;
+        bool ok = cb->invoke(
+            2, 1, context, kHookScriptDeadlineMs, pushFn, pushCtx, &readCallbackStopFlag, &stopFlag
+        );
+        if (!ok) {
+            logCallbackFailure(context);
+        }
+        return ok && stopFlag.stop;
+    }
 } // namespace luax

@@ -68,14 +68,14 @@ LuaScriptEvent().listen([](std::string_view topic, std::string_view payload) {
 });
 ```
 
-| Rule                       | Detail                                                                                       |
-| -------------------------- | -------------------------------------------------------------------------------------------- |
-| Caller thread              | Any. Off-main posts are queued and delivered on the main thread                              |
-| Delivery                   | Synchronous on the main thread to every matching listener, oldest to newest per priority     |
-| `LuaScriptEvent` listeners | C++ listeners registered on `LuaScriptEvent().listen(...)`, for both Lua posts and C++ posts |
-| `payload` default          | Empty string                                                                                 |
-| Listener result            | Returning `true` stops later listeners                                                       |
-| Before runtime ready       | Posts are dropped silently                                                                   |
+| Rule                       | Detail                                                                                                              |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| Caller thread              | Any. Off-main posts are queued and delivered on the main thread. Posts during shutdown are dropped                  |
+| Delivery                   | Synchronous on the main thread to every matching listener, oldest to newest per priority                            |
+| `LuaScriptEvent` listeners | C++ listeners registered on `LuaScriptEvent().listen(...)`, for both Lua posts and C++ posts                        |
+| `payload` default          | Empty string                                                                                                        |
+| Listener result            | Returning `true` stops later listeners                                                                              |
+| Before runtime ready       | C++ `LuaScriptEvent` listeners still receive posts. Lua listeners only exist once `geode.ScriptEvent` is registered |
 
 Declarations live in `include/ScriptEvents.hpp`.
 
@@ -86,7 +86,7 @@ Declarations live in `include/ScriptEvents.hpp`.
 | `runFile`, `runScript`                         | Main only                | Full path validation, read, compile, and run                                                                       |
 | `runFileAsync`, `runScriptAsync`               | Any (not shutting down)  | Work starts when the future first runs. The script executes on the main thread                                     |
 | `registerFunction`, `registerValue`            | Main only, runtime ready | Publish under the caller mod's exact `_G` key. Returns `Err` when LuauAPI is an optional dependency and not loaded |
-| `postScriptEvent`                              | Any (not shutting down)  | Queued and delivered on the main thread. Dropped before runtime ready                                              |
+| `postScriptEvent`                              | Any (not shutting down)  | Queued and delivered on the main thread. `LuaScriptEvent` listeners receive posts even before the runtime is ready |
 | `isReady`, `status`, `lastError`               | Main only                | Off main thread or during shutdown return safe defaults                                                            |
 | `memoryUsage`, `memoryLimit`, `codegenEnabled` | Main only                | Return zeros or false off main thread                                                                              |
 

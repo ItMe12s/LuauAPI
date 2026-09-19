@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import re
 from luau_codegen.parse.broma import Root
 from luau_codegen.model.domain import lua_namespace
 from luau_codegen.emit.plan import EmitPlan, collect_plan
@@ -68,6 +69,22 @@ def _header(label: str) -> list[str]:
         f"-- {label}\n",
         "\n",
     ]
+
+
+def _event_namespace_fields() -> list[str]:
+    extra_dir = os.path.join(_PACKAGE_DIR, "extra_bindings")
+    if not os.path.isdir(extra_dir):
+        return []
+    fields: list[str] = []
+    for name in sorted(os.listdir(extra_dir)):
+        if not name.endswith(".dluau"):
+            continue
+        with open(os.path.join(extra_dir, name), "r", encoding="utf-8") as f:
+            text = f.read()
+        for match in re.finditer(r"export type (\w+EventNamespace) = \{", text):
+            ns = match.group(1)
+            fields.append(f"    {ns[: -len('Namespace')]}: {ns},")
+    return sorted(fields)
 
 
 def emit(
@@ -249,11 +266,7 @@ def emit(
     lines.append("    Loader: LoaderNamespace,\n")
     lines.append("    json: JsonNamespace,\n")
     lines.append("    fs: FsNamespace,\n")
-    lines.append("    KeyboardInputEvent: KeyboardInputEventNamespace,\n")
-    lines.append("    MouseInputEvent: MouseInputEventNamespace,\n")
-    lines.append("    MouseMoveEvent: MouseMoveEventNamespace,\n")
-    lines.append("    ScrollWheelEvent: ScrollWheelEventNamespace,\n")
-    lines.append("    ScriptEvent: ScriptEventNamespace,\n")
+    lines.extend(_event_namespace_fields())
     geode_enum_fields = enum_namespace_field_lines(plan.ctx.geode_enum_members)
     geode_namespace_fields = sorted(
         _factory_field_lines(geode_factories) + geode_enum_fields,

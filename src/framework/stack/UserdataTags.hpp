@@ -17,10 +17,12 @@ namespace luax::detail {
     constexpr std::uint32_t kImGuiFontHandleUserdataTag = 11;
     constexpr std::uint32_t kManagedPopupUserdataTag = 12;
     constexpr std::uint32_t kScriptListenerUserdataTag = 13;
+    constexpr std::uint32_t kKeyboardListenerUserdataTag = 14;
+    constexpr std::uint32_t kMouseListenerUserdataTag = 15;
     // Luau userdata tags are uint8_t.
     // All usertypes share this tag, the real type id lives in UserdataBlock::typeTag.
-    constexpr std::uint32_t kSharedUsertypeTag = 14;
-    constexpr std::uint32_t kFirstDynamicUsertypeTag = 15;
+    constexpr std::uint32_t kSharedUsertypeTag = 16;
+    constexpr std::uint32_t kFirstDynamicUsertypeTag = 17;
 
     static_assert(
         kFirstDynamicUsertypeTag < LUA_UTAG_LIMIT, "Reserved userdata tags exceed LUA_UTAG_LIMIT"
@@ -38,7 +40,9 @@ namespace luax::detail {
             kTextureUserdataTag < kImGuiFontHandleUserdataTag &&
             kImGuiFontHandleUserdataTag < kManagedPopupUserdataTag &&
             kManagedPopupUserdataTag < kScriptListenerUserdataTag &&
-            kScriptListenerUserdataTag < kSharedUsertypeTag &&
+            kScriptListenerUserdataTag < kKeyboardListenerUserdataTag &&
+            kKeyboardListenerUserdataTag < kMouseListenerUserdataTag &&
+            kMouseListenerUserdataTag < kSharedUsertypeTag &&
             kSharedUsertypeTag < kFirstDynamicUsertypeTag,
         "Reserved userdata tags must be unique and ordered"
     );
@@ -93,6 +97,14 @@ namespace luax::detail {
 
     constexpr int scriptListenerTag() noexcept {
         return static_cast<int>(kScriptListenerUserdataTag);
+    }
+
+    constexpr int keyboardListenerTag() noexcept {
+        return static_cast<int>(kKeyboardListenerUserdataTag);
+    }
+
+    constexpr int mouseListenerTag() noexcept {
+        return static_cast<int>(kMouseListenerUserdataTag);
     }
 
 } // namespace luax::detail

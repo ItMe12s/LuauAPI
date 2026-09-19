@@ -4,8 +4,8 @@
 #include "framework/callback/LuaCallback.hpp"
 #include "framework/stack/Stack.hpp"
 #include "framework/stack/TableUtil.hpp"
+#include "framework/stack/UserdataTags.hpp"
 
-#include <Geode/loader/Priority.hpp>
 #include <Geode/utils/Keyboard.hpp>
 #include <cstdint>
 #include <lua.h>
@@ -51,91 +51,84 @@ namespace {
     }
 
     using MouseBinding = events::EventHandleBinding<
-        kMouseListenerMeta, geode::MouseInputData, &pushMouseInputData, &readMouseInputData>;
-
-    int optPriority(lua_State* L, int idx) {
-        if (lua_gettop(L) < idx || lua_isnil(L, idx)) return geode::Priority::Normal;
-        return check<int>(L, idx, "geode mouse event listener");
-    }
+        kMouseListenerMeta, detail::mouseListenerTag(), geode::MouseInputData, &pushMouseInputData,
+        &readMouseInputData>;
 
     bool invokeMousePairEvent(
         std::shared_ptr<LuaCallback> const& cb, char const* context, double first, double second
     ) {
-        if (!cb || !cb->valid()) return false;
-
-        struct Ctx {
+        struct Ctx : CallbackStopFlag {
             double first;
             double second;
-            bool stop = false;
-        } ctx{first, second, false};
+        } ctx;
 
-        bool ok = cb->invoke(
-            2,
-            1,
+        ctx.first = first;
+        ctx.second = second;
+
+        return invoke2ArgCallback(
+            cb,
             context,
-            kHookScriptDeadlineMs,
+            ctx,
             +[](lua_State* L, void* raw) {
                 auto* c = static_cast<Ctx*>(raw);
                 lua_pushnumber(L, c->first);
                 lua_pushnumber(L, c->second);
             },
-            &ctx,
-            +[](lua_State* L, void* raw) {
-                auto* c = static_cast<Ctx*>(raw);
-                c->stop = lua_toboolean(L, -1) != 0;
-            },
             &ctx
         );
-
-        if (!ok) {
-            logCallbackFailure(context);
-        }
-        return ok && ctx.stop;
     }
 
     int mouseInputListen(lua_State* L) {
-        luaL_checktype(L, 1, LUA_TFUNCTION);
-        auto cb = std::make_shared<LuaCallback>(L, 1);
-        int priority = optPriority(L, 2);
-        auto state = std::make_shared<MouseBinding::State>(geode::MouseInputEvent().listen(
-            [cb](geode::MouseInputData& data) {
-                return MouseBinding::invoke(cb, "geode.MouseInputEvent.listen", data);
-            },
-            priority
-        ));
-        MouseBinding::rememberListener(state);
-        MouseBinding::pushListener(L, std::move(state));
-        return 1;
+        return MouseBinding::registerListener(
+            L,
+            1,
+            2,
+            "geode.MouseInputEvent.listen",
+            [](std::shared_ptr<LuaCallback> const& cb, int priority) {
+                return geode::MouseInputEvent().listen(
+                    [cb](geode::MouseInputData& data) {
+                        return MouseBinding::invoke(cb, "geode.MouseInputEvent.listen", data);
+                    },
+                    priority
+                );
+            }
+        );
     }
 
     int mouseMoveListen(lua_State* L) {
-        luaL_checktype(L, 1, LUA_TFUNCTION);
-        auto cb = std::make_shared<LuaCallback>(L, 1);
-        int priority = optPriority(L, 2);
-        auto state = std::make_shared<MouseBinding::State>(geode::MouseMoveEvent().listen(
-            [cb](std::int32_t x, std::int32_t y) {
-                return invokeMousePairEvent(cb, "geode.MouseMoveEvent.listen", x, y);
-            },
-            priority
-        ));
-        MouseBinding::rememberListener(state);
-        MouseBinding::pushListener(L, std::move(state));
-        return 1;
+        return MouseBinding::registerListener(
+            L,
+            1,
+            2,
+            "geode.MouseMoveEvent.listen",
+            [](std::shared_ptr<LuaCallback> const& cb, int priority) {
+                return geode::MouseMoveEvent().listen(
+                    [cb](std::int32_t x, std::int32_t y) {
+                        return invokeMousePairEvent(cb, "geode.MouseMoveEvent.listen", x, y);
+                    },
+                    priority
+                );
+            }
+        );
     }
 
     int scrollWheelListen(lua_State* L) {
-        luaL_checktype(L, 1, LUA_TFUNCTION);
-        auto cb = std::make_shared<LuaCallback>(L, 1);
-        int priority = optPriority(L, 2);
-        auto state = std::make_shared<MouseBinding::State>(geode::ScrollWheelEvent().listen(
-            [cb](double xOffset, double yOffset) {
-                return invokeMousePairEvent(cb, "geode.ScrollWheelEvent.listen", xOffset, yOffset);
-            },
-            priority
-        ));
-        MouseBinding::rememberListener(state);
-        MouseBinding::pushListener(L, std::move(state));
-        return 1;
+        return MouseBinding::registerListener(
+            L,
+            1,
+            2,
+            "geode.ScrollWheelEvent.listen",
+            [](std::shared_ptr<LuaCallback> const& cb, int priority) {
+                return geode::ScrollWheelEvent().listen(
+                    [cb](double xOffset, double yOffset) {
+                        return invokeMousePairEvent(
+                            cb, "geode.ScrollWheelEvent.listen", xOffset, yOffset
+                        );
+                    },
+                    priority
+                );
+            }
+        );
     }
 
     geode::Result<void> registerMouseInputData(lua_State* L) {

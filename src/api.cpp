@@ -792,22 +792,23 @@ namespace imes::luauapi {
     }
 #endif
 
-    void postScriptEventNow(std::string_view topic, std::string_view payload) {
-        LuaScriptEvent().send(topic, payload);
-        luax::postScriptEventToLua(topic, payload);
+    void postScriptEventOnMainThread(std::string_view topic, std::string_view payload) {
+        if (LuaScriptEvent().send(topic, payload)) return;
+        luax::dispatchToLuaListeners(topic, payload);
     }
 
     void postScriptEvent(std::string_view topic, std::string_view payload) {
+        if (luax::Runtime::isShuttingDown()) return;
         if (!luax::Runtime::isMainThread()) {
             auto topicCopy = std::string(topic);
             auto payloadCopy = std::string(payload);
             geode::queueInMainThread([topicCopy = std::move(topicCopy),
                                       payloadCopy = std::move(payloadCopy)]() {
-                postScriptEventNow(topicCopy, payloadCopy);
+                postScriptEventOnMainThread(topicCopy, payloadCopy);
             });
             return;
         }
-        postScriptEventNow(topic, payload);
+        postScriptEventOnMainThread(topic, payload);
     }
 
     // isInitialized() delegates to ready() (Runtime.cpp), keep the two in sync.

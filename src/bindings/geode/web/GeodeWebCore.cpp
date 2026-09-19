@@ -166,8 +166,7 @@ namespace luax::webdetail {
     } // namespace
 
     int optPriority(lua_State* L, int idx) {
-        if (lua_gettop(L) < idx || lua_isnil(L, idx)) return geode::Priority::Normal;
-        return check<int>(L, idx, "geode.utils.web listener");
+        return luax::optPriority(L, idx, "geode.utils.web listener");
     }
 
     std::uint64_t checkNonNegativeInteger(lua_State* L, int idx, char const* method) {

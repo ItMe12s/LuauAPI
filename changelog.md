@@ -13,7 +13,7 @@
 
 - Added `geode.ScriptEvent` with `post` / `listen` / `listenFor`
   and C++ `imes::luauapi::postScriptEvent` / `LuaScriptEvent` for string events between scripts and C++.
-- Added `task.everyNode`, which works `like task.every` but automatically cancels when the node stops running or is freed.
+- Added `task.everyNode`, which works like `task.every` but automatically cancels when the node stops running or is freed.
 - Added delegate callback support for game enum args (`GJErrorCode`, `GJMPErrorCode`, `UpdateResponse`, `ResolutionPolicy`) and `gd::vector<int>` containers.
 - Updated to Geode SDK 5.10.1.
 
@@ -42,7 +42,6 @@
 
 ## v0.1.0-beta.26
 
-- Redesigned `gd3d` internals for code quality, performance and iOS support.
 - Added skewing support to Lunar.
 - Added pose sampling, seek, and current time to Lunar animation tracks.
 - Added keyframe CRUD to `LunarAnimationDef` and node listing plus pose readback to `LunarRig`.
@@ -51,6 +50,7 @@
 - Fixed `geode.Mod.getSettingValue` returning nil for untouched settings (now returns the default value).
 - Updated Lunar `*_out` / `*_in_out` pow easing to the standard `1 - (1-p)^rate` curve.
 - Updated Luau VM and codegen to compile without exceptions.
+- Redesigned `gd3d` internals for code quality, performance and iOS support.
 
 ## v0.1.0-beta.25
 
@@ -172,10 +172,10 @@
 
 ## v0.1.0-beta.7
 
-- Redesigned deferred CCObject release drain for cross-platform stability.
 - Fixed `geode.fields` throwing `unordered_map::at: key not found`.
 - Fixed dynamic node/object userdata losing subtype methods.
 - Fixed crash when spamming menu callbacks.
+- Redesigned deferred CCObject release drain for cross-platform stability.
 
 ## v0.1.0-beta.6
 
