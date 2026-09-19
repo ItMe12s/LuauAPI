@@ -2,6 +2,7 @@
 #include "core/Config.hpp"
 #include "core/Runtime.hpp"
 #include "framework/Binding.hpp"
+#include "framework/usertype/Usertype.hpp"
 #include "host/lua_test_helpers.hpp"
 
 #include <RuntimeTypes.hpp>
@@ -355,4 +356,209 @@ TEST_CASE("task.wait errors when called outside a yieldable thread") {
         std::string_view::npos
     );
     lua_pop(L, 1);
+}
+
+TEST_CASE("TaskScheduler everyNode fires while the node is running") {
+    RuntimeGuard guard;
+    auto* runtime = luax::Runtime::getOrCreate();
+    auto* L = runtime->state();
+
+    auto ref = luauapi_test::makeCallback(L, "_G.everyNodeHits = (_G.everyNodeHits or 0) + 1");
+
+    auto* node = new cocos2d::CCNode();
+    auto& scheduler = luax::TaskScheduler::get();
+    auto id = scheduler.addForNode(std::move(ref), node, 0.0, 0.5);
+    REQUIRE(id != 0);
+    REQUIRE(scheduler.activeCount() == 1);
+    node->release();
+
+    scheduler.advance(0.5);
+    scheduler.advance(0.5);
+    REQUIRE(scheduler.activeCount() == 1);
+
+    lua_getglobal(L, "everyNodeHits");
+    REQUIRE(lua_tointeger(L, -1) == 2);
+    lua_pop(L, 1);
+}
+
+TEST_CASE("TaskScheduler everyNode cancels when the node stops running") {
+    RuntimeGuard guard;
+    auto* runtime = luax::Runtime::getOrCreate();
+    auto* L = runtime->state();
+
+    auto ref =
+        luauapi_test::makeCallback(L, "_G.everyNodeStopsHits = (_G.everyNodeStopsHits or 0) + 1");
+
+    auto* node = new cocos2d::CCNode();
+    auto& scheduler = luax::TaskScheduler::get();
+    auto id = scheduler.addForNode(std::move(ref), node, 0.0, 0.5);
+    REQUIRE(id != 0);
+    node->release();
+
+    scheduler.advance(0.5);
+    REQUIRE(scheduler.isScheduled(id));
+
+    node->setRunningForTests(false);
+    scheduler.advance(0.5);
+    REQUIRE_FALSE(scheduler.isScheduled(id));
+
+    lua_getglobal(L, "everyNodeStopsHits");
+    REQUIRE(lua_tointeger(L, -1) == 1);
+    lua_pop(L, 1);
+}
+
+TEST_CASE("TaskScheduler everyNode cancels when the node is freed") {
+    struct PoolSimGuard {
+        PoolSimGuard() {
+            geode::detail::weakRefSimulatePoolForTests() = true;
+        }
+
+        ~PoolSimGuard() {
+            geode::detail::weakRefSimulatePoolForTests() = false;
+        }
+    } poolGuard;
+
+    RuntimeGuard guard;
+    auto* runtime = luax::Runtime::getOrCreate();
+    auto* L = runtime->state();
+
+    auto ref =
+        luauapi_test::makeCallback(L, "_G.everyNodeFreedHits = (_G.everyNodeFreedHits or 0) + 1");
+
+    auto* node = new cocos2d::CCNode();
+    auto& scheduler = luax::TaskScheduler::get();
+    auto id = scheduler.addForNode(std::move(ref), node, 0.0, 0.5);
+    REQUIRE(id != 0);
+    node->release();
+
+    scheduler.advance(0.5);
+    REQUIRE_FALSE(scheduler.isScheduled(id));
+
+    lua_getglobal(L, "everyNodeFreedHits");
+    REQUIRE(lua_isnil(L, -1));
+    lua_pop(L, 1);
+}
+
+TEST_CASE("task.everyNode fires from Lua and cancels on handle cancel") {
+    luauapi_test::HandleGcRuntimeGuard guard;
+    auto* runtime = luax::Runtime::getOrCreate();
+    auto* L = runtime->state();
+    registerTaskBinding(L);
+    REQUIRE(luax::Usertype<cocos2d::CCNode>::registerType(L, "CCNode").isOk());
+
+    auto* node = new cocos2d::CCNode();
+    node->retain();
+    luax::Usertype<cocos2d::CCNode>::pushBorrowed(L, node);
+    lua_setglobal(L, "everyNodeTarget");
+
+    REQUIRE(
+        luauapi_test::runScriptVoid(
+            L,
+            R"(
+            _G.everyNodeHits = 0
+            _G.everyNodeHandle = task.everyNode(everyNodeTarget, 0.1, function()
+                _G.everyNodeHits = _G.everyNodeHits + 1
+            end)
+        )"
+        )
+    );
+
+    auto& scheduler = luax::TaskScheduler::get();
+    scheduler.advance(0.1);
+    REQUIRE(scheduler.activeCount() == 1);
+
+    REQUIRE(luauapi_test::runScriptVoid(L, "_G.everyNodeHandle:cancel()"));
+    scheduler.advance(0.1);
+
+    lua_getglobal(L, "everyNodeHits");
+    REQUIRE(lua_tointeger(L, -1) == 1);
+    lua_pop(L, 1);
+
+    lua_pushnil(L);
+    lua_setglobal(L, "everyNodeTarget");
+    node->release();
+    lua_gc(L, LUA_GCCOLLECT, 0);
+}
+
+TEST_CASE("task.everyNode rejects a non-node argument") {
+    luauapi_test::HandleGcRuntimeGuard guard;
+    auto* runtime = luax::Runtime::getOrCreate();
+    auto* L = runtime->state();
+    registerTaskBinding(L);
+
+    luauapi_test::loadFunction(L, "task.everyNode(123, 0.1, function() end)");
+    REQUIRE(lua_pcall(L, 0, 0, 0) != 0);
+    char const* err = lua_tostring(L, -1);
+    REQUIRE(err != nullptr);
+    REQUIRE(
+        std::string_view(err).find("task.everyNode expected a CCNode at arg 1") != std::string_view::npos
+    );
+    lua_pop(L, 1);
+}
+
+TEST_CASE("task.everyNode cancels on first tick when the node is not running") {
+    luauapi_test::HandleGcRuntimeGuard guard;
+    auto* runtime = luax::Runtime::getOrCreate();
+    auto* L = runtime->state();
+    registerTaskBinding(L);
+    REQUIRE(luax::Usertype<cocos2d::CCNode>::registerType(L, "CCNode").isOk());
+
+    auto* node = new cocos2d::CCNode();
+    node->setRunningForTests(false);
+    luax::Usertype<cocos2d::CCNode>::pushBorrowed(L, node);
+    lua_setglobal(L, "everyNodeTarget");
+
+    REQUIRE(
+        luauapi_test::runScriptVoid(
+            L,
+            R"(
+            _G.everyNodeHits = 0
+            _G.everyNodeHandle = task.everyNode(everyNodeTarget, 0.1, function()
+                _G.everyNodeHits = _G.everyNodeHits + 1
+            end)
+        )"
+        )
+    );
+
+    auto& scheduler = luax::TaskScheduler::get();
+    REQUIRE(scheduler.activeCount() == 1);
+
+    scheduler.advance(0.1);
+
+    lua_getglobal(L, "everyNodeHits");
+    REQUIRE(lua_tointeger(L, -1) == 0);
+    lua_pop(L, 1);
+    REQUIRE(scheduler.activeCount() == 0);
+
+    lua_pushnil(L);
+    lua_setglobal(L, "everyNodeTarget");
+    node->release();
+    lua_gc(L, LUA_GCCOLLECT, 0);
+}
+
+TEST_CASE("task.everyNode rejects a non-positive interval") {
+    luauapi_test::HandleGcRuntimeGuard guard;
+    auto* runtime = luax::Runtime::getOrCreate();
+    auto* L = runtime->state();
+    registerTaskBinding(L);
+    REQUIRE(luax::Usertype<cocos2d::CCNode>::registerType(L, "CCNode").isOk());
+
+    auto* node = new cocos2d::CCNode();
+    node->retain();
+    luax::Usertype<cocos2d::CCNode>::pushBorrowed(L, node);
+    lua_setglobal(L, "everyNodeTarget");
+
+    luauapi_test::loadFunction(L, "task.everyNode(everyNodeTarget, 0, function() end)");
+    REQUIRE(lua_pcall(L, 0, 0, 0) != 0);
+    char const* err = lua_tostring(L, -1);
+    REQUIRE(err != nullptr);
+    REQUIRE(
+        std::string_view(err).find("task.everyNode: interval must be > 0") != std::string_view::npos
+    );
+    lua_pop(L, 1);
+
+    lua_pushnil(L);
+    lua_setglobal(L, "everyNodeTarget");
+    node->release();
+    lua_gc(L, LUA_GCCOLLECT, 0);
 }

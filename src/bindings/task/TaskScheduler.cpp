@@ -21,13 +21,35 @@ namespace luax {
         if (full()) {
             return 0;
         }
-        Task task;
         std::uint64_t const id = m_nextId++;
-        task.callback = std::move(callback);
-        task.remaining = delaySeconds;
-        task.interval = intervalSeconds;
-        task.isThread = isThread;
-        m_timed.insertWithId(id, std::move(task));
+        m_timed.insertWithId(
+            id,
+            Task{
+                .callback = std::move(callback),
+                .remaining = delaySeconds,
+                .interval = intervalSeconds,
+                .isThread = isThread,
+            }
+        );
+        return id;
+    }
+
+    std::uint64_t TaskScheduler::addForNode(
+        LuaRef callback, cocos2d::CCNode* node, double delaySeconds, double intervalSeconds
+    ) {
+        if (full()) {
+            return 0;
+        }
+        std::uint64_t const id = m_nextId++;
+        m_timed.insertWithId(
+            id,
+            Task{
+                .callback = std::move(callback),
+                .remaining = delaySeconds,
+                .interval = intervalSeconds,
+                .node = geode::WeakRef<cocos2d::CCNode>(node),
+            }
+        );
         return id;
     }
 
@@ -35,10 +57,8 @@ namespace luax {
         if (full()) {
             return 0;
         }
-        Task task;
         std::uint64_t const id = m_nextId++;
-        task.callback = std::move(callback);
-        m_deferred.insertWithId(id, std::move(task));
+        m_deferred.insertWithId(id, Task{.callback = std::move(callback)});
         return id;
     }
 
@@ -74,6 +94,14 @@ namespace luax {
             if (i >= m_timed.size()) continue;
             Task& task = m_timed[i];
             if (task.cancelled) continue;
+
+            if (task.node) {
+                auto lock = task.node->lock();
+                if (!lock || !lock.data()->isRunning()) {
+                    task.cancelled = true;
+                    continue;
+                }
+            }
 
             bool ok = fire(task);
             Task& current = m_timed[i];

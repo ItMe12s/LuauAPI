@@ -79,7 +79,14 @@ namespace cocos2d {
         std::size_t m_releaseCallCount = 0;
     };
 
-    class CCNode : public CCObject {};
+    class CCNode : public CCObject {
+    public:
+        bool isRunning() const { return m_running; }
+        void setRunningForTests(bool running) { m_running = running; }
+
+    private:
+        bool m_running = true;
+    };
 
     class CCScheduler {
     public:
@@ -162,10 +169,7 @@ namespace geode {
         ~WeakRef() { forget(); }
 
         Lock lock() const {
-            if (!m_ptr || !detail::isLiveCocosObject(m_ptr)) {
-                return Lock{nullptr, false};
-            }
-            if (m_ptr->objectId() != m_objectId) {
+            if (!alive()) {
                 return Lock{nullptr, false};
             }
             if (detail::weakRefLockRetainsForTests()) {
@@ -176,10 +180,21 @@ namespace geode {
         }
 
         bool valid() const {
+            return alive();
+        }
+
+    private:
+        bool alive() const {
             if (!m_ptr || !detail::isLiveCocosObject(m_ptr)) {
                 return false;
             }
-            return m_ptr->objectId() == m_objectId;
+            if (m_ptr->objectId() != m_objectId) {
+                return false;
+            }
+            if (detail::weakRefSimulatePoolForTests() && m_ptr->retainCount() <= 1) {
+                return false;
+            }
+            return true;
         }
 
     private:

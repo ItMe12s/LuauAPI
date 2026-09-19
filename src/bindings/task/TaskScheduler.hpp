@@ -4,8 +4,10 @@
 #include "framework/schedule/CancellableSlots.hpp"
 #include "framework/usertype/LuaRef.hpp"
 
+#include <Geode/Geode.hpp>
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 #include <vector>
 
 struct lua_State;
@@ -17,6 +19,9 @@ namespace luax {
 
         std::uint64_t add(
             LuaRef callback, double delaySeconds, double intervalSeconds, bool isThread = false
+        );
+        std::uint64_t addForNode(
+            LuaRef callback, cocos2d::CCNode* node, double delaySeconds, double intervalSeconds
         );
         std::uint64_t addDeferred(LuaRef callback);
 
@@ -44,6 +49,7 @@ namespace luax {
             double elapsed = 0.0;
             bool cancelled = false;
             bool isThread = false;
+            std::optional<geode::WeakRef<cocos2d::CCNode>> node;
         };
 
         bool fire(Task& task);

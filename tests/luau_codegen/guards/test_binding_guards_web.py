@@ -305,7 +305,7 @@ class BindingGuardTests(unittest.TestCase):
 
     def test_task_schedulers_rearm_on_each_call(self) -> None:
         source = read_repo_file(TASK_BINDING)
-        for fn in ("taskDelay", "taskEvery", "taskDefer"):
+        for fn in ("taskDelay", "taskEvery", "taskEveryNode", "taskDefer"):
             with self.subTest(fn=fn):
                 body = function_body(source, fn)
                 self.assertIn(

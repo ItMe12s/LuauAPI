@@ -13,6 +13,7 @@
 
 - Added `geode.ScriptEvent` with `post` / `listen` / `listenFor`
   and C++ `imes::luauapi::postScriptEvent` / `LuaScriptEvent` for string events between scripts and C++.
+- Added `task.everyNode`, which works `like task.every` but automatically cancels when the node stops running or is freed.
 - Added delegate callback support for game enum args (`GJErrorCode`, `GJMPErrorCode`, `UpdateResponse`, `ResolutionPolicy`) and `gd::vector<int>` containers.
 - Updated to Geode SDK 5.10.1.
 

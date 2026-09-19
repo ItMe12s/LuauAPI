@@ -6,6 +6,7 @@
 #include "framework/stack/TableUtil.hpp"
 #include "framework/stack/UserdataTags.hpp"
 #include "framework/usertype/LuaRef.hpp"
+#include "framework/usertype/Usertype.hpp"
 
 #include <Geode/Geode.hpp>
 #include <chrono>
@@ -99,6 +100,24 @@ namespace {
         return 1;
     }
 
+    int taskEveryNode(lua_State* L) {
+        auto* node = Usertype<cocos2d::CCNode>::tryCheck(L, 1);
+        if (!node) {
+            luaL_error(L, "task.everyNode expected a CCNode at arg 1");
+        }
+        double seconds = luaL_checknumber(L, 2);
+        luaL_checktype(L, 3, LUA_TFUNCTION);
+        if (seconds <= 0.0) {
+            luaL_error(L, "task.everyNode: interval must be > 0");
+        }
+        ensureCapacity(L);
+        ensureTaskTickArmed();
+        LuaRef ref(L, 3);
+        std::uint64_t id = TaskScheduler::get().addForNode(std::move(ref), node, seconds, seconds);
+        pushHandle(L, id);
+        return 1;
+    }
+
     int taskDefer(lua_State* L) {
         luaL_checktype(L, 1, LUA_TFUNCTION);
         ensureCapacity(L);
@@ -157,6 +176,7 @@ namespace luax {
         setTableCFunction(L, -1, "spawn", &taskSpawn);
         setTableCFunction(L, -1, "delay", &taskDelay);
         setTableCFunction(L, -1, "every", &taskEvery);
+        setTableCFunction(L, -1, "everyNode", &taskEveryNode);
         setTableCFunction(L, -1, "defer", &taskDefer);
         setTableCFunction(L, -1, "wait", &taskWait);
         setTableCFunction(L, -1, "cancel", &taskCancel);

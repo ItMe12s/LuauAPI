@@ -5,7 +5,8 @@
 The `task` library schedules callbacks and the `time` library reads clocks.
 Scheduled tasks run on the game tick. They keep running when the game pauses.
 Speedhacks change task timing because timers use frame delta.
-`task.spawn`, `task.delay`, `task.every`, and `task.defer` run on fresh coroutines, so `task.wait` works inside them.
+`task.spawn`, `task.delay`, `task.every`, `task.everyNode`,
+and `task.defer` run on fresh coroutines, so `task.wait` works inside them.
 
 `loadstring` is a global, not part of `task`.
 See [globals](globals.md).
@@ -52,6 +53,33 @@ task.every(seconds: number, fn: () -> ()) -> TaskHandle
 Runs `fn` every `seconds` and returns a handle.
 Interval must be greater than zero or the call raises `task.every: interval must be > 0`.
 If a callback waits longer than the interval, later runs can overlap.
+
+## task.everyNode
+
+```lua
+task.everyNode(node: CCNode, seconds: number, fn: () -> ()) -> TaskHandle
+```
+
+Runs `fn` every `seconds` while `node` is running and returns a handle.
+Interval must be greater than zero or the call raises `task.everyNode: interval must be > 0`.
+
+The task checks the node before every run.
+It cancels itself when the node is not running or when the node is freed.
+Not running means `node:isRunning()` returns false, for example when the node is detached, paused, or removed from the scene.
+Registering on a node that is not running yet does not error.
+The task waits for the first run and cancels itself there if the node never starts.
+The node is held weakly, so the task alone never keeps a freed node alive.
+
+Passing a non-node raises `task.everyNode expected a CCNode at arg 1`.
+
+```lua
+local node = cocos2d.CCNode.create()
+local handle = task.everyNode(node, 1, function()
+    print("node still running")
+end)
+
+-- Later, when the node leaves the scene, the task stops on its own.
+```
 
 ## task.defer
 
