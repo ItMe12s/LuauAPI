@@ -93,7 +93,6 @@ namespace {
             luaL_error(L, "%s: interval must be > 0", method);
         }
         ensureCapacity(L);
-        ensureTaskTickArmed();
         luaL_checktype(L, callbackIdx, LUA_TFUNCTION);
         LuaRef ref(L, callbackIdx);
         if (nodeOrNull) {
@@ -105,6 +104,7 @@ namespace {
     int taskEvery(lua_State* L) {
         double seconds = luaL_checknumber(L, 1);
         luaL_checktype(L, 2, LUA_TFUNCTION);
+        ensureTaskTickArmed();
         std::uint64_t id = taskEveryCommon(L, seconds, 2, nullptr, "task.every");
         pushHandle(L, id);
         return 1;
@@ -117,6 +117,7 @@ namespace {
         }
         double seconds = luaL_checknumber(L, 2);
         luaL_checktype(L, 3, LUA_TFUNCTION);
+        ensureTaskTickArmed();
         std::uint64_t id = taskEveryCommon(L, seconds, 3, node, "task.everyNode");
         pushHandle(L, id);
         return 1;

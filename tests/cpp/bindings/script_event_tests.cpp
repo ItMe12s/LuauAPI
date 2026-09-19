@@ -320,9 +320,9 @@ TEST_CASE("geode.ScriptEvent rejects invalid arguments") {
     ScriptEventTestGuard guard;
     auto* L = guard.makeState();
 
-    REQUIRE_FALSE(runScriptPcall(L, "geode.ScriptEvent.post(123)"));
+    REQUIRE_FALSE(runScriptPcall(L, "geode.ScriptEvent.post({})"));
     REQUIRE_FALSE(runScriptPcall(L, "geode.ScriptEvent.listen('not a function')"));
-    REQUIRE_FALSE(runScriptPcall(L, "geode.ScriptEvent.listenFor(123, function() end)"));
+    REQUIRE_FALSE(runScriptPcall(L, "geode.ScriptEvent.listenFor({}, function() end)"));
 }
 
 TEST_CASE("off-main postScriptEvent hops to the main thread") {
