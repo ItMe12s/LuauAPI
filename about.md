@@ -53,13 +53,13 @@ Need help? Join the [Discord](https://discord.gg/E8f6D6XqbW).
 
 ### Making a crash report
 
-First turn on **Enable Crash Context File** in LuauAPI's mod settings under User Settings.
+Turn on **Enable Crash Context File** in LuauAPI's mod settings.
 
-Debugging only!!! it can cause lag, so leave it off after you are done.
+Debugging only!!! it can cause lag, so leave it off after you're done.
 
 Then crash the game. In the `Geode Crash Handler` window click `Open crashlog folder`.
 
-Send both files to the developers, the `luauapi-last-context.txt` sidecar file and the Geode crashlog.
+Send both files to the developers, the `luauapi-last-context.txt` and the Geode crashlog.
 
 `luauapi-last-context.txt` gets overwritten on the next launch, so copy it somewhere safe before restarting.
 
@@ -93,3 +93,13 @@ For now, C++ is still the tool for:
 - Multithreading
 
 Work is ongoing to shrink this list. These will be solved in the future :3
+
+### Credits and Special Thanks
+
+- [Juniper](https://github.com/TreehouseFalcon) (Testing, Debugging, Ideas)
+- [Cosmella](https://github.com/Cosmella-v) (Testing, Debugging, Ideas)
+- [Erymanthus](https://github.com/RayDeeUx) (Testing, Debugging, Review)
+- [YellowCat98](https://github.com/YellowCat98) (Early Testing)
+
+They might not contribute code directly to the project,
+but they help along the way and guide the project in a better direction.

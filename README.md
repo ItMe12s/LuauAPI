@@ -66,8 +66,9 @@ git submodule update --init --recursive
 
 Special thanks to:
 
+- [Juniper](https://github.com/TreehouseFalcon) (Testing, Debugging, Ideas)
+- [Cosmella](https://github.com/Cosmella-v) (Testing, Debugging, Ideas)
 - [Erymanthus](https://github.com/RayDeeUx) (Testing, Debugging, Review)
-- [Juniper](https://github.com/TreehouseFalcon) (Testing, Debugging, User)
 - [YellowCat98](https://github.com/YellowCat98) (Early Testing)
 
 And many more people who helped along the way!
