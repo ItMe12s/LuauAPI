@@ -64,14 +64,11 @@ namespace geode {
                 }
             );
             storage()[m_filter].push_back({priority, callback, true});
-            return ListenerHandle([callback, port = &storage()[m_filter]]() {
-                auto& entries = *port;
-                for (auto it = entries.begin(); it != entries.end();) {
-                    if (it->callback == callback) {
-                        it = entries.erase(it);
-                    }
-                    else {
-                        ++it;
+            return ListenerHandle([callback, filter = m_filter]() {
+                auto& entries = storage()[filter];
+                for (auto& entry : entries) {
+                    if (entry.callback == callback) {
+                        entry.active = false;
                     }
                 }
             });
